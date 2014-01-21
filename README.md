@@ -3,24 +3,24 @@ syntaxjs
 
 Not bugfree EcmaScript 6 Interpreter written in EcmaScript 5
 
-It can be tried with simply typing node syntax0.js. The line to
-start syntaxjs.nodeShell() is at the end of the file. It can also
-be required.
-
-There is an object "syntaxjs" in the global Space. Also in the
-browser. The browser version is currently broken, coz i did not
-care for the last time.
-
-I wrote a lot of comments about the bugs and the architecure and
-all the design mistakes here, but i should reflect again and write
-something understandable up.
+It can be tried with simply typing node syntax0.js. 
 
 '''bash
 linux-www5:~ # node syntax0.js
 '''
 
-So there are some commands which worked earlier and are broken today.
-I see it in my few tests. I broke the code last month, but i am optimistic.
+Generators don´t work. The path into the Iterations has to be recorded first.
+Because it is using indirect recursion evaluation on some mozilla api like AST.
 
-I waited and waited for releasing something less buggy and now i do exactly
-the opposite, i upload a version when it´s brokener than ever.
+I possibly broke for of. And for (x of "abc") possibly puts out "[ o o o o o 
+of [object Object] instead of a string iteration. This is one of the features
+which worked where i wonder what i did to break it. 
+
+There are a lot of issues i know about. But to explain i would have to
+write something understandable up. But i would know the way through them.
+
+There are possibly a lot of features broken. Currently i speak of the worst
+version ever. Last month i ruined the system and have not search for the main
+cause yet. Today i suddenly had the feeling to create a repository.
+
+Hope not to annoy you too much with the bugs.
