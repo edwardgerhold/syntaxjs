@@ -26644,10 +26644,8 @@ define("lib/syntaxjs-shell", function (require, exports) {
 
         //
         // this is some additional hack to emulate multiline input
-        // the shell now scans the code for correct open and close of parens
-        // I will probably move this issue into the interpreter to accept pieces of input.
-        // currently the indirect-recursive approach hides the sight onto the line interpreter a little
         //
+ 
         var savedInput ="";
         var isOpenParen = {
             __proto__:null,
@@ -26685,17 +26683,17 @@ define("lib/syntaxjs-shell", function (require, exports) {
             }
             return parens.length === 0;
         }
+        
         //
-        // the prompt is now called again, if the input does not close the parens and saves the current input
-        // if the paren stack can not get empty you can not break out.
-        // except for .break 
+        // prompt is now called again, and the lastInput is prepending the new inputted code.
+        //
 
         prompt = function prompt() {
             
             rl.question(prefix, function (code) {
 
                 if (code === ".break") {
-                    lastInput === "";
+                    lastInput = "";
                     prefix = defaultPrefix;
                     setTimeout(prompt);
                     return;
