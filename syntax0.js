@@ -4320,22 +4320,9 @@ define("lib/parser", ["lib/some-lex-and-parse-tables", "lib/standalone-tokenizer
         return null;
     }
 
-    parser.PropertyKey = PropertyKey;
 
-    function PropertyKey() {
-        var node = this.Identifier() || this.Literal();
-        if (!node && (Keywords[v])) {
-            node = Node("Identifier");
-            node.name = v;
-            node.loc = T && T.loc;
-        }
-        if (node) return node;
-        throwError(new SyntaxError("invalid property key in object literal"));
-        return null;
-    }
 
     parser.StrictFormalParameters = StrictFormalParameters;
-
     function StrictFormalParameters() {
         return this.FormalParameterList.apply(this, arguments);
     }
@@ -4349,8 +4336,23 @@ define("lib/parser", ["lib/some-lex-and-parse-tables", "lib/standalone-tokenizer
             pass("[");
             propertyName = this.AssignmentExpression("]");
             pass("]");
+            return propertyName;
         } 
-        return propertyName;
+        return null;
+    }
+
+    parser.PropertyKey = PropertyKey;
+    function PropertyKey() {
+        var node;
+        node = /*this.ComputedPropertyName() ||*/ this.Identifier() || this.Literal();
+        if (!node && (Keywords[v])) {
+            node = Node("Identifier");
+            node.name = v;
+            node.loc = T && T.loc;
+        }
+        if (node) return node;
+        throwError(new SyntaxError("invalid property key in definition list"));
+        return null;
     }
 
     function PropertyDefinitionList(parent) {
@@ -4375,6 +4377,13 @@ define("lib/parser", ["lib/some-lex-and-parse-tables", "lib/standalone-tokenizer
 
             } else {
 
+                /* 
+                    This has to be cleaned up. I did today, and removed the double method, the double "init", the computedPropertyName,
+                    and used PropertyKey() for both. It looked nice and clean. But it failed. So i restored it for now. I want to write
+                    it again (from scratch), but tomorrow.
+                */
+
+                
                 if (v === "[") {
                     computedPropertyName = this.ComputedPropertyName();
                 } else computedPropertyName = undefined;
@@ -4443,6 +4452,8 @@ define("lib/parser", ["lib/some-lex-and-parse-tables", "lib/standalone-tokenizer
         } while (v !== "}" && v != undefined);
         return list;
     }
+
+
     parser.ObjectExpression = ObjectExpression;
 
     function lookForEqualSignBehindBracesBeforeUsingTheObjectCoverGrammarForThis() {
@@ -5406,13 +5417,13 @@ define("lib/parser", ["lib/some-lex-and-parse-tables", "lib/standalone-tokenizer
             isGenerator = true;
             pass(v);
         } else if (v === "get") {
-        	isGetter = true;
-        	pass(v);
-        	// get c() {}
+            isGetter = true;
+            pass(v);
+            // get c() {}
         } else if (v === "set") {
-        	isSetter = true;
-        	pass(v);
-        	// set c() {}
+            isSetter = true;
+            pass(v);
+            // set c() {}
         }
 
 
@@ -8453,7 +8464,15 @@ define("lib/api", function (require, exports, module) {
     var internals_decode = Object.create(null);
     for (var k in internals_encode) {
         internals_decode[internals_encode[k]] = k;
+    
     }
+
+
+    function createGenericRecord(obj) {
+        // interface for bytecode encoding of objects
+        return obj;
+    }
+
 
     function compareInternalSlot(O, N, V) {
         var value = getInternalSlot(O, N);
@@ -8471,6 +8490,9 @@ define("lib/api", function (require, exports, module) {
     function hasInternalSlot(O, N) {
         return N in O;
     }
+
+
+
 
     //
     // call internal
@@ -16367,31 +16389,17 @@ define("lib/api", function (require, exports, module) {
             configurable: false
         });
 
-        DefineOwnProperty(SymbolPrototype, "valueOf", {
-            value: CreateBuiltinFunction(function valueOf(thisArg, argList) {
-                var s = thisArg;
-                if (hasInternalSlot(s, "SymbolData")) return withError("Type", "The this argument has got no [[SymbolData]] property.");
-                var sym = getInternalSlot(s, "SymbolData");
-                return NormalCompletion(sym);
-            }),
-            writable: false,
-            enumerable: false,
-            configurable: false
-        });
-
-        LazyDefineBuiltinConstant(SymbolPrototype, $$toStringTag, "Symbol");
+        var SymbolPrototype_valueOf = function valueOf(thisArg, argList) {
+            var s = thisArg;
+            if (hasInternalSlot(s, "SymbolData")) return withError("Type", "The this argument has got no [[SymbolData]] property.");
+            var sym = getInternalSlot(s, "SymbolData");
+            return NormalCompletion(sym);
+        };
         
         var SymbolPrototype_$$toPrimitive = function (thisArg, argList) {
                 return withError("Type", "Symbol.prototype[@@toPrimitive] is supposed to throw a Type Error!");
         };
-
-        DefineOwnProperty(SymbolPrototype, $$toPrimitive, {
-            configurable: false,
-            enumerable: false,
-            value: CreateBuiltinFunction(SymbolPrototype_$$toPrimitive, 1, "[Symbol.toPrimitive]"),
-            writable: false
-        });
-
+        
         var GlobalSymbolRegistry = Object.create(null);
 
         var SymbolFunction_keyFor = function (thisArg, argList) {
@@ -16413,28 +16421,19 @@ define("lib/api", function (require, exports, module) {
             Assert(e === undefined, "GlobalSymbolRegistry must currently not contain an entry for stringKey");
             var newSymbol = SymbolPrimitiveType();
             setInternalSlot(newSymbol, "Description", stringKey);
-            GlobalSymbolRegistry[stringKey] = { key: stringKey, symbol: newSymbol };
+            GlobalSymbolRegistry[stringKey] = createGenericRecord({ key: stringKey, symbol: newSymbol });
             return NormalCompletion(newSymbol); // There is a Typo newSumbol in the Spec. 
         };
+
+
+        LazyDefineBuiltinFunction(SymbolPrototype, "valueOf", 0, SymbolPrototype_valueOf);
+        LazyDefineBuiltinConstant(SymbolPrototype, $$toStringTag, "Symbol");
+        LazyDefineBuiltinConstant(SymbolPrototype, $$toPrimitive, CreateBuiltinFunction(SymbolPrototype_$$toPrimitive, 1, "[Symbol.toPrimitive]"));
 
         LazyDefineBuiltinFunction(SymbolFunction, "for", 1, SymbolFunction_for);
         LazyDefineBuiltinFunction(SymbolFunction, "keyFor", 1, SymbolFunction_keyFor /* ,realm */);
 
-/*
-es6> Symbol.for("Hallo");
-{ Description: 'Hallo',
-  Bindings: {},                 // Issue: Hat noch Binding Records
-  Symbols: {},                  // Issue: Hat noch Symbol Bindings
-  Prototype: null,  
-  Extensible: false,        
-  Integrity: 'frozen',          // Das ist von Beginning A.D. 
-  uniqueSymbolID: 9977.562215400394 }   // Der geheime Propertykey für ES5.
-es6> let s = Symbol.for("Hallo");
-undefined
-es6> Symbol.keyFor(s) === "Hallo"
-true
-es6> 
-*/
+
         // ===========================================================================================================
         // encodeURI, decodeURI functions
         // ===========================================================================================================
@@ -23421,6 +23420,8 @@ define("lib/runtime", ["lib/parser", "lib/api", "lib/slower-static-semantics"], 
             var functionPrototype;
 
             
+            /* I refactored it today, but resetted it tonight, i rewrite it tomorrow */
+            
             if (kind == "init") {
 
                 if (isComputed) {
@@ -23461,7 +23462,6 @@ define("lib/runtime", ["lib/parser", "lib/api", "lib/slower-static-semantics"], 
                 } else {
                     propName = typeof key === "string" ? key : key.name || key.value;
                 }
-
                 defineGetterOrSetterOnObject(node, newObj, propName, kind);
             }
         
@@ -26597,9 +26597,15 @@ define("lib/syntaxjs-tester", function (require, exports, module) {
 define("lib/syntaxjs-shell", function (require, exports) {
     
 
-    var fs, readline, rl, prefix, evaluate, startup, evaluateFile, prompt;
+    var fs, readline, rl, prefix, evaluate, startup, evaluateFile, prompt, validParens, shell;
+    
+    var defaultPrefix = "es6> ";
+    var multilinePrefix = "...> ";
+    var lastInput = "";
 
     if (typeof process !== "undefined" && typeof module !== "undefined") {
+
+        prefix = defaultPrefix;
 
         startup = function startup() {
             console.time("Uptime");
@@ -26609,9 +26615,9 @@ define("lib/syntaxjs-shell", function (require, exports) {
                 input: process.stdin,
                 output: process.stdout
             });
+        };
 
-            prefix = "es6> ";
-            evaluate = function evaluate(code, continuation) {
+        evaluate = function evaluate(code, continuation) {
                 var val;
                 try {
                     val = syntaxjs.toValue(code, true);
@@ -26621,7 +26627,6 @@ define("lib/syntaxjs-shell", function (require, exports) {
                     console.log(val);
                     if (continuation) setTimeout(continuation, 0);
                 }
-            }
         };
 
         evaluateFile = function evaluateFile(file, continuation) {
@@ -26637,9 +26642,67 @@ define("lib/syntaxjs-shell", function (require, exports) {
             if (code) evaluate(code, continuation);
         };
 
+        //
+        // this is some additional hack to emulate multiline input
+        // the shell now scans the code for correct open and close of parens
+        // I will probably move this issue into the interpreter to accept pieces of input.
+        // currently the indirect-recursive approach hides the sight onto the line interpreter a little
+        //
+        var savedInput ="";
+        var isOpenParen = {
+            __proto__:null,
+            "(":true,
+            "{":true,
+            "[":true
+        };
+        var isCloseParen = {
+            __proto__:null,
+            ")": true,
+            "}": true,
+            "]": true
+        };
+        var isRightParen = {
+            __proto__: null,
+            "(":")",
+            "[":"]",
+            "{":"}"
+        };
+        
+        validParens = function (code) {
+            var parens = [];
+            for (var i = 0, j = code.length; i < j; i++) {
+                var ch = code[i];
+                if (isOpenParen[ch]) {
+                    parens.push(ch);
+                } else if (isCloseParen[ch]) {
+                    if (!parens.length) throw new SyntaxError("syntaxjshell: preflight: nesting error. stack is empty but you closed some paren.");
+
+                    var p = parens.pop();
+                    if (!(isRightParen[p] === ch)) {
+                        throw new SyntaxError("syntaxjshell: preflight: nesting error. closing paren does not match stack.");
+                    }
+                }
+            }
+            return parens.length === 0;
+        }
+        //
+        // the prompt is now called again, if the input does not close the parens and saves the current input
+        // if the paren stack can not get empty you can not break out.
+        // except for .break 
+
         prompt = function prompt() {
+            
             rl.question(prefix, function (code) {
-                if (code[0] === ".") {
+
+                if (code === ".break") {
+                    lastInput === "";
+                    prefix = defaultPrefix;
+                    setTimeout(prompt);
+                    return;
+                }
+
+                if (savedInput === "" && code[0] === ".") {
+
                     if (/^(\.print)/.test(code)) {
                         code = code.substr(7);
                         console.log(JSON.stringify(syntaxjs.createAst(code), null, 4));
@@ -26666,15 +26729,29 @@ define("lib/syntaxjs-shell", function (require, exports) {
                         console.log(".quit (quit the shell with process.exit instead of ctrl-c)");
                         setTimeout(prompt);
                         return;
-                    }
+                    } 
+
+                } 
+
+                if (savedInput) code = savedInput + code;
+            
+                if (validParens(code)) {        
+                    prefix = defaultPrefix;
+                    savedInput = "";
                     evaluate(code, prompt);
+                    return;
                 } else {
-                    evaluate(code, prompt);
+                    prefix = multilinePrefix;
+                    savedInput = code;  
+                    setTimeout(prompt);
+                    return;
                 }
+                    
+                
             });
         };
 
-        var shell = function main() {
+        shell = function main() {
             var file;
             startup();
             if (process.argv[2]) file = process.argv[2];
