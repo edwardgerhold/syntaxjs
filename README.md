@@ -39,11 +39,12 @@ Unchecked: Possibly the line if (syntaxjs.system == "node") syntaxjs.nodeShell()
 another check against nodes module.parent if the shell starts even when requiring 
 the program. I enabled starting the shell automatically just for convenience.
 
+
 ```javascript
 var code = "let x = 10, y = 20, z = 30";	// You can pass source directly into each of the functions
 						// or what you´ve received from previous step [toValue(createAst(tokenize(source)))]
 var ast = syntaxjs.createAst(code);		// createAst and tokenize return Ast and Array.
-var result = syntaxjs.toValue(ast, true); 	// true keeps the environment alive, else each toValue restarts 
+var result = syntaxjs.toValue(ast, true); 	// true keeps the environment alive, else each toValue restarts
 result = syntaxjs.toValue("x+y*c");		// but that will be replaced by returning a realm object
 						// with it´s own evaluation function 
 var source = syntaxjs.toJsLang(ast); 		// let x = 10, y = 20, z = 30;		
@@ -87,5 +88,80 @@ Times - i have no job, but i am not sitting at the computer the whole day.
 I leave, for hours, for days. Then i return and do something. Sometimes i
 left a note on my homepage, here i shouldn´t.
 
+I know nothing about the githup pages or the wiki. If i want to talk, i 
+should move it into there. So the next will be a documentation here. And
+probably, the draft is out, but i didnt code yesterday and not today, i 
+will continue. Removing the browser bug will take a few minutes. Maybe
+i search for ten minutes and remove it in twenty seconds. 
+
+Whatever, i already started talking in the README.md. I didnt want that.
+So i leave putting a few commands into the shell up to you. I gonna inform
+you how the thing works the next days with a replaced README.md containing
+the internals. 
+
 Hope not to annoy you too much with the bugs.
 
+
+---
+
+Notes for myself about what to write into the documentation
+
+A hint for myself: When restarting the README: Start clean, talk clear, precise,
+no commas, no personal words, just the data, the code, the bugs. That everyone
+at once understands, how the program works. You leave the computer after submitting
+this notice? Well, others wouldnt even write that up. The same for you. But if you
+take the computer again, take your time, write us an hour or two a clean and sober documentation up.
+
+As well as for the README i should check out the wiki and what i have got with a github account
+I signed 2012 but i had no project, i learned almost nothing about github.
+
+Working -
+
+* the story, from a syntaxhighlighter to a parser to a interpreter to become a useful tool 
+* The main object syntaxjs
+* Starting the Shell
+* Requiring it 
+* tokenize() - Explaining the tokenizer internals
+* createAst() - Explaining the parser internals
+* toValue() - Explaining the Interpreter internals
+* highlightElements() - Explaining the Highlighter with GUI
+* highlight() - Explaining the text only highlighting function returning a string with span elements
+* CSS Classes and DOM Layout of the Highlighter 
+* toJsLang() - How the AST is recursivly retransformed into a string
+
+Open Tasks - 
+
+* compile() - The missing piece and what i have done to make sure,
+it is feasible to add the compiler later
+* Heap Model		- theoretically complete, most is about load and store, hashing datastructures, and bitflags to reduce size
+* Byte Code Model 	- at the beginning i asked myself "self-defined opcodes?" "is there something" meanwhile the program progressed
+* Garbage Collection    - how i implemented a mark and sweep gc on a typed array in about hundred lines of code a little earlier
+
+More Internals - 
+
+* My AMD "Model" - Why my module system with the exports is weak and sucks - how it works and what i experience with
+
+* My Data Structures - I use Arrays as List, if the Specification says List i used an Array.
+		    If the specification says Array, it is a special defined Object called "ArrayExoticObject".
+		    If i can use stringkeys, i replace Lists with Object Literals to save complexity like O(n) .indexOfs.
+		    
+* Identifiers and Names - I broke almost every rule with Capitalizing Most. And a handful of Datastructures use new,
+    the others Object.create. Why i don´t like my own inconsistency, but can live with it.
+
+* My LLVM Dream - How i dreamed to compile the engine later from JavaScript to C++.
+
+* BUGLIST
+* All open bugs.
+
+    For that i should also check out the github bugtracker to
+
+---
+
+Hope not to annoy you too much with the notes.
+
+I couldnt free my mind to reflect about redoing the page otherwise.
+
+While typing i have a strong wish to fetch the vocabulary book from the shelf, it is needed here.
+
+
+Ok, i submit this **** now and restart with the documentation.
