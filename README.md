@@ -7,7 +7,7 @@ It can be tried with simply typing node syntax0.js.
 
 linux-www5:~ # node syntax0.js [exec_me.js]
 
-'''javascript
+```javascript
 es6> let f = x => x*x;
 undefined
 es6> f(100);
@@ -25,7 +25,7 @@ Test
 es6>
 undefined
 es6>
-'''
+```
 
 Update: In regular js space it creates an object "syntaxjs". Within the inner Environment,
 Reflect.parse(code) and Reflect.parseGoal("GoalSymbol", code) are available. A quick
@@ -39,7 +39,7 @@ Unchecked: Possibly the line if (syntaxjs.system == "node") syntaxjs.nodeShell()
 another check against nodes module.parent if the shell starts even when requiring 
 the program. I enabled starting the shell automatically just for convenience.
 
-'''javascript
+```javascript
 var code = "let x = 10, y = 20, z = 30";	// You can pass source directly into each of the functions
 						// or what you´ve received from previous step [toValue(createAst(tokenize(source)))]
 var ast = syntaxjs.createAst(code);		// createAst and tokenize return Ast and Array.
@@ -48,7 +48,7 @@ result = syntaxjs.toValue("x+y*c");		// but that will be replaced by returning a
 						// with it´s own evaluation function 
 var source = syntaxjs.toJsLang(ast); 		// let x = 10, y = 20, z = 30;
 						
-'''
+```
 
 Some issues
 
@@ -67,6 +67,12 @@ There are possibly a lot of features broken. Currently i speak of the worst
 version ever. Last month i ruined the system and have not really searched for 
 the main cause yet. Today i suddenly had the feeling to create a repository.
 In reality i celebrated the publication of the latest draft.
+
+Update: The /test directory will be installed soon. I have a couple of files but the
+main goal is to run "test262.py --command="node syntax0.js" --tests=/test262"
+On the shell you have to press CTRL-D each Test, coz it´s configured to jump 
+into the shell after executing a file, for development, that i can look into
+the resulting environment.
 
 Hope not to annoy you too much with the bugs.
 
