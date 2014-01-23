@@ -10816,7 +10816,8 @@ define("lib/api", function (require, exports, module) {
     }
     
     function OrdinaryCreateFromConstructor(constructor, intrinsicDefaultProto, internalDataList) {
-        Assert(intrinsicDefaultProto in getIntrinsics(), "the chosen intrinsic default proto has to be defined in the intrinsic");
+    
+        Assert(HasProperty(getIntrinsics(), intrinsicDefaultProto), "the chosen intrinsic default proto has to be defined in the intrinsic");
         var O, result;
         var proto = GetPrototypeFromConstructor(constructor, intrinsicDefaultProto);
         if ((proto = ifAbrupt(proto)) && isAbrupt(proto)) return proto;
