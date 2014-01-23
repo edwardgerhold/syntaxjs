@@ -1,0 +1,28 @@
+Placeholder for the License Terms for syntaxjs
+
+syntax0.js (c) Edward Gerhold 2013, 2014
+
+I still have to figure out, which license is the right one.
+
+* EcmaScript 6 Spezification belongs to ECMA, which is most of the code.
+* Mozilla Parser API belongs to Mozilla, which is the Syntaxtree Format.
+* There is a module with a functional parser by Douglas Crockford, from a
+tutorial on his website, written down by hand. It´s currently not in use, 
+but inclusive.
+* Esprimas Demo on it´s Website esprima.org inspired me to add a button, 
+to show the ast of a highlighted text and to use JSON.stringify(code, null, 4);.
+* I wrote code with promisesaplus.com and github.com/domenic/promises-unwrapping
+and people.mozilla.org/~jorendorff/js-loaders but these parts are superseeded by 
+the latest specification
+* Object.observe is included, but not finished, only the half is written,
+the internal methods are not updated with yet.
+* An Emitter is inspired by Node.js but a complete own Implementation.
+* Everything else is written and even invented by me. 
+
+I think i can grant you the rights to use, modify and distribute the software
+and the same conditions, the others licenses grant me. I won´t change my mind,
+that´s for sure. But to be correct, i still have to figure out, what we got.
+
+Have fun!
+
+
