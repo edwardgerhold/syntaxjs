@@ -10,7 +10,9 @@ I still have to figure out, which license is the right one.
 tutorial on his website, written down by hand. It´s currently not in use, 
 but inclusive.
 * Esprimas Demo on it´s Website esprima.org inspired me to add a button, 
-to show the ast of a highlighted text and to use JSON.stringify(code, null, 4);.
+to show the ast of a highlighted text, and to use JSON.stringify(code, null, 4);
+As i remember again. I have seen the array of tokens there. Already in 2012.
+When i first wrote a syntaxhighlighter, which later in 2013 became this tool.
 * I wrote code with promisesaplus.com and github.com/domenic/promises-unwrapping
 and people.mozilla.org/~jorendorff/js-loaders but these parts are superseeded by 
 the latest specification
@@ -21,7 +23,7 @@ the internal methods are not updated with yet.
 
 I think i can grant you the rights to use, modify and distribute the software
 and the same conditions, the others licenses grant me. I won´t change my mind,
-that´s for sure. But to be correct, i still have to figure out, what we got.
+that´s for sure. But to be correct, i still have to figure out, what we got.u
 
 Have fun!
 
