@@ -73,28 +73,19 @@ On the shell you have to press CTRL-D each Test, coz it´s configured to jump
 into the shell after executing a file, for development, that i can look into
 the resulting environment.
 
+For the project i have a standard directory tree, and package in mind. 
+I think the submodules will go into /lib, the css into /css and the docs
+into /docs, tests into /test and /tools into tools.
 
-Update: Next days 
+Next i will remove the bug which broke my browser version, rewrite this
+readme to specify the program and it´s internals, that you can read it,
+make my mind up not to commit too much edited readme (won´t ever happen
+again because i write a main documentation into this file until the next
+commit)
 
-- I see: This page is suitable for a good, long documentation. I will change 
-this file into the documentation.
-- The big javascript file will be split up into separate modules which will
-live in the /lib directory. Internally most is prepared already.
-- I have a standard tree in mind.
-- I would like to automate a bunch of task with grunt then, but i have to
-learn using it, and first, i should split up the file to have something to
-build.
-- There will be a package.json file and i should push it into npm.
-- I will figure out how to create my own branch and how to accept and merge
-pull requests for the master branch. ** the most important **
-(same you did already, reading the documentation)
-- This will be my first project ever.
-- Last but not least, i should improve my english speaking skills. I hear it
-almost like my motherlanguage. But i notice, currently i am very bad in writing.
-And if it is not the doc, it is the way i choose variable names and objects.
-I am not so eloquent choosing identifiers, you will probably have problems 
-reading the code because of some wrong words at the right place.
-
+Times - i have no job, but i am not sitting at the computer the whole day.
+I leave, for hours, for days. Then i return and do something. Sometimes i
+left a note on my homepage, here i shouldn´t.
 
 Hope not to annoy you too much with the bugs.
 
