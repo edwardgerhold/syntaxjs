@@ -22,7 +22,7 @@
   "keywords": [
     "parser",
     "highlighter",
-    "interpreter",
+    "interpreter"
   ],
 
   "main": "syntax0.js"
