@@ -1,22 +1,32 @@
+
 {
-    "name": "syntaxjs",
-    "description": "Commandline interpreter for EcmaScript 6, JavaScript Syntaxhighlighter.",
-    "version": "0.0.2014",
-    "author": {
-	"name": "Edward Gerhold",
-	"email": "edward.gerhold@googlemail.com"
-    },
-    "main": "syntax0.js",
-    "repository": {
-	"type": "git",
-	"url": "https://github.com/edwardgerhold/syntaxjs"
-    },
-    "keywords": [
-	"parser",
-	"interpreter",
-	"es6",
-	"highlighter",
-	"shell",
-	"codegen"
-    ]
+
+  "name": "syntaxjs",
+
+  "description": "ugly javascript syntaxhighlighter and buggy interpreter",
+
+  "version": "0.0.1",
+
+  "author": {
+    "name": "Edward Gerhold",
+    "email": "edward.gerhold@googlemail.com"
+  },
+
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/edwardgerhold/syntaxjs"
+  },
+
+  "keywords": [
+    "parser",
+    "interpreter",
+    "es6",
+    "highlighter",
+    "shell",
+    "codegen"
+  ],
+
+  "main": "syntax0.js"
+
+  
 }
