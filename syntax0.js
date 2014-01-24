@@ -15651,7 +15651,7 @@ define("lib/api", function (require, exports, module) {
                     if (kPresent) {
                         var kValue = Get(O, Pk);
                         if ((kValue = ifAbrupt(kValue)) && isAbrupt(kValue)) return kValue;
-                        var mappedValue = Call(callback, T, [kValue, k, O]);
+                        var mappedValue = callInternalSlot("Call", callback, T, [kValue, k, O]);
                         if ((mappedValue = ifAbrupt(mappedValue)) && isAbrupt(mappedValue)) return mappedValue;
                         A.DefineOwnProperty(Pk, {
                             value: mappedValue,
@@ -22292,7 +22292,7 @@ define("lib/runtime", ["lib/parser", "lib/api", "lib/slower-static-semantics"], 
 
         if (!code) return withError("Type", "function has no code property");
 
-        var callerContext = cx;
+        var callerContext = getContext();
 
         var calleeContext = newContext();
 
