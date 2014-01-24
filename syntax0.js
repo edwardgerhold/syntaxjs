@@ -146,7 +146,7 @@ define("lib/i18n-messages", function (require, exports, module) {
 
 });
 
-define("lib/some-lex-and-parse-tables", function (require, exports, module) {
+define("lib/tables", function (require, exports, module) {
 
     "use strict";
 
@@ -1358,7 +1358,7 @@ define("lib/some-lex-and-parse-tables", function (require, exports, module) {
     // return tables;
 });
 
-define("lib/standalone-tokenizer", ["lib/some-lex-and-parse-tables"], function (tables) {
+define("lib/tokenizer", ["lib/tables"], function (tables) {
 
     "use strict";
 
@@ -2020,7 +2020,7 @@ define("lib/standalone-tokenizer", ["lib/some-lex-and-parse-tables"], function (
     return tokenize;
 });
 
-define("lib/crocks-pratt-parser", ["lib/some-lex-and-parse-tables", "lib/standalone-tokenizer"], function (tables, tokenize) {
+define("lib/crocks-pratt-parser", ["lib/tables", "lib/tokenizer"], function (tables, tokenize) {
     "use strict";
 
     function makeCustomToken(foreign_token) {
@@ -3439,7 +3439,7 @@ define("lib/slower-static-semantics", function (require, exports, modules) {
 ############################################################################################################################################################################################################
 */
 
-define("lib/parser", ["lib/some-lex-and-parse-tables", "lib/standalone-tokenizer"], function (tables, tokenize) {
+define("lib/parser", ["lib/tables", "lib/tokenizer"], function (tables, tokenize) {
 
     "use strict";
 
@@ -12692,7 +12692,7 @@ define("lib/api", function (require, exports, module) {
         return [V];
     }
 
-    var HexDigits = require("lib/some-lex-and-parse-tables").HexDigits; // CAUTION: require
+    var HexDigits = require("lib/tables").HexDigits; // CAUTION: require
 
     function Decode(string, reservedSet) {
         var strLen = string.length;
@@ -12883,21 +12883,27 @@ define("lib/api", function (require, exports, module) {
     // Create Builtin (Intrinsic Module)
     // ===========================================================================================================
 
-    function CreateBuiltinFunction(builtInFunction, len, name) {
+    function CreateBuiltinFunction(steps, len, name) {
         
         var tmp;
         var realm = getRealm();
         var F = OrdinaryFunction();
 
-        setInternalSlot(F, "Call", function Call() {
+        // this is probably unneccessary, coz all builtins have no access to the environments anyways
+        // because they are plain javascript functions
+        function Call() {
             var result;
             var cx = new ExecutionContext(getLexEnv(), realm, interAMD);
-            getStack().push(cx);
-            result = builtInFunction.apply(this, arguments);
-            cx = getStack().pop();
+            var stack = getStack();
+            stack.push(cx);
+            result = steps.apply(this, arguments);
+            Assert(cx === stack.pop(), "CreateBuiltinFunction: Wrong Context popped from the Stack.");
             return result;
-        });
-
+        }
+        // the .steps reference is needed by function.prototype.toString to put out the right function
+        Call.steps = steps;
+        
+        setInternalSlot(F, "Call", Call);
         setInternalSlot(F, "Code", undefined);
         setInternalSlot(F, "Construct", undefined);
         setInternalSlot(F, "FormalParameters", undefined);
@@ -12912,9 +12918,8 @@ define("lib/api", function (require, exports, module) {
             tmp = name;
             name = len;
             len = tmp;
-        }
-     
-        if (typeof name !== "string") name = builtInFunction.name;
+        }     
+        if (typeof name !== "string") name = steps.name;
         if (name) SetFunctionName(F, name);
         if (typeof len !== "number") len = 0;
         setFunctionLength(F, len);
@@ -18076,6 +18081,35 @@ define("lib/api", function (require, exports, module) {
                 return O;
             };
 
+        // B.2.2.1  Object.prototype.__proto__
+
+            var ObjectPrototype_get_proto = function (thisArg, argList) {
+                var O = ToObject(thisArg);
+                if ((O=ifAbrupt(O)) && isAbrupt(O)) return O;
+                return callInternalSlot("GetPrototypeOf", O);
+            };
+            var ObjectPrototype_set_proto = function (thisArg, argList) {
+                var proto = argList[0];
+                var O = CheckObjectCoercible(thisArg);
+                if ((O=ifAbrupt(O)) && isAbrupt(O)) return O;
+                var protoType = Type(proto);
+                if (protoType !== "object" && protoType !== null) return proto;
+                if (Type(O) !== "object") return proto;
+                var status = callInternalSlot("SetPrototypeOf", O, proto);
+                if ((status=ifAbrupt(status)) && isAbrupt(status)) return status;
+                if (status === false) return withError("Type", "__proto__: SetPrototypeOf failed.");
+                return proto;
+            };
+            var ObjectPrototype_proto_ = {
+                __proto__:null,
+                configurable: true,
+                enumerable: false,
+                get: CreateBuiltinFunction(ObjectPrototype_get_proto, "get __proto__", 0),
+                set: CreateBuiltinFunction(ObjectPrototype_set_proto, "set __proto___", 0)
+            };
+            DefineOwnProperty(ObjectPrototype, "__proto__", ObjectPrototype_proto_)
+
+
         LazyDefineBuiltinFunction(ObjectPrototype, $$create, 0, ObjectPrototype_propertyIsEnumerable);
         LazyDefineBuiltinFunction(ObjectPrototype, "hasOwnProperty", 0, ObjectPrototype_hasOwnProperty);
         LazyDefineBuiltinFunction(ObjectPrototype, "isPrototypeOf", 0, ObjectPrototype_isPrototypeOf);
@@ -18556,9 +18590,16 @@ define("lib/api", function (require, exports, module) {
             C = getInternalSlot(F, "Code");
             var kind = getInternalSlot(F, "FunctionKind");
             var star = kind === "generator" ? "*" : "";
-            if (!C && getInternalSlot(F, "Call")) {
+            var callfn;
+            if (!C && (callfn=getInternalSlot(F, "Call"))) {
                 var code = "[[native Code]]\r\n";
-                code += F.Call.toString();
+
+                // createbuiltin wraps the builtin
+                if (callfn.steps) callfn = callfn.steps; 
+                // setinternalslot call has no wrapper
+                // this requires a double check here
+
+                code += callfn.toString(); 
                 return code;
             }
             var paramString, bodyString;
@@ -23435,6 +23476,10 @@ define("lib/runtime", ["lib/parser", "lib/api", "lib/slower-static-semantics"], 
                     // init
                     propName = typeof key === "string" ? key : key.name || key.value;
                 }
+
+                if (!isComputed && propName === "__proto__") {
+
+                }
                 
                 if (node.type === "FunctionDeclaration") {
                     status = defineFunctionOnObject(node, newObj, propName);
@@ -25363,7 +25408,7 @@ define("lib/runtime", ["lib/parser", "lib/api", "lib/slower-static-semantics"], 
 // Highlight (UI Independent Function translating JS into a string of spans)
 // *******************************************************************************************************************************
 
-define("lib/syntaxerror-highlight", ["lib/some-lex-and-parse-tables", "lib/standalone-tokenizer"], function (tables, tokenize) {
+define("lib/syntaxerror-highlight", ["lib/tables", "lib/tokenizer"], function (tables, tokenize) {
 
     "use strict";
 
@@ -25478,7 +25523,7 @@ define("lib/syntaxerror-highlight", ["lib/some-lex-and-parse-tables", "lib/stand
 /* ** Syntax-Highlighter Komponente ************************************************************************************************************************************************************************* */
 if (typeof process === "undefined" && typeof window !== "undefined")
 
-    define("lib/syntaxerror-highlight-gui", ["lib/some-lex-and-parse-tables", "lib/standalone-tokenizer", "lib/parser", "lib/runtime", "lib/builder", "heap", "lib/syntaxerror-highlight"],
+    define("lib/syntaxerror-highlight-gui", ["lib/tables", "lib/tokenizer", "lib/parser", "lib/runtime", "lib/builder", "heap", "lib/syntaxerror-highlight"],
         function (tables, tokenize, parse, Evaluate, builder, heap, highlight) {
 
             "use strict";
@@ -26813,12 +26858,13 @@ define("lib/syntaxjs-worker", function (require, exports, module) {
 define("lib/syntaxjs", function () {
     "use strict";
     
-    var VERSION = "0.0.14-beta";
+    var VERSION = "0.0.2014";
 
     function pdmacro(v) {
         return {
-            value: v,
             configurable: false,
+            enumerable: true,
+            value: v,
             writable: false
         };
     }
@@ -26827,7 +26873,7 @@ define("lib/syntaxjs", function () {
     var syntaxerror = Object.create(null);
     var syntaxerror_public_api_readonly = {
 	version: pdmacro(VERSION),
-        tokenize: pdmacro(require("lib/standalone-tokenizer")),
+        tokenize: pdmacro(require("lib/tokenizer")),
         createAst: pdmacro(require("lib/parser")),
         toValue: pdmacro(require("lib/runtime")),
         createRealm: pdmacro(require("lib/api").createRealm),
