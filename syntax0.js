@@ -10637,22 +10637,6 @@ define("lib/api", function (require, exports, module) {
     // **Create Functions (ObjectCreate, ProxyCreate, PromiseCreate)
     //
 
-    function RegExpCreate(re, m) {
-        var R;
-        var C = getIntrinsic("%RegExp%")
-        var creator = Get(C, $$create);
-        var proto = GetPrototypeFromConstructor(C, "%RegExpPrototype%");
-        if (creator) {
-            R = creator();
-        } else {
-            R = OrdinaryCreateFromConstructor(getIntrinsic("%RegExp%"), proto);
-        }
-        debug("calling regexp parser");
-        var pattern = parseRegExp(re);
-        R.RegExpMatcher = pattern;
-        return R;
-
-    }
 
     function ObjectCreate(proto, internalDataList) {
         if (proto === undefined) proto = Get(getIntrinsics(), "%ObjectPrototype%");
@@ -11779,7 +11763,8 @@ define("lib/api", function (require, exports, module) {
     // ===========================================================================================================
 
     function stringifyErrorStack(type, message) {
-        var len = interAMD.stack.length || 0;
+        var callStack = getStack();
+        var len = callStack.length || 0;
         var frame = getContext();
         var start = 0;
         var pos;
@@ -11788,27 +11773,24 @@ define("lib/api", function (require, exports, module) {
         var stackTraceLimit = interAMD.stackTraceLimit;
         var url = interAMD.scriptLocation;
         var fn, clr;
-        if (type && message) {
-            stack = "[" + type + "]: " + message + "\r\n";
-        }
+        
+        if (type === undefined) type = "";
+        if (message === undefined) message = "";
+        if (type) stack = "["+type+"]: ";
+        else stack = "";
+        stack += message;
+        stack += "\r\n";
+        
         if (len > stackTraceLimit) start = len - stackTraceLimit;
         for (pos = len - 1; pos >= start; pos--) {
-            if (frame = interAMD.stack[pos]) {
-                var node = frame.node;
-                var typ = node && node.type;
-                //var loc = frame.loc;
+            if (frame = callStack[pos]) {
+                var node = frame.state.node;
+                var ntype = node && node.type;
                 line = frame.line;
                 column = frame.column;
-                /*if (loc) {
-                    line = loc.start.line;
-                    column = loc.start.column;
-                } else {
-                    line = "??";
-                    column = "??"
-                } */
                 fn = frame.state.callee;
                 clr = frame.state.caller;
-                stack += fn + " (" + typ + ")  at line " + line + ", column " + column + " ";
+                stack += fn + " (" + ntype + ")  at line " + line + ", column " + column + " ";
                 if (clr) stack += "[called from " + clr + "]";
                 stack += "\r\n";
             }
@@ -11823,22 +11805,15 @@ define("lib/api", function (require, exports, module) {
     // This Function returns the Errors, say the spec says "Throw a TypeError", then return withError("Type", message);
 
     function withError(type, message) {
-        //var ex = interAMD.ErrorConstructor.Construct([message]);
         var id = type + "Error";
+        //var intrName = "%" + id + "%";
+        //var ex = OrdinaryConstruct(getIntrinsic(intrName), [message]);
         var ctorName = id + "Constructor";
-        //console.log(ctorName);
-        //console.dir(interAMD[ctorName]);
         var ex = OrdinaryConstruct(interAMD[ctorName], [message]);
-        setInternalSlot(ex, "ErrorData", id);
-        CreateDataProperty(ex, "type", id);
-        CreateDataProperty(ex, "name", id);
-        CreateDataProperty(ex, "message", message);
         var stack = stringifyErrorStack(id, message);
-        CreateDataProperty(ex, "stack", stack);
-        
-        ex.toString = function () {
-            return "[object " + type + "Error]"
-        };
+
+        CreateDataProperty(ex, "stack", stack);      
+
         return Completion("throw", ex, "");
     }
 
@@ -11847,11 +11822,11 @@ define("lib/api", function (require, exports, module) {
     // ===========================================================================================================
 
     function generatorCallbackWrong(generator, body) {
-        var result = exports.ResumableEvaluation(body);
+        //var result = exports.ResumableEvaluation(body);
 
-        //   var result = exports.Evaluate(body);
+        var result = exports.Evaluate(body);
         if ((result = ifAbrupt(result)) && isAbrupt(result)) return result;
-        //if (IteratorComplete(result)) {
+        // if (IteratorComplete(result)) {
         if ((result = ifAbrupt(result)) && isAbrupt(result) && result.type === "return") {
             Assert(isAbrupt(result) && result.type === "return", "expecting abrupt return completion");
             setInternalSlot(generator, "GeneratorState", "completed");
@@ -13151,7 +13126,7 @@ define("lib/api", function (require, exports, module) {
     exports.CreateListFromArrayLike = CreateListFromArrayLike;
     exports.TestIntegrityLevel = TestIntegrityLevel;
     exports.SetIntegrityLevel = SetIntegrityLevel;
-    exports.RegExpCreate = RegExpCreate;
+    
     exports.CheckObjectCoercible = CheckObjectCoercible;
     exports.HasProperty = HasProperty;
     exports.GetMethod = GetMethod;
@@ -15962,7 +15937,7 @@ define("lib/api", function (require, exports, module) {
         setInternalSlot(StringConstructor, "Call", function Call(thisArg, argList) {
             var O = thisArg;
             var s;
-            if (!arguments.length) s = "";
+            if (!argList.length) s = "";
             else s = ToString(argList[0]);
             if ((s = ifAbrupt(s)) && isAbrupt(s)) return s;
             if (Type(O) === "object" && hasInternalSlot(O, "StringData") && getInternalSlot(O, "StringData") === undefined) {
@@ -16654,19 +16629,22 @@ define("lib/api", function (require, exports, module) {
         MakeConstructor(ErrorConstructor, true, ErrorPrototype);
         LazyDefineBuiltinConstant(ErrorConstructor, "prototype", ErrorPrototype);
         LazyDefineBuiltinConstant(ErrorPrototype, "constructor", ErrorConstructor);
-        
+        SetFunctionName(ErrorConstructor, "Error");
+
         setInternalSlot(ErrorConstructor, "Call", function (thisArg, argList) {
             var func = ErrorConstructor;
             var message = argList[0];
             var O = thisArg;
             var isObject = Type(O) === "object";
+                // This is different from the others in the spec
             if (!isObject || (isObject &&
-                (!hasInternalSlot(O, "ErrorData") || (getInternalSlot(O, "ErrorData") !== undefined)))) {
+                (!hasInternalSlot(O, "ErrorData") || (getInternalSlot(O, "ErrorData") === undefined)))) {
                 O = OrdinaryCreateFromConstructor(func, "%ErrorPrototype%", {
                     "ErrorData": undefined
                 });
                 if ((O = ifAbrupt(O)) && isAbrupt(O)) return O;
             }
+                // or i read it wrong
             Assert(Type(O) === "object");
             setInternalSlot(O, "ErrorData", "Error");
             if (message !== undefined) {
@@ -16681,6 +16659,10 @@ define("lib/api", function (require, exports, module) {
                 var status = DefineOwnPropertyOrThrow(O, "message", msgDesc);
                 if (isAbrupt(status)) return status;
             }
+
+            CreateDataProperty(O, "stack", stringifyErrorStack());
+
+            setInternalSlot(O, "toString", function () { return "[object Error]"; })
             return O;
         });
 
@@ -16694,7 +16676,7 @@ define("lib/api", function (require, exports, module) {
             value: CreateBuiltinFunction(function (thisArg, argList) {
                 var F = thisArg;
                 var obj = OrdinaryCreateFromConstructor(F, "%ErrorPrototype%", {
-                    "ErrorData": true
+                    "ErrorData": undefined
                 });
                 return obj;
             }),
@@ -16729,7 +16711,7 @@ define("lib/api", function (require, exports, module) {
         function createNativeError(nativeType, ctor, proto) {
             var name = nativeType + "Error";
             var intrProtoName = "%" + nativeType + "ErrorPrototype%"
-
+            SetFunctionName(ctor, name);
             setInternalSlot(ctor, "Call", function (thisArg, argList) {
                 var func = this;
                 var O = thisArg;
@@ -16741,7 +16723,7 @@ define("lib/api", function (require, exports, module) {
                     O = ifAbrupt(O);
                 }
                 if (Type(O) !== "object") return withError("Assert: NativeError: O is an object: failed");
-                setInternalSlot(O, "ErrorData", nativeType + "Error");
+                setInternalSlot(O, "ErrorData", name);
                 if (message !== undefined) {
                     var msg = ToString(message);
                     var msgDesc = {
@@ -16753,10 +16735,13 @@ define("lib/api", function (require, exports, module) {
                     var status = DefineOwnPropertyOrThrow(O, "message", msgDesc);
                     if (isAbrupt(status)) return status;
                 }
+                CreateDataProperty(O, "stack", stringifyErrorStack())
+                // interne representation
                 setInternalSlot(O, "toString", function () {
                     return "[object "+name+"]";
                 });
                 return O;
+
             });
 
             setInternalSlot(ctor, "Construct", function (thisArg, argList) {
@@ -16781,10 +16766,11 @@ define("lib/api", function (require, exports, module) {
                 configurable: false,
                 writable: false
             });
+
             LazyDefineBuiltinConstant(ctor, "prototype", proto);
             LazyDefineBuiltinConstant(proto, "constructor", ctor);
             LazyDefineBuiltinConstant(proto, "name", name);
-            CreateDataProperty(proto, "message", "");
+            LazyDefineBuiltinConstant(proto, "message", "");
             MakeConstructor(ctor, false, proto);
         }
 
@@ -19731,22 +19717,25 @@ define("lib/api", function (require, exports, module) {
         // ===========================================================================================================
 
         MakeConstructor(RegExpConstructor, true, RegExpPrototype);
-        RegExpConstructor.Call = function (thisArg, argList) {
 
-        };
-        RegExpConstructor.Construct = function (argList) {
-            var O = ObjectCreate(RegExpPrototype);
-            this.Call(argList);
-            return O;
-
+        var RegExp_$$create = function (thisArg, argList) {
+            return RegExpAlloc(F);
         };
 
-        var regExpTest = OrdinaryFunction();
-        regExpTest.Call = function (thisArg, argList) {
-            var what = argList[0];
+        var RegExp_Call = function (thisArg, argList) {
+
         };
 
-        CreateDataProperty(RegExpPrototype, "test", regExpTest);
+        var RegExp_Construct = function (thisArg, argList) {
+
+        };
+
+        setInternalSlot(RegExpConstructor, "Call", RegExp_Call);
+        setInternalSlot(RegExpConstructor, "Construct", RegExp_Construct);
+
+        LazyDefineBuiltinConstant(RegExpConstructor, $$isRegExp, true);
+        LazyDefineBuiltinFunction(RegExpConstructor, $$create, 1, RegExp_$$create);
+
 
         // ===========================================================================================================
         // set Timeout
@@ -21275,15 +21264,14 @@ define("lib/api", function (require, exports, module) {
                 writable: false,
                 configurable: false
             });
+
             DefineOwnProperty(globalThis, "load", GetOwnProperty(intrinsics, "%LoadFunction%"));
             DefineOwnProperty(globalThis, "request", GetOwnProperty(intrinsics, "%RequestFunction%"));
-
             DefineOwnProperty(globalThis, "console", GetOwnProperty(intrinsics, "%Console%"));
-
             DefineOwnProperty(globalThis, "Realm", GetOwnProperty(intrinsics, "%Realm%"));
             DefineOwnProperty(globalThis, "Loader", GetOwnProperty(intrinsics, "%Loader%"));
             DefineOwnProperty(globalThis, "Module", GetOwnProperty(intrinsics, "%Module%"));
-
+            DefineOwnProperty(globalThis, "RegExp", GetOwnProperty(intrinsics, "%RegExp%"));
             DefineOwnProperty(globalThis, "ArrayBuffer", GetOwnProperty(intrinsics, "%ArrayBuffer%"));
             DefineOwnProperty(globalThis, "DataView", GetOwnProperty(intrinsics, "%DataView%"));
             DefineOwnProperty(globalThis, "Int8Array", GetOwnProperty(intrinsics, "%Int8Array%"));
@@ -21425,10 +21413,6 @@ define("lib/api", function (require, exports, module) {
         require("lib/runtime").setInterAMD(s);
     }
 
-    //
-    // ----- probably movable to "lib/api" module which cares for storing the suspended realm.
-    //
-
     function createRealm(options) {
         options = options || {}; // { createOnly: true, don´t set to current realm }
 
@@ -21470,6 +21454,7 @@ define("lib/api", function (require, exports, module) {
         }
         
         realm.toString = function () { return "[object Realm]"; }
+        
         realm.toValue = function (code) {
             saveInterAMD();
             setInterAMD(interAMD);
@@ -21524,12 +21509,33 @@ define("lib/runtime", ["lib/parser", "lib/api", "lib/slower-static-semantics"], 
         if (!isWorker) console.dir.apply(console, arguments);
     }
 
+
+/*
+    The interfaces for refactoring the runtime for the Bytecode
+*/
+
+    
+    function getCode(code, field) {
+        return code[field];
+    }
+
+
+
+    function isCodeType(code, type) {
+        return code.type === type;
+    }
+
+
+/*
+    
+*/
+
+
     //
     // Code REALM requiren
     // 
 
     var createRealm = ecma.createRealm;
-
     var writePropertyDescriptor = ecma.writePropertyDescriptor;
 
     // 
@@ -21656,7 +21662,7 @@ define("lib/runtime", ["lib/parser", "lib/api", "lib/slower-static-semantics"], 
     var GeneratorStart = ecma.GeneratorStart;
     var GeneratorYield = ecma.GeneratorYield;
     var GeneratorResume = ecma.GeneratorResume;
-    var RegExpCreate = ecma.RegExpCreate;
+    
     var CreateEmptyIterator = CreateEmptyIterator;
     var ToBoolean = ecma.ToBoolean;
     var ToString = ecma.ToString;
@@ -22019,8 +22025,8 @@ define("lib/runtime", ["lib/parser", "lib/api", "lib/slower-static-semantics"], 
     function InstantiateFunctionObject(node, env) {
 
         var F;
-        var params = node.params;
-        var body = node.body;
+        var params = getCode(node, "params");
+        var body = getCode(node, "body");
         var generator = node.generator;
 
         var strict = cx.strict || node.strict;
@@ -22140,19 +22146,12 @@ define("lib/runtime", ["lib/parser", "lib/api", "lib/slower-static-semantics"], 
             }
         }
 
-//console.log("argList: " + argList.join());
-
         var ao = InstantiateArgumentsObject(argList);
 
-//console.log("nach arguments instantiate")
 
-        if (isAbrupt(ao)) return ao;
+        if ((ao = ifAbrupt(ao)) && isAbrupt(ao)) return ao;
         var formalStatus = BindingInitialisation(formals, ao, undefined);
 
-//console.log("nach binding init")
-
-        //var formalStatus = BindingInitialisation(formals, ao, env);
-        //if (isAbrupt(formalStatus)) return formalStatus;
         if (argumentsObjectNeeded) {
             
             if (strict) {
@@ -22184,11 +22183,9 @@ define("lib/runtime", ["lib/parser", "lib/api", "lib/slower-static-semantics"], 
         var val;
 
 
-
         while (indx >= 0) {
             val = args[indx];
-            writePropertyDescriptor(
-            /*callInternalSlot("DefineOwnProperty", */obj, ToString(indx), {
+            callInternalSlot("DefineOwnProperty", obj, ToString(indx), {
                 value: val,
                 writable: true,
                 enumerable: true,
@@ -22230,6 +22227,7 @@ define("lib/runtime", ["lib/parser", "lib/api", "lib/slower-static-semantics"], 
                 param = formals[indx];
 
                 if (IsBindingPattern[param.type]) { // extra hack ?
+                    
                     var elem;
                     for (var x = 0, y = param.elements.length; x < y; x++) {
                         elem = param.elements[i];
@@ -22255,8 +22253,6 @@ define("lib/runtime", ["lib/parser", "lib/api", "lib/slower-static-semantics"], 
                         name = param.id;
                     } else name = "";
 
-                    
-//    console.log("got name " + name);
                     
                     if (name && !mappedNames[name]) {
                         mappedNames[name] = true;
@@ -22505,17 +22501,19 @@ define("lib/runtime", ["lib/parser", "lib/api", "lib/slower-static-semantics"], 
     evaluation.ThrowStatement = ThrowStatement;
 
     function ThrowStatement(node) {
-        var expr = node.argument;
+        var expr = getCode(node, "argument");
+        
         var exprRef = Evaluate(expr);
         if (isAbrupt(exprRef)) return exprRef;
         var exprValue = GetValue(exprRef);
+
         return Completion("throw", exprValue, empty);
     }
 
     evaluation.ReturnStatement = ReturnStatement;
 
     function ReturnStatement(node) {
-        var expr = node.argument;
+        var expr = getCode(node, "argument");
         var exprRef = Evaluate(expr);
         if (isAbrupt(exprRef)) return exprRef;
         var exprValue = GetValue(exprRef);
@@ -22529,22 +22527,12 @@ define("lib/runtime", ["lib/parser", "lib/api", "lib/slower-static-semantics"], 
     function YieldExpression(node, completion) {
 
         var parent = node.parent;
-        var expression = node.argument;
+        var expression = getCode(node, "argument");
         var delegator = node.delegator;
 
         if (!expression) {
             return GeneratorYield(CreateItrResultObject(undefined, false));
         }
-
-        /*
-			Wo soll ich den Zustand des Generators hier als Unterbrochen markieren?
-			Die Evaluierung des Generators muss bei dem Yield dann unterbrochen werden.
-			
-			cx.pauseGenerator = true;
-		
-		*/
-
-        cx.pauseGenerator = true;
 
         var exprRef = Evaluate(expression);
         var value = GetValue(exprRef);
@@ -22685,8 +22673,8 @@ define("lib/runtime", ["lib/parser", "lib/api", "lib/slower-static-semantics"], 
     function GeneratorDeclaration(node) {
         "use strict";
 
-        var params = node.params;
-        var body = node.body;
+        var params = getCode(node, "params");
+        var body = getCode(node, "body");
         var id = node.id;
         var gproto = Get(getIntrinsics(), "%GeneratorPrototype%");
         var scope = getLexEnv();
@@ -22718,8 +22706,8 @@ define("lib/runtime", ["lib/parser", "lib/api", "lib/slower-static-semantics"], 
         "use strict";
         var F;
         var scope = getLexEnv();
-        var body = node.body;
-        var params = node.params;
+        var body = getCode(node, "body");
+        var params = getCode(node, "params");
         var strict = true;
         F = FunctionCreate("arrow", params, body, scope, strict);
         F.ThisMode = "lexical";
@@ -22735,8 +22723,8 @@ define("lib/runtime", ["lib/parser", "lib/api", "lib/slower-static-semantics"], 
         var F;
         var id = node.id;
         var expr = node.expression;
-        var params = node.params;
-        var body = node.body;
+        var params = getCode(node, "params");
+        var body = getCode(node, "body");
         var scope;
         var strict = cx.strict || node.strict;
         if (expr || objectdecl) {
@@ -22875,7 +22863,7 @@ define("lib/runtime", ["lib/parser", "lib/api", "lib/slower-static-semantics"], 
         var decl, decl2, init, arr, initialiser, status, env;
 
         // console.log("decl for "+node.type);
-        var env = node.type === "VariableDeclaration" ? (node.kind === "var" ? getVarEnv() : getLexEnv()) : getLexEnv();
+        var env = isCodeType("VariableDeclaration") ? (node.kind === "var" ? getVarEnv() : getLexEnv()) : getLexEnv();
         var i, j, p, q, type
 
         var name;
@@ -23435,6 +23423,7 @@ define("lib/runtime", ["lib/parser", "lib/api", "lib/slower-static-semantics"], 
                 pad = element.width;
                 //Put(array, "length", pad, false);
 
+
                 array.Bindings["length"] = {
                     value: pad,
                     writable: true,
@@ -23463,8 +23452,8 @@ define("lib/runtime", ["lib/parser", "lib/api", "lib/slower-static-semantics"], 
     function defineFunctionOnObject (node, newObj, propName) {
             
             var scope = getLexEnv();
-            var body = node.body;
-            var formals = node.params;
+            var body = getCode(node, "body");
+            var formals = getCode(node, "params");
             var strict = cx.strict || node.strict;
             var fproto = Get(getIntrinsics(), "%FunctionPrototype%");
             var id = node.id;
@@ -23502,8 +23491,8 @@ define("lib/runtime", ["lib/parser", "lib/api", "lib/slower-static-semantics"], 
     function defineGetterOrSetterOnObject (node, newObj, propName, kind) {
                 
             var scope = getLexEnv();
-            var body = node.body;
-            var formals = node.params;
+            var body = getCode(node, "body");
+            var formals = getCode(node, "params");
             var functionPrototype = getIntrinsic("%FunctionPrototype%");
             var strict = node.strict;
             var methodName;
@@ -23579,7 +23568,7 @@ define("lib/runtime", ["lib/parser", "lib/api", "lib/slower-static-semantics"], 
 
                 }
                 
-                if (node.type === "FunctionDeclaration") {
+                if (isCodeType("FunctionDeclaration")) {
                     status = defineFunctionOnObject(node, newObj, propName);
                     if (isAbrupt(status)) return status;
                 } else {
@@ -23698,7 +23687,7 @@ define("lib/runtime", ["lib/parser", "lib/api", "lib/slower-static-semantics"], 
             if (Type(array) !== "object") return withError("Type", "can not desctructure a non-object into some object");
             var width;
             var index = 0;
-            var len = Get(array, "length");
+                var len = Get(array, "length");
             var status;
 
             for (i = 0, j = leftElems.length; i < j; i++) {
@@ -23891,7 +23880,7 @@ define("lib/runtime", ["lib/parser", "lib/api", "lib/slower-static-semantics"], 
         var isPrefixOperation = node.prefix;
         var oldValue, newValue, val;
         var op = node.operator;
-        var argument = node.argument;
+        var argument = getCode(node, "argument");
 
         var exprRef = Evaluate(argument);
         if ((exprRef = ifAbrupt(exprRef)) && isAbrupt(exprRef)) return exprRef;
@@ -24067,7 +24056,9 @@ define("lib/runtime", ["lib/parser", "lib/api", "lib/slower-static-semantics"], 
         var result;
         switch (op) {
         case "of":
-            result = "it is a question if of is a shortcut for an iter";
+            debug("doing the impossible");
+            var value = Invoke(ToObject(rval), "valueOf");
+            result = SameValue(rval, lval);
             return result;
         case "in":
             result = HasProperty(rval, ToPropertyKey(lval));
@@ -24192,7 +24183,7 @@ define("lib/runtime", ["lib/parser", "lib/api", "lib/slower-static-semantics"], 
     evaluation.BlockStatement = BlockStatement;
 
     function BlockStatement(node) {
-        var stmtList = node.body;
+        var stmtList = getCode(node, "body");
 
         var oldEnv = getLexEnv();
         var blockEnv = NewDeclarativeEnvironment(oldEnv);
@@ -24242,7 +24233,7 @@ define("lib/runtime", ["lib/parser", "lib/api", "lib/slower-static-semantics"], 
 
     function WhileStatement(node, labelSet) {
         var test = node.test;
-        var body = node.body;
+        var body = getCode(node, "body");
         var exprRef, exprValue;
         var V, stmt;
         labelSet = labelSet || cx.labelSet || Object.create(null);
@@ -24270,7 +24261,7 @@ define("lib/runtime", ["lib/parser", "lib/api", "lib/slower-static-semantics"], 
     function DoWhileStatement(node, labelSet) {
 
         var test = node.test;
-        var body = node.body;
+        var body = getCode(node, "body");
         var exprRef, exprValue;
         var V, stmt;
         labelSet = labelSet || cx.labelSet || Object.create(null);
@@ -24404,7 +24395,7 @@ define("lib/runtime", ["lib/parser", "lib/api", "lib/slower-static-semantics"], 
     function ForInStatement(node, labelSet) {
         var left = node.left;
         var right = node.right;
-        var body = node.body;
+        var body = getCode(node, "body");
         var tleft = left.type;
         var tright = right.type;
 
@@ -24427,7 +24418,7 @@ define("lib/runtime", ["lib/parser", "lib/api", "lib/slower-static-semantics"], 
         "use strict";
         var left = node.left;
         var right = node.right;
-        var body = node.body;
+        var body = getCode(node, "body");
         var tleft = left.type;
         var tright = right.type;
 
@@ -24454,7 +24445,7 @@ define("lib/runtime", ["lib/parser", "lib/api", "lib/slower-static-semantics"], 
         var fn = evaluation[type];
         if (fn) result = fn(node, labelSet);
         else throw SyntaxError("can not evaluate " + type);
-        return result;
+        return NormalCompletion(result);
     }
 
     evaluation.LabelledStatement = LabelledStatement;
@@ -24496,7 +24487,7 @@ define("lib/runtime", ["lib/parser", "lib/api", "lib/slower-static-semantics"], 
         var initExpr = node.init;
         var testExpr = node.test;
         var incrExpr = node.update;
-        var body = node.body;
+        var body = getCode(node, "body");
         var exprRef, exprValue;
         var varDcl, isConst, dn, forDcl;
         var oldEnv, loopEnv, bodyResult;
@@ -24774,8 +24765,8 @@ define("lib/runtime", ["lib/parser", "lib/api", "lib/slower-static-semantics"], 
 
     function DefineMethod(node, object, functionPrototype) {
         "use strict";
-        var body = node.body;
-        var formals = node.params;
+        var body = getCode(node, "body");
+        var formals = getCode(node, "params");
         var key = node.id;
         
 
@@ -24967,7 +24958,7 @@ define("lib/runtime", ["lib/parser", "lib/api", "lib/slower-static-semantics"], 
 
     evaluation.WithStatement = WithStatement;
     function WithStatement(node) {
-        var body = node.body;
+        var body = getCode(node, "body");
         var object = GetValue(Evaluate(node.object));
         var objEnv = new ObjectEnvironment(object, cx.lexEnv);
         objEnv.withEnvironment = true;
@@ -25392,7 +25383,7 @@ define("lib/runtime", ["lib/parser", "lib/api", "lib/slower-static-semantics"], 
     }
 
     function ExecuteTheCode(source, shellModeBool, resetEnvNowBool) {
-        var exprRef, exprValue, text, type, message, stack, error;
+        var exprRef, exprValue, text, type, message, stack, error, name, callstack;
 
         var node = typeof source === "string" ? parse(source) : source;
         if (!node) throw "example: Call Evaluate(parse(source)) or Evaluate(source)";
@@ -25402,7 +25393,6 @@ define("lib/runtime", ["lib/parser", "lib/api", "lib/slower-static-semantics"], 
             initializeTheRuntime();
             NormalCompletion(undefined);
         }
-        stack = getStack();
 
         exprRef = Evaluate(node);
         if (Type(exprRef) === "reference") exprValue = GetValue(exprRef);
@@ -25415,20 +25405,19 @@ define("lib/runtime", ["lib/parser", "lib/api", "lib/slower-static-semantics"], 
 
                 if (Type(error) === "object") {
 
-                    type = Get(error, "type");
+                    name = Get(error, "name");
                     message = Get(error, "message");
-                    stack = Get(error, "stack");
+                    callstack = Get(error, "stack");
 
                     text = "";
-                    text += "{syntaxerror.js throws}:\r\n";
-                    text += "[" + type + "]: ";
-                    text += message + "\n";
-                    text += "{exc.stack}: " + stack + "\r\n";
+                    text += "An exception has been thrown!\r\n";
+                    text += "exception.name: "+ name + "\r\n";
+                    text += "exception.message: " + message + "\n";
+                    text += "exception.stack: " + callstack + "\r\n";
                     text += "\r\n";
 
-                    var error = new Error(type);
-                    error.type = type;
-                    error.name = type;
+                    var error = new Error(name);
+                    error.name = name;
                     error.message = message;
                     error.stack = text;
 
@@ -25693,7 +25682,7 @@ if (typeof process === "undefined" && typeof window !== "undefined")
 
             var DataAttributes = {
                 "id": "data-syntaxjs",
-                "highlight": "data-syntaxerror-highlight",
+                "highlight": "data-syntaxjs-highlight",
                 "controls": "data-syntaxjs-controls",
                 "language": "data-syntaxjs-language",
                 "shell": "data-syntaxjs-shell"
@@ -25721,7 +25710,7 @@ if (typeof process === "undefined" && typeof window !== "undefined")
                 "wordcount-table": "syntaxjs-wordcount-table",
                 "minify": "syntaxjs-minify-button",
                 "tokens": "syntaxjs-tokens-button",
-                "highlight": "lib/syntaxerror-highlight-button",
+                "highlight": "syntaxjs-highlight-button",
                 "ast": "syntaxjs-ast-button",
                 "value": "syntaxjs-eval-button",
                 "source": "syntaxjs-generator-button",
@@ -25892,10 +25881,12 @@ if (typeof process === "undefined" && typeof window !== "undefined")
             // CreateFeaturing Elements
 
             var registered_annotation = false;
-            var globalControls = Duties[document.documentElement.getAttribute("data-syntaxjs-controls")];
+            var globalControlsAttribute = document.documentElement.getAttribute("data-syntaxjs-controls");
+            var globalControls = globalControlsAttribute !== undefined ? Duties[globalControlsAttribute] : false;
 
-            function highlightElements(elements, options) {
+            function highlightElements(options) {
 
+                var elements;
                 var element, rec, hl, ctrl;
                 var controls, tag, att;
                 var annotate;
@@ -25905,26 +25896,9 @@ if (typeof process === "undefined" && typeof window !== "undefined")
                 var opt;
                 var opt_rec;
 
-                if (arguments.length === 1 && typeof elements === "object") {
-                    options = elements;
-                }
 
-                if (!options) {
-
-                    options = {
-                        "PRE": {
-                            controls: true,
-                            annotate: true,
-                            syntaxerrors: true,
-                            delegate: true
-                        },
-                        "CODE": {
-                            syntaxerrors: false,
-                            controls: false,
-                            annotate: true,
-                            delegate: true
-                        }
-                    };
+                if (options === undefined) {
+                    options = defaultOptions();
                 }
 
                 if (!registered_annotation) {
@@ -25941,12 +25915,13 @@ if (typeof process === "undefined" && typeof window !== "undefined")
 
                             if (elements = document.querySelectorAll(tag)) {
 
-                                opt = options[tag];
-                                if (opt) {
-                                    controls = opt.controls !== undefined ? opt.controls : false;
-                                    syntaxerrors = opt.syntaxerrors !== undefined ? opt.syntaxerrors : true;
-                                    annotate = opt.annotate !== undefined ? opt.annotate : true;
-                                    delegate = opt.delegate !== undefined ? opt.delegate : true;
+                                opts = options[tag];
+
+                                if (opts) {
+                                    controls =  opts.controls !== undefined ? opts.controls : false;
+                                    syntaxerrors = opts.syntaxerrors !== undefined ? opts.syntaxerrors : true;
+                                    annotate =  opts.annotate !== undefined ? opts.annotate : true;
+                                    delegate =  opts.delegate !== undefined ? opts.delegate : true;
                                 } else {
                                     syntaxerrors = annotate = delegate = true;
                                     controls = false;
@@ -25957,7 +25932,7 @@ if (typeof process === "undefined" && typeof window !== "undefined")
                                     if (element = elements[a]) {
 
                                         name = element.tagName;
-                                        att1 = element.getAttribute("data-syntaxerror-highlight");
+                                        att1 = element.getAttribute("data-syntaxjs-highlight");
                                         att2 = element.getAttribute("data-syntaxjs-controls");
 
                                         hl = true;
@@ -25966,36 +25941,28 @@ if (typeof process === "undefined" && typeof window !== "undefined")
 
                                         if (!globalControls) ctrl = false;
                                         else ctrl = true;
+
                                         if (Duties[att2]) ctrl = true;
                                         else if (OffDuties[att2]) ctrl = false;
 
-                                        rec = createRecord(element, opt);
+                                        rec = createRecord(element, opts);
                                         if (controls && ctrl) createFeaturingElements(rec, options);
 
                                         if (hl) highlight(null, null, rec);
                                         rec = null;
                                     }
                                 }
-
                             }
                         }
-
                     }
-
                 }
-            }
-
-            var setImmediate = window.setImmediate;
-            if (typeof setImmediate !== "function") {
-                setImmediate = function (cb) {
-                    return setTimeout(cb, 0);
-                };
             }
 
             // live Editor -
             // the first bug i got to was when replacing innerHTML with the highlighted text
+
             function createFeaturingElements(rec) {
-                setImmediate(function () {
+                setTimeout(function () {
                     createWrapper(rec);
                     createNativeEvalButton(rec);
                     createOriginalTextButton(rec);
@@ -26013,6 +25980,7 @@ if (typeof process === "undefined" && typeof window !== "undefined")
                 });
                 return rec;
             }
+            
             //
             // CreateWrapper wraps the original pre with some elements,
             // to contain the buttons, console, second view, (maybe tabs soon)  and more
@@ -26599,45 +26567,39 @@ if (typeof process === "undefined" && typeof window !== "undefined")
 		Startet den Highlighter *****
 	*/
 
-            function startHighlighter() {
+            function defaultOptions() {
+                    var options = Object.create(null);
+                    options["PRE"] = {
+                            controls: true,
+                            annotate: true,
+                            syntaxerrors: true,
+                            delegate: true // das war die worker option
+                    };
+                    options["CODE"] = {
+                            syntaxerrors: false,
+                            controls: false,
+                            annotate: true,
+                            delegate: true // das war die worker option
+                    };
+                    return options;
+            }
 
+            function startHighlighterOnLoad() {
                 var script = document.querySelector("script[data-syntaxjs-config]");
                 var config;
                 if (script) config = script.getAttribute("data-syntaxjs-config");
-                if (config) {
-                    config = JSON.parse(config);
-                } else config = {
-                    "PRE": {
-                        controls: true,
-                        syntaxerrors: true,
-                        delegate: true,
-                        annotate: true
-                    },
-                    "CODE": {
-                        controls: false,
-                        syntaxerrors: false,
-                        delegate: true,
-                        annotate: true
-                    }
-                };
+
+                if (config) config = JSON.parse(config);
+                else config = defaultOptions();        
                 var onload = function (e) {
-                    // var highlightElements = require("lib/syntaxerror-highlight-gui").highlightElements;
-                    setImmediate(highlightElements.bind(syntaxjs, config));
+                    setTimeout(highlightElements.bind(syntaxjs, config));
                 };
                 addEventListener(window, "DOMContentLoaded", onload, false);
             }
 
-            /* -------------------------------- */
-
-            var nativeGlobal = typeof window !== "undefined" ? window : typeof global !== "undefined" ? global : typeof importScripts === "function" ? self : {};
-            var setImmediate = nativeGlobal.setImmediate;
-            if (typeof setImmediate !== "function") {
-                setImmediate = function (cb) {
-                    return setTimeout(cb, 0);
-                };
-            }
-
-            GUI.startHighlighter = startHighlighter;
+            /* -------------------------------- */            
+            
+            GUI.startHighlighterOnLoad = startHighlighterOnLoad;
             GUI.highlightElements = highlightElements;
             return GUI;
         });
@@ -26741,11 +26703,11 @@ define("lib/syntaxjs-tester", function (require, exports, module) {
 define("lib/syntaxjs-shell", function (require, exports) {
     
 
-    var fs, readline, rl, prefix, evaluate, startup, evaluateFile, prompt, validParens, shell;
+    var fs, readline, rl, prefix, evaluate, startup, evaluateFile, prompt, haveClosedAllParens, shell;
     
     var defaultPrefix = "es6> ";
     var multilinePrefix = "...> ";
-    var lastInput = "";
+    var inputBuffer = "";
 
     if (typeof process !== "undefined" && typeof module !== "undefined") {
 
@@ -26810,7 +26772,7 @@ define("lib/syntaxjs-shell", function (require, exports) {
             "{":"}"
         };
         
-        validParens = function (code) {
+        haveClosedAllParens = function (code) {
             var parens = [];
             for (var i = 0, j = code.length; i < j; i++) {
                 var ch = code[i];
@@ -26818,7 +26780,6 @@ define("lib/syntaxjs-shell", function (require, exports) {
                     parens.push(ch);
                 } else if (isCloseParen[ch]) {
                     if (!parens.length) throw new SyntaxError("syntaxjshell: preflight: nesting error. stack is empty but you closed some paren.");
-
                     var p = parens.pop();
                     if (!(isRightParen[p] === ch)) {
                         throw new SyntaxError("syntaxjshell: preflight: nesting error. closing paren does not match stack.");
@@ -26829,7 +26790,7 @@ define("lib/syntaxjs-shell", function (require, exports) {
         }
         
         //
-        // prompt is now called again, and the lastInput is prepending the new inputted code.
+        // prompt is now called again, and the inputBuffer is prepending the new inputted code.
         //
 
         prompt = function prompt() {
@@ -26837,7 +26798,7 @@ define("lib/syntaxjs-shell", function (require, exports) {
             rl.question(prefix, function (code) {
 
                 if (code === ".break") {
-                    lastInput = "";
+                    inputBuffer = "";
                     prefix = defaultPrefix;
                     setTimeout(prompt);
                     return;
@@ -26877,7 +26838,7 @@ define("lib/syntaxjs-shell", function (require, exports) {
 
                 if (savedInput) code = savedInput + code;
             
-                if (validParens(code)) {        
+                if (haveClosedAllParens(code)) {        
                     prefix = defaultPrefix;
                     savedInput = "";
                     evaluate(code, prompt);
@@ -26990,20 +26951,14 @@ define("lib/syntaxjs", function () {
     } else if (typeof window !== "undefined") {
         syntaxerror.system = "browser";
         syntaxerror_highlighter_api.highlightElements = pdmacro(require("lib/syntaxerror-highlight-gui").highlightElements),
-        syntaxerror_highlighter_api.startHighlighter = pdmacro(require("lib/syntaxerror-highlight-gui").startHighlighter)
+        syntaxerror_highlighter_api.startHighlighterOnLoad = pdmacro(require("lib/syntaxerror-highlight-gui").startHighlighterOnLoad)
 
     } else if (typeof process !== "undefined") {
         if (typeof exports !== "undefined") exports.syntaxjs = syntaxerror;
         syntaxerror.system = "node";
         syntaxerror.nativeRequire = nativeGlobal.require,
         syntaxerror.nativeModule = module;
-        /*
-		  if (typeof nativeGlobal.require !== "function")  nativeGlobal.require = require;
-		  if (typeof nativeGlobal.define  !== "function")  nativeGlobal.define = define;
-		  if (typeof nativeGlobal.Module  !== "function")  nativeGlobal.Module = Module;
-		*/
     }
-
     // ASSIGN properties to a SYNTAXJS object
     Object.defineProperties(syntaxerror, syntaxerror_public_api_readonly);
     Object.defineProperties(syntaxerror, syntaxerror_highlighter_api);
@@ -27017,7 +26972,7 @@ var syntaxjs = require("lib/syntaxjs");
 if (syntaxjs.system === "node") {
     if (!module.parent) syntaxjs.nodeShell();
 } else if (syntaxjs.system === "browser") {
-    syntaxjs.startHighlighter();
+    syntaxjs.startHighlighterOnLoad();
 } else if (syntaxjs.system === "worker") {
     syntaxjs.subscribeWorker();
 }
