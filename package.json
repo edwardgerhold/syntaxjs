@@ -1,4 +1,3 @@
-
 {
 
   "name": "syntaxjs",
@@ -9,24 +8,23 @@
 
   "author": {
     "name": "Edward Gerhold",
-    "email": "edward.gerhold@googlemail.com"
+    "email": "edward.gerhold@googlemail.com",
+    "homepage": "http://linux-swt.de"
   },
 
   "repository": {
     "type": "git",
-    "url": "https://github.com/edwardgerhold/syntaxjs"
+    "url": "git://github.com/edwardgerhold/syntaxjs.git"
   },
-
+ 
+  "bugs": "https://github.com/edwardgerhold/syntaxjs/issues",
+ 
   "keywords": [
     "parser",
-    "interpreter",
-    "es6",
     "highlighter",
-    "shell",
-    "codegen"
+    "interpreter",
   ],
 
   "main": "syntax0.js"
-
   
 }
