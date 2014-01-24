@@ -9179,7 +9179,7 @@ define("lib/api", function (require, exports, module) {
             debug("object env: createmutablebinding mit key: " + N);
             var O = this.BoundObject;
             var configValue = D === true ? true : false;
-            return O.DefineOwnProperty(N, {
+            return callInternalSlot("DefineOwnProperty", O,N, {
                 value: undefined,
                 writable: true,
                 enumerable: false,
@@ -9188,7 +9188,7 @@ define("lib/api", function (require, exports, module) {
         },
         CreateImmutableBinding: function (N) {
             var O = this.BoundObject;
-            return O.DefineOwnProperty(N, {
+            return callInternalSlot("DefineOwnProperty", O,N, {
                 value: undefined,
                 writable: false,
                 enumerable: false,
@@ -9878,12 +9878,12 @@ define("lib/api", function (require, exports, module) {
         if (desc == undefined) return undefined;
         if (desc.Origin) return desc.Origin;
         var obj = ObjectCreate();
-        obj.DefineOwnProperty("value", new PropertyDescriptor(desc.value, true, true, true));
-        obj.DefineOwnProperty("writable", new PropertyDescriptor(desc.writable, true, true, true));
-        obj.DefineOwnProperty("get", new PropertyDescriptor(desc.get, true, true, true));
-        obj.DefineOwnProperty("set", new PropertyDescriptor(desc.set, true, true, true));
-        obj.DefineOwnProperty("enumerable", new PropertyDescriptor(desc.enumerable, true, true, true));
-        obj.DefineOwnProperty("configurable", new PropertyDescriptor(desc.configurable, true, true, true));
+        callInternalSlot("DefineOwnProperty", obj,"value", new PropertyDescriptor(desc.value, true, true, true));
+        callInternalSlot("DefineOwnProperty", obj,"writable", new PropertyDescriptor(desc.writable, true, true, true));
+        callInternalSlot("DefineOwnProperty", obj,"get", new PropertyDescriptor(desc.get, true, true, true));
+        callInternalSlot("DefineOwnProperty", obj,"set", new PropertyDescriptor(desc.set, true, true, true));
+        callInternalSlot("DefineOwnProperty", obj,"enumerable", new PropertyDescriptor(desc.enumerable, true, true, true));
+        callInternalSlot("DefineOwnProperty", obj,"configurable", new PropertyDescriptor(desc.configurable, true, true, true));
         return obj;
     }
 
@@ -10869,13 +10869,13 @@ define("lib/api", function (require, exports, module) {
         var obj;
         if (creator) {
             if (!IsCallable(creator)) return withError("Type", "OrdinaryConstruct: creator is not callable");
-            obj = Call(creator, F, argList);
+            obj = callInternalSlot("Call", creator, F, argList);
         } else {
             obj = OrdinaryCreateFromConstructor(F, "%ObjectPrototype%");
         }
         if ((obj = ifAbrupt(obj)) && isAbrupt(obj)) return obj;
         if (Type(obj) !== "object") return withError("Type", "OrdinaryConstruct: Type(obj) is not object");
-        var result = Call(F, obj, argList);
+        var result = callInternalSlot("Call", F, obj, argList);
         if ((result = ifAbrupt(result)) && isAbrupt(result)) return result;
         if (Type(result) === "object") return result;
         return obj;
@@ -11160,7 +11160,7 @@ define("lib/api", function (require, exports, module) {
                 }
                 return result;
             } else if (IsCallable(f)) {
-                Call(f, o, argList);
+                callInternalSlot("Call", f, o, argList);
             }
         },
         Delete: function (P) {
@@ -12206,7 +12206,7 @@ define("lib/api", function (require, exports, module) {
             var trap = GetMethod(H, "getPrototypeOf");
             if ((trap = ifAbrupt(trap)) && isAbrupt(trap)) return trap;
             if (trap === undefined) return GetPrototypeOf(T);
-            var handlerProto = Call(trap, handler, [T]);
+            var handlerProto = callInternalSlot("Call", trap, handler, [T]);
             if ((handlerProto = ifAbrupt(handlerProto)) && isAbrupt(handlerProto)) return handlerProto;
             var targetProto = GetPrototypeOf(T);
             if ((targetProto = ifAbrupt(targetProto)) && isAbrupt(targetProto)) return targetProto;
@@ -12220,7 +12220,7 @@ define("lib/api", function (require, exports, module) {
             var trap = GetMethod(H, "setPrototypeOf");
             if ((trap = ifAbrupt(trap)) && isAbrupt(trap)) return trap;
             if (trap === undefined) return SetPrototypeOf(T, V);
-            var trapResult = Call(trap, H, [T, V]);
+            var trapResult = callInternalSlot("Call", trap, H, [T, V]);
             if ((trapResult = ifAbrupt(trapResult)) && isAbrupt(trapResult)) return trapResult;
             trapResult = ToBoolean(trapResult);
             var extensibleTarget = IsExtensible(T);
@@ -12238,7 +12238,7 @@ define("lib/api", function (require, exports, module) {
             var trap = GetMethod(H, "isExtensible");
             if ((trap = ifAbrupt(trap)) && isAbrupt(trap)) return trap;
             if (trap === undefined) return IsExtensible(T);
-            var trapResult = Call(trap, H, [T]);
+            var trapResult = callInternalSlot("Call", trap, H, [T]);
             if ((trapResult = ifAbrupt(trapResult)) && isAbrupt(trapResult)) return trapResult;
             trapResult = ToBoolean(trapResult);
             var booleanTrapResult = ToBoolean(trapResult);
@@ -12255,7 +12255,7 @@ define("lib/api", function (require, exports, module) {
             var trap = GetMethod(H, "preventExtensions");
             if ((trap = ifAbrupt(trap)) && isAbrupt(trap)) return trap;
             if (trap === undefined) return PreventExtensions(T);
-            var trapResult = Call(trap, H, [T]);
+            var trapResult = callInternalSlot("Call", trap, H, [T]);
             if ((trapResult = ifAbrupt(trapResult)) && isAbrupt(trapResult)) return trapResult;
             var booleanTrapResult = ToBoolean(trapResult);
             if ((booleanTrapResult = ifAbrupt(booleanTrapResult)) && isAbrupt(booleanTrapResult)) return booleanTrapResult;
@@ -12272,7 +12272,7 @@ define("lib/api", function (require, exports, module) {
             var trap = GetMethod(H, "hasOwn");
             if ((trap = ifAbrupt(trap)) && isAbrupt(trap)) return trap;
             if (trap === undefined) return HasOwnProperty(T, P);
-            var trapResult = Call(trap, H, [T, P]);
+            var trapResult = callInternalSlot("Call", trap, H, [T, P]);
             if ((trapResult = ifAbrupt(trapResult)) && isAbrupt(trapResult)) return trapResult;
             var success = ToBoolean(trapResult);
             var extensibleTarget;
@@ -12304,7 +12304,7 @@ define("lib/api", function (require, exports, module) {
             var trap = GetMethod(H, "getOwnPropertyDescriptor");
             if ((trap = ifAbrupt(trap)) && isAbrupt(trap)) return trap;
             if (trap === undefined) return GetOwnProperty(T, P);
-            var trapResultObj = Call(trap, H, [T, P]);
+            var trapResultObj = callInternalSlot("Call", trap, H, [T, P]);
             if ((trapResultObj = ifAbrupt(trapResultObj)) && isAbrupt(trapResultObj)) return trapResultObj;
             if (Type(trapResultObj) !== "object" && Type(trapResultObj) !== "undefined") return withError("Type", "getown - neither object nor undefined");
             var targetDesc = GetOwnProperty(T, P);
@@ -12338,7 +12338,7 @@ define("lib/api", function (require, exports, module) {
             var trap = GetMethod(H, "defineProperty");
             if ((trap = ifAbrupt(trap)) && isAbrupt(trap)) return trap;
             if (trap === undefined) return DefineOwnProperty(T, P, D);
-            var trapResult = Call(trap, H, [T, P, D]);
+            var trapResult = callInternalSlot("Call", trap, H, [T, P, D]);
             if ((trapResult = ifAbrupt(trapResult)) && isAbrupt(trapResult)) return trapResult;
             var targetDesc = GetOwnProperty(T, P);
             if ((targetDesc = ifAbrupt(targetDesc)) && isAbrupt(targetDesc)) return targetDesc;
@@ -12364,7 +12364,7 @@ define("lib/api", function (require, exports, module) {
             var trap = GetMethod(H, "has");
             if ((trap = ifAbrupt(trap)) && isAbrupt(trap)) return trap;
             if (trap === undefined) return HasProperty(T, P);
-            var trapResult = Call(trap, H, [T, P]);
+            var trapResult = callInternalSlot("Call", trap, H, [T, P]);
             if ((trapResult = ifAbrupt(trapResult)) && isAbrupt(trapResult)) return trapResult;
             var success = ToBoolean(trapResult);
             if (!success) {
@@ -12387,7 +12387,7 @@ define("lib/api", function (require, exports, module) {
             var trap = GetMethod(H, "get");
             if ((trap = ifAbrupt(trap)) && isAbrupt(trap)) return trap;
             if (trap === undefined) return Get(T, P);
-            var trapResult = Call(trap, H, [T, P]);
+            var trapResult = callInternalSlot("Call", trap, H, [T, P]);
             if ((trapResult = ifAbrupt(trapResult)) && isAbrupt(trapResult)) return trapResult;
 
             var targetDesc = GetOwnProperty(T, P);
@@ -12408,7 +12408,7 @@ define("lib/api", function (require, exports, module) {
             var trap = GetMethod(H, "set");
             if ((trap = ifAbrupt(trap)) && isAbrupt(trap)) return trap;
             if (trap === undefined) return Set(T, P, V, R);
-            var trapResult = Call(trap, H, [T, P, V, R]);
+            var trapResult = callInternalSlot("Call", trap, H, [T, P, V, R]);
             if ((trapResult = ifAbrupt(trapResult)) && isAbrupt(trapResult)) return trapResult;
             if (ToBoolean(trapResult) === false) return withError("Type", "cant set value with trap");
             var targetDesc = GetOwnProperty(T, P);
@@ -12430,7 +12430,7 @@ define("lib/api", function (require, exports, module) {
             if ((trap = ifAbrupt(trap)) && isAbrupt(trap)) return trap;
             if (trap === undefined) return Invoke(T, P, A, R);
             var argArray = CreateArrayFromList(A);
-            return Call(trap, H, [T, P, argArray, R]);
+            return callInternalSlot("Call", trap, H, [T, P, argArray, R]);
         },
         Delete: function (P) {
 
@@ -12440,7 +12440,7 @@ define("lib/api", function (require, exports, module) {
             var trap = GetMethod(H, "deleteProperty");
             if ((trap = ifAbrupt(trap)) && isAbrupt(trap)) return trap;
             if (trap === undefined) return Delete(T, P);
-            var trapResult = Call(trap, H, [T, P]);
+            var trapResult = callInternalSlot("Call", trap, H, [T, P]);
             if ((trapResult = ifAbrupt(trapResult)) && isAbrupt(trapResult)) return trapResult;
 
             if (ToBoolean(trapResult) === false) return false;
@@ -12458,7 +12458,7 @@ define("lib/api", function (require, exports, module) {
             var trap = GetMethod(H, "enumerate");
             if ((trap = ifAbrupt(trap)) && isAbrupt(trap)) return trap;
             if (trap === undefined) return Enumerate(T);
-            var trapResult = Call(trap, H, [T]);
+            var trapResult = callInternalSlot("Call", trap, H, [T]);
             if ((trapResult = ifAbrupt(trapResult)) && isAbrupt(trapResult)) return trapResult;
             if (Type(trapResult) !== "object") return withError("Type", "trapResult is not an object");
             return trapResult;
@@ -12469,7 +12469,7 @@ define("lib/api", function (require, exports, module) {
             var trap = GetMethod(H, "ownKeys");
             if ((trap = ifAbrupt(trap)) && isAbrupt(trap)) return trap;
             if (trap === undefined) return OwnPropertyKeys(T);
-            var trapResult = Call(trap, H, [T]);
+            var trapResult = callInternalSlot("Call", trap, H, [T]);
             if ((trapResult = ifAbrupt(trapResult)) && isAbrupt(trapResult)) return trapResult;
             if (Type(trapResult) !== "object") return withError("Type", "trapResult is not an object");
             return trapResult;
@@ -12480,9 +12480,9 @@ define("lib/api", function (require, exports, module) {
             var H = getInternalSlot(this, "ProxyHandler");
             var trap = GetMethod(H, "apply");
             if ((trap = ifAbrupt(trap)) && isAbrupt(trap)) return trap;
-            if (trap === undefined) return Call(T, thisArg, argList);
+            if (trap === undefined) return callInternalSlot("Call",T, thisArg, argList);
             var argArray = CreateArrayFromList(argList);
-            return Call(trap, H, [T, thisArg, argArray]);
+            return callInternalSlot("Call", trap, H, [T, thisArg, argArray]);
         },
 
         Construct: function (argList) {
@@ -12492,7 +12492,7 @@ define("lib/api", function (require, exports, module) {
             if ((trap = ifAbrupt(trap)) && isAbrupt(trap)) return trap;
             if (trap === undefined) return callInternalSlot("Construct", T, argList);
             var argArray = CreateArrayFromList(argList);
-            var newObj = Call(trap, H, [T, argArray]);
+            var newObj = callInternalSlot("Call", trap, H, [T, argArray]);
             if ((newObj = ifAbrupt(newObj)) && isAbrupt(newObj)) return newObj;
             if (Type(newObj) !== "object") return withError("Type", "returned value is not an object");
             return newObj;
@@ -12516,7 +12516,7 @@ define("lib/api", function (require, exports, module) {
 
     }
 
-    function thisTimeValue(O) {
+    function thisTimeValue(value) {
         if (value instanceof CompletionRecord) return thisTimeValue(value);
         if (Type(value) === "object" && hasInternalSlot(value, "DateValue")) {
             var b = getInternalSlot(value, "DateValue");
@@ -12643,6 +12643,10 @@ define("lib/api", function (require, exports, module) {
         return ToInteger(time) + (+0);
     }
 
+    function WeekDay (t) {
+        return ((Day(t) + 4) % 7);
+    }
+
     // ===========================================================================================================
     // Encode, Decode Algorithms
     // ===========================================================================================================
@@ -12742,9 +12746,9 @@ define("lib/api", function (require, exports, module) {
 
     function ObjectDefineProperty(O, P, Desc) {
         if (IsDataDescriptor(Desc)) {
-            O.DefineOwnProperty(P, Desc);
+            callInternalSlot("DefineOwnProperty", O,P, Desc);
         } else if (IsAccessorDescriptor(Desc)) {
-            O.DefineOwnProperty(P, Desc);
+            callInternalSlot("DefineOwnProperty", O,P, Desc);
         }
         return O;
     }
@@ -15235,7 +15239,7 @@ define("lib/api", function (require, exports, module) {
             writable: true,
             configurable: true
         });
-
+        
         DefineOwnProperty(ArrayPrototype, "constructor", {
             value: ArrayConstructor,
             enumerable: false,
@@ -15251,27 +15255,23 @@ define("lib/api", function (require, exports, module) {
                 var func = Get(array, "join");
                 if ((func = ifAbrupt(func)) && isAbrupt(func)) return func;
                 if (!IsCallable(func)) func = Get(ObjectPrototype, "toString");
-                return func.Call(array, []);
+                return callInternalSlot("Call", func, array, []);
             }),
             enumerable: false,
             writable: true,
             configurable: true
         });
 
-        DefineOwnProperty(ArrayPrototype, "toLocaleString", {
-            value: CreateBuiltinFunction(function toLocaleString(thisArg, argList) {
+        var ArrayPrototype_toLocaleString = function toLocaleString(thisArg, argList) {
 
-            }),
-            enumerable: false,
-            writable: true,
-            configurable: true
-        });
+        };
+        LazyDefineBuiltinFunction(ArrayPrototype, "toLocaleString", 2, ArrayPrototype_toLocaleString);
 
         function IsConcatSpreadable(O) {
             if (isAbrupt(O)) return O;
             var spreadable = Get(O, $$isConcatSpreadable);
-            if (isAbrupt(spreadable)) return spreadable;
-            if (spreadable) return ToBoolean(spreadable);
+            if ((spreadable = ifAbrupt(spreadable)) && isAbrupt(spreadable)) return spreadable;
+            if (spreadable !== undefined) return ToBoolean(spreadable);
             if (O instanceof ArrayExoticObject) return true;
             return false;
         }
@@ -15512,22 +15512,117 @@ define("lib/api", function (require, exports, module) {
             configurable: true
         });
 
-        DefineOwnProperty(ArrayPrototype, "splice", {
-            value: CreateBuiltinFunction(function splice(thisArg, argList) {
+        var ArrayPrototype_splice = function splice(thisArg, argList) {
+            var start = argList[0];
+            var deleteCount = argList[1];
+            var items = argList.slice(2);
+            var O = ToObject(thisArg);
+            if ((O = ifAbrupt(O)) && isAbrupt(O)) return O;
+            var lenVal = Get(O, "length");
+            var len = ToLength(lenVal);
+            if ((len = ifAbrupt(len)) && isAbrupt(len)) return len;
+            var relativeStart = ToInteger(start);
+            if ((relativeStart=ifAbrupt(relativeStart))&&isAbrupt(relativeStart)) return relativeStart;
+            var actualStart;
+            if (relativeStart < 0) actualStart = max((len+relativeStart),0);
+            else actualStart=min(relativeStart,len);
+            if (start === undefined) {
+                var actualDeleteCount = 0;
+            } else if (deleteCount === undefined) {
+                actualDeleteCount = len - actualStart;
+            } else {
+                var dc = ToInteger(deleteCount);
+                if ((dc=ifAbrupt(dc)) && isAbrupt(dc)) return dc;
+                actualDeleteCount = min(max(dc, 0), len - actualStart);
+            }
+            var A = undefined;
+            if (O instanceof ArrayExoticObject) {
+                var C = Get(O, "constructor");
+                if ((C=ifAbrupt(C))&&isAbrupt(C)) return C;
+                if (IsConstructor(C) === true) {
+                    var thisRealm = getRealm();
+                    if (SameValue(thisRealm, getInternalSlot(C, "Realm"))) {
+                        A = callInternalSlot("Construct", [actualDeleteCount]);
+                    }
+                }
+            }
+            if (A === undefined) {
+                A = ArrayCreate(actualDeleteCount);
+            }
+            if ((A=ifAbrupt(A)) && isAbrupt(A)) return A;
+            var k = 0;
+            while (k < actualDeleteCount) {
+                var from = ToString(actualStart + k);
+                var fromPresent = HasProperty(O, from);
+                if ((fromPresent=ifAbrupt(fromPresent)) && isAbrupt(fromPresent));
+                if (fromPresent === true) {
+                    var fromValue = Get(O, from);
+                    if ((fromValue=ifAbrupt(fromValue)) && isAbrupt(fromValue)) return fromValue;
+                    var status = CreateDataPropertyOrThrow(A, ToString(k), fromValue);
+                    if (isAbrupt(status)) return status;
+                }
+                k = k + 1;
+            }
+            var putStatus = Put(A, "length", actualDeleteCount, true);
+            if (isAbrupt(putStatus)) return putStatus;
+            var itemCount = items.length;
+            var k;
+            if (itemCount < actualDeleteCount) {
+                k = actualStart;
+                while (k < (len - actualDeleteCount)) {
+                    var from = ToString(k+actualDeleteCount);
+                    var to = ToString(k+itemCount);
+                    var fromPresent = HasProperty(O, from);
+                    if ((fromPresent = ifAbrupt(fromPresent)) && isAbrupt(fromPresent));
+                    if (fromPresent  === true) {
+                        var fromValue = Get(O, from);
+                        if ((fromValue = ifAbrupt(fromValue)) && isAbrupt(fromValue)) return fromValue;
+                        putStatus = Put(O, to, fromValue, true);
+                        if (isAbrupt(putStatus)) return putStatus;
 
-            }),
-            enumerable: false,
-            writable: true,
-            configurable: true
-        });
-        DefineOwnProperty(ArrayPrototype, "unshift", {
-            value: CreateBuiltinFunction(function unshift(thisArg, argList) {
+                    } else {
+                        var deleteStatus = DeletePropertyOrThrow(O, to);
+                        if (isAbrupt(deleteStatus)) return deleteStatus;
+                    }
+                    k = k + 1;
+                }
+            } else if (itemCount > actualDeleteCount) {
+                k = len - actualDeleteCount;
+                while (k < actualStart) {
+                    var from = ToStirng(k + actualDeleteCount - 1);
+                    var to = ToString(k + itemCount - 1);
+                    var fromPresent = HasProperty(O, from);
+                    if (fromPresent === true) {
+                        var fromValue = Get(O, from);
+                        if ((fromValue=ifAbrupt(fromValue)) && isAbrupt(fromValue)) return fromValue;
+                        putStatus = Put(O, to, fromValue, true);
+                        if (isAbrupt(putStatus)) return putStatus;
+                    } else {
+                        deleteStatus = DeletePropertyOrThrow(O, to);
+                        if (isAbrupt(deleteStatus)) return deleteStatus;
+                    }
+                    k = k - 1;
+                }
+            }
+            k = actualStart;
+            var l = 0;
+            while (k < actualStart) {
+                var E = items[l];
+                putStatus = Put(O, ToString(k), E, true);
+                l = l + 1;
+                k = k + 1;
+                if (isAbrupt(putStatus)) return putStatus;
+            }
+            putStatus = Put(O, "length", len - actualDeleteCount + itemCount, true);
+            if (isAbrupt(putStatus)) return putStatus;
+            return NormalCompletion(A);
+        };
+        var ArrayPrototype_unshift = function unshift(thisArg, argList) {
 
-            }, 1),
-            enumerable: false,
-            writable: true,
-            configurable: true
-        });
+        };
+        LazyDefineBuiltinFunction(ArrayPrototype, "splice", 2, ArrayPrototype_splice);
+        LazyDefineBuiltinFunction(ArrayPrototype, "unshift", 1, ArrayPrototype_unshift);
+        
         DefineOwnProperty(ArrayPrototype, "indexOf", {
             value: CreateBuiltinFunction(function indexOf(thisArg, argList) {
                 var O = ToObject(thisArg);
@@ -15625,7 +15720,7 @@ define("lib/api", function (require, exports, module) {
                     if (kPresent) {
                         var kValue = Get(O, Pk);
                         if ((kValue = ifAbrupt(kValue)) && isAbrupt(kValue)) return kValue;
-                        var funcResult = Call(callback, T, [kValue, k, O]);
+                        var funcResult = callInternalSlot("Call", callback, T, [kValue, k, O]);
                         if (isAbrupt(funcResult)) return funcResult;
                     }
                     k = k + 1;
@@ -15658,7 +15753,7 @@ define("lib/api", function (require, exports, module) {
                         if ((kValue = ifAbrupt(kValue)) && isAbrupt(kValue)) return kValue;
                         var mappedValue = callInternalSlot("Call", callback, T, [kValue, k, O]);
                         if ((mappedValue = ifAbrupt(mappedValue)) && isAbrupt(mappedValue)) return mappedValue;
-                        A.DefineOwnProperty(Pk, {
+                        callInternalSlot("DefineOwnProperty", A, Pk, {
                             value: mappedValue,
                             writable: true,
                             enumerable: true,
@@ -15668,7 +15763,6 @@ define("lib/api", function (require, exports, module) {
                     k = k + 1;
                 }
                 return NormalCompletion(A);
-
             }),
             enumerable: false,
             writable: true,
@@ -15696,7 +15790,7 @@ define("lib/api", function (require, exports, module) {
                         var kValue = Get(O, Pk);
                         if ((kValue = ifAbrupt(kValue)) && isAbrupt(kValue)) return kValue;
 
-                        var selected = Call(callback, T, [kValue, k, O]);
+                        var selected = callInternalSlot("Call", callback, T, [kValue, k, O]);
                         if ((selected = ifAbrupt(selected)) && isAbrupt(selected)) return selected;
                         if (ToBoolean(selected) === true) {
 
@@ -15718,23 +15812,15 @@ define("lib/api", function (require, exports, module) {
             configurable: true
         });
 
-        DefineOwnProperty(ArrayPrototype, "reduce", {
-            value: CreateBuiltinFunction(function reduce(thisArg, argList) {
+        var ArrayPrototype_reduce = function reduce(thisArg, argList) {
 
-            }, 1),
-            enumerable: false,
-            writable: true,
-            configurable: true
-        });
+        };
+        var ArrayPrototype_reduceRight = function reduce(thisArg, argList) {
 
-        DefineOwnProperty(ArrayPrototype, "reduceRight", {
-            value: CreateBuiltinFunction(function reduceRight(thisArg, argList) {
+        };
 
-            }),
-            enumerable: false,
-            writable: true,
-            configurable: true
-        });
+        LazyDefineBuiltinFunction(ArrayPrototype, "reduce", 1, ArrayPrototype_reduce);
+        LazyDefineBuiltinFunction(ArrayPrototype, "reduceRight", 1, ArrayPrototype_reduceRight);
 
         DefineOwnProperty(ArrayPrototype, "every", {
             value: CreateBuiltinFunction(function every(thisArg, argList) {
@@ -15754,7 +15840,7 @@ define("lib/api", function (require, exports, module) {
                     if (kPresent) {
                         var kValue = Get(O, Pk);
                         if ((kValue = ifAbrupt(kValue)) && isAbrupt(kValue)) return kValue;
-                        var testResult = Call(callback, T, [kValue, k, O]);
+                        var testResult = callInternalSlot("Call", callback, T, [kValue, k, O]);
                         if ((testResult = ifAbrupt(testResult)) && isAbrupt(testResult)) return testResult;
                         if (ToBoolean(testResult) === false) return NormalCompletion(false);
                     }
@@ -15785,7 +15871,7 @@ define("lib/api", function (require, exports, module) {
                     if (kPresent) {
                         var kValue = Get(O, Pk);
                         if ((kValue = ifAbrupt(kValue)) && isAbrupt(kValue)) return kValue;
-                        var testResult = Call(callback, T, [kValue, k, O]);
+                        var testResult = callInternalSlot("Call", callback, T, [kValue, k, O]);
                         if ((testResult = ifAbrupt(testResult)) && isAbrupt(testResult)) return testResult;
                         if (ToBoolean(testResult) === true) return NormalCompletion(true);
                     }
@@ -15798,22 +15884,17 @@ define("lib/api", function (require, exports, module) {
             configurable: true
         });
 
-        DefineOwnProperty(ArrayPrototype, "predicate", {
-            value: CreateBuiltinFunction(function predicate(thisArg, argList) {
+        var ArrayPrototype_predicate = function (thisArg, argList) {
 
-            }),
-            enumerable: false,
-            writable: true,
-            configurable: true
-        });
+        };
+        var ArrayPrototype_findIndex = function (thisArg, argList) {
 
-        DefineOwnProperty(ArrayPrototype, "findIndex", {
-            value: CreateBuiltinFunction(function findIndex(thisArg, argList) {}),
-            enumerable: false,
-            writable: true,
-            configurable: true
-        });
+        };
+        
+        LazyDefineBuiltinFunction(ArrayPrototype, "predicate", 1, ArrayPrototype_predicate);
+        LazyDefineBuiltinFunction(ArrayPrototype, "findIndex", 1, ArrayPrototype_findIndex);
 
+        
         DefineOwnProperty(ArrayPrototype, "entries", {
             value: CreateBuiltinFunction(function entries(thisArg, argList) {
                 var O = ToObject(thisArg);
@@ -16704,7 +16785,7 @@ define("lib/api", function (require, exports, module) {
             LazyDefineBuiltinConstant(proto, "constructor", ctor);
             LazyDefineBuiltinConstant(proto, "name", name);
             CreateDataProperty(proto, "message", "");
-            MakeConstructor(ctor, true, proto);
+            MakeConstructor(ctor, false, proto);
         }
 
         // ===========================================================================================================
@@ -16729,11 +16810,13 @@ define("lib/api", function (require, exports, module) {
         // ===========================================================================================================
 
         setInternalSlot(DateConstructor, "Call", function (thisArg, argList) {
+            
             var O = thisArg;
             var numberOfArgs = argList.length;
             var y, m, dt, h, min, milli, finalDate;
 
             if (numberOfArgs >= 2) {
+                
                 var year = argList[0];
                 var month = argList[1];
                 var date = argList[2];
@@ -16741,7 +16824,10 @@ define("lib/api", function (require, exports, module) {
                 var minutes = argList[4];
                 var seconds = argList[5];
                 var ms = argList[6];
-                if (Type(O) === "object" && hasInternalSlot(O, "DateValue") && getInternalSlot(O, "DateValue") === undefined) {
+                
+                if (Type(O) === "object" 
+                    && hasInternalSlot(O, "DateValue") 
+                    && (getInternalSlot(O, "DateValue") === undefined)) {
 
                     y = ToNumber(year);
                     if (isAbrupt(y)) return y;
@@ -16757,12 +16843,12 @@ define("lib/api", function (require, exports, module) {
                     if (isAbrupt(min)) return min;
                     if (ms) milli = ToNumber(ms);
                     else milli = 0;
-                    if (isAbrupt(milli)) return milliM
+                    if (isAbrupt(milli)) return milli;
                     finalDate = MakeDate(MakeDay(yr, m, dt), MakeTime(h, min, s, milli));
                     setInternalSlot(O, "DateValue", TimeClip(UTC(finalDate)));
                 }
                 return O;
-            } else if (arguments.length === 1) {
+            } else if (numberOfArgs === 1) {
                 var value = argList[0];
                 var tv, v;
                 if (Type(O) === "object" && hasInternalSlot(O, "DateValue") && getInternalSlot(O, "DateValue") === undefined) {
@@ -16779,9 +16865,9 @@ define("lib/api", function (require, exports, module) {
                         return O;
                     }
                 }
-            } else if (arguments.length === 0) {
+            } else if (numberOfArgs === 0) {
                 if (Type(O) === "object" && hasInternalSlot(O, "DateValue") && getInternalSlot(O, "DateValue") === undefined) {
-                    setInternalSlot(O, "DateValue", TimeClip(UTC(Date.now())));
+                    setInternalSlot(O, "DateValue", Date.now()/*TimeClip(UTC(Date.now()))*/);
                     return O;
                 }
             } else {
@@ -16791,8 +16877,7 @@ define("lib/api", function (require, exports, module) {
         });
 
         setInternalSlot(DateConstructor, "Construct", function (thisArg, argList) {
-            var F = this;
-            return OrdinaryConstruct(F, argList);
+            return OrdinaryConstruct(this, argList);
         });
 
 
@@ -16803,7 +16888,7 @@ define("lib/api", function (require, exports, module) {
             configurable: false
         });
 
-        DefineOwnProperty(DatePrototype, "contructor", {
+        DefineOwnProperty(DatePrototype, "constructor", {
             value: DateConstructor,
             writable: false,
             enumerable: false,
@@ -16831,7 +16916,12 @@ define("lib/api", function (require, exports, module) {
         });
 
         DefineOwnProperty(DateConstructor, $$create, {
-            value: CreateBuiltinFunction(function (thisArg, argList) {}),
+            value: CreateBuiltinFunction(function (thisArg, argList) {
+                var obj = OrdinaryCreateFromConstructor(DateConstructor, "%DatePrototype%", {
+                    "DateValue" : undefined
+                });
+                return obj;
+            }),
             writable: false,
             enumerable: false,
             configurable: false
@@ -17030,6 +17120,8 @@ define("lib/api", function (require, exports, module) {
             enumerable: false,
             configurable: false
         });
+
+        LazyDefineBuiltinConstant(DatePrototype, $$toStringTag, "Date");
 
         //===========================================================================================================
         // Math 
@@ -17320,6 +17412,9 @@ define("lib/api", function (require, exports, module) {
                     var e = 0;
                 } else {
                     if (fractionDigits !== undefined) {
+
+                        // ich konnte das im mcview nicht lesen ob 10f oder 10^f 
+                        // ich hab das unterwegs geschrieben, todo 
                         e;
                         n;
                     } else {
@@ -17357,12 +17452,15 @@ define("lib/api", function (require, exports, module) {
         LazyDefineBuiltinConstant(NumberConstructor, "MAX_VALUE", MAX_VALUE);
         LazyDefineBuiltinConstant(NumberConstructor, "NaN", NAN);
         LazyDefineBuiltinConstant(NumberConstructor, "NEGATIVE_INFINITY", NEGATIVE_INFINITY);
+        
         LazyDefineBuiltinFunction(NumberPrototype, "clz", 0, NumberPrototype_clz); 
         LazyDefineBuiltinFunction(NumberPrototype, "toExponential", 0, NumberPrototype_toExponential);
         LazyDefineBuiltinFunction(NumberPrototype, "toFixed", 0, NumberPrototype_toFixed);
         LazyDefineBuiltinFunction(NumberPrototype, "toPrecision", 0, NumberPrototype_toPrecision);
         LazyDefineBuiltinFunction(NumberPrototype, "toString", 0, NumberPrototype_toString);
         LazyDefineBuiltinFunction(NumberPrototype, "valueOf", 0, NumberPrototype_valueOf);
+
+        LazyDefineBuiltinConstant(NumberPrototype, $$toStringTag, "Number");
 
         // ===========================================================================================================
         // Proxy
@@ -17603,7 +17701,7 @@ define("lib/api", function (require, exports, module) {
                 if ((key = ifAbrupt(key)) && isAbrupt(key)) return key;
                 var desc = ToPropertyDescriptor(attributes);
                 if ((desc = ifAbrupt(desc)) && isAbrupt(desc)) return desc;
-                return obj.DefineOwnProperty(key, desc);
+                return callInternalSlot("DefineOwnProperty", obj,key, desc);
             };
             var ReflectObject_enumerate = function (thisArg, argList) {
                 var target = argList[0];
@@ -18832,11 +18930,11 @@ define("lib/api", function (require, exports, module) {
             if (Type(value) === "object") {
                 var toJSON = Get(value, "toJSON");
                 if (IsCallable(toJSON)) {
-                    value = Call(toJSON, value, [key]);
+                    value = callInternalSlot("Call", toJSON, value, [key]);
                 }
             }
             if (IsCallable(replacer)) {
-                value = Call(replacer, holder, [key, value]);
+                value = callInternalSlot("Call", replacer, holder, [key, value]);
             }
             if (Type(value) === "object") {
 
@@ -19034,7 +19132,7 @@ define("lib/api", function (require, exports, module) {
                     }
                 }
             }
-            return Call(reviver, holder, [name, val]);
+            return callInternalSlot("Call",reviver, holder, [name, val]);
         }
 
         DefineOwnProperty(JSONObject, "parse", {
@@ -20251,7 +20349,7 @@ define("lib/api", function (require, exports, module) {
                 if ((k = ifAbrupt(k)) && isAbrupt(k)) return k;
                 v = Get(nextItem, "1");
                 if ((v = ifAbrupt(v)) && isAbrupt(v)) return v;
-                status = Call(adder, map, [k, v]);
+                status = callInternalSlot("Call", adder, map, [k, v]);
                 if (isAbrupt(status)) return status;
             }
             return NormalCompletion(map);
@@ -20614,7 +20712,7 @@ define("lib/api", function (require, exports, module) {
                 if ((k = ifAbrupt(k)) && isAbrupt(k)) return k;
                 v = Get(nextItem, "1");
                 if ((v = ifAbrupt(v)) && isAbrupt(v)) return v;
-                status = Call(adder, set, [v]);
+                status = callInternalSlot("Call", adder, set, [v]);
                 if (isAbrupt(status)) return status;
             }
             return NormalCompletion(set);
@@ -21032,7 +21130,7 @@ define("lib/api", function (require, exports, module) {
                 var result;
                 for (var i = 0, j = list.length; i < j; i++) {
                     if (callback = list[i]) {
-                        result = Call(callback, thisArg, values);
+                        result = callInternalSlot("Call", callback, thisArg, values);
                         if (isAbrupt(result)) return result;
                     }
                 }
