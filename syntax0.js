@@ -8268,6 +8268,11 @@ define("lib/api", function (require, exports, module) {
     var heap = require("lib/heap");
     var i18n = require("lib/i18n-messages");
 
+    // I had these variables at the beginning, i return to;
+    var realm, intrinsics, globalEnv, globalThis;
+    var stack, eventQueue;
+    
+
     // ===========================================================================================================
     // all and empty are special objects
     // ===========================================================================================================
@@ -8311,9 +8316,7 @@ define("lib/api", function (require, exports, module) {
     // quick getters for realm, env, intrnscs
     // ===========================================================================================================
 
-    var interAMD;
-    var realm, intrinsics, globalEnv, globalThis, stack, eventQueue;
-
+    
     exports.getEventQueue = getEventQueue;
 
     function getContext() {
@@ -8323,21 +8326,21 @@ define("lib/api", function (require, exports, module) {
     }
 
     function getEventQueue() {
-        return eventQueue;
+        return realm.eventQueue;
     }
 
     function newContext(outer, s) {
         var env = outer !== undefined ? outer : getLexEnv();
-        s = s || interAMD;
+        s = s || realm.xs;
         var cx = new ExecutionContext(env, getRealm(), s);
         getStack().push(cx);
-        return (interAMD.cx = cx);
+        return (realm.cx = cx); 
     }
 
     function oldContext() {
         var stack = getStack();
         stack.pop();
-        return (interAMD.cx = stack[stack.length - 1]);
+        return (realm.cx = stack[stack.length - 1]);
     }
 
     function dropExecutionContext() {
@@ -8346,27 +8349,27 @@ define("lib/api", function (require, exports, module) {
 
     function getGlobalThis() {
         //return globalThis;
-        return interAMD.realm.globalThis;
+        return realm.globalThis;
     }
 
     function getGlobalEnv() {
         //return globalEnv;
-        return interAMD.realm.globalEnv;
+        return realm.globalEnv;
     }
 
     function getIntrinsics() {
         //return intrinsics;
-        return interAMD.realm.intrinsics;
+        return realm.intrinsics;
     }
 
     function getIntrinsic(name) {
         //var desc = intrinsics.Bindings[name];
-        var desc = interAMD.realm.intrinsics.Bindings[name];
+        var desc = realm.intrinsics.Bindings[name];
         return desc && desc.value;
     }
 
     function getRealm() {
-        return interAMD.realm;
+        return realm;
     }
 
     function getLexEnv() {
@@ -8382,11 +8385,11 @@ define("lib/api", function (require, exports, module) {
     }
 
     function getState() {
-        return interAMD;
+        return realm.xs;
     }
 
     function getStack() {
-        return interAMD.stack;
+        return realm.stack;
     }
 
     // ===========================================================================================================
@@ -8605,15 +8608,11 @@ define("lib/api", function (require, exports, module) {
 
     function OrdinaryObject(prototype) {
         var O = Object.create(OrdinaryObject.prototype);
-        O.Bindings = Object.create(null);
-        O.Symbols = Object.create(null);
-        O.Prototype = prototype === undefined ? interAMD.ObjectPrototype || null : prototype;
-        O.Extensible = true;
-
-        /*setInternalSlot(O,"Bindings",Object.create(null));
-	setInternalSlot(O,"Symbols",Object.create(null));
-	setInternalSlot(O,"Prototype",prototype || null);
-	setInternalSlot(O,"Extensible", true);*/
+        prototype = prototype === undefined ? realm.xs.ObjectPrototype || null : prototype;
+        setInternalSlot(O,"Bindings",Object.create(null));
+	    setInternalSlot(O,"Symbols",Object.create(null));
+	    setInternalSlot(O,"Prototype",prototype || null);
+	    setInternalSlot(O,"Extensible", true);
         return O;
     }
     OrdinaryObject.prototype = {
@@ -8926,7 +8925,7 @@ define("lib/api", function (require, exports, module) {
         var nextPos = 0;
         var len = list.length;
 
-        var listIteratorNext = CreateBuiltinFunction(function (thisArg, argList) {
+        var listIteratorNext = CreateBuiltinFunction(getRealm(),function (thisArg, argList) {
             var value, done;
             if (nextPos < len) {
                 value = list[nextPos];
@@ -8960,7 +8959,7 @@ define("lib/api", function (require, exports, module) {
         var F = Object.create(OrdinaryFunction.prototype);
         setInternalSlot(F, "Bindings", Object.create(null));
         setInternalSlot(F, "Symbols", Object.create(null));
-        setInternalSlot(F, "Prototype", interAMD.FunctionPrototype);
+        setInternalSlot(F, "Prototype", realm.xs.FunctionPrototype);
         setInternalSlot(F, "Realm", undefined);
         setInternalSlot(F, "Extensible", true);
         F.Realm = undefined;
@@ -9484,6 +9483,7 @@ define("lib/api", function (require, exports, module) {
 
     function CodeRealm(intrinsics, gthis, genv, ldr) {
         "use strict";
+
         this.intrinsics = intrinsics;
         this.globalThis = gthis;
         this.globalEnv = genv;
@@ -9492,6 +9492,12 @@ define("lib/api", function (require, exports, module) {
         this.indirectEval = undefined;
         this.Function = undefined;
         this.loader = ldr;
+
+        this.stack = [];
+        this.eventQueue = [];
+        this.xs = Object.create(null);
+
+        return this;
     }
     CodeRealm.prototype.toString = CodeRealm_toString;
 
@@ -9502,7 +9508,7 @@ define("lib/api", function (require, exports, module) {
     // ===========================================================================================================
     // Execution Context
     // - has got a stack
-    // interAMD.stack = [ctx1, .., ctxn];
+    // xs.stack = [ctx1, .., ctxn];
     // ===========================================================================================================
 
     function ExecutionContext(outer, realm, state, generator) {
@@ -9516,7 +9522,7 @@ define("lib/api", function (require, exports, module) {
         this.lexEnv = this.varEnv;
 
         this.generator = generator;
-        interAMD.cx = this;
+        realm.cx = this;
     }
     ExecutionContext.prototype.toString = ExecutionContext_toString;
 
@@ -9533,7 +9539,6 @@ define("lib/api", function (require, exports, module) {
         this.type = type;
         this.value = value;
         this.target = target;
-        interAMD.completion = this;
     }
 
     CompletionRecord.prototype.toString = CompletionRecord_toString;
@@ -9553,24 +9558,24 @@ define("lib/api", function (require, exports, module) {
     }
 
     function NormalCompletion(argument, label) {
-        var completion = interAMD.completion;
+        var completion = new CompletionRecord(); // realm.completion;
         if (argument instanceof CompletionRecord) {
             completion = argument;
         } else completion.value = argument;
-        completion.type = "normal";
+        completion.type = "normal"
         completion.target = label;
-        interAMD.completion = completion;
+        realm.completion = completion;
         return completion;
     }
 
     function Completion(type, argument, target) {
-        var completion = interAMD.completion;
+        var completion = new CompletionRecord();
         if (argument instanceof CompletionRecord) {
             completion = argument;
         } else completion.value = argument;
         completion.type = type || "normal";
         completion.target = target;
-        interAMD.completion = completion;
+        realm.completion = completion;
         return completion;
     }
 
@@ -10554,19 +10559,19 @@ define("lib/api", function (require, exports, module) {
 
         if (V instanceof SymbolPrimitiveType) {
             var s = SymbolCreate();
-            setInternalSlot(s, "Prototype", interAMD.SymbolPrototype);
+            setInternalSlot(s, "Prototype", realm.xs.SymbolPrototype);
             setInternalSlot(s, "SymbolData", V);
             return s;
         }
 
         if (typeof V === "number") {
-            return OrdinaryConstruct(interAMD.NumberConstructor, V);
+            return OrdinaryConstruct(realm.xs.NumberConstructor, V);
         }
         if (typeof V === "string") {
-            return OrdinaryConstruct(interAMD.StringConstructor, V);
+            return OrdinaryConstruct(realm.xs.StringConstructor, V);
         }
         if (typeof V === "boolean") {
-            return OrdinaryConstruct(interAMD.BooleanConstructor, V);
+            return OrdinaryConstruct(realm.xs.BooleanConstructor, V);
         }
 
         // return V;
@@ -11110,7 +11115,7 @@ define("lib/api", function (require, exports, module) {
 
         setInternalSlot(O, "Target", object);
         setInternalSlot(O, "Symbols", Object.create(null));
-        setInternalSlot(O, "Prototype", interAMD.ObjectPrototype);
+        setInternalSlot(O, "Prototype", realm.xs.ObjectPrototype);
         setInternalSlot(O, "Extensible", true);
         return O;
     }
@@ -11273,47 +11278,6 @@ define("lib/api", function (require, exports, module) {
     // A Definition of all Standard Builtin Objects (one per Realm is per contract)
     // ===========================================================================================================
 
-    // ===========================================================================================================
-    // a plugin idea
-    // ===========================================================================================================
-
-    function registerCustomBuiltinFunction(intrinsicNameOfTarget, nameToAdd, desc) {
-        var set = Object.create(null);
-        if (desc) assign(set, desc);
-        addMissingProperties(set, {
-            global: intrinsicNameOfTarget === undefined ? true : false,
-            target: intrinsicNameOfTarget,
-            name: nameToAdd,
-            value: desc.value,
-            writable: true,
-            enumerable: true,
-            configurable: true
-        });
-        interAMD.customFunctions.push(set);
-    }
-
-    function installCustomBuiltinFunctions(data) {
-        var sets = interAMD.customFunctions;
-        sets.forEach(function (data) {
-            var global = data.global;
-            var name = data.name;
-            var target = data.target;
-            var intrinsics, targetObj;
-            var desc = {
-                value: data.value,
-                writable: data.writable,
-                enumerable: data.enumerable,
-                configurable: data.configurable
-            };
-            if (!global) {
-                intrinsics = getIntrinsics();
-                targetObj = Get(getIntrinsics(), target);
-            } else if (global) {
-                targetObj = getGlobalThis();
-            }
-            DefineOwnProperty(targetObj, name, desc);
-        });
-    }
 
     // ===========================================================================================================
     // String Exotic Object
@@ -11793,8 +11757,8 @@ define("lib/api", function (require, exports, module) {
         var frame = getContext();
         var start = 0;
         var node, ntype, line ,column, pos, fn, clr;
-        var stackTraceLimit = interAMD.stackTraceLimit;
-        var url = interAMD.scriptLocation;
+        var stackTraceLimit = realm.xs.stackTraceLimit;
+        var url = realm.xs.scriptLocation;
         var cnt = 1;
 
         if (type === undefined) type = "", message = "", stack = "";
@@ -11831,15 +11795,22 @@ define("lib/api", function (require, exports, module) {
 
     // This Function returns the Errors, say the spec says "Throw a TypeError", then return withError("Type", message);
 
+
+    function withRangError(message) {
+        return Completion("throw", OrdinaryConstruct(realm.xs.SyntaxErrorConstructor, [message]));
+    }
+
+
+    function withSyntaxError(message) {
+        return Completion("throw", OrdinaryConstruct(realm.xs.SyntaxErrorConstructor, [message]));
+    }
+
+    function withTypeError(message) {
+        return Completion("throw", OrdinaryConstruct(realm.xs.TypeErrorConstructor, [message]));
+    }
+
     function withError(type, message) {
-        var id = type + "Error";
-        //var intrName = "%" + id + "%";
-        //var ex = OrdinaryConstruct(getIntrinsic(intrName), [message]);
-        var ctorName = id + "Constructor";
-        var ex = OrdinaryConstruct(interAMD[ctorName], [message]);
-        //var stack = stringifyErrorStack(id, message);
-        //CreateDataProperty(ex, "stack", stack);      
-        return Completion("throw", ex, "");
+        return Completion("throw", OrdinaryConstruct(getIntrinsic("%" + type + "Error%"), [message]), "");
     }
 
     // ===========================================================================================================
@@ -12836,7 +12807,7 @@ define("lib/api", function (require, exports, module) {
         return callInternalSlot("DefineOwnProperty", O, name, {
             configurable: c,
             enumerable: e,
-            value: CreateBuiltinFunction(fproto, arity, name),
+            value: CreateBuiltinFunction(getRealm(),fproto, arity, name),
             writable: w
         });
     }
@@ -12896,7 +12867,7 @@ define("lib/api", function (require, exports, module) {
     // Create Builtin (Intrinsic Module)
     // ===========================================================================================================
 
-    function CreateBuiltinFunction(steps, len, name) {
+    function CreateBuiltinFunction(realm, steps, len, name) {
         
         var tmp;
         var realm = getRealm();
@@ -12906,7 +12877,7 @@ define("lib/api", function (require, exports, module) {
         // because they are plain javascript functions
         function Call() {
             var result;
-            var cx = new ExecutionContext(getLexEnv(), realm, interAMD);
+            var cx = new ExecutionContext(getLexEnv(), realm);
             var stack = getStack();
             stack.push(cx);
             result = steps.apply(this, arguments);
@@ -12920,7 +12891,7 @@ define("lib/api", function (require, exports, module) {
         setInternalSlot(F, "Code", undefined);
         setInternalSlot(F, "Construct", undefined);
         setInternalSlot(F, "FormalParameters", undefined);
-        setInternalSlot(F, "Prototype", interAMD.FunctionPrototype);
+        setInternalSlot(F, "Prototype", realm.xs.FunctionPrototype);
         setInternalSlot(F, "Environment", undefined);
         setInternalSlot(F, "Strict", true);
         setInternalSlot(F, "Realm", realm);
@@ -13056,8 +13027,6 @@ define("lib/api", function (require, exports, module) {
     exports.oldContext = oldContext;
     exports.dropExecutionContext = dropExecutionContext;
     exports.withError = withError; // This Function returns the Errors, say the spec says "Throw a TypeError", then return withError("Type", message);
-    exports.registerCustomBuiltinFunction = registerCustomBuiltinFunction;
-    exports.installCustomBuiltinFunctions = installCustomBuiltinFunctions;
     exports.getContext = getContext;
     exports.getRealm = getRealm;
     exports.getLexEnv = getLexEnv;
@@ -13263,7 +13232,12 @@ define("lib/api", function (require, exports, module) {
     
     function createIntrinsicPrototype (realm, intrinsicName) {
         var intrinsics = realm.intrinsics;
-        var prototype = OrdinaryObject();
+        
+        var prototype = Object.create(OrdinaryObject.prototype);
+        setInternalSlot(prototype, "Bindings", Object.create(null));
+        setInternalSlot(prototype, "Symbols", Object.create(null));
+        setInternalSlot(prototype, "Extensible", true);
+        setInternalSlot(prototype, "Prototype", null);        
         define_intrinsic(intrinsics, intrinsicName, prototype);
         return prototype;
     }
@@ -13276,26 +13250,31 @@ define("lib/api", function (require, exports, module) {
     }
 
     function createIntrinsics(realm) {
-        var intrinsics = OrdinaryObject();
+        
+        var intrinsics = Object.create(OrdinaryObject.prototype);
+        setInternalSlot(intrinsics, "Bindings", Object.create(null));
+        setInternalSlot(intrinsics, "Symbols", Object.create(null));
+        setInternalSlot(intrinsics, "Extensible", true);
         setInternalSlot(intrinsics, "Prototype", null);        
         realm.intrinsics = intrinsics;
 
 
         var ObjectPrototype = createIntrinsicPrototype(realm, "%ObjectPrototype%");
         setInternalSlot(ObjectPrototype, "Prototype", null);
-        interAMD.ObjectPrototype = ObjectPrototype;        
+        realm.xs.ObjectPrototype = ObjectPrototype;        
 
         var FunctionPrototype = createIntrinsicPrototype(realm, "%FunctionPrototype%");
         setInternalSlot(FunctionPrototype, "Prototype", ObjectPrototype);
-        interAMD.FunctionPrototype = FunctionPrototype;
+        realm.xs.FunctionPrototype = FunctionPrototype;
         
         var FunctionConstructor = createIntrinsicConstructor(realm, "Function", 0, "%Function%");
         setInternalSlot(FunctionConstructor, "Prototype", FunctionPrototype);
-        interAMD.FunctionConstructor = FunctionConstructor;
+        realm.xs.FunctionConstructor = FunctionConstructor;
         
         var ObjectConstructor = createIntrinsicConstructor(realm, "Object", 0, "%Object%");
-        Assert(getInternalSlot(ObjectConstructor, "Prototype") === FunctionPrototype, "ObjectConstructor and FunctionPrototype have to have a link");
-        interAMD.ObjectConstructor = ObjectConstructor;
+        
+    Assert(getInternalSlot(ObjectConstructor, "Prototype") === FunctionPrototype, "ObjectConstructor and FunctionPrototype have to have a link");
+        realm.xs.ObjectConstructor = ObjectConstructor;
         
         var EncodeURIFunction = createIntrinsicConstructor(realm, "EncodeURI", 0, "%EncodeURI%");
         var DecodeURIFunction = createIntrinsicConstructor(realm, "DecodeURI", 0, "%DecodeURI%");
@@ -13600,11 +13579,11 @@ define("lib/api", function (require, exports, module) {
         // %Realm%
         setInternalSlot(RealmConstructor, "Call", RealmConstructor_Call);
         setInternalSlot(RealmConstructor, "Construct", RealmConstructor_Construct);
-        LazyDefineProperty(RealmConstructor, $$create, CreateBuiltinFunction(RealmConstructor_$$create, 0, "[Symbol.create]"));
+        LazyDefineProperty(RealmConstructor, $$create, CreateBuiltinFunction(getRealm(),RealmConstructor_$$create, 0, "[Symbol.create]"));
         MakeConstructor(RealmConstructor, false, RealmPrototype);
         // %RealmPrototype%
-        LazyDefineAccessor(RealmPrototype, "global", CreateBuiltinFunction(RealmPrototype_get_global, 0, "get global"));
-        LazyDefineProperty(RealmPrototype, "eval", CreateBuiltinFunction(RealmPrototype_eval, 1, "eval"));
+        LazyDefineAccessor(RealmPrototype, "global", CreateBuiltinFunction(getRealm(),RealmPrototype_get_global, 0, "get global"));
+        LazyDefineProperty(RealmPrototype, "eval", CreateBuiltinFunction(getRealm(),RealmPrototype_eval, 1, "eval"));
         LazyDefineProperty(RealmConstructor, $$toStringTag, "Realm");
 
         // ##################################################################
@@ -13800,22 +13779,40 @@ define("lib/api", function (require, exports, module) {
 
         };
         var LoaderPrototype_set = function (thisArg, argList) {
-
+            var name = argList[0];
+            var module = argList[1];
+            var loader = thisLoader(thisArg);
+            if ((loader=ifAbrupt(loader)) && isAbrupt(loader)) return loader;
+            var loaderRecord = getInternalSlot(loader, "LoaderRecord");
+            var name = ToString(name);
+            if ((name=ifAbrupt(name)) && isAbrupt(name)) return name;
+            if (Type(module) !== "object") return withError("Type", "module is not an object");
         };
         var LoaderPrototype_delete = function (thisArg, argList) {
 
         };
         var LoaderPrototype_normalize = function (thisArg, argList) {
-
+            var name = argList[0];
+            var refererName = argList[1];
+            var refererAddress = argList[2];
+            Assert(Type(name) == "string", "Loader.prototype.normalize: name has to be a string.");
+            return NormalCompletion(name);
         };
         var LoaderPrototype_locate = function (thisArg, argList) {
-
+            var loadRequest = argList[0];
+            return Get(loadRequest, "name");
         };
         var LoaderPrototype_fetch = function (thisArg, argList) {
-
+            return withError("Type", "The Loader.prototype.fetch function is supposed to throw a type error.")
         };
+        var LoaderPrototype_translate = function (thisArg, argList) {
+            var load = argList[0];
+            return Get(load, "source");
+        };
+        
         var LoaderPrototype_instantiate = function (thisArg, argList) {
-
+            var loadRequest = argList[0];
+            return NormalCompletion(undefined);
         };
         var LoaderPrototype_$$iterator = LoaderPrototype_entries;
 
@@ -13824,29 +13821,29 @@ define("lib/api", function (require, exports, module) {
         setInternalSlot(LoaderConstructor, "Prototype", FunctionPrototype);
         setInternalSlot(LoaderConstructor, "Call", LoaderConstructor_Call);
         setInternalSlot(LoaderConstructor, "Construct", LoaderConstructor_Construct);
-        LazyDefineProperty(LoaderConstructor, $$create, CreateBuiltinFunction(LoaderConstructor_$$create, 0, "[Symbol.create]"));
+        LazyDefineProperty(LoaderConstructor, $$create, CreateBuiltinFunction(getRealm(),LoaderConstructor_$$create, 0, "[Symbol.create]"));
         MakeConstructor(LoaderConstructor, false, LoaderPrototype);
         //SetFunctionName(LoaderConstructor, "Loader");
 
         // Loader.prototype
-        LazyDefineProperty(LoaderPrototype, "entries", CreateBuiltinFunction(LoaderPrototype_entries, 0, "entries"));
-        LazyDefineProperty(LoaderPrototype, "values", CreateBuiltinFunction(LoaderPrototype_values, 0, "values"));
-        LazyDefineProperty(LoaderPrototype, "keys", CreateBuiltinFunction(LoaderPrototype_keys, 0, "keys"));
-        LazyDefineProperty(LoaderPrototype, "has", CreateBuiltinFunction(LoaderPrototype_has, 0, "has"));
-        LazyDefineProperty(LoaderPrototype, "get", CreateBuiltinFunction(LoaderPrototype_get, 0, "get"));
-        LazyDefineProperty(LoaderPrototype, "set", CreateBuiltinFunction(LoaderPrototype_set, 0, "set"));
-        LazyDefineProperty(LoaderPrototype, "delete", CreateBuiltinFunction(LoaderPrototype_delete, 0, "delete"));
-        LazyDefineProperty(LoaderPrototype, "define", CreateBuiltinFunction(LoaderPrototype_define, 2, "define"));
+        LazyDefineProperty(LoaderPrototype, "entries", CreateBuiltinFunction(getRealm(),LoaderPrototype_entries, 0, "entries"));
+        LazyDefineProperty(LoaderPrototype, "values", CreateBuiltinFunction(getRealm(),LoaderPrototype_values, 0, "values"));
+        LazyDefineProperty(LoaderPrototype, "keys", CreateBuiltinFunction(getRealm(),LoaderPrototype_keys, 0, "keys"));
+        LazyDefineProperty(LoaderPrototype, "has", CreateBuiltinFunction(getRealm(),LoaderPrototype_has, 0, "has"));
+        LazyDefineProperty(LoaderPrototype, "get", CreateBuiltinFunction(getRealm(),LoaderPrototype_get, 0, "get"));
+        LazyDefineProperty(LoaderPrototype, "set", CreateBuiltinFunction(getRealm(),LoaderPrototype_set, 0, "set"));
+        LazyDefineProperty(LoaderPrototype, "delete", CreateBuiltinFunction(getRealm(),LoaderPrototype_delete, 0, "delete"));
+        LazyDefineProperty(LoaderPrototype, "define", CreateBuiltinFunction(getRealm(),LoaderPrototype_define, 2, "define"));
         
-        LazyDefineProperty(LoaderPrototype, "load", CreateBuiltinFunction(LoaderPrototype_load,    1, "load"));
-        LazyDefineProperty(LoaderPrototype, "module", CreateBuiltinFunction(LoaderPrototype_module, 1, "module"));
-        LazyDefineProperty(LoaderPrototype, "import", CreateBuiltinFunction(LoaderPrototype_import, 0, "import"));
-        LazyDefineProperty(LoaderPrototype, "eval", CreateBuiltinFunction(LoaderPrototype_eval, 0, "eval"));
-        LazyDefineProperty(LoaderPrototype, "normalize", CreateBuiltinFunction(LoaderPrototype_normalize, 0, "normalize"));
-        LazyDefineProperty(LoaderPrototype, "fetch", CreateBuiltinFunction(LoaderPrototype_fetch, 0, "fetch"));
-        LazyDefineProperty(LoaderPrototype, "locate", CreateBuiltinFunction(LoaderPrototype_locate, 0, "locate"));
-        LazyDefineProperty(LoaderPrototype, "instantiate", CreateBuiltinFunction(LoaderPrototype_instantiate, 0, "instantiate"));
-        LazyDefineProperty(LoaderPrototype, $$iterator, CreateBuiltinFunction(LoaderPrototype_$$iterator, 0, "[Symbol.iterator]"));
+        LazyDefineProperty(LoaderPrototype, "load", CreateBuiltinFunction(getRealm(),LoaderPrototype_load,    1, "load"));
+        LazyDefineProperty(LoaderPrototype, "module", CreateBuiltinFunction(getRealm(),LoaderPrototype_module, 1, "module"));
+        LazyDefineProperty(LoaderPrototype, "import", CreateBuiltinFunction(getRealm(),LoaderPrototype_import, 0, "import"));
+        LazyDefineProperty(LoaderPrototype, "eval", CreateBuiltinFunction(getRealm(),LoaderPrototype_eval, 0, "eval"));
+        LazyDefineProperty(LoaderPrototype, "normalize", CreateBuiltinFunction(getRealm(),LoaderPrototype_normalize, 0, "normalize"));
+        LazyDefineProperty(LoaderPrototype, "fetch", CreateBuiltinFunction(getRealm(),LoaderPrototype_fetch, 0, "fetch"));
+        LazyDefineProperty(LoaderPrototype, "locate", CreateBuiltinFunction(getRealm(),LoaderPrototype_locate, 0, "locate"));
+        LazyDefineProperty(LoaderPrototype, "instantiate", CreateBuiltinFunction(getRealm(),LoaderPrototype_instantiate, 0, "instantiate"));
+        LazyDefineProperty(LoaderPrototype, $$iterator, CreateBuiltinFunction(getRealm(),LoaderPrototype_$$iterator, 0, "[Symbol.iterator]"));
         LazyDefineProperty(LoaderPrototype, $$toStringTag, "Loader");
 
         // ##################################################################
@@ -13875,8 +13872,8 @@ define("lib/api", function (require, exports, module) {
             return thisArg;
         };
 
-        LazyDefineProperty(LoaderIteratorPrototype, $$iterator, CreateBuiltinFunction(LoaderIteratorPrototype_$$iterator, 0, "[Symbol.iterator]"));
-        LazyDefineProperty(LoaderIteratorPrototype, "next", CreateBuiltinFunction(LoaderIteratorPrototype_next, 0, "next"));
+        LazyDefineProperty(LoaderIteratorPrototype, $$iterator, CreateBuiltinFunction(getRealm(),LoaderIteratorPrototype_$$iterator, 0, "[Symbol.iterator]"));
+        LazyDefineProperty(LoaderIteratorPrototype, "next", CreateBuiltinFunction(getRealm(),LoaderIteratorPrototype_next, 0, "next"));
         LazyDefineProperty(LoaderIteratorPrototype, $$toStringTag, "Loader Iterator");
 
         // ##################################################################
@@ -14459,7 +14456,7 @@ define("lib/api", function (require, exports, module) {
         };
 
         function CreateConstantGetter(key, value) {
-            var getter = CreateBuiltinFunction(ConstantFunction_Call, 0, "get " + key);
+            var getter = CreateBuiltinFunction(getRealm(),ConstantFunction_Call, 0, "get " + key);
             setInternalSlot(getter, "ConstantValue", value);
             return getter;
         }
@@ -14827,7 +14824,7 @@ define("lib/api", function (require, exports, module) {
             var d, p;
             if (isWindow()) {
 
-                var handler = CreateBuiltinFunction(function handler(thisArg, argList) {
+                var handler = CreateBuiltinFunction(getRealm(),function handler(thisArg, argList) {
                     var resolve = argList[0];
                     var reject = argList[1];
                 })
@@ -14857,7 +14854,7 @@ define("lib/api", function (require, exports, module) {
         // ===========================================================================================================
 
         DefineOwnProperty(ConsoleObject, "log", {
-            value: CreateBuiltinFunction(function log(thisArg, argList) {
+            value: CreateBuiltinFunction(getRealm(),function log(thisArg, argList) {
                 console.log.apply(console, argList);
             }),
             writable: true,
@@ -14866,7 +14863,7 @@ define("lib/api", function (require, exports, module) {
 
         });
         DefineOwnProperty(ConsoleObject, "dir", {
-            value: CreateBuiltinFunction(function dir(thisArg, argList) {
+            value: CreateBuiltinFunction(getRealm(),function dir(thisArg, argList) {
                 console.dir.apply(console, argList);
             }),
             writable: true,
@@ -14875,7 +14872,7 @@ define("lib/api", function (require, exports, module) {
 
         });
         DefineOwnProperty(ConsoleObject, "html", {
-            value: CreateBuiltinFunction(function html(thisArg, argList) {
+            value: CreateBuiltinFunction(getRealm(),function html(thisArg, argList) {
                 var selector = argList[0];
                 var html = "";
                 if (Type(selector) !== "string") return withError("Type", "First argument of console.html should be a valid css selector string.");
@@ -14909,7 +14906,7 @@ define("lib/api", function (require, exports, module) {
         // ===========================================================================================================
         setInternalSlot(ArrayIteratorPrototype, "Prototype", ObjectPrototype);
         DefineOwnProperty(ArrayIteratorPrototype, $$iterator, {
-            value: CreateBuiltinFunction(function (thisArg, argList) {
+            value: CreateBuiltinFunction(getRealm(),function (thisArg, argList) {
                 return thisArg;
             }, 0, "[Symbol.iterator]"),
             enumerable: false,
@@ -14923,7 +14920,7 @@ define("lib/api", function (require, exports, module) {
             writable: false
         });
         DefineOwnProperty(ArrayIteratorPrototype, "next", {
-            value: CreateBuiltinFunction(function next(thisArg, argList) {
+            value: CreateBuiltinFunction(getRealm(),function next(thisArg, argList) {
                 var O = thisArg;
                 if (Type(O) !== "object") return withError("Type", "ArrayIterator.prototype.next: O is not an object. ");
 
@@ -15012,7 +15009,7 @@ define("lib/api", function (require, exports, module) {
         setInternalSlot(ArrayPrototype, "Prototype", ObjectPrototype);
 
         DefineOwnProperty(ArrayConstructor, $$create, {
-            value: CreateBuiltinFunction(function $$create(thisArg, argList) {
+            value: CreateBuiltinFunction(getRealm(),function $$create(thisArg, argList) {
                 var F = thisArg;
                 var proto = GetPrototypeFromConstructor(F, "%ArrayPrototype%");
                 if ((proto = ifAbrupt(proto)) && isAbrupt(proto)) return proto;
@@ -15133,7 +15130,7 @@ define("lib/api", function (require, exports, module) {
         });
 
         DefineOwnProperty(ArrayConstructor, "isArray", {
-            value: CreateBuiltinFunction(function isArray(thisArg, argList) {
+            value: CreateBuiltinFunction(getRealm(),function isArray(thisArg, argList) {
                 var arg = GetValue(argList[0]);
                 // if (Type(arg) !== "object") return false;
                 if (arg instanceof ArrayExoticObject) return true;
@@ -15145,7 +15142,7 @@ define("lib/api", function (require, exports, module) {
         });
 
         DefineOwnProperty(ArrayConstructor, "of", {
-            value: CreateBuiltinFunction(function of(thisArg, argList) {
+            value: CreateBuiltinFunction(getRealm(),function of(thisArg, argList) {
                 var items = CreateArrayFromList(argList);
                 var lenValue = Get(items, "length");
                 var C = thisArg;
@@ -15184,7 +15181,7 @@ define("lib/api", function (require, exports, module) {
         });
 
         DefineOwnProperty(ArrayConstructor, "from", {
-            value: CreateBuiltinFunction(function from(thisArg, argList) {
+            value: CreateBuiltinFunction(getRealm(),function from(thisArg, argList) {
                 var C = thisArg;
                 var arrayLike = argList[0];
                 var mapfn = argList[1];
@@ -15306,7 +15303,7 @@ define("lib/api", function (require, exports, module) {
         });
 
         DefineOwnProperty(ArrayPrototype, "toString", {
-            value: CreateBuiltinFunction(function toString(thisArg, argList) {
+            value: CreateBuiltinFunction(getRealm(),function toString(thisArg, argList) {
                 var array = ToObject(thisArg);
                 if ((array = ifAbrupt(array)) && isAbrupt(array)) return array;
                 array = GetValue(array);
@@ -15335,7 +15332,7 @@ define("lib/api", function (require, exports, module) {
         }
 
         DefineOwnProperty(ArrayPrototype, "concat", {
-            value: CreateBuiltinFunction(function concat(thisArg, argList) {
+            value: CreateBuiltinFunction(getRealm(),function concat(thisArg, argList) {
                 var args = argList;
                 var k = 0;
                 var len = args.length;
@@ -15354,7 +15351,7 @@ define("lib/api", function (require, exports, module) {
         });
 
         DefineOwnProperty(ArrayPrototype, "join", {
-            value: CreateBuiltinFunction(function join(thisArg, argList) {
+            value: CreateBuiltinFunction(getRealm(),function join(thisArg, argList) {
                 var O = ToObject(thisArg);
                 if ((O = ifAbrupt(O)) && isAbrupt(O)) return O;
                 var separator = argList[0];
@@ -15387,7 +15384,7 @@ define("lib/api", function (require, exports, module) {
         });
 
         DefineOwnProperty(ArrayPrototype, "pop", {
-            value: CreateBuiltinFunction(function pop(thisArg, argList) {
+            value: CreateBuiltinFunction(getRealm(),function pop(thisArg, argList) {
                 var O = ToObject(thisArg);
                 if ((O = ifAbrupt(O)) && isAbrupt(O)) return O;
                 var lenVal = Get(O, "length");
@@ -15416,7 +15413,7 @@ define("lib/api", function (require, exports, module) {
         });
 
         DefineOwnProperty(ArrayPrototype, "push", {
-            value: CreateBuiltinFunction(function push(thisArg, argList) {
+            value: CreateBuiltinFunction(getRealm(),function push(thisArg, argList) {
                 var O = ToObject(thisArg);
                 if ((O = ifAbrupt(O)) && isAbrupt(O)) return O;
                 var lenVal = Get(O, "length");
@@ -15440,7 +15437,7 @@ define("lib/api", function (require, exports, module) {
         });
 
         DefineOwnProperty(ArrayPrototype, "reverse", {
-            value: CreateBuiltinFunction(function reverse(thisArg, argList) {
+            value: CreateBuiltinFunction(getRealm(),function reverse(thisArg, argList) {
                 var O = ToObject(thisArg);
                 if ((O = ifAbrupt(O)) && isAbrupt(O)) return O;
                 var lenVal = Get(O, "length");
@@ -15494,7 +15491,7 @@ define("lib/api", function (require, exports, module) {
         });
 
         DefineOwnProperty(ArrayPrototype, "shift", {
-            value: CreateBuiltinFunction(function shift(thisArg, argList) {
+            value: CreateBuiltinFunction(getRealm(),function shift(thisArg, argList) {
                 var O = ToObject(thisArg);
                 if ((O = ifAbrupt(O)) && isAbrupt(O)) return O;
                 var lenVal = Get(O, "length");
@@ -15508,7 +15505,7 @@ define("lib/api", function (require, exports, module) {
         });
 
         DefineOwnProperty(ArrayPrototype, "slice", {
-            value: CreateBuiltinFunction(function slice(thisArg, argList) {
+            value: CreateBuiltinFunction(getRealm(),function slice(thisArg, argList) {
                 var start = argList[0];
                 var end = argList[1];
                 var O = ToObject(thisArg);
@@ -15557,7 +15554,7 @@ define("lib/api", function (require, exports, module) {
         });
 
         DefineOwnProperty(ArrayPrototype, "sort", {
-            value: CreateBuiltinFunction(function sort(thisArg, argList) {
+            value: CreateBuiltinFunction(getRealm(),function sort(thisArg, argList) {
                 var O = ToObject(thisArg);
                 if ((O = ifAbrupt(O)) && isAbrupt(O)) return O;
                 var lenVal = Get(O, "length");
@@ -15682,7 +15679,7 @@ define("lib/api", function (require, exports, module) {
         LazyDefineBuiltinFunction(ArrayPrototype, "unshift", 1, ArrayPrototype_unshift);
         
         DefineOwnProperty(ArrayPrototype, "indexOf", {
-            value: CreateBuiltinFunction(function indexOf(thisArg, argList) {
+            value: CreateBuiltinFunction(getRealm(),function indexOf(thisArg, argList) {
                 var O = ToObject(thisArg);
                 if ((O = ifAbrupt(O)) && isAbrupt(O)) return O;
                 var searchElement = argList[0];
@@ -15721,7 +15718,7 @@ define("lib/api", function (require, exports, module) {
             configurable: true
         });
         DefineOwnProperty(ArrayPrototype, "lastIndexOf", {
-            value: CreateBuiltinFunction(function lastIndexOf(thisArg, argList) {
+            value: CreateBuiltinFunction(getRealm(),function lastIndexOf(thisArg, argList) {
                 var O = ToObject(thisArg);
                 if ((O = ifAbrupt(O)) && isAbrupt(O)) return O;
                 var searchElement = argList[0];
@@ -15760,7 +15757,7 @@ define("lib/api", function (require, exports, module) {
             configurable: true
         });
         DefineOwnProperty(ArrayPrototype, "forEach", {
-            value: CreateBuiltinFunction(function forEach(thisArg, argList) {
+            value: CreateBuiltinFunction(getRealm(),function forEach(thisArg, argList) {
                 var callback = argList[0];
                 var T = argList[1];
                 var O = ToObject(thisArg);
@@ -15790,7 +15787,7 @@ define("lib/api", function (require, exports, module) {
             configurable: true
         });
         DefineOwnProperty(ArrayPrototype, "map", {
-            value: CreateBuiltinFunction(function map(thisArg, argList) {
+            value: CreateBuiltinFunction(getRealm(),function map(thisArg, argList) {
 
                 var callback = argList[0];
                 var T = argList[1];
@@ -15827,7 +15824,7 @@ define("lib/api", function (require, exports, module) {
             configurable: true
         });
         DefineOwnProperty(ArrayPrototype, "filter", {
-            value: CreateBuiltinFunction(function filter(thisArg, argList) {
+            value: CreateBuiltinFunction(getRealm(),function filter(thisArg, argList) {
 
                 var callback = argList[0];
                 var T = argList[1];
@@ -15881,7 +15878,7 @@ define("lib/api", function (require, exports, module) {
         LazyDefineBuiltinFunction(ArrayPrototype, "reduceRight", 1, ArrayPrototype_reduceRight);
 
         DefineOwnProperty(ArrayPrototype, "every", {
-            value: CreateBuiltinFunction(function every(thisArg, argList) {
+            value: CreateBuiltinFunction(getRealm(),function every(thisArg, argList) {
                 var callback = argList[0];
                 var T = argList[1];
                 var O = ToObject(thisArg);
@@ -15912,7 +15909,7 @@ define("lib/api", function (require, exports, module) {
         });
 
         DefineOwnProperty(ArrayPrototype, "some", {
-            value: CreateBuiltinFunction(function some(thisArg, argList) {
+            value: CreateBuiltinFunction(getRealm(),function some(thisArg, argList) {
                 var callback = argList[0];
                 var T = argList[1];
                 var O = ToObject(thisArg);
@@ -15954,7 +15951,7 @@ define("lib/api", function (require, exports, module) {
 
         
         DefineOwnProperty(ArrayPrototype, "entries", {
-            value: CreateBuiltinFunction(function entries(thisArg, argList) {
+            value: CreateBuiltinFunction(getRealm(),function entries(thisArg, argList) {
                 var O = ToObject(thisArg);
                 if (isAbrupt(O)) return O;
                 return CreateArrayIterator(O, "key+value");
@@ -15964,7 +15961,7 @@ define("lib/api", function (require, exports, module) {
             configurable: true
         });
         DefineOwnProperty(ArrayPrototype, "keys", {
-            value: CreateBuiltinFunction(function keys(thisArg, argList) {
+            value: CreateBuiltinFunction(getRealm(),function keys(thisArg, argList) {
                 var O = ToObject(thisArg);
                 if (isAbrupt(O)) return O;
                 return CreateArrayIterator(O, "key");
@@ -15975,7 +15972,7 @@ define("lib/api", function (require, exports, module) {
         });
 
         DefineOwnProperty(ArrayPrototype, "values", {
-            value: CreateBuiltinFunction(function values(thisArg, argList) {
+            value: CreateBuiltinFunction(getRealm(),function values(thisArg, argList) {
                 var O = ToObject(thisArg);
                 if (isAbrupt(O)) return O;
                 return CreateArrayIterator(O, "value");
@@ -15986,7 +15983,7 @@ define("lib/api", function (require, exports, module) {
         });
 
         DefineOwnProperty(ArrayPrototype, $$iterator, {
-            value: CreateBuiltinFunction(function $$iterator(thisArg, argList) {
+            value: CreateBuiltinFunction(getRealm(),function $$iterator(thisArg, argList) {
                 var O = ToObject(thisArg);
                 if ((O = ifAbrupt(O)) && isAbrupt(O)) return O;
                 return CreateArrayIterator(O, "value");
@@ -16043,7 +16040,7 @@ define("lib/api", function (require, exports, module) {
         });
 
         DefineOwnProperty(StringConstructor, $$create, {
-            value: CreateBuiltinFunction(function $$create(thisArg, argList) {
+            value: CreateBuiltinFunction(getRealm(),function $$create(thisArg, argList) {
                 var F = thisArg;
                 var obj = StringExoticObject();
                 var proto = GetPrototypeFromConstructor(F, "%StringPrototype%");
@@ -16057,7 +16054,7 @@ define("lib/api", function (require, exports, module) {
             configurable: true
         });
 
-        StringRawFunction = CreateBuiltinFunction(function raw(thisArg, argList) {
+        StringRawFunction = CreateBuiltinFunction(getRealm(),function raw(thisArg, argList) {
             // String.raw(callSite, ...substitutions)
 
             var callSite = argList[0];
@@ -16101,28 +16098,28 @@ define("lib/api", function (require, exports, module) {
         });
 
         DefineOwnProperty(StringConstructor, "fromCharCode", {
-            value: CreateBuiltinFunction(function (thisArg, argList) {}),
+            value: CreateBuiltinFunction(getRealm(),function (thisArg, argList) {}),
             enumerable: false,
             writable: true,
             configurable: true
         });
 
         DefineOwnProperty(StringConstructor, "fromCodePoint", {
-            value: CreateBuiltinFunction(function (thisArg, argList) {}),
+            value: CreateBuiltinFunction(getRealm(),function (thisArg, argList) {}),
             enumerable: false,
             writable: true,
             configurable: true
         });
 
         DefineOwnProperty(StringConstructor, "", {
-            value: CreateBuiltinFunction(function (thisArg, argList) {}),
+            value: CreateBuiltinFunction(getRealm(),function (thisArg, argList) {}),
             enumerable: false,
             writable: true,
             configurable: true
         });
 
         DefineOwnProperty(StringPrototype, "", {
-            value: CreateBuiltinFunction(function (thisArg, argList) {}),
+            value: CreateBuiltinFunction(getRealm(),function (thisArg, argList) {}),
             enumerable: false,
             writable: true,
             configurable: true
@@ -16268,7 +16265,7 @@ define("lib/api", function (require, exports, module) {
         // ===========================================================================================================
 
         DefineOwnProperty(StringPrototype, $$iterator, {
-            value: CreateBuiltinFunction(function iterator(thisArg, argList) {
+            value: CreateBuiltinFunction(getRealm(),function iterator(thisArg, argList) {
                 return CreateStringIterator(thisArg, "value");
             }, 0, "[Symbol.iterator]"),
             writable: false,
@@ -16276,7 +16273,7 @@ define("lib/api", function (require, exports, module) {
             configurable: false
         });
         DefineOwnProperty(StringPrototype, "values", {
-            value: CreateBuiltinFunction(function values(thisArg, argList) {
+            value: CreateBuiltinFunction(getRealm(),function values(thisArg, argList) {
                 return CreateStringIterator(thisArg, "value");
             }),
             writable: false,
@@ -16284,7 +16281,7 @@ define("lib/api", function (require, exports, module) {
             configurable: false
         });
         DefineOwnProperty(StringPrototype, "keys", {
-            value: CreateBuiltinFunction(function keys(thisArg, argList) {
+            value: CreateBuiltinFunction(getRealm(),function keys(thisArg, argList) {
                 return CreateStringIterator(thisArg, "key");
             }),
             writable: false,
@@ -16292,7 +16289,7 @@ define("lib/api", function (require, exports, module) {
             configurable: false
         });
         DefineOwnProperty(StringPrototype, "entries", {
-            value: CreateBuiltinFunction(function entries(thisArg, argList) {
+            value: CreateBuiltinFunction(getRealm(),function entries(thisArg, argList) {
                 return CreateStringIterator(thisArg, "key+value");
             }),
             writable: false,
@@ -16300,7 +16297,7 @@ define("lib/api", function (require, exports, module) {
             configurable: false
         });
         DefineOwnProperty(StringIteratorPrototype, "next", {
-            value: CreateBuiltinFunction(function next(thisArg, argList) {
+            value: CreateBuiltinFunction(getRealm(),function next(thisArg, argList) {
                 var O = thisArg;
                 if (Type(O) !== "object")
                     return withError("Type", "the this value is not an object");
@@ -16369,7 +16366,7 @@ define("lib/api", function (require, exports, module) {
         });
         MakeConstructor(BooleanConstructor, true, BooleanPrototype);
         DefineOwnProperty(BooleanConstructor, $$create, {
-            value: CreateBuiltinFunction(function (thisArg, argList) {
+            value: CreateBuiltinFunction(getRealm(),function (thisArg, argList) {
                 var F = thisArg;
                 var obj = OrdinaryCreateFromConstructor(F, "%BooleanPrototype%", {
                     "BooleanData": null
@@ -16393,7 +16390,7 @@ define("lib/api", function (require, exports, module) {
             configurable: false
         });
         DefineOwnProperty(BooleanPrototype, "toString", {
-            value: CreateBuiltinFunction(function toString(thisArg, argList) {
+            value: CreateBuiltinFunction(getRealm(),function toString(thisArg, argList) {
                 var b = thisBooleanValue(thisArg);
                 if (isAbrupt(b)) return b;
                 if (b === true) return "true";
@@ -16404,7 +16401,7 @@ define("lib/api", function (require, exports, module) {
             configurable: true
         });
         DefineOwnProperty(BooleanPrototype, "valueOf", {
-            value: CreateBuiltinFunction(function valueOf(thisArg, argList) {
+            value: CreateBuiltinFunction(getRealm(),function valueOf(thisArg, argList) {
                 return thisBooleanValue(thisArg);
             }),
             enumerable: false,
@@ -16495,7 +16492,7 @@ define("lib/api", function (require, exports, module) {
             return withError("Type", "The Symbol[@@create] method of the Symbol Function is supposed to throw a Type Error");
         };
         DefineOwnProperty(SymbolFunction, $$create, {
-            value: CreateBuiltinFunction(SymbolFunction_$$create, 0, "[Symbol.create]"),
+            value: CreateBuiltinFunction(getRealm(),SymbolFunction_$$create, 0, "[Symbol.create]"),
             writable: false,
             enumerable: false,
             configurable: false
@@ -16528,7 +16525,7 @@ define("lib/api", function (require, exports, module) {
         };
 
         DefineOwnProperty(SymbolPrototype, "toString", {
-            value: CreateBuiltinFunction(SymbolPrototype_toString, 0, "toString"),
+            value: CreateBuiltinFunction(getRealm(),SymbolPrototype_toString, 0, "toString"),
             writable: false,
             enumerable: false,
             configurable: false
@@ -16573,7 +16570,7 @@ define("lib/api", function (require, exports, module) {
 
         LazyDefineBuiltinFunction(SymbolPrototype, "valueOf", 0, SymbolPrototype_valueOf);
         LazyDefineBuiltinConstant(SymbolPrototype, $$toStringTag, "Symbol");
-        LazyDefineBuiltinConstant(SymbolPrototype, $$toPrimitive, CreateBuiltinFunction(SymbolPrototype_$$toPrimitive, 1, "[Symbol.toPrimitive]"));
+        LazyDefineBuiltinConstant(SymbolPrototype, $$toPrimitive, CreateBuiltinFunction(getRealm(),SymbolPrototype_$$toPrimitive, 1, "[Symbol.toPrimitive]"));
 
         LazyDefineBuiltinFunction(SymbolFunction, "for", 1, SymbolFunction_for);
         LazyDefineBuiltinFunction(SymbolFunction, "keyFor", 1, SymbolFunction_keyFor /* ,realm */);
@@ -16756,7 +16753,7 @@ define("lib/api", function (require, exports, module) {
         });
 
         DefineOwnProperty(ErrorConstructor, $$create, {
-            value: CreateBuiltinFunction(function (thisArg, argList) {
+            value: CreateBuiltinFunction(getRealm(),function (thisArg, argList) {
                 var F = thisArg;
                 var obj = OrdinaryCreateFromConstructor(F, "%ErrorPrototype%", {
                     "ErrorData": undefined
@@ -16770,7 +16767,7 @@ define("lib/api", function (require, exports, module) {
         });
 
         DefineOwnProperty(ErrorPrototype, "toString", {
-            value: CreateBuiltinFunction(function (thisArg, argList) {
+            value: CreateBuiltinFunction(getRealm(),function (thisArg, argList) {
                 var O = thisArg;
                 if (Type(O) !== "object") return withError("Type", "Error.prototype.toString: O is not an object.");
                 var name = Get(O, "name");
@@ -16842,7 +16839,7 @@ define("lib/api", function (require, exports, module) {
                 writable: false
             });
             DefineOwnProperty(ctor, $$create, {
-                value: CreateBuiltinFunction(function (thisArg, argList) {
+                value: CreateBuiltinFunction(getRealm(),function (thisArg, argList) {
                     var F = thisArg;
                     var obj = OrdinaryCreateFromConstructor(F, intrProtoName);
                     return obj;
@@ -16968,7 +16965,7 @@ define("lib/api", function (require, exports, module) {
 
         //DatePrototype
         DefineOwnProperty(DateConstructor, "parse", {
-            value: CreateBuiltinFunction(function (thisArg, argList) {
+            value: CreateBuiltinFunction(getRealm(),function (thisArg, argList) {
                 var string = ToString(argList[0]);
             }),
             writable: false,
@@ -16978,7 +16975,7 @@ define("lib/api", function (require, exports, module) {
 
         //DatePrototype
         DefineOwnProperty(DateConstructor, "now", {
-            value: CreateBuiltinFunction(function (thisArg, argList) {
+            value: CreateBuiltinFunction(getRealm(),function (thisArg, argList) {
                 return NormalCompletion(Date.now());
             }),
             writable: false,
@@ -16987,7 +16984,7 @@ define("lib/api", function (require, exports, module) {
         });
 
         DefineOwnProperty(DateConstructor, $$create, {
-            value: CreateBuiltinFunction(function (thisArg, argList) {
+            value: CreateBuiltinFunction(getRealm(),function (thisArg, argList) {
                 var obj = OrdinaryCreateFromConstructor(DateConstructor, "%DatePrototype%", {
                     "DateValue" : undefined
                 });
@@ -16999,7 +16996,7 @@ define("lib/api", function (require, exports, module) {
         });
 
         DefineOwnProperty(DatePrototype, "getDate", {
-            value: CreateBuiltinFunction(function (thisArg, argList) {
+            value: CreateBuiltinFunction(getRealm(),function (thisArg, argList) {
                 var t = thisTimeValue(thisArg);
                 if (isAbrupt(t)) return t;
                 if (t !== t) return NaN;
@@ -17011,7 +17008,7 @@ define("lib/api", function (require, exports, module) {
         });
 
         DefineOwnProperty(DatePrototype, "getDay", {
-            value: CreateBuiltinFunction(function (thisArg, argList) {
+            value: CreateBuiltinFunction(getRealm(),function (thisArg, argList) {
                 var t = thisTimeValue(thisArg);
                 if (isAbrupt(t)) return t;
                 if (t !== t) return NaN;
@@ -17024,7 +17021,7 @@ define("lib/api", function (require, exports, module) {
         });
 
         DefineOwnProperty(DatePrototype, "getFullYear", {
-            value: CreateBuiltinFunction(function (thisArg, argList) {
+            value: CreateBuiltinFunction(getRealm(),function (thisArg, argList) {
                 var t = thisTimeValue(thisArg);
                 if (isAbrupt(t)) return t;
                 if (t !== t) return NaN;
@@ -17036,7 +17033,7 @@ define("lib/api", function (require, exports, module) {
         });
 
         DefineOwnProperty(DatePrototype, "getHours", {
-            value: CreateBuiltinFunction(function (thisArg, argList) {
+            value: CreateBuiltinFunction(getRealm(),function (thisArg, argList) {
                 var t = thisTimeValue(thisArg);
                 if (isAbrupt(t)) return t;
                 if (t !== t) return NaN;
@@ -17048,7 +17045,7 @@ define("lib/api", function (require, exports, module) {
         });
 
         DefineOwnProperty(DatePrototype, "getMilliSeconds", {
-            value: CreateBuiltinFunction(function (thisArg, argList) {
+            value: CreateBuiltinFunction(getRealm(),function (thisArg, argList) {
                 var t = thisTimeValue(thisArg);
                 if (isAbrupt(t)) return t;
                 if (t !== t) return NaN;
@@ -17060,7 +17057,7 @@ define("lib/api", function (require, exports, module) {
         });
 
         DefineOwnProperty(DatePrototype, "getMinutes", {
-            value: CreateBuiltinFunction(function (thisArg, argList) {
+            value: CreateBuiltinFunction(getRealm(),function (thisArg, argList) {
                 var t = thisTimeValue(thisArg);
                 if (isAbrupt(t)) return t;
                 if (t !== t) return NaN;
@@ -17072,7 +17069,7 @@ define("lib/api", function (require, exports, module) {
         });
 
         DefineOwnProperty(DatePrototype, "getMonth", {
-            value: CreateBuiltinFunction(function (thisArg, argList) {
+            value: CreateBuiltinFunction(getRealm(),function (thisArg, argList) {
                 var t = thisTimeValue(thisArg);
                 if (isAbrupt(t)) return t;
                 if (t !== t) return NaN;
@@ -17084,7 +17081,7 @@ define("lib/api", function (require, exports, module) {
         });
 
         DefineOwnProperty(DatePrototype, "getTimeZoneOffset", {
-            value: CreateBuiltinFunction(function (thisArg, argList) {
+            value: CreateBuiltinFunction(getRealm(),function (thisArg, argList) {
                 var t = thisTimeValue(thisArg);
                 if (isAbrupt(t)) return t;
                 if (t !== t) return NaN;
@@ -17097,7 +17094,7 @@ define("lib/api", function (require, exports, module) {
         });
 
         DefineOwnProperty(DatePrototype, "getUTCDay", {
-            value: CreateBuiltinFunction(function (thisArg, argList) {
+            value: CreateBuiltinFunction(getRealm(),function (thisArg, argList) {
                 var t = thisTimeValue(thisArg);
                 if (isAbrupt(t)) return t;
                 if (t !== t) return NaN;
@@ -17110,7 +17107,7 @@ define("lib/api", function (require, exports, module) {
         });
 
         DefineOwnProperty(DatePrototype, "getUTCFullYear", {
-            value: CreateBuiltinFunction(function (thisArg, argList) {
+            value: CreateBuiltinFunction(getRealm(),function (thisArg, argList) {
                 var t = thisTimeValue(thisArg);
                 if (isAbrupt(t)) return t;
                 if (t !== t) return NaN;
@@ -17123,7 +17120,7 @@ define("lib/api", function (require, exports, module) {
         });
 
         DefineOwnProperty(DatePrototype, "getUTCHours", {
-            value: CreateBuiltinFunction(function (thisArg, argList) {
+            value: CreateBuiltinFunction(getRealm(),function (thisArg, argList) {
                 var t = thisTimeValue(thisArg);
                 if (isAbrupt(t)) return t;
                 if (t !== t) return NaN;
@@ -17136,7 +17133,7 @@ define("lib/api", function (require, exports, module) {
         });
 
         DefineOwnProperty(DatePrototype, "getUTCMilliseconds", {
-            value: CreateBuiltinFunction(function (thisArg, argList) {
+            value: CreateBuiltinFunction(getRealm(),function (thisArg, argList) {
                 var t = thisTimeValue(thisArg);
                 if (isAbrupt(t)) return t;
                 if (t !== t) return NaN;
@@ -17148,7 +17145,7 @@ define("lib/api", function (require, exports, module) {
         });
 
         DefineOwnProperty(DatePrototype, "getUTCMinutes", {
-            value: CreateBuiltinFunction(function (thisArg, argList) {
+            value: CreateBuiltinFunction(getRealm(),function (thisArg, argList) {
                 var t = thisTimeValue(thisArg);
                 if (isAbrupt(t)) return t;
                 if (t !== t) return NaN;
@@ -17160,7 +17157,7 @@ define("lib/api", function (require, exports, module) {
         });
 
         DefineOwnProperty(DatePrototype, "getUTCSeconds", {
-            value: CreateBuiltinFunction(function (thisArg, argList) {
+            value: CreateBuiltinFunction(getRealm(),function (thisArg, argList) {
                 var t = thisTimeValue(thisArg);
                 if (isAbrupt(t)) return t;
                 if (t !== t) return NaN;
@@ -17172,7 +17169,7 @@ define("lib/api", function (require, exports, module) {
         });
 
         DefineOwnProperty(DatePrototype, "setDate", {
-            value: CreateBuiltinFunction(function (thisArg, argList) {
+            value: CreateBuiltinFunction(getRealm(),function (thisArg, argList) {
                 var date = argList[0];
                 var t = LocalTime(thisTimeValue(thisArg));
                 var newDate = MakeDate(MakeDay(YearFromTime(t), MonthFromTime(t), dt), TimeWithinDay(t));
@@ -17551,7 +17548,7 @@ define("lib/api", function (require, exports, module) {
                 var target = argList[0];
                 var handler = argList[1]
 
-                var revoker = CreateBuiltinFunction(function revoke(thisArg, argList) {
+                var revoker = CreateBuiltinFunction(getRealm(),function revoke(thisArg, argList) {
                     var p = getInternalSlot(revoker, "RevokableProxy");
                     if (p === null) return NormalCompletion(undefined);
                     setInternalSlot(revoker, "RevokableProxy", null);
@@ -17810,7 +17807,7 @@ define("lib/api", function (require, exports, module) {
         // IsNaN
         // ===========================================================================================================
 
-        IsNaNFunction = CreateBuiltinFunction(function isNaN(thisArg, argList) {
+        IsNaNFunction = CreateBuiltinFunction(getRealm(),function isNaN(thisArg, argList) {
             var nan = ToNumber(argList[0]);
             return nan !== nan;
         }, 1, "isNaN");
@@ -17819,7 +17816,7 @@ define("lib/api", function (require, exports, module) {
         // IsFinite
         // ===========================================================================================================
 
-        IsFiniteFunction = CreateBuiltinFunction(function isFinite(thisArg, argList) {
+        IsFiniteFunction = CreateBuiltinFunction(getRealm(),function isFinite(thisArg, argList) {
             var number = ToNumber(argList[0]);
             if (number == Infinity || number == -Infinity || number != number) return false;
             return true
@@ -17923,7 +17920,7 @@ define("lib/api", function (require, exports, module) {
         });
 
 
-        LazyDefineProperty(ObjectConstructor, "seal", CreateBuiltinFunction(
+        LazyDefineProperty(ObjectConstructor, "seal", CreateBuiltinFunction(getRealm(),
             function (thisArg, argList) {
                 var O;
                 O = argList[0];
@@ -17935,7 +17932,7 @@ define("lib/api", function (require, exports, module) {
             }
         ));
 
-        LazyDefineProperty(ObjectConstructor, "freeze", CreateBuiltinFunction(
+        LazyDefineProperty(ObjectConstructor, "freeze", CreateBuiltinFunction(getRealm(),
             function (thisArg, argList) {
                 var O;
                 O = argList[0];
@@ -17947,7 +17944,7 @@ define("lib/api", function (require, exports, module) {
             }
         ));
 
-        LazyDefineProperty(ObjectConstructor, "getOwnPropertyDescriptor", CreateBuiltinFunction(
+        LazyDefineProperty(ObjectConstructor, "getOwnPropertyDescriptor", CreateBuiltinFunction(getRealm(),
             function (thisArg, argList) {
                 var O = argList[0];
                 var P = argList[1];
@@ -17959,7 +17956,7 @@ define("lib/api", function (require, exports, module) {
                 return FromPropertyDescriptor(desc);
             }));
 
-        LazyDefineProperty(ObjectConstructor, "getOwnPropertyNames", CreateBuiltinFunction(
+        LazyDefineProperty(ObjectConstructor, "getOwnPropertyNames", CreateBuiltinFunction(getRealm(),
             function (thisArg, argList) {
                 var O = argList[0];
                 return GetOwnPropertyKeys(O, "string");
@@ -17987,13 +17984,13 @@ define("lib/api", function (require, exports, module) {
             return CreateArrayFromList(nameList);
         }
 
-        LazyDefineProperty(ObjectConstructor, "getOwnPropertySymbols", CreateBuiltinFunction(
+        LazyDefineProperty(ObjectConstructor, "getOwnPropertySymbols", CreateBuiltinFunction(getRealm(),
             function (thisArg, argList) {
                 var O = argList[0];
                 return GetOwnPropertyKeys(O, "symbol");
             }));
 
-        LazyDefineProperty(ObjectConstructor, "getPrototypeOf", CreateBuiltinFunction(
+        LazyDefineProperty(ObjectConstructor, "getPrototypeOf", CreateBuiltinFunction(getRealm(),
             function (thisArg, argList) {
                 var O = argList[0];
                 var obj = ToObject(O);
@@ -18001,14 +17998,14 @@ define("lib/api", function (require, exports, module) {
                 return GetPrototypeOf(obj);
             }));
 
-        LazyDefineProperty(ObjectConstructor, "is", CreateBuiltinFunction(
+        LazyDefineProperty(ObjectConstructor, "is", CreateBuiltinFunction(getRealm(),
             function (thisArg, argList) {
                 var value1 = argList[0];
                 var value2 = argList[1];
                 return SameValue(value1, value2);
             }));
 
-        LazyDefineProperty(ObjectConstructor, "isExtensible", CreateBuiltinFunction(
+        LazyDefineProperty(ObjectConstructor, "isExtensible", CreateBuiltinFunction(getRealm(),
             function (thisArg, argList) {
                 var O = argList[0];
                 if (Type(O) !== "object") return false;
@@ -18016,7 +18013,7 @@ define("lib/api", function (require, exports, module) {
             }
         ));
 
-        LazyDefineProperty(ObjectConstructor, "isSealed", CreateBuiltinFunction(
+        LazyDefineProperty(ObjectConstructor, "isSealed", CreateBuiltinFunction(getRealm(),
             function (thisArg, argList) {
                 var O = argList[0];
                 if (Type(O) !== "object") return true;
@@ -18024,7 +18021,7 @@ define("lib/api", function (require, exports, module) {
             }
         ));
 
-        LazyDefineProperty(ObjectConstructor, "isFrozen", CreateBuiltinFunction(
+        LazyDefineProperty(ObjectConstructor, "isFrozen", CreateBuiltinFunction(getRealm(),
             function (thisArg, argList) {
                 var O = argList[0];
                 if (Type(O) !== "object") return true;
@@ -18273,8 +18270,8 @@ define("lib/api", function (require, exports, module) {
                 __proto__:null,
                 configurable: true,
                 enumerable: false,
-                get: CreateBuiltinFunction(ObjectPrototype_get_proto, "get __proto__", 0),
-                set: CreateBuiltinFunction(ObjectPrototype_set_proto, "set __proto___", 0)
+                get: CreateBuiltinFunction(getRealm(),ObjectPrototype_get_proto, "get __proto__", 0),
+                set: CreateBuiltinFunction(getRealm(),ObjectPrototype_set_proto, "set __proto___", 0)
             };
             DefineOwnProperty(ObjectPrototype, "__proto__", ObjectPrototype_proto_)
 
@@ -18296,7 +18293,7 @@ define("lib/api", function (require, exports, module) {
         // var NotifierPrototype is defined with all other intrinsics above
 
         DefineOwnProperty(NotifierPrototype, "notify", {
-            value: CreateBuiltinFunction(function notify(thisArg, argList) {
+            value: CreateBuiltinFunction(getRealm(),function notify(thisArg, argList) {
                 var changeRecord = argList[0];
                 var notifier = thisArg;
                 if (Type(notifier) !== "object") return withError("Type", "Notifier is not an object.");
@@ -18339,7 +18336,7 @@ define("lib/api", function (require, exports, module) {
         });
 
         DefineOwnProperty(NotifierPrototype, "performChange", {
-            value: CreateBuiltinFunction(function notify(thisArg, argList) {
+            value: CreateBuiltinFunction(getRealm(),function notify(thisArg, argList) {
                 var changeType = argList[0];
                 var changeFn = argList[1];
                 var notifier = thisArg;
@@ -18561,7 +18558,7 @@ define("lib/api", function (require, exports, module) {
         }
 
         DefineOwnProperty(ObjectConstructor, "observe", {
-            value: CreateBuiltinFunction(function (thisArg, argList) {
+            value: CreateBuiltinFunction(getRealm(),function (thisArg, argList) {
                 var O = argList[0];
                 var callback = argList[1];
                 var accept = argList[2];
@@ -18599,7 +18596,7 @@ define("lib/api", function (require, exports, module) {
         });
 
         DefineOwnProperty(ObjectConstructor, "unobserve", {
-            value: CreateBuiltinFunction(function (thisArg, argList) {
+            value: CreateBuiltinFunction(getRealm(),function (thisArg, argList) {
                 var O = argList[0];
                 var callback = argList[1];
                 if (Type(O) !== "object") return withError("Type", "first argument is not an object");
@@ -18617,7 +18614,7 @@ define("lib/api", function (require, exports, module) {
         });
 
         DefineOwnProperty(ObjectConstructor, "deliverChangeRecords", {
-            value: CreateBuiltinFunction(function (thisArg, argList) {
+            value: CreateBuiltinFunction(getRealm(),function (thisArg, argList) {
                 var callback = argList[0];
                 if (!IsCallable(callback)) return withError("Type", "first argument is not callable.");
                 var status;
@@ -18634,7 +18631,7 @@ define("lib/api", function (require, exports, module) {
         });
 
         DefineOwnProperty(ObjectConstructor, "getNotifier", {
-            value: CreateBuiltinFunction(function (thisArg, argList) {
+            value: CreateBuiltinFunction(getRealm(),function (thisArg, argList) {
                 var O = argList[0];
                 if (Type(O) !== "object") return withError("Type", "first argument is not an object");
                 if (TestIntegrityLevel(O, "frozen")) return NormalCompletion(null);
@@ -18657,7 +18654,7 @@ define("lib/api", function (require, exports, module) {
         setInternalSlot(FunctionPrototype, "Prototype", ObjectPrototype);
         LazyDefineProperty(FunctionPrototype, $$toStringTag, "Function");
 
-        LazyDefineProperty(FunctionPrototype, "valueOf", CreateBuiltinFunction(function valueOf(thisArg, argList) {
+        LazyDefineProperty(FunctionPrototype, "valueOf", CreateBuiltinFunction(getRealm(),function valueOf(thisArg, argList) {
             return thisArg;
         }));
 
@@ -18721,7 +18718,7 @@ define("lib/api", function (require, exports, module) {
         });
 
         DefineOwnProperty(FunctionConstructor, $$create, {
-            value: CreateBuiltinFunction(function (thisArg, argList) {
+            value: CreateBuiltinFunction(getRealm(),function (thisArg, argList) {
                 var F = thisArg;
                 var proto = GetPrototypeFromConstructor(F, "%FunctionPrototype%");
                 if ((proto = ifAbrupt(proto)) && isAbrupt(proto)) return proto;
@@ -18733,7 +18730,7 @@ define("lib/api", function (require, exports, module) {
             configurable: true
         });
 
-        LazyDefineProperty(FunctionPrototype, $$create, CreateBuiltinFunction(function $$create(thisArg, argList) {
+        LazyDefineProperty(FunctionPrototype, $$create, CreateBuiltinFunction(getRealm(),function $$create(thisArg, argList) {
             var F = thisArg;
             return OrdinaryCreateFromConstructor(F, "%ObjectPrototype%");
         }));
@@ -18749,7 +18746,7 @@ define("lib/api", function (require, exports, module) {
         // Function.prototype.toString uses codegen module ===>>> var codegen = require("lib/js-codegen");
         // ====
 
-        CreateDataProperty(FunctionPrototype, "toString", CreateBuiltinFunction(function (thisArg, argList) {
+        CreateDataProperty(FunctionPrototype, "toString", CreateBuiltinFunction(getRealm(),function (thisArg, argList) {
             var codegen = require("lib/js-codegen");
             var F = thisArg;
             if (!IsCallable(F)) return withError("Type", "Function.prototype.toString only applies to functions!");
@@ -18786,7 +18783,7 @@ define("lib/api", function (require, exports, module) {
 
 
         DefineOwnProperty(FunctionPrototype, "apply", {
-            value: CreateBuiltinFunction(function apply(thisArg, argList) {
+            value: CreateBuiltinFunction(getRealm(),function apply(thisArg, argList) {
                 var func = thisArg;
                 if (!IsCallable(func)) return withError("Type", "fproto.apply: func is not callable");
                 var T;
@@ -18802,7 +18799,7 @@ define("lib/api", function (require, exports, module) {
             writable: true
         });
         DefineOwnProperty(FunctionPrototype, "bind", {
-            value: CreateBuiltinFunction(function bind(thisArg, argList) {
+            value: CreateBuiltinFunction(getRealm(),function bind(thisArg, argList) {
                 var boundTarget = thisArg;
                 var thisArgument = argList[0];
                 var listOfArguments = argList.slice(1, argList.length - 1);
@@ -18814,7 +18811,7 @@ define("lib/api", function (require, exports, module) {
             
         });
         DefineOwnProperty(FunctionPrototype, "call", {
-            value: CreateBuiltinFunction(function call(thisArg, argList) {
+            value: CreateBuiltinFunction(getRealm(),function call(thisArg, argList) {
                 var func = thisArg;
                 if (!IsCallable(func)) return withError("Type", "fproto.call: func is not callable");
                 var T = ToObject(argList[0]);
@@ -18826,7 +18823,7 @@ define("lib/api", function (require, exports, module) {
             configurable: true
         });
         DefineOwnProperty(FunctionPrototype, $$hasInstance, {
-            value: CreateBuiltinFunction(function $$hasInstance(thisArg, argList) {
+            value: CreateBuiltinFunction(getRealm(),function $$hasInstance(thisArg, argList) {
                 var V = argList[0];
                 var F = thisArg;
                 return OrdinaryHasInstance(F, V);
@@ -18855,7 +18852,7 @@ define("lib/api", function (require, exports, module) {
         // Generator Prototype and Function
         // ===========================================================================================================
 
-        LazyDefineProperty(GeneratorPrototype, $$iterator, CreateBuiltinFunction(function (thisArg, argList) {
+        LazyDefineProperty(GeneratorPrototype, $$iterator, CreateBuiltinFunction(getRealm(),function (thisArg, argList) {
             return thisArg;
         }));
 
@@ -18881,13 +18878,13 @@ define("lib/api", function (require, exports, module) {
         LazyDefineProperty(GeneratorObject, "prototype", GeneratorPrototype);
         //    LazyDefineProperty(GeneratorPrototype, "constructor", GeneratorObject);
 
-        LazyDefineProperty(GeneratorPrototype, "next", CreateBuiltinFunction(function (thisArg, argList) {
+        LazyDefineProperty(GeneratorPrototype, "next", CreateBuiltinFunction(getRealm(),function (thisArg, argList) {
             var value = argList[0];
             var G = thisArg;
             return GeneratorResume(G, value);
         }));
 
-        LazyDefineProperty(GeneratorPrototype, "throw", CreateBuiltinFunction(function (thisArg, argList) {
+        LazyDefineProperty(GeneratorPrototype, "throw", CreateBuiltinFunction(getRealm(),function (thisArg, argList) {
             var g = thisArg;
             var exception = argList[0];
             if (Type(g) !== "object") return withError("Type", "throw: Generator is not an object");
@@ -18968,7 +18965,7 @@ define("lib/api", function (require, exports, module) {
             return OrdinaryConstruct(F, argList);
         });
 
-        LazyDefineProperty(GeneratorFunction, $$create, CreateBuiltinFunction(function (thisArg, argList) {
+        LazyDefineProperty(GeneratorFunction, $$create, CreateBuiltinFunction(getRealm(),function (thisArg, argList) {
             var F = thisArg;
             var proto = GetPrototypeFromConstructor(F, "%Generator%");
             if ((proto = ifAbrupt(proto)) && isAbrupt(proto)) return proto;
@@ -18976,7 +18973,7 @@ define("lib/api", function (require, exports, module) {
             return obj;
         }));
 
-        LazyDefineProperty(GeneratorPrototype, $$create, CreateBuiltinFunction(function (thisArg, argList) {
+        LazyDefineProperty(GeneratorPrototype, $$create, CreateBuiltinFunction(getRealm(),function (thisArg, argList) {
             var F = thisArg;
             var obj = OrdinaryCreateFromConstructor(F, "%Generator%", {
                 GeneratorState: null,
@@ -19206,7 +19203,7 @@ define("lib/api", function (require, exports, module) {
         }
 
         DefineOwnProperty(JSONObject, "parse", {
-            value: CreateBuiltinFunction(function (thisArg, argList) {
+            value: CreateBuiltinFunction(getRealm(),function (thisArg, argList) {
                 var text = GetValue(argList[0]);
                 var reviver = argList[1];
                 var JText = ToString(text);
@@ -19235,7 +19232,7 @@ define("lib/api", function (require, exports, module) {
             writable: false
         });
         DefineOwnProperty(JSONObject, "stringify", {
-            value: CreateBuiltinFunction(function (thisArg, argList) {
+            value: CreateBuiltinFunction(getRealm(),function (thisArg, argList) {
                 var value = argList[0];
                 var replacer = argList[1];
                 var space = argList[2];
@@ -19371,7 +19368,7 @@ define("lib/api", function (require, exports, module) {
         }
 
 
-        var Thrower = CreateBuiltinFunction(function (thisArg, argList) {
+        var Thrower = CreateBuiltinFunction(getRealm(),function (thisArg, argList) {
             var e = argList[0];
             return Completion("throw", e, "");
         }, 1, "thrower");
@@ -19434,12 +19431,12 @@ define("lib/api", function (require, exports, module) {
             setInternalSlot(promise, "ResolveReactions", []);
             setInternalSlot(promise, "RejectReactions", []);
 
-            var resolve = CreateBuiltinFunction(function (thisArg, argList) {
+            var resolve = CreateBuiltinFunction(getRealm(),function (thisArg, argList) {
                 var x = argList[0];
                 Resolve(promise, x);
             });
             setInternalSlot(resolve, "Promise", promise);
-            var reject = CreateBuiltinFunction(function (thisArg, argList) {
+            var reject = CreateBuiltinFunction(getRealm(),function (thisArg, argList) {
                 var x = argList[0];
                 Reject(promise, x);
             });
@@ -19473,7 +19470,7 @@ define("lib/api", function (require, exports, module) {
         MakeConstructor(PromiseConstructor, true, PromisePrototype);
         setInternalSlot(PromiseConstructor, "Call", PromiseConstructor_Call);
         setInternalSlot(PromiseConstructor, "Construct", PromiseConstructor_Construct);
-        LazyDefineProperty(PromiseConstructor, $$create, CreateBuiltinFunction(PromiseConstructor_$$create, 0, "[Symbol.create]"));
+        LazyDefineProperty(PromiseConstructor, $$create, CreateBuiltinFunction(getRealm(),PromiseConstructor_$$create, 0, "[Symbol.create]"));
 
 
 
@@ -19667,11 +19664,11 @@ define("lib/api", function (require, exports, module) {
             // Assert(execution context is empty);
             var p = OrdinaryConstruct(PromiseConstructor, []);
 
-            var resolve = CreateBuiltinFunction(function (thisArg, argList) {
+            var resolve = CreateBuiltinFunction(getRealm(),function (thisArg, argList) {
                 var x = argList[0];
                 Resolve(p, x);
             });
-            var reject = CreateBuiltinFunction(function (thisArg, argList) {
+            var reject = CreateBuiltinFunction(getRealm(),function (thisArg, argList) {
                 var x = argList[0];
                 Reject(p, x);
             });
@@ -19685,7 +19682,7 @@ define("lib/api", function (require, exports, module) {
         function GetDeferred(C) {
             var promise;
             if (IsConstructor(C)) {
-                var resolver = CreateBuiltinFunction(function (thisArg, argList) {
+                var resolver = CreateBuiltinFunction(getRealm(),function (thisArg, argList) {
                     var resolve = argList[0];
                     var reject = argList[1];
                     if (resolve) {
@@ -19697,11 +19694,11 @@ define("lib/api", function (require, exports, module) {
                 promise = callInternalSlot("Construct", C, [resolver]);
             } else {
                 promise = callInternalSlot("Construct", PromiseConstructor, []);
-                var resolve = CreateBuiltinFunction(function (thisArg, argList) {
+                var resolve = CreateBuiltinFunction(getRealm(),function (thisArg, argList) {
                     var x = argList[0];
                     Resolve(promise, x);
                 });
-                var reject = CreateBuiltinFunction(function (thisArg, argList) {
+                var reject = CreateBuiltinFunction(getRealm(),function (thisArg, argList) {
                     var x = argList[0];
                     Reject(promise, x);
                 });
@@ -19750,7 +19747,7 @@ define("lib/api", function (require, exports, module) {
             while (!IteratorComplete(iterable)) {
                 nextValue = IteratorValue(IteratorNext(iterable));
                 nextPromise = ToPromise(thisArg, nextValue);
-                onFullfilled = CreateBuiltinFunction(
+                onFullfilled = CreateBuiltinFunction(getRealm(),
                     (function (index) {
                         return function (thisArg, argList) {
                             values.DefineOwnProperty(index, {
@@ -19791,9 +19788,9 @@ define("lib/api", function (require, exports, module) {
         LazyDefineBuiltinFunction(PromiseConstructor, "cast", 1, PromiseConstructor_cast);
         LazyDefineBuiltinFunction(PromiseConstructor, "race", 1, PromiseConstructor_race);
 
-        LazyDefineProperty(PromiseConstructor, "all", CreateBuiltinFunction(PromiseConstructor_all, 0, "all"));
-        LazyDefineProperty(PromisePrototype, "then", CreateBuiltinFunction(PromisePrototype_then, 2, "then"));
-        LazyDefineProperty(PromisePrototype, "catch", CreateBuiltinFunction(PromisePrototype_catch, 1, "catch"));
+        LazyDefineProperty(PromiseConstructor, "all", CreateBuiltinFunction(getRealm(),PromiseConstructor_all, 0, "all"));
+        LazyDefineProperty(PromisePrototype, "then", CreateBuiltinFunction(getRealm(),PromisePrototype_then, 2, "then"));
+        LazyDefineProperty(PromisePrototype, "catch", CreateBuiltinFunction(getRealm(),PromisePrototype_catch, 1, "catch"));
         LazyDefineProperty(PromisePrototype, "constructor", PromiseConstructor);
 
         // ===========================================================================================================
@@ -19872,7 +19869,7 @@ define("lib/api", function (require, exports, module) {
         });
 
         DefineOwnProperty(ArrayBufferConstructor, "isView", {
-            value: CreateBuiltinFunction(function (thisArg, argList) {
+            value: CreateBuiltinFunction(getRealm(),function (thisArg, argList) {
                 var arg = argList[0];
                 if (Type(arg) !== "object") return false;
                 if (hasInternalSlot(arg, "ViewedArrayBuffer")) return true;
@@ -19884,7 +19881,7 @@ define("lib/api", function (require, exports, module) {
         });
 
         DefineOwnProperty(ArrayBufferConstructor, $$create, {
-            value: CreateBuiltinFunction(function (thisArg, argList) {
+            value: CreateBuiltinFunction(getRealm(),function (thisArg, argList) {
                 var F = thisArg;
                 return AllocateArrayBuffer(F);
             }),
@@ -19910,7 +19907,7 @@ define("lib/api", function (require, exports, module) {
         setInternalSlot(ArrayBufferPrototype, "Prototype", ObjectPrototype);
 
         DefineOwnProperty(ArrayBufferPrototype, "byteLength", {
-            get: CreateBuiltinFunction(function (thisArg, argList) {
+            get: CreateBuiltinFunction(getRealm(),function (thisArg, argList) {
                 var O = thisArg;
                 if (!hasInternalSlot(O, "ArrayBufferData")) return withError("Type", "The this argument hasnÂ´t [[ArrayBufferData]]");
                 if (getInternalSlot(O, "ArrayBufferData") === undefined) return withError("Type", "The this arguments [[ArrayBufferData]] is not initialised");
@@ -19923,7 +19920,7 @@ define("lib/api", function (require, exports, module) {
         });
 
         DefineOwnProperty(ArrayBufferPrototype, "slice", {
-            value: CreateBuiltinFunction(function (thisArg, argList) {
+            value: CreateBuiltinFunction(getRealm(),function (thisArg, argList) {
                 var start = argList[0];
                 var end = argList[1];
             }),
@@ -19947,7 +19944,7 @@ define("lib/api", function (require, exports, module) {
         setInternalSlot(DataViewConstructor, "Prototype", DataViewPrototype);
 
         DefineOwnProperty(DataViewConstructor, $$create, {
-            value: CreateBuiltinFunction(function (thisArg, argList) {
+            value: CreateBuiltinFunction(getRealm(),function (thisArg, argList) {
 
             }),
             writable: false,
@@ -19963,7 +19960,7 @@ define("lib/api", function (require, exports, module) {
         });
 
         DefineOwnProperty(DataViewPrototype, "readInt8", {
-            value: CreateBuiltinFunction(function (thisArg, argList) {
+            value: CreateBuiltinFunction(getRealm(),function (thisArg, argList) {
 
             }),
             writable: true,
@@ -19972,7 +19969,7 @@ define("lib/api", function (require, exports, module) {
         });
 
         DefineOwnProperty(DataViewPrototype, "readInt16", {
-            value: CreateBuiltinFunction(function (thisArg, argList) {
+            value: CreateBuiltinFunction(getRealm(),function (thisArg, argList) {
 
             }),
             writable: true,
@@ -19981,7 +19978,7 @@ define("lib/api", function (require, exports, module) {
         });
 
         DefineOwnProperty(DataViewPrototype, "writeInt8", {
-            value: CreateBuiltinFunction(function (thisArg, argList) {
+            value: CreateBuiltinFunction(getRealm(),function (thisArg, argList) {
 
             }),
             writable: true,
@@ -19990,7 +19987,7 @@ define("lib/api", function (require, exports, module) {
         });
 
         DefineOwnProperty(DataViewPrototype, "writeInt16", {
-            value: CreateBuiltinFunction(function (thisArg, argList) {
+            value: CreateBuiltinFunction(getRealm(),function (thisArg, argList) {
 
             }),
             writable: true,
@@ -20226,9 +20223,9 @@ define("lib/api", function (require, exports, module) {
         };
 
         setInternalSlot(TypedArrayConstructor, "Call", TypedArrayConstructor_Call);
-        LazyDefineProperty(TypedArrayConstructor, $$create, CreateBuiltinFunction(TypedArrayConstructor_$$create, 0, "[Symbol.create]"));
-        LazyDefineProperty(TypedArrayConstructor, "from", CreateBuiltinFunction(TypedArrayConstructor_from, 1, "from"));
-        LazyDefineProperty(TypedArrayConstructor, "of", CreateBuiltinFunction(TypedArrayConstructor_of, 2, "of"));
+        LazyDefineProperty(TypedArrayConstructor, $$create, CreateBuiltinFunction(getRealm(),TypedArrayConstructor_$$create, 0, "[Symbol.create]"));
+        LazyDefineProperty(TypedArrayConstructor, "from", CreateBuiltinFunction(getRealm(),TypedArrayConstructor_from, 1, "from"));
+        LazyDefineProperty(TypedArrayConstructor, "of", CreateBuiltinFunction(getRealm(),TypedArrayConstructor_of, 2, "of"));
 
         // ------------------------------------------------------------------------------------------
         // 22.2.6. Typed Array Prototype
@@ -20288,10 +20285,10 @@ define("lib/api", function (require, exports, module) {
         };
 
         function createTypedArrayPrototype(proto) {
-            LazyDefineAccessor(proto, "buffer", CreateBuiltinFunction(TypedArrayPrototype_get_buffer, 0, "get buffer"));
-            LazyDefineAccessor(proto, "byteLength", CreateBuiltinFunction(TypedArrayPrototype_get_byteLength, 0, "get byteLength"));
-            LazyDefineAccessor(proto, "byteOffset", CreateBuiltinFunction(TypedArrayPrototype_get_byteOffset, 0, "get byteOffset"));
-            LazyDefineAccessor(proto, $$toStringTag, CreateBuiltinFunction(TypedArrayPrototype_get_$$toStringTag, 0, "get [Symbol.toStringTag]"));
+            LazyDefineAccessor(proto, "buffer", CreateBuiltinFunction(getRealm(),TypedArrayPrototype_get_buffer, 0, "get buffer"));
+            LazyDefineAccessor(proto, "byteLength", CreateBuiltinFunction(getRealm(),TypedArrayPrototype_get_byteLength, 0, "get byteLength"));
+            LazyDefineAccessor(proto, "byteOffset", CreateBuiltinFunction(getRealm(),TypedArrayPrototype_get_byteOffset, 0, "get byteOffset"));
+            LazyDefineAccessor(proto, $$toStringTag, CreateBuiltinFunction(getRealm(),TypedArrayPrototype_get_$$toStringTag, 0, "get [Symbol.toStringTag]"));
             return proto;
         };
 
@@ -20448,7 +20445,7 @@ define("lib/api", function (require, exports, module) {
             configurable: false
         });
         DefineOwnProperty(MapPrototype, "has", {
-            value: CreateBuiltinFunction(function has(thisArg, argList) {
+            value: CreateBuiltinFunction(getRealm(),function has(thisArg, argList) {
 
                 var same;
                 var key = argList[0];
@@ -20478,7 +20475,7 @@ define("lib/api", function (require, exports, module) {
             configurable: false
         });
         DefineOwnProperty(MapPrototype, "get", {
-            value: CreateBuiltinFunction(function get(thisArg, argList) {
+            value: CreateBuiltinFunction(getRealm(),function get(thisArg, argList) {
                 var key = argList[0];
                 var M = thisArg;
                 var same;
@@ -20507,7 +20504,7 @@ define("lib/api", function (require, exports, module) {
         });
 
         DefineOwnProperty(MapPrototype, "set", {
-            value: CreateBuiltinFunction(function set(thisArg, argList) {
+            value: CreateBuiltinFunction(getRealm(),function set(thisArg, argList) {
                 var key = argList[0];
                 var value = argList[1];
                 var M = thisArg;
@@ -20543,7 +20540,7 @@ define("lib/api", function (require, exports, module) {
             configurable: false
         });
         DefineOwnProperty(MapPrototype, "delete", {
-            value: CreateBuiltinFunction(function _delete(thisArg, argList) {
+            value: CreateBuiltinFunction(getRealm(),function _delete(thisArg, argList) {
                 var key = argList[0];
                 var M = thisArg;
                 var same;
@@ -20571,7 +20568,7 @@ define("lib/api", function (require, exports, module) {
             configurable: false
         });
         DefineOwnProperty(MapPrototype, "forEach", {
-            value: CreateBuiltinFunction(function forEach(thisArg, argList) {
+            value: CreateBuiltinFunction(getRealm(),function forEach(thisArg, argList) {
 
             }),
             writable: false,
@@ -20580,14 +20577,14 @@ define("lib/api", function (require, exports, module) {
         });
 
         DefineOwnProperty(MapPrototype, "clear", {
-            value: CreateBuiltinFunction(function clear(thisArg, argList) {}),
+            value: CreateBuiltinFunction(getRealm(),function clear(thisArg, argList) {}),
             writable: false,
             enumerable: false,
             configurable: false
         });
 
         DefineOwnProperty(MapPrototype, "keys", {
-            value: CreateBuiltinFunction(function keys(thisArg, argList) {
+            value: CreateBuiltinFunction(getRealm(),function keys(thisArg, argList) {
                 var O = thisArg;
                 return CreateMapIterator(O, "key");
             }),
@@ -20596,7 +20593,7 @@ define("lib/api", function (require, exports, module) {
             configurable: false
         });
         DefineOwnProperty(MapPrototype, "values", {
-            value: CreateBuiltinFunction(function values(thisArg, argList) {
+            value: CreateBuiltinFunction(getRealm(),function values(thisArg, argList) {
                 var O = thisArg;
                 return CreateMapIterator(O, "value");
             }),
@@ -20605,7 +20602,7 @@ define("lib/api", function (require, exports, module) {
             configurable: false
         });
         DefineOwnProperty(MapPrototype, "entries", {
-            value: CreateBuiltinFunction(function entries(thisArg, argList) {
+            value: CreateBuiltinFunction(getRealm(),function entries(thisArg, argList) {
                 var O = thisArg;
                 return CreateMapIterator(O, "key+value");
             }),
@@ -20615,7 +20612,7 @@ define("lib/api", function (require, exports, module) {
         });
 
         DefineOwnProperty(MapConstructor, $$create, {
-            value: CreateBuiltinFunction(function $$create(thisArg, argList) {
+            value: CreateBuiltinFunction(getRealm(),function $$create(thisArg, argList) {
                 var F = thisArg;
                 return OrdinaryCreateFromConstructor(F, "%MapPrototype%", {
                     "MapData": undefined,
@@ -20670,7 +20667,7 @@ define("lib/api", function (require, exports, module) {
         });
 
         DefineOwnProperty(MapIteratorPrototype, $$iterator, {
-            value: CreateBuiltinFunction(function $$iterator(thisArg, argList) {
+            value: CreateBuiltinFunction(getRealm(),function $$iterator(thisArg, argList) {
                 return thisArg;
             }),
             writable: false,
@@ -20679,7 +20676,7 @@ define("lib/api", function (require, exports, module) {
         });
 
         DefineOwnProperty(MapIteratorPrototype, "next", {
-            value: CreateBuiltinFunction(function next(thisArg, argList) {
+            value: CreateBuiltinFunction(getRealm(),function next(thisArg, argList) {
                 var O = thisArg;
                 if (Type(O) !== "object") return withError("Type", "the this value is not an object");
                 if (!hasInternalSlot(O, "Map") || !hasInternalSlot(O, "MapNextIndex") || !hasInternalSlot(O, "MapIterationKind")) return withError("Type", "iterator has not all of the required internal properties");
@@ -20798,7 +20795,7 @@ define("lib/api", function (require, exports, module) {
         });
 
         DefineOwnProperty(SetConstructor, $$create, {
-            value: CreateBuiltinFunction(function $$create(thisArg, argList) {
+            value: CreateBuiltinFunction(getRealm(),function $$create(thisArg, argList) {
                 var F = thisArg;
                 return OrdinaryCreateFromConstructor(F, "%SetPrototype%", {
                     "SetData": undefined,
@@ -20818,14 +20815,14 @@ define("lib/api", function (require, exports, module) {
         });
 
         DefineOwnProperty(SetPrototype, "clear", {
-            value: CreateBuiltinFunction(function clear(thisArg, argList) {}),
+            value: CreateBuiltinFunction(getRealm(),function clear(thisArg, argList) {}),
             writable: false,
             enumerable: false,
             configurable: false
         });
 
         DefineOwnProperty(SetPrototype, "set", {
-            value: CreateBuiltinFunction(function set(thisArg, argList) {
+            value: CreateBuiltinFunction(getRealm(),function set(thisArg, argList) {
                 var value = argList[0];
                 var S = thisArg;
                 var same;
@@ -20854,7 +20851,7 @@ define("lib/api", function (require, exports, module) {
         });
 
         DefineOwnProperty(SetPrototype, "has", {
-            value: CreateBuiltinFunction(function has(thisArg, argList) {
+            value: CreateBuiltinFunction(getRealm(),function has(thisArg, argList) {
                 var value = argList[0];
                 var S = thisArg;
                 var same;
@@ -20882,7 +20879,7 @@ define("lib/api", function (require, exports, module) {
             configurable: false
         });
         DefineOwnProperty(SetPrototype, "delete", {
-            value: CreateBuiltinFunction(function _delete(thisArg, argList) {
+            value: CreateBuiltinFunction(getRealm(),function _delete(thisArg, argList) {
                 var value = argList[0];
                 var S = thisArg;
                 var same;
@@ -20947,7 +20944,7 @@ define("lib/api", function (require, exports, module) {
         });
 
         DefineOwnProperty(SetIteratorPrototype, $$iterator, {
-            value: CreateBuiltinFunction(function $$iterator(thisArg, argList) {
+            value: CreateBuiltinFunction(getRealm(),function $$iterator(thisArg, argList) {
                 return thisArg;
             }),
             writable: false,
@@ -20956,7 +20953,7 @@ define("lib/api", function (require, exports, module) {
         });
 
         DefineOwnProperty(SetIteratorPrototype, "next", {
-            value: CreateBuiltinFunction(function next(thisArg, argList) {
+            value: CreateBuiltinFunction(getRealm(),function next(thisArg, argList) {
                 var O = thisArg;
                 if (Type(O) !== "object") return withError("Type", "the this value is not an object");
                 if (!hasInternalSlot(O, "Set") || !hasInternalSlot(O, "SetNextIndex") || !hasInternalSlot(O, "SetIterationKind")) return withError("Type", "iterator has not all of the required internal properties");
@@ -21029,7 +21026,7 @@ define("lib/api", function (require, exports, module) {
         });
 
         DefineOwnProperty(EmitterConstructor, $$create, {
-            value: CreateBuiltinFunction(function (thisArg, argList) {
+            value: CreateBuiltinFunction(getRealm(),function (thisArg, argList) {
                 var F = EmitterConstructor;
                 var proto = GetPrototypeFromConstructor(F, "%EmitterPrototype%");
                 var O = ObjectCreate(proto, {
@@ -21056,7 +21053,7 @@ define("lib/api", function (require, exports, module) {
         });
 
         DefineOwnProperty(EmitterPrototype, "on", {
-            value: CreateBuiltinFunction(function on(thisArg, argList) {
+            value: CreateBuiltinFunction(getRealm(),function on(thisArg, argList) {
                 var E = thisArg,
                     listeners, callback, event;
 
@@ -21082,7 +21079,7 @@ define("lib/api", function (require, exports, module) {
         });
 
         DefineOwnProperty(EmitterPrototype, "once", {
-            value: CreateBuiltinFunction(function once(thisArg, argList) {
+            value: CreateBuiltinFunction(getRealm(),function once(thisArg, argList) {
                 var E = thisArg,
                     listeners, callback, event;
 
@@ -21102,7 +21099,7 @@ define("lib/api", function (require, exports, module) {
                 list.push(
                     function (callback) {
 
-                        return CreateBuiltinFunction(function once_callback(thisArg, argList) {
+                        return CreateBuiltinFunction(getRealm(),function once_callback(thisArg, argList) {
                             if (callback) {
                                 callInternalSlot("Call", callback, thisArg, argList);
                                 callback = null;
@@ -21120,7 +21117,7 @@ define("lib/api", function (require, exports, module) {
         });
 
         DefineOwnProperty(EmitterPrototype, "remove", {
-            value: CreateBuiltinFunction(function remove(thisArg, argList) {
+            value: CreateBuiltinFunction(getRealm(),function remove(thisArg, argList) {
 
                 var E = thisArg,
                     listeners, callback, event, values;
@@ -21158,7 +21155,7 @@ define("lib/api", function (require, exports, module) {
         });
 
         DefineOwnProperty(EmitterPrototype, "removeAll", {
-            value: CreateBuiltinFunction(function removeAll(thisArg, argList) {
+            value: CreateBuiltinFunction(getRealm(),function removeAll(thisArg, argList) {
                 var E = thisArg,
                     listeners, event;
 
@@ -21184,7 +21181,7 @@ define("lib/api", function (require, exports, module) {
         });
 
         DefineOwnProperty(EmitterPrototype, "emit", {
-            value: CreateBuiltinFunction(function emit(thisArg, argList) {
+            value: CreateBuiltinFunction(getRealm(),function emit(thisArg, argList) {
                 var E = thisArg,
                     listeners, callback, event, values;
 
@@ -21479,65 +21476,49 @@ define("lib/api", function (require, exports, module) {
     // ---------------- this modul cares for suspending and restoring realms -----
     //
 
-    var interAMD;
-    var interAMDs = [];
+    
+    var realms = [];
 
-    function saveInterAMD() {
-        interAMDs.push(interAMD);
+    function saveCodeRealm() {
+        realms.push(realm);
     }
 
-    function restoreInterAMD() {
-        setInterAMD(interAMDs.pop());
+    function restoreCodeRealm() {
+        setCodeRealm(realms.pop());
     }
 
-    function setInterAMD(s) {
-        interAMD = s;
-        if (s) {
-            stack = interAMD.stack;
-            realm = interAMD.realm;
+    function setCodeRealm(r) {  // CREATE REALM (API)
+        if (r) {
+            realm = r;
+            stack = realm.stack;
             intrinsics = realm.intrinsics;
             globalEnv = realm.globalEnv;
             globalThis = realm.globalThis;
         }
-        require("lib/runtime").setInterAMD(s);
+        require("lib/runtime").setCodeRealm(r);
     }
 
     function createRealm(options) {
         options = options || {}; // { createOnly: true, don´t set to current realm }
 
         debug("Creating Realm...");
-
-        // xfer 
-        var interAMD = Object.create(null);
-        interAMD.stack = [];
-        interAMD.eventQueue = [];
-
-        // code realm
         
         var realm = new CodeRealm();
-        
-        interAMD.realm = realm;
-        realm.interAMD = interAMD;
-        
-        realm.intrinsics = OrdinaryObject(null);
+        setCodeRealm(realm); // loc
+        var intrinsics = createIntrinsics(realm);
         realm.globalThis = OrdinaryObject(null);
         realm.globalEnv = new GlobalEnvironment(realm.globalThis);
         
-        if (!options.createOnly) setInterAMD(interAMD); // local
-        
-        interAMD.completion = new CompletionRecord();
-
+        setCodeRealm(realm); // local
         // first context
         var cx;
-        cx = newContext(null, interAMD);
-
+        cx = newContext(null, realm.xs);
         // intrinsics
-        createIntrinsics(realm);
         createGlobalThis(realm.globalThis, realm.intrinsics);
 
         realm.loader = undefined;
 
-        quickAssignIntrVars(interAMD);
+        quickAssignIntrVars(realm.xs);
 
         if (!options.createOnly) {
             var cx = getContext();
@@ -21545,13 +21526,15 @@ define("lib/api", function (require, exports, module) {
             cx.varEnv = realm.globalEnv;
         }
         
+        
         realm.toString = function () { return "[object CodeRealm]"; }
         
+
         realm.toValue = function (code) {
-            saveInterAMD();
-            setInterAMD(interAMD);
+            saveCodeRealm();
+            setCodeRealm(realm);
             var result = ecma.Evaluate(code);
-            restoreInterAMD();
+            restoreCodeRealm();
             return result;
         };
         
@@ -21563,9 +21546,9 @@ define("lib/api", function (require, exports, module) {
 
     exports.createRealm = createRealm;
     exports.createIntrinsics = createIntrinsics;
-    exports.setInterAMD = setInterAMD;
-    exports.saveInterAMD = saveInterAMD;
-    exports.restoreInterAMD = restoreInterAMD;
+    exports.setCodeRealm = setCodeRealm;
+    exports.saveCodeRealm = saveCodeRealm;
+    exports.restoreCodeRealm = restoreCodeRealm;
 
     return exports;
 });
@@ -21625,6 +21608,10 @@ define("lib/runtime", ["lib/parser", "lib/api", "lib/slower-static-semantics"], 
 
     //
     // Code REALM requiren
+
+
+
+
     // 
 
     var createRealm = ecma.createRealm;
@@ -21838,17 +21825,22 @@ define("lib/runtime", ["lib/parser", "lib/api", "lib/slower-static-semantics"], 
     // ----------------------------------------------------------
     //
 
-    function setInterAMD(s) {
-        interAMD = s;
-        if (s) {
-            stack = interAMD.stack;
-            realm = interAMD.realm;
+    function setCodeRealm(r) {  // IN THE RUNTIME, 
+                // before evaluate accepts a realm 
+                // and public evalute is only defined on each realm
+
+        if (r) {
+            realm = r;
+            stack = realm.stack;
             intrinsics = realm.intrinsics;
             globalEnv = realm.globalEnv;
             globalThis = realm.globalThis;
-            eventQueue = interAMD.eventQueue;
+            eventQueue = realm.eventQueue;
+        
         }
-        onceEachTimeARealmRegisters();
+        realm.xs.EvaluateBody = EvaluateBody;
+        realm.xs.Evaluate = Evaluate;
+        realm.xs.CreateGeneratorInstance = CreateGeneratorInstance;
     }
 
     // ^ replacen mit realm und module system
@@ -21864,16 +21856,16 @@ define("lib/runtime", ["lib/parser", "lib/api", "lib/slower-static-semantics"], 
 
     var CheckObjectCoercible = ecma.CheckObjectCoercible;
 
-    // ---- interAMD is used for intermodule 
-    var interAMD, stack;
+    // ---- xs is used for intermodule 
+    
     // -----
     var line, column;
-    var realm;
-    var cx; // der aktive Context;
 
+
+    var cx; // der aktive Context; gegen getContext()
     var realm, intrinsics, globalEnv, globalThis;
-    var eventQueue;
-
+    var stack, eventQueue;
+    
     var scriptLocation;
 
     var initialisedTheRuntime = false;
@@ -22671,17 +22663,11 @@ define("lib/runtime", ["lib/parser", "lib/api", "lib/slower-static-semantics"], 
 
     /****************************************************/
 
-    // put to interAMD and eval once each realm.
+    // put to xs and eval once each realm.
 
     ecma.EvaluateBody = EvaluateBody;
     ecma.Evaluate = Evaluate;
     ecma.CreateGeneratorInstance = CreateGeneratorInstance;
-
-    function onceEachTimeARealmRegisters() {
-        interAMD.EvaluateBody = EvaluateBody;
-        interAMD.Evaluate = Evaluate;
-        interAMD.CreateGeneratorInstance = CreateGeneratorInstance;
-    }
 
     /****************************************************/
 
@@ -23316,7 +23302,7 @@ define("lib/runtime", ["lib/parser", "lib/api", "lib/slower-static-semantics"], 
         dir(l);
         log(">> Completion Record << ");
         log("completion:");
-        dir(interAMD.completion);
+        dir(realm.completion);
         log("## Environments (E <= E.outer)");
         l = getLexEnv();
         i = 0;
@@ -23341,7 +23327,7 @@ define("lib/runtime", ["lib/parser", "lib/api", "lib/slower-static-semantics"], 
     evaluation.printStackAtDebuggerStatement = printStackAtDebuggerStatement;
 
     function printStackAtDebuggerStatement() {
-        var stackTraceLimit = interAMD.stackTraceLimit || 10;
+        var stackTraceLimit = realm.xs.stackTraceLimit || 10;
         var i = 0;
 
         var key;
@@ -25247,9 +25233,9 @@ define("lib/runtime", ["lib/parser", "lib/api", "lib/slower-static-semantics"], 
 
     function Directive(node) {
         if (isStrictMode[node.value]) {
-            interAMD.strict = strict = cx.strict = true;
+            getContext().strict = true;
         } else if (isUsingAsmJsWhatMeansNuttingButADirectiveHereBUTaValidatorOrGeneratorWouldBeCool[node.value]) {
-            cx.asm = true;
+            getContext().asm = true;
         }
         return NormalCompletion(empty);
     }
@@ -25271,23 +25257,17 @@ define("lib/runtime", ["lib/parser", "lib/api", "lib/slower-static-semantics"], 
 
         "use strict";
         var v;
-        /*
-		cx = newContext();
-		cx.varEnv = getGlobalEnv();
-		cx.lexEnv = getGlobalEnv();
-		getLexEnv().                                                          outer = cx.varEnv;
-		*/
-
+        
         if (program.strict) {
-            interAMD.strict = cx.strict = true;
+            getContext().strict = true;
         }
 
         var status = InstantiateGlobalDeclaration(program, getGlobalEnv(), []);
         if (isAbrupt(status)) return status;
 
         tellExecutionContext(program, 0);
-        cx.callee = "{ScriptItemList}";
-        cx.caller = "{Script}";
+        cx.callee = "ScriptItemList";
+        cx.caller = "Script";
 
         var node;
         var V = undefined;
@@ -25304,10 +25284,7 @@ define("lib/runtime", ["lib/parser", "lib/api", "lib/slower-static-semantics"], 
             }
         }
 
-        interAMD.strict = getContext().strict = false;
-
-        //            cx = oldContext();
-
+        getContext().strict = false;
         return NormalCompletion(V);
     }
 
@@ -25459,6 +25436,7 @@ define("lib/runtime", ["lib/parser", "lib/api", "lib/slower-static-semantics"], 
                 tellExecutionContext(node, 0);
                 R = E.apply(this, arguments);
             }
+
             return R;
         }
     }
@@ -25541,27 +25519,27 @@ define("lib/runtime", ["lib/parser", "lib/api", "lib/slower-static-semantics"], 
         initialisedTheRuntime = false;
     }
 
+
     function initializeTheRuntime() {
 
         realm = createRealm(); // and everything else
-        // setzt interAMD
+
+        
         cx = getContext();
-
         initialisedTheRuntime = true;
-
-        eventQueue = interAMD.eventQueue;
-        stack = interAMD.stack;
-
         /* rubbish */
-        scriptLocation = "(syntaxjs.parse)";
-        if (typeof window !== "undefined") {
-            scriptLocation = document.location.href + " (syntaxjs.parse)";
-        } else if (typeof process !== "undefined") scriptLocation = "(node.js interpreter)";
-        else scriptLocation = "(worker)";
-        interAMD.scriptLocation = scriptLocation;
+        
+        scriptLocation = "(syntax.js)";
 
-        /* *** */
-        // ecma.installCustomBuiltinFunctions();
+        if (typeof window !== "undefined") {
+            scriptLocation = "("+document.location.href + " @syntax.js)";
+        } else if (typeof process !== "undefined") {
+            scriptLocation = "(node.js interpreter)";
+        } else {
+            scriptLocation = "(worker)";
+        }
+        
+        realm.xs.scriptLocation = scriptLocation;
 
     }
 
@@ -25573,12 +25551,12 @@ define("lib/runtime", ["lib/parser", "lib/api", "lib/slower-static-semantics"], 
 
     /*
 		exports.ExecuteTheCode = ExecuteTheCode;
-		exports.setInterAMD = setInterAMD;
+		exports.setCodeRealm = setCodeRealm;
 		exports.Evaluate = Evaluate;
 		exports.ResumableEvaluation = ResumableEvaluation;
 		*/
 
-    ExecuteTheCode.setInterAMD = setInterAMD;
+    ExecuteTheCode.setCodeRealm = setCodeRealm;
     ExecuteTheCode.Evaluate = Evaluate;
 
     return ExecuteTheCode;
