@@ -12790,6 +12790,15 @@ define("lib/api", function (require, exports, module) {
     // LazyDefineProperty (used intermediary)
     // ===========================================================================================================
 
+    function LazyDefineFalseTrueFalse(O, name, value) {
+        return callInternalSlot("DefineOwnProperty", O, name, {
+            configurable: false,
+            enumerable: true,
+            value: value,
+            writable: false 
+        });
+    }
+
     function LazyDefineBuiltinConstant(O, name, value) {
         return callInternalSlot("DefineOwnProperty", O, name, {
             configurable: false,
@@ -21204,237 +21213,78 @@ define("lib/api", function (require, exports, module) {
         
         LazyDefineBuiltinConstant(EmitterPrototype, $$toStringTag, "Emitter");
         
-        // ===========================================================================================================
-        // "assign Intrinsics" (refactor to create buitins once per realm)
-        // ===========================================================================================================
-        
-            
-
-
-        /*
-        assignIntrinsics = function assignIntrinsics(Intrinsics) {
-
-            LazyDefineProperty(Intrinsics, "%Realm%", RealmConstructor);
-            LazyDefineProperty(Intrinsics, "%RealmPrototype%", RealmPrototype);
-            LazyDefineProperty(Intrinsics, "%Loader%", LoaderConstructor);
-            LazyDefineProperty(Intrinsics, "%LoaderPrototype%", LoaderPrototype);
-            LazyDefineProperty(Intrinsics, "%Module%", ModuleFunction);
-            LazyDefineProperty(Intrinsics, "%TypedArray%", TypedArrayConstructor);    
-            LazyDefineProperty(Intrinsics, "%Int8Array%", Int8ArrayConstructor);
-            LazyDefineProperty(Intrinsics, "%Int8ArrayPrototype%", Int8ArrayPrototype);
-            LazyDefineProperty(Intrinsics, "%Uint8Array%", Uint8ArrayConstructor);
-            LazyDefineProperty(Intrinsics, "%Uint8ArrayPrototype%", Uint8ArrayPrototype);
-            LazyDefineProperty(Intrinsics, "%Uint8ClampedArray%", Uint8ClampedArrayConstructor);
-            LazyDefineProperty(Intrinsics, "%Uint8ClampedArrayPrototype%", Uint8ClampedArrayPrototype);
-            LazyDefineProperty(Intrinsics, "%Int16Array%", Int16ArrayConstructor);
-            LazyDefineProperty(Intrinsics, "%Int16ArrayPrototype%", Int16ArrayPrototype);
-            LazyDefineProperty(Intrinsics, "%Uint16Array%", Uint16ArrayConstructor);
-            LazyDefineProperty(Intrinsics, "%Uint16ArrayPrototype%", Uint16ArrayPrototype);
-            LazyDefineProperty(Intrinsics, "%Int32Array%", Int32ArrayConstructor);
-            LazyDefineProperty(Intrinsics, "%Int32ArrayPrototype%", Int32ArrayPrototype);
-            LazyDefineProperty(Intrinsics, "%Uint32Array%", Uint32ArrayConstructor);
-            LazyDefineProperty(Intrinsics, "%Uint32ArrayPrototype%", Uint32ArrayPrototype);
-            LazyDefineProperty(Intrinsics, "%Float32Array%", Float32ArrayConstructor);
-            LazyDefineProperty(Intrinsics, "%Float32ArrayPrototype%", Float32ArrayPrototype);
-            LazyDefineProperty(Intrinsics, "%Float64Array%", Float64ArrayConstructor);
-            LazyDefineProperty(Intrinsics, "%Float64ArrayPrototype%", Float64ArrayPrototype);
-            LazyDefineProperty(Intrinsics, "%ArrayBuffer%", ArrayBufferConstructor);
-            LazyDefineProperty(Intrinsics, "%ArrayBufferPrototype%", ArrayBufferPrototype);
-            LazyDefineProperty(Intrinsics, "%DataView%", DataViewConstructor);
-            LazyDefineProperty(Intrinsics, "%DataViewPrototype%", DataViewPrototype);
-            LazyDefineProperty(Intrinsics, "%Load%", LoadFunction);
-            LazyDefineProperty(Intrinsics, "%Request%", RequestFunction);
-            LazyDefineProperty(Intrinsics, "%ThrowTypeError", ThrowTypeError);
-            LazyDefineProperty(Intrinsics, "%GeneratorFunction%", GeneratorFunction);
-            LazyDefineProperty(Intrinsics, "%Generator%", GeneratorObject);
-            LazyDefineProperty(Intrinsics, "%GeneratorPrototype%", GeneratorPrototype);
-            LazyDefineProperty(Intrinsics, "%Object%", ObjectConstructor);
-            LazyDefineProperty(Intrinsics, "%ObjectPrototype%", ObjectPrototype);
-            LazyDefineProperty(Intrinsics, "%Array%", ArrayConstructor);
-            LazyDefineProperty(Intrinsics, "%ArrayPrototype%", ArrayPrototype);
-            LazyDefineProperty(Intrinsics, "%Symbol%", SymbolFunction);
-            LazyDefineProperty(Intrinsics, "%Reflect%", ReflectObject);
-            LazyDefineProperty(Intrinsics, "%Eval%", EvalFunction);
-            LazyDefineProperty(Intrinsics, "%Error%", ErrorConstructor);
-            LazyDefineProperty(Intrinsics, "%ErrorPrototype%", ErrorPrototype);
-            LazyDefineProperty(Intrinsics, "%TypeError%", TypeErrorConstructor);
-            LazyDefineProperty(Intrinsics, "%TypeErrorPrototype%", TypeErrorPrototype);
-            LazyDefineProperty(Intrinsics, "%SyntaxError%", SyntaxErrorConstructor);
-            LazyDefineProperty(Intrinsics, "%SyntaxErrorPrototype%", SyntaxErrorPrototype);
-            LazyDefineProperty(Intrinsics, "%ReferenceError%", ReferenceErrorConstructor);
-            LazyDefineProperty(Intrinsics, "%ReferenceErrorPrototype%", ReferenceErrorPrototype);
-            LazyDefineProperty(Intrinsics, "%URIError%", URIErrorConstructor);
-            LazyDefineProperty(Intrinsics, "%URIErrorPrototype%", URIErrorPrototype);
-            LazyDefineProperty(Intrinsics, "%RangeError%", RangeErrorConstructor);
-            LazyDefineProperty(Intrinsics, "%RangeErrorPrototype%", RangeErrorPrototype);
-            LazyDefineProperty(Intrinsics, "%EvalError%", EvalErrorConstructor);
-            LazyDefineProperty(Intrinsics, "%EvalErrorPrototype%", EvalErrorPrototype);
-            LazyDefineProperty(Intrinsics, "%Date%", DateConstructor);
-            LazyDefineProperty(Intrinsics, "%DatePrototype%", DatePrototype);
-            LazyDefineProperty(Intrinsics, "%JSON%", JSONObject);
-            LazyDefineProperty(Intrinsics, "%Math%", MathObject);
-            LazyDefineProperty(Intrinsics, "%RegExp%", RegExpConstructor);
-            LazyDefineProperty(Intrinsics, "%RegExpPrototype%", RegExpPrototype);
-            LazyDefineProperty(Intrinsics, "%String%", StringConstructor);
-            LazyDefineProperty(Intrinsics, "%StringPrototype%", StringPrototype);
-            LazyDefineProperty(Intrinsics, "%StringIteratorPrototype%", StringIteratorPrototype);
-            LazyDefineProperty(Intrinsics, "%ArrayIteratorPrototype%", ArrayIteratorPrototype);
-            LazyDefineProperty(Intrinsics, "%Proxy%", ProxyConstructor);
-            LazyDefineProperty(Intrinsics, "%ProxyPrototype%", ProxyPrototype);
-            LazyDefineProperty(Intrinsics, "%Number%", NumberConstructor);
-            LazyDefineProperty(Intrinsics, "%NumberPrototype%", NumberPrototype);
-            LazyDefineProperty(Intrinsics, "%Boolean%", BooleanConstructor);
-            LazyDefineProperty(Intrinsics, "%BooleanPrototype%", BooleanPrototype);
-            LazyDefineProperty(Intrinsics, "%String%", StringConstructor);
-            LazyDefineProperty(Intrinsics, "%StringPrototype%", StringPrototype);
-            LazyDefineProperty(Intrinsics, "%Promise%", PromiseConstructor);
-            LazyDefineProperty(Intrinsics, "%PromisePrototype%", PromisePrototype);
-            LazyDefineProperty(Intrinsics, "%SetTimeout%", SetTimeoutFunction);
-            LazyDefineProperty(Intrinsics, "%Function%", FunctionConstructor);
-            LazyDefineProperty(Intrinsics, "%FunctionPrototype%", FunctionPrototype);
-            LazyDefineProperty(Intrinsics, "%ParseInt%", ParseIntFunction);
-            LazyDefineProperty(Intrinsics, "%ParseFloat%", ParseFloatFunction);
-            LazyDefineProperty(Intrinsics, "%EncodeURI%", EncodeURIFunction);
-            LazyDefineProperty(Intrinsics, "%DecodeURI%", DecodeURIFunction);
-            LazyDefineProperty(Intrinsics, "%EncodeURIComponent%", EncodeURIComponentFunction);
-            LazyDefineProperty(Intrinsics, "%DecodeURIComponent%", DecodeURIComponentFunction);
-            LazyDefineProperty(Intrinsics, "%Escape%", EscapeFunction);
-            LazyDefineProperty(Intrinsics, "%Unescape%", UnescapeFunction);
-            LazyDefineProperty(Intrinsics, "%IsNaN%", IsNaNFunction);
-            LazyDefineProperty(Intrinsics, "%IsFinite%", IsFiniteFunction);
-            LazyDefineProperty(Intrinsics, "%Console%", ConsoleObject);
-            LazyDefineProperty(Intrinsics, "%Map%", MapConstructor);
-            LazyDefineProperty(Intrinsics, "%MapPrototype%", MapPrototype);
-            LazyDefineProperty(Intrinsics, "%MapIteratorPrototype%", MapIteratorPrototype);
-            LazyDefineProperty(Intrinsics, "%Set%", SetConstructor);
-            LazyDefineProperty(Intrinsics, "%SetPrototype%", SetPrototype);
-            LazyDefineProperty(Intrinsics, "%SetIteratorPrototype%", SetIteratorPrototype);
-            LazyDefineProperty(Intrinsics, "%WeakMap%", WeakMapConstructor);
-            LazyDefineProperty(Intrinsics, "%WeakMapPrototype%", WeakMapPrototype);
-            LazyDefineProperty(Intrinsics, "%WeakSet%", WeakSetConstructor);
-            LazyDefineProperty(Intrinsics, "%WeakSetPrototype%", WeakSetPrototype);
-            LazyDefineProperty(Intrinsics, "%Emitter%", EmitterConstructor);
-            LazyDefineProperty(Intrinsics, "%EmitterPrototype%", EmitterPrototype);
-            LazyDefineProperty(Intrinsics, "%DOMWrapper%", new ExoticDOMObjectWrapper(
-                typeof importScripts === "function" ? self : typeof window === "object" ? window : process)
-            );
-            
-
-            return Intrinsics;
-        }
-*/
 
         // ===========================================================================================================
         // Globales This erzeugen (sollte mit dem realm und den builtins 1x pro neustart erzeugt werden)
         // ===========================================================================================================
 
         createGlobalThis = function createGlobalThis(globalThis, intrinsics) {
-            //console.dir(intrinsics);
-
-
             SetPrototypeOf(globalThis, ObjectPrototype);
             setInternalSlot(globalThis, "Extensible", true);
 
-            DefineOwnProperty(globalThis, $$toStringTag, {
-                value: "syntaxjsGlobal",
-                enumerable: false,
-                writable: false,
-                configurable: false
-            });
-
-            DefineOwnProperty(globalThis, "load", GetOwnProperty(intrinsics, "%Load%"));
-            DefineOwnProperty(globalThis, "request", GetOwnProperty(intrinsics, "%Request%"));
-
-            DefineOwnProperty(globalThis, "console", GetOwnProperty(intrinsics, "%Console%"));
-            DefineOwnProperty(globalThis, "Realm", GetOwnProperty(intrinsics, "%Realm%"));
-            DefineOwnProperty(globalThis, "Loader", GetOwnProperty(intrinsics, "%Loader%"));
-            DefineOwnProperty(globalThis, "Module", GetOwnProperty(intrinsics, "%Module%"));
-            DefineOwnProperty(globalThis, "RegExp", GetOwnProperty(intrinsics, "%RegExp%"));
-            DefineOwnProperty(globalThis, "ArrayBuffer", GetOwnProperty(intrinsics, "%ArrayBuffer%"));
-            DefineOwnProperty(globalThis, "DataView", GetOwnProperty(intrinsics, "%DataView%"));
-            DefineOwnProperty(globalThis, "Int8Array", GetOwnProperty(intrinsics, "%Int8Array%"));
-            DefineOwnProperty(globalThis, "Uint8Array", GetOwnProperty(intrinsics, "%Uint8Array%"));
-            DefineOwnProperty(globalThis, "Uint8ClampedArray", GetOwnProperty(intrinsics, "%Uint8ClampedArray%"));
-            DefineOwnProperty(globalThis, "Int16Array", GetOwnProperty(intrinsics, "%Int16Array%"));
-            DefineOwnProperty(globalThis, "Uint16Array", GetOwnProperty(intrinsics, "%Uint16Array%"));
-            DefineOwnProperty(globalThis, "Int32Array", GetOwnProperty(intrinsics, "%Int32Array%"));
-            DefineOwnProperty(globalThis, "Uint32Array", GetOwnProperty(intrinsics, "%Uint32Array%"));
-            DefineOwnProperty(globalThis, "Float32Array", GetOwnProperty(intrinsics, "%Float32Array%"));
-            DefineOwnProperty(globalThis, "Float64Array", GetOwnProperty(intrinsics, "%Float64Array%"));
-            DefineOwnProperty(globalThis, "Map", GetOwnProperty(intrinsics, "%Map%"));
-            DefineOwnProperty(globalThis, "Set", GetOwnProperty(intrinsics, "%Set%"));
-            DefineOwnProperty(globalThis, "WeakMap", GetOwnProperty(intrinsics, "%WeakMap%"));
-            DefineOwnProperty(globalThis, "WeakSet", GetOwnProperty(intrinsics, "%WeakSet%"));
-            DefineOwnProperty(globalThis, "global", {
-                value: globalThis,
-                writable: false,
-                enumerable: true,
-                configurable: false
-            });
-            DefineOwnProperty(globalThis, "undefined", {
-                value: undefined,
-                writable: false,
-                enumerable: true,
-                configurable: false
-            });
-            DefineOwnProperty(globalThis, "NaN", {
-                value: NaN,
-                writable: false,
-                enumerable: true,
-                configurable: false
-            });
-            DefineOwnProperty(globalThis, "Infinity", {
-                value: Infinity,
-                writable: false,
-                enumerable: true,
-                configurable: false
-            });
-            DefineOwnProperty(globalThis, "-Infinity", {
-                value: -Infinity,
-                writable: false,
-                enumerable: true,
-                configurable: false
-            });
-            DefineOwnProperty(globalThis, "null", {
-                value: null,
-                writable: false,
-                enumerable: true,
-                configurable: false
-            });
             DefineOwnProperty(globalThis, "Array", GetOwnProperty(intrinsics, "%Array%"));
+            DefineOwnProperty(globalThis, "ArrayBuffer", GetOwnProperty(intrinsics, "%ArrayBuffer%"));
+            DefineOwnProperty(globalThis, "Boolean", GetOwnProperty(intrinsics, "%Boolean%"));
+            DefineOwnProperty(globalThis, "DataView", GetOwnProperty(intrinsics, "%DataView%"));
             DefineOwnProperty(globalThis, "Date", GetOwnProperty(intrinsics, "%Date%"));
-            DefineOwnProperty(globalThis, "eval", GetOwnProperty(intrinsics, "%Eval%"));
+            DefineOwnProperty(globalThis, "Emitter", GetOwnProperty(intrinsics, "%Emitter%"));
             DefineOwnProperty(globalThis, "Error", GetOwnProperty(intrinsics, "%Error%"));
-            DefineOwnProperty(globalThis, "TypeError", GetOwnProperty(intrinsics, "%TypeError%"));
-            DefineOwnProperty(globalThis, "SyntaxError", GetOwnProperty(intrinsics, "%SyntaxError%"));
-            DefineOwnProperty(globalThis, "ReferenceError", GetOwnProperty(intrinsics, "%ReferenceError%"));
-            DefineOwnProperty(globalThis, "RangeError", GetOwnProperty(intrinsics, "%RangeError%"));
-            DefineOwnProperty(globalThis, "URIError", GetOwnProperty(intrinsics, "%URIError%"));
             DefineOwnProperty(globalThis, "EvalError", GetOwnProperty(intrinsics, "%EvalError%"));
             DefineOwnProperty(globalThis, "Function", GetOwnProperty(intrinsics, "%Function%"));
+            DefineOwnProperty(globalThis, "Float32Array", GetOwnProperty(intrinsics, "%Float32Array%"));
+            DefineOwnProperty(globalThis, "Float64Array", GetOwnProperty(intrinsics, "%Float64Array%"));
             DefineOwnProperty(globalThis, "GeneratorFunction", GetOwnProperty(intrinsics, "%GeneratorFunction%"));
-            DefineOwnProperty(globalThis, "isNaN", GetOwnProperty(intrinsics, "%IsNaN%"));
-            DefineOwnProperty(globalThis, "isFinite", GetOwnProperty(intrinsics, "%IsFinite%"));
+            LazyDefineBuiltinConstant(globalThis, "Infinity", Infinity);
+            DefineOwnProperty(globalThis, "Int8Array", GetOwnProperty(intrinsics, "%Int8Array%"));
+            DefineOwnProperty(globalThis, "Int16Array", GetOwnProperty(intrinsics, "%Int16Array%"));
+            DefineOwnProperty(globalThis, "Int32Array", GetOwnProperty(intrinsics, "%Int32Array%"));
             DefineOwnProperty(globalThis, "JSON", GetOwnProperty(intrinsics, "%JSON%"));
+            DefineOwnProperty(globalThis, "Loader", GetOwnProperty(intrinsics, "%Loader%"));
             DefineOwnProperty(globalThis, "Math", GetOwnProperty(intrinsics, "%Math%"));
+            DefineOwnProperty(globalThis, "Map", GetOwnProperty(intrinsics, "%Map%"));
+            DefineOwnProperty(globalThis, "Module", GetOwnProperty(intrinsics, "%Module%"));
+            LazyDefineBuiltinFunction(globalThis, "NaN", NaN);
             DefineOwnProperty(globalThis, "Number", GetOwnProperty(intrinsics, "%Number%"));
-            DefineOwnProperty(globalThis, "Boolean", GetOwnProperty(intrinsics, "%Boolean%"));
-            DefineOwnProperty(globalThis, "String", GetOwnProperty(intrinsics, "%String%"));
-            DefineOwnProperty(globalThis, "Object", GetOwnProperty(intrinsics, "%Object%"));
-            DefineOwnProperty(globalThis, "Reflect", GetOwnProperty(intrinsics, "%Reflect%"));
-            DefineOwnProperty(globalThis, "Symbol", GetOwnProperty(intrinsics, "%Symbol%"));
             DefineOwnProperty(globalThis, "Proxy", GetOwnProperty(intrinsics, "%Proxy%"));
-            DefineOwnProperty(globalThis, "setTimeout", GetOwnProperty(intrinsics, "%SetTimeout%"));
+            DefineOwnProperty(globalThis, "RangeError", GetOwnProperty(intrinsics, "%RangeError%"));
+            DefineOwnProperty(globalThis, "Realm", GetOwnProperty(intrinsics, "%Realm%"));
+            DefineOwnProperty(globalThis, "ReferenceError", GetOwnProperty(intrinsics, "%ReferenceError%"));
+            DefineOwnProperty(globalThis, "RegExp", GetOwnProperty(intrinsics, "%RegExp%"));
+            DefineOwnProperty(globalThis, "SyntaxError", GetOwnProperty(intrinsics, "%SyntaxError%"));
+            DefineOwnProperty(globalThis, "TypeError", GetOwnProperty(intrinsics, "%TypeError%"));
+            DefineOwnProperty(globalThis, "URIError", GetOwnProperty(intrinsics, "%URIError%"));
+            DefineOwnProperty(globalThis, "Object", GetOwnProperty(intrinsics, "%Object%"));
             DefineOwnProperty(globalThis, "Promise", GetOwnProperty(intrinsics, "%Promise%"));
-            DefineOwnProperty(globalThis, "escape", GetOwnProperty(intrinsics, "%Escape%"));
-            DefineOwnProperty(globalThis, "unescape", GetOwnProperty(intrinsics, "%Unescape%"));
-            DefineOwnProperty(globalThis, "encodeURI", GetOwnProperty(intrinsics, "%EncodeURI%"));
-            DefineOwnProperty(globalThis, "encodeURIComponent", GetOwnProperty(intrinsics, "%EncodeURIComponent%"));
+            DefineOwnProperty(globalThis, "Reflect", GetOwnProperty(intrinsics, "%Reflect%"));
+            DefineOwnProperty(globalThis, "Set", GetOwnProperty(intrinsics, "%Set%"));
+            DefineOwnProperty(globalThis, "String", GetOwnProperty(intrinsics, "%String%"));
+            DefineOwnProperty(globalThis, "Symbol", GetOwnProperty(intrinsics, "%Symbol%"));
+            DefineOwnProperty(globalThis, "Uint8Array", GetOwnProperty(intrinsics, "%Uint8Array%"));
+            DefineOwnProperty(globalThis, "Uint8ClampedArray", GetOwnProperty(intrinsics, "%Uint8ClampedArray%"));
+            DefineOwnProperty(globalThis, "Uint16Array", GetOwnProperty(intrinsics, "%Uint16Array%"));
+            DefineOwnProperty(globalThis, "Uint32Array", GetOwnProperty(intrinsics, "%Uint32Array%"));            
+            DefineOwnProperty(globalThis, "WeakMap", GetOwnProperty(intrinsics, "%WeakMap%"));
+            DefineOwnProperty(globalThis, "WeakSet", GetOwnProperty(intrinsics, "%WeakSet%"));            
+            DefineOwnProperty(globalThis, "console", GetOwnProperty(intrinsics, "%Console%"));
             DefineOwnProperty(globalThis, "decodeURI", GetOwnProperty(intrinsics, "%DecodeURI%"));
             DefineOwnProperty(globalThis, "decodeURIComponent", GetOwnProperty(intrinsics, "%DecodeURIComponent%"));
+            DefineOwnProperty(globalThis, "encodeURI", GetOwnProperty(intrinsics, "%EncodeURI%"));
+            DefineOwnProperty(globalThis, "encodeURIComponent", GetOwnProperty(intrinsics, "%EncodeURIComponent%"));
+            DefineOwnProperty(globalThis, "escape", GetOwnProperty(intrinsics, "%Escape%"));
+            DefineOwnProperty(globalThis, "eval", GetOwnProperty(intrinsics, "%Eval%"));
+            LazyDefineFalseTrueFalse(globalThis, "global", globalThis);
+            DefineOwnProperty(globalThis, "isNaN", GetOwnProperty(intrinsics, "%IsNaN%"));
+            DefineOwnProperty(globalThis, "isFinite", GetOwnProperty(intrinsics, "%IsFinite%"));
+            DefineOwnProperty(globalThis, "load", GetOwnProperty(intrinsics, "%Load%"));
+            LazyDefineBuiltinConstant(globalThis, "null", null);
             DefineOwnProperty(globalThis, "parseInt", GetOwnProperty(intrinsics, "%ParseInt%"));
             DefineOwnProperty(globalThis, "parseFloat", GetOwnProperty(intrinsics, "%ParseFloat%"));
-            DefineOwnProperty(globalThis, "Emitter", GetOwnProperty(intrinsics, "%Emitter%"));
+            DefineOwnProperty(globalThis, "request", GetOwnProperty(intrinsics, "%Request%"));
+            DefineOwnProperty(globalThis, "setTimeout", GetOwnProperty(intrinsics, "%SetTimeout%"));
+            LazyDefineBuiltinConstant(globalThis, "undefined", undefined);
+            DefineOwnProperty(globalThis, "unescape", GetOwnProperty(intrinsics, "%Unescape%"));
+            LazyDefineBuiltinConstant(globalThis, $$toStringTag, "syntaxjsGlobal")
+            
 
         /*
 	           DOM Wrapper 
