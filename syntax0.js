@@ -13953,24 +13953,7 @@ define("lib/api", function (require, exports, module) {
     // REALM (intrinsics, globalthis, globalenv, loader) each Process One
     // #################################################################################################################################################################################################
     // #################################################################################################################################################################################################
-    var assignIntrinsics;
     var createGlobalThis;
-    //var quickAssignIntrVars; // in createIntrinsics (assignt immer das aktuelle intrinsic object)
-
-    /*
-    var debugmode = false;
-
-    function debug() {
-        if (debugmode && typeof importScripts !== "function") console.log.apply(console, arguments);
-    }
-
-    function debugdir() {
-        if (debugmode && typeof importScripts !== "function") console.dir.apply(console, arguments);
-    }*/
-
-    // *****************************************************************************************************************************************************************************
-    // code and intrinsics: CREATE INTRINSICS (builtins definieren)
-    // *****************************************************************************************************************************************************************************   
 
     function define_intrinsic(intrinsics, intrinsicName, value) {
         var descriptor = Object.create(null);
@@ -14126,109 +14109,6 @@ define("lib/api", function (require, exports, module) {
         var RealmPrototype = createIntrinsicPrototype(intrinsics, "%RealmPrototype%");
         var ModuleFunction = createIntrinsicConstructor(intrinsics, "Module", 0, "%Module%");
         var ModulePrototype = null;
-
-        /*
-	@std:Module
-	*/
-        /*
-        quickAssignIntrVars = function quickAssignIntrVars(target) {
-                target.EncodeURIFunction = EncodeURIFunction;
-                target.DecodeURIFunction = DecodeURIFunction;
-                target.EncodeURIComponentFunction = EncodeURIComponentFunction;
-                target.DecodeURIComponentFunction = DecodeURIComponentFunction;
-                target.SetTimeoutFunction = SetTimeoutFunction;
-                target.SetImmediateFunction = SetImmediateFunction;
-                target.IsNaNFunction = IsNaNFunction;
-                target.IsFiniteFunction = IsFiniteFunction;
-                target.ParseFloatFunction = ParseFloatFunction;
-                target.ParseIntFunction = ParseIntFunction;
-                target.EscapeFunction = EscapeFunction;
-                target.UnescapeFunction = UnescapeFunction;
-                target.EvalFunction = EvalFunction;
-                target.RegExpConstructor = RegExpConstructor;
-                target.RegExpPrototype = RegExpPrototype;
-                target.ProxyConstructor = ProxyConstructor;
-                target.ProxyPrototype = ProxyPrototype;
-                target.BooleanConstructor = BooleanConstructor;
-                target.BooleanPrototype = BooleanConstructor;
-                target.NumberConstructor = NumberConstructor;
-                target.NumberPrototype = NumberPrototype;
-                target.StringConstructor = StringConstructor;
-                target.StringPrototype = StringPrototype;
-                target.StringIteratorPrototype = StringIteratorPrototype;
-                target.DateConstructor = DateConstructor;
-                target.DatePrototype = DatePrototype;
-                target.ErrorConstructor = ErrorConstructor;
-                target.ErrorPrototype = ErrorPrototype;
-                target.ArrayConstructor = ArrayConstructor;
-                target.ArrayPrototype = ArrayPrototype;
-                target.ArrayIteratorPrototype = ArrayIteratorPrototype;
-                target.GeneratorFunction = GeneratorFunction;
-                target.GeneratorPrototype = GeneratorPrototype;
-                target.GeneratorObject = GeneratorObject;
-                target.ReflectObject = ReflectObject;
-                //target.NativeError = NativeError;
-                target.SymbolFunction = SymbolFunction;
-                target.SymbolPrototype = SymbolPrototype;
-                target.TypeErrorConstructor = TypeErrorConstructor;
-                target.TypeErrorPrototype = TypeErrorPrototype;
-                target.ReferenceErrorConstructor = ReferenceErrorConstructor;
-                target.ReferenceErrorPrototype = ReferenceErrorPrototype;
-                target.SyntaxErrorConstructor = SyntaxErrorConstructor;
-                target.SyntaxErrorPrototype = SyntaxErrorPrototype;
-                target.RangeErrorConstructor = RangeErrorConstructor;
-                target.RangeErrorPrototype = RangeErrorPrototype;
-                target.EvalErrorConstructor = EvalErrorConstructor;
-                target.EvalErrorPrototype = EvalErrorPrototype;
-                target.URIErrorConstructor = URIErrorConstructor;
-                target.URIErrorPrototype = URIErrorPrototype;
-                target.PromiseConstructor = PromiseConstructor;
-                target.PromisePrototype = PromisePrototype;
-                target.WeakMapConstructor = WeakMapConstructor;
-                target.WeakMapPrototype = WeakMapPrototype;
-                target.WeakSetConstructor = WeakSetConstructor;
-                target.WeakSetPrototype = WeakSetPrototype;
-                target.MapConstructor = MapConstructor;
-                target.MapPrototype = MapPrototype;
-                target.MapIteratorPrototype = MapIteratorPrototype;
-                target.SetConstructor = SetConstructor;
-                target.SetPrototype = SetPrototype;
-                target.SetIteratorPrototype = SetIteratorPrototype;
-                target.TypedArrayConstructor = TypedArrayConstructor;
-                target.TypedArrayPrototype = TypedArrayPrototype;
-                target.Uint8ArrayConstructor = Uint8ArrayConstructor;
-                target.Int8ArrayConstructor = Int8ArrayConstructor;
-                target.Uint8ClampedArrayConstructor = Uint8ClampedArrayConstructor;
-                target.Int16ArrayConstructor = Int16ArrayConstructor;
-                target.Uint16ArrayConstructor = Uint16ArrayConstructor;
-                target.Int32ArrayConstructor = Int32ArrayConstructor;
-                target.Uint32ArrayConstructor = Uint32ArrayConstructor;
-                target.Float32ArrayConstructor = Float32ArrayConstructor;
-                target.Float64ArrayConstructor = Float64ArrayConstructor
-                target.Uint8ArrayPrototype = Uint8ArrayPrototype;
-                target.Int8ArrayPrototype = Int8ArrayPrototype;
-                target.Uint8ClampedArrayPrototype = Uint8ClampedArrayPrototype;
-                target.Int16ArrayPrototype = Int16ArrayPrototype;
-                target.Uint16ArrayPrototype = Uint16ArrayPrototype;
-                target.Int32ArrayPrototype = Int32ArrayPrototype;
-                target.Uint32ArrayPrototype = Uint32ArrayPrototype;
-                target.Float32ArrayPrototype = Float32ArrayPrototype;
-                target.Float64ArrayPrototype = Float64ArrayPrototype;
-                target.ArrayBufferConstructor = ArrayBufferConstructor;
-                target.ArrayBufferPrototype = ArrayBufferPrototype;
-                target.DataViewConstructor = DataViewConstructor;
-                target.DataViewPrototype = DataViewPrototype;
-                target.JSONObject = JSONObject;
-                target.MathObject = MathObject;
-                target.ConsoleObject = ConsoleObject;
-                target.LoadFunction = LoadFunction;
-                target.RequestFunction = RequestFunction;
-                target.EmitterConstructor = EmitterConstructor;
-                target.EmitterPrototype = EmitterPrototype;
-                target.NotifierPrototype = NotifierPrototype;
-                return target;
-        }
-        */
 
         // ##################################################################
         // Der Module Loader Start
