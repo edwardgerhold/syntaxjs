@@ -4930,8 +4930,8 @@ define("lib/parser", ["lib/tables", "lib/tokenizer"], function (tables, tokenize
                 }
                 covered.push(T);
             }
-
-            if (i >= j) throwError(new SyntaxError("no tokens left over covering expression"));
+ 
+           if (i >= j) throwError(new SyntaxError("no tokens left over covering expression"));
 
             pass(")");
 
@@ -4946,7 +4946,7 @@ define("lib/parser", ["lib/tables", "lib/tokenizer"], function (tables, tokenize
                 node.expression = true;
                 node.params = (expr ? [expr] : this.ArrowParameterList(covered));
                 pass("=>");
-                node.body = this.ConciseBody();
+                node.body = this.ConciseBody(node);
                 l2 = loc && loc.end;
                 node.loc = makeLoc(l1, l2);
                 EarlyErrors(node);
@@ -4962,13 +4962,13 @@ define("lib/parser", ["lib/tables", "lib/tokenizer"], function (tables, tokenize
 
     parser.ConciseBody = ConciseBody;
 
-    function ConciseBody() {
+    function ConciseBody(parent) {
         if (v == "{") {
             var body;
             yieldStack.push(yieldIsId);
             yieldIsId = true;
             pass("{");
-            body = this.FunctionBody();
+            body = this.FunctionBody(parent);
             pass("}");
             yieldIsId = yieldStack.pop();
             return body;
@@ -5328,9 +5328,7 @@ define("lib/parser", ["lib/tables", "lib/tokenizer"], function (tables, tokenize
             else if (v === ",") node.init = null;
             else if (v === ";") node.init = null;
             else if (v === "in" || v === "of") node.init = null;
-
             return node;
-
         }
 
         return null;
@@ -5708,7 +5706,9 @@ define("lib/parser", ["lib/tables", "lib/tokenizer"], function (tables, tokenize
             end = loc && loc.end;
             node.loc = makeLoc(start, end);
 
-            if (node.generator) AddParentPointers(node);
+            if (node.generator) {
+                AddParentPointers(node);
+            }
             defaultIsId = defaultStack.pop();
 
             node.lexNames = ident.bound_lex();
@@ -5991,8 +5991,8 @@ define("lib/parser", ["lib/tables", "lib/tokenizer"], function (tables, tokenize
 
             contains.new_scope();
             ident.new_var();
+            
             moduleStack.push(curModule);
-
             curModule = {
                 __proto__: null,
                 knownExports: Object.create(null),
@@ -6014,6 +6014,7 @@ define("lib/parser", ["lib/tables", "lib/tokenizer"], function (tables, tokenize
             contains.old_scope();
             ident.old_scope();
             curModule = moduleStack.pop();
+
 
             return node;
         }
@@ -9630,22 +9631,28 @@ define("lib/api", function (require, exports, module) {
         return queue;
     }
 
-    var LoadingTasks = TaskQueue();
-    var PromiseTasks = TaskQueue();
 
-    function EnqueueTask(queueName, task, args) {
-        
+    function makeTaskQueues(realm) {
+        realm.LoadingTasks = TaskQueue();
+        realm.PromiseTasks = TaskQueue();
+    }
+    function getTasks(realm, name) {
+        return realm[name+"Tasks"];
+    }
+
+    function EnqueueTask(queueName, task, args) {        
     }
 
     function NextTask (result, nextQueue) {
         if ((result=ifAbrupt(result)) && isAbrupt(result)) {
             // performing implementation defined unhandled exception processing
+            console.log("NextTask: Got exception - which will remain unhandled - for debugging, i print them out." )
+            printException(result);
         }
         Assert(getStack().length === 0, "NextTask: The execution context stack has to be empty");
         var nextPending = nextQueue.shift();
 
     }
-
     // ===========================================================================================================
     // Reference 
     // ===========================================================================================================
@@ -9655,7 +9662,7 @@ define("lib/api", function (require, exports, module) {
         this.base = V;
         this.strict = S;
         //if (T !== undefined) 
-            this.thisValue = T;
+        this.thisValue = T;
     }
 
     Reference.prototype = {
@@ -11758,37 +11765,61 @@ define("lib/api", function (require, exports, module) {
     // Error Stack
     // ===========================================================================================================
 
+
+    function printException (error) {
+        var name = Get(error, "name");
+        var message = Get(error, "message");
+        var stack = Get(error, "stack");
+        var text = makeMyExceptionText(name, message, callstack);
+        console.log(text);
+    }
+
+    function makeMyExceptionText(name, message, callstack) {
+        var text = "";
+        text += "An exception has been thrown!\r\n";
+        text += "exception.name: "+ name + "\r\n";
+        text += "exception.message: " + message + "\n";
+        text += "exception.stack: " + callstack + "\r\n";
+        text += "\r\n";
+        return text;
+    }
+    
+
+
+
     function stringifyErrorStack(type, message) {
         var callStack = getStack();
         var len = callStack.length || 0;
         var frame = getContext();
         var start = 0;
-        var pos;
-        var node;
-        var line, column;
+        var node, ntype, line ,column, pos, fn, clr;
         var stackTraceLimit = interAMD.stackTraceLimit;
         var url = interAMD.scriptLocation;
-        var fn, clr;
-        
-        if (type === undefined) type = "";
-        if (message === undefined) message = "";
-        if (type) stack = "["+type+"]: ";
-        else stack = "";
-        stack += message;
-        stack += "\r\n";
+        var cnt = 1;
+
+        if (type === undefined) type = "", message = "", stack = "";
+        else {
+            if (message === undefined) message = "";
+            stack = type+": ";
+            stack += message;
+            stack += "\r\n";
+        }
         
         if (len > stackTraceLimit) start = len - stackTraceLimit;
+        
         for (pos = len - 1; pos >= start; pos--) {
             if (frame = callStack[pos]) {
-                var node = frame.state.node;
-                var ntype = node && node.type;
+                node = frame.state.node;
+                ntype = node && node.type;
                 line = frame.line;
                 column = frame.column;
-                fn = frame.state.callee;
-                clr = frame.state.caller;
-                stack += fn + " (" + ntype + ")  at line " + line + ", column " + column + " ";
-                if (clr) stack += "[called from " + clr + "]";
+                fn = frame.callee;
+                clr = frame.caller;
+                stack += cnt + ". ";
+                stack += fn + " at " + ntype + "  at line " + line + ", column " + column + " ";
+                stack += "[caller " + clr + " @ "+url+"]";
                 stack += "\r\n";
+                cnt = cnt + 1;
             }
         }
         return stack;
@@ -11806,10 +11837,8 @@ define("lib/api", function (require, exports, module) {
         //var ex = OrdinaryConstruct(getIntrinsic(intrName), [message]);
         var ctorName = id + "Constructor";
         var ex = OrdinaryConstruct(interAMD[ctorName], [message]);
-        var stack = stringifyErrorStack(id, message);
-
-        CreateDataProperty(ex, "stack", stack);      
-
+        //var stack = stringifyErrorStack(id, message);
+        //CreateDataProperty(ex, "stack", stack);      
         return Completion("throw", ex, "");
     }
 
@@ -12916,6 +12945,9 @@ define("lib/api", function (require, exports, module) {
     //
     //
     //
+    exports.printException = printException;
+    exports.makeMyExceptionText = makeMyExceptionText;
+
 
     exports.PromiseNew = PromiseNew;
     exports.PromiseBuiltinCapability = PromiseBuiltinCapability;
@@ -16740,7 +16772,9 @@ define("lib/api", function (require, exports, module) {
                     var status = DefineOwnPropertyOrThrow(O, "message", msgDesc);
                     if (isAbrupt(status)) return status;
                 }
+
                 CreateDataProperty(O, "stack", stringifyErrorStack())
+
                 // interne representation
                 setInternalSlot(O, "toString", function () {
                     return "[object "+name+"]";
@@ -21576,6 +21610,8 @@ define("lib/runtime", ["lib/parser", "lib/api", "lib/slower-static-semantics"], 
     // essential-api (essential internals)
     //
 
+
+
     var List = ecma.List;
     var Assert = ecma.Assert;
     var assert = ecma.assert;
@@ -21592,7 +21628,11 @@ define("lib/runtime", ["lib/parser", "lib/api", "lib/slower-static-semantics"], 
     var CompletePropertyDescriptor = ecma.CompletePropertyDescriptor;
     var ValidateAndApplyPropertyDescriptor = ecma.ValidateAndApplyPropertyDescriptor;
     var ThrowTypeError = ecma.ThrowTypeError;
+    
     var withError = ecma.withError;
+    var printException = ecma.printException;
+    var makeMyExceptionText = ecma.makeMyExceptionText;
+
 
     var $$unscopables = ecma.$$unscopables;
     var $$create = ecma.$$create;
@@ -22440,10 +22480,10 @@ define("lib/runtime", ["lib/parser", "lib/api", "lib/slower-static-semantics"], 
         var calleeContext = newContext();
 
         var calleeName = Get(this, "name");
-        var callerName = callerContext.state.callee;
+        var callerName = callerContext.callee;
 
-        calleeContext.state.caller = callerName;
-        calleeContext.state.callee = calleeName;
+        calleeContext.caller = callerName;
+        calleeContext.callee = calleeName;
 
         if (thisMode === "lexical") {
             localEnv = NewDeclarativeEnvironment(scope);
@@ -22811,6 +22851,7 @@ define("lib/runtime", ["lib/parser", "lib/api", "lib/slower-static-semantics"], 
         "use strict";
         var exprRef;
         var O, callee;
+        var cx = getContext();
         var strict = cx.strict;
         var notSuperExpr = node.callee.type !== "SuperExpression";
 
@@ -22831,7 +22872,7 @@ define("lib/runtime", ["lib/parser", "lib/api", "lib/slower-static-semantics"], 
         }
 
         if (callee) {
-            cx.state.callee = "(new) " + (Get(callee, "name") || "(anonymous)");
+            cx.callee = "(new) " + (Get(callee, "name") || "(anonymous)");
         }
 
         var args = node.arguments;
@@ -23370,7 +23411,7 @@ define("lib/runtime", ["lib/parser", "lib/api", "lib/slower-static-semantics"], 
 
         for (i = 0; i < j; i++) {
             element = elementList[i];
-
+ls
             if (element.type === "Elision") {
 
                 nextIndex += element.width;
@@ -24887,10 +24928,10 @@ define("lib/runtime", ["lib/parser", "lib/api", "lib/slower-static-semantics"], 
             lex.CreateMutableBinding(className);
         }
 
-        var caller = cx.state.callee;
+        var caller = cx.callee;
         getContext().lexEnv = scope;
-        cx.state.callee = className;
-        cx.state.caller = caller;
+        cx.callee = className;
+        cx.caller = caller;
         getContext().lexEnv = scope;
         var F = FunctionCreate("normal", [], null, scope, true, FunctionPrototype, constructorParent);
 
@@ -25192,8 +25233,8 @@ define("lib/runtime", ["lib/parser", "lib/api", "lib/slower-static-semantics"], 
         if (isAbrupt(status)) return status;
 
         tellExecutionContext(program, 0);
-        cx.state.callee = "{ScriptItemList}";
-        cx.state.caller = "{Script}";
+        cx.callee = "{ScriptItemList}";
+        cx.caller = "{Script}";
 
         var node;
         var V = undefined;
@@ -25340,9 +25381,7 @@ define("lib/runtime", ["lib/parser", "lib/api", "lib/slower-static-semantics"], 
             return NormalCompletion();
 
         } else {
-
             if (!state.length) return Evaluate(node, completion);
-
             return ResumableEvaluation(production, state, completion);
         }
     }
@@ -25390,6 +25429,19 @@ define("lib/runtime", ["lib/parser", "lib/api", "lib/slower-static-semantics"], 
         setTimeout(handler, 0);
     }
 
+    function makeNativeException (error) {
+        var name = Get(error, "name");
+        var message = Get(error, "message");
+        var callstack = Get(error, "stack");
+        var text = makeMyExceptionText(name, message, callstack);
+
+        var nativeError = new Error(name);
+        nativeError.name = name;
+        nativeError.message = message;
+        nativeError.stack = text;
+        return nativeError;
+    }
+
     function ExecuteTheCode(source, shellModeBool, resetEnvNowBool) {
         var exprRef, exprValue, text, type, message, stack, error, name, callstack;
 
@@ -25412,32 +25464,13 @@ define("lib/runtime", ["lib/parser", "lib/api", "lib/slower-static-semantics"], 
                 error = exprValue.value;
 
                 if (Type(error) === "object") {
-
-                    name = Get(error, "name");
-                    message = Get(error, "message");
-                    callstack = Get(error, "stack");
-
-                    text = "";
-                    text += "An exception has been thrown!\r\n";
-                    text += "exception.name: "+ name + "\r\n";
-                    text += "exception.message: " + message + "\n";
-                    text += "exception.stack: " + callstack + "\r\n";
-                    text += "\r\n";
-
-                    var error = new Error(name);
-                    error.name = name;
-                    error.message = message;
-                    error.stack = text;
-
+                    error = makeNativeException(error)
                 } else {
-
                     error = new Error(error);
                     error.stack = "{eddies placeholder for stackframe of non object throwers}";
-
                 }
 
                 if (error) throw error;
-
             }
         }
 
@@ -25453,7 +25486,6 @@ define("lib/runtime", ["lib/parser", "lib/api", "lib/slower-static-semantics"], 
 
     function endRuntime() {
         initialisedTheRuntime = false;
-
     }
 
     function initializeTheRuntime() {
