@@ -8331,7 +8331,7 @@ define("lib/api", function (require, exports, module) {
 
     function newContext(outer, s) {
         var env = outer !== undefined ? outer : getLexEnv();
-        s = s || realm.xs;
+        s = s || Object.create(null);
         var cx = new ExecutionContext(env, getRealm(), s);
         getStack().push(cx);
         return (realm.cx = cx); 
@@ -8608,7 +8608,7 @@ define("lib/api", function (require, exports, module) {
 
     function OrdinaryObject(prototype) {
         var O = Object.create(OrdinaryObject.prototype);
-        prototype = prototype === undefined ? realm.xs.ObjectPrototype || null : prototype;
+        prototype = prototype === undefined ? getIntrinsic("%ObjectPrototype%") || null : prototype;
         setInternalSlot(O,"Bindings",Object.create(null));
 	    setInternalSlot(O,"Symbols",Object.create(null));
 	    setInternalSlot(O,"Prototype",prototype || null);
@@ -8959,7 +8959,7 @@ define("lib/api", function (require, exports, module) {
         var F = Object.create(OrdinaryFunction.prototype);
         setInternalSlot(F, "Bindings", Object.create(null));
         setInternalSlot(F, "Symbols", Object.create(null));
-        setInternalSlot(F, "Prototype", realm.xs.FunctionPrototype);
+        setInternalSlot(F, "Prototype", getIntrinsic("%FunctionPrototype%"));
         setInternalSlot(F, "Realm", undefined);
         setInternalSlot(F, "Extensible", true);
         F.Realm = undefined;
@@ -10558,20 +10558,20 @@ define("lib/api", function (require, exports, module) {
         if (Type(V) === "object") return V;
 
         if (V instanceof SymbolPrimitiveType) {
-            var s = SymbolCreate();
-            setInternalSlot(s, "Prototype", realm.xs.SymbolPrototype);
+            var s = SymbolPrimitiveType();
+            setInternalSlot(s, "Prototype", getIntrinsic("%SymbolPrototype%"));
             setInternalSlot(s, "SymbolData", V);
             return s;
         }
 
         if (typeof V === "number") {
-            return OrdinaryConstruct(realm.xs.NumberConstructor, V);
+            return OrdinaryConstruct(getIntrinsic("%Number%"), V);
         }
         if (typeof V === "string") {
-            return OrdinaryConstruct(realm.xs.StringConstructor, V);
+            return OrdinaryConstruct(getIntrinsic("%String%"), V);
         }
         if (typeof V === "boolean") {
-            return OrdinaryConstruct(realm.xs.BooleanConstructor, V);
+            return OrdinaryConstruct(getIntrinsic("%Boolean%"), V);
         }
 
         // return V;
@@ -11115,7 +11115,7 @@ define("lib/api", function (require, exports, module) {
 
         setInternalSlot(O, "Target", object);
         setInternalSlot(O, "Symbols", Object.create(null));
-        setInternalSlot(O, "Prototype", realm.xs.ObjectPrototype);
+        setInternalSlot(O, "Prototype", getIntrinsic("%ObjectPrototype%"));
         setInternalSlot(O, "Extensible", true);
         return O;
     }
@@ -11220,7 +11220,7 @@ define("lib/api", function (require, exports, module) {
 
     var es5id = Math.floor(Math.random() * (1 << 16));
 
-    function SymbolPrimitiveType(es5id, desc) {
+    function SymbolPrimitiveType(id, desc) {
         var O = Object.create(SymbolPrimitiveType.prototype);
         setInternalSlot(O, "Description", desc);
         setInternalSlot(O, "Bindings", Object.create(null));
@@ -11228,7 +11228,7 @@ define("lib/api", function (require, exports, module) {
         setInternalSlot(O, "Prototype", null);
         setInternalSlot(O, "Extensible", false);
         setInternalSlot(O, "Integrity", "frozen");
-        setInternalSlot(O, "es5id", es5id || (++es5id + Math.random()));
+        setInternalSlot(O, "es5id", id || (++es5id + Math.random()));
         //setInternalSlot(O, "Private", false);
         return O;
     }
@@ -11797,16 +11797,16 @@ define("lib/api", function (require, exports, module) {
 
 
     function withRangError(message) {
-        return Completion("throw", OrdinaryConstruct(realm.xs.SyntaxErrorConstructor, [message]));
+        return Completion("throw", OrdinaryConstruct(getIntrinsic("%SyntaxError%"), [message]));
     }
 
 
     function withSyntaxError(message) {
-        return Completion("throw", OrdinaryConstruct(realm.xs.SyntaxErrorConstructor, [message]));
+        return Completion("throw", OrdinaryConstruct(getIntrinsic("%SyntaxError%"), [message]));
     }
 
     function withTypeError(message) {
-        return Completion("throw", OrdinaryConstruct(realm.xs.TypeErrorConstructor, [message]));
+        return Completion("throw", OrdinaryConstruct(getIntrinsic("%TypeError%"), [message]));
     }
 
     function withError(type, message) {
@@ -11820,7 +11820,7 @@ define("lib/api", function (require, exports, module) {
     function generatorCallbackWrong(generator, body) {
         //var result = exports.ResumableEvaluation(body);
 
-        var result = exports.Evaluate(body);
+        var result = realm.xs.Evaluate(body);
         if ((result = ifAbrupt(result)) && isAbrupt(result)) return result;
         // if (IteratorComplete(result)) {
         if ((result = ifAbrupt(result)) && isAbrupt(result) && result.type === "return") {
@@ -12891,7 +12891,7 @@ define("lib/api", function (require, exports, module) {
         setInternalSlot(F, "Code", undefined);
         setInternalSlot(F, "Construct", undefined);
         setInternalSlot(F, "FormalParameters", undefined);
-        setInternalSlot(F, "Prototype", realm.xs.FunctionPrototype);
+        setInternalSlot(F, "Prototype", getIntrinsic("%FunctionPrototype%"));
         setInternalSlot(F, "Environment", undefined);
         setInternalSlot(F, "Strict", true);
         setInternalSlot(F, "Realm", realm);
@@ -12979,1023 +12979,6 @@ define("lib/api", function (require, exports, module) {
         }
 
 
-
-
-    // ===========================================================================================================
-    // exports
-    // ===========================================================================================================
-
-    var $$unscopables        = SymbolPrimitiveType("@@unscopables", "Symbol.unscopables");
-    var $$create             = SymbolPrimitiveType("@@create", "Symbol.create");
-    var $$toPrimitive        = SymbolPrimitiveType("@@toPrimitive", "Symbol.toPrimitive");
-    var $$toStringTag        = SymbolPrimitiveType("@@toStringTag", "Symbol.toStringTag");
-    var $$hasInstance        = SymbolPrimitiveType("@@hasInstance", "Symbol.hasInstance");
-    var $$iterator           = SymbolPrimitiveType("@@iterator", "Symbol.iterator");
-    var $$isRegExp           = SymbolPrimitiveType("@@isRegExp", "Symbol.isRegExp");
-    var $$isConcatSpreadable = SymbolPrimitiveType("@@isConcatSpreadable", "Symbol.isConcatSpreadable");
-
-
-
-    exports.$$unscopables   = $$unscopables;
-    exports.$$create            = $$create;
-    exports.$$toPrimitive           = $$toPrimitive;
-    exports.$$hasInstance               = $$hasInstance;
-    exports.$$toStringTag                   = $$toStringTag;
-    exports.$$iterator                          = $$iterator;
-    exports.$$isRegExp                              = $$isRegExp;
-    exports.$$isConcatSpreadable = $$isConcatSpreadable;
-
-
-    exports.IndirectEval = IndirectEval;
-    exports.CreateRealm = CreateRealm;
-
-    exports.CreateBuiltinFunction = CreateBuiltinFunction;
-    exports.AddRestrictedFunctionProperties = AddRestrictedFunctionProperties;
-    exports.LazyDefineProperty = LazyDefineProperty;
-    exports.uriReserved = uriReserved;
-    exports.uriUnescaped = uriUnescaped;
-    exports.Encode = Encode;
-    exports.Decode = Decode;
-    exports.UTF8Encode = UTF8Encode;
-    exports.SetFunctionName = SetFunctionName;
-    exports.List = List;
-    exports.setFunctionLength = setFunctionLength;
-    exports.HasOwnProperty = HasOwnProperty;
-    exports.Put = Put;
-    exports.Invoke = Invoke;
-    exports.newContext = newContext;
-    exports.oldContext = oldContext;
-    exports.dropExecutionContext = dropExecutionContext;
-    exports.withError = withError; // This Function returns the Errors, say the spec says "Throw a TypeError", then return withError("Type", message);
-    exports.getContext = getContext;
-    exports.getRealm = getRealm;
-    exports.getLexEnv = getLexEnv;
-    exports.getVarEnv = getVarEnv;
-    exports.getIntrinsic = getIntrinsic;
-    exports.getIntrinsics = getIntrinsics;
-    exports.getGlobalEnv = getGlobalEnv;
-    exports.getGlobalThis = getGlobalThis;
-    exports.getStack = getStack;
-    exports.getState = getState;
-    exports.getInternalSlot = getInternalSlot;
-    exports.setInternalSlot = setInternalSlot;
-    exports.hasInternalSlot = hasInternalSlot;
-    exports.callInternalSlot = callInternalSlot;
-    exports.applyInternal = applyInternal;
-    exports.CreateArrayIterator = CreateArrayIterator;
-    exports.CreateByteDataBlock = CreateByteDataBlock;
-    exports.CopyDataBlockBytes = CopyDataBlockBytes;
-    exports.GetThisEnvironment = GetThisEnvironment;
-    exports.GeneratorStart = GeneratorStart;
-    exports.GeneratorYield = GeneratorYield;
-    exports.GeneratorResume = GeneratorResume;
-    exports.CreateItrResultObject = CreateItrResultObject;
-    exports.IteratorNext = IteratorNext;
-    exports.IteratorComplete = IteratorComplete;
-    exports.IteratorValue = IteratorValue;
-    exports.GetIterator = GetIterator;
-    exports.CreateDataProperty = CreateDataProperty;
-    exports.CreateOwnAccessorProperty = CreateOwnAccessorProperty;
-    exports.stringifyErrorStack = stringifyErrorStack;
-    exports.addMissingProperties = addMissingProperties;
-    exports.NormalCompletion = NormalCompletion;
-    exports.registerCompletionUpdater = registerCompletionUpdater;
-    exports.Completion = Completion;
-    exports.NewDeclarativeEnvironment = NewDeclarativeEnvironment;
-    exports.NewObjectEnvironment = NewObjectEnvironment;
-    exports.NewFunctionEnvironment = NewFunctionEnvironment;
-    exports.createIdentifierBinding = createIdentifierBinding;
-    exports.GetIdentifierReference = GetIdentifierReference;
-    exports.FunctionCreate = FunctionCreate;
-    exports.FunctionAllocate = FunctionAllocate;
-    exports.FunctionInitialise = FunctionInitialise;
-    exports.GeneratorFunctionCreate = GeneratorFunctionCreate;
-    exports.OrdinaryHasInstance = OrdinaryHasInstance;
-    exports.GetPrototypeFromConstructor = GetPrototypeFromConstructor;
-    exports.OrdinaryCreateFromConstructor = OrdinaryCreateFromConstructor;
-    exports.OrdinaryConstruct = OrdinaryConstruct;
-    exports.MakeConstructor = MakeConstructor;
-    exports.CreateEmptyIterator = CreateEmptyIterator;
-    exports.ArgumentsExoticObject = ArgumentsExoticObject;
-    exports.ArrayCreate = ArrayCreate;
-    exports.ArraySetLength = ArraySetLength;
-    exports.ExoticDOMObjectWrapper = ExoticDOMObjectWrapper;
-    exports.ExoticDOMFunctionWrapper = ExoticDOMFunctionWrapper;
-    exports.BoundFunctionCreate = BoundFunctionCreate;
-    exports.GeneratorFunctionCreate = GeneratorFunctionCreate;
-    exports.ObjectDefineProperties = ObjectDefineProperties;
-    exports.DeclarativeEnvironment = DeclarativeEnvironment;
-    exports.ObjectEnvironment = ObjectEnvironment;
-    exports.GlobalEnvironment = GlobalEnvironment;
-    exports.ToPropertyKey = ToPropertyKey;
-    exports.IsPropertyKey = IsPropertyKey;
-    exports.IsSymbol = IsSymbol;
-    exports.CreateDataProperty = CreateDataProperty;
-    exports.PropertyDescriptor = PropertyDescriptor;
-    exports.IsAccessorDescriptor = IsAccessorDescriptor;
-    exports.IsDataDescriptor = IsDataDescriptor;
-    exports.IsGenericDescriptor = IsGenericDescriptor;
-    exports.FromPropertyDescriptor = FromPropertyDescriptor;
-    exports.ToPropertyDescriptor = ToPropertyDescriptor;
-    exports.CompletePropertyDescriptor = CompletePropertyDescriptor;
-    exports.ValidateAndApplyPropertyDescriptor = ValidateAndApplyPropertyDescriptor;
-    exports.OrdinaryObject = OrdinaryObject;
-    exports.ObjectCreate = ObjectCreate;
-    exports.IsCallable = IsCallable;
-    exports.IsConstructor = IsConstructor;
-    exports.OrdinaryFunction = OrdinaryFunction;
-    exports.FunctionEnvironment = FunctionEnvironment;
-    exports.DeclarativeEnvironment = DeclarativeEnvironment;
-    exports.GlobalEnvironment = GlobalEnvironment;
-    exports.ObjectEnvironment = ObjectEnvironment;
-    exports.SymbolPrimitiveType = SymbolPrimitiveType;
-    exports.CodeRealm = CodeRealm;
-    exports.ExecutionContext = ExecutionContext;
-    exports.CompletionRecord = CompletionRecord;
-    exports.NormalCompletion = NormalCompletion;
-    exports.IdentifierBinding = IdentifierBinding;
-    exports.floor = floor;
-    exports.ceil = ceil;
-    exports.sign = sign;
-    exports.abs = abs;
-    exports.min = min;
-    exports.max = max;
-    exports.Type = Type;
-    exports.ToPrimitive = ToPrimitive;
-    exports.ToString = ToString;
-    exports.ToBoolean = ToBoolean;
-    exports.ToUint32 = ToUint32;
-    exports.ToNumber = ToNumber;
-    exports.ToObject = ToObject;
-    exports.GetValue = GetValue;
-    exports.PutValue = PutValue;
-    exports.GetBase = GetBase;
-    exports.MakeSuperReference = MakeSuperReference;
-    exports.IsSuperReference = IsSuperReference;
-    exports.IsUnresolvableReference = IsUnresolvableReference;
-    exports.IsPropertyReference = IsPropertyReference;
-    exports.IsStrictReference = IsStrictReference;
-    exports.GetReferencedName = GetReferencedName;
-    exports.GetThisValue = GetThisValue;
-    exports.HasPrimitiveBase = HasPrimitiveBase;
-    exports.ifAbrupt = ifAbrupt;
-    exports.isAbrupt = isAbrupt;
-    exports.Assert = Assert;
-    exports.unwrap = unwrap;
-    exports.SameValue = SameValue;
-    exports.SameValueZero = SameValueZero;
-    exports.Type = Type;
-    exports.Reference = Reference;
-    exports.ToPrimitive = ToPrimitive;
-    exports.ToInteger = ToInteger;
-    exports.ToNumber = ToNumber;
-    exports.ToUint16 = ToUint16;
-    exports.ToInt32 = ToInt32;
-    exports.ToUint32 = ToUint32;
-    exports.OrdinaryHasInstance = OrdinaryHasInstance;
-    exports.GetGlobalObject = GetGlobalObject;
-    exports.ThisResolution = ThisResolution;
-    exports.CreateArrayFromList = CreateArrayFromList;
-    exports.CreateListFromArrayLike = CreateListFromArrayLike;
-    exports.TestIntegrityLevel = TestIntegrityLevel;
-    exports.SetIntegrityLevel = SetIntegrityLevel;
-    
-    exports.CheckObjectCoercible = CheckObjectCoercible;
-    exports.HasProperty = HasProperty;
-    exports.GetMethod = GetMethod;
-    exports.Get = Get;
-    exports.Set = Set;
-    exports.DefineOwnProperty = DefineOwnProperty;
-    exports.GetOwnProperty = GetOwnProperty;
-    exports.OwnPropertyKeys = OwnPropertyKeys;
-    exports.OwnPropertyKeysAsList = OwnPropertyKeysAsList;
-    exports.MakeListIterator = MakeListIterator;
-    exports.DefineOwnPropertyOrThrow = DefineOwnPropertyOrThrow;
-    exports.Delete = Delete;
-    exports.Enumerate = Enumerate;
-    exports.OwnPropertyKeys = OwnPropertyKeys;
-    exports.SetPrototypeOf = SetPrototypeOf;
-    exports.GetPrototypeOf = GetPrototypeOf;
-    exports.PreventExtensions = PreventExtensions;
-    exports.IsExtensible = IsExtensible;
-    exports.CreateByteArrayBlock = CreateByteArrayBlock;
-    exports.SetArrayBufferData = SetArrayBufferData;
-    exports.AllocateArrayBuffer = AllocateArrayBuffer;
-    exports.IntegerIndexedObjectCreate = IntegerIndexedObjectCreate;
-    exports.StringExoticObject = StringExoticObject;
-    exports.thisTimeValue = thisTimeValue;
-    exports.thisNumberValue = thisNumberValue;
-    exports.thisBooleanValue = thisBooleanValue;
-    exports.thisStringValue = thisStringValue;
-
-    // #################################################################################################################################################################################################
-    // #################################################################################################################################################################################################
-    // REALM (intrinsics, globalthis, globalenv, loader) each Process One
-    // #################################################################################################################################################################################################
-    // #################################################################################################################################################################################################
-    var assignIntrinsics;
-    var createGlobalThis;
-    var quickAssignIntrVars; // in createIntrinsics (assignt immer das aktuelle intrinsic object)
-
-    var debugmode = false;
-
-    function debug() {
-        if (debugmode && typeof importScripts !== "function") console.log.apply(console, arguments);
-    }
-
-    function debugdir() {
-        if (debugmode && typeof importScripts !== "function") console.dir.apply(console, arguments);
-    }
-
-    // *****************************************************************************************************************************************************************************
-    // code and intrinsics: CREATE INTRINSICS (builtins definieren)
-    // *****************************************************************************************************************************************************************************   
-
-    function define_intrinsic(intrinsics, intrinsicName, value) {
-        var descriptor = Object.create(null);
-        descriptor.configurable = true;
-        descriptor.enumerable = true;
-        descriptor.value = value;
-        descriptor.writable = true;
-        callInternalSlot("DefineOwnProperty", intrinsics, intrinsicName, descriptor);
-    }
-    
-
-    function createIntrinsicConstructor (realm, name, len, intrinsicName) {
-        var intrinsics = realm.intrinsics;
-        var constructor = OrdinaryFunction();
-        define_intrinsic(intrinsics, intrinsicName, constructor);
-        SetFunctionName(constructor, name);
-        setFunctionLength(constructor, len);
-        return constructor;
-    }
-    
-    function createIntrinsicPrototype (realm, intrinsicName) {
-        var intrinsics = realm.intrinsics;
-        
-        var prototype = Object.create(OrdinaryObject.prototype);
-        setInternalSlot(prototype, "Bindings", Object.create(null));
-        setInternalSlot(prototype, "Symbols", Object.create(null));
-        setInternalSlot(prototype, "Extensible", true);
-        setInternalSlot(prototype, "Prototype", null);        
-        define_intrinsic(intrinsics, intrinsicName, prototype);
-        return prototype;
-    }
-
-    function createIntrinsicObject (realm, intrinsicName) {
-        var intrinsics = realm.intrinsics;
-        var object = OrdinaryObject();
-        define_intrinsic(intrinsics, intrinsicName, object);
-        return object;
-    }
-
-    function createIntrinsics(realm) {
-        
-        var intrinsics = Object.create(OrdinaryObject.prototype);
-        setInternalSlot(intrinsics, "Bindings", Object.create(null));
-        setInternalSlot(intrinsics, "Symbols", Object.create(null));
-        setInternalSlot(intrinsics, "Extensible", true);
-        setInternalSlot(intrinsics, "Prototype", null);        
-        realm.intrinsics = intrinsics;
-
-
-        var ObjectPrototype = createIntrinsicPrototype(realm, "%ObjectPrototype%");
-        setInternalSlot(ObjectPrototype, "Prototype", null);
-        realm.xs.ObjectPrototype = ObjectPrototype;        
-
-        var FunctionPrototype = createIntrinsicPrototype(realm, "%FunctionPrototype%");
-        setInternalSlot(FunctionPrototype, "Prototype", ObjectPrototype);
-        realm.xs.FunctionPrototype = FunctionPrototype;
-        
-        var FunctionConstructor = createIntrinsicConstructor(realm, "Function", 0, "%Function%");
-        setInternalSlot(FunctionConstructor, "Prototype", FunctionPrototype);
-        realm.xs.FunctionConstructor = FunctionConstructor;
-        
-        var ObjectConstructor = createIntrinsicConstructor(realm, "Object", 0, "%Object%");
-        
-    Assert(getInternalSlot(ObjectConstructor, "Prototype") === FunctionPrototype, "ObjectConstructor and FunctionPrototype have to have a link");
-        realm.xs.ObjectConstructor = ObjectConstructor;
-        
-        var EncodeURIFunction = createIntrinsicConstructor(realm, "EncodeURI", 0, "%EncodeURI%");
-        var DecodeURIFunction = createIntrinsicConstructor(realm, "DecodeURI", 0, "%DecodeURI%");
-        var EncodeURIComponentFunction = createIntrinsicConstructor(realm, "EncodeURIComponent", 0, "%EncodeURIComponent%");
-        var DecodeURIComponentFunction = createIntrinsicConstructor(realm, "DecodeURIComponent", 0, "%DecodeURIComponent%");
-        var SetTimeoutFunction = createIntrinsicConstructor(realm, "SetTimeout", 0, "%SetTimeout%");
-        var SetImmediateFunction = createIntrinsicConstructor(realm, "SetImmediate", 0, "%SetImmediate%");
-        var IsNaNFunction = createIntrinsicConstructor(realm, "IsNaN", 0, "%IsNaN%");
-        var IsFiniteFunction = createIntrinsicConstructor(realm, "IsFinite", 0, "%IsFinite%");
-        var ParseFloatFunction = createIntrinsicConstructor(realm, "ParseFloat", 0, "%ParseFloat%");
-        var ParseIntFunction = createIntrinsicConstructor(realm, "ParseInt", 0, "%ParseInt%");
-        var EscapeFunction = createIntrinsicConstructor(realm, "Escape", 0, "%Escape%");
-        var UnescapeFunction = createIntrinsicConstructor(realm, "Unescape", 0, "%Unescape%");
-        var EvalFunction = createIntrinsicConstructor(realm, "Eval", 0, "%Eval%");
-        var RegExpConstructor = createIntrinsicConstructor(realm, "RegExp", 0, "%RegExp%");
-        var RegExpPrototype = createIntrinsicPrototype(realm, "%RegExpPrototype%");
-        var ProxyConstructor = createIntrinsicConstructor(realm, "Proxy", 0, "%Proxy%");
-        var ProxyPrototype = createIntrinsicPrototype(realm, "%ProxyPrototype%");
-        var BooleanConstructor = createIntrinsicConstructor(realm, "Boolean", 0, "%Boolean%");
-        var BooleanPrototype = createIntrinsicPrototype(realm, "%BooleanPrototype%");
-        var NumberConstructor = createIntrinsicConstructor(realm, "Number", 0, "%Number%");
-        var NumberPrototype = createIntrinsicPrototype(realm, "%NumberPrototype%");
-        var StringConstructor = createIntrinsicConstructor(realm, "String", 0, "%String%");
-        var StringRawFunction;
-        var StringPrototype = createIntrinsicPrototype(realm, "%StringPrototype%");
-        var StringIteratorPrototype = createIntrinsicPrototype(realm, "%StringIteratorPrototype%");
-        var DateConstructor = createIntrinsicConstructor(realm, "Date", 0, "%Date%");
-        var DatePrototype = createIntrinsicPrototype(realm, "%DatePrototype%");
-        var ErrorConstructor = createIntrinsicConstructor(realm, "Error", 0, "%Error%");
-        var ErrorPrototype = createIntrinsicPrototype(realm, "%ErrorPrototype%");
-        var ArrayConstructor = createIntrinsicConstructor(realm, "Array", 0, "%Array%");
-        var ArrayPrototype = createIntrinsicPrototype(realm, "%ArrayPrototype%");
-        var ArrayIteratorPrototype = createIntrinsicPrototype(realm, "%ArrayIteratorPrototype%");
-        var GeneratorFunction = createIntrinsicConstructor(realm, "Generator", 0, "%Generator%");
-        var GeneratorPrototype = createIntrinsicPrototype(realm, "%GeneratorPrototype%");
-        var GeneratorObject = createIntrinsicObject(realm, "%Generator%");
-        var ReflectObject = createIntrinsicObject(realm, "%Reflect%");
-        //var NativeError = OrdinaryFunction();
-        var SymbolFunction = createIntrinsicConstructor(realm, "Symbol", 0, "%Symbol%");
-        var SymbolPrototype = createIntrinsicPrototype(realm, "%SymbolPrototype%");
-        var TypeErrorConstructor = createIntrinsicConstructor(realm, "TypeError", 0, "%TypeError%");
-        var TypeErrorPrototype = createIntrinsicPrototype(realm, "%TypeErrorPrototype%");
-        var ReferenceErrorConstructor = createIntrinsicConstructor(realm, "ReferenceError", 0, "%ReferenceError%");
-        var ReferenceErrorPrototype = createIntrinsicPrototype(realm, "%ReferenceErrorPrototype%");
-        var SyntaxErrorConstructor = createIntrinsicConstructor(realm, "SyntaxError", 0, "%SyntaxError%");
-        var SyntaxErrorPrototype = createIntrinsicPrototype(realm, "%SyntaxErrorPrototype%");
-        var RangeErrorConstructor = createIntrinsicConstructor(realm, "RangeError", 0, "%RangeError%");
-        var RangeErrorPrototype = createIntrinsicPrototype(realm, "%RangeErrorPrototype%");
-        var EvalErrorConstructor = createIntrinsicConstructor(realm, "EvalError", 0, "%EvalError%");
-        var EvalErrorPrototype = createIntrinsicPrototype(realm, "%EvalErrorPrototype%");
-        var URIErrorConstructor = createIntrinsicConstructor(realm, "URIError", 0, "%URIError%");
-        var URIErrorPrototype = createIntrinsicPrototype(realm, "%URIErrorPrototype%");
-        var PromiseConstructor = createIntrinsicConstructor(realm, "Promise", 0, "%Promise%");
-        var PromisePrototype = createIntrinsicPrototype(realm, "%PromisePrototype%");
-        var WeakMapConstructor = createIntrinsicConstructor(realm, "WeakMap", 0, "%WeakMap%");
-        var WeakMapPrototype = createIntrinsicPrototype(realm, "%WeakMapPrototype%");
-        var WeakSetConstructor = createIntrinsicConstructor(realm, "WeakSet", 0, "%WeakSet%");
-        var WeakSetPrototype = createIntrinsicPrototype(realm, "%WeakSetPrototype%");
-        var MapConstructor = createIntrinsicConstructor(realm, "Map", 0, "%Map%");
-        var MapPrototype = createIntrinsicPrototype(realm, "%MapPrototype%");
-        var MapIteratorPrototype = createIntrinsicPrototype(realm, "%MapIteratorPrototype%");
-        var SetConstructor = createIntrinsicConstructor(realm, "Set", 0, "%Set%");
-        var SetPrototype = createIntrinsicPrototype(realm, "%SetPrototype%");
-        var SetIteratorPrototype = createIntrinsicPrototype(realm, "%SetIteratorPrototype%");
-        var __mapSetUniqueInternalUniqueKeyCounter__ = 0;
-        var TypedArrayConstructor = createIntrinsicConstructor(realm, "TypedArray", 0, "%TypedArray%");
-        var TypedArrayPrototype = createIntrinsicPrototype(realm, "%TypedArrayPrototype%");
-        var Uint8ArrayConstructor = createIntrinsicConstructor(realm, "Uint8Array", 0, "%Uint8Array%");
-        var Int8ArrayConstructor = createIntrinsicConstructor(realm, "Int8Array", 0, "%Int8Array%");
-        var Uint8ClampedArrayConstructor = createIntrinsicConstructor(realm, "Uint8ClampedArray", 0, "%Uint8ClampedArray%");
-        var Int16ArrayConstructor = createIntrinsicConstructor(realm, "Int16Array", 0, "%Int16Array%");
-        var Uint16ArrayConstructor = createIntrinsicConstructor(realm, "Uint16Array", 0, "%Uint16Array%");
-        var Int32ArrayConstructor = createIntrinsicConstructor(realm, "Int32Array", 0, "%Int32Array%");
-        var Uint32ArrayConstructor = createIntrinsicConstructor(realm, "Uint32Array", 0, "%Uint32Array%");
-        var Float32ArrayConstructor = createIntrinsicConstructor(realm, "Float32Array", 0, "%Float32Array%");
-        var Float64ArrayConstructor = createIntrinsicConstructor(realm, "Float64Array", 0, "%Float64Array%");
-        var Uint8ArrayPrototype = createIntrinsicPrototype(realm, "%Uint8ArrayPrototype%");
-        var Int8ArrayPrototype = createIntrinsicPrototype(realm, "%Int8ArrayPrototype%");
-        var Uint8ClampedArrayPrototype = createIntrinsicPrototype(realm, "%Uint8ClampedArrayPrototype%");
-        var Int16ArrayPrototype = createIntrinsicPrototype(realm, "%Int16ArrayPrototype%");
-        var Uint16ArrayPrototype = createIntrinsicPrototype(realm, "%Uint16ArrayPrototype%");
-        var Int32ArrayPrototype = createIntrinsicPrototype(realm, "%Int32ArrayPrototype%");
-        var Uint32ArrayPrototype = createIntrinsicPrototype(realm, "%Uint32ArrayPrototype%");
-        var Float32ArrayPrototype = createIntrinsicPrototype(realm, "%Float32ArrayPrototype%");
-        var Float64ArrayPrototype = createIntrinsicPrototype(realm, "%Float64ArrayPrototype%");
-        var ArrayBufferConstructor = createIntrinsicConstructor(realm, "ArrayBuffer", 0, "%ArrayBuffer%");
-        var ArrayBufferPrototype = createIntrinsicPrototype(realm, "%ArrayBufferPrototype%");
-        var DataViewConstructor = createIntrinsicConstructor(realm, "DataView", 0, "%DataView%");
-        var DataViewPrototype = createIntrinsicPrototype(realm, "%DataViewPrototype%");
-        var JSONObject = createIntrinsicObject(realm, "%JSON%");
-        var MathObject = createIntrinsicObject(realm, "%Math%");
-        var ConsoleObject = createIntrinsicObject(realm, "%Console%");
-        var LoadFunction = createIntrinsicConstructor(realm, "Load", 0, "%Load%");
-        var RequestFunction = createIntrinsicConstructor(realm, "Request", 0, "%Request%");
-        var EmitterConstructor = createIntrinsicConstructor(realm, "Emitter", 0, "%Emitter%");
-        var EmitterPrototype = createIntrinsicPrototype(realm, "%EmitterPrototype%");
-        // Object.observe
-        var NotifierPrototype = createIntrinsicPrototype(realm, "%NotifierPrototype%");
-        var ObserverCallbacks = [];
-        var LoaderConstructor = createIntrinsicConstructor(realm, "Loader", 0, "%Loader%");
-        var LoaderPrototype = createIntrinsicPrototype(realm, "%LoaderPrototype%");
-        var LoaderIteratorPrototype = createIntrinsicPrototype(realm, "%LoaderIteratorPrototype%");
-        var RealmConstructor = createIntrinsicConstructor(realm, "Realm", 0, "%Realm%");
-        var RealmPrototype = createIntrinsicPrototype(realm, "%RealmPrototype%");
-        var ModuleFunction = createIntrinsicConstructor(realm, "Module", 0, "%Module%");
-        var ModulePrototype = null;
-
-        /*
-	@std:Module
-	*/
-        
-        quickAssignIntrVars = function quickAssignIntrVars(target) {
-                target.EncodeURIFunction = EncodeURIFunction;
-                target.DecodeURIFunction = DecodeURIFunction;
-                target.EncodeURIComponentFunction = EncodeURIComponentFunction;
-                target.DecodeURIComponentFunction = DecodeURIComponentFunction;
-                target.SetTimeoutFunction = SetTimeoutFunction;
-                target.SetImmediateFunction = SetImmediateFunction;
-                target.IsNaNFunction = IsNaNFunction;
-                target.IsFiniteFunction = IsFiniteFunction;
-                target.ParseFloatFunction = ParseFloatFunction;
-                target.ParseIntFunction = ParseIntFunction;
-                target.EscapeFunction = EscapeFunction;
-                target.UnescapeFunction = UnescapeFunction;
-                target.EvalFunction = EvalFunction;
-                target.RegExpConstructor = RegExpConstructor;
-                target.RegExpPrototype = RegExpPrototype;
-                target.ProxyConstructor = ProxyConstructor;
-                target.ProxyPrototype = ProxyPrototype;
-                target.BooleanConstructor = BooleanConstructor;
-                target.BooleanPrototype = BooleanConstructor;
-                target.NumberConstructor = NumberConstructor;
-                target.NumberPrototype = NumberPrototype;
-                target.StringConstructor = StringConstructor;
-                target.StringPrototype = StringPrototype;
-                target.StringIteratorPrototype = StringIteratorPrototype;
-                target.DateConstructor = DateConstructor;
-                target.DatePrototype = DatePrototype;
-                target.ErrorConstructor = ErrorConstructor;
-                target.ErrorPrototype = ErrorPrototype;
-                target.ArrayConstructor = ArrayConstructor;
-                target.ArrayPrototype = ArrayPrototype;
-                target.ArrayIteratorPrototype = ArrayIteratorPrototype;
-                target.GeneratorFunction = GeneratorFunction;
-                target.GeneratorPrototype = GeneratorPrototype;
-                target.GeneratorObject = GeneratorObject;
-                target.ReflectObject = ReflectObject;
-                //target.NativeError = NativeError;
-                target.SymbolFunction = SymbolFunction;
-                target.SymbolPrototype = SymbolPrototype;
-                target.TypeErrorConstructor = TypeErrorConstructor;
-                target.TypeErrorPrototype = TypeErrorPrototype;
-                target.ReferenceErrorConstructor = ReferenceErrorConstructor;
-                target.ReferenceErrorPrototype = ReferenceErrorPrototype;
-                target.SyntaxErrorConstructor = SyntaxErrorConstructor;
-                target.SyntaxErrorPrototype = SyntaxErrorPrototype;
-                target.RangeErrorConstructor = RangeErrorConstructor;
-                target.RangeErrorPrototype = RangeErrorPrototype;
-                target.EvalErrorConstructor = EvalErrorConstructor;
-                target.EvalErrorPrototype = EvalErrorPrototype;
-                target.URIErrorConstructor = URIErrorConstructor;
-                target.URIErrorPrototype = URIErrorPrototype;
-                target.PromiseConstructor = PromiseConstructor;
-                target.PromisePrototype = PromisePrototype;
-                target.WeakMapConstructor = WeakMapConstructor;
-                target.WeakMapPrototype = WeakMapPrototype;
-                target.WeakSetConstructor = WeakSetConstructor;
-                target.WeakSetPrototype = WeakSetPrototype;
-                target.MapConstructor = MapConstructor;
-                target.MapPrototype = MapPrototype;
-                target.MapIteratorPrototype = MapIteratorPrototype;
-                target.SetConstructor = SetConstructor;
-                target.SetPrototype = SetPrototype;
-                target.SetIteratorPrototype = SetIteratorPrototype;
-                target.TypedArrayConstructor = TypedArrayConstructor;
-                target.TypedArrayPrototype = TypedArrayPrototype;
-                target.Uint8ArrayConstructor = Uint8ArrayConstructor;
-                target.Int8ArrayConstructor = Int8ArrayConstructor;
-                target.Uint8ClampedArrayConstructor = Uint8ClampedArrayConstructor;
-                target.Int16ArrayConstructor = Int16ArrayConstructor;
-                target.Uint16ArrayConstructor = Uint16ArrayConstructor;
-                target.Int32ArrayConstructor = Int32ArrayConstructor;
-                target.Uint32ArrayConstructor = Uint32ArrayConstructor;
-                target.Float32ArrayConstructor = Float32ArrayConstructor;
-                target.Float64ArrayConstructor = Float64ArrayConstructor
-                target.Uint8ArrayPrototype = Uint8ArrayPrototype;
-                target.Int8ArrayPrototype = Int8ArrayPrototype;
-                target.Uint8ClampedArrayPrototype = Uint8ClampedArrayPrototype;
-                target.Int16ArrayPrototype = Int16ArrayPrototype;
-                target.Uint16ArrayPrototype = Uint16ArrayPrototype;
-                target.Int32ArrayPrototype = Int32ArrayPrototype;
-                target.Uint32ArrayPrototype = Uint32ArrayPrototype;
-                target.Float32ArrayPrototype = Float32ArrayPrototype;
-                target.Float64ArrayPrototype = Float64ArrayPrototype;
-                target.ArrayBufferConstructor = ArrayBufferConstructor;
-                target.ArrayBufferPrototype = ArrayBufferPrototype;
-                target.DataViewConstructor = DataViewConstructor;
-                target.DataViewPrototype = DataViewPrototype;
-                target.JSONObject = JSONObject;
-                target.MathObject = MathObject;
-                target.ConsoleObject = ConsoleObject;
-                target.LoadFunction = LoadFunction;
-                target.RequestFunction = RequestFunction;
-                target.EmitterConstructor = EmitterConstructor;
-                target.EmitterPrototype = EmitterPrototype;
-                target.NotifierPrototype = NotifierPrototype;
-                return target;
-        }
-        
-
-        // ##################################################################
-        // Der Module Loader Start
-        // ##################################################################
-
-        var std_Module;// = OrdinaryModule(getGlobalThis());
-
-        var std_Object;
-        var std_ObjectPrototype;
-        var std_Function;
-        var std_FunctionPrototype;
-        var std_Function_call;
-        var std_Function_apply;
-        var std_Function_bind;
-
-
-        // ##################################################################
-        // Das Code Realm als %Realm%
-        // ##################################################################
-
-        var RealmPrototype_get_global = function (thisArg, argList) {
-            var realmObject = thisArg;
-            var realm = getInternalSlot(realmObject, "Realm");
-            if ((Type(realmObject) != "object") || !hasInternalSlot(realmObject, "Realm")) return withError("Type", "The this value is no realm object");
-            var globalThis = getInternalSlot(realm, globalThis);
-            return globalThis;
-        };
-
-        var RealmPrototype_eval = function (thisArg, argList) {
-            var source = argList[0];
-            var realmObject = thisArg;
-            if ((Type(realmObject) != "object") || !hasInternalSlot(realmObject, "Realm")) return withError("Type", "The this value is no realm object");
-            return IndirectEval(getInternalSlot(realmObject, "Realm"), source);
-        };
-
-        var RealmConstructor_Call = function (thisArg, argList) {
-            var realmObject = thisArg;
-            var options = argList[0];
-            var initializer = argList[1];
-            if (Type(realmObject) !== "object") return withError("Type", "The this value is not an object");
-            if (!hasInternalSlot(realmObject, "Realm")) return withError("Type", "The this value has not the required properties.");
-            if (getInternalSlot(realmObject, "Realm") !== undefined) return withError("Type", "the realm property has to be undefined");
-            if (options === undefined) options = ObjectCreate(null);
-            else if (Type(options) !== "object") return withError("Type", "options is not an object");
-            var realm = CreateRealm(realmObject);
-            var evalHooks = Get(options, "eval");
-            if ((evalHooks=ifAbrupt(evalHooks)) && isAbrupt(evalHooks)) return evalHooks;
-            if (evalHooks === undefined) evalHooks = ObjectCreate();
-            var directEval = Get(evalHooks(direct));
-            if ((directEval=ifAbrupt(directEval)) && isAbrupt(directEval)) return directEval;
-            if (directEval === undefined) directEval = ObjectCreate();
-            else if (Type(directEval) !== "object") return withError("Type", "directEval is not an object");
-            var translate = Get(directEval, "translate");
-            if ((translate = ifAbrupt(translate)) && isAbrupt(translate)) return translate;
-            if ((translate !== undefined) && !IsCallable(translate)) return withError("Type", "translate has to be a function");
-            setInternalSlot(realm, "translateDirectEvalHook", translate);
-            var fallback = Get(directEval, "fallback");
-            if ((fallback=ifAbrupt(fallback)) && isAbrupt(fallback)) return fallback;
-            setInternalSlot(realm, "fallbackDirectEvalHook", fallback);
-            var indirectEval = Get(options, "indirect");
-            if ((indirectEval = ifAbrupt(indirectEval)) && isAbrupt(indirectEval)) return indirectEval;
-            if ((indirectEval !== undefined) && !IsCallable(indirectEval)) return withError("Type", "indirectEval should be a function");
-            setInternalSlot(realm, "indirectEvalHook", indirectEval);
-            var Function = Get(options, "Function");
-            if ((Function = ifAbrupt(Function)) && isAbrupt(Function)) return Function;
-            if ((Function !== undefined) && !IsCallable(Function)) return withError("Type", "Function should be a function");
-            setInternalSlot(realm, "FunctionHook", Function);
-            setInternalSlot(realmObject, "Realm", realm);
-            if (initializer !== undefined) {
-                if (!IsCallable(initializer)) return withError("Type", "initializer should be a function");
-                var builtins = ObjectCreate();
-                DefineBuiltinProperties(realm, builtins);
-                var status = callInternalSlot("Call", initializer, realmObject, [builtins]);
-                if (isAbrupt(status)) return status;
-            }
-            return realmObject;
-        };
-
-        var RealmConstructor_Construct = function (argList) {
-            var F = this;
-            var args = argList;
-            return OrdinaryConstruct(F, argList);
-        };
-
-        var RealmConstructor_$$create = function (thisArg, argList) {
-            var F = thisArg;
-            var realmObject = OrdinaryCreateFromConstructor(F, "%RealmPrototype%", {
-                "Realm": undefined
-            });
-            return realmObject;
-        };
-
-        // %Realm%
-        setInternalSlot(RealmConstructor, "Call", RealmConstructor_Call);
-        setInternalSlot(RealmConstructor, "Construct", RealmConstructor_Construct);
-        LazyDefineProperty(RealmConstructor, $$create, CreateBuiltinFunction(getRealm(),RealmConstructor_$$create, 0, "[Symbol.create]"));
-        MakeConstructor(RealmConstructor, false, RealmPrototype);
-        // %RealmPrototype%
-        LazyDefineAccessor(RealmPrototype, "global", CreateBuiltinFunction(getRealm(),RealmPrototype_get_global, 0, "get global"));
-        LazyDefineProperty(RealmPrototype, "eval", CreateBuiltinFunction(getRealm(),RealmPrototype_eval, 1, "eval"));
-        LazyDefineProperty(RealmConstructor, $$toStringTag, "Realm");
-
-        // ##################################################################
-        // %Loader% und Loader.prototype
-        // ##################################################################
-
-
-        var LoaderConstructor_Call = function (thisArg, argList) {
-            var options = argList[0];
-            var loader = thisArg;
-            if (Type(loader) !== "object") return withError("Type", "Loader is not an object");
-
-            if (getInternalSlot(loader, "Modules") !== undefined) return withError("Type", "loader.[[Modules]] isnt undefined");
-            if (Type(options) !== "object") return withError("Type", "the Loader constructors´ options argument is not an object");
-
-            var realmObject = Get(options, "realm");
-            if ((realmObject = ifAbrupt(realmObject)) && isAbrupt(realmObject)) return realmObject;
-            var realm;
-
-            if (realmObject === undefined) realm = getRealm();
-            else realm = getInternalSlot(realmObject, "Realm");
-
-            var exc = null;
-            var help = function (name) {
-                var hook = Get(options, name);
-                if ((hook = ifAbrupt(hook)) && isAbrupt(hook)) return hook;
-                if (hook !== undefined) {
-                    var result = callInternalSlot("DefineOwnProperty", loader, name, {
-                        value: hook,
-                        writable: true,
-                        enumerable: true,
-                        configurable: true
-                    });
-                    if (isAbrupt(result)) exc = result;
-                }
-            };
-            ["normalize", "locate", "fetch", "translate", "instantiate"].forEach(help);
-            if (exc) return exc;
-
-            setInternalSlot(loader, "Modules", Object.create(null));
-            setInternalSlot(loader, "Loads", []);
-            setInternalSlot(loader, "Realm", realm);
-            return NormalCompletion(loader);
-        };
-
-        var LoaderConstructor_Construct = function (argList) {
-            return OrdinaryConstruct(this, argList);
-        };
-
-        var LoaderConstructor_$$create = function (thisArg, argList) {
-            var F = thisArg;
-            var loader = OrdinaryCreateFromConstructor(F, "%LoaderPrototype%", {
-                "Modules": undefined,
-                "Loads": undefined,
-                "Realm": undefined
-            });
-            return loader;
-        };
-
-        var LoaderPrototype_get_realm = function (thisArg, argList) {
-            var loader = thisArg;
-            if (Type(loader) !== "object" || !hasInternalSlot(loader, "Realm")) {
-                return withError("Type", "the this value is not a valid loader object");
-            }
-            var realm = getInternalSlot(loader, "Realm");
-            return getInternalSlot(realm, "realmObject");
-        };
-
-        var LoaderPrototype_get_global = function (thisArg, argList) {
-            var loader = thisArg;
-            if (Type(loader) !== "object" || !hasInternalSlot(loader, "Realm")) {
-                return withError("Type", "the this value is not a valid loader object");
-            }
-            var realm = getInternalSlot(loader, "Realm");
-            var global = realm.globalThis;
-            return global;
-        };
-
-        var ReturnUndefined_Call = function (thisArg, argList) {
-            return NormalCompletion(undefined);
-        };
-
-        function ReturnUndefined() {
-            var F = OrdinaryFunction();
-            setInternalSlot(F, "Call", ReturnUndefined_Call);
-            return F;
-        }
-
-        var LoaderPrototype_entries = function (thisArg, argList) {
-            return CreateLoaderIterator(thisArg, "key+value");
-        };
-
-        var LoaderPrototype_values = function (thisArg, argList) {
-            return CreateLoaderIterator(thisArg, "value");
-        };
-
-        var LoaderPrototype_keys = function (thisArg, argList) {
-            return CreateLoaderIterator(thisArg, "key");
-        };
-
-        var LoaderPrototype_define = function (thisArg, argList) {
-            var loader = thisArg;
-            if ((loader = ifAbrupt(loader)) && isAbrupt(loader)) return loader;
-
-            setInternalSlot(F, "Loader", loader);
-            setInternalSlot(F, "ModuleName", name);
-            setInternalSlot(F, "Step", "translate");
-            setInternalSlot(F, "ModuleMetadata", metadata);
-            setInternalSlot(F, "ModuleSource", source);
-            setInternalSlot(F, "ModuleAddress", address);
-            var Promise = getIntrinsic("%Promise%");
-            var p = OrdinaryConstruct(Promise, [F]);
-            var G = ReturnUndefined;
-            p = PromiseThen(o, G);
-            return p;
-        };
-        var LoaderPrototype_load = function (thisArg, argList) {
-            var request = argList[0];
-            var options = argList[1];
-            var loader = thisLoader(thisArg);
-            if ((loader =ifAbrupt(loader)) && isAbrupt(loader)) return loader;
-            var p = LoadModule(loader, name, options);
-            var F = ReturnUndefined(); 
-
-            p = PromiseThen(p, F);
-            return p;
-        };
-
-        var LoaderPrototype_module = function (thisArg, argList) {
-            var loader = thisLoader(thisArg);
-            if ((loader=ifAbrupt(loader)) && isAbrupt(loader)) return loader;
-            var address = GetOption(options, "address");
-            if ((address=ifAbrupt(address)) && isAbrupt(address)) return address;
-            var load = CreateLoad(undefined);
-            load.address = address;
-            var linkSet = CreateLinkSet(loader, load);
-            var successCallback = EvaluateLoadedModule();
-            setInternalSlot(successCallback, "Loader", loader);
-            setInternalSlot(successCallback, "Load", load);
-            var p = PromiseThen(linkSet.done, successCallback);
-            var sourcePromise = PromiseOf(source);
-            ProceedToTranslate(loader, load, sourcePromise);
-            return p;
-        };
-
-        var LoaderPrototype_import = function (thisArg, argList) {
-            var name = argList[0];
-            var options = argList[1];
-            var loader = thisLoader(thisArg);
-            if ((loader=ifAbrupt(loader)) && isAbrupt(loader)) return loader;
-            var p = LoadModule(loader, name, options);
-            if ((p=ifAbrupt(p)) && isAbrupt(p)) return p;
-            var F = EvaluateLoadedModule();
-            setInternalSlot(F, "Loader", loader);
-            p = PromiseThen(p, F);
-            return p;
-        };
-        var LoaderPrototype_eval = function (thisArg, argList) {
-            var source = argList[0];
-            var loader = thisLoader(thisArg);
-            if ((loader=ifAbrupt(loader)) && isAbrupt(loader)) return loader;
-            return IndirectEval(getInternalSlot(loader, "Realm"), source);
-
-        };
-
-
-        var LoaderPrototype_get = function (thisArg, argList) {
-            var loader = thisLoader(thisArg);
-            if ((loader=ifAbrupt(loader)) && isAbrupt(loader)) return loader;
-            var name = ToString(argList[0]);
-            if ((name=ifAbrupt(name)) && isAbrupt(name)) return name;
-
-            var modules = getInternalSlot(loader, "Modules");
-            if (modules[name]) {
-                var module = modules[name];
-                var result = EnsureEvaluated(module, [], loader);
-                if ((result=ifAbrupt(result)) && isAbrupt(result)) return result;
-                return NormalCompletion(module);
-            }
-            return NormalCompletion(undefined);
-        };
-        var LoaderPrototype_has = function (thisArg, argList) {
-            var loader = thisLoader(thisArg);
-            if ((loader=ifAbrupt(loader)) && isAbrupt(loader)) return loader;
-            var name = ToString(argList[0]);
-            if ((name=ifAbrupt(name)) && isAbrupt(name)) return name;
-
-            var modules = getInternalSlot(loader, "Modules");
-            if (modules[name]) {
-                return NormalCompletion(true);
-            }
-            return NormalCompletion(false);
-
-        };
-        var LoaderPrototype_set = function (thisArg, argList) {
-            var name = argList[0];
-            var module = argList[1];
-            var loader = thisLoader(thisArg);
-            if ((loader=ifAbrupt(loader)) && isAbrupt(loader)) return loader;
-            var loaderRecord = getInternalSlot(loader, "LoaderRecord");
-            var name = ToString(name);
-            if ((name=ifAbrupt(name)) && isAbrupt(name)) return name;
-            if (Type(module) !== "object") return withError("Type", "module is not an object");
-        };
-        var LoaderPrototype_delete = function (thisArg, argList) {
-
-        };
-        var LoaderPrototype_normalize = function (thisArg, argList) {
-            var name = argList[0];
-            var refererName = argList[1];
-            var refererAddress = argList[2];
-            Assert(Type(name) == "string", "Loader.prototype.normalize: name has to be a string.");
-            return NormalCompletion(name);
-        };
-        var LoaderPrototype_locate = function (thisArg, argList) {
-            var loadRequest = argList[0];
-            return Get(loadRequest, "name");
-        };
-        var LoaderPrototype_fetch = function (thisArg, argList) {
-            return withError("Type", "The Loader.prototype.fetch function is supposed to throw a type error.")
-        };
-        var LoaderPrototype_translate = function (thisArg, argList) {
-            var load = argList[0];
-            return Get(load, "source");
-        };
-        
-        var LoaderPrototype_instantiate = function (thisArg, argList) {
-            var loadRequest = argList[0];
-            return NormalCompletion(undefined);
-        };
-        var LoaderPrototype_$$iterator = LoaderPrototype_entries;
-
-        // Loader
-
-        setInternalSlot(LoaderConstructor, "Prototype", FunctionPrototype);
-        setInternalSlot(LoaderConstructor, "Call", LoaderConstructor_Call);
-        setInternalSlot(LoaderConstructor, "Construct", LoaderConstructor_Construct);
-        LazyDefineProperty(LoaderConstructor, $$create, CreateBuiltinFunction(getRealm(),LoaderConstructor_$$create, 0, "[Symbol.create]"));
-        MakeConstructor(LoaderConstructor, false, LoaderPrototype);
-        //SetFunctionName(LoaderConstructor, "Loader");
-
-        // Loader.prototype
-        LazyDefineProperty(LoaderPrototype, "entries", CreateBuiltinFunction(getRealm(),LoaderPrototype_entries, 0, "entries"));
-        LazyDefineProperty(LoaderPrototype, "values", CreateBuiltinFunction(getRealm(),LoaderPrototype_values, 0, "values"));
-        LazyDefineProperty(LoaderPrototype, "keys", CreateBuiltinFunction(getRealm(),LoaderPrototype_keys, 0, "keys"));
-        LazyDefineProperty(LoaderPrototype, "has", CreateBuiltinFunction(getRealm(),LoaderPrototype_has, 0, "has"));
-        LazyDefineProperty(LoaderPrototype, "get", CreateBuiltinFunction(getRealm(),LoaderPrototype_get, 0, "get"));
-        LazyDefineProperty(LoaderPrototype, "set", CreateBuiltinFunction(getRealm(),LoaderPrototype_set, 0, "set"));
-        LazyDefineProperty(LoaderPrototype, "delete", CreateBuiltinFunction(getRealm(),LoaderPrototype_delete, 0, "delete"));
-        LazyDefineProperty(LoaderPrototype, "define", CreateBuiltinFunction(getRealm(),LoaderPrototype_define, 2, "define"));
-        
-        LazyDefineProperty(LoaderPrototype, "load", CreateBuiltinFunction(getRealm(),LoaderPrototype_load,    1, "load"));
-        LazyDefineProperty(LoaderPrototype, "module", CreateBuiltinFunction(getRealm(),LoaderPrototype_module, 1, "module"));
-        LazyDefineProperty(LoaderPrototype, "import", CreateBuiltinFunction(getRealm(),LoaderPrototype_import, 0, "import"));
-        LazyDefineProperty(LoaderPrototype, "eval", CreateBuiltinFunction(getRealm(),LoaderPrototype_eval, 0, "eval"));
-        LazyDefineProperty(LoaderPrototype, "normalize", CreateBuiltinFunction(getRealm(),LoaderPrototype_normalize, 0, "normalize"));
-        LazyDefineProperty(LoaderPrototype, "fetch", CreateBuiltinFunction(getRealm(),LoaderPrototype_fetch, 0, "fetch"));
-        LazyDefineProperty(LoaderPrototype, "locate", CreateBuiltinFunction(getRealm(),LoaderPrototype_locate, 0, "locate"));
-        LazyDefineProperty(LoaderPrototype, "instantiate", CreateBuiltinFunction(getRealm(),LoaderPrototype_instantiate, 0, "instantiate"));
-        LazyDefineProperty(LoaderPrototype, $$iterator, CreateBuiltinFunction(getRealm(),LoaderPrototype_$$iterator, 0, "[Symbol.iterator]"));
-        LazyDefineProperty(LoaderPrototype, $$toStringTag, "Loader");
-
-        // ##################################################################
-        // Der Loader Iterator
-        // ##################################################################
-
-        function CreateLoaderIterator(loader, kind) {
-            var loaderIterator = ObjectCreate(LoaderIteratorPrototype, {
-                "Loader": loader,
-                "ModuleMapNextIndex": 0,
-                "MapIterationKind": kind
-            });
-            return loaderIterator;
-        }
-
-        var LoaderIteratorPrototype_next = function next(thisArg, argList) {
-            var iterator = thisArg;
-            var loader = getInternalSlot(iterator, "Loader");
-            var nextIndex = getInternalSlot(iterator, "ModuleMapNextIndex");
-            var kind = getInternalSlot(iterator, "MapIterationKind");
-            var nextValue;
-            return nextValue;
-        };
-
-        var LoaderIteratorPrototype_$$iterator = function $$iterator(thisArg, argList) {
-            return thisArg;
-        };
-
-        LazyDefineProperty(LoaderIteratorPrototype, $$iterator, CreateBuiltinFunction(getRealm(),LoaderIteratorPrototype_$$iterator, 0, "[Symbol.iterator]"));
-        LazyDefineProperty(LoaderIteratorPrototype, "next", CreateBuiltinFunction(getRealm(),LoaderIteratorPrototype_next, 0, "next"));
-        LazyDefineProperty(LoaderIteratorPrototype, $$toStringTag, "Loader Iterator");
-
-        // ##################################################################
-        // Der Module Loader Stop
-        // ##################################################################
-
-        var create_std_Module = function create_std_Module(obj) {
-            var mod = OrdinaryModule();
-            return mod;
-        };
-
-        // ##################################################################
-        // Loader Operationen 
-        // ##################################################################
-
-        function thisLoader(value) {
-            if (Type(value) === "object" && hasInternalSlot(value, "Modules")) {
-                var m = getInternalSlot(value, "Modules");
-                if (m !== undefined) return value;
-            }
-            return withError("Type", "thisLoader(value): value is not a valid loader object");
-        }
-
-        function LoadRecord() {
-            return {
-                __proto__:null,
-                status: undefined,
-                name: undefined,
-                linksets: undefined,
-                metadata: undefined,
-                address: undefined,
-                source: undefined,
-                kind: undefined,
-                body: undefined,
-                execute: undefined,
-                exception: undefined,
-                module: undefined,
-                constructor: LoadRecord
-            };
-        }
-
-        function CreateLoad(name) {
-            var load = LoadRecord();
-            load.status = "loading";
-            load.name = name;
-            load.linksets = [];
-            var metadata = ObjectCreate();
-            load.metadata = metadata;
-            return load;
-        }
-
-        function createLoadFailedFunction(exc) {
-
-            var LoadFailedFunction_Call = function (thisArg, argList) {
-                var F = this;
-                var load = getInternalSlot(this, "Load");
-                Assert(load.status === "loading", "load.[[Status]] has to be loading at this point");
-                load.status = "failed";
-                load.exception = exc;
-                var linkSets = load.linksets;
-                for (var i = 0, j = linkSets.length; i < j; i++) LinkSetFailed(linkSet[i], exc);
-                Assert(load.linksets.length === 0, "load.[[LinkSets]] has to be empty at this point");
-            };
-
-            var F = OrdinaryFunction();
-            setInternalSlot(F, "Load", load);
-            setInternalSlot(F, "Call", LoadFailedFunction_Call);
-            return F;
-        }
-
-        function RequestLoad(loader, request, refererName, refererAddress) {
-            var F = CallNormalize();
-            setInternalSlot(F, "Loader", loader);
-            setInternalSlot(F, "Request", request);
-            setInternalSlot(F, "RefererName", refererName);
-            setInternalSlot(F, "RefererAddress", refererAddress);
-            var p = OrdinaryConstruct(getIntrinsic("%Promise%"), [F]);
-            var G = GetOrCreateLoad();
-            setInternalSlot(G, "Loader", loader);
-            p = PromiseThen(p, G);
-            return p;
-        }
-
-        var CallNormalizeFunction_Call = function (thisArg, argList) {
-            var F = this;
-            var resolve = argList[0];
-            var reject = argList[1];
-
-            var loader = getInternalSlot(F, "Loader");
-            var request = getInternalSlot(F, "Request");
-            var refererName = getInternalSlot(F, "RefererName");
-            var refererAddress = getInternalSlot(F, "RefererAddress");
-
-            var normalizeHook = Get(loader, "normalize");
-            var name = callInternalSlot("Call", normalizeHook, undefined, [request, refererName, refererAddress]);
-            if ((name = ifAbrupt(name)) && isAbrupt(name)) return name;
-            callInternalSlot("Call", resolve, undefined, [name]);
-        };
-
-        function CallNormalize() {
-            var F = OrdinaryFunction();
-            setInternalSlot(F, "Call", CallNormalizeFunction_Call);
-            return F;
-        }
-
-        var GetOrCreateLoad_Call = function (thisArg, argList) {
-            var F = this;
-            var name = argList[0];
-            var loader = getInternalSlot(F, "loader");
-            name = ToString(name);
-            if ((name = ifAbrupt(name)) && isAbrupt(name)) return name;
-            if (loader.modules[name]) {
-                var existingModule = loader.modules[name].value;
-                var load = CreateLoad(name);
-                load.status = "linked";
-                return load;
-            } else if (loader.loads[name]) {
-                var load = loader.loads[name];
-                Assert(load.status === "loading" || load.status === "loaded", "load.[[status]] has either to be loading or loaded");
-                return load;
-            }
-        };
 
         function GetOrCreateLoad() {
             var F = OrdinaryFunction();
@@ -14747,6 +13730,1012 @@ define("lib/api", function (require, exports, module) {
             }
             return O;
         }
+
+
+    // ===========================================================================================================
+    // exports
+    // ===========================================================================================================
+
+    var $$unscopables        = SymbolPrimitiveType("@@unscopables", "Symbol.unscopables");
+    var $$create             = SymbolPrimitiveType("@@create", "Symbol.create");
+    var $$toPrimitive        = SymbolPrimitiveType("@@toPrimitive", "Symbol.toPrimitive");
+    var $$toStringTag        = SymbolPrimitiveType("@@toStringTag", "Symbol.toStringTag");
+    var $$hasInstance        = SymbolPrimitiveType("@@hasInstance", "Symbol.hasInstance");
+    var $$iterator           = SymbolPrimitiveType("@@iterator", "Symbol.iterator");
+    var $$isRegExp           = SymbolPrimitiveType("@@isRegExp", "Symbol.isRegExp");
+    var $$isConcatSpreadable = SymbolPrimitiveType("@@isConcatSpreadable", "Symbol.isConcatSpreadable");
+
+
+
+    exports.$$unscopables   = $$unscopables;
+    exports.$$create            = $$create;
+    exports.$$toPrimitive           = $$toPrimitive;
+    exports.$$hasInstance               = $$hasInstance;
+    exports.$$toStringTag                   = $$toStringTag;
+    exports.$$iterator                          = $$iterator;
+    exports.$$isRegExp                              = $$isRegExp;
+    exports.$$isConcatSpreadable = $$isConcatSpreadable;
+
+
+    exports.IndirectEval = IndirectEval;
+    exports.CreateRealm = CreateRealm;
+
+    exports.CreateBuiltinFunction = CreateBuiltinFunction;
+    exports.AddRestrictedFunctionProperties = AddRestrictedFunctionProperties;
+    exports.LazyDefineProperty = LazyDefineProperty;
+    exports.uriReserved = uriReserved;
+    exports.uriUnescaped = uriUnescaped;
+    exports.Encode = Encode;
+    exports.Decode = Decode;
+    exports.UTF8Encode = UTF8Encode;
+    exports.SetFunctionName = SetFunctionName;
+    exports.List = List;
+    exports.setFunctionLength = setFunctionLength;
+    exports.HasOwnProperty = HasOwnProperty;
+    exports.Put = Put;
+    exports.Invoke = Invoke;
+    exports.newContext = newContext;
+    exports.oldContext = oldContext;
+    exports.dropExecutionContext = dropExecutionContext;
+    exports.withError = withError; // This Function returns the Errors, say the spec says "Throw a TypeError", then return withError("Type", message);
+    exports.getContext = getContext;
+    exports.getRealm = getRealm;
+    exports.getLexEnv = getLexEnv;
+    exports.getVarEnv = getVarEnv;
+    exports.getIntrinsic = getIntrinsic;
+    exports.getIntrinsics = getIntrinsics;
+    exports.getGlobalEnv = getGlobalEnv;
+    exports.getGlobalThis = getGlobalThis;
+    exports.getStack = getStack;
+    exports.getState = getState;
+    exports.getInternalSlot = getInternalSlot;
+    exports.setInternalSlot = setInternalSlot;
+    exports.hasInternalSlot = hasInternalSlot;
+    exports.callInternalSlot = callInternalSlot;
+    exports.applyInternal = applyInternal;
+    exports.CreateArrayIterator = CreateArrayIterator;
+    exports.CreateByteDataBlock = CreateByteDataBlock;
+    exports.CopyDataBlockBytes = CopyDataBlockBytes;
+    exports.GetThisEnvironment = GetThisEnvironment;
+    exports.GeneratorStart = GeneratorStart;
+    exports.GeneratorYield = GeneratorYield;
+    exports.GeneratorResume = GeneratorResume;
+    exports.CreateItrResultObject = CreateItrResultObject;
+    exports.IteratorNext = IteratorNext;
+    exports.IteratorComplete = IteratorComplete;
+    exports.IteratorValue = IteratorValue;
+    exports.GetIterator = GetIterator;
+    exports.CreateDataProperty = CreateDataProperty;
+    exports.CreateOwnAccessorProperty = CreateOwnAccessorProperty;
+    exports.stringifyErrorStack = stringifyErrorStack;
+    exports.addMissingProperties = addMissingProperties;
+    exports.NormalCompletion = NormalCompletion;
+    exports.registerCompletionUpdater = registerCompletionUpdater;
+    exports.Completion = Completion;
+    exports.NewDeclarativeEnvironment = NewDeclarativeEnvironment;
+    exports.NewObjectEnvironment = NewObjectEnvironment;
+    exports.NewFunctionEnvironment = NewFunctionEnvironment;
+    exports.createIdentifierBinding = createIdentifierBinding;
+    exports.GetIdentifierReference = GetIdentifierReference;
+    exports.FunctionCreate = FunctionCreate;
+    exports.FunctionAllocate = FunctionAllocate;
+    exports.FunctionInitialise = FunctionInitialise;
+    exports.GeneratorFunctionCreate = GeneratorFunctionCreate;
+    exports.OrdinaryHasInstance = OrdinaryHasInstance;
+    exports.GetPrototypeFromConstructor = GetPrototypeFromConstructor;
+    exports.OrdinaryCreateFromConstructor = OrdinaryCreateFromConstructor;
+    exports.OrdinaryConstruct = OrdinaryConstruct;
+    exports.MakeConstructor = MakeConstructor;
+    exports.CreateEmptyIterator = CreateEmptyIterator;
+    exports.ArgumentsExoticObject = ArgumentsExoticObject;
+    exports.ArrayCreate = ArrayCreate;
+    exports.ArraySetLength = ArraySetLength;
+    exports.ExoticDOMObjectWrapper = ExoticDOMObjectWrapper;
+    exports.ExoticDOMFunctionWrapper = ExoticDOMFunctionWrapper;
+    exports.BoundFunctionCreate = BoundFunctionCreate;
+    exports.GeneratorFunctionCreate = GeneratorFunctionCreate;
+    exports.ObjectDefineProperties = ObjectDefineProperties;
+    exports.DeclarativeEnvironment = DeclarativeEnvironment;
+    exports.ObjectEnvironment = ObjectEnvironment;
+    exports.GlobalEnvironment = GlobalEnvironment;
+    exports.ToPropertyKey = ToPropertyKey;
+    exports.IsPropertyKey = IsPropertyKey;
+    exports.IsSymbol = IsSymbol;
+    exports.CreateDataProperty = CreateDataProperty;
+    exports.PropertyDescriptor = PropertyDescriptor;
+    exports.IsAccessorDescriptor = IsAccessorDescriptor;
+    exports.IsDataDescriptor = IsDataDescriptor;
+    exports.IsGenericDescriptor = IsGenericDescriptor;
+    exports.FromPropertyDescriptor = FromPropertyDescriptor;
+    exports.ToPropertyDescriptor = ToPropertyDescriptor;
+    exports.CompletePropertyDescriptor = CompletePropertyDescriptor;
+    exports.ValidateAndApplyPropertyDescriptor = ValidateAndApplyPropertyDescriptor;
+    exports.OrdinaryObject = OrdinaryObject;
+    exports.ObjectCreate = ObjectCreate;
+    exports.IsCallable = IsCallable;
+    exports.IsConstructor = IsConstructor;
+    exports.OrdinaryFunction = OrdinaryFunction;
+    exports.FunctionEnvironment = FunctionEnvironment;
+    exports.DeclarativeEnvironment = DeclarativeEnvironment;
+    exports.GlobalEnvironment = GlobalEnvironment;
+    exports.ObjectEnvironment = ObjectEnvironment;
+    exports.SymbolPrimitiveType = SymbolPrimitiveType;
+    exports.CodeRealm = CodeRealm;
+    exports.ExecutionContext = ExecutionContext;
+    exports.CompletionRecord = CompletionRecord;
+    exports.NormalCompletion = NormalCompletion;
+    exports.IdentifierBinding = IdentifierBinding;
+    exports.floor = floor;
+    exports.ceil = ceil;
+    exports.sign = sign;
+    exports.abs = abs;
+    exports.min = min;
+    exports.max = max;
+    exports.Type = Type;
+    exports.ToPrimitive = ToPrimitive;
+    exports.ToString = ToString;
+    exports.ToBoolean = ToBoolean;
+    exports.ToUint32 = ToUint32;
+    exports.ToNumber = ToNumber;
+    exports.ToObject = ToObject;
+    exports.GetValue = GetValue;
+    exports.PutValue = PutValue;
+    exports.GetBase = GetBase;
+    exports.MakeSuperReference = MakeSuperReference;
+    exports.IsSuperReference = IsSuperReference;
+    exports.IsUnresolvableReference = IsUnresolvableReference;
+    exports.IsPropertyReference = IsPropertyReference;
+    exports.IsStrictReference = IsStrictReference;
+    exports.GetReferencedName = GetReferencedName;
+    exports.GetThisValue = GetThisValue;
+    exports.HasPrimitiveBase = HasPrimitiveBase;
+    exports.ifAbrupt = ifAbrupt;
+    exports.isAbrupt = isAbrupt;
+    exports.Assert = Assert;
+    exports.unwrap = unwrap;
+    exports.SameValue = SameValue;
+    exports.SameValueZero = SameValueZero;
+    exports.Type = Type;
+    exports.Reference = Reference;
+    exports.ToPrimitive = ToPrimitive;
+    exports.ToInteger = ToInteger;
+    exports.ToNumber = ToNumber;
+    exports.ToUint16 = ToUint16;
+    exports.ToInt32 = ToInt32;
+    exports.ToUint32 = ToUint32;
+    exports.OrdinaryHasInstance = OrdinaryHasInstance;
+    exports.GetGlobalObject = GetGlobalObject;
+    exports.ThisResolution = ThisResolution;
+    exports.CreateArrayFromList = CreateArrayFromList;
+    exports.CreateListFromArrayLike = CreateListFromArrayLike;
+    exports.TestIntegrityLevel = TestIntegrityLevel;
+    exports.SetIntegrityLevel = SetIntegrityLevel;
+    
+    exports.CheckObjectCoercible = CheckObjectCoercible;
+    exports.HasProperty = HasProperty;
+    exports.GetMethod = GetMethod;
+    exports.Get = Get;
+    exports.Set = Set;
+    exports.DefineOwnProperty = DefineOwnProperty;
+    exports.GetOwnProperty = GetOwnProperty;
+    exports.OwnPropertyKeys = OwnPropertyKeys;
+    exports.OwnPropertyKeysAsList = OwnPropertyKeysAsList;
+    exports.MakeListIterator = MakeListIterator;
+    exports.DefineOwnPropertyOrThrow = DefineOwnPropertyOrThrow;
+    exports.Delete = Delete;
+    exports.Enumerate = Enumerate;
+    exports.OwnPropertyKeys = OwnPropertyKeys;
+    exports.SetPrototypeOf = SetPrototypeOf;
+    exports.GetPrototypeOf = GetPrototypeOf;
+    exports.PreventExtensions = PreventExtensions;
+    exports.IsExtensible = IsExtensible;
+    exports.CreateByteArrayBlock = CreateByteArrayBlock;
+    exports.SetArrayBufferData = SetArrayBufferData;
+    exports.AllocateArrayBuffer = AllocateArrayBuffer;
+    exports.IntegerIndexedObjectCreate = IntegerIndexedObjectCreate;
+    exports.StringExoticObject = StringExoticObject;
+    exports.thisTimeValue = thisTimeValue;
+    exports.thisNumberValue = thisNumberValue;
+    exports.thisBooleanValue = thisBooleanValue;
+    exports.thisStringValue = thisStringValue;
+
+    // #################################################################################################################################################################################################
+    // #################################################################################################################################################################################################
+    // REALM (intrinsics, globalthis, globalenv, loader) each Process One
+    // #################################################################################################################################################################################################
+    // #################################################################################################################################################################################################
+    var assignIntrinsics;
+    var createGlobalThis;
+    //var quickAssignIntrVars; // in createIntrinsics (assignt immer das aktuelle intrinsic object)
+
+    /*
+    var debugmode = false;
+
+    function debug() {
+        if (debugmode && typeof importScripts !== "function") console.log.apply(console, arguments);
+    }
+
+    function debugdir() {
+        if (debugmode && typeof importScripts !== "function") console.dir.apply(console, arguments);
+    }*/
+
+    // *****************************************************************************************************************************************************************************
+    // code and intrinsics: CREATE INTRINSICS (builtins definieren)
+    // *****************************************************************************************************************************************************************************   
+
+    function define_intrinsic(intrinsics, intrinsicName, value) {
+        var descriptor = Object.create(null);
+        descriptor.configurable = true;
+        descriptor.enumerable = true;
+        descriptor.value = value;
+        descriptor.writable = true;
+        callInternalSlot("DefineOwnProperty", intrinsics, intrinsicName, descriptor);
+    }
+    
+
+    function createIntrinsicConstructor (intrinsics, name, len, intrinsicName) {
+        
+        var constructor = OrdinaryFunction();
+        define_intrinsic(intrinsics, intrinsicName, constructor);
+        SetFunctionName(constructor, name);
+        setFunctionLength(constructor, len);
+        return constructor;
+    }
+    
+    function createIntrinsicPrototype (intrinsics, intrinsicName) {
+        var prototype = OrdinaryObject();
+        define_intrinsic(intrinsics, intrinsicName, prototype);
+        return prototype;
+    }
+
+    function createIntrinsicObject (intrinsics, intrinsicName) {
+        var object = OrdinaryObject();
+        define_intrinsic(intrinsics, intrinsicName, object);
+        return object;
+    }
+
+    function createIntrinsics(realm) {
+        
+        var intrinsics = OrdinaryObject(null);
+        realm.intrinsics = intrinsics;
+
+        var ObjectPrototype = createIntrinsicPrototype(intrinsics, "%ObjectPrototype%");
+        setInternalSlot(ObjectPrototype, "Prototype", null);
+        
+        var FunctionPrototype = createIntrinsicPrototype(intrinsics, "%FunctionPrototype%");
+        setInternalSlot(FunctionPrototype, "Prototype", ObjectPrototype);
+        
+        var FunctionConstructor = createIntrinsicConstructor(intrinsics, "Function", 0, "%Function%");
+        setInternalSlot(FunctionConstructor, "Prototype", FunctionPrototype);
+        
+        var ObjectConstructor = createIntrinsicConstructor(intrinsics, "Object", 0, "%Object%");
+        
+    Assert(getInternalSlot(ObjectConstructor, "Prototype") === FunctionPrototype, "ObjectConstructor and FunctionPrototype have to have a link");
+        
+        var EncodeURIFunction = createIntrinsicConstructor(intrinsics, "EncodeURI", 0, "%EncodeURI%");
+        var DecodeURIFunction = createIntrinsicConstructor(intrinsics, "DecodeURI", 0, "%DecodeURI%");
+        var EncodeURIComponentFunction = createIntrinsicConstructor(intrinsics, "EncodeURIComponent", 0, "%EncodeURIComponent%");
+        var DecodeURIComponentFunction = createIntrinsicConstructor(intrinsics, "DecodeURIComponent", 0, "%DecodeURIComponent%");
+        var SetTimeoutFunction = createIntrinsicConstructor(intrinsics, "SetTimeout", 0, "%SetTimeout%");
+        var SetImmediateFunction = createIntrinsicConstructor(intrinsics, "SetImmediate", 0, "%SetImmediate%");
+        var IsNaNFunction = createIntrinsicConstructor(intrinsics, "IsNaN", 0, "%IsNaN%");
+        var IsFiniteFunction = createIntrinsicConstructor(intrinsics, "IsFinite", 0, "%IsFinite%");
+        var ParseFloatFunction = createIntrinsicConstructor(intrinsics, "ParseFloat", 0, "%ParseFloat%");
+        var ParseIntFunction = createIntrinsicConstructor(intrinsics, "ParseInt", 0, "%ParseInt%");
+        var EscapeFunction = createIntrinsicConstructor(intrinsics, "Escape", 0, "%Escape%");
+        var UnescapeFunction = createIntrinsicConstructor(intrinsics, "Unescape", 0, "%Unescape%");
+        var EvalFunction = createIntrinsicConstructor(intrinsics, "Eval", 0, "%Eval%");
+        var RegExpConstructor = createIntrinsicConstructor(intrinsics, "RegExp", 0, "%RegExp%");
+        var RegExpPrototype = createIntrinsicPrototype(intrinsics, "%RegExpPrototype%");
+        var ProxyConstructor = createIntrinsicConstructor(intrinsics, "Proxy", 0, "%Proxy%");
+        var ProxyPrototype = createIntrinsicPrototype(intrinsics, "%ProxyPrototype%");
+        var BooleanConstructor = createIntrinsicConstructor(intrinsics, "Boolean", 0, "%Boolean%");
+        var BooleanPrototype = createIntrinsicPrototype(intrinsics, "%BooleanPrototype%");
+        var NumberConstructor = createIntrinsicConstructor(intrinsics, "Number", 0, "%Number%");
+        var NumberPrototype = createIntrinsicPrototype(intrinsics, "%NumberPrototype%");
+        var StringConstructor = createIntrinsicConstructor(intrinsics, "String", 0, "%String%");
+        var StringRawFunction;
+        var StringPrototype = createIntrinsicPrototype(intrinsics, "%StringPrototype%");
+        var StringIteratorPrototype = createIntrinsicPrototype(intrinsics, "%StringIteratorPrototype%");
+        var DateConstructor = createIntrinsicConstructor(intrinsics, "Date", 0, "%Date%");
+        var DatePrototype = createIntrinsicPrototype(intrinsics, "%DatePrototype%");
+        var ErrorConstructor = createIntrinsicConstructor(intrinsics, "Error", 0, "%Error%");
+        var ErrorPrototype = createIntrinsicPrototype(intrinsics, "%ErrorPrototype%");
+        var ArrayConstructor = createIntrinsicConstructor(intrinsics, "Array", 0, "%Array%");
+        var ArrayPrototype = createIntrinsicPrototype(intrinsics, "%ArrayPrototype%");
+        var ArrayIteratorPrototype = createIntrinsicPrototype(intrinsics, "%ArrayIteratorPrototype%");
+        var GeneratorFunction = createIntrinsicConstructor(intrinsics, "Generator", 0, "%GeneratorFunction%");
+        var GeneratorPrototype = createIntrinsicPrototype(intrinsics, "%GeneratorPrototype%");
+        var GeneratorObject = createIntrinsicObject(intrinsics, "%Generator%");
+        var ReflectObject = createIntrinsicObject(intrinsics, "%Reflect%");
+        //var NativeError = OrdinaryFunction();
+        var SymbolFunction = createIntrinsicConstructor(intrinsics, "Symbol", 0, "%Symbol%");
+        var SymbolPrototype = createIntrinsicPrototype(intrinsics, "%SymbolPrototype%");
+        var TypeErrorConstructor = createIntrinsicConstructor(intrinsics, "TypeError", 0, "%TypeError%");
+        var TypeErrorPrototype = createIntrinsicPrototype(intrinsics, "%TypeErrorPrototype%");
+        var ReferenceErrorConstructor = createIntrinsicConstructor(intrinsics, "ReferenceError", 0, "%ReferenceError%");
+        var ReferenceErrorPrototype = createIntrinsicPrototype(intrinsics, "%ReferenceErrorPrototype%");
+        var SyntaxErrorConstructor = createIntrinsicConstructor(intrinsics, "SyntaxError", 0, "%SyntaxError%");
+        var SyntaxErrorPrototype = createIntrinsicPrototype(intrinsics, "%SyntaxErrorPrototype%");
+        var RangeErrorConstructor = createIntrinsicConstructor(intrinsics, "RangeError", 0, "%RangeError%");
+        var RangeErrorPrototype = createIntrinsicPrototype(intrinsics, "%RangeErrorPrototype%");
+        var EvalErrorConstructor = createIntrinsicConstructor(intrinsics, "EvalError", 0, "%EvalError%");
+        var EvalErrorPrototype = createIntrinsicPrototype(intrinsics, "%EvalErrorPrototype%");
+        var URIErrorConstructor = createIntrinsicConstructor(intrinsics, "URIError", 0, "%URIError%");
+        var URIErrorPrototype = createIntrinsicPrototype(intrinsics, "%URIErrorPrototype%");
+        var PromiseConstructor = createIntrinsicConstructor(intrinsics, "Promise", 0, "%Promise%");
+        var PromisePrototype = createIntrinsicPrototype(intrinsics, "%PromisePrototype%");
+        var WeakMapConstructor = createIntrinsicConstructor(intrinsics, "WeakMap", 0, "%WeakMap%");
+        var WeakMapPrototype = createIntrinsicPrototype(intrinsics, "%WeakMapPrototype%");
+        var WeakSetConstructor = createIntrinsicConstructor(intrinsics, "WeakSet", 0, "%WeakSet%");
+        var WeakSetPrototype = createIntrinsicPrototype(intrinsics, "%WeakSetPrototype%");
+        var MapConstructor = createIntrinsicConstructor(intrinsics, "Map", 0, "%Map%");
+        var MapPrototype = createIntrinsicPrototype(intrinsics, "%MapPrototype%");
+        var MapIteratorPrototype = createIntrinsicPrototype(intrinsics, "%MapIteratorPrototype%");
+        var SetConstructor = createIntrinsicConstructor(intrinsics, "Set", 0, "%Set%");
+        var SetPrototype = createIntrinsicPrototype(intrinsics, "%SetPrototype%");
+        var SetIteratorPrototype = createIntrinsicPrototype(intrinsics, "%SetIteratorPrototype%");
+        var __mapSetUniqueInternalUniqueKeyCounter__ = 0;
+        var TypedArrayConstructor = createIntrinsicConstructor(intrinsics, "TypedArray", 0, "%TypedArray%");
+        var TypedArrayPrototype = createIntrinsicPrototype(intrinsics, "%TypedArrayPrototype%");
+        var Uint8ArrayConstructor = createIntrinsicConstructor(intrinsics, "Uint8Array", 0, "%Uint8Array%");
+        var Int8ArrayConstructor = createIntrinsicConstructor(intrinsics, "Int8Array", 0, "%Int8Array%");
+        var Uint8ClampedArrayConstructor = createIntrinsicConstructor(intrinsics, "Uint8ClampedArray", 0, "%Uint8ClampedArray%");
+        var Int16ArrayConstructor = createIntrinsicConstructor(intrinsics, "Int16Array", 0, "%Int16Array%");
+        var Uint16ArrayConstructor = createIntrinsicConstructor(intrinsics, "Uint16Array", 0, "%Uint16Array%");
+        var Int32ArrayConstructor = createIntrinsicConstructor(intrinsics, "Int32Array", 0, "%Int32Array%");
+        var Uint32ArrayConstructor = createIntrinsicConstructor(intrinsics, "Uint32Array", 0, "%Uint32Array%");
+        var Float32ArrayConstructor = createIntrinsicConstructor(intrinsics, "Float32Array", 0, "%Float32Array%");
+        var Float64ArrayConstructor = createIntrinsicConstructor(intrinsics, "Float64Array", 0, "%Float64Array%");
+        var Uint8ArrayPrototype = createIntrinsicPrototype(intrinsics, "%Uint8ArrayPrototype%");
+        var Int8ArrayPrototype = createIntrinsicPrototype(intrinsics, "%Int8ArrayPrototype%");
+        var Uint8ClampedArrayPrototype = createIntrinsicPrototype(intrinsics, "%Uint8ClampedArrayPrototype%");
+        var Int16ArrayPrototype = createIntrinsicPrototype(intrinsics, "%Int16ArrayPrototype%");
+        var Uint16ArrayPrototype = createIntrinsicPrototype(intrinsics, "%Uint16ArrayPrototype%");
+        var Int32ArrayPrototype = createIntrinsicPrototype(intrinsics, "%Int32ArrayPrototype%");
+        var Uint32ArrayPrototype = createIntrinsicPrototype(intrinsics, "%Uint32ArrayPrototype%");
+        var Float32ArrayPrototype = createIntrinsicPrototype(intrinsics, "%Float32ArrayPrototype%");
+        var Float64ArrayPrototype = createIntrinsicPrototype(intrinsics, "%Float64ArrayPrototype%");
+        var ArrayBufferConstructor = createIntrinsicConstructor(intrinsics, "ArrayBuffer", 0, "%ArrayBuffer%");
+        var ArrayBufferPrototype = createIntrinsicPrototype(intrinsics, "%ArrayBufferPrototype%");
+        var DataViewConstructor = createIntrinsicConstructor(intrinsics, "DataView", 0, "%DataView%");
+        var DataViewPrototype = createIntrinsicPrototype(intrinsics, "%DataViewPrototype%");
+        var JSONObject = createIntrinsicObject(intrinsics, "%JSON%");
+        var MathObject = createIntrinsicObject(intrinsics, "%Math%");
+        var ConsoleObject = createIntrinsicObject(intrinsics, "%Console%");
+        var LoadFunction = createIntrinsicConstructor(intrinsics, "Load", 0, "%Load%");
+        var RequestFunction = createIntrinsicConstructor(intrinsics, "Request", 0, "%Request%");
+        var EmitterConstructor = createIntrinsicConstructor(intrinsics, "Emitter", 0, "%Emitter%");
+        var EmitterPrototype = createIntrinsicPrototype(intrinsics, "%EmitterPrototype%");
+        // Object.observe
+        var NotifierPrototype = createIntrinsicPrototype(intrinsics, "%NotifierPrototype%");
+        var ObserverCallbacks = [];
+        var LoaderConstructor = createIntrinsicConstructor(intrinsics, "Loader", 0, "%Loader%");
+        var LoaderPrototype = createIntrinsicPrototype(intrinsics, "%LoaderPrototype%");
+        var LoaderIteratorPrototype = createIntrinsicPrototype(intrinsics, "%LoaderIteratorPrototype%");
+        var RealmConstructor = createIntrinsicConstructor(intrinsics, "Realm", 0, "%Realm%");
+        var RealmPrototype = createIntrinsicPrototype(intrinsics, "%RealmPrototype%");
+        var ModuleFunction = createIntrinsicConstructor(intrinsics, "Module", 0, "%Module%");
+        var ModulePrototype = null;
+
+        /*
+	@std:Module
+	*/
+        /*
+        quickAssignIntrVars = function quickAssignIntrVars(target) {
+                target.EncodeURIFunction = EncodeURIFunction;
+                target.DecodeURIFunction = DecodeURIFunction;
+                target.EncodeURIComponentFunction = EncodeURIComponentFunction;
+                target.DecodeURIComponentFunction = DecodeURIComponentFunction;
+                target.SetTimeoutFunction = SetTimeoutFunction;
+                target.SetImmediateFunction = SetImmediateFunction;
+                target.IsNaNFunction = IsNaNFunction;
+                target.IsFiniteFunction = IsFiniteFunction;
+                target.ParseFloatFunction = ParseFloatFunction;
+                target.ParseIntFunction = ParseIntFunction;
+                target.EscapeFunction = EscapeFunction;
+                target.UnescapeFunction = UnescapeFunction;
+                target.EvalFunction = EvalFunction;
+                target.RegExpConstructor = RegExpConstructor;
+                target.RegExpPrototype = RegExpPrototype;
+                target.ProxyConstructor = ProxyConstructor;
+                target.ProxyPrototype = ProxyPrototype;
+                target.BooleanConstructor = BooleanConstructor;
+                target.BooleanPrototype = BooleanConstructor;
+                target.NumberConstructor = NumberConstructor;
+                target.NumberPrototype = NumberPrototype;
+                target.StringConstructor = StringConstructor;
+                target.StringPrototype = StringPrototype;
+                target.StringIteratorPrototype = StringIteratorPrototype;
+                target.DateConstructor = DateConstructor;
+                target.DatePrototype = DatePrototype;
+                target.ErrorConstructor = ErrorConstructor;
+                target.ErrorPrototype = ErrorPrototype;
+                target.ArrayConstructor = ArrayConstructor;
+                target.ArrayPrototype = ArrayPrototype;
+                target.ArrayIteratorPrototype = ArrayIteratorPrototype;
+                target.GeneratorFunction = GeneratorFunction;
+                target.GeneratorPrototype = GeneratorPrototype;
+                target.GeneratorObject = GeneratorObject;
+                target.ReflectObject = ReflectObject;
+                //target.NativeError = NativeError;
+                target.SymbolFunction = SymbolFunction;
+                target.SymbolPrototype = SymbolPrototype;
+                target.TypeErrorConstructor = TypeErrorConstructor;
+                target.TypeErrorPrototype = TypeErrorPrototype;
+                target.ReferenceErrorConstructor = ReferenceErrorConstructor;
+                target.ReferenceErrorPrototype = ReferenceErrorPrototype;
+                target.SyntaxErrorConstructor = SyntaxErrorConstructor;
+                target.SyntaxErrorPrototype = SyntaxErrorPrototype;
+                target.RangeErrorConstructor = RangeErrorConstructor;
+                target.RangeErrorPrototype = RangeErrorPrototype;
+                target.EvalErrorConstructor = EvalErrorConstructor;
+                target.EvalErrorPrototype = EvalErrorPrototype;
+                target.URIErrorConstructor = URIErrorConstructor;
+                target.URIErrorPrototype = URIErrorPrototype;
+                target.PromiseConstructor = PromiseConstructor;
+                target.PromisePrototype = PromisePrototype;
+                target.WeakMapConstructor = WeakMapConstructor;
+                target.WeakMapPrototype = WeakMapPrototype;
+                target.WeakSetConstructor = WeakSetConstructor;
+                target.WeakSetPrototype = WeakSetPrototype;
+                target.MapConstructor = MapConstructor;
+                target.MapPrototype = MapPrototype;
+                target.MapIteratorPrototype = MapIteratorPrototype;
+                target.SetConstructor = SetConstructor;
+                target.SetPrototype = SetPrototype;
+                target.SetIteratorPrototype = SetIteratorPrototype;
+                target.TypedArrayConstructor = TypedArrayConstructor;
+                target.TypedArrayPrototype = TypedArrayPrototype;
+                target.Uint8ArrayConstructor = Uint8ArrayConstructor;
+                target.Int8ArrayConstructor = Int8ArrayConstructor;
+                target.Uint8ClampedArrayConstructor = Uint8ClampedArrayConstructor;
+                target.Int16ArrayConstructor = Int16ArrayConstructor;
+                target.Uint16ArrayConstructor = Uint16ArrayConstructor;
+                target.Int32ArrayConstructor = Int32ArrayConstructor;
+                target.Uint32ArrayConstructor = Uint32ArrayConstructor;
+                target.Float32ArrayConstructor = Float32ArrayConstructor;
+                target.Float64ArrayConstructor = Float64ArrayConstructor
+                target.Uint8ArrayPrototype = Uint8ArrayPrototype;
+                target.Int8ArrayPrototype = Int8ArrayPrototype;
+                target.Uint8ClampedArrayPrototype = Uint8ClampedArrayPrototype;
+                target.Int16ArrayPrototype = Int16ArrayPrototype;
+                target.Uint16ArrayPrototype = Uint16ArrayPrototype;
+                target.Int32ArrayPrototype = Int32ArrayPrototype;
+                target.Uint32ArrayPrototype = Uint32ArrayPrototype;
+                target.Float32ArrayPrototype = Float32ArrayPrototype;
+                target.Float64ArrayPrototype = Float64ArrayPrototype;
+                target.ArrayBufferConstructor = ArrayBufferConstructor;
+                target.ArrayBufferPrototype = ArrayBufferPrototype;
+                target.DataViewConstructor = DataViewConstructor;
+                target.DataViewPrototype = DataViewPrototype;
+                target.JSONObject = JSONObject;
+                target.MathObject = MathObject;
+                target.ConsoleObject = ConsoleObject;
+                target.LoadFunction = LoadFunction;
+                target.RequestFunction = RequestFunction;
+                target.EmitterConstructor = EmitterConstructor;
+                target.EmitterPrototype = EmitterPrototype;
+                target.NotifierPrototype = NotifierPrototype;
+                return target;
+        }
+        */
+
+        // ##################################################################
+        // Der Module Loader Start
+        // ##################################################################
+
+        var std_Module;// = OrdinaryModule(getGlobalThis());
+
+        var std_Object;
+        var std_ObjectPrototype;
+        var std_Function;
+        var std_FunctionPrototype;
+        var std_Function_call;
+        var std_Function_apply;
+        var std_Function_bind;
+
+
+        // ##################################################################
+        // Das Code Realm als %Realm%
+        // ##################################################################
+
+        var RealmPrototype_get_global = function (thisArg, argList) {
+            var realmObject = thisArg;
+            var realm = getInternalSlot(realmObject, "Realm");
+            if ((Type(realmObject) != "object") || !hasInternalSlot(realmObject, "Realm")) return withError("Type", "The this value is no realm object");
+            var globalThis = getInternalSlot(realm, globalThis);
+            return globalThis;
+        };
+
+        var RealmPrototype_eval = function (thisArg, argList) {
+            var source = argList[0];
+            var realmObject = thisArg;
+            if ((Type(realmObject) != "object") || !hasInternalSlot(realmObject, "Realm")) return withError("Type", "The this value is no realm object");
+            return IndirectEval(getInternalSlot(realmObject, "Realm"), source);
+        };
+
+        var RealmConstructor_Call = function (thisArg, argList) {
+            var realmObject = thisArg;
+            var options = argList[0];
+            var initializer = argList[1];
+            if (Type(realmObject) !== "object") return withError("Type", "The this value is not an object");
+            if (!hasInternalSlot(realmObject, "Realm")) return withError("Type", "The this value has not the required properties.");
+            if (getInternalSlot(realmObject, "Realm") !== undefined) return withError("Type", "the realm property has to be undefined");
+            if (options === undefined) options = ObjectCreate(null);
+            else if (Type(options) !== "object") return withError("Type", "options is not an object");
+            var realm = CreateRealm(realmObject);
+            var evalHooks = Get(options, "eval");
+            if ((evalHooks=ifAbrupt(evalHooks)) && isAbrupt(evalHooks)) return evalHooks;
+            if (evalHooks === undefined) evalHooks = ObjectCreate();
+            var directEval = Get(evalHooks(direct));
+            if ((directEval=ifAbrupt(directEval)) && isAbrupt(directEval)) return directEval;
+            if (directEval === undefined) directEval = ObjectCreate();
+            else if (Type(directEval) !== "object") return withError("Type", "directEval is not an object");
+            var translate = Get(directEval, "translate");
+            if ((translate = ifAbrupt(translate)) && isAbrupt(translate)) return translate;
+            if ((translate !== undefined) && !IsCallable(translate)) return withError("Type", "translate has to be a function");
+            setInternalSlot(realm, "translateDirectEvalHook", translate);
+            var fallback = Get(directEval, "fallback");
+            if ((fallback=ifAbrupt(fallback)) && isAbrupt(fallback)) return fallback;
+            setInternalSlot(realm, "fallbackDirectEvalHook", fallback);
+            var indirectEval = Get(options, "indirect");
+            if ((indirectEval = ifAbrupt(indirectEval)) && isAbrupt(indirectEval)) return indirectEval;
+            if ((indirectEval !== undefined) && !IsCallable(indirectEval)) return withError("Type", "indirectEval should be a function");
+            setInternalSlot(realm, "indirectEvalHook", indirectEval);
+            var Function = Get(options, "Function");
+            if ((Function = ifAbrupt(Function)) && isAbrupt(Function)) return Function;
+            if ((Function !== undefined) && !IsCallable(Function)) return withError("Type", "Function should be a function");
+            setInternalSlot(realm, "FunctionHook", Function);
+            setInternalSlot(realmObject, "Realm", realm);
+            if (initializer !== undefined) {
+                if (!IsCallable(initializer)) return withError("Type", "initializer should be a function");
+                var builtins = ObjectCreate();
+                DefineBuiltinProperties(realm, builtins);
+                var status = callInternalSlot("Call", initializer, realmObject, [builtins]);
+                if (isAbrupt(status)) return status;
+            }
+            return realmObject;
+        };
+
+        var RealmConstructor_Construct = function (argList) {
+            var F = this;
+            var args = argList;
+            return OrdinaryConstruct(F, argList);
+        };
+
+        var RealmConstructor_$$create = function (thisArg, argList) {
+            var F = thisArg;
+            var realmObject = OrdinaryCreateFromConstructor(F, "%RealmPrototype%", {
+                "Realm": undefined
+            });
+            return realmObject;
+        };
+
+        // %Realm%
+        setInternalSlot(RealmConstructor, "Call", RealmConstructor_Call);
+        setInternalSlot(RealmConstructor, "Construct", RealmConstructor_Construct);
+        LazyDefineProperty(RealmConstructor, $$create, CreateBuiltinFunction(getRealm(),RealmConstructor_$$create, 0, "[Symbol.create]"));
+        MakeConstructor(RealmConstructor, false, RealmPrototype);
+        // %RealmPrototype%
+        LazyDefineAccessor(RealmPrototype, "global", CreateBuiltinFunction(getRealm(),RealmPrototype_get_global, 0, "get global"));
+        LazyDefineProperty(RealmPrototype, "eval", CreateBuiltinFunction(getRealm(),RealmPrototype_eval, 1, "eval"));
+        LazyDefineProperty(RealmConstructor, $$toStringTag, "Realm");
+
+        // ##################################################################
+        // %Loader% und Loader.prototype
+        // ##################################################################
+
+
+        var LoaderConstructor_Call = function (thisArg, argList) {
+            var options = argList[0];
+            var loader = thisArg;
+            if (Type(loader) !== "object") return withError("Type", "Loader is not an object");
+
+            if (getInternalSlot(loader, "Modules") !== undefined) return withError("Type", "loader.[[Modules]] isnt undefined");
+            if (Type(options) !== "object") return withError("Type", "the Loader constructors´ options argument is not an object");
+
+            var realmObject = Get(options, "realm");
+            if ((realmObject = ifAbrupt(realmObject)) && isAbrupt(realmObject)) return realmObject;
+            var realm;
+
+            if (realmObject === undefined) realm = getRealm();
+            else realm = getInternalSlot(realmObject, "Realm");
+
+            var exc = null;
+            var help = function (name) {
+                var hook = Get(options, name);
+                if ((hook = ifAbrupt(hook)) && isAbrupt(hook)) return hook;
+                if (hook !== undefined) {
+                    var result = callInternalSlot("DefineOwnProperty", loader, name, {
+                        value: hook,
+                        writable: true,
+                        enumerable: true,
+                        configurable: true
+                    });
+                    if (isAbrupt(result)) exc = result;
+                }
+            };
+            ["normalize", "locate", "fetch", "translate", "instantiate"].forEach(help);
+            if (exc) return exc;
+
+            setInternalSlot(loader, "Modules", Object.create(null));
+            setInternalSlot(loader, "Loads", []);
+            setInternalSlot(loader, "Realm", realm);
+            return NormalCompletion(loader);
+        };
+
+        var LoaderConstructor_Construct = function (argList) {
+            return OrdinaryConstruct(this, argList);
+        };
+
+        var LoaderConstructor_$$create = function (thisArg, argList) {
+            var F = thisArg;
+            var loader = OrdinaryCreateFromConstructor(F, "%LoaderPrototype%", {
+                "Modules": undefined,
+                "Loads": undefined,
+                "Realm": undefined
+            });
+            return loader;
+        };
+
+        var LoaderPrototype_get_realm = function (thisArg, argList) {
+            var loader = thisArg;
+            if (Type(loader) !== "object" || !hasInternalSlot(loader, "Realm")) {
+                return withError("Type", "the this value is not a valid loader object");
+            }
+            var realm = getInternalSlot(loader, "Realm");
+            return getInternalSlot(realm, "realmObject");
+        };
+
+        var LoaderPrototype_get_global = function (thisArg, argList) {
+            var loader = thisArg;
+            if (Type(loader) !== "object" || !hasInternalSlot(loader, "Realm")) {
+                return withError("Type", "the this value is not a valid loader object");
+            }
+            var realm = getInternalSlot(loader, "Realm");
+            var global = realm.globalThis;
+            return global;
+        };
+
+        var ReturnUndefined_Call = function (thisArg, argList) {
+            return NormalCompletion(undefined);
+        };
+
+        function ReturnUndefined() {
+            var F = OrdinaryFunction();
+            setInternalSlot(F, "Call", ReturnUndefined_Call);
+            return F;
+        }
+
+        var LoaderPrototype_entries = function (thisArg, argList) {
+            return CreateLoaderIterator(thisArg, "key+value");
+        };
+
+        var LoaderPrototype_values = function (thisArg, argList) {
+            return CreateLoaderIterator(thisArg, "value");
+        };
+
+        var LoaderPrototype_keys = function (thisArg, argList) {
+            return CreateLoaderIterator(thisArg, "key");
+        };
+
+        var LoaderPrototype_define = function (thisArg, argList) {
+            var loader = thisArg;
+            if ((loader = ifAbrupt(loader)) && isAbrupt(loader)) return loader;
+
+            setInternalSlot(F, "Loader", loader);
+            setInternalSlot(F, "ModuleName", name);
+            setInternalSlot(F, "Step", "translate");
+            setInternalSlot(F, "ModuleMetadata", metadata);
+            setInternalSlot(F, "ModuleSource", source);
+            setInternalSlot(F, "ModuleAddress", address);
+            var Promise = getIntrinsic("%Promise%");
+            var p = OrdinaryConstruct(Promise, [F]);
+            var G = ReturnUndefined;
+            p = PromiseThen(o, G);
+            return p;
+        };
+        var LoaderPrototype_load = function (thisArg, argList) {
+            var request = argList[0];
+            var options = argList[1];
+            var loader = thisLoader(thisArg);
+            if ((loader =ifAbrupt(loader)) && isAbrupt(loader)) return loader;
+            var p = LoadModule(loader, name, options);
+            var F = ReturnUndefined(); 
+
+            p = PromiseThen(p, F);
+            return p;
+        };
+
+        var LoaderPrototype_module = function (thisArg, argList) {
+            var loader = thisLoader(thisArg);
+            if ((loader=ifAbrupt(loader)) && isAbrupt(loader)) return loader;
+            var address = GetOption(options, "address");
+            if ((address=ifAbrupt(address)) && isAbrupt(address)) return address;
+            var load = CreateLoad(undefined);
+            load.address = address;
+            var linkSet = CreateLinkSet(loader, load);
+            var successCallback = EvaluateLoadedModule();
+            setInternalSlot(successCallback, "Loader", loader);
+            setInternalSlot(successCallback, "Load", load);
+            var p = PromiseThen(linkSet.done, successCallback);
+            var sourcePromise = PromiseOf(source);
+            ProceedToTranslate(loader, load, sourcePromise);
+            return p;
+        };
+
+        var LoaderPrototype_import = function (thisArg, argList) {
+            var name = argList[0];
+            var options = argList[1];
+            var loader = thisLoader(thisArg);
+            if ((loader=ifAbrupt(loader)) && isAbrupt(loader)) return loader;
+            var p = LoadModule(loader, name, options);
+            if ((p=ifAbrupt(p)) && isAbrupt(p)) return p;
+            var F = EvaluateLoadedModule();
+            setInternalSlot(F, "Loader", loader);
+            p = PromiseThen(p, F);
+            return p;
+        };
+        var LoaderPrototype_eval = function (thisArg, argList) {
+            var source = argList[0];
+            var loader = thisLoader(thisArg);
+            if ((loader=ifAbrupt(loader)) && isAbrupt(loader)) return loader;
+            return IndirectEval(getInternalSlot(loader, "Realm"), source);
+
+        };
+
+
+        var LoaderPrototype_get = function (thisArg, argList) {
+            var loader = thisLoader(thisArg);
+            if ((loader=ifAbrupt(loader)) && isAbrupt(loader)) return loader;
+            var name = ToString(argList[0]);
+            if ((name=ifAbrupt(name)) && isAbrupt(name)) return name;
+
+            var modules = getInternalSlot(loader, "Modules");
+            if (modules[name]) {
+                var module = modules[name];
+                var result = EnsureEvaluated(module, [], loader);
+                if ((result=ifAbrupt(result)) && isAbrupt(result)) return result;
+                return NormalCompletion(module);
+            }
+            return NormalCompletion(undefined);
+        };
+        var LoaderPrototype_has = function (thisArg, argList) {
+            var loader = thisLoader(thisArg);
+            if ((loader=ifAbrupt(loader)) && isAbrupt(loader)) return loader;
+            var name = ToString(argList[0]);
+            if ((name=ifAbrupt(name)) && isAbrupt(name)) return name;
+
+            var modules = getInternalSlot(loader, "Modules");
+            if (modules[name]) {
+                return NormalCompletion(true);
+            }
+            return NormalCompletion(false);
+
+        };
+        var LoaderPrototype_set = function (thisArg, argList) {
+            var name = argList[0];
+            var module = argList[1];
+            var loader = thisLoader(thisArg);
+            if ((loader=ifAbrupt(loader)) && isAbrupt(loader)) return loader;
+            var loaderRecord = getInternalSlot(loader, "Loader");
+            var name = ToString(name);
+            if ((name=ifAbrupt(name)) && isAbrupt(name)) return name;
+            if (Type(module) !== "object") return withError("Type", "module is not an object");
+            var modules = loaderRecord.modules;
+            modules[name] = module;
+            return NormalCompletion(loader);
+        };
+        var LoaderPrototype_delete = function (thisArg, argList) {
+
+        };
+        var LoaderPrototype_normalize = function (thisArg, argList) {
+            var name = argList[0];
+            var refererName = argList[1];
+            var refererAddress = argList[2];
+            Assert(Type(name) == "string", "Loader.prototype.normalize: name has to be a string.");
+            return NormalCompletion(name);
+        };
+        var LoaderPrototype_locate = function (thisArg, argList) {
+            var loadRequest = argList[0];
+            return Get(loadRequest, "name");
+        };
+        var LoaderPrototype_fetch = function (thisArg, argList) {
+            return withError("Type", "The Loader.prototype.fetch function is supposed to throw a type error.")
+        };
+        var LoaderPrototype_translate = function (thisArg, argList) {
+            var load = argList[0];
+            return Get(load, "source");
+        };
+        
+        var LoaderPrototype_instantiate = function (thisArg, argList) {
+            var loadRequest = argList[0];
+            return NormalCompletion(undefined);
+        };
+        var LoaderPrototype_$$iterator = LoaderPrototype_entries;
+
+        // Loader
+
+        setInternalSlot(LoaderConstructor, "Prototype", FunctionPrototype);
+        setInternalSlot(LoaderConstructor, "Call", LoaderConstructor_Call);
+        setInternalSlot(LoaderConstructor, "Construct", LoaderConstructor_Construct);
+        LazyDefineProperty(LoaderConstructor, $$create, CreateBuiltinFunction(getRealm(),LoaderConstructor_$$create, 0, "[Symbol.create]"));
+        MakeConstructor(LoaderConstructor, false, LoaderPrototype);
+        //SetFunctionName(LoaderConstructor, "Loader");
+
+        // Loader.prototype
+        LazyDefineProperty(LoaderPrototype, "entries", CreateBuiltinFunction(getRealm(),LoaderPrototype_entries, 0, "entries"));
+        LazyDefineProperty(LoaderPrototype, "values", CreateBuiltinFunction(getRealm(),LoaderPrototype_values, 0, "values"));
+        LazyDefineProperty(LoaderPrototype, "keys", CreateBuiltinFunction(getRealm(),LoaderPrototype_keys, 0, "keys"));
+        LazyDefineProperty(LoaderPrototype, "has", CreateBuiltinFunction(getRealm(),LoaderPrototype_has, 0, "has"));
+        LazyDefineProperty(LoaderPrototype, "get", CreateBuiltinFunction(getRealm(),LoaderPrototype_get, 0, "get"));
+        LazyDefineProperty(LoaderPrototype, "set", CreateBuiltinFunction(getRealm(),LoaderPrototype_set, 0, "set"));
+        LazyDefineProperty(LoaderPrototype, "delete", CreateBuiltinFunction(getRealm(),LoaderPrototype_delete, 0, "delete"));
+        LazyDefineProperty(LoaderPrototype, "define", CreateBuiltinFunction(getRealm(),LoaderPrototype_define, 2, "define"));
+
+        LazyDefineProperty(LoaderPrototype, "load", CreateBuiltinFunction(getRealm(),LoaderPrototype_load,    1, "load"));
+        LazyDefineProperty(LoaderPrototype, "module", CreateBuiltinFunction(getRealm(),LoaderPrototype_module, 1, "module"));
+        LazyDefineProperty(LoaderPrototype, "import", CreateBuiltinFunction(getRealm(),LoaderPrototype_import, 0, "import"));
+        LazyDefineProperty(LoaderPrototype, "eval", CreateBuiltinFunction(getRealm(),LoaderPrototype_eval, 0, "eval"));
+        LazyDefineProperty(LoaderPrototype, "normalize", CreateBuiltinFunction(getRealm(),LoaderPrototype_normalize, 0, "normalize"));
+        LazyDefineProperty(LoaderPrototype, "fetch", CreateBuiltinFunction(getRealm(),LoaderPrototype_fetch, 0, "fetch"));
+        LazyDefineProperty(LoaderPrototype, "locate", CreateBuiltinFunction(getRealm(),LoaderPrototype_locate, 0, "locate"));
+        LazyDefineProperty(LoaderPrototype, "translate", CreateBuiltinFunction(getRealm(),LoaderPrototype_instantiate, 1, "translate"));
+        LazyDefineProperty(LoaderPrototype, "instantiate", CreateBuiltinFunction(getRealm(),LoaderPrototype_instantiate, 0, "instantiate"));
+        LazyDefineProperty(LoaderPrototype, $$iterator, CreateBuiltinFunction(getRealm(),LoaderPrototype_$$iterator, 0, "[Symbol.iterator]"));
+        LazyDefineProperty(LoaderPrototype, $$toStringTag, "Loader");
+
+        // ##################################################################
+        // Der Loader Iterator
+        // ##################################################################
+
+        function CreateLoaderIterator(loader, kind) {
+            var loaderIterator = ObjectCreate(LoaderIteratorPrototype, {
+                "Loader": loader,
+                "ModuleMapNextIndex": 0,
+                "MapIterationKind": kind
+            });
+            return loaderIterator;
+        }
+
+        var LoaderIteratorPrototype_next = function next(thisArg, argList) {
+            var iterator = thisArg;
+            var loader = getInternalSlot(iterator, "Loader");
+            var nextIndex = getInternalSlot(iterator, "ModuleMapNextIndex");
+            var kind = getInternalSlot(iterator, "MapIterationKind");
+            var nextValue;
+            return nextValue;
+        };
+
+        var LoaderIteratorPrototype_$$iterator = function $$iterator(thisArg, argList) {
+            return thisArg;
+        };
+
+        LazyDefineProperty(LoaderIteratorPrototype, $$iterator, CreateBuiltinFunction(getRealm(),LoaderIteratorPrototype_$$iterator, 0, "[Symbol.iterator]"));
+        LazyDefineProperty(LoaderIteratorPrototype, "next", CreateBuiltinFunction(getRealm(),LoaderIteratorPrototype_next, 0, "next"));
+        LazyDefineProperty(LoaderIteratorPrototype, $$toStringTag, "Loader Iterator");
+
+        // ##################################################################
+        // Der Module Loader Stop
+        // ##################################################################
+
+        var create_std_Module = function create_std_Module(obj) {
+            var mod = OrdinaryModule();
+            return mod;
+        };
+
+        // ##################################################################
+        // Loader Operationen 
+        // ##################################################################
+
+        function thisLoader(value) {
+            if (Type(value) === "object" && hasInternalSlot(value, "Modules")) {
+                var m = getInternalSlot(value, "Modules");
+                if (m !== undefined) return value;
+            }
+            return withError("Type", "thisLoader(value): value is not a valid loader object");
+        }
+
+        function LoadRecord() {
+            return {
+                __proto__:null,
+                status: undefined,
+                name: undefined,
+                linksets: undefined,
+                metadata: undefined,
+                address: undefined,
+                source: undefined,
+                kind: undefined,
+                body: undefined,
+                execute: undefined,
+                exception: undefined,
+                module: undefined,
+                constructor: LoadRecord
+            };
+        }
+
+        function CreateLoad(name) {
+            var load = LoadRecord();
+            load.status = "loading";
+            load.name = name;
+            load.linksets = [];
+            var metadata = ObjectCreate();
+            load.metadata = metadata;
+            return load;
+        }
+
+        function createLoadFailedFunction(exc) {
+
+            var LoadFailedFunction_Call = function (thisArg, argList) {
+                var F = this;
+                var load = getInternalSlot(this, "Load");
+                Assert(load.status === "loading", "load.[[Status]] has to be loading at this point");
+                load.status = "failed";
+                load.exception = exc;
+                var linkSets = load.linksets;
+                for (var i = 0, j = linkSets.length; i < j; i++) LinkSetFailed(linkSet[i], exc);
+                Assert(load.linksets.length === 0, "load.[[LinkSets]] has to be empty at this point");
+            };
+
+            var F = OrdinaryFunction();
+            setInternalSlot(F, "Load", load);
+            setInternalSlot(F, "Call", LoadFailedFunction_Call);
+            return F;
+        }
+
+        function RequestLoad(loader, request, refererName, refererAddress) {
+            var F = CallNormalize();
+            setInternalSlot(F, "Loader", loader);
+            setInternalSlot(F, "Request", request);
+            setInternalSlot(F, "RefererName", refererName);
+            setInternalSlot(F, "RefererAddress", refererAddress);
+            var p = OrdinaryConstruct(getIntrinsic("%Promise%"), [F]);
+            var G = GetOrCreateLoad();
+            setInternalSlot(G, "Loader", loader);
+            p = PromiseThen(p, G);
+            return p;
+        }
+
+        var CallNormalizeFunction_Call = function (thisArg, argList) {
+            var F = this;
+            var resolve = argList[0];
+            var reject = argList[1];
+
+            var loader = getInternalSlot(F, "Loader");
+            var request = getInternalSlot(F, "Request");
+            var refererName = getInternalSlot(F, "RefererName");
+            var refererAddress = getInternalSlot(F, "RefererAddress");
+
+            var normalizeHook = Get(loader, "normalize");
+            var name = callInternalSlot("Call", normalizeHook, undefined, [request, refererName, refererAddress]);
+            if ((name = ifAbrupt(name)) && isAbrupt(name)) return name;
+            callInternalSlot("Call", resolve, undefined, [name]);
+        };
+
+        function CallNormalize() {
+            var F = OrdinaryFunction();
+            setInternalSlot(F, "Call", CallNormalizeFunction_Call);
+            return F;
+        }
+
+        var GetOrCreateLoad_Call = function (thisArg, argList) {
+            var F = this;
+            var name = argList[0];
+            var loader = getInternalSlot(F, "loader");
+            name = ToString(name);
+            if ((name = ifAbrupt(name)) && isAbrupt(name)) return name;
+            if (loader.modules[name]) {
+                var existingModule = loader.modules[name].value;
+                var load = CreateLoad(name);
+                load.status = "linked";
+                return load;
+            } else if (loader.loads[name]) {
+                var load = loader.loads[name];
+                Assert(load.status === "loading" || load.status === "loaded", "load.[[status]] has either to be loading or loaded");
+                return load;
+            }
+        };
 
         //******************************************************************************************************************************************************************************************************
         //******************************************************************************************************************************************************************************************************
@@ -21212,14 +21201,17 @@ define("lib/api", function (require, exports, module) {
             enumerable: false,
             configurable: false
         });
-
+        
         LazyDefineBuiltinConstant(EmitterPrototype, $$toStringTag, "Emitter");
         
         // ===========================================================================================================
         // "assign Intrinsics" (refactor to create buitins once per realm)
         // ===========================================================================================================
         
+            
 
+
+        /*
         assignIntrinsics = function assignIntrinsics(Intrinsics) {
 
             LazyDefineProperty(Intrinsics, "%Realm%", RealmConstructor);
@@ -21250,8 +21242,8 @@ define("lib/api", function (require, exports, module) {
             LazyDefineProperty(Intrinsics, "%ArrayBufferPrototype%", ArrayBufferPrototype);
             LazyDefineProperty(Intrinsics, "%DataView%", DataViewConstructor);
             LazyDefineProperty(Intrinsics, "%DataViewPrototype%", DataViewPrototype);
-            LazyDefineProperty(Intrinsics, "%LoadFunction%", LoadFunction);
-            LazyDefineProperty(Intrinsics, "%RequestFunction%", RequestFunction);
+            LazyDefineProperty(Intrinsics, "%Load%", LoadFunction);
+            LazyDefineProperty(Intrinsics, "%Request%", RequestFunction);
             LazyDefineProperty(Intrinsics, "%ThrowTypeError", ThrowTypeError);
             LazyDefineProperty(Intrinsics, "%GeneratorFunction%", GeneratorFunction);
             LazyDefineProperty(Intrinsics, "%Generator%", GeneratorObject);
@@ -21330,7 +21322,7 @@ define("lib/api", function (require, exports, module) {
 
             return Intrinsics;
         }
-
+*/
 
         // ===========================================================================================================
         // Globales This erzeugen (sollte mit dem realm und den builtins 1x pro neustart erzeugt werden)
@@ -21350,8 +21342,9 @@ define("lib/api", function (require, exports, module) {
                 configurable: false
             });
 
-            DefineOwnProperty(globalThis, "load", GetOwnProperty(intrinsics, "%LoadFunction%"));
-            DefineOwnProperty(globalThis, "request", GetOwnProperty(intrinsics, "%RequestFunction%"));
+            DefineOwnProperty(globalThis, "load", GetOwnProperty(intrinsics, "%Load%"));
+            DefineOwnProperty(globalThis, "request", GetOwnProperty(intrinsics, "%Request%"));
+
             DefineOwnProperty(globalThis, "console", GetOwnProperty(intrinsics, "%Console%"));
             DefineOwnProperty(globalThis, "Realm", GetOwnProperty(intrinsics, "%Realm%"));
             DefineOwnProperty(globalThis, "Loader", GetOwnProperty(intrinsics, "%Loader%"));
@@ -21464,7 +21457,13 @@ define("lib/api", function (require, exports, module) {
             return globalThis;
         }
 
-        return assignIntrinsics(intrinsics);
+
+        LazyDefineProperty(intrinsics, "%DOMWrapper%", new ExoticDOMObjectWrapper(
+                typeof importScripts === "function" ? self : typeof window === "object" ? window : process)
+        );
+ 
+
+        return intrinsics; // assignIntrinsics(intrinsics);
 
     } // createIntrinsics ()
 
@@ -21501,7 +21500,8 @@ define("lib/api", function (require, exports, module) {
     function createRealm(options) {
         options = options || {}; // { createOnly: true, don´t set to current realm }
 
-        debug("Creating Realm...");
+        if (console.time) console.time("Creating Realm...");
+
         
         var realm = new CodeRealm();
         setCodeRealm(realm); // loc
@@ -21518,7 +21518,7 @@ define("lib/api", function (require, exports, module) {
 
         realm.loader = undefined;
 
-        quickAssignIntrVars(realm.xs);
+        // quickAssignIntrVars(realm.xs);
 
         if (!options.createOnly) {
             var cx = getContext();
@@ -21538,8 +21538,7 @@ define("lib/api", function (require, exports, module) {
             return result;
         };
         
-        debug("Realm created!");
-
+        if (console.time) console.timeEnd("Creating Realm...");
 
         return realm;
     }
@@ -21838,9 +21837,8 @@ define("lib/runtime", ["lib/parser", "lib/api", "lib/slower-static-semantics"], 
             eventQueue = realm.eventQueue;
         
         }
-        realm.xs.EvaluateBody = EvaluateBody;
-        realm.xs.Evaluate = Evaluate;
-        realm.xs.CreateGeneratorInstance = CreateGeneratorInstance;
+        
+
     }
 
     // ^ replacen mit realm und module system
