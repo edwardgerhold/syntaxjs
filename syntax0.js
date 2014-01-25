@@ -1,6 +1,3 @@
-"use strict";
-
-Error.stackTraceLimit = 20;
 
 function Module(id, exports, children, code) {
     "use strict"
@@ -16,7 +13,6 @@ function Module(id, exports, children, code) {
     if (exports) m.loaded = true;
     m.exports = exports || {};
     m.require = function (ids, factory) {
-        // use toUrl to add paths here
         return require.apply(this, arguments);
     };
     if (code) {
@@ -2116,7 +2112,7 @@ define("lib/crocks-pratt-parser", ["lib/tables", "lib/tokenizer"], function (tab
             n.nud = itself;
             n.led = null;
             n.std = null;
-            n.scope = cope;
+            n.scope = scope;
             return n;
         },
         find: function (n) {
@@ -8430,10 +8426,10 @@ define("lib/api", function (require, exports, module) {
         "Extensible": 1,
         "Bindings": 2,
         "Symbols": 3,
-        "uniqueSymbolID": 4,
+        "es5id": 4,
         // Functions
         "FunctionKind": 5,
-        "Scope": 6,
+        "Environment": 6,
         "FormalParameters": 7,
         "Code": 8,
         "HomeObject": 9,
@@ -8546,12 +8542,12 @@ define("lib/api", function (require, exports, module) {
 
     function readPropertyDescriptor(object, name) {
         if (IsSymbol(name)) {
-            return object["Symbols"][name.uniqueSymbolID];
+            return object["Symbols"][name.es5id];
         } else {
             return object["Bindings"][name];
         }
         /*if (IsSymbol(name)) {
-		return getInternalSlot(getInternalSlot(object, "Symbols"), getInternalSlot(name,"uniqueSymbolID"));
+		return getInternalSlot(getInternalSlot(object, "Symbols"), getInternalSlot(name,"es5id"));
 	} else {
 		return getInternalSlot(getInternalSlot(object,"Bindings"),name);
 	}*/
@@ -8561,12 +8557,12 @@ define("lib/api", function (require, exports, module) {
 
     function writePropertyDescriptor(object, name, value) {
         if (IsSymbol(name)) {
-            return object["Symbols"][name.uniqueSymbolID] = value;
+            return object["Symbols"][name.es5id] = value;
         } else {
             return object["Bindings"][name] = value;
         }
         /*if (IsSymbol(name)) {
-		return setInternalSlot(getInternalSlot(object, "Symbols"), getInternalSlot(name,"uniqueSymbolID"),  value);
+		return setInternalSlot(getInternalSlot(object, "Symbols"), getInternalSlot(name,"es5id"),  value);
 	} else {
 		return setInternalSlot(getInternalSlot(object,"Bindings"), name, value);
 	}*/
@@ -8656,7 +8652,7 @@ define("lib/api", function (require, exports, module) {
             if (IsPropertyKey(P)) {
                 //P = unwrap(P);
                 if (IsSymbol(P)) {
-                    if (this.Symbols[P.uniqueSymbolID] !== undefined) return true;
+                    if (this.Symbols[P.es5id] !== undefined) return true;
                 } else {
                     P = ToString(P);
                     if (this.Bindings[P]) return true;
@@ -8711,13 +8707,13 @@ define("lib/api", function (require, exports, module) {
 
     function Delete(O, P) {
         var v;
-        if (IsSymbol(P)) v = O.Symbols[P.uniqueSymbolID];
+        if (IsSymbol(P)) v = O.Symbols[P.es5id];
         else(v = O.Bindings[P]);
         if (v) {
             if (v.configurable) {
                 if (IsSymbol(P)) {
-                    O.Symbols[P.uniqueSymbolID] = undefined;
-                    delete O.Symbols[P.uniqueSymbolID];
+                    O.Symbols[P.es5id] = undefined;
+                    delete O.Symbols[P.es5id];
                 } else {
                     O.Bindings[P] = undefined;
                     delete O.Bindings[P];
@@ -8968,7 +8964,7 @@ define("lib/api", function (require, exports, module) {
         setInternalSlot(F, "Extensible", true);
         F.Realm = undefined;
         F.Extensible = true;
-        setInternalSlot(F, "Scope", undefined);
+        setInternalSlot(F, "Environment", undefined);
         setInternalSlot(F, "Code", undefined);
         setInternalSlot(F, "FormalParameters", undefined);
         return F;
@@ -9117,7 +9113,7 @@ define("lib/api", function (require, exports, module) {
         this.BoundFunction = F;
         this.thisValue = T;
         this.Bindings = Object.create(null);
-        this.outer = F.Scope;
+        this.outer = getInternalSlot(F,"Environment");
     }
     FunctionEnvironment.prototype = assign(FunctionEnvironment.prototype, {
         HasThisBinding: function () {
@@ -10744,7 +10740,7 @@ define("lib/api", function (require, exports, module) {
         setInternalSlot(F, "FunctionKind", kind);
         setInternalSlot(F, "FormalParameters", paramList);
         setInternalSlot(F, "Code", body);
-        setInternalSlot(F, "Scope", scope);
+        setInternalSlot(F, "Environment", scope);
         setInternalSlot(F, "Strict", strict);
         setInternalSlot(F, "Realm", getRealm());
         if (homeObject) setInternalSlot(F, "HomeObject", homeObject);
@@ -10933,7 +10929,7 @@ define("lib/api", function (require, exports, module) {
 
     function cloneFunction (func) {
         var newFunc = OrdinaryFunction();
-        setInternalSlot(newFunc, "Scope", getInternalSlot(func, "Scope"));
+        setInternalSlot(newFunc, "Environment", getInternalSlot(func, "Environment"));
         setInternalSlot(newFunc, "Code", getInternalSlot(func, "Code"));
         setInternalSlot(newFunc, "FormalParameterList", getInternalSlot(func, "FormalParameterList"));
         setInternalSlot(newFunc, "ThisMode", getInternalSlot(func, "ThisMode"));
@@ -10960,7 +10956,7 @@ define("lib/api", function (require, exports, module) {
         Assert(Type(newHome) === "object", "newhome has to be an object");
         var nu = OrdinaryFunction();
         setInternalSlot(nu, "FunctionKind", getInternalSlot(func, "FunctionKind"));
-        setInternalSlot(nu, "Scope", getInternalSlot(func, "Scope"));
+        setInternalSlot(nu, "Environment", getInternalSlot(func, "Environment"));
         setInternalSlot(nu, "Code", getInternalSlot(func, "Code"));
         setInternalSlot(nu, "FormalParameters", getInternalSlot(func, "FormalParameters"));
         setInternalSlot(nu, "Strict", getInternalSlot(func, "Strict"));
@@ -10991,7 +10987,7 @@ define("lib/api", function (require, exports, module) {
         } else {
             env.HomeObject = undefined;
         }
-        env.outer = getInternalSlot(F, "Scope"); // noch in [[Environment]] umbenennen
+        env.outer = getInternalSlot(F, "Environment"); // noch in [[Environment]] umbenennen
         return env;
     }
 
@@ -11210,7 +11206,7 @@ define("lib/api", function (require, exports, module) {
     // Symbol PrimitiveType / Exotic Object
     // ===========================================================================================================
 
-    var uniqueSymbolID = Math.floor(Math.random() * (1 << 16));
+    var es5id = Math.floor(Math.random() * (1 << 16));
 
     function SymbolPrimitiveType(es5id, desc) {
         var O = Object.create(SymbolPrimitiveType.prototype);
@@ -11220,7 +11216,7 @@ define("lib/api", function (require, exports, module) {
         setInternalSlot(O, "Prototype", null);
         setInternalSlot(O, "Extensible", false);
         setInternalSlot(O, "Integrity", "frozen");
-        setInternalSlot(O, "uniqueSymbolID", es5id || (++uniqueSymbolID + Math.random()));
+        setInternalSlot(O, "es5id", es5id || (++es5id + Math.random()));
         //setInternalSlot(O, "Private", false);
         return O;
     }
@@ -12122,6 +12118,9 @@ define("lib/api", function (require, exports, module) {
             if (isMapped) desc.value = Get(map, P);
             return desc;
         },
+
+
+    // Muss definitiv einen Bug haben.
         DefineOwnProperty: function (P, Desc) {
             var ao = this;
             var map = this.ParameterMap;
@@ -12887,7 +12886,7 @@ define("lib/api", function (require, exports, module) {
         setInternalSlot(F, "Construct", undefined);
         setInternalSlot(F, "FormalParameters", undefined);
         setInternalSlot(F, "Prototype", interAMD.FunctionPrototype);
-        setInternalSlot(F, "Scope", undefined);
+        setInternalSlot(F, "Environment", undefined);
         setInternalSlot(F, "Strict", true);
         setInternalSlot(F, "Realm", realm);
      
@@ -14718,7 +14717,7 @@ define("lib/api", function (require, exports, module) {
                     return withError("Type", "can not xml http request " + file);
                 }
             } else if (isNode()) {
-                fs = syntaxjs.nativeModule.require("fs");
+                fs = require._nativeModule.require("fs");
                 try {
                     data = fs.readFileSync(file, "utf8");
                     return data;
@@ -20378,7 +20377,7 @@ define("lib/api", function (require, exports, module) {
 
                 if (comparator === undefined) same = SameValueZero;
                 else same = SameValue;
-                // This differs from spec as it uses internally string-keys to achieve O(1) nearness 
+                
                 var internalKey;
 
                 internalKey = __checkInternalUniqueKey(key);
@@ -20404,7 +20403,7 @@ define("lib/api", function (require, exports, module) {
                 var comparator = getInternalSlot(M, "MapComparator");
                 if (comparator === undefined) same = SameValueZero;
                 else same = SameValue;
-                // This differs from spec as it uses internally string-keys to achieve O(1) nearness 
+                
                 var internalKey;
 
                 internalKey = __checkInternalUniqueKey(key);
@@ -20437,7 +20436,7 @@ define("lib/api", function (require, exports, module) {
                 if (comparator === undefined) same = SameValueZero;
                 else same = SameValue;
 
-                // This differs from spec as it uses internally string-keys to achieve O(1) nearness 
+                
                 var internalKey;
 
                 internalKey = __checkInternalUniqueKey(key, true);
@@ -20469,7 +20468,7 @@ define("lib/api", function (require, exports, module) {
                 var comparator = getInternalSlot(M, "MapComparator");
                 if (comparator === undefined) same = SameValueZero;
                 else same = SameValue;
-                // This differs from spec as it uses internally string-keys to achieve O(1) nearness 
+                
                 var internalKey;
 
                 internalKey = __checkInternalUniqueKey(key);
@@ -20754,7 +20753,7 @@ define("lib/api", function (require, exports, module) {
                 if (comparator === undefined) same = SameValueZero;
                 else same = SameValue;
 
-                // This differs from spec as it uses internally string-keys to achieve O(1) nearness 
+                
                 var internalKey;
 
                 internalKey = __checkInternalUniqueKey(value, true);
@@ -20783,7 +20782,7 @@ define("lib/api", function (require, exports, module) {
                 if (comparator === undefined) same = SameValueZero;
                 else same = SameValue;
 
-                // This differs from spec as it uses internally string-keys to achieve O(1) nearness 
+                
                 var internalKey;
 
                 internalKey = __checkInternalUniqueKey(value);
@@ -20811,7 +20810,7 @@ define("lib/api", function (require, exports, module) {
                 if (comparator === undefined) same = SameValueZero;
                 else same = SameValue;
 
-                // This differs from spec as it uses internally string-keys to achieve O(1) nearness 
+                
                 var internalKey;
 
                 internalKey = __checkInternalUniqueKey(value);
@@ -22185,7 +22184,8 @@ define("lib/runtime", ["lib/parser", "lib/api", "lib/slower-static-semantics"], 
 
         while (indx >= 0) {
             val = args[indx];
-            callInternalSlot("DefineOwnProperty", obj, ToString(indx), {
+            //callInternalSlot("DefineOwnProperty", 
+            writePropertyDescriptor(obj, ToString(indx), {
                 value: val,
                 writable: true,
                 enumerable: true,
@@ -22418,14 +22418,16 @@ define("lib/runtime", ["lib/parser", "lib/api", "lib/slower-static-semantics"], 
 
     function Call(thisArg, argList) {
 
+        var F = this;
         var params = getInternalSlot(this, "FormalParameters");
         var code = getInternalSlot(this, "Code");
         var thisMode = getInternalSlot(this, "ThisMode");
+        var scope = getInternalSlot(this, "Environment");
         var status, result;
         var fname;
         var localEnv;
 
-        if (!code) return withError("Type", "function has no code property");
+        if (!code) return withError("Type", "Call: this value has no [[Code]] slot");
 
         var callerContext = getContext();
 
@@ -22438,7 +22440,7 @@ define("lib/runtime", ["lib/parser", "lib/api", "lib/slower-static-semantics"], 
         calleeContext.state.callee = calleeName;
 
         if (thisMode === "lexical") {
-            localEnv = NewDeclarativeEnvironment(this.Scope);
+            localEnv = NewDeclarativeEnvironment(scope);
         } else {
             if (thisMode === "strict") {
                 this.thisValue = thisArg;
@@ -26612,7 +26614,7 @@ define("lib/syntaxerror-file", function (require, exports, module) {
 
     function readFile(name, callback, errback) {
         if (syntaxjs.system == "node") {
-            var fs = syntaxjs.nativeRequire("fs");
+            var fs = require._nativeRequire("fs");
             return fs.readFile(name, function (err, data) {
                 if (err) errback(err);
                 callback(data);
@@ -26637,7 +26639,7 @@ define("lib/syntaxerror-file", function (require, exports, module) {
 
     function readFileSync(name) {
         if (syntaxjs.system == "node") {
-            var fs = syntaxjs.nativeRequire("fs");
+            var fs = require._nativeRequire("fs");
             return fs.readFileSync(name, "utf8");
         } else if (syntaxjs.system == "browser") {
             var xhr = new XMLHttpRequest();
@@ -26914,10 +26916,13 @@ define("lib/syntaxjs-worker", function (require, exports, module) {
 
 // This is the App ?
 
+
+
+
 define("lib/syntaxjs", function () {
     "use strict";
     
-    var VERSION = "0.0.2014";
+    var VERSION = "0.0.1";
 
     function pdmacro(v) {
         return {
@@ -26929,9 +26934,10 @@ define("lib/syntaxjs", function () {
     }
 
     var nativeGlobal = typeof window !== "undefined" ? window : typeof global !== "undefined" ? global : typeof importScripts === "function" ? self : {};
+    
     var syntaxerror = Object.create(null);
     var syntaxerror_public_api_readonly = {
-	version: pdmacro(VERSION),
+	    version: pdmacro(VERSION),
         tokenize: pdmacro(require("lib/tokenizer")),
         createAst: pdmacro(require("lib/parser")),
         toValue: pdmacro(require("lib/runtime")),
@@ -26952,16 +26958,21 @@ define("lib/syntaxjs", function () {
         syntaxerror.system = "browser";
         syntaxerror_highlighter_api.highlightElements = pdmacro(require("lib/syntaxerror-highlight-gui").highlightElements),
         syntaxerror_highlighter_api.startHighlighterOnLoad = pdmacro(require("lib/syntaxerror-highlight-gui").startHighlighterOnLoad)
-
-    } else if (typeof process !== "undefined") {
+    } else if (typeof process !== "undefined") {    
         if (typeof exports !== "undefined") exports.syntaxjs = syntaxerror;
         syntaxerror.system = "node";
-        syntaxerror.nativeRequire = nativeGlobal.require,
-        syntaxerror.nativeModule = module;
+        // temporarily left. could move to closure, could call a call to save
+        // but will hide away them from the main object, left over from hacking.
+        require._nativeRequire = nativeGlobal.require;
+        require._nativeModule =  module;
+        Object.defineProperties(exports, syntaxerror_public_api_readonly);
+        Object.defineProperties(exports, syntaxerror_highlighter_api)
     }
+
     // ASSIGN properties to a SYNTAXJS object
     Object.defineProperties(syntaxerror, syntaxerror_public_api_readonly);
     Object.defineProperties(syntaxerror, syntaxerror_highlighter_api);
+    
     return syntaxerror;
 });
 
