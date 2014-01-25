@@ -12981,6 +12981,31 @@ define("lib/api", function (require, exports, module) {
 
 
 
+    //
+    // Realm und Loader
+    //
+    //
+    //
+
+
+        function IndirectEval(realm, source) {
+            
+            return realm.toValue(source);
+
+        }
+
+        function CreateRealm (realmObject) {
+            /*var realm = createRealm({ createOnly: true });
+            setInternalSlot(realmObject, "Realm", realm);
+            return realm;
+            */
+
+            var realmRec = new CodeRealm();
+            
+            var intrinsics = createIntrinsics(realmRec);
+            var newGlobal = ObjectCreate(null);
+            defineGlobalObject(newGlobal, intrinsics);
+        }
 
 
 
@@ -13010,6 +13035,8 @@ define("lib/api", function (require, exports, module) {
     exports.$$isConcatSpreadable = $$isConcatSpreadable;
 
 
+    exports.IndirectEval = IndirectEval;
+    exports.CreateRealm = CreateRealm;
 
     exports.CreateBuiltinFunction = CreateBuiltinFunction;
     exports.AddRestrictedFunctionProperties = AddRestrictedFunctionProperties;
@@ -13215,133 +13242,171 @@ define("lib/api", function (require, exports, module) {
     // code and intrinsics: CREATE INTRINSICS (builtins definieren)
     // *****************************************************************************************************************************************************************************   
 
-    function createIntrinsics(Intrinsics, interAMD) {
+    function define_intrinsic(intrinsics, intrinsicName, value) {
+        var descriptor = Object.create(null);
+        descriptor.configurable = true;
+        descriptor.enumerable = true;
+        descriptor.value = value;
+        descriptor.writable = true;
+        callInternalSlot("DefineOwnProperty", intrinsics, intrinsicName, descriptor);
+    }
+    
 
-        var ObjectPrototype = OrdinaryObject(null);
+    function createIntrinsicConstructor (realm, name, len, intrinsicName) {
+        var intrinsics = realm.intrinsics;
+        var constructor = OrdinaryFunction();
+        define_intrinsic(intrinsics, intrinsicName, constructor);
+        SetFunctionName(constructor, name);
+        setFunctionLength(constructor, len);
+        return constructor;
+    }
+    
+    function createIntrinsicPrototype (realm, intrinsicName) {
+        var intrinsics = realm.intrinsics;
+        var prototype = OrdinaryObject();
+        define_intrinsic(intrinsics, intrinsicName, prototype);
+        return prototype;
+    }
+
+    function createIntrinsicObject (realm, intrinsicName) {
+        var intrinsics = realm.intrinsics;
+        var object = OrdinaryObject();
+        define_intrinsic(intrinsics, intrinsicName, object);
+        return object;
+    }
+
+    function createIntrinsics(realm) {
+        var intrinsics = OrdinaryObject();
+        setInternalSlot(intrinsics, "Prototype", null);        
+        realm.intrinsics = intrinsics;
+
+
+        var ObjectPrototype = createIntrinsicPrototype(realm, "%ObjectPrototype%");
         setInternalSlot(ObjectPrototype, "Prototype", null);
-        interAMD.ObjectPrototype = ObjectPrototype;
-        
-        var FunctionPrototype = OrdinaryObject();
+        interAMD.ObjectPrototype = ObjectPrototype;        
+
+        var FunctionPrototype = createIntrinsicPrototype(realm, "%FunctionPrototype%");
         setInternalSlot(FunctionPrototype, "Prototype", ObjectPrototype);
         interAMD.FunctionPrototype = FunctionPrototype;
-
-        var FunctionConstructor = OrdinaryFunction();
+        
+        var FunctionConstructor = createIntrinsicConstructor(realm, "Function", 0, "%Function%");
         setInternalSlot(FunctionConstructor, "Prototype", FunctionPrototype);
         interAMD.FunctionConstructor = FunctionConstructor;
-
-        var ObjectConstructor = OrdinaryFunction();
+        
+        var ObjectConstructor = createIntrinsicConstructor(realm, "Object", 0, "%Object%");
         Assert(getInternalSlot(ObjectConstructor, "Prototype") === FunctionPrototype, "ObjectConstructor and FunctionPrototype have to have a link");
         interAMD.ObjectConstructor = ObjectConstructor;
         
-        
-        var EncodeURIFunction = OrdinaryFunction();
-        var DecodeURIFunction = OrdinaryFunction();
-        var EncodeURIComponentFunction = OrdinaryFunction();
-        var DecodeURIComponentFunction = OrdinaryFunction();
-        var SetTimeoutFunction = OrdinaryFunction();
-        var SetImmediateFunction = OrdinaryFunction();
-        var IsNaNFunction = OrdinaryFunction();
-        var IsFiniteFunction = OrdinaryFunction();
-        var ParseFloatFunction = OrdinaryFunction();
-        var ParseIntFunction = OrdinaryFunction();
-        var EscapeFunction = OrdinaryFunction();
-        var UnescapeFunction = OrdinaryFunction();
-        var EvalFunction = OrdinaryFunction();
-        var RegExpConstructor = OrdinaryFunction();
-        var RegExpPrototype = OrdinaryObject();
-        var ProxyConstructor = OrdinaryFunction();
-        var ProxyPrototype = OrdinaryObject();
-        var BooleanConstructor = OrdinaryFunction();
-        var BooleanPrototype = OrdinaryObject();
-        var NumberConstructor = OrdinaryFunction();
-        var NumberPrototype = OrdinaryObject();
-        var StringConstructor = OrdinaryFunction();
+        var EncodeURIFunction = createIntrinsicConstructor(realm, "EncodeURI", 0, "%EncodeURI%");
+        var DecodeURIFunction = createIntrinsicConstructor(realm, "DecodeURI", 0, "%DecodeURI%");
+        var EncodeURIComponentFunction = createIntrinsicConstructor(realm, "EncodeURIComponent", 0, "%EncodeURIComponent%");
+        var DecodeURIComponentFunction = createIntrinsicConstructor(realm, "DecodeURIComponent", 0, "%DecodeURIComponent%");
+        var SetTimeoutFunction = createIntrinsicConstructor(realm, "SetTimeout", 0, "%SetTimeout%");
+        var SetImmediateFunction = createIntrinsicConstructor(realm, "SetImmediate", 0, "%SetImmediate%");
+        var IsNaNFunction = createIntrinsicConstructor(realm, "IsNaN", 0, "%IsNaN%");
+        var IsFiniteFunction = createIntrinsicConstructor(realm, "IsFinite", 0, "%IsFinite%");
+        var ParseFloatFunction = createIntrinsicConstructor(realm, "ParseFloat", 0, "%ParseFloat%");
+        var ParseIntFunction = createIntrinsicConstructor(realm, "ParseInt", 0, "%ParseInt%");
+        var EscapeFunction = createIntrinsicConstructor(realm, "Escape", 0, "%Escape%");
+        var UnescapeFunction = createIntrinsicConstructor(realm, "Unescape", 0, "%Unescape%");
+        var EvalFunction = createIntrinsicConstructor(realm, "Eval", 0, "%Eval%");
+        var RegExpConstructor = createIntrinsicConstructor(realm, "RegExp", 0, "%RegExp%");
+        var RegExpPrototype = createIntrinsicPrototype(realm, "%RegExpPrototype%");
+        var ProxyConstructor = createIntrinsicConstructor(realm, "Proxy", 0, "%Proxy%");
+        var ProxyPrototype = createIntrinsicPrototype(realm, "%ProxyPrototype%");
+        var BooleanConstructor = createIntrinsicConstructor(realm, "Boolean", 0, "%Boolean%");
+        var BooleanPrototype = createIntrinsicPrototype(realm, "%BooleanPrototype%");
+        var NumberConstructor = createIntrinsicConstructor(realm, "Number", 0, "%Number%");
+        var NumberPrototype = createIntrinsicPrototype(realm, "%NumberPrototype%");
+        var StringConstructor = createIntrinsicConstructor(realm, "String", 0, "%String%");
         var StringRawFunction;
-        var StringPrototype = OrdinaryObject();
-        var StringIteratorPrototype = OrdinaryObject();
-        var DateConstructor = OrdinaryFunction();
-        var DatePrototype = OrdinaryObject();
-        var ErrorConstructor = OrdinaryFunction();
-        var ErrorPrototype = OrdinaryObject();
-        var ArrayConstructor = OrdinaryFunction();
-        var ArrayPrototype = OrdinaryObject();
-        var ArrayIteratorPrototype = OrdinaryObject();
-        var GeneratorFunction = OrdinaryFunction();
-        var GeneratorPrototype = OrdinaryObject();
-        var GeneratorObject = OrdinaryObject();
-        var ReflectObject = OrdinaryObject();
-        var NativeError = OrdinaryFunction();
-        var SymbolFunction = OrdinaryFunction();
-        var SymbolPrototype = OrdinaryObject();
-        var TypeErrorConstructor = OrdinaryFunction();
-        var TypeErrorPrototype = OrdinaryObject();
-        var ReferenceErrorConstructor = OrdinaryFunction();
-        var ReferenceErrorPrototype = OrdinaryObject();
-        var SyntaxErrorConstructor = OrdinaryFunction();
-        var SyntaxErrorPrototype = OrdinaryObject();
-        var RangeErrorConstructor = OrdinaryFunction();
-        var RangeErrorPrototype = OrdinaryObject();
-        var EvalErrorConstructor = OrdinaryFunction();
-        var EvalErrorPrototype = OrdinaryObject();
-        var URIErrorConstructor = OrdinaryFunction();
-        var URIErrorPrototype = OrdinaryObject();
-        var PromiseConstructor = OrdinaryFunction();
-        var PromisePrototype = OrdinaryObject();
-        var WeakMapConstructor = OrdinaryFunction();
-        var WeakMapPrototype = OrdinaryObject();
-        var WeakSetConstructor = OrdinaryFunction();
-        var WeakSetPrototype = OrdinaryObject();
-        var MapConstructor = OrdinaryFunction();
-        var MapPrototype = OrdinaryObject();
-        var MapIteratorPrototype = OrdinaryObject();
-        var SetConstructor = OrdinaryFunction();
-        var SetPrototype = OrdinaryObject();
-        var SetIteratorPrototype = OrdinaryObject();
+        var StringPrototype = createIntrinsicPrototype(realm, "%StringPrototype%");
+        var StringIteratorPrototype = createIntrinsicPrototype(realm, "%StringIteratorPrototype%");
+        var DateConstructor = createIntrinsicConstructor(realm, "Date", 0, "%Date%");
+        var DatePrototype = createIntrinsicPrototype(realm, "%DatePrototype%");
+        var ErrorConstructor = createIntrinsicConstructor(realm, "Error", 0, "%Error%");
+        var ErrorPrototype = createIntrinsicPrototype(realm, "%ErrorPrototype%");
+        var ArrayConstructor = createIntrinsicConstructor(realm, "Array", 0, "%Array%");
+        var ArrayPrototype = createIntrinsicPrototype(realm, "%ArrayPrototype%");
+        var ArrayIteratorPrototype = createIntrinsicPrototype(realm, "%ArrayIteratorPrototype%");
+        var GeneratorFunction = createIntrinsicConstructor(realm, "Generator", 0, "%Generator%");
+        var GeneratorPrototype = createIntrinsicPrototype(realm, "%GeneratorPrototype%");
+        var GeneratorObject = createIntrinsicObject(realm, "%Generator%");
+        var ReflectObject = createIntrinsicObject(realm, "%Reflect%");
+        //var NativeError = OrdinaryFunction();
+        var SymbolFunction = createIntrinsicConstructor(realm, "Symbol", 0, "%Symbol%");
+        var SymbolPrototype = createIntrinsicPrototype(realm, "%SymbolPrototype%");
+        var TypeErrorConstructor = createIntrinsicConstructor(realm, "TypeError", 0, "%TypeError%");
+        var TypeErrorPrototype = createIntrinsicPrototype(realm, "%TypeErrorPrototype%");
+        var ReferenceErrorConstructor = createIntrinsicConstructor(realm, "ReferenceError", 0, "%ReferenceError%");
+        var ReferenceErrorPrototype = createIntrinsicPrototype(realm, "%ReferenceErrorPrototype%");
+        var SyntaxErrorConstructor = createIntrinsicConstructor(realm, "SyntaxError", 0, "%SyntaxError%");
+        var SyntaxErrorPrototype = createIntrinsicPrototype(realm, "%SyntaxErrorPrototype%");
+        var RangeErrorConstructor = createIntrinsicConstructor(realm, "RangeError", 0, "%RangeError%");
+        var RangeErrorPrototype = createIntrinsicPrototype(realm, "%RangeErrorPrototype%");
+        var EvalErrorConstructor = createIntrinsicConstructor(realm, "EvalError", 0, "%EvalError%");
+        var EvalErrorPrototype = createIntrinsicPrototype(realm, "%EvalErrorPrototype%");
+        var URIErrorConstructor = createIntrinsicConstructor(realm, "URIError", 0, "%URIError%");
+        var URIErrorPrototype = createIntrinsicPrototype(realm, "%URIErrorPrototype%");
+        var PromiseConstructor = createIntrinsicConstructor(realm, "Promise", 0, "%Promise%");
+        var PromisePrototype = createIntrinsicPrototype(realm, "%PromisePrototype%");
+        var WeakMapConstructor = createIntrinsicConstructor(realm, "WeakMap", 0, "%WeakMap%");
+        var WeakMapPrototype = createIntrinsicPrototype(realm, "%WeakMapPrototype%");
+        var WeakSetConstructor = createIntrinsicConstructor(realm, "WeakSet", 0, "%WeakSet%");
+        var WeakSetPrototype = createIntrinsicPrototype(realm, "%WeakSetPrototype%");
+        var MapConstructor = createIntrinsicConstructor(realm, "Map", 0, "%Map%");
+        var MapPrototype = createIntrinsicPrototype(realm, "%MapPrototype%");
+        var MapIteratorPrototype = createIntrinsicPrototype(realm, "%MapIteratorPrototype%");
+        var SetConstructor = createIntrinsicConstructor(realm, "Set", 0, "%Set%");
+        var SetPrototype = createIntrinsicPrototype(realm, "%SetPrototype%");
+        var SetIteratorPrototype = createIntrinsicPrototype(realm, "%SetIteratorPrototype%");
         var __mapSetUniqueInternalUniqueKeyCounter__ = 0;
-        var TypedArrayConstructor = OrdinaryFunction();
-        var TypedArrayPrototype = OrdinaryObject();
-        var Uint8ArrayConstructor = OrdinaryFunction();
-        var Int8ArrayConstructor = OrdinaryFunction();
-        var Uint8ClampedArrayConstructor = OrdinaryFunction();
-        var Int16ArrayConstructor = OrdinaryFunction();
-        var Uint16ArrayConstructor = OrdinaryFunction();
-        var Int32ArrayConstructor = OrdinaryFunction();
-        var Uint32ArrayConstructor = OrdinaryFunction();
-        var Float32ArrayConstructor = OrdinaryFunction();
-        var Float64ArrayConstructor = OrdinaryFunction();
-        var Uint8ArrayPrototype = OrdinaryObject();
-        var Int8ArrayPrototype = OrdinaryObject();
-        var Uint8ClampedArrayPrototype = OrdinaryObject();
-        var Int16ArrayPrototype = OrdinaryObject();
-        var Uint16ArrayPrototype = OrdinaryObject();
-        var Int32ArrayPrototype = OrdinaryObject();
-        var Uint32ArrayPrototype = OrdinaryObject();
-        var Float32ArrayPrototype = OrdinaryObject();
-        var Float64ArrayPrototype = OrdinaryObject();
-        var ArrayBufferConstructor = OrdinaryFunction();
-        var ArrayBufferPrototype = OrdinaryObject();
-        var DataViewConstructor = OrdinaryFunction();
-        var DataViewPrototype = OrdinaryObject();
-        var JSONObject = OrdinaryObject();
-        var MathObject = OrdinaryObject();
-        var ConsoleObject = OrdinaryObject();
-        var LoadFunction = OrdinaryFunction();
-        var RequestFunction = OrdinaryFunction();
-        var EmitterConstructor = OrdinaryFunction();
-        var EmitterPrototype = OrdinaryObject();
+        var TypedArrayConstructor = createIntrinsicConstructor(realm, "TypedArray", 0, "%TypedArray%");
+        var TypedArrayPrototype = createIntrinsicPrototype(realm, "%TypedArrayPrototype%");
+        var Uint8ArrayConstructor = createIntrinsicConstructor(realm, "Uint8Array", 0, "%Uint8Array%");
+        var Int8ArrayConstructor = createIntrinsicConstructor(realm, "Int8Array", 0, "%Int8Array%");
+        var Uint8ClampedArrayConstructor = createIntrinsicConstructor(realm, "Uint8ClampedArray", 0, "%Uint8ClampedArray%");
+        var Int16ArrayConstructor = createIntrinsicConstructor(realm, "Int16Array", 0, "%Int16Array%");
+        var Uint16ArrayConstructor = createIntrinsicConstructor(realm, "Uint16Array", 0, "%Uint16Array%");
+        var Int32ArrayConstructor = createIntrinsicConstructor(realm, "Int32Array", 0, "%Int32Array%");
+        var Uint32ArrayConstructor = createIntrinsicConstructor(realm, "Uint32Array", 0, "%Uint32Array%");
+        var Float32ArrayConstructor = createIntrinsicConstructor(realm, "Float32Array", 0, "%Float32Array%");
+        var Float64ArrayConstructor = createIntrinsicConstructor(realm, "Float64Array", 0, "%Float64Array%");
+        var Uint8ArrayPrototype = createIntrinsicPrototype(realm, "%Uint8ArrayPrototype%");
+        var Int8ArrayPrototype = createIntrinsicPrototype(realm, "%Int8ArrayPrototype%");
+        var Uint8ClampedArrayPrototype = createIntrinsicPrototype(realm, "%Uint8ClampedArrayPrototype%");
+        var Int16ArrayPrototype = createIntrinsicPrototype(realm, "%Int16ArrayPrototype%");
+        var Uint16ArrayPrototype = createIntrinsicPrototype(realm, "%Uint16ArrayPrototype%");
+        var Int32ArrayPrototype = createIntrinsicPrototype(realm, "%Int32ArrayPrototype%");
+        var Uint32ArrayPrototype = createIntrinsicPrototype(realm, "%Uint32ArrayPrototype%");
+        var Float32ArrayPrototype = createIntrinsicPrototype(realm, "%Float32ArrayPrototype%");
+        var Float64ArrayPrototype = createIntrinsicPrototype(realm, "%Float64ArrayPrototype%");
+        var ArrayBufferConstructor = createIntrinsicConstructor(realm, "ArrayBuffer", 0, "%ArrayBuffer%");
+        var ArrayBufferPrototype = createIntrinsicPrototype(realm, "%ArrayBufferPrototype%");
+        var DataViewConstructor = createIntrinsicConstructor(realm, "DataView", 0, "%DataView%");
+        var DataViewPrototype = createIntrinsicPrototype(realm, "%DataViewPrototype%");
+        var JSONObject = createIntrinsicObject(realm, "%JSON%");
+        var MathObject = createIntrinsicObject(realm, "%Math%");
+        var ConsoleObject = createIntrinsicObject(realm, "%Console%");
+        var LoadFunction = createIntrinsicConstructor(realm, "Load", 0, "%Load%");
+        var RequestFunction = createIntrinsicConstructor(realm, "Request", 0, "%Request%");
+        var EmitterConstructor = createIntrinsicConstructor(realm, "Emitter", 0, "%Emitter%");
+        var EmitterPrototype = createIntrinsicPrototype(realm, "%EmitterPrototype%");
         // Object.observe
-        var NotifierPrototype = OrdinaryObject();
+        var NotifierPrototype = createIntrinsicPrototype(realm, "%NotifierPrototype%");
         var ObserverCallbacks = [];
-        var LoaderConstructor = OrdinaryFunction();
-        var LoaderPrototype = OrdinaryObject();
-        var LoaderIteratorPrototype = OrdinaryObject();
-        var RealmConstructor = OrdinaryFunction();
-        var RealmPrototype = OrdinaryObject();
-        var ModuleFunction = OrdinaryFunction();
+        var LoaderConstructor = createIntrinsicConstructor(realm, "Loader", 0, "%Loader%");
+        var LoaderPrototype = createIntrinsicPrototype(realm, "%LoaderPrototype%");
+        var LoaderIteratorPrototype = createIntrinsicPrototype(realm, "%LoaderIteratorPrototype%");
+        var RealmConstructor = createIntrinsicConstructor(realm, "Realm", 0, "%Realm%");
+        var RealmPrototype = createIntrinsicPrototype(realm, "%RealmPrototype%");
+        var ModuleFunction = createIntrinsicConstructor(realm, "Module", 0, "%Module%");
         var ModulePrototype = null;
+
         /*
 	@std:Module
 	*/
+        
         quickAssignIntrVars = function quickAssignIntrVars(target) {
                 target.EncodeURIFunction = EncodeURIFunction;
                 target.DecodeURIFunction = DecodeURIFunction;
@@ -13378,7 +13443,7 @@ define("lib/api", function (require, exports, module) {
                 target.GeneratorPrototype = GeneratorPrototype;
                 target.GeneratorObject = GeneratorObject;
                 target.ReflectObject = ReflectObject;
-                target.NativeError = NativeError;
+                //target.NativeError = NativeError;
                 target.SymbolFunction = SymbolFunction;
                 target.SymbolPrototype = SymbolPrototype;
                 target.TypeErrorConstructor = TypeErrorConstructor;
@@ -13439,6 +13504,7 @@ define("lib/api", function (require, exports, module) {
                 target.NotifierPrototype = NotifierPrototype;
                 return target;
         }
+        
 
         // ##################################################################
         // Der Module Loader Start
@@ -13458,26 +13524,6 @@ define("lib/api", function (require, exports, module) {
         // ##################################################################
         // Das Code Realm als %Realm%
         // ##################################################################
-
-        function IndirectEval(realm, source) {
-            
-            return realm.toValue(source);
-
-        }
-
-        function CreateRealm (realmObject) {
-            /*var realm = createRealm({ createOnly: true });
-            setInternalSlot(realmObject, "Realm", realm);
-            return realm;
-            */
-
-            var realmRec = new CodeRealm();
-            var intrinsics = createIntrinsics();
-            realmRec.intrinsics = intrinsics;
-            var newGlobal = ObjectCreate(null);
-            defineGlobalObject(newGlobal, intrinsics);
-        }
-
 
         var RealmPrototype_get_global = function (thisArg, argList) {
             var realmObject = thisArg;
@@ -13780,7 +13826,7 @@ define("lib/api", function (require, exports, module) {
         setInternalSlot(LoaderConstructor, "Construct", LoaderConstructor_Construct);
         LazyDefineProperty(LoaderConstructor, $$create, CreateBuiltinFunction(LoaderConstructor_$$create, 0, "[Symbol.create]"));
         MakeConstructor(LoaderConstructor, false, LoaderPrototype);
-        SetFunctionName(LoaderConstructor, "Loader");
+        //SetFunctionName(LoaderConstructor, "Loader");
 
         // Loader.prototype
         LazyDefineProperty(LoaderPrototype, "entries", CreateBuiltinFunction(LoaderPrototype_entries, 0, "entries"));
@@ -16666,7 +16712,7 @@ define("lib/api", function (require, exports, module) {
         MakeConstructor(ErrorConstructor, true, ErrorPrototype);
         LazyDefineBuiltinConstant(ErrorConstructor, "prototype", ErrorPrototype);
         LazyDefineBuiltinConstant(ErrorPrototype, "constructor", ErrorConstructor);
-        SetFunctionName(ErrorConstructor, "Error");
+        //SetFunctionName(ErrorConstructor, "Error");
 
         setInternalSlot(ErrorConstructor, "Call", function (thisArg, argList) {
             var func = ErrorConstructor;
@@ -16748,7 +16794,7 @@ define("lib/api", function (require, exports, module) {
         function createNativeError(nativeType, ctor, proto) {
             var name = nativeType + "Error";
             var intrProtoName = "%" + nativeType + "ErrorPrototype%"
-            SetFunctionName(ctor, name);
+            //SetFunctionName(ctor, name);
             setInternalSlot(ctor, "Call", function (thisArg, argList) {
                 var func = this;
                 var O = thisArg;
@@ -17767,7 +17813,7 @@ define("lib/api", function (require, exports, module) {
         IsNaNFunction = CreateBuiltinFunction(function isNaN(thisArg, argList) {
             var nan = ToNumber(argList[0]);
             return nan !== nan;
-        }, 1, "isFinite");
+        }, 1, "isNaN");
 
         // ===========================================================================================================
         // IsFinite
@@ -17777,7 +17823,7 @@ define("lib/api", function (require, exports, module) {
             var number = ToNumber(argList[0]);
             if (number == Infinity || number == -Infinity || number != number) return false;
             return true
-       }, 1, "isNaN");
+       }, 1, "isFinite");
 
         // ===========================================================================================================
         // Object
@@ -17844,8 +17890,8 @@ define("lib/api", function (require, exports, module) {
                 return ObjectDefineProperties(O, Properties);
             };
 
-        SetFunctionName(ObjectConstructor, "Object");
-        setFunctionLength(ObjectConstructor, 1);
+        //SetFunctionName(ObjectConstructor, "Object");
+        //setFunctionLength(ObjectConstructor, 1);
         LazyDefineBuiltinFunction(ObjectConstructor, "assign", 2, ObjectConstructor_assign);
         LazyDefineBuiltinFunction(ObjectConstructor, "create", 0, ObjectConstructor_create);
         LazyDefineBuiltinFunction(ObjectConstructor, "defineProperty", 0, ObjectConstructor_defineProperty);
@@ -18715,8 +18761,7 @@ define("lib/api", function (require, exports, module) {
             var star = kind === "generator" ? "*" : "";
             var callfn;
             if (!C && (callfn=getInternalSlot(F, "Call"))) {
-                var code = "[[native Code]]\r\n";
-
+                var code = "// [[Builtin Function native JavaScript Code]]\r\n";
                 // createbuiltin wraps the builtin
                 if (callfn.steps) callfn = callfn.steps; 
                 // setinternalslot call has no wrapper
@@ -19424,7 +19469,7 @@ define("lib/api", function (require, exports, module) {
 
 
 
-        SetFunctionName(PromiseConstructor, "Promise");
+        //SetFunctionName(PromiseConstructor, "Promise");
         MakeConstructor(PromiseConstructor, true, PromisePrototype);
         setInternalSlot(PromiseConstructor, "Call", PromiseConstructor_Call);
         setInternalSlot(PromiseConstructor, "Construct", PromiseConstructor_Construct);
@@ -21176,6 +21221,8 @@ define("lib/api", function (require, exports, module) {
         // ===========================================================================================================
         // "assign Intrinsics" (refactor to create buitins once per realm)
         // ===========================================================================================================
+        
+
         assignIntrinsics = function assignIntrinsics(Intrinsics) {
 
             LazyDefineProperty(Intrinsics, "%Realm%", RealmConstructor);
@@ -21287,12 +21334,14 @@ define("lib/api", function (require, exports, module) {
             return Intrinsics;
         }
 
+
         // ===========================================================================================================
         // Globales This erzeugen (sollte mit dem realm und den builtins 1x pro neustart erzeugt werden)
         // ===========================================================================================================
 
         createGlobalThis = function createGlobalThis(globalThis, intrinsics) {
             //console.dir(intrinsics);
+
 
             SetPrototypeOf(globalThis, ObjectPrototype);
             setInternalSlot(globalThis, "Extensible", true);
@@ -21417,7 +21466,8 @@ define("lib/api", function (require, exports, module) {
             }
             return globalThis;
         }
-        return assignIntrinsics(Intrinsics);
+
+        return assignIntrinsics(intrinsics);
 
     } // createIntrinsics ()
 
@@ -21463,9 +21513,12 @@ define("lib/api", function (require, exports, module) {
         interAMD.eventQueue = [];
 
         // code realm
+        
         var realm = new CodeRealm();
+        
         interAMD.realm = realm;
         realm.interAMD = interAMD;
+        
         realm.intrinsics = OrdinaryObject(null);
         realm.globalThis = OrdinaryObject(null);
         realm.globalEnv = new GlobalEnvironment(realm.globalThis);
@@ -21476,10 +21529,10 @@ define("lib/api", function (require, exports, module) {
 
         // first context
         var cx;
-        if (!options.createOnly) cx = newContext(null, interAMD);
+        cx = newContext(null, interAMD);
 
         // intrinsics
-        createIntrinsics(realm.intrinsics, interAMD);
+        createIntrinsics(realm);
         createGlobalThis(realm.globalThis, realm.intrinsics);
 
         realm.loader = undefined;
@@ -21492,7 +21545,7 @@ define("lib/api", function (require, exports, module) {
             cx.varEnv = realm.globalEnv;
         }
         
-        realm.toString = function () { return "[object Realm]"; }
+        realm.toString = function () { return "[object CodeRealm]"; }
         
         realm.toValue = function (code) {
             saveInterAMD();
@@ -23411,7 +23464,7 @@ define("lib/runtime", ["lib/parser", "lib/api", "lib/slower-static-semantics"], 
 
         for (i = 0; i < j; i++) {
             element = elementList[i];
-ls
+
             if (element.type === "Elision") {
 
                 nextIndex += element.width;
