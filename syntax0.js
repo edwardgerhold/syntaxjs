@@ -9234,7 +9234,7 @@ define("lib/api", function (require, exports, module) {
     // Global Environment
     // ===========================================================================================================
 
-    function GlobalEnvironment(globalThis) {
+    function GlobalEnvironment(globalThis, intrinsics) {
 
         this.outer = null;
         this.objEnv = NewObjectEnvironment(globalThis, this.outer);
@@ -9246,6 +9246,7 @@ define("lib/api", function (require, exports, module) {
         this.lexEnv.toString = function () {
             return "[object GlobalLexicalEnvironment]";
         };
+
         this.VarNames = Object.create(null);
 
         for (var k in globalThis.Bindings) {
@@ -9493,6 +9494,7 @@ define("lib/api", function (require, exports, module) {
         this.Function = undefined;
         this.loader = ldr;
 
+        // self defined
         this.stack = [];
         this.eventQueue = [];
         this.xs = Object.create(null);
@@ -9645,7 +9647,20 @@ define("lib/api", function (require, exports, module) {
         return realm[name+"Tasks"];
     }
 
+    var queueNames = {
+        __proto__:null,
+        "Loading": true,
+        "Promise": true
+    }
     function EnqueueTask(queueName, task, args) {        
+            Assert(Type(queueName) === "string" && queueNames[queueName], "EnqueueTask: queueName has to be valid");
+            // Assert(isTaskName[task])
+            Assert(Array.isArray(args), "arguments have to be a list and to be equal in the number of arguments of task");
+            var callerContext = getContext();
+            var callerRealm = callerContext.realm;
+            var pending = PendingTaskRecord(task, arguments, callerRealm);
+            getTasks(queueName).push(pending);
+            return NormalCompletion(empty);
     }
 
     function NextTask (result, nextQueue) {
@@ -9656,7 +9671,10 @@ define("lib/api", function (require, exports, module) {
         }
         Assert(getStack().length === 0, "NextTask: The execution context stack has to be empty");
         var nextPending = nextQueue.shift();
-
+        var newContext = new ExecutionContext(null);
+        newContext.realm = nextPending.realm;
+        getStack.push(newContext);
+        callInternalSlot("Call", nextPending.Task, undefined, nextPending.Arguments);
     }
     // ===========================================================================================================
     // Reference 
@@ -9671,9 +9689,10 @@ define("lib/api", function (require, exports, module) {
     }
 
     Reference.prototype = {
+        constructor: Reference,
         toString: function () {
             return "[object Reference]";
-        },
+        } /*,
         GetValue: function () {
             return GetValue(this);
         },
@@ -9706,8 +9725,8 @@ define("lib/api", function (require, exports, module) {
         },
         GetThisValue: function () {
             return GetThisValue(this);
-        },
-        constructor: Reference
+        }*/
+        
     };
 
     function GetValue(V) {
@@ -9751,7 +9770,7 @@ define("lib/api", function (require, exports, module) {
         } else if (IsPropertyReference(V)) {
 
             if (HasPrimitiveBase(V)) {
-                Assert(base !== null && base !== undefined, "base never null or undefined");
+                Assert(base !== null && base !== undefined, "PutValue: base is never null nor undefined");
                 base = ToObject(base);
                 var succeeded = base.Set(V.name, W, GetThisValue(V));
                 if ((succeeded = ifAbrupt(succeeded)) && isAbrupt(succeeded)) return succeeded;
@@ -9886,11 +9905,11 @@ define("lib/api", function (require, exports, module) {
         if (desc == undefined) return undefined;
         if (desc.Origin) return desc.Origin;
         var obj = ObjectCreate();
-        callInternalSlot("DefineOwnProperty", obj,"value", new PropertyDescriptor(desc.value, true, true, true));
-        callInternalSlot("DefineOwnProperty", obj,"writable", new PropertyDescriptor(desc.writable, true, true, true));
-        callInternalSlot("DefineOwnProperty", obj,"get", new PropertyDescriptor(desc.get, true, true, true));
-        callInternalSlot("DefineOwnProperty", obj,"set", new PropertyDescriptor(desc.set, true, true, true));
-        callInternalSlot("DefineOwnProperty", obj,"enumerable", new PropertyDescriptor(desc.enumerable, true, true, true));
+        callInternalSlot("DefineOwnProperty", obj,"value",      new PropertyDescriptor(desc.value, true, true, true));
+        callInternalSlot("DefineOwnProperty", obj,"writable",   new PropertyDescriptor(desc.writable, true, true, true));
+        callInternalSlot("DefineOwnProperty", obj,"get",        new PropertyDescriptor(desc.get, true, true, true));
+        callInternalSlot("DefineOwnProperty", obj,"set",        new PropertyDescriptor(desc.set, true, true, true));
+        callInternalSlot("DefineOwnProperty", obj,"enumerable",   new PropertyDescriptor(desc.enumerable, true, true, true));
         callInternalSlot("DefineOwnProperty", obj,"configurable", new PropertyDescriptor(desc.configurable, true, true, true));
         return obj;
     }
@@ -10565,13 +10584,13 @@ define("lib/api", function (require, exports, module) {
         }
 
         if (typeof V === "number") {
-            return OrdinaryConstruct(getIntrinsic("%Number%"), V);
+            return OrdinaryConstruct(getIntrinsic("%Number%"), [V]);
         }
         if (typeof V === "string") {
-            return OrdinaryConstruct(getIntrinsic("%String%"), V);
+            return OrdinaryConstruct(getIntrinsic("%String%"), [V]);
         }
         if (typeof V === "boolean") {
-            return OrdinaryConstruct(getIntrinsic("%Boolean%"), V);
+            return OrdinaryConstruct(getIntrinsic("%Boolean%"), [V]);
         }
 
         // return V;
@@ -10986,6 +11005,11 @@ define("lib/api", function (require, exports, module) {
     function NewObjectEnvironment(O, E) {
         return new ObjectEnvironment(O, E);
     }
+
+    function NewGlobalEnvironment(global, intrinsics) {
+        return new GlobalEnvironment(global, intrinsics);
+    }
+
 
     function NewFunctionEnvironment(F, T) {
         Assert(getInternalSlot(F, "ThisMode") !== "lexical", "NewFunctionEnvironment: ThisMode is lexical");
@@ -12968,24 +12992,87 @@ define("lib/api", function (require, exports, module) {
     //
 
 
-        function IndirectEval(realm, source) {
-            
+        function IndirectEval(realm, source) {            
             return realm.toValue(source);
-
         }
 
-        function CreateRealm (realmObject) {
-            /*var realm = createRealm({ createOnly: true });
-            setInternalSlot(realmObject, "Realm", realm);
-            return realm;
-            */
+        exports.CreateRealm = CreateRealm;
 
+        function CreateRealm () {
             var realmRec = new CodeRealm();
+            setCodeRealm(realmRec); // setzt intrinsics
             
             var intrinsics = createIntrinsics(realmRec);
-            var newGlobal = ObjectCreate(null);
-            defineGlobalObject(newGlobal, intrinsics);
+            var newGlobal = createGlobalThis(realmRec, ObjectCreate(null), intrinsics);
+            var newGlobalEnv = new GlobalEnvironment(newGlobal);
+
+            realmRec.globalThis = newGlobal;
+            realmRec.globalEnv = newGlobalEnv;
+            realmRec.directEvalTranslate = undefined;
+            realmRec.directEvalFallback = undefined;
+            realmRec.indirectEval = undefined;
+            realmRec.Function = undefined;
+            return realmRec;
         }
+
+    var realms = [];
+    function saveCodeRealm() {
+        realms.push(realm);
+    }
+    function restoreCodeRealm() {
+        setCodeRealm(realms.pop());
+    }
+    function setCodeRealm(r) {  // CREATE REALM (API)
+        if (r) {
+            realm = r;
+            stack = realm.stack;
+            intrinsics = realm.intrinsics;
+            globalEnv = realm.globalEnv;
+            globalThis = realm.globalThis;
+        }
+        require("lib/runtime").setCodeRealm(r);
+    }
+
+    function createRealm(options) {
+        options = options || {}; // { createOnly: true, don´t set to current real
+        if (console.time) console.time("Creating Realm...");
+        var realm = CreateRealm(); // new CodeRealm(); // CreateRealm();
+        /*
+        setCodeRealm(realm); // loc
+        var intrinsics = createIntrinsics(realm);
+        realm.globalThis = OrdinaryObject(null);
+        realm.globalEnv = new GlobalEnvironment(realm.globalThis);
+        */
+        setCodeRealm(realm); 
+        // var cx;
+        // cx = newContext(null, realm.xs);
+
+        var context = new ExecutionContext(null, realm);
+        getStack().push(context);
+
+        // intrinsics
+        // createGlobalThis(realm, realm.globalThis, realm.intrinsic
+        realm.loader = undefined;
+
+        if (!options.createOnly) {
+            var cx = getContext();
+            cx.lexEnv = realm.globalEnv;
+            cx.varEnv = realm.globalEnv;
+        }
+
+        realm.toString = function () { return "[object CodeRealm]"; }
+        realm.toValue = function (code) {
+            saveCodeRealm();
+            setCodeRealm(realm);
+            var result = ecma.Evaluate(code);
+            restoreCodeRealm();
+            return result;
+        };
+        if (console.time) console.timeEnd("Creating Realm...");
+        return realm;
+    }
+
+
 
 
 
@@ -13741,6 +13828,244 @@ define("lib/api", function (require, exports, module) {
         }
 
 
+/*
+
+            Alte PromiseFunktionen
+*/
+
+
+        var ThenableCoercions = {
+            keys: [],
+            values: [],
+            has: function (obj) {
+                var keyIndex = this.keys.indexOf(obj);
+                return keyIndex > -1;
+            },
+            get: function (obj) {
+                var keyIndex = this.keys.indexOf(obj);
+                if (keyIndex > -1) {
+                    var item = this.values[keyIndex];
+                    return item;
+                }
+                return undefined;
+            },
+            set: function (obj, item) {
+                var keyIndex = this.keys.indexOf(obj);
+                if (keyIndex === -1) {
+                    keyIndex = this.keys.length;
+                    this.keys.push(obj);
+                }
+                this.values[keyIndex] = item;
+                return undefined;
+            },
+            toString: function () {
+                return "[object SlowLeakMap]";
+            }
+        };
+
+        function IsPromise(x) {
+
+            if (Type(x) == "object") {
+                if (getInternalSlot(x, "PromiseStatus") === undefined) return false;
+                return true;
+            }
+            return false;
+        }
+
+        function ToPromise(C, x) {
+            var pc = getInternalSlot(x, "PromiseConstructor");
+            if (IsPromise(x) && SameValue(pc, C)) return true;
+            var deferred = GetDeferred(C);
+            callInternalSlot("Resolve", deferred, x);
+            return deferred.Promise;
+        }
+
+        function Resolve(p, x) {
+            if (p.Following || p.Value || p.Reason) return;
+            if (IsPromise(x)) {
+                if (SameValue(p, x)) {
+                    var selfResolutionError = withError("Type", "resolve: self resolution error");
+                    SetReason(p, selfResolutionError);
+                } else if (x.Following) {
+                    p.Following = x.Following;
+                    x.Following.Derived.push({
+                        DerivedPromise: p,
+                        OnFulfilled: undefined,
+                        OnRejected: undefined
+                    });
+                } else if (x.Value) {
+                    SetValue(p, x.Value);
+                } else if (x.Reason) {
+                    SetReason(p, x.Reason);
+                } else {
+                    p.Following = x;
+                    x.Derived.push({
+                        DerivedPromise: p,
+                        OnFulfilled: undefined,
+                        OnRejected: undefined
+                    });
+                }
+            } else {
+                SetValue(p, x);
+            }
+        }
+
+        function Reject(p, r) {
+            if (p.Following || p.Value || p.Reason) return;
+            SetReason(p, r);
+        }
+
+        function Then(p, onFulfilled, onRejected) {
+            if (p.Following) return Then(p.Following, onFulfilled, onRejected);
+            else {
+                var q;
+                var C = Get(p, "constructor");
+                if ((C = ifAbrupt(C)) && isAbrupt(C)) {
+                    q = OrdinaryConstruct(PromiseConstructor, []);
+                    Reject(q, C);
+                } else {
+                    q = (GetDeferred(C)).Promise;
+                    var derived = {
+                        DerivedPromise: q,
+                        onFulfilled: onFulfilled,
+                        onRejected: onRejected
+                    };
+                    UpdateDerivedFromPromise(derived, p);
+                }
+                return q;
+            }
+        }
+
+        function PropagateToDerived(p) {
+
+            Assert( !! p.Value == !( !! p.Reason), "there is only one way to resolve or to reject");
+
+            var derived;
+            for (var i = 0, j = p.Derived.length; i < j; i++) {
+                derived = p.Derived[i];
+                UpdateDerived(derived, p);
+            }
+            p.Derived = [];
+        }
+
+        function UpdateDerived(derived, originator) {
+            var idx;
+            Assert( !! originator.Value == !( !! originator.Reason));
+            if (originator.Value) {
+
+                if (Type(originator.Value) === "object") {
+                    setTimeout(function () {
+                        if (ThenableCoercions.has(originator.Value)) {
+                            var coercedAlready = ThenableCoercions.get(originator.Value);
+                            UpdateDerivedFromPromise(derived, coercedAlready);
+                        } else {
+                            var then = Get(originator.Value, "then");
+                            if (isAbrupt(then)) {
+                                UpdateDerivedFromReason(derived, then);
+                            } else if (IsCallable(then)) {
+                                var coerced = CoerceThenable(originator.Value, then);
+                                UpdateDerivedFromPromise(derived, coerced);
+                            } else UpdateDerivedFromValue(derived, originator.Value);
+                        }
+                    }, 0);
+                } else {
+                    UpdateDerivedFromValue(derived, originator.Value);
+                }
+            } else {
+                UpdateDerivedFromReason(derived, originator.Reason);
+            }
+        }
+
+        function UpdateDerivedFromValue(derived, value) {
+            if (IsCallable(derived.OnFulfilled)) CallHandler(derived.DerivedPromise, derived.OnFulfilled, value);
+            else SetValue(derived.DerivedPromise, value);
+        }
+
+        function UpdateDerivedFromReason(derived, reason) {
+            if (IsCallable(derived.OnRejected)) CallHandler(derived.DerivedPromise, derived.OnRejected, value);
+            else SetReason(derived.DerivedPromise, reason);
+        }
+
+        function UpdateDerivedFromPromise(derived, promise) {
+            if (promise.Value || promise.Reason) UpdateDerived(derived, promise);
+            else promise.Derived.push(derived);
+        }
+
+        function CallHandler(derivedPromise, handler, argument) {
+            setTimeout(function () {
+                var v = handler.Call(undefined, [argument]);
+                if (isAbrupt(v)) Reject(derivedPromise, v);
+                else Resolve(derivedPromise, v);
+            });
+        }
+
+        function SetValue(p, value) {
+            Assert(!p.Value && !p.Reason);
+            p.Value = value;
+            p.Following = undefined;
+            PropagateToDerived(p);
+        }
+
+        function SetReason(p, reason) {
+            Assert(!p.Value && !p.Reason);
+            p.Reason = reason;
+            p.Following = undefined;
+            PropagateToDerived(p);
+        }
+
+        function CoerceThenable(thenable, then) {
+            Assert(Type(thenable) == "object");
+            Assert(IsCallable(then));
+            // Assert(execution context is empty);
+            var p = OrdinaryConstruct(PromiseConstructor, []);
+
+            var resolve = CreateBuiltinFunction(getRealm(),function (thisArg, argList) {
+                var x = argList[0];
+                Resolve(p, x);
+            });
+            var reject = CreateBuiltinFunction(getRealm(),function (thisArg, argList) {
+                var x = argList[0];
+                Reject(p, x);
+            });
+
+            var e = then.Call(thenable, [resolve, reject]);
+            if ((e = ifAbrupt(e)) && isAbrupt(e)) Reject(p, e);
+            ThenableCoercions.set(thenable, p);
+            return p;
+        }
+
+        function GetDeferred(C) {
+            var promise;
+            if (IsConstructor(C)) {
+                var resolver = CreateBuiltinFunction(getRealm(),function (thisArg, argList) {
+                    var resolve = argList[0];
+                    var reject = argList[1];
+                    if (resolve) {
+                        Resolve(promise, x);
+                    } else if (reject) {
+                        Reject(promise, x);
+                    }
+                });
+                promise = callInternalSlot("Construct", C, [resolver]);
+            } else {
+                promise = callInternalSlot("Construct", PromiseConstructor, []);
+                var resolve = CreateBuiltinFunction(getRealm(),function (thisArg, argList) {
+                    var x = argList[0];
+                    Resolve(promise, x);
+                });
+                var reject = CreateBuiltinFunction(getRealm(),function (thisArg, argList) {
+                    var x = argList[0];
+                    Reject(promise, x);
+                });
+                return {
+                    Promise: promise,
+                    Resolve: resolve,
+                    Reject: reject
+                };
+            }
+        }
+
+
     // ===========================================================================================================
     // exports
     // ===========================================================================================================
@@ -13991,6 +14316,7 @@ define("lib/api", function (require, exports, module) {
         var intrinsics = OrdinaryObject(null);
         realm.intrinsics = intrinsics;
 
+
         var ObjectPrototype = createIntrinsicPrototype(intrinsics, "%ObjectPrototype%");
         setInternalSlot(ObjectPrototype, "Prototype", null);
         
@@ -14110,12 +14436,15 @@ define("lib/api", function (require, exports, module) {
         var ModuleFunction = createIntrinsicConstructor(intrinsics, "Module", 0, "%Module%");
         var ModulePrototype = null;
 
+
+
         // ##################################################################
         // Der Module Loader Start
         // ##################################################################
 
-        var std_Module;// = OrdinaryModule(getGlobalThis());
 
+
+        var std_Module;// = OrdinaryModule(getGlobalThis());
         var std_Object;
         var std_ObjectPrototype;
         var std_Function;
@@ -17417,6 +17746,7 @@ define("lib/api", function (require, exports, module) {
             setInternalSlot(proxy, "Prototype", ProxyPrototype);
             setInternalSlot(proxy, "ProxyTarget", target);
             setInternalSlot(proxy, "ProxyHandler", handler);
+            if (!IsConstructor(target)) setInternalSlot(p, "Construct", undefined);
             return proxy;
         }
 
@@ -17445,17 +17775,21 @@ define("lib/api", function (require, exports, module) {
         };
 
         var ProxyConstructor_Call = function Call(thisArg, argList) {
+            return withError("Type", "The Proxy Constructor is supposed to throw when called without new.");
+        };
+
+        var ProxyConstructor_Construct = function (argList) {
             var target = argList[0];
             var handler = argList[1];
-            var p = ProxyCreate(target, handler);
-            if (!IsConstructor(target)) setInternalSlot(p, "Construct", undefined);
-            return p;
+            return ProxyCreate(target, handler);
         };
 
         LazyDefineBuiltinFunction(ProxyConstructor, "revocable", 2, ProxyConstructor_revocable);
         setInternalSlot(ProxyConstructor, "Call", ProxyConstructor_Call);
-
+        setInternalSlot(ProxyConstructor, "Construct", ProxyConstructor_Construct);
         
+
+
         // ===========================================================================================================
         // Reflect
         // ===========================================================================================================
@@ -19357,237 +19691,6 @@ define("lib/api", function (require, exports, module) {
         // http://github.com/domenic/promises-unwrapping
         //
 
-        var ThenableCoercions = {
-            keys: [],
-            values: [],
-            has: function (obj) {
-                var keyIndex = this.keys.indexOf(obj);
-                return keyIndex > -1;
-            },
-            get: function (obj) {
-                var keyIndex = this.keys.indexOf(obj);
-                if (keyIndex > -1) {
-                    var item = this.values[keyIndex];
-                    return item;
-                }
-                return undefined;
-            },
-            set: function (obj, item) {
-                var keyIndex = this.keys.indexOf(obj);
-                if (keyIndex === -1) {
-                    keyIndex = this.keys.length;
-                    this.keys.push(obj);
-                }
-                this.values[keyIndex] = item;
-                return undefined;
-            },
-            toString: function () {
-                return "[object SlowLeakMap]";
-            }
-        };
-
-        function IsPromise(x) {
-
-            if (Type(x) == "object") {
-                if (getInternalSlot(x, "PromiseStatus") === undefined) return false;
-                return true;
-            }
-            return false;
-        }
-
-        function ToPromise(C, x) {
-            var pc = getInternalSlot(x, "PromiseConstructor");
-            if (IsPromise(x) && SameValue(pc, C)) return true;
-            var deferred = GetDeferred(C);
-            callInternalSlot("Resolve", deferred, x);
-            return deferred.Promise;
-        }
-
-        function Resolve(p, x) {
-            if (p.Following || p.Value || p.Reason) return;
-            if (IsPromise(x)) {
-                if (SameValue(p, x)) {
-                    var selfResolutionError = withError("Type", "resolve: self resolution error");
-                    SetReason(p, selfResolutionError);
-                } else if (x.Following) {
-                    p.Following = x.Following;
-                    x.Following.Derived.push({
-                        DerivedPromise: p,
-                        OnFulfilled: undefined,
-                        OnRejected: undefined
-                    });
-                } else if (x.Value) {
-                    SetValue(p, x.Value);
-                } else if (x.Reason) {
-                    SetReason(p, x.Reason);
-                } else {
-                    p.Following = x;
-                    x.Derived.push({
-                        DerivedPromise: p,
-                        OnFulfilled: undefined,
-                        OnRejected: undefined
-                    });
-                }
-            } else {
-                SetValue(p, x);
-            }
-        }
-
-        function Reject(p, r) {
-            if (p.Following || p.Value || p.Reason) return;
-            SetReason(p, r);
-        }
-
-        function Then(p, onFulfilled, onRejected) {
-            if (p.Following) return Then(p.Following, onFulfilled, onRejected);
-            else {
-                var q;
-                var C = Get(p, "constructor");
-                if ((C = ifAbrupt(C)) && isAbrupt(C)) {
-                    q = OrdinaryConstruct(PromiseConstructor, []);
-                    Reject(q, C);
-                } else {
-                    q = (GetDeferred(C)).Promise;
-                    var derived = {
-                        DerivedPromise: q,
-                        onFulfilled: onFulfilled,
-                        onRejected: onRejected
-                    };
-                    UpdateDerivedFromPromise(derived, p);
-                }
-                return q;
-            }
-        }
-
-        function PropagateToDerived(p) {
-
-            Assert( !! p.Value == !( !! p.Reason), "there is only one way to resolve or to reject");
-
-            var derived;
-            for (var i = 0, j = p.Derived.length; i < j; i++) {
-                derived = p.Derived[i];
-                UpdateDerived(derived, p);
-            }
-            p.Derived = [];
-        }
-
-        function UpdateDerived(derived, originator) {
-            var idx;
-            Assert( !! originator.Value == !( !! originator.Reason));
-            if (originator.Value) {
-
-                if (Type(originator.Value) === "object") {
-                    setTimeout(function () {
-                        if (ThenableCoercions.has(originator.Value)) {
-                            var coercedAlready = ThenableCoercions.get(originator.Value);
-                            UpdateDerivedFromPromise(derived, coercedAlready);
-                        } else {
-                            var then = Get(originator.Value, "then");
-                            if (isAbrupt(then)) {
-                                UpdateDerivedFromReason(derived, then);
-                            } else if (IsCallable(then)) {
-                                var coerced = CoerceThenable(originator.Value, then);
-                                UpdateDerivedFromPromise(derived, coerced);
-                            } else UpdateDerivedFromValue(derived, originator.Value);
-                        }
-                    }, 0);
-                } else {
-                    UpdateDerivedFromValue(derived, originator.Value);
-                }
-            } else {
-                UpdateDerivedFromReason(derived, originator.Reason);
-            }
-        }
-
-        function UpdateDerivedFromValue(derived, value) {
-            if (IsCallable(derived.OnFulfilled)) CallHandler(derived.DerivedPromise, derived.OnFulfilled, value);
-            else SetValue(derived.DerivedPromise, value);
-        }
-
-        function UpdateDerivedFromReason(derived, reason) {
-            if (IsCallable(derived.OnRejected)) CallHandler(derived.DerivedPromise, derived.OnRejected, value);
-            else SetReason(derived.DerivedPromise, reason);
-        }
-
-        function UpdateDerivedFromPromise(derived, promise) {
-            if (promise.Value || promise.Reason) UpdateDerived(derived, promise);
-            else promise.Derived.push(derived);
-        }
-
-        function CallHandler(derivedPromise, handler, argument) {
-            setTimeout(function () {
-                var v = handler.Call(undefined, [argument]);
-                if (isAbrupt(v)) Reject(derivedPromise, v);
-                else Resolve(derivedPromise, v);
-            });
-        }
-
-        function SetValue(p, value) {
-            Assert(!p.Value && !p.Reason);
-            p.Value = value;
-            p.Following = undefined;
-            PropagateToDerived(p);
-        }
-
-        function SetReason(p, reason) {
-            Assert(!p.Value && !p.Reason);
-            p.Reason = reason;
-            p.Following = undefined;
-            PropagateToDerived(p);
-        }
-
-        function CoerceThenable(thenable, then) {
-            Assert(Type(thenable) == "object");
-            Assert(IsCallable(then));
-            // Assert(execution context is empty);
-            var p = OrdinaryConstruct(PromiseConstructor, []);
-
-            var resolve = CreateBuiltinFunction(getRealm(),function (thisArg, argList) {
-                var x = argList[0];
-                Resolve(p, x);
-            });
-            var reject = CreateBuiltinFunction(getRealm(),function (thisArg, argList) {
-                var x = argList[0];
-                Reject(p, x);
-            });
-
-            var e = then.Call(thenable, [resolve, reject]);
-            if ((e = ifAbrupt(e)) && isAbrupt(e)) Reject(p, e);
-            ThenableCoercions.set(thenable, p);
-            return p;
-        }
-
-        function GetDeferred(C) {
-            var promise;
-            if (IsConstructor(C)) {
-                var resolver = CreateBuiltinFunction(getRealm(),function (thisArg, argList) {
-                    var resolve = argList[0];
-                    var reject = argList[1];
-                    if (resolve) {
-                        Resolve(promise, x);
-                    } else if (reject) {
-                        Reject(promise, x);
-                    }
-                });
-                promise = callInternalSlot("Construct", C, [resolver]);
-            } else {
-                promise = callInternalSlot("Construct", PromiseConstructor, []);
-                var resolve = CreateBuiltinFunction(getRealm(),function (thisArg, argList) {
-                    var x = argList[0];
-                    Resolve(promise, x);
-                });
-                var reject = CreateBuiltinFunction(getRealm(),function (thisArg, argList) {
-                    var x = argList[0];
-                    Reject(promise, x);
-                });
-                return {
-                    Promise: promise,
-                    Resolve: resolve,
-                    Reject: reject
-                };
-            }
-        }
-
         var PromiseConstructor_resolve = function (thisArg, argList) {
                 var r = argList[0];
                 var deferred = GetDeferred(thisArg);
@@ -19685,7 +19788,7 @@ define("lib/api", function (require, exports, module) {
 
         };
 
-        var RegExp_Construct = function (thisArg, argList) {
+        var RegExp_Construct = function (argList) {
 
         };
 
@@ -20640,7 +20743,7 @@ define("lib/api", function (require, exports, module) {
             }
             if (comparator !== undefined) {
                 if (comparator !== "is") return withError("Range", "comparator argument has currently to be 'undefined' or 'is'");
-            }
+v            }
 
             setInternalSlot(set, "SetData", Object.create(null));
             setInternalSlot(set, "SetComparator", comparator);
@@ -20770,7 +20873,7 @@ define("lib/api", function (require, exports, module) {
                 if (comparator === undefined) same = SameValueZero;
                 else same = SameValue;
 
-                
+                    
                 var internalKey;
 
                 internalKey = __checkInternalUniqueKey(value);
@@ -21067,7 +21170,6 @@ define("lib/api", function (require, exports, module) {
 
                 if (!hasInternalSlot(E, "EventListeners")) return withError("Type", "[[Listeners]] missing on this argument");
                 else listeners = getInternalSlot(E, "EventListeners");
-
                 event = argList[0];
                 values = argList.slice(1);
                 if (Type(event) !== "string") return withError("Type", "Your argument 1 is not a event name string.");
@@ -21098,7 +21200,7 @@ define("lib/api", function (require, exports, module) {
         // Globales This erzeugen (sollte mit dem realm und den builtins 1x pro neustart erzeugt werden)
         // ===========================================================================================================
 
-        createGlobalThis = function createGlobalThis(globalThis, intrinsics) {
+        createGlobalThis = function createGlobalThis(realm, globalThis, intrinsics) {
             SetPrototypeOf(globalThis, ObjectPrototype);
             setInternalSlot(globalThis, "Extensible", true);
 
@@ -21131,6 +21233,9 @@ define("lib/api", function (require, exports, module) {
             DefineOwnProperty(globalThis, "ReferenceError", GetOwnProperty(intrinsics, "%ReferenceError%"));
             DefineOwnProperty(globalThis, "RegExp", GetOwnProperty(intrinsics, "%RegExp%"));
             DefineOwnProperty(globalThis, "SyntaxError", GetOwnProperty(intrinsics, "%SyntaxError%"));
+
+            LazyDefineProperty(globalThis, "System", realm.loader);
+
             DefineOwnProperty(globalThis, "TypeError", GetOwnProperty(intrinsics, "%TypeError%"));
             DefineOwnProperty(globalThis, "URIError", GetOwnProperty(intrinsics, "%URIError%"));
             DefineOwnProperty(globalThis, "Object", GetOwnProperty(intrinsics, "%Object%"));
@@ -21204,74 +21309,6 @@ define("lib/api", function (require, exports, module) {
     //
     // ---------------- this modul cares for suspending and restoring realms -----
     //
-
-    
-    var realms = [];
-
-    function saveCodeRealm() {
-        realms.push(realm);
-    }
-
-    function restoreCodeRealm() {
-        setCodeRealm(realms.pop());
-    }
-
-    function setCodeRealm(r) {  // CREATE REALM (API)
-        if (r) {
-            realm = r;
-            stack = realm.stack;
-            intrinsics = realm.intrinsics;
-            globalEnv = realm.globalEnv;
-            globalThis = realm.globalThis;
-        }
-        require("lib/runtime").setCodeRealm(r);
-    }
-
-    function createRealm(options) {
-        options = options || {}; // { createOnly: true, don´t set to current realm }
-
-        if (console.time) console.time("Creating Realm...");
-
-        
-        var realm = new CodeRealm();
-        setCodeRealm(realm); // loc
-        var intrinsics = createIntrinsics(realm);
-        realm.globalThis = OrdinaryObject(null);
-        realm.globalEnv = new GlobalEnvironment(realm.globalThis);
-        
-        setCodeRealm(realm); // local
-        // first context
-        var cx;
-        cx = newContext(null, realm.xs);
-        // intrinsics
-        createGlobalThis(realm.globalThis, realm.intrinsics);
-
-        realm.loader = undefined;
-
-        // quickAssignIntrVars(realm.xs);
-
-        if (!options.createOnly) {
-            var cx = getContext();
-            cx.lexEnv = realm.globalEnv;
-            cx.varEnv = realm.globalEnv;
-        }
-        
-        
-        realm.toString = function () { return "[object CodeRealm]"; }
-        
-
-        realm.toValue = function (code) {
-            saveCodeRealm();
-            setCodeRealm(realm);
-            var result = ecma.Evaluate(code);
-            restoreCodeRealm();
-            return result;
-        };
-        
-        if (console.time) console.timeEnd("Creating Realm...");
-
-        return realm;
-    }
 
     exports.createRealm = createRealm;
     exports.createIntrinsics = createIntrinsics;
@@ -22211,7 +22248,7 @@ define("lib/runtime", ["lib/parser", "lib/api", "lib/slower-static-semantics"], 
         if (!IsCallable(func)) return withError("Type", "EvaluateCall: func is not callable");
         if (Type(ref) === "reference") {
             if (IsPropertyReference(ref)) {
-                thisValue = ref.GetThisValue();
+                thisValue = GetThisValue(ref);
             } else {
                 var env = GetBase(ref);
                 thisValue = env.WithBaseObject();
@@ -22376,7 +22413,7 @@ define("lib/runtime", ["lib/parser", "lib/api", "lib/slower-static-semantics"], 
                         return received;
                     }
                 }
-                donone = IteratorComplete(iterator);
+                var done = IteratorComplete(iterator);
                 if ((done = ifAbrupt(done)) && isAbrupt(done)) return done;
                 if (done) {
                     innerValue = IteratorValue(innerResult);
@@ -23380,9 +23417,6 @@ define("lib/runtime", ["lib/parser", "lib/api", "lib/slower-static-semantics"], 
                     propName = typeof key === "string" ? key : key.name || key.value;
                 }
 
-                if (!isComputed && propName === "__proto__") {
-
-                }
                 
                 if (isCodeType("FunctionDeclaration")) {
                     status = defineFunctionOnObject(node, newObj, propName);
@@ -23397,7 +23431,6 @@ define("lib/runtime", ["lib/parser", "lib/api", "lib/slower-static-semantics"], 
                 }
                 
             } else if (kind === "method") {
-
                 propValue = Evaluate(node, newObj);
                 if ((propValue = ifAbrupt(propValue)) && isAbrupt(propValue)) return propValue;
 
@@ -23419,7 +23452,7 @@ define("lib/runtime", ["lib/parser", "lib/api", "lib/slower-static-semantics"], 
     evaluation.ObjectExpression = ObjectExpression;
     function ObjectExpression(node) {
         "use strict";
-        var props = node.properties;
+        var props = getCode(node, "properties");
         var newObj = ObjectCreate();        
         var status;
         for (var i = 0, j = props.length; i < j; i++) {
