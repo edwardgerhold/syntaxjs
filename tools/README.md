@@ -55,7 +55,7 @@ test.print();	// console.log
 ```
 
 ```javascript
-test.print({ el: ".valid_selector" }); // .innerHTML
+test.html({ el: ".valid_selector" }); // .innerHTML
 ````
 
 More about and with testerjs will come with syntaxjs over time.
