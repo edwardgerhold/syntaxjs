@@ -1621,7 +1621,7 @@ define("lib/tokenizer", ["lib/tables"], function (tables) {
 
     function RegularExpressionLiteral() {
         var expr = "",
-            flags = "";
+        flags = "";
         var n, l;
         if (ch === "/" && !NotBeforeRegExp[lastTokenType]) { // <--- grammatik
 
@@ -1629,6 +1629,7 @@ define("lib/tokenizer", ["lib/tables"], function (tables) {
                 expr += ch;
                 next();
                 if (i > j) throw new SyntaxError("Unexpected end of line, while parsing RegularExpressionLiteral at line " + line + ", column " + column);
+
                 big: while (i < j) {
 
                     if (ch === "/") {
@@ -1671,7 +1672,7 @@ define("lib/tokenizer", ["lib/tables"], function (tables) {
                 if (ok = RegularExpressionLiteral()) {
                     inputElementGoal = inputElementDiv;
                     return ok;
-                }
+                } else inputElementGoal = inputElementDiv;
                 // restoreTheDot();
             }
 
@@ -3175,6 +3176,7 @@ define("lib/slower-static-semantics", function (require, exports, modules) {
     }
 
     function PropName(node) {
+        if (typeof node === "string") return node;
         var type = node.type;
         var id = node.id;
         if (type === "MethodDefinition") {
@@ -3689,6 +3691,8 @@ define("lib/parser", ["lib/tables", "lib/tokenizer"], function (tables, tokenize
     var curParameter = "";
     var moduleStack = [];
     var curModule;
+    var curFunc;
+    var functionStack = [];
 
     var operator;
     var bytes = 0;
@@ -4445,7 +4449,8 @@ define("lib/parser", ["lib/tables", "lib/tokenizer"], function (tables, tokenize
                 pass(",");
             } else break;
 
-        } while (v !== "}" && v != undefined);
+        } while (v !== "}" && v !== undefined);
+
         return list;
     }
 
@@ -5183,10 +5188,14 @@ define("lib/parser", ["lib/tables", "lib/tokenizer"], function (tables, tokenize
 
     function SuperExpression(parent) {
         if (v === "super") {
+            
             var l1 = loc && loc.start;
             var node = Node("SuperExpression");
             node.loc = makeLoc(l1, l1);
             pass("super");
+            
+        if (curFunc) curFunc.needsSuper = true;
+
             if (compile) return builder.superExpression(node.home, node.method, node.loc);
             return node;
         }
@@ -5431,6 +5440,10 @@ define("lib/parser", ["lib/tables", "lib/tokenizer"], function (tables, tokenize
             if ((computedPropertyName && v ==="(") || rhs === "(" ) {
 
                 node = Node("MethodDefinition");
+
+                functionStack.push(curFunc)
+                curFunc = node;
+
                 if (computedPropertyName) {
                     node.id = computedPropertyName
                     node.computed = true;
@@ -5454,6 +5467,9 @@ define("lib/parser", ["lib/tables", "lib/tokenizer"], function (tables, tokenize
                 node.loc = makeLoc(l1, l2);
                 EarlyErrors(node);
                 if (compile) return builder.methodDefinition(node.id, node.params, node.body, node.strict, node.static, node.generator, node.loc);
+
+                curFunc = functionStack.pop();
+
                 return node;
 
             } else if (((computedPropertyName && v === "=") || rhs === "=") && !isObjectMethod) {    
@@ -5663,11 +5679,17 @@ define("lib/parser", ["lib/tables", "lib/tokenizer"], function (tables, tokenize
                 node = Node("FunctionDeclaration");
                 node.generator = false;
             }
+
+            functionStack.push(curFunc);
+            curFunc = node;
+
+
             node.id = null;
             node.params = [];
             node.expression = !! isExpr;
             node.strict = false;
             node.body = [];
+
 
             var id;
 
@@ -5711,10 +5733,13 @@ define("lib/parser", ["lib/tables", "lib/tokenizer"], function (tables, tokenize
             }
             defaultIsId = defaultStack.pop();
 
-            node.lexNames = ident.bound_lex();
-            node.varNames = ident.bound_var();
+            //node.lexNames = ident.bound_lex();
+            //node.varNames = ident.bound_var();
+            
             ident.old_scope();
             contains.old_scope();
+
+            curFunc = functionStack.pop();
 
             EarlyErrors(node);
             return node;
@@ -8687,7 +8712,7 @@ define("lib/api", function (require, exports, module) {
     }
 
     function SetPrototypeOf(O, V) {
-        if (Type(V) !== "object" && Type(V) !== "null") return withError("Type", "Assertion: argument is either object or null, but it is not.");
+        if (Type(V) !== "object" && V !== null) return withError("Type", "Assertion: argument is either object or null, but it is not.");
         var extensible = getInternalSlot(O, "Extensible");
         var current = getInternalSlot(O, "Prototype");
         if (SameValue(V, current)) return true;
@@ -9516,8 +9541,8 @@ define("lib/api", function (require, exports, module) {
     function ExecutionContext(outer, realm, state, generator) {
         "use strict";
 
-        this.state = state || getState();
-        this.realm = realm || getRealm();
+        this.state = state || getState();   // remove diese 2 argumente
+        this.realm = realm || getRealm();   // remove getstate und getrealm
 
         outer = outer || null;
         this.varEnv = NewDeclarativeEnvironment(outer);
@@ -9561,6 +9586,8 @@ define("lib/api", function (require, exports, module) {
 
     function NormalCompletion(argument, label) {
         var completion = new CompletionRecord(); // realm.completion;
+
+    // dont reuse old completions
         if (argument instanceof CompletionRecord) {
             completion = argument;
         } else completion.value = argument;
@@ -11006,8 +11033,8 @@ define("lib/api", function (require, exports, module) {
         return new ObjectEnvironment(O, E);
     }
 
-    function NewGlobalEnvironment(global, intrinsics) {
-        return new GlobalEnvironment(global, intrinsics);
+    function NewGlobalEnvironment(global) {
+        return new GlobalEnvironment(global);
     }
 
 
@@ -11842,18 +11869,17 @@ define("lib/api", function (require, exports, module) {
     // ===========================================================================================================
 
     function generatorCallbackWrong(generator, body) {
-        //var result = exports.ResumableEvaluation(body);
 
         var result = realm.xs.Evaluate(body);
         if ((result = ifAbrupt(result)) && isAbrupt(result)) return result;
-        // if (IteratorComplete(result)) {
-        if ((result = ifAbrupt(result)) && isAbrupt(result) && result.type === "return") {
-            Assert(isAbrupt(result) && result.type === "return", "expecting abrupt return completion");
-            setInternalSlot(generator, "GeneratorState", "completed");
-            if ((result = ifAbrupt(result)) && isAbrupt(result)) return result;
-            cx.generatorCallback = undefined;
-            return CreateItrResultObject(result, true);
-            //}
+        if (IteratorComplete(result)) {
+            if ((result = ifAbrupt(result)) && isAbrupt(result) && result.type === "return") {
+                Assert(isAbrupt(result) && result.type === "return", "expecting abrupt return completion");
+                setInternalSlot(generator, "GeneratorState", "completed");
+                if ((result = ifAbrupt(result)) && isAbrupt(result)) return result;
+                cx.generatorCallback = undefined;
+                return CreateItrResultObject(result, true);
+            }
         }
         return result;
     }
@@ -12173,10 +12199,10 @@ define("lib/api", function (require, exports, module) {
             return true;
         },
         Delete: function (P) {
-            var map = this.ParameterMap;
+            var map = getInternalSlot(this, "ParameterMap");
             var isMapped = callInternalSlot("GetOwnProperty", map, P);
             var result = Delete(this, P);
-            result = ifAbrupt(result);
+            if ((result = ifAbrupt(result)) && isAbrupt(result)) return result;
             if (result && isMapped) callInternalSlot("Delete", map, P);
         },
         
@@ -13000,7 +13026,8 @@ define("lib/api", function (require, exports, module) {
 
         function CreateRealm () {
             var realmRec = new CodeRealm();
-            setCodeRealm(realmRec); // setzt intrinsics
+            
+                setCodeRealm(realmRec); 
             
             var intrinsics = createIntrinsics(realmRec);
             var newGlobal = createGlobalThis(realmRec, ObjectCreate(null), intrinsics);
@@ -14330,19 +14357,19 @@ define("lib/api", function (require, exports, module) {
         
     Assert(getInternalSlot(ObjectConstructor, "Prototype") === FunctionPrototype, "ObjectConstructor and FunctionPrototype have to have a link");
         
-        var EncodeURIFunction = createIntrinsicConstructor(intrinsics, "EncodeURI", 0, "%EncodeURI%");
-        var DecodeURIFunction = createIntrinsicConstructor(intrinsics, "DecodeURI", 0, "%DecodeURI%");
+        var EncodeURIFunction = createIntrinsicConstructor(intrinsics, "encodeURI", 0, "%EncodeURI%");
+        var DecodeURIFunction = createIntrinsicConstructor(intrinsics, "ecodeURI", 0, "%DecodeURI%");
         var EncodeURIComponentFunction = createIntrinsicConstructor(intrinsics, "EncodeURIComponent", 0, "%EncodeURIComponent%");
         var DecodeURIComponentFunction = createIntrinsicConstructor(intrinsics, "DecodeURIComponent", 0, "%DecodeURIComponent%");
         var SetTimeoutFunction = createIntrinsicConstructor(intrinsics, "SetTimeout", 0, "%SetTimeout%");
         var SetImmediateFunction = createIntrinsicConstructor(intrinsics, "SetImmediate", 0, "%SetImmediate%");
-        var IsNaNFunction = createIntrinsicConstructor(intrinsics, "IsNaN", 0, "%IsNaN%");
-        var IsFiniteFunction = createIntrinsicConstructor(intrinsics, "IsFinite", 0, "%IsFinite%");
-        var ParseFloatFunction = createIntrinsicConstructor(intrinsics, "ParseFloat", 0, "%ParseFloat%");
-        var ParseIntFunction = createIntrinsicConstructor(intrinsics, "ParseInt", 0, "%ParseInt%");
-        var EscapeFunction = createIntrinsicConstructor(intrinsics, "Escape", 0, "%Escape%");
-        var UnescapeFunction = createIntrinsicConstructor(intrinsics, "Unescape", 0, "%Unescape%");
-        var EvalFunction = createIntrinsicConstructor(intrinsics, "Eval", 0, "%Eval%");
+        var IsNaNFunction = createIntrinsicConstructor(intrinsics, "isNaN", 0, "%IsNaN%");
+        var IsFiniteFunction = createIntrinsicConstructor(intrinsics, "isFinite", 0, "%IsFinite%");
+        var ParseFloatFunction = createIntrinsicConstructor(intrinsics, "parseFloat", 0, "%ParseFloat%");
+        var ParseIntFunction = createIntrinsicConstructor(intrinsics, "parseInt", 0, "%ParseInt%");
+        var EscapeFunction = createIntrinsicConstructor(intrinsics, "escape", 0, "%Escape%");
+        var UnescapeFunction = createIntrinsicConstructor(intrinsics, "unescape", 0, "%Unescape%");
+        var EvalFunction = createIntrinsicConstructor(intrinsics, "eval", 0, "%Eval%");
         var RegExpConstructor = createIntrinsicConstructor(intrinsics, "RegExp", 0, "%RegExp%");
         var RegExpPrototype = createIntrinsicPrototype(intrinsics, "%RegExpPrototype%");
         var ProxyConstructor = createIntrinsicConstructor(intrinsics, "Proxy", 0, "%Proxy%");
@@ -14421,7 +14448,7 @@ define("lib/api", function (require, exports, module) {
         var JSONObject = createIntrinsicObject(intrinsics, "%JSON%");
         var MathObject = createIntrinsicObject(intrinsics, "%Math%");
         var ConsoleObject = createIntrinsicObject(intrinsics, "%Console%");
-        var LoadFunction = createIntrinsicConstructor(intrinsics, "Load", 0, "%Load%");
+        var LoadFunction = createIntrinsicConstructor(intrinsics, "load", 0, "%Load%");
         var RequestFunction = createIntrinsicConstructor(intrinsics, "Request", 0, "%Request%");
         var EmitterConstructor = createIntrinsicConstructor(intrinsics, "Emitter", 0, "%Emitter%");
         var EmitterPrototype = createIntrinsicPrototype(intrinsics, "%EmitterPrototype%");
@@ -15060,6 +15087,8 @@ define("lib/api", function (require, exports, module) {
         // Console (add-on, with console.log);
         // ===========================================================================================================
 
+        LazyDefineBuiltinConstant(ConsoleObject, $$toStringTag, "Console");
+
         DefineOwnProperty(ConsoleObject, "log", {
             value: CreateBuiltinFunction(getRealm(),function log(thisArg, argList) {
                 console.log.apply(console, argList);
@@ -15072,6 +15101,16 @@ define("lib/api", function (require, exports, module) {
         DefineOwnProperty(ConsoleObject, "dir", {
             value: CreateBuiltinFunction(getRealm(),function dir(thisArg, argList) {
                 console.dir.apply(console, argList);
+            }),
+            writable: true,
+            enumerable: false,
+            configurable: true
+
+        });
+
+        DefineOwnProperty(ConsoleObject, "error", {
+            value: CreateBuiltinFunction(getRealm(),function error(thisArg, argList) {
+                console.error.apply(console, argList);
             }),
             writable: true,
             enumerable: false,
@@ -15111,6 +15150,7 @@ define("lib/api", function (require, exports, module) {
         // ===========================================================================================================
         // Array Iterator
         // ===========================================================================================================
+
         setInternalSlot(ArrayIteratorPrototype, "Prototype", ObjectPrototype);
         DefineOwnProperty(ArrayIteratorPrototype, $$iterator, {
             value: CreateBuiltinFunction(getRealm(),function (thisArg, argList) {
@@ -15120,6 +15160,7 @@ define("lib/api", function (require, exports, module) {
             configurable: false,
             writable: false
         });
+
         DefineOwnProperty(ArrayIteratorPrototype, $$toStringTag, {
             value: "Array Iterator",
             enumerable: false,
@@ -23302,6 +23343,109 @@ define("lib/runtime", ["lib/parser", "lib/api", "lib/slower-static-semantics"], 
         return NormalCompletion(array);
     }
 
+
+
+
+    evaluation.PropertyDefinition = PropertyDefinition;
+    function PropertyDefinition(newObj, propertyDefinition) {
+        "use strict";
+
+            var kind = propertyDefinition.kind;
+            var key =  propertyDefinition.key;
+            var node = propertyDefinition.value;
+            
+            var strict = node.strict;
+            var isComputed = propertyDefinition.computed;
+
+            var status;   
+            var exprRef, exprValue;
+            var propRef, propName, propValue;
+            var closure;
+            var formals;
+            var body;
+            var scope;
+            var hasSuperRef;
+            var homeObject;
+            var methodName;
+            var functionPrototype;
+
+            
+            /* I refactored it today, but resetted it tonight, i rewrite it tomorrow */
+            
+
+        // TOMORROW ? (FOUR DAYS AGO)
+
+            if (kind == "init") {
+
+                // prop key
+                if (isComputed) {
+                    var symRef = Evaluate(key);
+                    var symValue = GetValue(symRef);
+                    if ((symValue=ifAbrupt(symValue)) && isAbrupt(symValue)) return symValue;
+                    if (!IsSymbol(symValue)) return withError("Type", "A [computed] property inside an object literal has to evaluate to a Symbol primitive");
+                    propName = symValue;
+                } else {
+                    
+                    // init
+                    propName = PropName(key);
+
+                }
+
+                // value
+                if (isCodeType("FunctionDeclaration")) {
+
+                    status = defineFunctionOnObject(node, newObj, propName);
+
+                    if (isAbrupt(status)) return status;
+                
+                } else {
+
+                    propRef = Evaluate(node, newObj);
+                    if ((propRef = ifAbrupt(propRef)) && isAbrupt(propRef)) return propRef;
+                    propValue = GetValue(propRef);
+                    if ((propValue = ifAbrupt(propValue)) && isAbrupt(propValue)) return propValue;
+                    
+
+                    // B 3.
+                // DOESNT WORK
+                    if (!isComputed && propName === "__proto__") {
+                        if (Type(propValue) === "object" || propValue === null) {
+                            return callInternalSlot("SetPrototypeOf", newObj, propValue);
+                        }
+                        return NormalCompletion(empty);
+                    }
+                // FOR NOW
+
+                    // Der neue IsAnonymousFn fehlt noch.
+
+
+                    status = CreateDataProperty(newObj, propName, propValue);
+                    if (isAbrupt(status)) return status;
+                }
+
+
+                
+            } else if (kind === "method") {
+                propValue = Evaluate(node, newObj);
+                if ((propValue = ifAbrupt(propValue)) && isAbrupt(propValue)) return propValue;
+
+            } else if (kind === "get" || kind === "set") {
+                                
+                // get [s] () { return 10 }
+                if (node.computed) {
+                    propName = GetValue(Evaluate(key));
+                    if ((propName =ifAbrupt(propName)) && isAbrupt(propName)) return propName;
+                    if (!IsSymbol(propName)) return withError("Type", "A [computed] property inside an object literal has to evaluate to a Symbol primitive");
+                } else {
+                    propName = typeof key === "string" ? key : key.name || key.value;
+                }
+                defineGetterOrSetterOnObject(node, newObj, propName, kind);
+            }
+        
+    }
+
+// Got to REDO ALL FOUR FUNCTIONS above and below from paper. It´s messed up (a litte, 2 init, 2 method because auf a missing computedpropertyname in propertykey and a missing propertykey() in method definition). thats all.
+
     function defineFunctionOnObject (node, newObj, propName) {
             
             var scope = getLexEnv();
@@ -23377,76 +23521,6 @@ define("lib/runtime", ["lib/parser", "lib/api", "lib/slower-static-semantics"], 
             status = DefineOwnPropertyOrThrow(newObj, propName, desc);       
             if (isAbrupt(status)) return status;
 
-    }
-
-
-    evaluation.PropertyDefinition = PropertyDefinition;
-    function PropertyDefinition(newObj, propertyDefinition) {
-        "use strict";
-            var kind = propertyDefinition.kind;
-            var key = propertyDefinition.key;
-            var node = propertyDefinition.value;
-            var strict = node.strict;
-            var isComputed = node.computed;
-
-            var status;   
-            var exprRef, exprValue;
-            var propRef, propName, propValue;
-            var closure;
-            var formals;
-            var body;
-            var scope;
-            var hasSuperRef;
-            var homeObject;
-            var methodName;
-            var functionPrototype;
-
-            
-            /* I refactored it today, but resetted it tonight, i rewrite it tomorrow */
-            
-            if (kind == "init") {
-
-                if (isComputed) {
-                    var symRef = Evaluate(key);
-                    var symValue = GetValue(symRef);
-                    if ((symValue=ifAbrupt(symValue)) && isAbrupt(symValue)) return symValue;
-                    if (!IsSymbol(symValue)) return withError("Type", "A [computed] property inside an object literal has to evaluate to a Symbol primitive");
-                    propName = symValue;
-                } else {
-                    // init
-                    propName = typeof key === "string" ? key : key.name || key.value;
-                }
-
-                
-                if (isCodeType("FunctionDeclaration")) {
-                    status = defineFunctionOnObject(node, newObj, propName);
-                    if (isAbrupt(status)) return status;
-                } else {
-                    propRef = Evaluate(node, newObj);
-                    if ((propRef = ifAbrupt(propRef)) && isAbrupt(propRef)) return propRef;
-                    propValue = GetValue(propRef);
-                    if ((propValue = ifAbrupt(propValue)) && isAbrupt(propValue)) return propValue;
-                    status = CreateDataProperty(newObj, propName, propValue);
-                    if (isAbrupt(status)) return status;
-                }
-                
-            } else if (kind === "method") {
-                propValue = Evaluate(node, newObj);
-                if ((propValue = ifAbrupt(propValue)) && isAbrupt(propValue)) return propValue;
-
-            } else if (kind === "get" || kind === "set") {
-                                
-                // get [s] () { return 10 }
-                if (node.computed) {
-                    propName = GetValue(Evaluate(key));
-                    if ((propName =ifAbrupt(propName)) && isAbrupt(propName)) return propName;
-                    if (!IsSymbol(propName)) return withError("Type", "A [computed] property inside an object literal has to evaluate to a Symbol primitive");
-                } else {
-                    propName = typeof key === "string" ? key : key.name || key.value;
-                }
-                defineGetterOrSetterOnObject(node, newObj, propName, kind);
-            }
-        
     }
 
     evaluation.ObjectExpression = ObjectExpression;
@@ -25001,14 +25075,54 @@ define("lib/runtime", ["lib/parser", "lib/api", "lib/slower-static-semantics"], 
         return NormalCompletion(empty);
     }
 
-    function tellExecutionContext(node, i) {
+    /*
 
+        Generator:
+
+        - if i enter a generator
+        - i have to record the code evaluation state
+          (which is mentioned at the beginning)
+
+          body (list)
+          recordNesting(body) -> onto stack
+
+
+
+    */
+
+
+    var HasToBeRecorded = {
+        __proto__:null,
+        "ForStatement":true,
+        "ForOfStatement":true,
+        "ForInStatement":true,
+        "WhileStatement":true,
+        "DoWhileStatement":true,
+        "SwitchStatement": true
+    };
+
+    function rewindNesting() {
+        cx.state.resumeEvaluation = true;
+    }
+    function recordNesting(node) {
+
+        if (HasToBeRecorded[node.type]) {
+            // push onto stack
+            cx.state.nesting.push(node);
+            cx.state.activeParent = node;
+        }
+
+    }   
+
+    function tellExecutionContext(node, i, parent) {
         loc = node.loc || loc;
         cx.state.node = node;
-        cx.line = loc.start.line;
+        cx.line =   loc.start.line;
         cx.column = loc.start.column;
-        cx.index = i;
-        if (node.strict !== undefined) cx.strict = node.strict;
+
+        if (node.strict !== undefined) {
+            cx.strict = node.strict;
+        }
     }
 
     evaluation.ScriptBody =
@@ -25102,80 +25216,6 @@ define("lib/runtime", ["lib/parser", "lib/api", "lib/slower-static-semantics"], 
         "body": "body",
         "block": "block"
     };
-
-    function RecordIndex(search, node, state) {
-        var p, k, i, j;
-        var type = search.type;
-        if (search === node) return state;
-        if (Array.isArray(node)) {
-            for (i = 0, j = node.length; i < j; i++) {
-                p = node[i];
-                if (RecordIndex(search, p, state)) {
-                    state.push(i);
-                    return state;
-                }
-            }
-        }
-        for (k in node) {
-            if (Object.hasOwnProperty.call(node, k)) {
-                if (p = node[DiverseSubProductions[k]]) {
-                    i = RecordIndex(search, p, state);
-                    if (i) state.push(k);
-                    return state;
-                }
-
-            }
-        }
-    }
-
-    function GetRootNode(node) {
-        var root;
-        if (!node.parent) return node;
-        root = node.parent;
-        do {
-            if (root.parent) root = root.parent;
-        } while (root.parent);
-        return root;
-    }
-
-    ecma.ResumableEvaluation = ResumableEvaluation;
-
-    function ResumableEvaluation(node, state, completion) {
-
-        if (!state) state = RecordIndex(node, GetRootNode(node), []);
-
-        var pos = state.pop();
-        var production = node[pos];
-        var exprRef;
-        var exprValue;
-        var p;
-
-        if (Array.isArray(production)) {
-
-            // Halt hier muss ich den Loop drueber resumen, das heisst,
-            // hier die Position ermitteln und
-            // dem Ding drueber die Parameter zum resumen mitgeben.
-
-            pos = state.pop();
-
-            if (state.length) {
-                completion = ResumableEvaluation(production[pos], state, completion);
-            }
-
-            for (var i = pos, j = production.length; i < j; i++) {
-                var p = production[i];
-                exprRef = Evaluate(p, completion); // YieldExpression mit Value ???
-                if ((exprRef = ifAbrupt(exprRef)) && isAbrupt(exprRef)) return exprRef;
-                if (cx.pauseGenerator) return exprRef;
-            }
-
-            return NormalCompletion();
-
-        } else {
-            if (!state.length) return Evaluate(node, completion);
-            return ResumableEvaluation(production, state, completion);
-        }
-    }
 
     function Evaluate(node) {
         var E, R;
