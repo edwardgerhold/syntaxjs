@@ -1414,15 +1414,16 @@ define("lib/tokenizer", ["lib/tables"], function (tables) {
     var filename = null;
 
     var lastTokenType;
+    var templateParse = false;
     var inputElementDiv = 1;
     var inputElementRegExp = 2;
     var inputElementTemplateTail = 3;
     var inputElementGoal = inputElementRegExp;
 
-    function newNodeId() {
-        var id = "" + Math.random();
-        if (tokenTable[id]) id = newNodeId();
-        return id;
+
+
+    function Assert(test, message) {
+        if (!test) throwError(new SyntaxError("tokenizer: "+message));
     }
 
     function nextLine() {
@@ -1430,10 +1431,6 @@ define("lib/tokenizer", ["lib/tables"], function (tables) {
         ++line;
         column = 0;
         return line;
-    }
-
-    function nestingError(r) {
-        throw SyntaxError("incorrectly nested " + r);
     }
 
     var AllowedLastChars = {
@@ -1698,7 +1695,7 @@ define("lib/tokenizer", ["lib/tables"], function (tables) {
             } else if (RPAREN[ch]) {
                 var p = parens.pop();
                 if (LPARENOF[ch] !== p) {
-                    //    			nestingError();
+                    
                 }
             }
             return pushtoken("Punctuator", ch, undefined, PunctToExprName[ch]);
@@ -3946,13 +3943,6 @@ define("lib/parser", ["lib/tables", "lib/tokenizer"], function (tables, tokenize
         if (debugmode && typeof importScripts !== "function") console.dir.apply(console, arguments);
     }
 
-    /*
-	function newNodeId() {
-		var id = ""+Math.random();
-		if (tokenTable[id]) id = newNodeId();
-		return id;
-	}
-*/
 
     // ========================================================================================================
     // Node
@@ -13060,166 +13050,7 @@ define("lib/api", function (require, exports, module) {
     }
 
 
-
-
-
-        function ProceedToLocate(loader, load, p) {
-            p = PromiseResolve(undefined);
-            var F = CallLocate();
-            setInternalSlot(F, "Loader", loader);
-            setInternalSlot(F, "Load", load);
-            p = PromiseThen(loader, load, p);
-            return ProceedToFetch(loader, load, p);
-        }
-
-        function ProceedToFetch(loader, load, p) {
-            var F = CallFetch();
-            setInternalSlot(F, "Loader", loader);
-            setInternalSlot(F, "Load", load);
-            setInternalSlot(F, "AddressPromise", p);
-            return ProceedToTranslate(loader, load, p);
-        }
-
-        function ProceedToTranslate(loader, load, p) {
-            var F = CallTranslate();
-            setInternalSlot(F, "Loader", loader);
-            setInternalSlot(F, "Load", load);
-            p = PromiseThen(p, F);
-            F = CallInstantiate();
-            setInternalSlot(F, "Loader", loader);
-            setInternalSlot(F, "Load", load);
-            p = PromiseThen(p, F);
-            F = InstantiateSucceeded();
-            setInternalSlot(F, "Loader", loader);
-            setInternalSlot(F, "Load", load);
-            p = PromiseThen(p, F);
-            F = LoadFailed();
-            setInternalSlot(F, "Load", load);
-            p = PromiseCatch(p, F);
-        }
-
-        function SimpleDefine(obj, name, value) {
-            return OrdinaryDefineOwnProperty(obj, name, {
-                value: value,
-                writable: true,
-                enumerable: true,
-                configurable: true
-            });
-        }
-
-        var CallLocate_Call = function (thisArg, argList) {
-            var F = this;
-            var loader = getInternalSlot(F, "Loader");
-            var load = getInternalSlot(F, "Load");
-            var hook = Get(loader, "locate");
-            if ((hook=ifAbrupt(hook)) && isAbrupt(hook)) return hook;
-            if (!IsCallable(hook)) return withError("Type", "call locate hook is not callable");
-            SimpleDefine(obj, "name", load.Name);y
-            SimpleDefine(obj, "metadata", load.Metadata);
-            return callInternalSlot("Call", hook, loader, [obj]);
-        };
-
-        function CallLocate() {
-            var F = OrdinaryFunction();
-            setInternalSlot(F, "Call", CallLocate_Call);
-            return F;
-        }
-
-        var CallFetch_Call = function (thisArg, argList) {
-            var F = this;
-            var address = argList[0];
-            var loader = getInternalSlot(F, "Loader");
-            var load = getInternalSlot(F, "Load");
-            load.Address = address;
-            var hook = Get(loader, "fetch");
-            if ((hook=ifAbrupt(hook)) && isAbrupt(hook)) return hook;
-            if (!IsCallable(hook)) return withError("Type", "call fetch hook is not callable");            
-            var obj = ObjectCreate();
-            SimpleDefine(obj, "name", load.Name);
-            SimpleDefine(obj, "metadata", load.Metadata);
-            SimpleDefine(obj, "address", address);
-            return callInternalSlot("Call", hook, loader, [obj]);
-        };
-
-        function CallFetch() {
-            var F = OrdinaryFunction();
-            setInternalSlot(F, "Call", CallFetch_Call);
-            return F;
-        }
-
-        var CallTranslate_Call = function (thisArg, argList) {
-            var F = this;
-            var source = argList[0];
-            var loader = getInternalSlot(F, "Loader");
-            var load = getInternalSlot(F, "Load");
-            if (!load.LinkSets.length) return NormalCompletion(undefined);
-            var hook = Get(loader, "translate");
-            if ((hook=ifAbrupt(hook)) && isAbrupt(hook)) return hook;
-            if (!IsCallable(hook)) return withError("Type", "call translate hook is not callable");            
-            var obj = ObjectCreate();
-            SimpleDefine(obj, "name", load.Name);
-            SimpleDefine(obj, "metadata", load.Metadata);
-            SimpleDefine(obj, "address", load.Address);
-            SimpleDefine(obj, "source", source);
-            return callInternalSlot("Call", hook, loader, [obj]);
-        };
-
-        function CallTranslate() {
-            var F = OrdinaryFunction();
-            setInternalSlot(F, "Call", CallTranslate_Call);
-            return F;
-        }
-
-        var CallInstantiate_Call = function (thisArg, argList) {
-            var F = this;
-            var source = argList[0];
-            var loader = getInternalSlot(F, "Loader");
-            var load = getInternalSlot(F, "Load");
-            var hook = Get(loader, "instantiate");
-            if ((hook=ifAbrupt(hook)) && isAbrupt(hook)) return hook;
-            if (!IsCallable(hook)) return withError("Type", "call translate hook is not callable");            
-            var obj = ObjectCreate();
-            SimpleDefine(obj, "name", load.Name);
-            SimpleDefine(obj, "metadata", load.Metadata);
-            SimpleDefine(obj, "address", load.Address);
-            SimpleDefine(obj, "source", source);
-            return callInternalSlot("Call", hook, loader, [obj]);
-        };
-
-        function CallInstantiate() {
-            var F = OrdinaryFunction();
-            setInternalSlot(F, "Call", CallInstantiate_Call);
-            return F;
-        }
-
-        var InstantiateSucceeded_Call = function (thisArg, argList) {
-            var instantiateResult = argList[0];
-            var loader = getInternalSlot(F, "loader");
-            var load = getInternalSlot(F, "load");
-            var depsList;
-            if (!load.LinkSets.length) return NormalCompletion(undefined);
-            if (instantiateResult) {
-                var body = parseGoal("Module", load.Source);
-                load.Body = body;
-                load.Kind = "declarative";
-                depsList = ModuleRequests(body);
-            } else if (Type(instantiateResult) === "object") {
-                var deps = Get(instantiateResult, "deps");
-                if ((deps=ifAbrupt(deps)) && isAbrupt(deps)) return deps;
-                if (deps === undefined) depsList = [];
-                else {
-                    depsList = IterableToList(deps);
-                    //if ((depsList=ifAbrupt(depsList)) && isAbrupt(depsList)) return depsList;
-                }
-                var execute = Get(instantiateResult, "execute");
-                load.Execute = execute;
-                load.Kind = "dynamic";
-            } else {
-                return withError("Type", "error with instantiation result");
-            }
-            return ProcessLoadDependencies(load, loader, depsList);
-        };
-
+        
         function IterableToList(iterable) {
             //var A = ArrayCreate();
             var A = [];
@@ -13231,72 +13062,7 @@ define("lib/api", function (require, exports, module) {
             }
             return A;
         }
-
-        function InstantiateSucceeded() {
-            var F = OrdinaryFunction();
-            setInternalSlot(F, "Call", InstantiateSucceeded_Call);
-            return F;
-        }
-
-        function ProcessLoadDependencies(load, loader, depsList) {
-            var refererName = load.Name;
-            load.dependencies = [];
-            var loadPromises = [];
-            for (var i = 0, j = depsList.length; i < j; i++) {
-                var request = depsList[i];
-                var p = RequestLoad(loader, request, refererName, load.Address);
-                var F = AddDependencyLoad();
-                setInternalSlot(F, "Load", load);
-                setInternalSlot(F, "Request", request);
-                p = PromiseThen(p, F);
-                loadPromises.push(p);
-            }
-            var p = PromiseAll(loadPromises);
-            var F = LoadSucceeded();p
-
-            setInternalSlot(F, "Load", load);
-            p = PromiseThen(p, F);
-            return p;
-        }
-
-        var AddDependencyLoad_Call = function (thisArg, argList) {
-            var depLoad = argList[0];
-            var parentLoad = getInternalSlot(F, "ParentLoad");
-            var request = getInternalSlot(F, "Request");
-            Assert(!parentLoad.dependecies[request], "there is no parentLoad dependency whose key is equal to request, but it is");
-            parentLoad.dependencies[request] = depLoad; //.Name;
-            if (depLoad.Status !== "linked") {
-                var linkSets = parentLoad.LinkSets; //.slice();
-                for (var i = 0, j = linkSets.length; i < j; i++) {
-                    var linkSet = linkSets[i];
-                    AddLoadToLinkSet(linkSet, depLoad);
-                }
-            }
-        };
-
-        function AddDependencyLoad() {
-            var F = OrdinaryFunction();
-            setInternalSlot(F, "Call", AddDependencyLoad_Call);
-            return F;
-        }
-
-        var LoadSucceeded_Call = function (thisArg, argList) {
-            var load = getInternalSlot(F, "Load");
-            Assert(load.Status === "loading", "load.Status should have been loading but isnt");
-            load.Status = "loaded";
-            var linkSets = load.LinkSets;
-            for (var i = 0, j = linkSets.length; i < j; i++) {
-                var linkSet = linkSets[i];
-                UpdateLinkSetOnLoad(linkSet, load);
-            }
-    };
-
-        function LoadSucceeded() {
-            var F = OrdinaryFunction();
-            setInternalSlot(F, "Call", LoadSucceeded_Call);
-            return F;
-        }
-
+        
         function LinkSet() {
             return {
                 loader: undefined,
@@ -13409,49 +13175,7 @@ define("lib/api", function (require, exports, module) {
         }
 
 
-        // update 27.1.
-        var AsyncStartLoadPartwayThrough_Call = function (thisArg, argList) {
-            var F = thisArg;
-            var state = getInternalSlot(F, "StepState");
-
-            var loader = state.Loader;
-            var name = state.ModuleName;
-            var step = state.step;
-            var source = state.ModuleSource;
-            if (loader.Modules[name]) return withError("Type", "Got name in loader.Modules")
-
-            /*
-            step 7 deferred because of typeos
-            for (var i = 0, j = loader.loads.length, loads = loader.loads; i < j; i++) {
-                var load = loads[i];
-                if (load.Name === name) return withError("Type", "loader.loads may not contain a record with the same name");
-            }
-            */
-
-            load = CreateLoad(name);
-            load.Metadata = metadata;
-            var linkSet = CreateLinkSet(loader, load);
-            loader.loads.push(load);
-            var result = callInternalSlot("Call", resolve, null, [linkSet.done]);
-            if (step === "locate") {
-                ProceedToLocate(loader, load);
-            } else if (step === "fetch") {
-                var addressPromise = PromiseOf(address);
-                ProceedToFetch(loader, load, addressPromise);
-            } else {
-                Assert(step === "translate", "step has to be translate");
-                load.Address = address;
-                var sourcePromise = PromiseOf(source);
-                ProceedToTranslate(loader, load, sourcePromise);
-            }
-        };
-
-        function AsyncStartLoadPartwayThrough() {
-            var F = OrdinaryFunction();
-            setInternalSlot(F, "Call", AsyncStartLoadPartwayThrough_Call);
-            return F;
-        }
-
+        
         var EvaluateLoadedModule_Call = function (thisArg, argList) {
             var F = thisArg;
             var loader = getInternalSlot(F, "Loader");
@@ -14265,6 +13989,14 @@ define("lib/api", function (require, exports, module) {
         // %Loader% und Loader.prototype
         // ##################################################################
 
+        function hasRecordInList(list, field, value) {
+            for (var i = 0, j = list.length; i < j; i++) {
+                var r = list[i];
+                if (r[field] === value) return true;
+            }
+            return false;
+        }
+
 
         function thisLoader(value) {
             if (Type(value) === "object" && hasInternalSlot(value, "Modules")) {
@@ -14293,8 +14025,6 @@ define("lib/api", function (require, exports, module) {
             loader.LoaderObj = object;
             return loader;
         }       
-
-
 
         function LoadRecord() {
             var lr = Object.create(LoadRecord.prototype);
@@ -14326,8 +14056,6 @@ define("lib/api", function (require, exports, module) {
             return load;
         }
 
-
-
         // 27.1.
         function CreateLoadRequestObject(name, metadata, address, source) {
             var obj = ObjectCreate();
@@ -14346,9 +14074,6 @@ define("lib/api", function (require, exports, module) {
             }
             return obj;
         }
-
-
-
 
         // 27.1. updated
         function LoadModule(loader, name, options) {
@@ -14410,21 +14135,266 @@ define("lib/api", function (require, exports, module) {
                 var loader = getInternalSlot(F, "Loader");
                 name = ToString(name);
                 if ((name=ifAbrupt(name)) && isAbrupt(name)) return name;
-                var modules = loaderRecord.Modules
+                var modules = loaderRecord.Modules;
+                for (var i = 0, j = modules.length; i < j; i++) {
+                    var p = modules[i];
+                    if (SameValue(p.key, name)) {
+                        var existingModule = p.value;
+                        var load = CreateLoad(name);
+                        load.Status = "linked";
+                        load.Module = existingModule;
+                        return NormalCompletion(load);
+                    }
+                }
+                for (i = 0, j = loader.Loads.length; i < j; i++) {
+                    if (SameValue(load.Name, name)) {
+                        Assert(load.Status === "loading" || load.Status === "loaded", "load.Status has to be loading or loaded");
+                        return NormalCompletion(load);
+                    }
+                }
+                var load = CreateLoad(name);
+                loader.Loads.push(load);
+                ProceedToLocate(loader, load);
+                return NormalCompletion(load);
             };
-
             setInternalSlot(F, "Call", GetOrCreateLoad_Call);
 
             return F;
         }
 
+        // 27.1. update
+        function ProceedToLocate(loader, load, p) {
+            p = PromiseOf(undefined);
+            var F = CallLocate();
+            setInternalSlot(F, "Loader", loader);
+            setInternalSlot(F, "Load", load);
+            p = PromiseThen(p, F);
+            return ProceedToFetch(loader, load, p);
+        }
 
+        // 27.1. update    
+        function CallLocate() {
+            var F = OrdinaryFunction();
+            var CallLocate_Call = function (thisArg, argList) {
+                var F = this;
+                var loader = getInternalSlot(F, "Loader");
+                var load = getInternalSlot(F, "Load");
+                var loaderObj = loader.LoaderObj;
+                var hook = Get(loaderObj, "locate");
+                if ((hook=ifAbrupt(hook)) && isAbrupt(hook)) return hook;
+                if (!IsCallable(hook)) return withError("Type", "call locate hook is not callable");
+                var obj = CreateLoadRequestObject(load.Name, load.Metadata);
+                return callInternalSlot("Call", hook, loader, [obj])
+            };
+            setInternalSlot(F, "Call", CallLocate_Call);
+            return F;
+        }
 
+        // 27.1.
+        function ProceedToFetch(loader, load, p) {
+            var F = CallFetch();
+            setInternalSlot(F, "Loader", loader);
+            setInternalSlot(F, "Load", load);
+            setInternalSlot(F, "AddressPromise", p);
+            p = PromiseThen(p, F);
+            return ProceedToTranslate(loader, load, p);
+        }
 
+        // 27.1.
+        function CallFetch() {
+            var F = OrdinaryFunction();
+            var CallFetch_Call = function (thisArg, argList) {
+                var F = this;
+                var address = argList[0];
+                var loader = getInternalSlot(F, "Loader");
+                if (load.LinkSets.length === 0) return NormalCompletion(undefined);
+                load.Address = address;
+                var loaderObj = loader.LoaderObj;
+                var hook = Get(loaderObj, "fetch");
+                if ((hook=ifAbrupt(hook))&&isAbrupt(hook)) return hook;
+                if (!IsCallable(hook)) return withError("Type", "fetch hook is not a function");
+                var obj = CreateLoadRequestObject(load.Name, load.Metadata, address);
+                return callInternalSlot("Call", hook, loader, [obj]);
+            };
+            setInternalSlot(F, "Call", CallFetch_Call);
+            return F;
+        }
 
+        // 27.1.
+        function ProceedToTranslate(loader, load, p) {
+            var F = CallTranslate();
+            setInternalSlot(F, "Loader", loader);
+            setInternalSlot(F, "Load", load);
+            p = PromiseThen(p, F);
+            F = CallInstantiate();
+            setInternalSlot(F, "Loader", loader);
+            setInternalSlot(F, "Load", load);
+            p = PromiseThen(p, F);
+            F = InstantiateSucceeded();
+            setInternalSlot(F, "Loader", loader);
+            setInternalSlot(F, "Load", load);
+            p = PromiseThen(p, F);
+            F = LoadFailed();
+            setInternalSlot(F, "Load", load);
+            return PromiseCatch(p, F);
+        }
 
+        // 27.1.
+        function CallTranslate() {
+            var F = OrdinaryFunction();
+            var CallTranslate_Call = function (thisArg, argList) {
+                var F = this;
+                var source = argList[0];
+                var loader = getInternalSlot(F, "Loader");
+                var load = getInternalSlot(F, "Load");
+                if (load.LinkSets.length === 0) return NormalCompletion(undefined);
+                var hook = Get(loader, "translate");
+                if ((hook=ifAbrupt(hook)) && isAbrupt(hook)) return hook;
+                if (!IsCallable(hook)) return withError("Type", "call translate hook is not callable");            
+                var obj = CreateLoadRequestObject(load.Name, load.Metadata, load.Address, source);
+                return callInternalSlot("Call", hook, loader, [obj]);
+            };
+            setInternalSlot(F, "Call", CallTranslate_Call);
+            return F;
+        }
 
+        // 27.1.
+        function CallInstantiate() {
+            var F = OrdinaryFunction();
+            var CallInstantiate_Call = function (thisArg, argList) {
+                var F = this;
+                var source = argList[0];
+                var loader = getInternalSlot(F, "Loader");
+                var load = getInternalSlot(F, "Load");
+                if (loader.LinkSets.length === 0) return NormalCompletion(undefined);
+                var hook = Get(loader, "instantiate");
+                if ((hook=ifAbrupt(hook)) && isAbrupt(hook)) return hook;
+                if (!IsCallable(hook)) return withError("Type", "call instantiate hook is not callable");            
+                var obj = CreateLoadRequestObject(load.Name, load.Metadata, load.Address, source);
+                return callInternalSlot("Call", hook, loader, [obj]);
+            };            
+            setInternalSlot(F, "Call", CallInstantiate_Call);
+            return F;
+        }
 
+        // 27.1.
+        function InstantiateSucceeded() {
+            var F = OrdinaryFunction();
+            var InstantiateSucceeded_Call = function (thisArg, argList) {
+                var instantiateResult = argList[0];
+                var loader = getInternalSlot(F, "Loader");
+                var load = getInternalSlot(F, "Load");
+                if (load.LinkSets.length === 0) return NormalCompletion(undefined);
+                if (instantiateResult === undefined) {
+                    try {
+                        var body = parseGoal("Module", load.Source);
+                    } catch (ex) {
+                        return withError("Syntax", ex.message);
+                    }
+                    load.Body = body;
+                    load.Kind = "declarative";
+                    var depsList = ModuleRequests(body);
+                } else if (Type(instantiateResult) === "object") {
+                    var deps = Get(instantiateResult, "deps");
+                    if ((deps=ifAbrupt(deps)) && isAbrupt(deps)) return deps;
+                    if (deps === undefined) depsList = [];
+                    else {
+                        depsList = IterableToList(deps); // IterableToArray?
+                        if ((depsList = ifAbrupt(depsList)) && isAbrupt(depsList)) return depsList;
+                    }
+                    var execute = Get(instantiateResult, "execute");
+                    if ((execute = ifAbrupt(execute)) && isAbrupt(execute)) return execute;
+                    load.Execute = execute;
+                    load.Kind = "dynamic";
+                } else {
+                    return withError("Type", "instantiateResult error");
+                }
+                return ProcessLoadDependencies(load, loader, depsList);
+            };
+            setInternalSlot(F, "Call", InstantiateSucceeded_Call);
+            return F;
+        }
+
+        // 27.1.
+        function LoadFailed() {
+            var LoadFailedFunction_Call = function (thisArg, argList) {
+                var exc = argList[0];
+                var F = this;
+                var load = getInternalSlot(this, "Load");
+                Assert(load.Status === "loading", "load.[[Status]] has to be loading at this point");
+                load.Status = "failed";
+                load.Exception = exc;
+                var linkSets = load.LinkSets;
+                for (var i = 0, j = linkSets.length; i < j; i++) {
+                    LinkSetFailed(linkSets[i], exc);
+                }
+                Assert(load.LinkSets.length === 0, "load.[[LinkSets]] has to be empty at this point");
+            };
+            var F = OrdinaryFunction();
+            setInternalSlot(F, "Call", LoadFailedFunction_Call);
+            return F;
+        }
+
+        // 27.1.
+        function ProcessLoadDependencies(load, loader, depsList) {
+            var refererName = load.Name;
+            load.Dependencies = [];
+            var loadPromises = [];
+            for (var i = 0, j = depsList.length; i < j; i++) {
+                var request = depsList[i];
+                var p = RequestLoad(loader, request, refererName, load.Address);
+                var F = AddDependencyLoad();
+                setInternalSlot(F, "Load", load);
+                setInternalSlot(F, "Request", request);
+                p = PromiseThen(p, F);
+                loadPromises.push(p);
+            }
+            var p = PromiseAll(loadPromises);
+            var F = LoadSucceeded();
+            setInternalSlot(F, "Load", load);
+            return PromiseThen(p, F);
+        }
+
+        // 27.1.
+        function AddDependencyLoad() {
+            var AddDependencyLoad_Call = function (thisArg, argList) {
+                var depLoad = argList[0];
+                var parentLoad = getInternalSlot(F, "ParentLoad");
+                var request = getInternalSlot(F, "Request");
+                Assert(!hasRecordInList(parentLoad.Dependencies, "key", request), "there must be no record in parentLoad.Dependencies with key equal to request ");
+                parentLoad.Dependences.push({key: request, value: depLoad.Name });
+                if (depLoad.Status !== "linked") {
+                    var linkSets = parentLoad.LinkSets;
+                    for (var i = 0, j = linkSets.length; i < j; i++) {
+                        AddLoadToLinkSet(linkSets[i], depLoad);
+                    }
+                }
+                return NormalCompletion(undefined);
+            };
+            var F = OrdinaryFunction();
+            setInternalSlot(F, "Call", AddDependencyLoad_Call);
+            return F;
+        }
+
+        // 27.1.
+        function LoadSucceeded() {
+            var LoadSucceeded_Call = function (thisArg, argList) {
+                var load = getInternalSlot(F, "Load");
+                Assert(load.Status === "loading", "load.Status should have been loading but isnt");
+                load.Status = "loaded";
+                var linkSets = load.LinkSets;
+                for (var i = 0, j = linkSets.length; i < j; i++) {
+                    
+                    UpdateLinkSetOnLoad(linkSets[i], load);
+                }
+                return NormalCompletion(undefined);
+            };
+            var F = OrdinaryFunction();
+            setInternalSlot(F, "Call", LoadSucceeded_Call);
+            return F;
+        }
+
+        // 27.1.
         function PromiseOfStartLoadPartWayThrough(step, loader, name, metadata, source, address) {
             var F = AsyncStartLoadPartwayThrough();
             var state = Object.create(null);
@@ -14440,31 +14410,47 @@ define("lib/api", function (require, exports, module) {
 
 
 
-
-
-
-
-
-        function createLoadFailedFunction(exc) {
-
-            var LoadFailedFunction_Call = function (thisArg, argList) {
-                var F = this;
-                var load = getInternalSlot(this, "Load");
-                Assert(load.Status === "loading", "load.[[Status]] has to be loading at this point");
-                load.Status = "failed";
-                load.Exception = exc;
-                var linkSets = load.LinkSets;
-                for (var i = 0, j = linkSets.length; i < j; i++) LinkSetFailed(linkSet[i], exc);
-                Assert(load.LinkSets.length === 0, "load.[[LinkSets]] has to be empty at this point");
-            };
-
+        function AsyncStartLoadPartwayThrough() {
             var F = OrdinaryFunction();
-            setInternalSlot(F, "Load", load);
-            setInternalSlot(F, "Call", LoadFailedFunction_Call);
+            var AsyncStartLoadPartwayThrough_Call = function (thisArg, argList) {
+                var F = thisArg;
+                var state = getInternalSlot(F, "StepState");
+
+                var loader = state.Loader;
+                var name = state.ModuleName;
+                var step = state.step;
+                var source = state.ModuleSource;
+                if (loader.Modules[name]) return withError("Type", "Got name in loader.Modules")
+                if (hasRecordInList(loader.Loads, "Name", name)) return withError("Type", "loader.Loads contains another entry with name '"+name+"'");
+                load = CreateLoad(name);
+                load.Metadata = metadata;
+                var linkSet = CreateLinkSet(loader, load);
+                loader.loads.push(load);
+                var result = callInternalSlot("Call", resolve, null, [linkSet.done]);
+                if (step === "locate") {
+                    ProceedToLocate(loader, load);
+                } else if (step === "fetch") {
+                    var addressPromise = PromiseOf(address);
+                    ProceedToFetch(loader, load, addressPromise);
+                } else {
+                    Assert(step === "translate", "step has to be translate");
+                    load.Address = address;
+                    var sourcePromise = PromiseOf(source);
+                    ProceedToTranslate(loader, load, sourcePromise);
+                }
+            };
+            setInternalSlot(F, "Call", AsyncStartLoadPartwayThrough_Call);
             return F;
         }
 
-        
+
+
+
+
+
+        //
+        // Down: LoaderConstructor, LoaderPrototype, LoaderIteratorPrototype
+        //
         var LoaderConstructor_Call = function (thisArg, argList) {
             var options = argList[0];
             var loader = thisArg;
