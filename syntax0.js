@@ -3018,8 +3018,8 @@ define("lib/slower-static-semantics", function (require, exports, modules) {
         return list;
     }
 
-    exports.DeclaredVars = DeclaredVars;
-    function DeclaredVars (node) {
+    exports.DeclaredNames = DeclaredNames;
+    function DeclaredNames (node) {
         var lexNames = LexicallyDeclaredNames(node);
         var varNames = VarDeclaredNames(node);
         var names = lexNames.concat(varNames);
@@ -13062,109 +13062,10 @@ define("lib/api", function (require, exports, module) {
             }
             return A;
         }
+
+
         
-        function LinkSet() {
-            return {
-                loader: undefined,
-                loads: undefined,
-                done: undefined,
-                resolve: undefined,
-                reject: undefined,
-                constructor: LinkSet
-            };
-        }
-
-        function CreateLinkSet(loader, startingLoad) {
-            if (Type(loader) !== "object") return withError("Type", "CreateLinkSet: loader has to be an object");
-            if (!hasInternalSlot("Loader", "Load")) return withError("Type", "CreateLinkSet: loader is missing internal properties");
-            var deferred = GetDeferred(getIntrinsic("%Promise%"));
-            if ((deferred = ifAbrupt(deferred)) && isAbrupt(deferred)) return deferred;
-            var linkSet = LinkSet();
-            linkSet.loader = loader;
-            linkSet.loads = [];
-            linkSet.done = deferred.Promise;
-            linkSet.resolve = deferred.Resolve;
-            linkSet.reject = deferred.Reject;
-            AddLoadToLinkSet(linkSet, startingLoad);
-            return linkSet;
-        }
-
-        function AddLoadToLinkSet(linkSet, load) {
-            Assert(load.Status === "loading" || load.Status === "loaded", "loader.[[Status]] has to be loading or loaded");
-            var loader = linkSet.loader;
-            if (!linkSet.loads[load.Name]) {
-                linkSet.loads.push(load);
-                linkSet.loads[load.Name] = load;
-                load.LinkSets.push(linkSet);
-                for (var name in load.dependencies) {
-                    if (!loader.Modules[name]) {
-                        if (loader.loads[name]) {
-                            depLoad = loader.loads[name];
-                            AddLoadToLinkSet(linkSet, depLoad);
-                        }
-                    }
-                }
-            }
-        }
-
-        function UpdateLinkSetOnLoad(linkSet, load) {
-            var loads = linkSet.loads;
-            Assert(loads.indexOf(loads) > -1, "linkset.loads has to contain load");
-            Assert(load.Status === "loaded" || load.Status === "linked");
-            for (var i = 0, j = loads.length; i < j; i++) {
-                var load = loads[i];
-                if (load.Status === "loading") return;
-            }
-            var startingLoad = loads[0];
-            var status = Link(loads, linkSet.loader);
-            if (isAbrupt(status)) {
-                LinkSetFailed(linkSet, status.value);
-                return;
-            }
-            Assert(linkSet.loads.length === 0, "linkset.loads has to be empty here");
-            var result = callInternalSlot("Call", linkset.resolve, undefined, [startingLoad]);
-            Assert(!isAbrupt(result), "resolving the linkset may not terminate abnormally");
-            return result;
-        }
-
-        function LinkSetFailed(linkSet, exc) {
-            var loader = linkSet.loader;
-            var loads = linkSet.loads; //.slice();
-            for (var i = 0, j = loads.length; i < j; i++) {
-                var load = loads[i];
-                var idx;
-                Assert((idx = load.LinkSets.indexOf(v)) > -1, "load.LinkSets has to contain linkset");
-                load.LinkSets.splice(idx,idx+1);upt
-                if ((load.LinkSets.length === 0) && ((idx=loader.loads.indexOf(load)) > -1)) {
-                    loader.loads.splice(idx,idx+1);
-
-                }
-            }
-            var result = callInternalSlot("Call", linkset.reject, undefined, [exc]);
-            Assert(!isAbrupt(result), "linkset.reject may not complete abormally");
-            return result;
-        }
-
-        function FinishLoad(loader, load) {
-            var name = load.Name;
-            if (name !== undefined) {
-                Assert(!loader.Modules[name], "there may be no duplicate recoded in loader.Modules")
-                loader.Modules[name] = load.Module;
-            }
-            var idx;
-            if ((idx=loader.loads.indexOf(load)) > -1) {
-                load.loads.splice(idx, idx+1);
-            }
-            for (var i = 0, j = load.LinkSets.length, linksets = load.LinkSets; i < j; i++) {
-                var loads = linksets.loads;
-                idx = loads.indexOf(loads);
-                if (idx>-1) {
-                    loads.splice(idx, idx+1);
-                }
-            }
-            load.LinkSets = [];
-        }
-
+        
         // Seite 21 von 43
 
 
@@ -13263,42 +13164,7 @@ define("lib/api", function (require, exports, module) {
 
 
 
-        function CreateUnlinkedModuleInstance(body, boundNames, knownExports, unknownExports, imports) {
-            var M = ObjectCreate(null);
-            setInternalSlot(M, "Body", body);
-            setInternalSlot(M, "BoundNames", boundNames);
-            setInternalSlot(M, "KnownExportEntries", knownExports);
-            setInternalSlot(M, "UnknownExportEntries", unknownExports);
-            setInternalSlot(M, "ExportDefinitions", undefined);
-            setInternalSlot(M, "Exports", undefined);
-            setInternalSlot(M, "Dependencies", undefined);
-            setInternalSlot(M, "UnlinkedDependencies", undefined);
-            setInternalSlot(M, "ImportEntries", imports);
-            setInternalSlot(M, "ImportDefinitions", undefined);
-            setInternalSlot(M, "LinkErrors", []);
-            var realm = getRealm();
-            var globalEnv = realm.globalEnv;
-            var env = NewModuleEnvironment(globalEnv)
-            setInternalSlot(M, "Environment", env);
-            return M;
-        }
-
-        function LookupModuleDependency(M, requestName) {
-            if (requestName === null) return M;
-            var deps = getInternalSlot(M, "Dependencies");
-            var pair = deps[requestName];
-            if (pair) return pair.Module;
-        }
-
-        function LookupExport(M, exportName) {
-            var exp = getInternalSlot(M, "Exports");
-            var ex;
-            if (ex = exp[exportName]) {
-                return ex.binding;
-            }
-            return undefined;
-        }
-
+        
         function ResolveExportEntries(M, visited) {
             var exportDefs = getInternalSlot(M, "ExportDefinitions");
             if (exportDefs != undefined) return exportDefs;
@@ -13473,31 +13339,6 @@ define("lib/api", function (require, exports, module) {
                     LinkDynamicModules(group, loader);
                 }
             }
-        }
-
-        function LinkageGroups(start) {
-            var G = start.loads;
-            var kind;
-            for (var i = 0, j = G.length; i <j; i++) {
-                var record = G[i];
-                if (kind && (record.Kind != kind)) return withError("Syntax", "mixed dependency cylces detected");
-                kind = record.Kind;
-
-            }
-        }
-
-        function BuildLinkageGroups(load, declarativeGroups, dynamicGroups, visited) {
-                if (visited[name]) return;
-                visited[load.Name] = load;
-                var groups;
-                for (var i = 0, j = load.unlinkeddependencies.length; i < j; i++) {
-                    BuildLinkageGroups(dep, declarativeGroups, dynamicGroups, visited);
-                    var k = load.groupindex;
-                    if (load.Kind === "declarative") groups = declarativeGroups;
-                    else groups = dynamicGroups;
-                    var group = groups[i];
-                    groups.push(load);
-                }
         }
 
         // ##################################################################
@@ -13996,6 +13837,14 @@ define("lib/api", function (require, exports, module) {
             }
             return false;
         }
+        function getRecordInList(list, field, value) {
+            for (var i = 0, j = list.length; i < j; i++) {
+                var r = list[i];
+                if (r[field] === value) return r;
+            }
+            return undefined;
+        }
+
 
 
         function thisLoader(value) {
@@ -14005,6 +13854,13 @@ define("lib/api", function (require, exports, module) {
             }
             return withError("Type", "thisLoader(value): value is not a valid loader object");
         }
+        
+        
+        //
+        // Runtime Semantics
+        // Loader State
+        //
+
         // 27.1. add
         function LoaderRecord () {
             var lr = Object.create(LoaderRecord.prototype);
@@ -14442,7 +14298,182 @@ define("lib/api", function (require, exports, module) {
             setInternalSlot(F, "Call", AsyncStartLoadPartwayThrough_Call);
             return F;
         }
+        //
+        // Module Linkage
+        //
 
+        // 27.1.
+        function CreateModuleLinkageRecord (loader, body) {
+            var M = ObjectCreate(null);
+            setInternalSlot(M, "Body", body);
+            setInternalSlot(M, "BoundNames", DeclaredNames(body));
+            setInternalSlot(M, "KnownExportEntries", KnownExportEntries(body));
+            setInternalSlot(M, "UnknownExportEntries", UnknownExportEntries(body));
+            setInternalSlot(M, "ExportDefinitions", undefined);
+            setInternalSlot(M, "Exports", undefined);
+            setInternalSlot(M, "Dependencies", undefined);
+            setInternalSlot(M, "UnlinkedDependencies", undefined);
+            setInternalSlot(M, "ImportEntries", ImportEntries(body));
+            setInternalSlot(M, "ImportDefinitions", undefined);
+            setInternalSlot(M, "LinkErrors", []);
+            var realm = loader.Realm;
+            var globalEnv = realm.globalEnv;
+            var env = NewModuleEnvironment(globalEnv)
+            setInternalSlot(M, "Environment", env);
+            return M;
+        }
+        // 27.1.
+        function LookupExport(M, exportName) {
+            var mExp = getInternalSlot(M, "Exports");
+            var exp;
+            if (!(exp=getRecordInList(mExp, "ExportName", exportName))) {
+                return NormalCompletion(undefined);
+            }
+            return exp.Binding;
+        }
+        // 27.1.
+        function LookupModuleDependency(M, requestName) {
+            if (requestName === null) return M;
+            var deps = getInternalSlot(M, "Dependencies");
+            var pair = getRecordInList(deps, "key", requestName);
+            return pair.Module;
+        }
+
+        // 27.1.
+        function LinkSet(loader, loads, done, resolve, reject) {
+            var ls = Object.create(LinkSet.prototype);
+            ls.Loader = loader;
+            ls.Loads = loads;
+            ls.Done = done;
+            ls.Resolve = resolve;
+            ls.Reject = reject;
+            ls.constructor = LinkSet;
+            return ls;
+        }
+        LinkSet.prototype.toString = function () { return "[object LinkSet]"; };
+
+        // 27.1.
+        function CreateLinkSet(loader, startingLoad) {
+            if (Type(loader) !== "object") return withError("Type", "CreateLinkSet: loader has to be an object");
+            if (!hasInternalSlot("Loader", "Load")) return withError("Type", "CreateLinkSet: loader is missing internal properties");
+            var promiseCapability = PromiseBuiltinCapability();
+            if ((promiseCapability = ifAbrupt(promiseCapability)) && isAbrupt(promiseCapability)) return promiseCapability;
+            var linkSet = LinkSet(loader, loads, promiseCapability.Promise, promiseCapability.Resolve, promiseCapability.Reject);
+            AddLoadToLinkSet(linkSet, startingLoad);
+            return NormalCompletion(linkSet);
+        }
+
+        // 27.1.
+        function AddLoadToLinkSet(linkSet, load) {
+            Assert(load.Status === "loading" || load.Status === "loaded", "load.Status is either loading or loaded.");
+            var loader = linkSet.Loader;
+            if (linkSet.indexOf(load) === -1) {     // INDEX-OF (Das ist dieser O(n) den fast jeder bedenkenlos und viel zu oft nimmt)
+                linkSet.Loads.push(load);
+                load.LinkSets.push(linkSet);
+                if (load.Status === "loaded") {
+                     for (var i = 0, j = load.Dependencies.length; i < j; i++) {
+                        var r = load.Dependencies[i];
+                        if (!hasRecordInList(loader.Modules, "key", name)) {       // Evil cubic stuff.
+                            var depLoad;
+                            if ((depLoad=hasRecordInList(loader.Loads, "Name", name))) {
+                                AddLoadToLinkSet(linkSet, depLoad);
+                            }
+                        }
+                     }
+                }
+            }
+        }
+
+
+        // 27.1.
+        function UpdateLinkSetOnLoad(linkSet, load) {
+            var loads = linkSet.Loads;
+            Assert(loads.indexOf(loads) > -1, "linkset.loads has to contain load");
+            Assert(load.Status === "loaded" || load.Status === "linked", "load.Status must be one of loaded or linked");
+            for (var i = 0, j = loads.length; i < j; i++) {
+                var load = loads[i];
+                if (load.Status === "loading") return NormalCompletion(undefined);
+            }
+            var startingLoad = loads[0];
+            var status = Link(loads, linkSet.Loader);
+            if (isAbrupt(status)) {
+                return LinkSetFailed(linkSet, status.value);
+            }
+            Assert(linkSet.Loads.length === 0, "linkset.loads has to be empty here");
+            var result = callInternalSlot("Call", linkset.Resolve, undefined, [startingLoad]);
+            Assert(!isAbrupt(result), "linkSet.resolve had to terminate normally")
+            return result;
+        }
+
+        // 27.1.
+        function LinkSetFailed(linkSet, exc) {
+            var loader = linkSet.Loader;
+            var loads = linkSet.Loads; 
+            for (var i = 0, j = loads.length; i < j; i++) {
+                var load = loads[i];
+                var idx;
+                Assert((idx = load.LinkSets.indexOf(v)) > -1, "load.LinkSets has to contain linkset");
+                load.LinkSets.splice(idx,1);    // SPLICE KOSTET EXTRA
+                if ((load.LinkSets.length === 0) && ((idx=loader.Loads.indexOf(load)) > -1)) {
+                    loader.Loads.splice(idx,1); // SPLICE KOSTET EXTRA
+                }
+            }
+            var result = callInternalSlot("Call", linkset.Reject, undefined, [exc]);
+            Assert(!isAbrupt(result), "linkSet.reject had to terminate normally")
+            return NormalCompletion(result);
+        }
+
+        // 27.1.    USING EXPENSIVE SPLICES to EMPTY the array
+        function FinishLoad(loader, load) {
+            var name = load.Name;
+            if (name !== undefined) {
+                Assert(!hasRecordInList(loader.Modules, "key", load.Name), "there may be no duplicate recoded in loader.Modules")
+                loader.Modules.push({ key: load.Name, value: load.Module });
+            }
+            var idx;
+            if ((idx=loader.Loads.indexOf(load)) > -1) {
+                load.Loads.splice(idx, 1);
+            }
+            for (var i = 0, j = load.LinkSets.length; i < j; i++) {
+                var loads = load.LinkSets[i].Loads;
+                idx = loads.indexOf(loads);
+                if (idx>-1) {
+                    loads.splice(idx, 1);
+                }
+            }
+            load.LinkSets.splice(0, load.linkSets.length);
+        }
+
+
+        //
+        // Module Linking Groups
+        //
+
+
+        function LinkageGroups(start) {
+            var G = start.loads;
+            var kind;
+            for (var i = 0, j = G.length; i <j; i++) {
+                var record = G[i];
+                if (kind && (record.Kind != kind)) return withError("Syntax", "mixed dependency cylces detected");
+                kind = record.Kind;
+
+            }
+        }
+
+        function BuildLinkageGroups(load, declarativeGroups, dynamicGroups, visited) {
+                if (visited[name]) return;
+                visited[load.Name] = load;
+                var groups;
+                for (var i = 0, j = load.unlinkeddependencies.length; i < j; i++) {
+                    BuildLinkageGroups(dep, declarativeGroups, dynamicGroups, visited);
+                    var k = load.groupindex;
+                    if (load.Kind === "declarative") groups = declarativeGroups;
+                    else groups = dynamicGroups;
+                    var group = groups[i];
+                    groups.push(load);
+                }
+        }
 
 
 
@@ -21434,6 +21465,7 @@ define("lib/runtime", ["lib/parser", "lib/api", "lib/slower-static-semantics"], 
     // Alte Static Semantics (werden abgeloest)
     //
 
+    var DeclaredNames = statics.DeclaredNames;
     var BoundNames = statics.BoundNames;
     var VarScopedDeclarations = statics.VarScopedDeclarations;
     var LexicallyScopedDeclarations = statics.LexicallyScopedDeclarations;
@@ -21458,6 +21490,7 @@ define("lib/runtime", ["lib/parser", "lib/api", "lib/slower-static-semantics"], 
     var IsAnonymousFunctionDefinition = statics.IsAnonymousFunctionDefinition;
     var StringValue = statics.StringValue;
     var IsIdentifierRef = statics.IsIdentifierRef;
+
 
     //
     // essential-api (essential internals)
