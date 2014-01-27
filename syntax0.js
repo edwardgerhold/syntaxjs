@@ -1466,8 +1466,7 @@ define("lib/tokenizer", ["lib/tables"], function (tables) {
         token.type = type;
         token.goal = details;
         token.value = value;
-        token.computed = computed;
-
+        
         if (PunctOrLT[type]) {
             /*
 			if (type === "Punctuator") {
@@ -3022,6 +3021,16 @@ define("lib/slower-static-semantics", function (require, exports, modules) {
         return list;
     }
 
+    exports.DeclaredVars = DeclaredVars;
+    function DeclaredVars (node) {
+        var lexNames = LexicallyDeclaredNames(node);
+        var varNames = VarDeclaredNames(node);
+        var names = lexNames.concat(varNames);
+        return names;
+    }
+
+
+
     function ReferencesSuper(node) {
         var type;
         var stmt, contains = false;
@@ -3161,7 +3170,7 @@ define("lib/slower-static-semantics", function (require, exports, modules) {
         case "Identifier":
             return node.name;
         case "StringLiteral":
-            return node.computed || node.value.slice(1, node.value.length - 1);
+            return node.value.slice(1, node.value.length - 1);
         case "NumericLiteral":
             return node.value;
         case "DefaultParameter":
@@ -3651,9 +3660,13 @@ define("lib/parser", ["lib/tables", "lib/tokenizer"], function (tables, tokenize
     var lparen = false;
     var rparen = false;
     var tbl;
+    
     var isWorker = typeof importScripts === "function";
-    var state = 0; // 0 = SourceElements
-    var goalSymbol = 0; // (!goalSymbol) === InputElementDiv
+    var isNode = typeof process !== "undefined" && typeof global !== "undefined";
+    var isBrowser = typeof window !== "undefined";
+
+    var state = 0;          // 0 = SourceElements
+    var goalSymbol = 0;     // (!goalSymbol) === InputElementDiv
     var ast;
 
     //
@@ -3752,82 +3765,45 @@ define("lib/parser", ["lib/tables", "lib/tokenizer"], function (tables, tokenize
         throwError(new SyntaxError(C + " expected at line " + line + ", column " + column));
     }
 
+    // Issue Tracking: Use Assert for SyntaxErrors in the Parsers. Costs no variables.
+    function Assert(test, message) {
+        if (!test) throwError(new SyntaxError(message));
+    }
+
     // ========================================================================================================
     // Early Errors
     // ========================================================================================================
 
-    function EarlyErrors(node) {
-        var con = contains;
-        /*
-	switch(node.type) {
-		case "Program":
-		if (con.contains("BreakStatement")) throw new SyntaxError("Break is not allowed in the outer script body");
-		if (con.contains("ContinueStatement")) throw new SyntaxError("Continue is not allowed in the outer script body");
-		if (con.contains("ReturnStatement")) throw new SyntaxError("Return is not allowed in the outer script body");
-		break;
-		case "FunctionDeclaration":
-		if (con.contains("BreakStatement")) throw new SyntaxError("Break is not allowed outside of iterations");
-		if (con.contains("ContinueStatement")) throw new SyntaxError("Continue is not allowed outside of iterations");
-		if (con.contains("YieldExpression")) throw new SyntaxError("Yield must be an identifier outside of generators or strict mode");
+    var contains;   // used in the parser, to reference the tables.
 
-		break;
-		case "GeneratorDeclaration":
-		
-		break;
-		case "ModuleDeclaration":
-			if (con.contains("BreakStatement")) throw new SyntaxError("Break is not allowed outside of iterations");
-		if (con.contains("ContinueStatement")) throw new SyntaxError("Continue is not allowed outside of iterations");
-		break;
-		default:
-		break;
-	}
-	*/
+    var EarlyErrorHandlers = Object.create(null);
+    EarlyErrorHandlers.Program = function () {
+        //if (contains.contains("BreakStatement")) throw new SyntaxError("Break is not allowed in the outer script body");     
+        //if (contains.contains("ContinueStatement")) throw new SyntaxError("Continue is not allowed in the outer script body");
+        //if (contains.contains("ReturnStatement")) throw new SyntaxError("Return is not allowed in the outer script body");
+    };
+
+    EarlyErrorHandlers.FunctionDeclaration = function () {
+        //if (contains.contains("BreakStatement")) throw new SyntaxError("Break is not allowed outside of iterations");
+        //if (contains.contains("ContinueStatement")) throw new SyntaxError("Continue is not allowed outside of iterations");
+        //if (contains.contains("YieldExpression")) throw new SyntaxError("Yield must be an identifier outside of generators or strict mode");
+    };
+    EarlyErrorHandlers.ModuleDeclaration = function () {
+
+    };
+
+    function EarlyErrors(node) {
+        var handler = EarlyErrorHandlers[node.type];
+        if (handler) handler();
         return node;
     }
-
-    // ========================================================================================================
-    // Contains
-    // ========================================================================================================
-
-    var ident, contains;
-
-    function makeNodeAndSymbolTables(tokens) {
-        ident = SymbolTable();
-        contains = ContainsTable();
+     
+    function makeSymbolAndContainsTable(tokens) {
+        contains = SymbolAndContainsTable();
     }
 
-    function ContainsTable() {
-        "use strict";
-
-        var container = Object.create(null);
-        var containers = [container];
-
-        function new_scope() {
-            containers.push(container);
-            container = Object.create(container);
-        }
-
-        function old_scope() {
-            container = containers.pop();
-        }
-
-        function add(production) {
-            container[production] = true;
-        }
-
-        function contains(production) {
-            if (Object.hasOwnProperty.call(container, production)) return container[production];
-            else return false;
-        }
-        return {
-            new_scope: new_scope,
-            old_scope: old_scope,
-            add: add,
-            contains: contains
-        };
-    }
-
-    var EvalArguments = {
+    
+    var ForbiddenArgumentsInStrict = {
         __proto__: null,
         "eval": true,
         "arguments": true
@@ -3837,29 +3813,37 @@ define("lib/parser", ["lib/tables", "lib/tokenizer"], function (tables, tokenize
     // Symbol Table
     // ========================================================================================================
 
-    /*
-	Symbol Stack:
-	------------
-	Identifier im AST speichern
-	Ein neuer Scope wird jede Funktion eingerichtet.
-	
-	Identifier sind:
-	----------------
-	VariableDecl
-	LexDecl
-	FunctionDecl
-	GeneratorDecl
-	MethodDefinition nicht, das sind Properties am Objekt.
-	
-*/
 
-    function SymbolTable() {
+// - needs to be cleaned up, maybe separated into it´s own module
+// - it has no dependencies, i just store names and node names inside
+// - maybe i change to public properties .currentEnv, .container and a .prototype for speedup and less unreadability
+    function SymbolAndContainsTable() {
         "use strict";
 
+        var container = Object.create(null);
+        var containers = [container];
         var lexEnv = Object.create(null);
         var varEnv = lexEnv;
         var varEnvs = [varEnv];
-        var lexEnvs = [lexEnv];
+        var lexEnvs = [lexEnv];        
+
+        function new_scope() {
+            containers.push(container);
+            container = Object.create(container);
+        }
+
+        function old_container() {
+            container = containers.pop();
+        }
+
+        function add(production, value) {
+            container[production] = value === undefined ? true : value; 
+        }
+
+        function contains(production) {
+            if (Object.hasOwnProperty.call(container, production)) return container[production];
+            else return false;
+        }
 
         function new_var_scope() {
             varEnvs.push(varEnv);
@@ -3876,6 +3860,8 @@ define("lib/parser", ["lib/tables", "lib/tokenizer"], function (tables, tokenize
         }
 
         function old_scope() {
+            container = containers.pop();
+
             if (lexEnv === varEnv) {
                 varEnv = varEnvs.pop();
             }
@@ -3904,18 +3890,25 @@ define("lib/parser", ["lib/tables", "lib/tokenizer"], function (tables, tokenize
         function bound_lex() {
             var boundNames = [];
             for (var v in lexEnv) {
-                if (!Object.hasOwnProperty.call(lexEnv, v)) boundNames.push(v);
+                if (Object.hasOwnProperty.call(lexEnv, v)) boundNames.push(v);
             }
             return boundNames;
         }
 
         function bound_var() {
             var boundNames = [];
-            for (var v in varEnv) boundNames.push(v);
+            for (var v in varEnv) if (Object.hasOwnProperty.call(varEnv, v)) boundNames.push(v);
             return boundNames;
         }
 
         return {
+            // contains
+            new_scope: new_scope,
+            old_container: old_container,
+            add: add,
+            contains: contains,
+
+            // lexNames, varNAmes
             new_var: new_var_scope, // var +& lex
             new_lex: new_lex_scope, // lex
             old_scope: old_scope,
@@ -3925,14 +3918,14 @@ define("lib/parser", ["lib/tables", "lib/tokenizer"], function (tables, tokenize
             is_lex: is_lex,
             bound_lex: bound_lex,
             bound_var: bound_var,
-            constructor: SymbolTable
+
+            //
+            constructor: SymbolAndContainsTable
         };
 
-    }
+        // Needs to be renamed
 
-    /* 
-     *
-     */
+    }
 
     // ========================================================================================================
     // debug the parser
@@ -3971,27 +3964,7 @@ define("lib/parser", ["lib/tables", "lib/tokenizer"], function (tables, tokenize
         var node = Object.create(null);
         node.ID = ++nodeId;
         contains.add(type);
-
-        /*	
-		node._oid_ = newNodeId();
-		tables.tokenTable[node._oid_] = node;
-		
-		if (linkToken) {
-			node._rid_ = linkToken._oid_;
-					linkToken._rid_ = node._oid_;
-		}
-		*/
-
-        if (typeof type === "object") {
-            for (var k in type) {
-                if (Object.hasOwnProperty.call(type, k)) node[k] = type[k];
-            }
-
-        } else {
-            node.type = type;
-        }
-
-        //if (!node.loc) node.loc = makeLoc();
+        node.type = type;
         return node;
     }
 
@@ -4073,7 +4046,8 @@ define("lib/parser", ["lib/tables", "lib/tokenizer"], function (tables, tokenize
 
         if (typeof t === "string") t = tokenize(t);
         tokens = t || [];
-        makeNodeAndSymbolTables();
+        
+        makeSymbolAndContainsTable();
 
         i = -1;
         j = tokens.length;
@@ -4186,7 +4160,6 @@ define("lib/parser", ["lib/tables", "lib/tokenizer"], function (tables, tokenize
             node.details = T.details;
             node.value = v;
             debug("Literal packed " + v);
-            node.computed = T.computed;
             node.loc = makeLoc(loc && loc.start, loc && loc.end);
             pass(v);
             if (compile) return builder[node.type](node.value, loc);
@@ -4828,6 +4801,7 @@ define("lib/parser", ["lib/tables", "lib/tokenizer"], function (tables, tokenize
 
         do {
             debug("expr at " + v);
+            
             if (hasStop && v === stop) break;
             ae = this.AssignmentExpression();
             if (ae) list.push(ae);
@@ -5252,11 +5226,12 @@ define("lib/parser", ["lib/tables", "lib/tokenizer"], function (tables, tokenize
                     l2 = loc && loc.end;
                     n.loc = makeLoc(l1, l2);
 
-                    ident.add_lex(n.as.name);
+                    contains.add_lex(n.as.name);
+
                     list.push(n);
                 } else {
 
-                    ident.add_lex(id.name);
+                    contains.add_lex(id.name);
                     list.push(id);
                 }
 
@@ -5330,8 +5305,8 @@ define("lib/parser", ["lib/tables", "lib/tokenizer"], function (tables, tokenize
             var id = this.Identifier();
             node.id = id.name;
 
-            if (kind == "var") ident.add_var(id.name);
-            else ident.add_lex(id.name);
+            if (kind == "var") contains.add_var(id.name);
+            else contains.add_lex(id.name);
 
             if (v === "=") node.init = this.Initialiser();
             else if (v === ",") node.init = null;
@@ -5501,7 +5476,7 @@ define("lib/parser", ["lib/tables", "lib/tokenizer"], function (tables, tokenize
         if (v === "class") {
 
             pushState("class");
-            ident.new_var();
+            contains.new_var();
 
             node = Node("ClassDeclaration");
             node.id = null;
@@ -5526,7 +5501,8 @@ define("lib/parser", ["lib/tables", "lib/tokenizer"], function (tables, tokenize
             }
 
             pass("}");
-            ident.old_scope();
+            
+            contains.old_scope();
             popState();
             if (compile) return builder["classExpression"](node.id, node.extends, node.elements, node.loc);
             return node;
@@ -5543,7 +5519,7 @@ define("lib/parser", ["lib/tables", "lib/tokenizer"], function (tables, tokenize
             var node = Node("RestParameter");
             node.id = v;
 
-            ident.add_lex(v);
+            contains.add_lex(v);
 
             pass(v);
             var l2 = loc && loc.end;
@@ -5613,7 +5589,7 @@ define("lib/parser", ["lib/tables", "lib/tokenizer"], function (tables, tokenize
                         id = this.DefaultParameter();
                     } else {
                         id = this.Identifier();
-                        ident.add_lex(id.name);
+                        contains.add_lex(id.name);
                     }
                     if (id) list.push(id);
                 }
@@ -5647,6 +5623,7 @@ define("lib/parser", ["lib/tables", "lib/tokenizer"], function (tables, tokenize
 
     function FunctionBody(parent) {
         var body = [];
+        body.type = "FunctionStatementList";
         var node, strict;
         if (v === "}") return body;
         this.DirectivePrologue(parent, body);
@@ -5701,12 +5678,12 @@ define("lib/parser", ["lib/tables", "lib/tokenizer"], function (tables, tokenize
                 }
             }
 
-            if (id && !isExpr) ident.add_var(id.name);
+            if (id && !isExpr) contains.add_var(id.name);
 
-            ident.new_var();
+            contains.new_var();
             contains.new_scope();
 
-            if (id && isExpr) ident.add_var(id.name);
+            if (id && isExpr) contains.add_var(id.name);
 
             pass("(");
             node.params = this.FormalParameterList();
@@ -5733,10 +5710,10 @@ define("lib/parser", ["lib/tables", "lib/tokenizer"], function (tables, tokenize
             }
             defaultIsId = defaultStack.pop();
 
-            //node.lexNames = ident.bound_lex();
-            //node.varNames = ident.bound_var();
+            //node.lexNames = contains.bound_lex();
+            //node.varNames = contains.bound_var();
             
-            ident.old_scope();
+            contains.old_container();
             contains.old_scope();
 
             curFunc = functionStack.pop();
@@ -5775,8 +5752,8 @@ define("lib/parser", ["lib/tables", "lib/tokenizer"], function (tables, tokenize
             var l1, l2;
             l1 = loc && loc.start;
 
-            ident.new_lex();
-            contains.new_scope();
+            contains.new_lex();
+            contains.new_container();
 
             var node = Node("BlockStatement");
 
@@ -5789,7 +5766,7 @@ define("lib/parser", ["lib/tables", "lib/tokenizer"], function (tables, tokenize
             node.loc = makeLoc(l1, l2);
 
             defaultIsId = defaultStack.pop();
-            ident.old_scope();
+            contains.old_container();
             contains.old_scope();
 
             pass("}");
@@ -5878,7 +5855,7 @@ define("lib/parser", ["lib/tables", "lib/tokenizer"], function (tables, tokenize
             pass("(");
             node.object = this.Expression();
             pass(")");
-            if (v !== "{") throwError(new SyntaxError("expecting BlockStatement after with (EXPR)"));
+            Assert(v === "{", "expecting BlockStatement after with (EXPR)");
             node.body = this.BlockStatement();
             var l2 = loc && loc.end;
             node.loc = makeLoc(l1, l2);
@@ -6014,8 +5991,8 @@ define("lib/parser", ["lib/tables", "lib/tokenizer"], function (tables, tokenize
             var node, l1, l2;
             l1 = loc && loc.start;
 
-            contains.new_scope();
-            ident.new_var();
+            contains.new_container();
+            contains.new_var();
             
             moduleStack.push(curModule);
             curModule = {
@@ -6036,8 +6013,8 @@ define("lib/parser", ["lib/tables", "lib/tokenizer"], function (tables, tokenize
 
             EarlyErrors(node);
 
+            contains.old_container();
             contains.old_scope();
-            ident.old_scope();
             curModule = moduleStack.pop();
 
 
@@ -6269,10 +6246,8 @@ define("lib/parser", ["lib/tables", "lib/tokenizer"], function (tables, tokenize
         var node;
         debug("statement at " + v);
         var fn = this[StatementParsers[v]];
-        //    console.log("a) got no fn ");
         if (fn) node = fn.call(this, a, b, c, d);
         if (!node) node = (this.LabelledStatement(a, b, c, d) || this.Expression(a, b, c, d));
-        //        if (!node) console.log("b) got no node");
         skip(";");
         return node;
     }
@@ -6311,7 +6286,7 @@ define("lib/parser", ["lib/tables", "lib/tokenizer"], function (tables, tokenize
             defaultIsId: defaultIsId,
             yieldStack: yieldStack,
             defaultStack: defaultStack,
-            ident: ident,
+            
             contains: contains
         };
         positions.push(o);
@@ -6337,7 +6312,7 @@ define("lib/parser", ["lib/tables", "lib/tokenizer"], function (tables, tokenize
             defaultIsId = o.defaultIsId;
             yieldStack = o.yieldStack;
             defaultStack = o.defaultStack;
-            ident = o.ident;
+            
             contains = o.contains;
         }
     }
@@ -6416,8 +6391,8 @@ define("lib/parser", ["lib/tables", "lib/tokenizer"], function (tables, tokenize
 
             /* parse */
 
-            ident.new_lex();
-            contains.new_scope();
+            contains.new_lex();
+            contains.new_container();
 
             if (numSemi === 2) {
                 node = Node("ForStatement");
@@ -6489,8 +6464,8 @@ define("lib/parser", ["lib/tables", "lib/tokenizer"], function (tables, tokenize
             node.loc = makeLoc(l1, l2);
             EarlyErrors(node);
 
+            contains.old_container();
             contains.old_scope();
-            ident.old_scope();
 
             if (compile) {
                 if (node.type === "ForStatement") return builder["forStatement"](node.init, node.condition, node.update, node.body, loc);
@@ -6506,7 +6481,7 @@ define("lib/parser", ["lib/tables", "lib/tokenizer"], function (tables, tokenize
     function WhileStatement() {
         /* IterationStatement : while ( this.Expression ) Statement */
         if (v === "while") {
-            contains.new_scope();
+            contains.new_container();
             var l1, l2;
             l1 = loc && loc.start;
             var node = Node("WhileStatement");
@@ -6516,7 +6491,7 @@ define("lib/parser", ["lib/tables", "lib/tokenizer"], function (tables, tokenize
             node.body = this.Statement();
             l2 = loc && loc.end;
             EarlyErrors(node);
-            contains.old_scope();
+            contains.old_container();
             if (compile) return builder["whileStatement"](node.test, node.body, node.loc);
             return node;
         }
@@ -6552,7 +6527,7 @@ define("lib/parser", ["lib/tables", "lib/tokenizer"], function (tables, tokenize
             var l1, l2;
             l1 = loc && loc.start;
 
-            contains.new_scope();
+            contains.new_container();
 
             var node = Node("DoWhileStatement");
 
@@ -6567,7 +6542,7 @@ define("lib/parser", ["lib/tables", "lib/tokenizer"], function (tables, tokenize
             node.loc = makeLoc(l1, l2);
             EarlyErrors(node);
 
-            contains.old_scope();
+            contains.old_container();
 
             if (compile) return builder["doWhileStatement"](node.test, node.body, node.loc);
             return node;
@@ -6581,7 +6556,7 @@ define("lib/parser", ["lib/tables", "lib/tokenizer"], function (tables, tokenize
 
             defaultStack.push(defaultIsId);
             defaultIsId = false;
-            contains.new_scope();
+            contains.new_container();
 
             var c;
             var node = Node("SwitchStatement");
@@ -6606,7 +6581,7 @@ define("lib/parser", ["lib/tables", "lib/tokenizer"], function (tables, tokenize
             EarlyErrors(node);
 
             defaultIsId = defaultStack.pop();
-            contains.old_scope();
+            contains.old_container();
 
             if (compile) return builder["switchStatement"](node.discriminant, node.cases, node.loc);
             return node;
@@ -6722,8 +6697,8 @@ define("lib/parser", ["lib/tables", "lib/tokenizer"], function (tables, tokenize
         EarlyErrors(node);
 
         /*
-		node.lexNames = ident.bound_lex();
-		node.varNames = ident.bound_var();
+		node.lexNames = contains.bound_lex();
+		node.varNames = contains.bound_var();
 				*/
 
         if (compile) return builder["program"](node.body, loc);
@@ -14779,7 +14754,7 @@ define("lib/api", function (require, exports, module) {
                     return withError("Type", "can not xml http request " + file);
                 }
             } else if (isNode()) {
-                fs = require._nativeModule.require("fs");
+                fs = syntaxjs._nativeModule.require("fs");
                 try {
                     data = fs.readFileSync(file, "utf8");
                     return data;
@@ -19368,20 +19343,26 @@ define("lib/api", function (require, exports, module) {
             var promiseCapability = NewPromiseCapability(C);
             if ((promiseCapability = ifAbrupt(promiseCapability)) && isAbrupt(promiseCapability)) return promiseCapability;
             var iterator = GetIterator(iterable);
-            if ((iterator = IfAbruptRejectPromise(iterator, promiseCapability)) && isAbupt(iterator)) return iterator;
+            
+            iterator = IfAbruptRejectPromise(iterator, promiseCapability);
+            if (isAbrupt(iterator)) return iterator;
             
             for (;;) {
                 var next = IteratorStep(iterator);
                 if ((next=ifAbrupt(next)) && isAbrupt(next)) return next;
-                IfAbruptRejectPromise(next, promiseCapability);
+                if ((next = IfAbruptRejectPromise(next, promiseCapability)) &&isAbrupt(next)) return next
+                
                 if (next === false) return NormalCompletion(promiseCapability.Promise);
+
                 var nextValue = IteratorValue(next);
-                IfAbruptRejectPromise(nextValue, promiseCapability);
+                if ((nextValue=IfAbruptRejectPromise(nextValue, promiseCapability)) && isAbrupt(nextValue)) return nextValue;
                 var nextPromise = Invoke(C, "cast", [nextValue]);
-                IfAbruptRejectPromise(nextPromise, promiseCapability);
+                if ((nextPromise=IfAbruptRejectPromise(nextPromise, promiseCapability)) && isAbrupt(nextPromise)) return nextPromise;
+
                 var result = Invoke(nextPromise, "then", [promiseCapability.Resolve, promiseCapability.Reject]);
-                IfAbruptRejectPromise(result, promiseCapability);
+                if ((result = IfAbruptRejectPromise(result, promiseCapability)) && isAbrupt(result)) return result;
             }
+            return NormalCompletion(undefined);
         };
 
         function makePromiseAllResolveFunction () {
@@ -19402,14 +19383,14 @@ define("lib/api", function (require, exports, module) {
             var promiseCapability = NewPromiseCapability(C);
             if ((promiseCapability = ifAbrupt(promiseCapability)) && isAbrupt(promiseCapability)) return promiseCapability;
             var iterator = GetIterator(iterable);
-            IfAbruptRejectPromise(iterator, promiseCapability);
+            if ((iterator=IfAbruptRejectPromise(iterator, promiseCapability)) && isAbrupt(iterator)) return iterator;
             var values = ArrayCreate(0);
             var remainingElementsCount = { value: 0 };
             var index = 0;
             for (;;) {
                     var next = IteratorStep(iterator);
                     if ((next=ifAbrupt(next)) && isAbrupt(next)) return next;
-                    IfAbruptRejectPromise(next, promiseCapability);
+                    if ((next=IfAbruptRejectPromise(next, promiseCapability)) && isAbrupt(next)) return next;
                     if (next === false) {
                         if (index == 0) {
                             var resolveResult = callInternalSlot("Call", promiseCapability.Resolve, undefined, [values]);
@@ -19418,16 +19399,16 @@ define("lib/api", function (require, exports, module) {
                         return NormalCompletion(promiseCapability.Promise)
                     }
                     var nextValue = IteratorValue(next);
-                    IfAbruptRejectPromise(nextValue, promiseCapability);
+                    if ((nextValue = IfAbruptRejectPromise(nextValue, promiseCapability)) && isAbrupt(nextValue)) return nextValue;
                     var nextPromise = Invoke(C, "cast", [nextValue]);
-                    IfAbruptRejectPromise(nextPromise, promiseCapability);
+                    if ((nextPromise=IfAbruptRejectPromise(nextPromise, promiseCapability)) && isAbrupt(nextPromise)) return nextPromise;
                     var resolveElement = makePromiseAllResolveFunction();
                     setInternalSlot(resolveElement, "Index", index);
                     setInternalSlot(resolveElement, "Values", values);
                     setInternalSlot(resolveElement, "Capabilities", resolveElement, promiseCapability);
                     setInternalSlot(resolveElement, "RemainingElements", remainingElementsCount);
                     var result = Invoke(nextPromise, "then", [resolveElement, promiseCapability.Reject]);
-                    IfAbruptRejectPromise(result, promiseCapability);
+                    if ((result = IfAbruptRejectPromise(result, promiseCapability)) && isAbrupt(result)) return result;
                     index = index + 1;
                     remainingElementsCount.value += 1;
             }
@@ -19496,8 +19477,11 @@ define("lib/api", function (require, exports, module) {
         LazyDefineProperty(PromisePrototype, "then", CreateBuiltinFunction(getRealm(),PromisePrototype_then, 2, "then"));
         LazyDefineProperty(PromisePrototype, "catch", CreateBuiltinFunction(getRealm(),PromisePrototype_catch, 1, "catch"));
         LazyDefineProperty(PromisePrototype, "constructor", PromiseConstructor);
+        LazyDefineProperty(PromisePrototype, $$toStringTag, "Promise");
 
 
+        // got to be moved outside of the createIntrinsics function
+        // createIntrinsics has to become the DefineProperty rows only.
 
     function PromiseNew (executor) {
         var promise = AllocatePromise("%Promise%");
@@ -19792,23 +19776,41 @@ define("lib/api", function (require, exports, module) {
         MakeConstructor(RegExpConstructor, true, RegExpPrototype);
 
         var RegExp_$$create = function (thisArg, argList) {
-            return RegExpAlloc(F);
+            return RegExpAllocate(thisArg);
         };
-
         var RegExp_Call = function (thisArg, argList) {
-
+            var obj = thisArg;
+            return obj;
         };
-
         var RegExp_Construct = function (argList) {
-
+            return Construct(this, argList);
         };
-
+        var RegExpPrototype_get_global = function (thisArg, argList) {};
+        var RegExpPrototype_get_multiline = function (thisArg, argList) {};
+        var RegExpPrototype_get_ignoreCase = function (thisArg, argList) {};
+        var RegExpPrototype_get_source = function (thisArg, argList) {};
+        var RegExpPrototype_compile = function (thisArg, argList) {
+        };
+        var RegExpPrototype_exec = function (thisArg, argList) {
+        };
+        var RegExpPrototype_test = function (thisArg, argList) {
+        };
         setInternalSlot(RegExpConstructor, "Call", RegExp_Call);
         setInternalSlot(RegExpConstructor, "Construct", RegExp_Construct);
-
-        LazyDefineBuiltinConstant(RegExpConstructor, $$isRegExp, true);
+        LazyDefineBuiltinConstant(RegExpPrototype, $$isRegExp, true);
+        LazyDefineBuiltinConstant(RegExpPrototype, $$toStringTag, "RegExp");
         LazyDefineBuiltinFunction(RegExpConstructor, $$create, 1, RegExp_$$create);
 
+        LazyDefineAccessor(RegExpPrototype, "ignoreCase", RegExpPrototype_get_ignoreCase, undefined);
+        LazyDefineAccessor(RegExpPrototype, "global", RegExpPrototype_get_global, undefined);
+        LazyDefineAccessor(RegExpPrototype, "multiline", RegExpPrototype_get_multiline, undefined);
+        LazyDefineAccessor(RegExpPrototype, "source", RegExpPrototype_get_source, undefined);
+        
+        LazyDefineProperty(RegExpPrototype, "lastIndex", 0);
+
+        LazyDefineBuiltinFunction(RegExpPrototype, "compile", 1, RegExpPrototype_compile);
+        LazyDefineBuiltinFunction(RegExpPrototype, "exec", 1, RegExpPrototype_exec);
+        LazyDefineBuiltinFunction(RegExpPrototype, "test", 1, RegExpPrototype_test);
 
         // ===========================================================================================================
         // set Timeout
@@ -21901,6 +21903,8 @@ define("lib/runtime", ["lib/parser", "lib/api", "lib/slower-static-semantics"], 
         if (!generator) {
             var name = node.id;
             F = FunctionCreate("normal", params, body, scope, strict);
+            // 14.1.16 4.
+            if (node.needsSuper) MakeMethod(F, name, undefined);
             MakeConstructor(F);
             if (name) SetFunctionName(F, name);
         } else if (generator) {
@@ -22485,7 +22489,7 @@ define("lib/runtime", ["lib/parser", "lib/api", "lib/slower-static-semantics"], 
         }
 
         for (var i = 0, j = code.length; i < j; i++) {
-            if ((node = code[i]) && !SkipDecl(node)) {
+            if ((node = code[i]) /*&& !SkipDecl(node)*/) {
                 tellExecutionContext(node, i);
                 exprRef = Evaluate(node);
                 if (isAbrupt(exprRef)) {
@@ -22597,6 +22601,11 @@ define("lib/runtime", ["lib/parser", "lib/api", "lib/slower-static-semantics"], 
                 if (isAbrupt(status)) return status;
             } else scope = getLexEnv();
             F = FunctionCreate("normal", params, body, scope, strict);
+
+            if (node.needsSuper) {
+                if (id) MakeMethod(F, id, undefined);
+                else MakeMethod(F, undefined, undefined);
+            }
             MakeConstructor(F);
             if (id) {
                 var status;
@@ -22610,11 +22619,15 @@ define("lib/runtime", ["lib/parser", "lib/api", "lib/slower-static-semantics"], 
         return NormalCompletion(empty);
     }
 
+    function isSuperMemberExpression (node) {
+        return node.object.type === "SuperExpression";
+    }
+
     evaluation.MemberExpression = MemberExpression;
     function MemberExpression(node) {
         "use strict";
 
-        var notSuperExpr = node.object.type !== "SuperExpression";
+        var notSuperExpr = !isSuperMemberExpression(node);
 
         var propertyNameReference;
         var propertyNameValue;
@@ -22648,6 +22661,8 @@ define("lib/runtime", ["lib/parser", "lib/api", "lib/slower-static-semantics"], 
         propertyNameString = ToPropertyKey(propertyNameValue);
 
         if (notSuperExpr) {
+            // object.name
+            // object[nameExpr]
 
             var bv = CheckObjectCoercible(baseValue);
             if ((bv = ifAbrupt(bv)) && isAbrupt(bv)) return bv;
@@ -22655,6 +22670,8 @@ define("lib/runtime", ["lib/parser", "lib/api", "lib/slower-static-semantics"], 
             return ref;
 
         } else {
+            // super.name
+            // super[nameExpr]
 
             return MakeSuperReference(propertyNameString, strict);
         }
@@ -23142,6 +23159,7 @@ define("lib/runtime", ["lib/parser", "lib/api", "lib/slower-static-semantics"], 
     function RegularExpressionLiteral(node) {
 
         var literalSource = node.computed;
+
         if (!literalSource) {
             literalSource = (node.value && node.value.substr(1, node.value.length - 2));
         }
@@ -23172,9 +23190,8 @@ define("lib/runtime", ["lib/parser", "lib/api", "lib/slower-static-semantics"], 
     evaluation.NumericLiteral = NumericLiteral;
 
     function NumericLiteral(node) {
-        return MV(node.value);
-        if (node.computed !== undefined) return node.computed;
-        else return +node.value;
+        return MV(node.value);        
+        // return +node.value;
     }
 
     evaluation.NullLiteral = NullLiteral;
@@ -23191,8 +23208,7 @@ define("lib/runtime", ["lib/parser", "lib/api", "lib/slower-static-semantics"], 
     evaluation.Literal = Literal;
 
     function Literal(node) {
-        if (node.goal) return evaluation[node.goal](node);
-        if (node.computed !== undefined) return node.computed;
+        //if (node.goal) return evaluation[node.goal](node);
         return node.value;
     }
 
@@ -26453,7 +26469,7 @@ define("lib/syntaxerror-file", function (require, exports, module) {
 
     function readFile(name, callback, errback) {
         if (syntaxjs.system == "node") {
-            var fs = require._nativeRequire("fs");
+            var fs = syntaxjs._nativeRequire("fs");
             return fs.readFile(name, function (err, data) {
                 if (err) errback(err);
                 callback(data);
@@ -26478,7 +26494,7 @@ define("lib/syntaxerror-file", function (require, exports, module) {
 
     function readFileSync(name) {
         if (syntaxjs.system == "node") {
-            var fs = require._nativeRequire("fs");
+            var fs = syntaxjs._nativeRequire("fs");
             return fs.readFileSync(name, "utf8");
         } else if (syntaxjs.system == "browser") {
             var xhr = new XMLHttpRequest();
@@ -26791,6 +26807,7 @@ define("lib/syntaxjs", function () {
     var syntaxerror_highlighter_api = {
         highlight: pdmacro(require("lib/syntaxerror-highlight"))
     };
+    
     if (typeof window == "undefined" && typeof self !== "undefined" && typeof importScripts !== "undefined") {
         syntaxerror.system = "worker";
     } else if (typeof window !== "undefined") {
@@ -26798,12 +26815,16 @@ define("lib/syntaxjs", function () {
         syntaxerror_highlighter_api.highlightElements = pdmacro(require("lib/syntaxerror-highlight-gui").highlightElements),
         syntaxerror_highlighter_api.startHighlighterOnLoad = pdmacro(require("lib/syntaxerror-highlight-gui").startHighlighterOnLoad)
     } else if (typeof process !== "undefined") {    
+        
         if (typeof exports !== "undefined") exports.syntaxjs = syntaxerror;
+        
+        
         syntaxerror.system = "node";
-        // temporarily left. could move to closure, could call a call to save
-        // but will hide away them from the main object, left over from hacking.
-        require._nativeRequire = nativeGlobal.require;
-        require._nativeModule =  module;
+        
+        syntaxerror._nativeRequire = nativeGlobal.require;
+        syntaxerror._nativeModule = module;
+
+        
         Object.defineProperties(exports, syntaxerror_public_api_readonly);
         Object.defineProperties(exports, syntaxerror_highlighter_api)
     }
