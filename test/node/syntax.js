@@ -1,0 +1,1 @@
+/www/syntaxjs/syntax0.js

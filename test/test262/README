@@ -1,0 +1,16 @@
+HOW TO RUN TEST262
+==================
+
+1. Download an install test262
+
+2. /test262/tools/packages/test262.py --command"node syntax.js" --tests=/test262
+
+3. The tests should run automatically 
+
+    If the syntax shell lands on the prompt, ctrl-d has to be pressed
+
+
+NOTE
+====
+
+not fully accomplished
