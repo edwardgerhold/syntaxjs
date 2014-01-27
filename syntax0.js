@@ -10917,6 +10917,10 @@ define("lib/api", function (require, exports, module) {
         return new GlobalEnvironment(global);
     }
 
+    function NewModuleEnvironment(global) {
+        return new DeclarativeEnvironment(global);
+    }
+
 
     function NewFunctionEnvironment(F, T) {
         Assert(getInternalSlot(F, "ThisMode") !== "lexical", "NewFunctionEnvironment: ThisMode is lexical");
@@ -11822,6 +11826,11 @@ define("lib/api", function (require, exports, module) {
     // ===========================================================================================================
     // Iterator Algorithms
     // ===========================================================================================================
+
+
+    function IsIterable (obj) {
+        return HasProperty(obj, $$iterator);
+    }
 
     function CreateItrResultObject(value, done) {
         Assert(Type(done) === "boolean");
@@ -12963,18 +12972,9 @@ define("lib/api", function (require, exports, module) {
         callInternalSlot("Call", nextPending.Task, undefined, nextPending.Arguments);
     }
 
-
-
-
-
-
     //
     // Realm und Loader
     //
-    //
-    //
-
-
         function IndirectEval(realm, source) {            
             return realm.toValue(source);
         }
@@ -13063,12 +13063,6 @@ define("lib/api", function (require, exports, module) {
 
 
 
-        function GetOrCreateLoad() {
-            var F = OrdinaryFunction();
-            setInternalSlot(F, "Call", GetOrCreateLoad_Call);
-            return F;
-        }
-
         function ProceedToLocate(loader, load, p) {
             p = PromiseResolve(undefined);
             var F = CallLocate();
@@ -13120,8 +13114,8 @@ define("lib/api", function (require, exports, module) {
             var hook = Get(loader, "locate");
             if ((hook=ifAbrupt(hook)) && isAbrupt(hook)) return hook;
             if (!IsCallable(hook)) return withError("Type", "call locate hook is not callable");
-            SimpleDefine(obj, "name", load.name);y
-            SimpleDefine(obj, "metadata", load.metadata);
+            SimpleDefine(obj, "name", load.Name);y
+            SimpleDefine(obj, "metadata", load.Metadata);
             return callInternalSlot("Call", hook, loader, [obj]);
         };
 
@@ -13136,13 +13130,13 @@ define("lib/api", function (require, exports, module) {
             var address = argList[0];
             var loader = getInternalSlot(F, "Loader");
             var load = getInternalSlot(F, "Load");
-            load.address = address;
+            load.Address = address;
             var hook = Get(loader, "fetch");
             if ((hook=ifAbrupt(hook)) && isAbrupt(hook)) return hook;
             if (!IsCallable(hook)) return withError("Type", "call fetch hook is not callable");            
             var obj = ObjectCreate();
-            SimpleDefine(obj, "name", load.name);
-            SimpleDefine(obj, "metadata", load.metadata);
+            SimpleDefine(obj, "name", load.Name);
+            SimpleDefine(obj, "metadata", load.Metadata);
             SimpleDefine(obj, "address", address);
             return callInternalSlot("Call", hook, loader, [obj]);
         };
@@ -13158,14 +13152,14 @@ define("lib/api", function (require, exports, module) {
             var source = argList[0];
             var loader = getInternalSlot(F, "Loader");
             var load = getInternalSlot(F, "Load");
-            if (!load.linksets.length) return NormalCompletion(undefined);
+            if (!load.LinkSets.length) return NormalCompletion(undefined);
             var hook = Get(loader, "translate");
             if ((hook=ifAbrupt(hook)) && isAbrupt(hook)) return hook;
             if (!IsCallable(hook)) return withError("Type", "call translate hook is not callable");            
             var obj = ObjectCreate();
-            SimpleDefine(obj, "name", load.name);
-            SimpleDefine(obj, "metadata", load.metadata);
-            SimpleDefine(obj, "address", load.address);
+            SimpleDefine(obj, "name", load.Name);
+            SimpleDefine(obj, "metadata", load.Metadata);
+            SimpleDefine(obj, "address", load.Address);
             SimpleDefine(obj, "source", source);
             return callInternalSlot("Call", hook, loader, [obj]);
         };
@@ -13185,9 +13179,9 @@ define("lib/api", function (require, exports, module) {
             if ((hook=ifAbrupt(hook)) && isAbrupt(hook)) return hook;
             if (!IsCallable(hook)) return withError("Type", "call translate hook is not callable");            
             var obj = ObjectCreate();
-            SimpleDefine(obj, "name", load.name);
-            SimpleDefine(obj, "metadata", load.metadata);
-            SimpleDefine(obj, "address", load.address);
+            SimpleDefine(obj, "name", load.Name);
+            SimpleDefine(obj, "metadata", load.Metadata);
+            SimpleDefine(obj, "address", load.Address);
             SimpleDefine(obj, "source", source);
             return callInternalSlot("Call", hook, loader, [obj]);
         };
@@ -13203,11 +13197,11 @@ define("lib/api", function (require, exports, module) {
             var loader = getInternalSlot(F, "loader");
             var load = getInternalSlot(F, "load");
             var depsList;
-            if (!load.linksets.length) return NormalCompletion(undefined);
+            if (!load.LinkSets.length) return NormalCompletion(undefined);
             if (instantiateResult) {
-                var body = parseGoal("Module", load.source);
-                load.body = body;
-                load.kind = "declarative";
+                var body = parseGoal("Module", load.Source);
+                load.Body = body;
+                load.Kind = "declarative";
                 depsList = ModuleRequests(body);
             } else if (Type(instantiateResult) === "object") {
                 var deps = Get(instantiateResult, "deps");
@@ -13218,8 +13212,8 @@ define("lib/api", function (require, exports, module) {
                     //if ((depsList=ifAbrupt(depsList)) && isAbrupt(depsList)) return depsList;
                 }
                 var execute = Get(instantiateResult, "execute");
-                load.execute = execute;
-                load.kind = "dynamic";
+                load.Execute = execute;
+                load.Kind = "dynamic";
             } else {
                 return withError("Type", "error with instantiation result");
             }
@@ -13245,12 +13239,12 @@ define("lib/api", function (require, exports, module) {
         }
 
         function ProcessLoadDependencies(load, loader, depsList) {
-            var refererName = load.name;
+            var refererName = load.Name;
             load.dependencies = [];
             var loadPromises = [];
             for (var i = 0, j = depsList.length; i < j; i++) {
                 var request = depsList[i];
-                var p = RequestLoad(loader, request, refererName, load.address);
+                var p = RequestLoad(loader, request, refererName, load.Address);
                 var F = AddDependencyLoad();
                 setInternalSlot(F, "Load", load);
                 setInternalSlot(F, "Request", request);
@@ -13270,9 +13264,9 @@ define("lib/api", function (require, exports, module) {
             var parentLoad = getInternalSlot(F, "ParentLoad");
             var request = getInternalSlot(F, "Request");
             Assert(!parentLoad.dependecies[request], "there is no parentLoad dependency whose key is equal to request, but it is");
-            parentLoad.dependencies[request] = depLoad; //.name;
-            if (depLoad.status !== "linked") {
-                var linkSets = parentLoad.linksets; //.slice();
+            parentLoad.dependencies[request] = depLoad; //.Name;
+            if (depLoad.Status !== "linked") {
+                var linkSets = parentLoad.LinkSets; //.slice();
                 for (var i = 0, j = linkSets.length; i < j; i++) {
                     var linkSet = linkSets[i];
                     AddLoadToLinkSet(linkSet, depLoad);
@@ -13288,9 +13282,9 @@ define("lib/api", function (require, exports, module) {
 
         var LoadSucceeded_Call = function (thisArg, argList) {
             var load = getInternalSlot(F, "Load");
-            Assert(load.status === "loading", "load.status should have been loading but isnt");
-            load.status = "loaded";
-            var linkSets = load.linksets;
+            Assert(load.Status === "loading", "load.Status should have been loading but isnt");
+            load.Status = "loaded";
+            var linkSets = load.LinkSets;
             for (var i = 0, j = linkSets.length; i < j; i++) {
                 var linkSet = linkSets[i];
                 UpdateLinkSetOnLoad(linkSet, load);
@@ -13330,14 +13324,14 @@ define("lib/api", function (require, exports, module) {
         }
 
         function AddLoadToLinkSet(linkSet, load) {
-            Assert(load.status === "loading" || load.status === "loaded", "loader.[[Status]] has to be loading or loaded");
+            Assert(load.Status === "loading" || load.Status === "loaded", "loader.[[Status]] has to be loading or loaded");
             var loader = linkSet.loader;
-            if (!linkSet.loads[load.name]) {
+            if (!linkSet.loads[load.Name]) {
                 linkSet.loads.push(load);
-                linkSet.loads[load.name] = load;
-                load.linksets.push(linkSet);
+                linkSet.loads[load.Name] = load;
+                load.LinkSets.push(linkSet);
                 for (var name in load.dependencies) {
-                    if (!loader.modules[name]) {
+                    if (!loader.Modules[name]) {
                         if (loader.loads[name]) {
                             depLoad = loader.loads[name];
                             AddLoadToLinkSet(linkSet, depLoad);
@@ -13350,10 +13344,10 @@ define("lib/api", function (require, exports, module) {
         function UpdateLinkSetOnLoad(linkSet, load) {
             var loads = linkSet.loads;
             Assert(loads.indexOf(loads) > -1, "linkset.loads has to contain load");
-            Assert(load.status === "loaded" || load.status === "linked");
+            Assert(load.Status === "loaded" || load.Status === "linked");
             for (var i = 0, j = loads.length; i < j; i++) {
                 var load = loads[i];
-                if (load.status === "loading") return;
+                if (load.Status === "loading") return;
             }
             var startingLoad = loads[0];
             var status = Link(loads, linkSet.loader);
@@ -13373,9 +13367,9 @@ define("lib/api", function (require, exports, module) {
             for (var i = 0, j = loads.length; i < j; i++) {
                 var load = loads[i];
                 var idx;
-                Assert((idx = load.linksets.indexOf(v)) > -1, "load.linksets has to contain linkset");
-                load.linksets.splice(idx,idx+1);upt
-                if ((load.linksets.length === 0) && ((idx=loader.loads.indexOf(load)) > -1)) {
+                Assert((idx = load.LinkSets.indexOf(v)) > -1, "load.LinkSets has to contain linkset");
+                load.LinkSets.splice(idx,idx+1);upt
+                if ((load.LinkSets.length === 0) && ((idx=loader.loads.indexOf(load)) > -1)) {
                     loader.loads.splice(idx,idx+1);
 
                 }
@@ -13386,43 +13380,27 @@ define("lib/api", function (require, exports, module) {
         }
 
         function FinishLoad(loader, load) {
-            var name = load.name;
+            var name = load.Name;
             if (name !== undefined) {
-                Assert(!loader.modules[name], "there may be no duplicate recoded in loader.modules")
-                loader.modules[name] = load.module;
+                Assert(!loader.Modules[name], "there may be no duplicate recoded in loader.Modules")
+                loader.Modules[name] = load.Module;
             }
             var idx;
             if ((idx=loader.loads.indexOf(load)) > -1) {
                 load.loads.splice(idx, idx+1);
             }
-            for (var i = 0, j = load.linksets.length, linksets = load.linksets; i < j; i++) {
+            for (var i = 0, j = load.LinkSets.length, linksets = load.LinkSets; i < j; i++) {
                 var loads = linksets.loads;
                 idx = loads.indexOf(loads);
                 if (idx>-1) {
                     loads.splice(idx, idx+1);
                 }
             }
-            load.linksets = [];
+            load.LinkSets = [];
         }
 
         // Seite 21 von 43
 
-        function LoadModule(loader, name, options) {
-            var name = ToString(name);
-            if ((name = ifAbrupt(name)) && isAbrupt(name)) return name;
-            var address = GetOption(options, "address");
-            if ((address = ifAbrupt(address)) && isAbrupt(address)) return address;
-            var F = AsyncStartLoadPartwayThrough();
-            setInternalSlot(F, "Loader", loader);
-            setInternalSlot(F, "ModuleName", name);
-            if (address === undefined) setIntenal(F, "Step", "locate");
-            else setInternalSlot(F, "Step", "fetch");
-            var metadata = ObjectCreate();
-            setInternalSlot(F, "ModuleMetadata", metadata);
-            setInternalSlot(F, "ModuleSource", source);
-            setInternalSlot(F, "ModuleAddress", address);
-            return OrdinaryConstruct(getIntrinsic("%Promise%"));
-        }
 
         function GetOption(options, name) {
             if (options == undefined) return undefined;
@@ -13430,23 +13408,28 @@ define("lib/api", function (require, exports, module) {
             return Get(options, name);
         }
 
+
+        // update 27.1.
         var AsyncStartLoadPartwayThrough_Call = function (thisArg, argList) {
             var F = thisArg;
-            var resolve = argList[0];
-            var reject = argList[1];
-            var loader = getInternalSlot(F, "Loader");
-            var name = getInternalSlot(F, "ModuleName");
-            var step = getInternalSlot(F, "Step");
-            var metadata = getInternalSlot(F, "ModuleMetadata");
-            var address = getInternalSlot(F, "ModuleAddress");
-            var source = getInternalSlot(F, "ModuleSource");
-            if (loader.modules[name]) return withError("Type", "loader.modules may not contain the same key");
+            var state = getInternalSlot(F, "StepState");
+
+            var loader = state.Loader;
+            var name = state.ModuleName;
+            var step = state.step;
+            var source = state.ModuleSource;
+            if (loader.Modules[name]) return withError("Type", "Got name in loader.Modules")
+
+            /*
+            step 7 deferred because of typeos
             for (var i = 0, j = loader.loads.length, loads = loader.loads; i < j; i++) {
                 var load = loads[i];
-                if (load.name === name) return withError("Type", "loader.loads may not contain a record with the same name");
+                if (load.Name === name) return withError("Type", "loader.loads may not contain a record with the same name");
             }
+            */
+
             load = CreateLoad(name);
-            load.metadata = metadata;
+            load.Metadata = metadata;
             var linkSet = CreateLinkSet(loader, load);
             loader.loads.push(load);
             var result = callInternalSlot("Call", resolve, null, [linkSet.done]);
@@ -13457,7 +13440,7 @@ define("lib/api", function (require, exports, module) {
                 ProceedToFetch(loader, load, addressPromise);
             } else {
                 Assert(step === "translate", "step has to be translate");
-                load.address = address;
+                load.Address = address;
                 var sourcePromise = PromiseOf(source);
                 ProceedToTranslate(loader, load, sourcePromise);
             }
@@ -13472,8 +13455,8 @@ define("lib/api", function (require, exports, module) {
         var EvaluateLoadedModule_Call = function (thisArg, argList) {
             var F = thisArg;
             var loader = getInternalSlot(F, "Loader");
-            Assert(load.status === "linked", "load.status has to be linked here");
-            var module = load.module;
+            Assert(load.Status === "linked", "load.Status has to be linked here");
+            var module = load.Module;
             var result = EnsureEvaluated(module, [], loader);
             if (isAbrupt(result)) return result;
             return module;
@@ -13553,6 +13536,9 @@ define("lib/api", function (require, exports, module) {
         // Modules and Loaders (linking.docx)
         // ##################################################################
 
+
+
+
         function CreateUnlinkedModuleInstance(body, boundNames, knownExports, unknownExports, imports) {
             var M = ObjectCreate(null);
             setInternalSlot(M, "Body", body);
@@ -13568,6 +13554,7 @@ define("lib/api", function (require, exports, module) {
             setInternalSlot(M, "LinkErrors", []);
             var realm = getRealm();
             var globalEnv = realm.globalEnv;
+            var env = NewModuleEnvironment(globalEnv)
             setInternalSlot(M, "Environment", env);
             return M;
         }
@@ -13576,7 +13563,7 @@ define("lib/api", function (require, exports, module) {
             if (requestName === null) return M;
             var deps = getInternalSlot(M, "Dependencies");
             var pair = deps[requestName];
-            if (pair) return pair.module;
+            if (pair) return pair.Module;
         }
 
         function LookupExport(M, exportName) {
@@ -13601,7 +13588,7 @@ define("lib/api", function (require, exports, module) {
                 var modReq = entry.moduleRequest // caps
                 var otherMod = LookupModuleDependency(M, modReq);
 
-                if (entry.module !== null && entry.localName !== null && !boundNames[emtry.localName]) { // caps
+                if (entry.module !== null && entry.localName !== null && !boundNames[entry.localName]) { // caps
                     var error = withError("Reference", "linkError created in ResolveExportEntries");
                     linkErrors.push(error);
                 }
@@ -13671,7 +13658,7 @@ define("lib/api", function (require, exports, module) {
             var defs = [];
             for (var i = 0; i < entries.length; i++) {
                 var entry = entries[i];
-                var modReq = entry.moduleRequest;
+                var modReq = entry.ModuleRequest;
                 var otherMod = LookupModuleDependency(M, modReq);
                 var record = { module: otherMod, importName: entry.importName, localName: entry.localName };
                 defs.push(record);
@@ -13705,8 +13692,8 @@ define("lib/api", function (require, exports, module) {
             var unlinked = [];
             for (var i = 0; i < loads.length; i++) {
                 var load = loads[i];
-                if (load.status !== "linked") {
-                    var body = load.body;
+                if (load.Status !== "linked") {
+                    var body = load.Body;
                     var boundNames = BoundNames(body);
                     var knownExports = KnownExportEntries(body);
                     var unknownExports = UnknownExportEntries(body);
@@ -13726,7 +13713,7 @@ define("lib/api", function (require, exports, module) {
                     var normalizedName = dep; // dep[value];
                     for (var i = 0; i < loads.length; i++) {
                         load = loads[i];
-                        if (load.status === "linked") {
+                        if (load.Status === "linked") {
                             //var resolvedDep = { key: requestName, value: load.module };
 
 
@@ -13739,14 +13726,14 @@ define("lib/api", function (require, exports, module) {
         function LinkDynamicModules(loads, loader) {
             for (var i = 0; i < loads.length; i++) {
                 var load = loads[i];
-                var factory = load.execute;
+                var factory = load.Execute;
                 var module = callInternalSlot("Call", factory, undefined, []);
                 if ((module=ifAbrupt(module)) && isAbrupt(module)) return module;
                 if (!hasInternalSlot(module, "Exports")) {
                     return withError("Type", "module object has not the required internal properties");
                 }
-                load.module = module;
-                load.status = "linked";
+                load.Module = module;
+                load.Status = "linked";
                 var r = FinishLoad(loader, load);
                 if (isAbrupt(r)) return r;
             }
@@ -13756,7 +13743,7 @@ define("lib/api", function (require, exports, module) {
             var groups = LinkageGroups(start);
             for (var g in groups) { // groups = [] ??? 
                 var group = groups[g];
-                if (group.kind === "declarative") { // groups.kind oder .Kind ??
+                if (group.Kind === "declarative") { // groups.Kind oder .Kind ??
                     LinkDeclarativeModules(group, loader);
                 } else {
                     LinkDynamicModules(group, loader);
@@ -13769,20 +13756,20 @@ define("lib/api", function (require, exports, module) {
             var kind;
             for (var i = 0, j = G.length; i <j; i++) {
                 var record = G[i];
-                if (kind && (record.kind != kind)) return withError("Syntax", "mixed dependency cylces detected");
-                kind = record.kind;
+                if (kind && (record.Kind != kind)) return withError("Syntax", "mixed dependency cylces detected");
+                kind = record.Kind;
 
             }
         }
 
         function BuildLinkageGroups(load, declarativeGroups, dynamicGroups, visited) {
                 if (visited[name]) return;
-                visited[load.name] = load;
+                visited[load.Name] = load;
                 var groups;
                 for (var i = 0, j = load.unlinkeddependencies.length; i < j; i++) {
                     BuildLinkageGroups(dep, declarativeGroups, dynamicGroups, visited);
                     var k = load.groupindex;
-                    if (load.kind === "declarative") groups = declarativeGroups;
+                    if (load.Kind === "declarative") groups = declarativeGroups;
                     else groups = dynamicGroups;
                     var group = groups[i];
                     groups.push(load);
@@ -14187,21 +14174,6 @@ define("lib/api", function (require, exports, module) {
 
 
 
-        // ##################################################################
-        // Der Module Loader Start
-        // ##################################################################
-
-
-
-        var std_Module;// = OrdinaryModule(getGlobalThis());
-        var std_Object;
-        var std_ObjectPrototype;
-        var std_Function;
-        var std_FunctionPrototype;
-        var std_Function_call;
-        var std_Function_apply;
-        var std_Function_bind;
-
 
         // ##################################################################
         // Das Code Realm als %Realm%
@@ -14294,6 +14266,205 @@ define("lib/api", function (require, exports, module) {
         // ##################################################################
 
 
+        function thisLoader(value) {
+            if (Type(value) === "object" && hasInternalSlot(value, "Modules")) {
+                var m = getInternalSlot(value, "Modules");
+                if (m !== undefined) return value;
+            }
+            return withError("Type", "thisLoader(value): value is not a valid loader object");
+        }
+        // 27.1. add
+        function LoaderRecord () {
+            var lr = Object.create(LoaderRecord.prototype);
+            lr.Realm = undefined;
+            lr.Modules = undefined; // record { Name, Module }
+            lr.Loads = undefined;   // outstanding async requests
+            lr.Loader = undefined;  // the loader obj
+            return lr;
+        }
+        LoaderRecord.prototype.toString = function () { return "[object LoaderRecord]"; };
+
+        // 27.1.
+        function CreateLoaderRecord(realm, object) {
+            var loader = LoadRecord();
+            loader.Realm = realm;
+            loader.Modules = [];
+            loader.Loads = [];
+            loader.LoaderObj = object;
+            return loader;
+        }       
+
+
+
+        function LoadRecord() {
+            var lr = Object.create(LoadRecord.prototype);
+            lr.Status = undefined;
+            lr.Name = undefined;
+            lr.LinkSets = undefined;
+            lr.Metadata = undefined;
+            lr.Address = undefined;
+            lr.Source = undefined;
+            lr.Kind = undefined;
+            lr.Body = undefined;
+            lr.Execute = undefined;
+            lr.Exception = undefined;
+            lr.Module = undefined;
+            lr.constructor = LoadRecord;
+            return lr;
+        }
+        LoadRecord.prototype.toString = function () { return "[object LoadRecord]"; };
+
+        // 27.1. check
+        function CreateLoad(name) {
+            var load = LoadRecord();
+            load.Status = "loading";
+            load.Name = name;
+            load.LinkSets = [];
+            var metadata = ObjectCreate();
+            load.Metadata = metadata;
+            // all other fields are undefined.
+            return load;
+        }
+
+
+
+        // 27.1.
+        function CreateLoadRequestObject(name, metadata, address, source) {
+            var obj = ObjectCreate();
+            var status, errmsg = "CreateLoadRequest: CreateDataProperty must not fail";
+            status = CreateDataProperty(obj, "name", name);
+            Assert(!isAbrupt(status), errmsg+ " - 1");
+            status = CreateDataProperty(obj, "metadata", metadata);
+            Assert(!isAbrupt(status), errmsg+ " - 2");
+            if (address !== undefined) {
+                status = CreateDataProperty(obj, "address", address);
+                Assert(!isAbrupt(status), errmsg+ " - 3");
+            }
+            if (source !== undefined) {
+                status = CreateDataProperty(obj, "source", source);
+                Assert(!isAbrupt(status), errmsg + " - 4");
+            }
+            return obj;
+        }
+
+
+
+
+        // 27.1. updated
+        function LoadModule(loader, name, options) {
+            
+            var name = ToString(name);
+            if ((name = ifAbrupt(name)) && isAbrupt(name)) return name;
+            var address = GetOption(options, "address");
+            if ((address = ifAbrupt(address)) && isAbrupt(address)) return address;
+            var step;
+            if (address === undefined) step = "locate";
+            else step = "fetch";
+            var metadata = ObjectCreate();
+            var source;
+            return PromiseOfStartLoadPartWayThrough(step, loader, name, metadata, source, address);
+        }
+
+        // 27.1. update
+        function RequestLoad(loader, request, refererName, refererAddress) {
+            var F = CallNormalize();
+            setInternalSlot(F, "Loader", loader);
+            setInternalSlot(F, "Request", request);
+            setInternalSlot(F, "RefererName", refererName);
+            setInternalSlot(F, "RefererAddress", refererAddress);
+            var p = PromiseNew(F);
+            var G = GetOrCreateLoad();
+            setInternalSlot(G, "Loader", loader);
+            p = PromiseThen(p, G);
+            return p;
+        }
+
+
+        // neu 27.1.
+        function CallNormalize() {
+            var F = OrdinaryFunction();
+            
+            var CallNormalizeFunction_Call = function (thisArg, argList) {
+                var resolve = argList[0];
+                var reject = argList[1];
+                var loader = getInternalSlot(F, "Loader");
+                var request = getInternalSlot(F, "Request");
+                var refererName = getInternalSlot(F, "RefererName");
+                var refererAddress = getInternalSlot(F, "RefererAddress");
+                var loaderObj = loader.LoaderObj;
+                var normalizeHook = Get(loaderObj, "normalize");
+                var name = callInternalSlot("Call", normalizeHook, loaderObj, [request, refererName, refererAddress]);
+                if ((name = ifAbrupt(name)) && isAbrupt(name)) return name;
+                return callInternalSlot("Call", resolve, undefined, [name]);
+            };
+
+            setInternalSlot(F, "Call", CallNormalizeFunction_Call);
+            return F;
+        }
+
+        // neu 27.1.
+        function GetOrCreateLoad() {
+            var F = OrdinaryFunction();
+            var GetOrCreateLoad_Call = function (thisArg, argList) {
+                var name = argList[0];
+                var loader = getInternalSlot(F, "Loader");
+                name = ToString(name);
+                if ((name=ifAbrupt(name)) && isAbrupt(name)) return name;
+                var modules = loaderRecord.Modules
+            };
+
+            setInternalSlot(F, "Call", GetOrCreateLoad_Call);
+
+            return F;
+        }
+
+
+
+
+
+
+
+
+        function PromiseOfStartLoadPartWayThrough(step, loader, name, metadata, source, address) {
+            var F = AsyncStartLoadPartwayThrough();
+            var state = Object.create(null);
+            state.Step = "translate";
+            state.Loader = loader;
+            state.ModuleName = name;
+            state.ModuleMetadata = metadata;
+            state.ModuleSource = source;
+            state.ModuleAddress = address;
+            setInternalSlot(F, "StepState", state);
+            return PromiseNew(F);
+        }
+
+
+
+
+
+
+
+
+        function createLoadFailedFunction(exc) {
+
+            var LoadFailedFunction_Call = function (thisArg, argList) {
+                var F = this;
+                var load = getInternalSlot(this, "Load");
+                Assert(load.Status === "loading", "load.[[Status]] has to be loading at this point");
+                load.Status = "failed";
+                load.Exception = exc;
+                var linkSets = load.LinkSets;
+                for (var i = 0, j = linkSets.length; i < j; i++) LinkSetFailed(linkSet[i], exc);
+                Assert(load.LinkSets.length === 0, "load.[[LinkSets]] has to be empty at this point");
+            };
+
+            var F = OrdinaryFunction();
+            setInternalSlot(F, "Load", load);
+            setInternalSlot(F, "Call", LoadFailedFunction_Call);
+            return F;
+        }
+
+        
         var LoaderConstructor_Call = function (thisArg, argList) {
             var options = argList[0];
             var loader = thisArg;
@@ -14408,9 +14579,8 @@ define("lib/api", function (require, exports, module) {
             var options = argList[1];
             var loader = thisLoader(thisArg);
             if ((loader =ifAbrupt(loader)) && isAbrupt(loader)) return loader;
-            var p = LoadModule(loader, name, options);
+            var p = LoadModule(loader, request, options);
             var F = ReturnUndefined(); 
-
             p = PromiseThen(p, F);
             return p;
         };
@@ -14421,7 +14591,7 @@ define("lib/api", function (require, exports, module) {
             var address = GetOption(options, "address");
             if ((address=ifAbrupt(address)) && isAbrupt(address)) return address;
             var load = CreateLoad(undefined);
-            load.address = address;
+            load.Address = address;
             var linkSet = CreateLinkSet(loader, load);
             var successCallback = EvaluateLoadedModule();
             setInternalSlot(successCallback, "Loader", loader);
@@ -14490,7 +14660,7 @@ define("lib/api", function (require, exports, module) {
             var name = ToString(name);
             if ((name=ifAbrupt(name)) && isAbrupt(name)) return name;
             if (Type(module) !== "object") return withError("Type", "module is not an object");
-            var modules = loaderRecord.modules;
+            var modules = loaderRecord.Modules;
             modules[name] = module;
             return NormalCompletion(loader);
         };
@@ -14584,136 +14754,8 @@ define("lib/api", function (require, exports, module) {
         LazyDefineProperty(LoaderIteratorPrototype, $$toStringTag, "Loader Iterator");
 
         // ##################################################################
-        // Der Module Loader Stop
-        // ##################################################################
-
-        var create_std_Module = function create_std_Module(obj) {
-            var mod = OrdinaryModule();
-            return mod;
-        };
-
-        // ##################################################################
         // Loader Operationen 
         // ##################################################################
-
-        function thisLoader(value) {
-            if (Type(value) === "object" && hasInternalSlot(value, "Modules")) {
-                var m = getInternalSlot(value, "Modules");
-                if (m !== undefined) return value;
-            }
-            return withError("Type", "thisLoader(value): value is not a valid loader object");
-        }
-
-        function LoadRecord() {
-            return {
-                __proto__:null,
-                status: undefined,
-                name: undefined,
-                linksets: undefined,
-                metadata: undefined,
-                address: undefined,
-                source: undefined,
-                kind: undefined,
-                body: undefined,
-                execute: undefined,
-                exception: undefined,
-                module: undefined,
-                constructor: LoadRecord
-            };
-        }
-
-        function CreateLoad(name) {
-            var load = LoadRecord();
-            load.status = "loading";
-            load.name = name;
-            load.linksets = [];
-            var metadata = ObjectCreate();
-            load.metadata = metadata;
-            return load;
-        }
-
-        function createLoadFailedFunction(exc) {
-
-            var LoadFailedFunction_Call = function (thisArg, argList) {
-                var F = this;
-                var load = getInternalSlot(this, "Load");
-                Assert(load.status === "loading", "load.[[Status]] has to be loading at this point");
-                load.status = "failed";
-                load.exception = exc;
-                var linkSets = load.linksets;
-                for (var i = 0, j = linkSets.length; i < j; i++) LinkSetFailed(linkSet[i], exc);
-                Assert(load.linksets.length === 0, "load.[[LinkSets]] has to be empty at this point");
-            };
-
-            var F = OrdinaryFunction();
-            setInternalSlot(F, "Load", load);
-            setInternalSlot(F, "Call", LoadFailedFunction_Call);
-            return F;
-        }
-
-        function RequestLoad(loader, request, refererName, refererAddress) {
-            var F = CallNormalize();
-            setInternalSlot(F, "Loader", loader);
-            setInternalSlot(F, "Request", request);
-            setInternalSlot(F, "RefererName", refererName);
-            setInternalSlot(F, "RefererAddress", refererAddress);
-            var p = OrdinaryConstruct(getIntrinsic("%Promise%"), [F]);
-            var G = GetOrCreateLoad();
-            setInternalSlot(G, "Loader", loader);
-            p = PromiseThen(p, G);
-            return p;
-        }
-
-        var CallNormalizeFunction_Call = function (thisArg, argList) {
-            var F = this;
-            var resolve = argList[0];
-            var reject = argList[1];
-
-            var loader = getInternalSlot(F, "Loader");
-            var request = getInternalSlot(F, "Request");
-            var refererName = getInternalSlot(F, "RefererName");
-            var refererAddress = getInternalSlot(F, "RefererAddress");
-
-            var normalizeHook = Get(loader, "normalize");
-            var name = callInternalSlot("Call", normalizeHook, undefined, [request, refererName, refererAddress]);
-            if ((name = ifAbrupt(name)) && isAbrupt(name)) return name;
-            callInternalSlot("Call", resolve, undefined, [name]);
-        };
-
-        function CallNormalize() {
-            var F = OrdinaryFunction();
-            setInternalSlot(F, "Call", CallNormalizeFunction_Call);
-            return F;
-        }
-
-        var GetOrCreateLoad_Call = function (thisArg, argList) {
-            var F = this;
-            var name = argList[0];
-            var loader = getInternalSlot(F, "loader");
-            name = ToString(name);
-            if ((name = ifAbrupt(name)) && isAbrupt(name)) return name;
-            if (loader.modules[name]) {
-                var existingModule = loader.modules[name].value;
-                var load = CreateLoad(name);
-                load.status = "linked";
-                return load;
-            } else if (loader.loads[name]) {
-                var load = loader.loads[name];
-                Assert(load.status === "loading" || load.status === "loaded", "load.[[status]] has either to be loading or loaded");
-                return load;
-            }
-        };
-
-        //******************************************************************************************************************************************************************************************************
-        //******************************************************************************************************************************************************************************************************
-        // Unter mir der Code der nach Realm kommt.
-        //******************************************************************************************************************************************************************************************************
-        //******************************************************************************************************************************************************************************************************
-
-        /*
-	Diese Funktion wieder defactoren.
-	Und daraus das std_Modul machen.
-	*/
 
         // ===========================================================================================================
         // %ThrowTypeError%
@@ -19485,7 +19527,7 @@ define("lib/api", function (require, exports, module) {
 
     function PromiseNew (executor) {
         var promise = AllocatePromise("%Promise%");
-        return IntialisePromise(promise, executor);
+        return InitializePromise(promise, executor);
     }
     
     function PromiseBuiltinCapability() {
@@ -19501,9 +19543,14 @@ define("lib/api", function (require, exports, module) {
         return NormalCompletion(capability.Promise);
     }
 
-    function PromiseAll(promiseList) {}
-    function PromiseCatch(promise, rejectedAction) {}
-    function PromiseThen(promise, resolvedAction, rejectedAction) {}
+    function PromiseAll(promiseList) {
+
+    }
+    function PromiseCatch(promise, rejectedAction) {
+    }
+    function PromiseThen(promise, resolvedAction, rejectedAction) {
+
+    }
 
 
 
@@ -19641,7 +19688,8 @@ define("lib/api", function (require, exports, module) {
     }
 
     function InitializePromise(promise, executor) {
-        Assert(hasInternalSlot(promise, "PromiseStatus") && (getInternalSlot(promise, "PromiseStatus") == undefined), "intializepromise, promisestatus");
+        Assert(hasInternalSlot(promise, "PromiseStatus") 
+            && (getInternalSlot(promise, "PromiseStatus") === undefined), "intializepromise, promisestatus");
         Assert(IsCallable(executor), "executor has to be callable");
         setInternalSlot(promise, "PromiseStatus", "unresolved");
         setInternalSlot(promise, "PromiseResolveReactions", []);
