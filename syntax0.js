@@ -3878,6 +3878,7 @@ define("lib/parser", ["lib/tables", "lib/tokenizer"], function (tables, tokenize
         }
 
         function contains(production) {
+            if (container)
             if (Object.hasOwnProperty.call(container, production)) return container[production];
             else return false;
         }
@@ -6712,6 +6713,9 @@ define("lib/parser", ["lib/tables", "lib/tokenizer"], function (tables, tokenize
 
     function Program() {
 
+        contains.new_container();
+        contains.new_var();
+
         var node = Node("Program");
         node.loc = loc = makeLoc();
         loc.start.line = 1;
@@ -6731,6 +6735,8 @@ define("lib/parser", ["lib/tables", "lib/tokenizer"], function (tables, tokenize
 		node.lexNames = contains.bound_lex();
 		node.varNames = contains.bound_var();
 				*/
+
+        contains.old_container();
 
         if (compile) return builder["program"](node.body, loc);
         return node;
@@ -11797,29 +11803,36 @@ define("lib/api", function (require, exports, module) {
     // ===========================================================================================================
 
     function printCodeEvaluationState() {
+        
         var state = getContext().state;
         var node;
         for (var i = state.length-1; i >= 0; i--) {
-            var node = state[i];
-            console.log(i + ". " + node.type);
+            var node = state[i].node;
+            var index = state[i].instructionIndex;
+            console.log(i + ". ("+index+") " + node.type);
         }
+
     }
 
     function generatorCallbackWrong(generator, body) {
 
         printCodeEvaluationState();
-
         var result = exports.ResumeEvaluate(body);
+
         if ((result = ifAbrupt(result)) && isAbrupt(result)) return result;
-        //if (IteratorComplete(result)) {
+  //      if (IteratorComplete(result)) {
             if ((result = ifAbrupt(result)) && isAbrupt(result) && result.type === "return") {
                 Assert(isAbrupt(result) && result.type === "return", "expecting abrupt return completion");
                 setInternalSlot(generator, "GeneratorState", "completed");
                 if ((result = ifAbrupt(result)) && isAbrupt(result)) return result;
+        
                 cx.generatorCallback = undefined;
+                getStack().pop();        
                 return CreateItrResultObject(result, true);
             }
-        //}
+    //    }
+      //
+      getStack().pop();        
         return result;
     }
 
@@ -11829,7 +11842,6 @@ define("lib/api", function (require, exports, module) {
         
         var cx = getContext();
         cx.generator = generator;
-        
         cx.generatorCallback = function () {
             // this has to be transferred into a kind of machine.
             // a little piece, how to obtain the right node from the stack has to be cleared
@@ -11850,16 +11862,21 @@ define("lib/api", function (require, exports, module) {
         var genContext = getInternalSlot(generator, "GeneratorContext");
 
         var methodContext = getContext();
+        
         getStack().push(genContext);
         
         setInternalSlot(generator, "GeneratorState", "executing");
 
         var generatorCallback = genContext.generatorCallback;
         var result = generatorCallback(NormalCompletion(value));
+        setInternalSlot(generator, "GeneratorState", "suspendedYield");
+
+        
+
         var x = getContext();
         
         if (x !== methodContext) {
-            console.log("GENERATOR ACHTUNG: CONTEXT MISMATCH TEST NICHT BESTANDEN - resume");
+            console.log("GENERATOR ACHTUNG 2: CONTEXT MISMATCH TEST NICHT BESTANDEN - resume");
         };
 
         return result;
@@ -11873,12 +11890,9 @@ define("lib/api", function (require, exports, module) {
 
         setInternalSlot(generator, "GeneratorState", "suspendedYield");
 
-
-
         var x = getStack().pop();
-
         if (x !== genContext) {
-            console.log("GENERATOR ACHTUNG: CONTEXT MISMATCH TEST NICHT BESTANDEN - yield");
+            console.log("GENERATOR ACHTUNG 1: CONTEXT MISMATCH TEST NICHT BESTANDEN - yield");
         };
 
         genContext.generatorCallback = function (compl) {
@@ -24247,8 +24261,15 @@ define("lib/runtime", ["lib/parser", "lib/api", "lib/slower-static-semantics"], 
     function StatementList(stmtList) {
         var stmtRef, stmtValue, stmt;
 
+        var index = 0;
+
+        // try for some resume. Hope to have not so many loops to update.
+        var state = getContext().state;
+        var instructionIndex = state[state.length-1].instructionIndex;
+        if (instructionIndex > 0) index = instructionIndex;
+
         var V = undefined;
-        for (var i = 0, j = stmtList.length; i < j; i++) {
+        for (var i = index, j = stmtList.length; i < j; i++) {
             if (stmt = stmtList[i]) {
                 tellExecutionContext(stmt, i);
                 stmtRef = Evaluate(stmt);
@@ -25236,6 +25257,13 @@ define("lib/runtime", ["lib/parser", "lib/api", "lib/slower-static-semantics"], 
 
     function tellExecutionContext(node, i, parent) {
         loc = node.loc || loc;
+        
+        var stateRec = cx.state[cx.state.length-1];
+
+        stateRec.instructionIndex = i;
+        // unsure but i have to reenter statementlists at some point,
+
+
         cx.state.node = node;
         cx.line =   loc.start.line;
         cx.column = loc.start.column;
@@ -25341,7 +25369,8 @@ define("lib/runtime", ["lib/parser", "lib/api", "lib/slower-static-semantics"], 
     function Evaluate(node, a, b, c, d) {
 
         var state = getContext().state;
-        state.push({ node: node });
+        // now one evaluate costs extra for today
+        state.push({ node: node, a: a, b: b, c: c, d: d });
 
         // slow, just temporary for memozing
         // a little group uses evaluate arguments.
@@ -25354,12 +25383,21 @@ define("lib/runtime", ["lib/parser", "lib/api", "lib/slower-static-semantics"], 
 
     ecma.ResumeEvaluate = ResumeEvaluate;
 
+
+    // work the remaining stack down, activated by generators
+    // statementlists check for their instruction pointer.
+    function GoDownEvaluate(a,b,c,d) {
+        var state = getContext().state;
+        while (state.length) {
+            var R = Evaluate2(null, a, b, c, d);
+            if (isAbrupt(R)) return R;
+            // die completion noch storen (bestimmt)
+        }
+        return R;
+    }
     function ResumeEvaluate(a,b,c,d) {
         // dont push onto the stack
-        var result = Evaluate2(null, a,b,c,d);
-
-        state.pop();
-
+        var result = GoDownEvaluate(null, a, b, c, d);    
         return result;
     }
 
@@ -25381,7 +25419,7 @@ define("lib/runtime", ["lib/parser", "lib/api", "lib/slower-static-semantics"], 
         } else if (Array.isArray(node)) {
 
             debug("Evaluate(StatementList)");
-            if (node.type) R = evaluation[node.type](node);
+            if (node.type) R = evaluation[node.type](node, a, b, c, d);
             else R = evaluation.StatementList(node, a, b, c, d);
 
         } else {
@@ -25389,7 +25427,7 @@ define("lib/runtime", ["lib/parser", "lib/api", "lib/slower-static-semantics"], 
             debug("Evaluate(" + node.type + ")");
             if (E = evaluation[node.type]) {
                 tellExecutionContext(node, 0);
-                R = E(node, a,b,c,d);
+                R = E(node, a, b, c, d);
             }
             
         }
