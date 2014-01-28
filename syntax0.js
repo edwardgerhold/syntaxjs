@@ -25346,7 +25346,8 @@ define("lib/runtime", ["lib/parser", "lib/api", "lib/slower-static-semantics"], 
         return Evaluate2()
     }
 
-    exports.ResumeEvaluate = ResumeEvaluate;
+    ecma.ResumeEvaluate = ResumeEvaluate;
+    
     function ResumeEvaluate(a,b,c,d) {
         // dont push onto the stack
         return Evaluate2(null, a,b,c,d);
