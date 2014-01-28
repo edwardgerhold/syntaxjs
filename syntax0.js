@@ -3820,6 +3820,7 @@ define("lib/parser", ["lib/tables", "lib/tokenizer"], function (tables, tokenize
         ps.stacks["Yield"] = [];
         return ps;
     }
+
     ParameterStack.prototype = {
         getParameter: function (name) {
             var stack = ps.stacks[name];
@@ -11804,11 +11805,11 @@ define("lib/api", function (require, exports, module) {
 
         printCodeEvaluationState();
 
-        getContext().state.resumingGenerator = true;
+        getContext().state.resumingGenerator 
 
 
 
-        var result = exports.Evaluate(body);
+        var result = exports.ResumeEvaluate(body);
         if ((result = ifAbrupt(result)) && isAbrupt(result)) return result;
         //if (IteratorComplete(result)) {
             if ((result = ifAbrupt(result)) && isAbrupt(result) && result.type === "return") {
@@ -11830,6 +11831,8 @@ define("lib/api", function (require, exports, module) {
         cx.generator = generator;
         
         cx.generatorCallback = function () {
+            // this has to be transferred into a kind of machine.
+            // a little piece, how to obtain the right node from the stack has to be cleared
             return generatorCallbackWrong(generator, body);
         };
         
@@ -25336,13 +25339,30 @@ define("lib/runtime", ["lib/parser", "lib/api", "lib/slower-static-semantics"], 
     ecma.Evaluate = Evaluate;
 
     function Evaluate(node, a, b, c, d) {
-        var E, R;
-        var body, i, j;
-
-        if (!node) return NormalCompletion(undefined); //  withError("Type", "Null node received");
 
         var state = getContext().state;
-        if (!state.resumingGenerator) state.push(node);
+        state.push({ node: node });
+
+        // slow, just temporary for memozing
+        // a little group uses evaluate arguments.
+        var args = [].slice.call(arguments)
+        // just for seperation of concetrns;
+        return Evaluate2()
+    }
+
+    function ResumeEvaluate(a,b,c,d) {
+        // dont push onto the stack
+        return Evaluate2(null, a,b,c,d);
+    }
+
+    function Evaluate2(node, a, b, c, d) {
+        var E, R;
+        var body, i, j;
+ 
+        // expensive like everything here but a must
+        var state = getContext().state;
+        var stateRec = state.pop();
+        node = stateRec.node;
 
         if (typeof node === "string") {
             debug("Evaluate(resolvebinding " + node + ")");
@@ -25352,19 +25372,17 @@ define("lib/runtime", ["lib/parser", "lib/api", "lib/slower-static-semantics"], 
 
             debug("Evaluate(StatementList)");
             if (node.type) R = evaluation[node.type](node);
-            else R = evaluation.StatementList(node);
+            else R = evaluation.StatementList(node, a, b, c, d);
 
         } else {
             
             debug("Evaluate(" + node.type + ")");
             if (E = evaluation[node.type]) {
                 tellExecutionContext(node, 0);
-                R = E.apply(this, arguments);
+                R = E(node, a,b,c,d);
             }
             
         }
-
-        if (!state.suspendedGenerator) state.pop();
 
         return R;
     }
