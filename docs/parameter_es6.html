@@ -1,0 +1,229 @@
+<!doctype html>
+<meta charset="utf8"
+<body>
+<h2>Parameterisierte Grammatik</h2>
+
+<h3>Possible Solution for using only the Base Grammar</h3>
+
+<p>This is a stack. Das ist ein Stack. Auf den werden die Parameter gepush.
+On it the parameters will be pushed. The actual value on top of the stack (at
+the end of the array) is the current Value of [in] or [return] or [yield].
+
+<pre>
+var parameters = {
+    "return": [],
+    "in": [],
+    "yield": []
+};
+
+function pushParameter(name, value) {
+    var stack = parameters[name];
+    stack.push(value); 
+}
+
+function popParameter(name) {
+    var stack = parameters[name];
+    stack.pop();
+}
+
+function getParameter(name) {
+    var stack = parameters[name];
+    var value = stack[stack.length-1];
+    return value;
+}
+
+/*
+    Examples
+    
+    
+    // Reading the In Parameter
+    if (!getParameter("in")) {
+	node.operator = "in";
+	accept("RelationalExpressionIn");
+    }
+    
+    
+    
+    
+    // Setting StatementList[Return];
+    pushParameter("return", true);
+    while (!bodyEnd) {
+	
+	
+    }    
+    // Resetting [Return] to former state;
+    popParameter("return");
+    
+    
+*/
+</pre>
+
+<h3>PLALR(1) in EcmaScript 6</h3>
+
+<h4>Edwards little Introduction into some true Parsing Tricks</h4>
+
+<p>In der neuen Ausgabe der JavaScript Spezifikation hat sich einiges getan. Besonders interessant ist auch die neugestaltete Grammatik.
+Gab es in der letzten Edition noch eine Grammatik die selbe Produktion zweimal, einmal mit und einmal ohne NoIn Suffix, womit man den "in"
+Operator im Initialisiererteil eines ForStatements kontrollieren konnte, geht man aufgrund neuer Anforderungen in EcmaScript 6 neue Wege.
+Zum anderen war es auch nicht unbedingt angenehm, die Grammatik nur für das "in" im For gleich zweimal abzuschreiben, damit sie unterwegs mal
+auf das in Verzichtet. Convenient wie jetzt, war auch die Schreibweise mit _opt_, womit nicht notwendige Token markiert werden können. Eine
+genauere Angabe über die Herkunft der NoIn Produktionen kann ich ihnen leider nicht geben. Aus der Praxis kann ich ihnen sagen, ich habe es mit
+einem LL(1) Parser auf eine andere Art und Weise gelöst. Ich habe eine Variable NoIn entsprechend der Aktivierung der alternativen Produktion auf
+den Stack gepusht und neu gesetzt und wieder runtergeholt, wenn der rekursive Teil abgearbeitet war. Auf diese Art und Weise habe ich bereits mit
+den Parametern der neuen EcmaScript 6 Grammatik experimentiert. Einen richtigen LALR(1) Generator habe ich noch nicht benutzt. Allerdings ist das
+nicht unbedingt nötig. LL(1) Parser sind in der Regel weniger komplex als LR(1) Parser, und für beide Seiten gibt es Lookup Tabellen, um praktisch
+ohne Backtracking und möglichst deterministisch auszukommen. Beim LL(1) Parser sind das die First und Follow Sets. In meiner EcmaScript Variante
+habe ich ausserdem ObjektLiterale mit bestimmten Namen oder Values mit jeweils der Booleanvariable true abgespeichert, womit ich schnelle Vergleiche,
+ob das aktuelle Element einer Menge zugehört, machen kann. Mit einem Stack, beziehungsweise mehreren Stacks, insofern die Aktivierung durcheinander
+erfolgen kann, und das denke ich, da wir beliebigen Code haben können, kann man die Parameter kontrollieren und einen entsprechenden Zustand markieren.
+Damit kann man ohne generierte Parsertabellen schnell und korrekt handeln.</p>
+
+<p>Um die Semantik der Parameter zu verstehen, und sie mir merken zu können, habe ich mir erlaubt, diese aus dem EcmaScript 6 Draft nochmal gesondert
+hervorzuheben. Erklärt wird das also ebenfalls in Kapitel 5.1.5 Grammar Notation der EcmaScript 6 Spezifikation. Eine ausführliche Einführung einer
+Universität zu dieser Art von Parser kann ich nicht anbieten, aber im Internet kann man die vorhandenen Vorlesungen benutzen, um sich das Parsing verständlich 
+zu machen. Das auf den Stack pushen und gegebenenfalls reduzieren ist nicht so schwer. Die Elemente auf dem Stack können einen String ergeben, der wiederum
+mit einer Righthandside eins Symbols links übereinstimmt (wenn man die, die in der Liste da stehen kombiniert, passt das). Dann kann man reduzieren. Da
+man hier von O(n^3) spricht, ist mir der LL(1) lieber, der fast linear durchgeht. Alles in allem möchte ich aber sagen, daß ich nicht so weitergehende Ahnung
+vom Parsen habe, weil mir die Praxis in der Richtung fehlt, daß ich für meine weiteren Angaben keine Gewähr geben kann oder gar keine erst machen will.</p>
+
+<h3>Grammatischer Überblick</h3>
+
+<p>Jedenfalls will ich uns jetzt mal die Parameter der EcmaScript 6 Grammatik, so wie sie auf englisch beschrieben sind, noch einmal auf Deutsch wiedergeben.</p>
+
+<p>Die Beispiele sind quasi 1:1 aus der ES-262 Edition 6 übernommen.</p>
+
+<h4>Lefthandside: Righthandside</h4>
+
+<p>Links steht der Name der Produktion, das Nonterminalsymbol. Die rechte Seite kann aus mehreren NonTerminals, mehreren Terminals wie zum Beispiel einzelnen Worten
+bestehen. Die rechte Seite fasst man zur linken zusammen. So fasst ein LL(1) Parser rekursiv das was rechts steht unter dem Namen links zusammen und ein LR(1) pusht
+solange auf den Stack, bis er mit dem produzierten String eine Righthandside matcht und die fasst er dann zum linken Symbol zusammen.</p>
+
+<h4>opt</h4>
+
+<p>Schon von vorher bekannt, steht opt für optional und macht es möglich ein Terminal/Nonterminal auf der rechten Seite als nicht notwendig anzusehen. In einem
+folgenden Beispiel, wird das opt Wort ebenfalls verwendet, darum erläutere ich es hier nochmals. Ausserdem gehört es ja grundsätzlich zur EcmaScript Grammatik
+hinzu.</p>
+
+<pre data-syntaxjs-highlight=false>
+VariableDeclaration:
+    BindingIdentifier Initialiser_opt
+    
+    steht für
+
+VariableDeclaration:
+    BindingIdentifier
+    
+VariableDeclaration:
+    BindingIdentifier Initialiser
+</pre>
+
+<h4>LeftHandSide[parameter]</h4>
+
+<p>Produktionen können mit einem [parameter] parametrisiert werden, indem man sie als Suffix hinter die Lefthandside schreibt. Also links vom Doppelpunkt.
+Auf beiden Seiten expandieren dann die Angaben entsprechend um die angegebenen Parameter. Eine Liste[Parametrisiert] wird zu einer Liste und einer ListeParametrisiert
+und auf der rechten Seite des Doppelpunkts werden alle aufgezählten Terminal und Nonterminalsymbole wiederholt aufgezählt, insofern nicht entsprechende weitere Parameter
+gesetzt sind. Das Ganze ist also ganz einfach und expandiert ensprechend der Parameterangaben, wenn man es nochmal in andere Worte fasst.</p>
+
+<pre data-syntaxjs-highlight=false>
+StatementList[Return]:
+    ReturnStatement
+    ExpressionStatement
+    
+steht für
+
+StatementList:
+    ReturnStatement
+    ExpressionStatement
+
+StatementListReturn:
+    ReturnStatement
+    ExpressionStatement
+</pre>
+
+<h4>>RightHandSide[parameter]</h4>
+
+<p>Parameter können auch auf der rechten Seite stehen.</p>
+
+<pre data-syntaxjs-highlight=false>
+VariableDeclaration:
+    BindingIdentifier Initialiser[In]opt
+
+    steht für
+    
+VariableDeclaration:
+    BindingIdentifier 
+    BindingIdentifier InitialiserIn
+</pre>
+
+<p style="font-size:0.8em">An der Stelle fragte ich mich, ob nicht ausserdem "BindingIdentifier Initialiser" vergessen wurde. Mit einer klitzekleinen
+Frage im Kopf sollte ich diese Paramernotation mal im Internet aufspüren. Sie heisst PLR(1) oder PLALR(1) wobei das P für Parameterized
+und das LR für Left-to-right, rightmost derivation steht. Das A steht irgendwie für Augmented und ist in wohl in Bison vorhanden.</p>
+
+<p>Das nächste Steuerzeichen, das "?", löst das Problem, dass RHS[parameter] einfach in RHSparameter expandiert wird.</p>
+
+<h4>LeftHandSide[parameter]: RightHandSide[?parameter]</h4>
+
+<pre data-syntaxjs-highlight=false>
+
+    VariableDeclaration[In]:
+    BindingIdentifier Intialiser[?In]opt
+    
+    wird zu
+    
+    VariableDeclaration:
+    BindingIdentifier Initialisier_opt
+    
+    VariableDeclarationIn:
+    BindingIdentifier InitialiserIn_opt
+
+</pre>
+
+<h4>[+parameter]RightHandSide - (wenn parameter)</h4>
+
+<p>Ist die Righthandside mit "[+parameter]" geprefixt, bedeutet das, diese Alternative ist nur dann verfügbar, wenn der benannte Parameter benutzt wird.</p>
+
+<pre data-syntaxjs-highlight=false>
+
+StatementList[Return]:
+    [+Return]ReturnStatement
+    ExpressionStatement 
+    
+steht für
+
+StatementList:
+    ExpressionStatement
+
+StatementListReturn:
+    ReturnStatement
+    ExpressionStatement
+
+</pre>
+    
+<h4>[~parameter]RightHandSide - (nicht wenn parameter)</h4>
+
+<p>Ist die righthandside mit "[~parameter]" geprefixt, bedeutet das, die Alternative ist
+nur verfügbar, wenn der benannte Parameter _nicht_ benutzt wird.</p>
+
+<pre data-syntaxjs-highlight=false>
+
+StatementList[Return]:
+    [~Return]ReturnStatement
+    ExpressionStatement
+    
+steht für
+
+StatementListReturn:
+    ExpressionStatement
+    
+StatementList:
+    ReturnStatement
+    ExpressionStatement
+
+</pre>
+
+<p>Das war es auch schon mit dem Kurzüberblick im EcmaScript 6 Draft und von mir, der sich die Formen damit ebenfalls nochmal vor Augen führen konnte. Eine
+klitzekleine Frage ist geblieben, die man aber auch getrost überspringen kann, weil sie im Verlauf der EcmaScript 6 Grammatik nicht von Nöten sein wird. Wenn
+man die Grammatik liest kommt man ausserdem selbst darauf. Einen Generator dafür zu schreiben, das wäre eine anspruchsvolle Aufgabe. Und die Grammatik erstmal
+aus dem doc herauszukopieren ebenfalls. Jedenfalls wünsche ich euch mit ES6 weiterhin viel Spass.</p>
+
+</body>

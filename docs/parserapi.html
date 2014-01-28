@@ -1,0 +1,186 @@
+<h2>Parser-API</h2>
+
+
+<p>These are some additions to the mozilla parser api ast. Which are far away from perfect
+and need to be corrected and well used. But i use them to evaluate es6 code with syntax.js.
+My dream is to get it later compatible with existing and great tools using this parser api.</p>
+
+<h2>For-In/Of Statements</h2>
+
+<pre>
+    for (let x of [1,2,3]) 
+    
+    {
+	type: "ForDeclaration"
+	kind: "let"
+	id: { type: "Identifier", name: "x" }
+    }
+    
+    for (let [k,v] of [1,2,3]) 
+    
+    {
+	type: "ForDeclaration",
+	kind: "let",
+	id: { type: "ArrayPattern", elements: [ { type: "Identifier", name: "k"}, {type:"Identifier", name: "v" } ] }
+    }
+</pre>
+
+<p>Ich denke "id" ist vielleicht nicht gut gewaehlt. Aber ich brauchte was, um die Luecke zu fuellen.</p>
+
+
+<h2>Spread Expression</h2>
+
+
+<pre>
+
+    f(...expr)
+    {
+	type: "SpreadExpression"
+	argument: { type: "Identifier", name: "expr" }
+    }    
+    
+
+    {
+	type: "SpreadExpression"
+	argument: AssignmentExpression
+    }
+
+</pre>
+    
+
+
+<h2>Rest Parameter</h2>
+
+<pre>
+
+    function f(...rest) {}
+    {
+	type: "RestParameter"
+	id: "rest"
+    }    
+    
+
+    {
+	type: "RestParameter"
+	id: string
+    }
+
+</pre>
+    
+    
+<h2>Default Parameters</h2>
+<pre>
+    f(a = 3) { }
+    
+    { 
+	type: "DefaultParameter", 
+	id: "a", 
+	init: { 
+	    type: "NumericLiteral", value: "3" 
+	} 
+    };
+    
+    
+    {
+	type: "DefaultParameter"
+	id: string
+	init: AssignmentExpression
+    }
+</pre>
+
+
+<h2>BindingPatterns</h2>
+<pre>
+
+    let { name: alias } = { name: "Edward" }
+    
+    properties: [{ type: "BindingElement", id: "name", as: "alias" }]
+        
+    {
+	type: "BindingElement"
+	id: Identifier
+	as: Identifier
+    }
+    
+</pre>
+
+
+<h2>ObjectExpressions/ Computed Properties</h2>
+
+<p>The nodes added to the properties Array in ObjectExpressions i gave the type "PropertyDefinition".
+The already have the kinds "init", "get"set"</
+<pre>
+    {
+	[symbol]: "computed property"
+    }
+    
+    {
+	type: "PropertyDefinition",
+	kind: "computed",
+	key: AssignmentExpression,
+	value: AssignmentExpression
+    }
+    
+</pre>
+
+
+<h2>Method Definitions</h2>
+<p>I could have reused functiondeclarations and added the kind "method" to the "PropertyDefinition"
+but i preferred to define MethodDefinitions.</p>
+
+<pre>
+
+    {
+	type: "MethodDefinition",
+	strict: bool
+	generator: bool
+	computed: bool 	// [s] computed property
+	kind: get|set	// 
+	params:	FormalParameters
+	body: FunctionBody
+	static: bool
+    }
+
+</pre>
+
+
+<h2>Template Literals</h2>
+
+<p>The lexer grabs from ` to `. And the evaluation splits it. Ecma 262 Ed. 6 defines a full tokenization.</p>
+
+<pre>
+    { 
+	type: "TemplateLiteral",
+	value: "`ffsdfsdf`"
+    }
+</pre>
+
+<p>This is split by a regex and transformed into a call site object later. The issue with, i have to correct it
+with the real grammar, is, that embedded template strings will break the regular expression :-) This is a temp solution</p>
+
+<h2>This isn´t complete!</h2>
+
+
+
+<pre>
+	{
+	type: "ModuleDeclaration",
+	id: "m",
+	strict: true,
+	body: [] // statementlist
+	}
+
+	{
+		type: "ImportStatement"
+		exports: []
+	}
+	{
+		type: "ExportStatement"
+		imports: []
+	}
+}
+
+</pre>
+
+
+<p>Oh, there are nodes missing. I will continue and correct this file soon.</p>
