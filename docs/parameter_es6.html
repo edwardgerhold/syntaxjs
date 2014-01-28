@@ -3,59 +3,42 @@
 <body>
 <h2>Parameterisierte Grammatik</h2>
 
-<h3>Possible Solution for using only the Base Grammar</h3>
+<h3>Possible solution for use with a base grammar</h3>
 
 <p>This is a stack. Das ist ein Stack. Auf den werden die Parameter gepush.
 On it the parameters will be pushed. The actual value on top of the stack (at
 the end of the array) is the current Value of [in] or [return] or [yield].
 
 <pre>
-var parameters = {
-    "return": [],
-    "in": [],
-    "yield": []
-};
-
-function pushParameter(name, value) {
-    var stack = parameters[name];
-    stack.push(value); 
-}
-
-function popParameter(name) {
-    var stack = parameters[name];
-    stack.pop();
-}
-
-function getParameter(name) {
-    var stack = parameters[name];
-    var value = stack[stack.length-1];
-    return value;
-}
-
-/*
-    Examples
-    
-    
-    // Reading the In Parameter
-    if (!getParameter("in")) {
-	node.operator = "in";
-	accept("RelationalExpressionIn");
+    function ParameterStack () {
+        var ps = Object.create(ParameterStack.prototype);
+        ps.stacks = Object.create(null);
+        ps.stacks["Default"] = [];
+        ps.stacks["GeneratorParameter"] = [];
+        ps.stacks["In"] = [];
+        ps.stacks["Return"] = [];
+        ps.stacks["Yield"] = [];
+        return ps;
     }
-    
-    
-    
-    
-    // Setting StatementList[Return];
-    pushParameter("return", true);
-    while (!bodyEnd) {
-	
-	
-    }    
-    // Resetting [Return] to former state;
-    popParameter("return");
-    
-    
-*/
+    ParameterStack.prototype = {
+        getParameter: function (name) {
+            var stack = ps.stacks[name];
+            return stack[stack.length-1];
+        },
+        pushParameter: function (name, value) {
+            var stack = ps.stacks[name];
+            var oldValue = this.getParameter(name);
+            stack.push(value);
+            return oldValue;
+        },
+        popParameter: function (name) {
+            var stack = ps.stacks[name];
+            return stack.pop();
+        },
+        toString: function () {
+            return "[object ParameterStack]";
+        }
+    };
 </pre>
 
 <h3>PLALR(1) in EcmaScript 6</h3>
@@ -225,5 +208,60 @@ StatementList:
 klitzekleine Frage ist geblieben, die man aber auch getrost überspringen kann, weil sie im Verlauf der EcmaScript 6 Grammatik nicht von Nöten sein wird. Wenn
 man die Grammatik liest kommt man ausserdem selbst darauf. Einen Generator dafür zu schreiben, das wäre eine anspruchsvolle Aufgabe. Und die Grammatik erstmal
 aus dem doc herauszukopieren ebenfalls. Jedenfalls wünsche ich euch mit ES6 weiterhin viel Spass.</p>
+
+<p>Here the original idea again</p>
+
+<pre>
+var parameters = {
+    "Default": [],
+    "GeneratorParameter": [],
+    "In": [],
+    "Return": [],
+    "Yield": []
+};
+
+function pushParameter(name, value) {
+    var stack = parameters[name];
+    stack.push(value); 
+}
+
+function popParameter(name) {
+    var stack = parameters[name];
+    stack.pop();
+}
+
+function getParameter(name) {
+    var stack = parameters[name];
+    var value = stack[stack.length-1];
+    return value;
+}
+
+
+/*
+    Examples
+    
+    
+    // Reading the In Parameter
+    if (!getParameter("In")) {
+    node.operator = "In";
+    accept("RelationalExpressionIn");
+    }
+    
+    
+    
+    // Setting StatementList[Return];
+    pushParameter("Return", true);
+    while (!bodyEnd) {
+        
+    
+    }    
+    // Resetting [Return] to former state;
+    popParameter("Return");
+    getParameter("Return")
+    
+*/
+</pre>
+
+
 
 </body>
