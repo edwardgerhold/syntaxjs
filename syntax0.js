@@ -25345,23 +25345,33 @@ define("lib/runtime", ["lib/parser", "lib/api", "lib/slower-static-semantics"], 
 
         // slow, just temporary for memozing
         // a little group uses evaluate arguments.
-        return Evaluate2(a,b,c,d)
+        var result = Evaluate2(node, a,b,c,d)
+
+        state.pop();
+
+        return result;
     }
 
     ecma.ResumeEvaluate = ResumeEvaluate;
 
     function ResumeEvaluate(a,b,c,d) {
         // dont push onto the stack
-        return Evaluate2(null, a,b,c,d);
+        var result = Evaluate2(null, a,b,c,d);
+
+        state.pop();
+
+        return result;
     }
 
     function Evaluate2(node, a, b, c, d) {
         var E, R;
         var body, i, j;
  
-        // expensive like everything here but a must
+        // expensive like everything here but a must to try for the first time
+        // currently pushing and popping the node is meaningless, but i am thinking
+        // about, how to maybe change the whole evaluation for
         var state = getContext().state;
-        var stateRec = state.pop();
+        var stateRec = state[state.length-1];
         node = stateRec.node;
 
         if (typeof node === "string") {
