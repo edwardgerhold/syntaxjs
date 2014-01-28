@@ -153,14 +153,14 @@ function SymbolAndContainsTable() {
 
 
 	EarlyErrors.FunctionDeclaration = function (node) {
-		Assert(!contains.contains("ReturnStatement"));
+		Assert(!contains.contains("ReturnStatement"), "Return Statements are forbidden");
 	}
 
 	function EarlyErrors(node) {
 		var handler = EarlyErrors[node.type];
 		if (handler) handler(node);
 		// man koennte try-catch nehmen und controllen.
-	
-}</pre>
+	}
+</pre>
 
 </body>
