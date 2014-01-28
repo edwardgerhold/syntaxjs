@@ -24815,7 +24815,7 @@ define("lib/runtime", ["lib/parser", "lib/api", "lib/slower-static-semantics"], 
     }
 
     function GetTemplateCallSite(templateLiteral) {
-        //if (templateLiteral.siteObj) return templateLiteral.siteObj;
+        if (templateLiteral.siteObj) return templateLiteral.siteObj;
         var cookedStrings = TemplateStrings(templateLiteral, false); // die expressions ??? bei mir jedenfalls gerade
         var rawStrings = TemplateStrings(templateLiteral, true); // strings 
         var count = Math.max(cookedStrings.length, rawStrings.length);
@@ -25260,7 +25260,7 @@ define("lib/runtime", ["lib/parser", "lib/api", "lib/slower-static-semantics"], 
         
         var stateRec = cx.state[cx.state.length-1];
 
-        stateRec.instructionIndex = i;
+        if (stateRec) stateRec.instructionIndex = i;
         // unsure but i have to reenter statementlists at some point,
 
 
@@ -25383,8 +25383,7 @@ define("lib/runtime", ["lib/parser", "lib/api", "lib/slower-static-semantics"], 
 
     ecma.ResumeEvaluate = ResumeEvaluate;
 
-
-    // work the remaining stack down, activated by generators
+    // work the remaining stack down, activated by generators.
     // statementlists check for their instruction pointer.
     function GoDownEvaluate(a,b,c,d) {
         var state = getContext().state;
@@ -25396,6 +25395,7 @@ define("lib/runtime", ["lib/parser", "lib/api", "lib/slower-static-semantics"], 
         }
         return R;
     }
+
     function ResumeEvaluate(a,b,c,d) {
         // dont push onto the stack
         var result = GoDownEvaluate(null, a, b, c, d);    
@@ -25414,7 +25414,7 @@ define("lib/runtime", ["lib/parser", "lib/api", "lib/slower-static-semantics"], 
         var stateRec = state[state.length-1];
         node = stateRec.node;
 
-        
+
 
         if (typeof node === "string") {
             debug("Evaluate(resolvebinding " + node + ")");
@@ -25488,6 +25488,7 @@ define("lib/runtime", ["lib/parser", "lib/api", "lib/slower-static-semantics"], 
         if (Type(exprRef) === "reference") exprValue = GetValue(exprRef);
         else exprValue = exprRef;
 
+
         // exception handling.
         if ((exprValue = ifAbrupt(exprValue)) && isAbrupt(exprValue)) {
             if (exprValue.type === "throw") {
@@ -25503,13 +25504,12 @@ define("lib/runtime", ["lib/parser", "lib/api", "lib/slower-static-semantics"], 
         }
 
 
+
         // now process my eventQueue (which will be replaced by ES6 concurrency and task queues)
         if (!shellModeBool && initialisedTheRuntime && !eventQueue.length) endRuntime();
-        else if (eventQueue.length) {
-            setTimeout(function () {
-                HandleEventQueue(shellModeBool, initialisedTheRuntime);
-            }, 0);
-        }
+        else if (eventQueue.length) setTimeout(function () {HandleEventQueue(shellModeBool, initialisedTheRuntime);}, 0);
+        
+
 
         return exprValue;
     }
