@@ -3806,6 +3806,41 @@ define("lib/parser", ["lib/tables", "lib/tokenizer"], function (tables, tokenize
         "arguments": true
     };
 
+//
+// Parameter
+//
+
+    function ParameterStack () {
+        var ps = Object.create(ParameterStack.prototype);
+        ps.stacks = Object.create(null);
+        ps.stacks["Default"] = [];
+        ps.stacks["GeneratorParameter"] = [];
+        ps.stacks["In"] = [];
+        ps.stacks["Return"] = [];
+        ps.stacks["Yield"] = [];
+        return ps;
+    }
+    ParameterStack.prototype = {
+        getParameter: function (name) {
+            var stack = ps.stacks[name];
+            return stack[stack.length-1];
+        },
+        pushParameter: function (name, value) {
+            var stack = ps.stacks[name];
+            var oldValue = this.getParameter(name);
+            stack.push(value);
+            return oldValue;
+        },
+        popParameter: function (name) {
+            var stack = ps.stacks[name];
+            return stack.pop();
+        },
+        toString: function () {
+            return "[object ParameterStack]";
+        }
+    };
+
+
     // ========================================================================================================
     // Symbol Table
     // ========================================================================================================
@@ -3856,7 +3891,7 @@ define("lib/parser", ["lib/tables", "lib/tokenizer"], function (tables, tokenize
             return lexEnv;
         }
 
-        function old_scope() {
+        function old_envs() {
             container = containers.pop();
 
             if (lexEnv === varEnv) {
@@ -3908,7 +3943,7 @@ define("lib/parser", ["lib/tables", "lib/tokenizer"], function (tables, tokenize
             // lexNames, varNAmes
             new_var: new_var_scope, // var +& lex
             new_lex: new_lex_scope, // lex
-            old_scope: old_scope,
+            old_envs: old_envs,
             add_lex: add_lex,
             add_var: add_var,
             is_var: is_var,
@@ -5492,7 +5527,7 @@ define("lib/parser", ["lib/tables", "lib/tokenizer"], function (tables, tokenize
 
             pass("}");
             
-            contains.old_scope();
+            contains.old_envs();
             popState();
             if (compile) return builder["classExpression"](node.id, node.extends, node.elements, node.loc);
             return node;
@@ -5695,16 +5730,17 @@ define("lib/parser", ["lib/tables", "lib/tokenizer"], function (tables, tokenize
             end = loc && loc.end;
             node.loc = makeLoc(start, end);
 
-            if (node.generator) {
+            /*if (node.generator) {
                 AddParentPointers(node);
-            }
+            }*/
+
             defaultIsId = defaultStack.pop();
 
             //node.lexNames = contains.bound_lex();
             //node.varNames = contains.bound_var();
             
             contains.old_container();
-            contains.old_scope();
+            contains.old_envs();
 
             curFunc = functionStack.pop();
 
@@ -5757,7 +5793,7 @@ define("lib/parser", ["lib/tables", "lib/tokenizer"], function (tables, tokenize
 
             defaultIsId = defaultStack.pop();
             contains.old_container();
-            contains.old_scope();
+            contains.old_envs();
 
             pass("}");
             return node;
@@ -6004,7 +6040,7 @@ define("lib/parser", ["lib/tables", "lib/tokenizer"], function (tables, tokenize
             EarlyErrors(node);
 
             contains.old_container();
-            contains.old_scope();
+            contains.old_envs();
             curModule = moduleStack.pop();
 
 
@@ -6455,7 +6491,7 @@ define("lib/parser", ["lib/tables", "lib/tokenizer"], function (tables, tokenize
             EarlyErrors(node);
 
             contains.old_container();
-            contains.old_scope();
+            contains.old_envs();
 
             if (compile) {
                 if (node.type === "ForStatement") return builder["forStatement"](node.init, node.condition, node.update, node.body, loc);
@@ -8319,18 +8355,17 @@ define("lib/api", function (require, exports, module) {
         return realm.eventQueue;
     }
 
-    function newContext(outer, s) {
+    function newContext(outer, state, realm) {
         var env = outer !== undefined ? outer : getLexEnv();
-        s = s || Object.create(null);
-        var cx = new ExecutionContext(env, getRealm(), s);
+        var cx = new ExecutionContext(env, realm||(realm=getRealm()), state||[]);
         getStack().push(cx);
-        return (realm.cx = cx); 
+        return (realm.context = cx);
     }
 
     function oldContext() {
         var stack = getStack();
         stack.pop();
-        return (realm.cx = stack[stack.length - 1]);
+        return (getRealm().context = stack[stack.length - 1]);
     }
 
     function dropExecutionContext() {
@@ -9495,6 +9530,16 @@ define("lib/api", function (require, exports, module) {
     }
     CodeRealm.prototype.toString = CodeRealm_toString;
 
+    CodeRealm.prototype.toValue = function (code) {
+        saveCodeRealm();
+        setCodeRealm(realm);
+        var result = exports.Evaluate(code);    // here the realm argument...hmm. already in use all over
+                                                // maybe remove the module barriers and simply concat the file.
+        restoreCodeRealm();
+        return result;
+    };
+
+
     function CodeRealm_toString() {
         return "[object CodeRealm]";
     }
@@ -9508,16 +9553,18 @@ define("lib/api", function (require, exports, module) {
     function ExecutionContext(outer, realm, state, generator) {
         "use strict";
 
-        this.state = state || getState();   // remove diese 2 argumente
-        this.realm = realm || getRealm();   // remove getstate und getrealm
+        this.state = [];
+        this.realm = realm;
 
         outer = outer || null;
         this.varEnv = NewDeclarativeEnvironment(outer);
         this.lexEnv = this.varEnv;
-
         this.generator = generator;
-        realm.cx = this;
+
+        realm.context = this;
+
     }
+    
     ExecutionContext.prototype.toString = ExecutionContext_toString;
 
     function ExecutionContext_toString() {
@@ -11744,11 +11791,26 @@ define("lib/api", function (require, exports, module) {
     // Generator Algorithms
     // ===========================================================================================================
 
+    function printCodeEvaluationState() {
+        var state = getContext().state;
+        var node;
+        for (var i = state.length-1; i >= 0; i--) {
+            var node = state[i];
+            console.log(i + ". " + node.type);
+        }
+    }
+
     function generatorCallbackWrong(generator, body) {
 
-        var result = realm.xs.Evaluate(body);
+        printCodeEvaluationState();
+
+        getContext().state.resumingGenerator = true;
+
+
+
+        var result = exports.Evaluate(body);
         if ((result = ifAbrupt(result)) && isAbrupt(result)) return result;
-        if (IteratorComplete(result)) {
+        //if (IteratorComplete(result)) {
             if ((result = ifAbrupt(result)) && isAbrupt(result) && result.type === "return") {
                 Assert(isAbrupt(result) && result.type === "return", "expecting abrupt return completion");
                 setInternalSlot(generator, "GeneratorState", "completed");
@@ -11756,17 +11818,21 @@ define("lib/api", function (require, exports, module) {
                 cx.generatorCallback = undefined;
                 return CreateItrResultObject(result, true);
             }
-        }
+        //}
         return result;
     }
 
     function GeneratorStart(generator, body) {
+        
         Assert(getInternalSlot(generator, "GeneratorState") === undefined, "GeneratorStart: GeneratorState has to be undefined");
+        
         var cx = getContext();
         cx.generator = generator;
+        
         cx.generatorCallback = function () {
             return generatorCallbackWrong(generator, body);
         };
+        
         setInternalSlot(generator, "GeneratorContext", cx);
         setInternalSlot(generator, "GeneratorState", "suspendedStart");
         return generator;
@@ -11798,10 +11864,13 @@ define("lib/api", function (require, exports, module) {
 
     function GeneratorYield(itrNextObj) {
         Assert(HasOwnProperty(itrNextObj, "value") && HasOwnProperty(itrNextObj, "done"), "expecting itrNextObj to have value and done properties");
+        
         var genContext = getContext();
         var generator = genContext.generator;
 
         setInternalSlot(generator, "GeneratorState", "suspendedYield");
+
+
 
         var x = getStack().pop();
 
@@ -12821,7 +12890,7 @@ define("lib/api", function (require, exports, module) {
             var stack = getStack();
             stack.push(cx);
             result = steps.apply(this, arguments);
-            Assert(cx === stack.pop(), "CreateBuiltinFunction: Wrong Context popped from the Stack.");
+            stack.pop(); //Assert(cx === stack.pop(), "CreateBuiltinFunction: Wrong Context popped from the Stack.");
             return result;
         }
         // the .steps reference is needed by function.prototype.toString to put out the right function
@@ -12987,8 +13056,14 @@ define("lib/api", function (require, exports, module) {
                 saveCodeRealm();
                 setCodeRealm(realmRec); 
             // i have to have a stack
-                var context = new ExecutionContext(null, realm);
-                getStack().push(context);
+                
+        
+            //var context = newContext(null);
+
+            var context = new ExecutionContext(null, realm);
+            getStack().push(context);
+
+
 
             
             var intrinsics = createIntrinsics(realmRec);
@@ -13000,6 +13075,9 @@ define("lib/api", function (require, exports, module) {
             var newGlobal = createGlobalThis(realmRec, ObjectCreate(null), intrinsics);
             var newGlobalEnv = new GlobalEnvironment(newGlobal);
 
+            context.varEnv = newGlobalEnv;
+            context.lexEnv = newGlobalEnv;
+
             realmRec.globalThis = newGlobal;
             realmRec.globalEnv = newGlobalEnv;
             realmRec.directEvalTranslate = undefined;
@@ -13008,13 +13086,25 @@ define("lib/api", function (require, exports, module) {
             realmRec.Function = undefined;
 
 
+
+
+
             makeTaskQueues(realmRec);
-            
+    
+            // my programming mistakes fixed.
+            // there are variables realm, intrinsics, stack, ..
+            // in the other module
+            // i think hiding behind ONE function will help
+            // or adding it to it´s modules exports and let
+            // them use exports would be another. I favor
+            // the function. but from my p3/933mhz i know i kill
+            // the program with        
                 restoreCodeRealm();
 
             return realmRec;
         }
 
+    
     var realms = [];
     function saveCodeRealm() {
         realms.push(realm);
@@ -13022,344 +13112,44 @@ define("lib/api", function (require, exports, module) {
     function restoreCodeRealm() {
         setCodeRealm(realms.pop());
     }
+
     function setCodeRealm(r) {  // CREATE REALM (API)
         if (r) {
             realm = r;
             stack = realm.stack;
+       
             intrinsics = realm.intrinsics;
             globalEnv = realm.globalEnv;
             globalThis = realm.globalThis;
+        } else {
+            // solution: REMOVE stack, intr, global*
+            // in favor of realm.*, too. Until it´s
+            // finished and optimize THEN, not now.
+            realm = "check for bugs";
+            stack = "check for bugs";
+            intrinsics = "check for bugs";
+            globalEnv = "check for bugs";
+            globalThis = "check for bugs";
         }
         require("lib/runtime").setCodeRealm(r);
     }
 
     function createRealm(options) {
         options = options || {}; // { createOnly: true, don´t set to current real
+        
         if (console.time) console.time("Creating Realm...");
+
         var realm = CreateRealm(); // new CodeRealm(); // CreateRealm();
-        /*
-        setCodeRealm(realm); // loc
-        var intrinsics = createIntrinsics(realm);
-        realm.globalThis = OrdinaryObject(null);
-        realm.globalEnv = new GlobalEnvironment(realm.globalThis);
-        */
+
         setCodeRealm(realm); 
-        // var cx;
-        // cx = newContext(null, realm.xs);
 
-        // intrinsics
-        // createGlobalThis(realm, realm.globalThis, realm.intrinsic
-        realm.loader = undefined;
 
-        if (!options.createOnly) {
-            var cx = getContext();
-            cx.lexEnv = realm.globalEnv;
-            cx.varEnv = realm.globalEnv;
-        }
 
-        realm.toString = function () { return "[object CodeRealm]"; }
-        realm.toValue = function (code) {
-            saveCodeRealm();
-            setCodeRealm(realm);
-            var result = exports.Evaluate(code);
-            restoreCodeRealm();
-            return result;
-        };
         if (console.time) console.timeEnd("Creating Realm...");
         return realm;
     }
 
 
-        
-        function IterableToList(iterable) {
-            //var A = ArrayCreate();
-            var A = [];
-            var next, status;
-            while (next = IteratorStep(iterable)) {
-                A.push(next);
-                // status = Invoke(A, "push", [next]);
-                //if (isAbrupt(status)) return status;
-            }
-            return A;
-        }
-
-
-        
-        
-        // Seite 21 von 43
-
-
-        function GetOption(options, name) {
-            if (options == undefined) return undefined;
-            if (Type(options) !== "object") return withError("Type", "options is not an object");
-            return Get(options, name);
-        }
-
-
-        
-        var EvaluateLoadedModule_Call = function (thisArg, argList) {
-            var F = thisArg;
-            var loader = getInternalSlot(F, "Loader");
-            Assert(load.Status === "linked", "load.Status has to be linked here");
-            var module = load.Module;
-            var result = EnsureEvaluated(module, [], loader);
-            if (isAbrupt(result)) return result;
-            return module;
-        };
-
-        function EvaluateLoadedModule() {
-            var F = OrdinaryFunction();
-            setInternalSlot(F, "Call", EvaluateLoadedModule_Call);
-            return F;
-        }
-
-        //
-        // 1.3 Module Linking
-
-        function EnsureEvaluated(mod, seen, loader) {
-            var deps = mod.dependencies;
-            for (var p in deps) {
-                var dep = deps[p];
-                if (seen.indexOf(dep) === -1) {
-                    EnsureEvaluated(dep, seen, loader);
-                }
-            }
-            var body = getInternalSlot(mod, "Body");
-            if (body !== undefined && getInternalSlot(mod, "Evaluated") === false) {
-                setInternalSlot(mod, "Evaluated", true);
-                var initContext = cx = newContext();
-                initContext.realm = getInternalSlot(loader, "Realm");
-                initContext.varEnv = getInternalSlot(mod, "Environment");
-                var r = Evaluate(body);
-                cx = oldContext();
-                if (isAbrupt(r)) return r;
-            }
-        }
-
-        function OrdinaryModule() {
-            var mod = ObjectCreate(null, {
-                "Environment": undefined,
-                "Exports": undefined,
-                "Dependencies": undefined
-            });
-            return mod;
-        }
-
-        var ConstantFunction_Call = function (thisArg, argList) {
-            return getInternalSlot(this, "ConstantValue");
-        };
-
-        function CreateConstantGetter(key, value) {
-            var getter = CreateBuiltinFunction(getRealm(),ConstantFunction_Call, 0, "get " + key);
-            setInternalSlot(getter, "ConstantValue", value);
-            return getter;
-        }
-
-        function Module(obj) {
-            if (Type(obj) !== "object") return withError("Type", "module obj is not an object");
-            var mod = OrdinaryModule();
-            var keys = OwnPropertyKeysAsList(obj);
-            for (var k in keys) {
-                var key = keys[k];
-                var value = Get(obj, key);
-                if ((value = ifAbrupt(value)) && isAbrupt(value)) return value;
-                var F = CreateConstantGetter(key, value);
-                var desc = {
-                    get: F,
-                    set: undefined,
-                    enumerable: true,
-                    configurable: false
-                };
-                var status = DefineOwnPropertyOrThrow(mod, key, desc);
-                if ((status = ifAbrupt(status)) && isAbrupt(status)) return status;
-            }
-            callInternalSlot("PreventExtensions", mod, mod, []);
-            return mod;
-        }
-
-        // ##################################################################
-        // Modules and Loaders (linking.docx)
-        // ##################################################################
-
-
-
-
-        
-        function ResolveExportEntries(M, visited) {
-            var exportDefs = getInternalSlot(M, "ExportDefinitions");
-            if (exportDefs != undefined) return exportDefs;
-            var defs = [];
-            var boundNames = getInternalSlot(M, "BoundNames");
-            var knownExportEntries = getInternalSlot(M, "KnownExportEntries");
-            var linkErrors = getInternalSlot(M, "LinkErrors");
-            for (var k in knownExportEntries) {
-
-                var entry = knownExportEntries[k];
-                var modReq = entry.moduleRequest // caps
-                var otherMod = LookupModuleDependency(M, modReq);
-
-                if (entry.module !== null && entry.localName !== null && !boundNames[entry.localName]) { // caps
-                    var error = withError("Reference", "linkError created in ResolveExportEntries");
-                    linkErrors.push(error);
-                }
-
-            }
-            setInternalSlot(M, "ExportDefinitions", defs);
-            return defs;
-        }
-
-        function ResolveExports(M) {
-            var exportDefinitions = getInternalSlot("M", "ExportDefinitions");
-            for (var i = 0, j = exportDefinitions.length; i < j; i++) {
-                var def = exportDefinitions[i];
-                ResolveExport(M, def.exportName, []);
-            }
-        }
-
-        function ResolveExport(M, exportName, visited) {
-            var exports = getInternalSlot(M,"Exports");
-            if (exports[exportName]) {
-                return exports.binding;
-            }
-            var ref = { module: M, exportName: exportName };
-            if (visited[exportName]) {
-                var error = withError("Syntax", "Visited Exports in ResolveExports");
-                var linkErrors = getInternalSlot(M, "LinkErrors");
-                linkErrors.push(error);
-                return error;
-            }
-            var defs = getInternalSlot(M, "ExportDefinitions");
-            var overlappingDefs = [];
-            var hasExplicit = 0;
-            var explicit;
-            for (var i = 0, j = defs.length; i < j; i++) {
-                var def = defs[i]
-                if (def.exportName === exportName) {
-                    overlappingDefs.push(def);
-                    if (def.explicit) hasExplicit++, explicit = def;
-                }
-            }
-            if (!overlappingDefs.length) {
-                error = withError("Reference", "can not find exportNames for overlappingDefs")
-                var linkErrors = getInternalSlot(M, "LinkErrors");
-                linkErrors.push(error);
-                return error;   
-            }
-            if (overlappingDefs.length > 1 && hasExplicit != 1) {
-                var error = withError("Syntax", "");
-                var linkErrors = getInternalSlot(M, "LinkErrors");
-                linkErrors.push(error);
-                return error;   
-            }
-            var def = explicit;
-            if (def.localName != null) {
-                var binding = { module: M, localName: def.localName };
-                var _export = {exportName:exportName, binding:binding};
-                exports[exportName] = _export;
-                return binding;
-            }
-            visited[exportName] = ref;
-            binding = ResolveExport(def.module, def.importName);
-            return binding;
-        }
-
-        function ResolveImportEntries(M) {
-            var entries = getInternalSlot(M, "ImportEntries");
-            var defs = [];
-            for (var i = 0; i < entries.length; i++) {
-                var entry = entries[i];
-                var modReq = entry.ModuleRequest;
-                var otherMod = LookupModuleDependency(M, modReq);
-                var record = { module: otherMod, importName: entry.importName, localName: entry.localName };
-                defs.push(record);
-            }
-            return defs;
-        }
-
-        function LinkImports(M) {
-            var envRec = getInternalSlot(M, "Environment");
-            var defs = getInternalSlot(M, "ImportDefinitions");
-            for (var i = 0; i < defs.length; i++) {
-                var def = defs[i];
-                if (def.importName === "module") {
-                    envRec.CreateImmutableBinding(def.localName);
-                    envRec.InitialiseBinding(def.localName, def.module);
-                } else {
-                    var binding = ResolveExport(def.module, def.importName);
-                    if (binding === undefined) {
-                        var error = withError("Reference", "can not resolve export to a binding");
-                        var linkErrors = getInternalSlot(M, "LinkErrors");
-                        linkErrors.push(error);
-                        return error;   
-                    } 
-                    envRec.CreateMutableBinding(def.localName);
-                    envRec.InitialiseBinding(def.localName, binding);
-                }
-            }
-        }
-
-        function LinkDeclarativeModules(loads, loader) {
-            var unlinked = [];
-            for (var i = 0; i < loads.length; i++) {
-                var load = loads[i];
-                if (load.Status !== "linked") {
-                    var body = load.Body;
-                    var boundNames = BoundNames(body);
-                    var knownExports = KnownExportEntries(body);
-                    var unknownExports = UnknownExportEntries(body);
-                    var imports = ImportEntries(body);
-                    var module = CreateUnlinkedModuleInstance(body, boundNames, knownExports, unknownExports, imports);
-                    var pair = { module: module, load: load };
-                    unlinked.push(pair);
-                }
-            }
-            for (i = 0; i < unlinked.length; i++) {
-                pair = unlinked[i];
-                var resolvedDeps = [];
-                var unlinkedDeps = [];
-                for (var d in pair.load.dependencies) {
-                    var dep = pair.load.dependencies[d];
-                    var requestName = d;  //dep[key]
-                    var normalizedName = dep; // dep[value];
-                    for (var i = 0; i < loads.length; i++) {
-                        load = loads[i];
-                        if (load.Status === "linked") {
-                            //var resolvedDep = { key: requestName, value: load.module };
-
-
-                        }
-                    }
-                }
-            }
-        }
-
-        function LinkDynamicModules(loads, loader) {
-            for (var i = 0; i < loads.length; i++) {
-                var load = loads[i];
-                var factory = load.Execute;
-                var module = callInternalSlot("Call", factory, undefined, []);
-                if ((module=ifAbrupt(module)) && isAbrupt(module)) return module;
-                if (!hasInternalSlot(module, "Exports")) {
-                    return withError("Type", "module object has not the required internal properties");
-                }
-                load.Module = module;
-                load.Status = "linked";
-                var r = FinishLoad(loader, load);
-                if (isAbrupt(r)) return r;
-            }
-        }
-
-        function Link(start, loader) {
-            var groups = LinkageGroups(start);
-            for (var g in groups) { // groups = [] ??? 
-                var group = groups[g];
-                if (group.Kind === "declarative") { // groups.Kind oder .Kind ??
-                    LinkDeclarativeModules(group, loader);
-                } else {
-                    LinkDynamicModules(group, loader);
-                }
-            }
-        }
 
         // ##################################################################
         // DefineBuiltinProperties::: Modules and Loaders (linking.docx)
@@ -13391,30 +13181,25 @@ define("lib/api", function (require, exports, module) {
     // exports
     // ===========================================================================================================
 
-    var $$unscopables        = SymbolPrimitiveType("@@unscopables", "Symbol.unscopables");
-    var $$create             = SymbolPrimitiveType("@@create", "Symbol.create");
-    var $$toPrimitive        = SymbolPrimitiveType("@@toPrimitive", "Symbol.toPrimitive");
-    var $$toStringTag        = SymbolPrimitiveType("@@toStringTag", "Symbol.toStringTag");
-    var $$hasInstance        = SymbolPrimitiveType("@@hasInstance", "Symbol.hasInstance");
-    var $$iterator           = SymbolPrimitiveType("@@iterator", "Symbol.iterator");
-    var $$isRegExp           = SymbolPrimitiveType("@@isRegExp", "Symbol.isRegExp");
-    var $$isConcatSpreadable = SymbolPrimitiveType("@@isConcatSpreadable", "Symbol.isConcatSpreadable");
+    var $$unscopables        = SymbolPrimitiveType("@@unscopables",         "Symbol.unscopables");
+    var $$create             = SymbolPrimitiveType("@@create",              "Symbol.create");
+    var $$toPrimitive        = SymbolPrimitiveType("@@toPrimitive",         "Symbol.toPrimitive");
+    var $$toStringTag        = SymbolPrimitiveType("@@toStringTag",         "Symbol.toStringTag");
+    var $$hasInstance        = SymbolPrimitiveType("@@hasInstance",         "Symbol.hasInstance");
+    var $$iterator           = SymbolPrimitiveType("@@iterator",            "Symbol.iterator");
+    var $$isRegExp           = SymbolPrimitiveType("@@isRegExp",            "Symbol.isRegExp");
+    var $$isConcatSpreadable = SymbolPrimitiveType("@@isConcatSpreadable",  "Symbol.isConcatSpreadable");
 
-
-
-    exports.$$unscopables   = $$unscopables;
-    exports.$$create            = $$create;
-    exports.$$toPrimitive           = $$toPrimitive;
-    exports.$$hasInstance               = $$hasInstance;
-    exports.$$toStringTag                   = $$toStringTag;
-    exports.$$iterator                          = $$iterator;
-    exports.$$isRegExp                              = $$isRegExp;
+    exports.$$unscopables        = $$unscopables;
+    exports.$$create             = $$create;
+    exports.$$toPrimitive        = $$toPrimitive;
+    exports.$$hasInstance        = $$hasInstance;
+    exports.$$toStringTag        = $$toStringTag;
+    exports.$$iterator           = $$iterator;
+    exports.$$isRegExp           = $$isRegExp;
     exports.$$isConcatSpreadable = $$isConcatSpreadable;
-
-
     exports.IndirectEval = IndirectEval;
     exports.CreateRealm = CreateRealm;
-
     exports.CreateBuiltinFunction = CreateBuiltinFunction;
     exports.AddRestrictedFunctionProperties = AddRestrictedFunctionProperties;
     exports.LazyDefineProperty = LazyDefineProperty;
@@ -13565,7 +13350,6 @@ define("lib/api", function (require, exports, module) {
     exports.CreateListFromArrayLike = CreateListFromArrayLike;
     exports.TestIntegrityLevel = TestIntegrityLevel;
     exports.SetIntegrityLevel = SetIntegrityLevel;
-    
     exports.CheckObjectCoercible = CheckObjectCoercible;
     exports.HasProperty = HasProperty;
     exports.GetMethod = GetMethod;
@@ -13852,6 +13636,8 @@ define("lib/api", function (require, exports, module) {
         // %Loader% und Loader.prototype
         // ##################################################################
 
+
+
         function hasRecordInList(list, field, value) {
             for (var i = 0, j = list.length; i < j; i++) {
                 var r = list[i];
@@ -13866,9 +13652,7 @@ define("lib/api", function (require, exports, module) {
             }
             return undefined;
         }
-
-
-
+        
         function thisLoader(value) {
             if (Type(value) === "object" && hasInternalSlot(value, "Modules")) {
                 var m = getInternalSlot(value, "Modules");
@@ -13985,8 +13769,7 @@ define("lib/api", function (require, exports, module) {
 
         // neu 27.1.
         function CallNormalize() {
-            var F = OrdinaryFunction();
-            
+            var F = OrdinaryFunction();            
             var CallNormalizeFunction_Call = function (thisArg, argList) {
                 var resolve = argList[0];
                 var reject = argList[1];
@@ -14000,7 +13783,6 @@ define("lib/api", function (require, exports, module) {
                 if ((name = ifAbrupt(name)) && isAbrupt(name)) return name;
                 return callInternalSlot("Call", resolve, undefined, [name]);
             };
-
             setInternalSlot(F, "Call", CallNormalizeFunction_Call);
             return F;
         }
@@ -14036,7 +13818,6 @@ define("lib/api", function (require, exports, module) {
                 return NormalCompletion(load);
             };
             setInternalSlot(F, "Call", GetOrCreateLoad_Call);
-
             return F;
         }
 
@@ -14239,8 +14020,8 @@ define("lib/api", function (require, exports, module) {
                 var depLoad = argList[0];
                 var parentLoad = getInternalSlot(F, "ParentLoad");
                 var request = getInternalSlot(F, "Request");
-                Assert(!hasRecordInList(parentLoad.Dependencies, "key", request), "there must be no record in parentLoad.Dependencies with key equal to request ");
-                parentLoad.Dependences.push({key: request, value: depLoad.Name });
+                Assert(!hasRecordInList(parentLoad.Dependencies, "Key", request), "there must be no record in parentLoad.Dependencies with key equal to request ");
+                parentLoad.Dependences.push({Key: request, Value: depLoad.Name });
                 if (depLoad.Status !== "linked") {
                     var linkSets = parentLoad.LinkSets;
                     for (var i = 0, j = linkSets.length; i < j; i++) {
@@ -14261,8 +14042,7 @@ define("lib/api", function (require, exports, module) {
                 Assert(load.Status === "loading", "load.Status should have been loading but isnt");
                 load.Status = "loaded";
                 var linkSets = load.LinkSets;
-                for (var i = 0, j = linkSets.length; i < j; i++) {
-                    
+                for (var i = 0, j = linkSets.length; i < j; i++) {   
                     UpdateLinkSetOnLoad(linkSets[i], load);
                 }
                 return NormalCompletion(undefined);
@@ -14287,16 +14067,15 @@ define("lib/api", function (require, exports, module) {
         }
 
 
-
+        // 26.1
         function AsyncStartLoadPartwayThrough() {
             var F = OrdinaryFunction();
             var AsyncStartLoadPartwayThrough_Call = function (thisArg, argList) {
                 var F = thisArg;
                 var state = getInternalSlot(F, "StepState");
-
                 var loader = state.Loader;
                 var name = state.ModuleName;
-                var step = state.step;
+                var step = state.Step;
                 var source = state.ModuleSource;
                 if (loader.Modules[name]) return withError("Type", "Got name in loader.Modules")
                 if (hasRecordInList(loader.Loads, "Name", name)) return withError("Type", "loader.Loads contains another entry with name '"+name+"'");
@@ -14357,7 +14136,7 @@ define("lib/api", function (require, exports, module) {
         function LookupModuleDependency(M, requestName) {
             if (requestName === null) return M;
             var deps = getInternalSlot(M, "Dependencies");
-            var pair = getRecordInList(deps, "key", requestName);
+            var pair = getRecordInList(deps, "Key", requestName);
             return pair.Module;
         }
 
@@ -14395,9 +14174,9 @@ define("lib/api", function (require, exports, module) {
                 if (load.Status === "loaded") {
                      for (var i = 0, j = load.Dependencies.length; i < j; i++) {
                         var r = load.Dependencies[i];
-                        if (!hasRecordInList(loader.Modules, "key", name)) {       // Evil cubic stuff.
+                        if (!hasRecordInList(loader.Modules, "Key", name)) {       // Evil cubic stuff.
                             var depLoad;
-                            if ((depLoad=hasRecordInList(loader.Loads, "Name", name))) {
+                            if ((depLoad=getRecordInList(loader.Loads, "Name", name))) {
                                 AddLoadToLinkSet(linkSet, depLoad);
                             }
                         }
@@ -14423,7 +14202,7 @@ define("lib/api", function (require, exports, module) {
             }
             Assert(linkSet.Loads.length === 0, "linkset.loads has to be empty here");
             var result = callInternalSlot("Call", linkset.Resolve, undefined, [startingLoad]);
-            Assert(!isAbrupt(result), "linkSet.resolve had to terminate normally")
+            Assert(!isAbrupt(result), "linkSet.resolve had to terminate normally");
             return result;
         }
 
@@ -14445,11 +14224,11 @@ define("lib/api", function (require, exports, module) {
             return NormalCompletion(result);
         }
 
-        // 27.1.    USING EXPENSIVE SPLICES to EMPTY the array
+        // 27.1.    USING EXPENSIVE SPLICES to EMPTY the array (and .indexOf Arrays )
         function FinishLoad(loader, load) {
             var name = load.Name;
             if (name !== undefined) {
-                Assert(!hasRecordInList(loader.Modules, "key", load.Name), "there may be no duplicate recoded in loader.Modules")
+                Assert(!hasRecordInList(loader.Modules, "Key", load.Name), "there may be no duplicate records in loader.Modules")
                 loader.Modules.push({ key: load.Name, value: load.Module });
             }
             var idx;
@@ -14472,31 +14251,443 @@ define("lib/api", function (require, exports, module) {
         //
 
 
-        function LinkageGroups(start) {
-            var G = start.loads;
-            var kind;
-            for (var i = 0, j = G.length; i <j; i++) {
-                var record = G[i];
-                if (kind && (record.Kind != kind)) return withError("Syntax", "mixed dependency cylces detected");
-                kind = record.Kind;
+/*
 
+
+1. Ein load record load hat eine "Verknüpfungsabhängigkeit" auf einem load record "load2 ", wenn load2 in
+load1.UnlinkedDependencies enthalten ist, oder ein load record load1.UnlinkedDependencies existiert, dass
+load eine Verknüpfungsabhängigkeit auf load2 hat.
+
+2. Ein Verknüpfungsgraph einer Liste "list" aus load records ist die MEnge der Load Records load, so daß 
+irgendein load record in "list" eine Verknüpfungsabhängigkeit auf load hat.
+
+3. eine Abhängigkeitskette von load1 zu load2 ist eine Liste von load records, die die transitive 
+Verknüpfungsabhängigkeit von load1 nach load2 beweist.
+
+4. Ein Abhängigkeitscycle ist eine Abhängigkeitskette deren erstes und letztes Elements [[Name]] Felder
+den gleichen Wert haben.
+
+Eine Abhängigkeitskette ist zyklisch wenn sie eine Subsequence enthält, die ein Abhängigkeitszyklus ist. Eine
+KEtte ist azyklisch wenn sie nicht zyklisch ist.
+
+
+Eine dependency chain ist mixed, wenn sie zwei elemente mit unterschiedlichen Kind Feldern enthält. Eine 
+dependency-group-transition mit Kind Kind ist eine Zwei-Element-Subsequence load1 und load2 einer 
+Abhängigkeitskette, so daß load1.Kind nicht gleich kind ist und load2.Kind gleich kind ist.
+
+Der dependency group count ist eine dependency kette mit dem ersten element load1 ist die Nummer der unterschiedlichen
+dependencygrouptransitions of kind load1.Kind.
+
+*/
+
+        // 29.1.
+
+
+        function LinkageGroups(start) {
+            var G = start.Loads;
+            var kind;
+            
+
+        /* first clear the linkage graph and what a linkage dependency load1 on load2.UnlinkedDependencies ist
+
+            then continue talking bullshit about the o^3 and o^4 complexity of the loops 
+
+            then say (they are a few modules, probably you have a hundred modules but not so many dependencies,
+            in reality a load of a module is not that expensive even with such a complicated tree (or graph) of modules)
+
+            couldnt use my graph data structure directly, coz i have no feeling for the loader code yet.
+            i didnt take the time to paint a diagram with, maybe i should try. That would make it easier for
+            me, to see the pipeline and the structures flowing.
+
+            But it´s better than a month ago, when i wrote it up for the first time. I directly tried to
+            refactor the lists which are asked for by name for using the name as the key because dupes are
+            forbidden anyways, but i didnt finish it.
+
+
+            Now i wait for NewModuleEnvironment and my OrdinaryModule oder ObjectCreate(null)
+            But i read about CreateImportBinding, which is the CreateImmutableBinding for ModuleEnvironments, i guess.
+            I read about getters or value. If the getters are interceptable, they would be much better, because acesses
+            to the module could be tracked.. But i dont know if in reality anyone tracks accesses to modules.
+
+         */
+
+            for (var i = 0, j = G.length; i < j; i++) {
+                var load = G[i]
+                if (load.Kind != kind) {
+                    if (kind === undefined)
+                    kind = G[i].Kind;
+                    else return withError("Syntax", "all loads must be of the same kind");
+                }
+            }
+            var n = 0;
+            for (i = 0, j = G.length; i < j; i++) {
+                load = G[i];
+                n = max(n, load.UnlinkedDependencies.length)
+            }
+
+            var declarativeGroupCount;
+            var declarativeGroups = Array(declarativeGroupCount);
+            var visited = [];
+
+        }
+
+
+
+
+        // 28.1.
+        function BuildLinkageGroups(load, declarativeGroups, dynamicGroups, visited) {
+            if (hasRecordInList(visited, "Name", load.Name)) return NormalCompletion(undefined);
+            visited.push(load);
+            for (var i = 0, j = load.UnlinkedDependencies.length; i < j; i++) {
+                BuildLinkageGroups(dep, declarativeGroups, dynamicGroups, visitied);
+            }
+            i = load.GroupIndex;
+            if (load.Kind === "declarative") {
+                var groups = declarativeGroups;
+            } else {
+                groups = dynamicGroups;
+            }
+            var group = groups[i];
+            group.push(load);
+            return NormalCompletion(undefined);
+        }
+
+
+        // 28.1.
+        function Link(start, loader) {
+            var groups = LinkageGroups(start);
+            for (var i = 0; i < groups.length; i++) {
+                var group = groups[i];
+                if (group[0].Kind === "declarative") {
+                    LinkDeclarativeModules(group, loader)
+                } else {
+                    LinkDynamicModules(group, loader);
+                }
             }
         }
 
-        function BuildLinkageGroups(load, declarativeGroups, dynamicGroups, visited) {
-                if (visited[name]) return;
-                visited[load.Name] = load;
-                var groups;
-                for (var i = 0, j = load.unlinkeddependencies.length; i < j; i++) {
-                    BuildLinkageGroups(dep, declarativeGroups, dynamicGroups, visited);
-                    var k = load.groupindex;
-                    if (load.Kind === "declarative") groups = declarativeGroups;
-                    else groups = dynamicGroups;
-                    var group = groups[i];
-                    groups.push(load);
+
+        // 28.1
+        function LinkImports(M) {
+            var envRec = getInternalSlot(M, "Environment");
+            var defs = getInternalSlot(M, "ImportDefinitions");
+            for (var i = 0; i < defs.length; i++) {
+                var def = defs[i];
+                if (def.ImportName === "module") {
+                    envRec.CreateImmutableBinding(def.LocalName);
+                    envRec.InitialiseBinding(def.LocalName, def.Module);
+                } else {
+                    var binding = ResolveExport(def.Module, def.ImportName);
+                    if (binding === undefined) {
+                        var error = withError("Reference", "Can not resolve export to a binding record");
+                        var linkErrors = getInternalSlot(M, "LinkErrors");
+                        linkErrors.push(error);
+                        return error;   
+                    }  else {
+                        env.CreateImportBinding(envRec, def.LocalName);
+                        // THIS FUNCTION DOES NOT EXIST YET.
+                    }
                 }
+            }
         }
 
+
+        // 28.1.
+        function ResolveExportEntries(M, visited) {
+            var exportDefs = getInternalSlot(M, "ExportDefinitions");
+            if (exportDefs != undefined) return exportDefs;
+            var defs = [];
+            var boundNames = getInternalSlot(M, "BoundNames");
+            var knownExportEntries = getInternalSlot(M, "KnownExportEntries");
+            var linkErrors = getInternalSlot(M, "LinkErrors");
+            for (var k in knownExportEntries) {
+
+                var entry = knownExportEntries[k];
+                var modReq = entry.ModuleRequest // caps
+                var otherMod = LookupModuleDependency(M, modReq);
+
+                if (entry.Module !== null && entry.LocalName !== null && !boundNames[entry.LocalName]) { // caps
+                    var error = withError("Reference", "linkError created in ResolveExportEntries");
+                    linkErrors.push(error);
+                }
+                defs.push({ Module: otherMod, ImportName: entry.ImportName, LocalName: entry.LocalName, 
+                    ExportName: entry.ExportName, Explitic: true });
+
+            }
+            for (var i = 0; i < M.UnknownExportEntries.length; i++) {
+                modReq = LookupModuleDependency(M, modReq);
+                if (visited.indexOf(otherMod) > -1) {
+                    error = withError("Syntax", "otherMod is alreay in visited");
+                    linkErrors.push(error);
+                }
+            }
+
+            setInternalSlot(M, "ExportDefinitions", defs);
+            return defs;
+        }
+
+        // 28.1.
+        function ResolveExports(M) {
+            var exportDefinitions = getInternalSlot("M", "ExportDefinitions");
+            for (var i = 0, j = exportDefinitions.length; i < j; i++) {
+                var def = exportDefinitions[i];
+                ResolveExport(M, def.exportName, []);
+            }
+        }
+
+
+// needs to be rewritten:
+        function ResolveExport(M, exportName, visited) {
+            var exports = getInternalSlot(M,"Exports");
+            if (exports[exportName]) {
+
+                // replace by O(n) Array.indexOf, to Replace it later by heart again with the hashtable.
+
+                // a specification with hashes would be less complex in times of iterations, to look up
+                // for a record, but the number of modules is quite small, so it doesnt take too long.
+                // 
+
+                return exports.binding;
+            }
+            var ref = { module: M, exportName: exportName };
+            if (visited[exportName]) {
+                var error = withError("Syntax", "Visited Exports in ResolveExports");
+                var linkErrors = getInternalSlot(M, "LinkErrors");
+                linkErrors.push(error);
+                return error;
+            }
+            var defs = getInternalSlot(M, "ExportDefinitions");
+            var overlappingDefs = [];
+            var hasExplicit = 0;
+            var explicit;
+            for (var i = 0, j = defs.length; i < j; i++) {
+                var def = defs[i]
+                if (def.exportName === exportName) {
+                    overlappingDefs.push(def);
+                    if (def.explicit) hasExplicit++, explicit = def;
+                }
+            }
+            if (!overlappingDefs.length) {
+                error = withError("Reference", "can not find exportNames for overlappingDefs")
+                var linkErrors = getInternalSlot(M, "LinkErrors");
+                linkErrors.push(error);
+                return error;   
+            }
+            if (overlappingDefs.length > 1 && hasExplicit != 1) {
+                var error = withError("Syntax", "");
+                var linkErrors = getInternalSlot(M, "LinkErrors");
+                linkErrors.push(error);
+                return error;   
+            }
+            var def = explicit;
+            if (def.localName != null) {
+                var binding = { module: M, localName: def.localName };
+                var _export = {exportName:exportName, binding:binding};
+                exports[exportName] = _export;
+                return binding;
+            }
+            visited[exportName] = ref;
+            binding = ResolveExport(def.module, def.importName);
+            return binding;
+        }
+
+
+        // 28.1.
+        function ResolveImportEntries(M) {
+            var entries = getInternalSlot(M, "ImportEntries");
+            var defs = [];
+            for (var i = 0; i < entries.length; i++) {
+                var entry = entries[i];
+                var modReq = entry.ModuleRequest;
+                var otherMod = LookupModuleDependency(M, modReq);
+                var record = { Module: otherMod, ImportName: entry.ImportName, localName: entry.LocalName };
+                defs.push(record);
+            }
+            return defs;
+        }
+
+
+        // 28.1.
+        function LinkDynamicModules(loads, loader) {
+            for (var i = 0; i < loads.length; i++) {
+                var load = loads[i];
+                var factory = load.Execute;
+                var module = callInternalSlot("Call", factory, undefined, []);
+                if ((module=ifAbrupt(module)) && isAbrupt(module)) return module;
+
+                if (!hasInternalSlot(module, "Exports")) {
+                    return withError("Type", "module object has not the required internal properties");
+                }
+                load.Module = module;
+                load.Status = "linked";
+                var r = FinishLoad(loader, load);
+                if (isAbrupt(r)) return r;
+            }
+        }
+
+        
+
+
+        function LinkDeclarativeModules(loads, loader) {
+            var unlinked = [];
+            for (var i = 0, j = loads.length; i < j; i++) {
+                var module =CreateModuleLinkageRecord(loader, load.Body);
+                var pair ={ Module: module, Load: load };
+                unlinked.push(pair);
+            }
+            for (i = 0, j = loads.length; i < j; i++) {
+                var resolvedDeps = [];
+                var unlinkedDeps = [];
+                var pair = loads[i]
+                for (var k = 0; k < pair.Load.Dependencies.length; k++) {
+                       var dep = pair.Load.Dependencies[k];
+                       var requestName = dep.Key;
+                       var normalizedName = dep.Value;
+                       var load;
+                       if (load = getRecordInList(loads, "Name", normalizedName)) {
+                            if (load.Status === "linked") {
+                                var resolvedDep = { Key: requestName, Value: load.Module };
+                                resolvedDeps.push(resolvedDep);
+                            } else {
+                                for (var m = 0; m < unlinked.lengh; m++) {
+                                    var otherPair = unlinked[i];
+                                    if (otherPair.Load.Name == normalizedName) {
+                                        unlinkedDeps.push(otherPair.Load)
+                                    }
+                                } 
+                            }
+                       } else {
+                            var module = LoaderRegistryLookup(loader, normalizedName);
+                            if (module === null) {
+                                var error = withError("Reference","");
+                                pair.Module.LinkErrors.push(error);
+                            } else {
+                                resolvedDeps.push({ Key: requestName, Value: module });
+                            }
+                        
+
+                       }
+
+                    
+                    pair.Module.Dependencies = resolvedDeps;
+                    pair.Module.UnlinkedDependencies = unlinkedDeps;
+                }
+            
+            }
+            for (i = 0, j = unlinked.length; i < j; i++) {
+                pair = unlinked[i];
+                ResolveExportEntries(pair.Module, []);
+                ResolveExports(pair.Module);
+            }
+            for (i = 0, j = unlinked.length; i < j; i++) {
+                pair = unlinked[i];
+                ResolveExportEntries(pair.Module, []);
+                ResolveExports(pair.Module);
+            }
+        }
+    
+        
+        function IterableToList(iterable) {
+            //var A = ArrayCreate();
+            var A = [];
+            var next, status;
+            while (next = IteratorStep(iterable)) {
+                A.push(next);
+                // status = Invoke(A, "push", [next]);
+                //if (isAbrupt(status)) return status;
+            }
+            return A;
+        }
+        
+        // Seite 21 von 43
+
+        function GetOption(options, name) {
+            if (options == undefined) return undefined;
+            if (Type(options) !== "object") return withError("Type", "options is not an object");
+            return Get(options, name);
+        }
+        
+        function EvaluateLoadedModule() {
+            var EvaluateLoadedModule_Call = function (thisArg, argList) {
+                var F = thisArg;
+                var loader = getInternalSlot(F, "Loader");
+                Assert(load.Status === "linked", "load.Status has to be linked here");
+                var module = load.Module;
+                var result = EnsureEvaluated(module, [], loader);
+                if (isAbrupt(result)) return result;
+                return module;
+            };
+            var F = OrdinaryFunction(); 
+            setInternalSlot(F, "Call", EvaluateLoadedModule_Call);
+            return F;
+        }
+
+        //
+        // 1.3 Module Linking
+
+        function EnsureEvaluated(mod, seen, loader) {
+            var deps = mod.dependencies;
+            for (var p in deps) {
+                var dep = deps[p];
+                if (seen.indexOf(dep) === -1) {
+                    EnsureEvaluated(dep, seen, loader);
+                }
+            }
+            var body = getInternalSlot(mod, "Body");
+            if (body !== undefined && getInternalSlot(mod, "Evaluated") === false) {
+                setInternalSlot(mod, "Evaluated", true);
+                var initContext = cx = newContext();
+                initContext.realm = getInternalSlot(loader, "Realm");
+                initContext.varEnv = getInternalSlot(mod, "Environment");
+                var r = Evaluate(body);
+                cx = oldContext();
+                if (isAbrupt(r)) return r;
+            }
+        }
+
+        function OrdinaryModule() {
+            var mod = ObjectCreate(null, {
+                "Environment": undefined,
+                "Exports": undefined,
+                "Dependencies": undefined
+            });
+            return mod;
+        }
+
+        var ConstantFunction_Call = function (thisArg, argList) {
+            return getInternalSlot(this, "ConstantValue");
+        };
+
+        function CreateConstantGetter(key, value) {
+            var getter = CreateBuiltinFunction(getRealm(),ConstantFunction_Call, 0, "get " + key);
+            setInternalSlot(getter, "ConstantValue", value);
+            return getter;
+        }
+
+        function Module(obj) {
+            if (Type(obj) !== "object") return withError("Type", "module obj is not an object");
+            var mod = OrdinaryModule();
+            var keys = OwnPropertyKeysAsList(obj);
+            for (var k in keys) {
+                var key = keys[k];
+                var value = Get(obj, key);
+                if ((value = ifAbrupt(value)) && isAbrupt(value)) return value;
+                var F = CreateConstantGetter(key, value);
+                var desc = {
+                    get: F,
+                    set: undefined,
+                    enumerable: true,
+                    configurable: false
+                };
+                var status = DefineOwnPropertyOrThrow(mod, key, desc);
+                if ((status = ifAbrupt(status)) && isAbrupt(status)) return status;
+            }
+            callInternalSlot("PreventExtensions", mod, mod, []);
+            return mod;
+        }
+
+
+/************************* unupdated end ****/
 
 
 
@@ -14517,7 +14708,6 @@ define("lib/api", function (require, exports, module) {
             var realmObject = Get(options, "realm");
             if ((realmObject = ifAbrupt(realmObject)) && isAbrupt(realmObject)) return realmObject;
             var realm;
-
             if (realmObject === undefined) realm = getRealm();
             else realm = getInternalSlot(realmObject, "Realm");
 
@@ -14537,7 +14727,6 @@ define("lib/api", function (require, exports, module) {
             };
             ["normalize", "locate", "fetch", "translate", "instantiate"].forEach(help);
             if (exc) return exc;
-
             setInternalSlot(loader, "Modules", Object.create(null));
             setInternalSlot(loader, "Loads", []);
             setInternalSlot(loader, "Realm", realm);
@@ -14602,7 +14791,6 @@ define("lib/api", function (require, exports, module) {
         var LoaderPrototype_define = function (thisArg, argList) {
             var loader = thisArg;
             if ((loader = ifAbrupt(loader)) && isAbrupt(loader)) return loader;
-
             setInternalSlot(F, "Loader", loader);
             setInternalSlot(F, "ModuleName", name);
             setInternalSlot(F, "Step", "translate");
@@ -14612,7 +14800,7 @@ define("lib/api", function (require, exports, module) {
             var Promise = getIntrinsic("%Promise%");
             var p = OrdinaryConstruct(Promise, [F]);
             var G = ReturnUndefined;
-            p = PromiseThen(o, G);
+            p = PromiseThen(p, G);
             return p;
         };
         var LoaderPrototype_load = function (thisArg, argList) {
@@ -21283,7 +21471,7 @@ v            }
             DefineOwnProperty(globalThis, "RegExp", GetOwnProperty(intrinsics, "%RegExp%"));
             DefineOwnProperty(globalThis, "SyntaxError", GetOwnProperty(intrinsics, "%SyntaxError%"));
 
-            //LazyDefineProperty(globalThis, "System", realm.loader);
+            LazyDefineProperty(globalThis, "System", realm.loader);
 
             DefineOwnProperty(globalThis, "TypeError", GetOwnProperty(intrinsics, "%TypeError%"));
             DefineOwnProperty(globalThis, "URIError", GetOwnProperty(intrinsics, "%URIError%"));
@@ -22250,12 +22438,9 @@ define("lib/runtime", ["lib/parser", "lib/api", "lib/slower-static-semantics"], 
         var type, value;
 
         for (var i = 0, j = list.length; i < j; i++) {
-
             arg = list[i];
             type = arg.type;
-
             if (type === "TemplateLiteral") {
-
                 var siteObj = GetTemplateCallSite(arg);
                 var substitutions = SubstitutionEvaluation(siteObj);
                 if ((substitutions = ifAbrupt(substitutions)) && isAbrupt(substitutions)) return substitutions;
@@ -22263,9 +22448,7 @@ define("lib/runtime", ["lib/parser", "lib/api", "lib/slower-static-semantics"], 
                 for (var k = 0, l = substitutions.length; k < l; k++) {
                     args.push(substitutions[k]);
                 }
-
             } else if (type === "SpreadExpression") {
-
                 var array = GetValue(Evaluate(arg));
                 if ((arg = ifAbrupt(arg)) && isAbrupt(arg)) return arg;
                 for (var k = 0, l = Get(array, "length"); k < l; k++) {
@@ -22273,9 +22456,7 @@ define("lib/runtime", ["lib/parser", "lib/api", "lib/slower-static-semantics"], 
                     if ((value = ifAbrupt(value)) && isAbrupt(value)) return value;
                     args.push(value);
                 }
-
             } else {
-
                 // Identifer und Literals.
                 var argRef = Evaluate(arg);
                 if ((argRef = ifAbrupt(argRef)) && isAbrupt(argRef)) return argRef;
@@ -22283,9 +22464,7 @@ define("lib/runtime", ["lib/parser", "lib/api", "lib/slower-static-semantics"], 
                 if ((argValue = ifAbrupt(argValue)) && isAbrupt(argValue)) return argValue;
                 args.push(argValue);
             }
-
         }
-
         // console.dir(args);
         return args;
     }
@@ -22627,9 +22806,9 @@ define("lib/runtime", ["lib/parser", "lib/api", "lib/slower-static-semantics"], 
         "use strict";
         var F;
         var id = node.id;
-        var expr = node.expression;
+        var expr = getCode(node,   "expression");
         var params = getCode(node, "params");
-        var body = getCode(node, "body");
+        var body = getCode(node,   "body");
         var scope;
         var strict = cx.strict || node.strict;
         if (expr || objectdecl) {
@@ -22644,6 +22823,7 @@ define("lib/runtime", ["lib/parser", "lib/api", "lib/slower-static-semantics"], 
                 if (id) MakeMethod(F, id, undefined);
                 else MakeMethod(F, undefined, undefined);
             }
+
             MakeConstructor(F);
             if (id) {
                 var status;
@@ -22736,13 +22916,11 @@ define("lib/runtime", ["lib/parser", "lib/api", "lib/slower-static-semantics"], 
         }
 
         if ((callee = ifAbrupt(callee)) && isAbrupt(callee)) return callee;
-
         if (!IsConstructor(callee)) {
             return withError("Type", "expected function is not a constructor");
         }
-
         if (callee) {
-            cx.callee = "(new) " + (Get(callee, "name") || "(anonymous)");
+            cx.callee = "new " + (Get(callee, "name") || "(anonymous)");
         }
 
         var args = node.arguments;
@@ -22890,7 +23068,6 @@ define("lib/runtime", ["lib/parser", "lib/api", "lib/slower-static-semantics"], 
 
             for (var i = 0, j = decl.elements.length; i < j; i++) {
                 if (elem = decl.elements[i]) {
-
                     if (elem.id) {
                         identName = elem.id.name;
                         newName = elem.as.name;
@@ -22898,10 +23075,8 @@ define("lib/runtime", ["lib/parser", "lib/api", "lib/slower-static-semantics"], 
                         identName = elem.name || elem.value;
                         newName = undefined;
                     }
-
                     val = Get(value, ToString(i));
                     // nextIndex = nextIndex + 1;
-
                     if (env !== undefined) {
                         if (newName) env.InitialiseBinding(newName, val);
                         else env.InitialiseBinding(identName, val);
@@ -22911,16 +23086,11 @@ define("lib/runtime", ["lib/parser", "lib/api", "lib/slower-static-semantics"], 
                         PutValue(lref, array);
                     }
                 }
-
             }
-
         } else if (decl && decl.type === "RestParameter") {
-
             var array = ArrayCreate(len - nextIndex);
             var name = decl.id;
-
             debug("processing restparameter: " + name);
-
             for (var i = nextIndex; i < len; i++) {
                 elem = value.Get(ToString(i), value);
                 if ((elem = ifAbrupt(elem)) && isAbrupt(elem)) return elem;
@@ -22935,22 +23105,13 @@ define("lib/runtime", ["lib/parser", "lib/api", "lib/slower-static-semantics"], 
 
             if (env !== undefined) {
                 env.InitialiseBinding(name, array);
-
             } else {
-
-                // wird bei function f(...rest) gerufen:
-
                 var lref = new Reference(name, getLexEnv(), cx.strict);
-
-                //lref = ResolveBinding(name);
-
                 if ((lref = ifAbrupt(lref)) && isAbrupt(lref)) return lref;
                 PutValue(lref, array);
             }
         }
-
         return len;
-
     }
 
     function BindingInitialisation(node, value, env) {
@@ -22958,19 +23119,10 @@ define("lib/runtime", ["lib/parser", "lib/api", "lib/slower-static-semantics"], 
         var names, name, val, got, len, ex, decl, lhs, strict;
         var type;
         if (!node) return;
-
-     /*   console.log("BINDINGINIT:")
-        console.dir(node);
-        console.dir(value);
-        console.dir(env); */
-
         if (Array.isArray(node)) { // F.FormalParameters: formals ist ein Array
-
             for (var i = 0, j = node.length; i < j; i++) {
-
                 decl = node[i];
                 type = decl.type;
-
                 if (type === "ObjectPattern") {
                     ex = KeyedBindingInitialisation(decl, Get(value, ToString(i)), env);
                     if (isAbrupt(ex)) return ex;
@@ -22988,19 +23140,13 @@ define("lib/runtime", ["lib/parser", "lib/api", "lib/slower-static-semantics"], 
             }
             return NormalCompletion(undefined);
         }
-
         type = node.type;
         strict = !! cx.strict;
-
         if (type === "ForDeclaration") {
             return BindingInitialisation(node.id, value, env);
-
         } else if (type === "DefaultParameter") {
-
             name = node.id;
-
             if (value === undefined) value = GetValue(Evaluate(node.init));
-
             if (env !== undefined) env.InitialiseBinding(name, value, strict);
             else {
                 //env = getLexEnv();
@@ -23009,19 +23155,13 @@ define("lib/runtime", ["lib/parser", "lib/api", "lib/slower-static-semantics"], 
                 PutValue(lhs, value);
             }
             return NormalCompletion(undefined);
-
         } else if (type === "Identifier") {
-
             name = node.name;
-
             if (env !== undefined) {
                 ex = env.InitialiseBinding(name, value, strict);
                 if (isAbrupt(ex)) return ex;
-
                 return NormalCompletion(undefined);
-
             } else {
-
                 //lhs = new Reference(name, getLexEnv(), strict);
                 //if ((lhs = ifAbrupt(lhs)) && isAbrupt(lhs)) return lhs;
                 lhs = ResolveBinding(name);
@@ -23031,20 +23171,13 @@ define("lib/runtime", ["lib/parser", "lib/api", "lib/slower-static-semantics"], 
                 if (isAbrupt(ex)) return ex;
                 return NormalCompletion(undefined);
             }
-
         } else if (type === "ArrayPattern" || type === "ArrayExpression") {
-
             var decl;
             for (var p = 0, q = node.elements.length; p < q; p++) {
-
                 if (decl = node.elements[p]) {
-
                     if (decl.type === "RestParameter") {
-
                         return IndexedBindingInitialisation(decl, p, value, env);
-
                     } else {
-
                         if (env) {
                             if (decl.id) {
                                 env.InitialiseBinding(decl.as.name, value.Get(decl.id.name, value));
@@ -23060,9 +23193,7 @@ define("lib/runtime", ["lib/parser", "lib/api", "lib/slower-static-semantics"], 
                                 PutValue(lhs, Get(value, ToString(p)));
                             }
                         }
-
                     }
-
                 }
             }
 
@@ -23126,15 +23257,14 @@ define("lib/runtime", ["lib/parser", "lib/api", "lib/slower-static-semantics"], 
         var i;
         var v = getVarEnv();
         var l = getLexEnv();
-        log("########### Running Execution Context on Top Of The Stack.");
+        log("Running Execution Context on Top Of The Stack.");
+        
         log("+++ running +++ cx.[[varEnv]]");
         dir(v);
         log("+++ running +++ cx.[[lexEnv]]");
         dir(l);
-        log(">> Completion Record << ");
-        log("completion:");
-        dir(realm.completion);
-        log("## Environments (E <= E.outer)");
+
+        log("## Environments (.outer follows each");
         l = getLexEnv();
         i = 0;
         var b;
@@ -23143,14 +23273,17 @@ define("lib/runtime", ["lib/parser", "lib/api", "lib/slower-static-semantics"], 
         do {
             bound = "";
             log("context " + i + " (last)");
-            log(l.toString());
-            if (l.toString() === "[object ObjectEnvironment]") b = l.BoundObject.Bindings;
-            else if (l.toString() === "[object GlobalVariableEnvironment]") b = l.BoundObject.Bindings;
-            else if (l.toString() === "[object GlobalLexicalEnvironment]") b = l.Bindings;
+            var toString = l.toString();
+            log(toString);
+
+                 if (toString  === "[object ObjectEnvironment]")         b = l.BoundObject.Bindings;
+            else if (toString  === "[object GlobalVariableEnvironment]") b = l.BoundObject.Bindings;
+            else if (toString  === "[object GlobalLexicalEnvironment]")  b = l.Bindings;
             else b = l.Bindings;
+
             for (k in b) bound += k + ", ";
             log("Bound Identifiers: " + bound);
-            log("(outer:)");
+            log("above´s .outer below:");
             ++i;
         } while (l = l.outer);
     }
@@ -23419,7 +23552,6 @@ define("lib/runtime", ["lib/parser", "lib/api", "lib/slower-static-semantics"], 
                 if (isCodeType("FunctionDeclaration")) {
 
                     status = defineFunctionOnObject(node, newObj, propName);
-
                     if (isAbrupt(status)) return status;
                 
                 } else {
@@ -23429,7 +23561,6 @@ define("lib/runtime", ["lib/parser", "lib/api", "lib/slower-static-semantics"], 
                     propValue = GetValue(propRef);
                     if ((propValue = ifAbrupt(propValue)) && isAbrupt(propValue)) return propValue;
                     
-
                     // B 3.
                 // DOESNT WORK
                     if (!isComputed && propName === "__proto__") {
@@ -23442,13 +23573,10 @@ define("lib/runtime", ["lib/parser", "lib/api", "lib/slower-static-semantics"], 
 
                     // Der neue IsAnonymousFn fehlt noch.
 
-
                     status = CreateDataProperty(newObj, propName, propValue);
                     if (isAbrupt(status)) return status;
                 }
-
-
-                
+            
             } else if (kind === "method") {
                 propValue = Evaluate(node, newObj);
                 if ((propValue = ifAbrupt(propValue)) && isAbrupt(propValue)) return propValue;
@@ -23459,7 +23587,7 @@ define("lib/runtime", ["lib/parser", "lib/api", "lib/slower-static-semantics"], 
                 if (node.computed) {
                     propName = GetValue(Evaluate(key));
                     if ((propName =ifAbrupt(propName)) && isAbrupt(propName)) return propName;
-                    if (!IsSymbol(propName)) return withError("Type", "A [computed] property inside an object literal has to evaluate to a Symbol primitive");
+                        if (!IsSymbol(propName)) return withError("Type", "A [computed] property inside an object literal has to evaluate to a Symbol primitive");
                 } else {
                     propName = typeof key === "string" ? key : key.name || key.value;
                 }
@@ -24108,6 +24236,8 @@ define("lib/runtime", ["lib/parser", "lib/api", "lib/slower-static-semantics"], 
         }
         return NormalCompletion(V);
     }
+
+    evaluation.FunctionStatementList = StatementList;
 
     evaluation.StatementList = StatementList;
 
@@ -25099,44 +25229,7 @@ define("lib/runtime", ["lib/parser", "lib/api", "lib/slower-static-semantics"], 
         return NormalCompletion(empty);
     }
 
-    /*
 
-        Generator:
-
-        - if i enter a generator
-        - i have to record the code evaluation state
-          (which is mentioned at the beginning)
-
-          body (list)
-          recordNesting(body) -> onto stack
-
-
-
-    */
-
-
-    var HasToBeRecorded = {
-        __proto__:null,
-        "ForStatement":true,
-        "ForOfStatement":true,
-        "ForInStatement":true,
-        "WhileStatement":true,
-        "DoWhileStatement":true,
-        "SwitchStatement": true
-    };
-
-    function rewindNesting() {
-        cx.state.resumeEvaluation = true;
-    }
-    function recordNesting(node) {
-
-        if (HasToBeRecorded[node.type]) {
-            // push onto stack
-            cx.state.nesting.push(node);
-            cx.state.activeParent = node;
-        }
-
-    }   
 
     function tellExecutionContext(node, i, parent) {
         loc = node.loc || loc;
@@ -25240,29 +25333,40 @@ define("lib/runtime", ["lib/parser", "lib/api", "lib/slower-static-semantics"], 
         "block": "block"
     };
 
-    function Evaluate(node) {
+    ecma.Evaluate = Evaluate;
+
+    function Evaluate(node, a, b, c, d) {
         var E, R;
         var body, i, j;
 
         if (!node) return NormalCompletion(undefined); //  withError("Type", "Null node received");
 
+        var state = getContext().state;
+        if (!state.resumingGenerator) state.push(node);
+
         if (typeof node === "string") {
             debug("Evaluate(resolvebinding " + node + ")");
             R = ResolveBinding(node);
-            return R;
+
         } else if (Array.isArray(node)) {
+
             debug("Evaluate(StatementList)");
-            R = evaluation.StatementList(node);
-            return R;
+            if (node.type) R = evaluation[node.type](node);
+            else R = evaluation.StatementList(node);
+
         } else {
+            
             debug("Evaluate(" + node.type + ")");
             if (E = evaluation[node.type]) {
                 tellExecutionContext(node, 0);
                 R = E.apply(this, arguments);
             }
-
-            return R;
+            
         }
+
+        if (!state.suspendedGenerator) state.pop();
+
+        return R;
     }
 
     function HandleEventQueue(shellmode, initialised) {
@@ -25309,26 +25413,27 @@ define("lib/runtime", ["lib/parser", "lib/api", "lib/slower-static-semantics"], 
             NormalCompletion(undefined);
         }
 
+        // convert references into values to return values to the user (toValue())
         exprRef = Evaluate(node);
         if (Type(exprRef) === "reference") exprValue = GetValue(exprRef);
         else exprValue = exprRef;
 
+        // exception handling.
         if ((exprValue = ifAbrupt(exprValue)) && isAbrupt(exprValue)) {
-
             if (exprValue.type === "throw") {
                 error = exprValue.value;
-
                 if (Type(error) === "object") {
                     error = makeNativeException(error)
                 } else {
                     error = new Error(error);
                     error.stack = "{eddies placeholder for stackframe of non object throwers}";
                 }
-
                 if (error) throw error;
             }
         }
 
+
+        // now process my eventQueue (which will be replaced by ES6 concurrency and task queues)
         if (!shellModeBool && initialisedTheRuntime && !eventQueue.length) endRuntime();
         else if (eventQueue.length) {
             setTimeout(function () {
@@ -25342,19 +25447,12 @@ define("lib/runtime", ["lib/parser", "lib/api", "lib/slower-static-semantics"], 
     function endRuntime() {
         initialisedTheRuntime = false;
     }
-
-
     function initializeTheRuntime() {
-
-        realm = createRealm(); // and everything else
-
-        
+        realm = createRealm(); 
         cx = getContext();
-        initialisedTheRuntime = true;
-        /* rubbish */
-        
-        scriptLocation = "(syntax.js)";
 
+        initialisedTheRuntime = true;
+        scriptLocation = "(syntax.js)";
         if (typeof window !== "undefined") {
             scriptLocation = "("+document.location.href + " @syntax.js)";
         } else if (typeof process !== "undefined") {
@@ -25362,9 +25460,7 @@ define("lib/runtime", ["lib/parser", "lib/api", "lib/slower-static-semantics"], 
         } else {
             scriptLocation = "(worker)";
         }
-        
         realm.xs.scriptLocation = scriptLocation;
-
     }
 
     function completionUpdater(c, v, b) {
@@ -25373,12 +25469,6 @@ define("lib/runtime", ["lib/parser", "lib/api", "lib/slower-static-semantics"], 
         abrupt = b;
     }
 
-    /*
-		exports.ExecuteTheCode = ExecuteTheCode;
-		exports.setCodeRealm = setCodeRealm;
-		exports.Evaluate = Evaluate;
-		exports.ResumableEvaluation = ResumableEvaluation;
-		*/
 
     ExecuteTheCode.setCodeRealm = setCodeRealm;
     ExecuteTheCode.Evaluate = Evaluate;
