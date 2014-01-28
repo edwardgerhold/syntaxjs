@@ -3860,7 +3860,7 @@ define("lib/parser", ["lib/tables", "lib/tokenizer"], function (tables, tokenize
         var varEnvs = [varEnv];
         var lexEnvs = [lexEnv];        
 
-        function new_scope() {
+        function new_container() {
             containers.push(container);
             container = Object.create(container);
         }
@@ -3936,7 +3936,7 @@ define("lib/parser", ["lib/tables", "lib/tokenizer"], function (tables, tokenize
 
         return {
             // contains
-            new_scope: new_scope,
+            new_container: new_container,
             old_container: old_container,
             add: add,
             contains: contains,
@@ -5707,7 +5707,7 @@ define("lib/parser", ["lib/tables", "lib/tokenizer"], function (tables, tokenize
             if (id && !isExpr) contains.add_var(id.name);
 
             contains.new_var();
-            contains.new_scope();
+            contains.new_container();
 
             if (id && isExpr) contains.add_var(id.name);
 
