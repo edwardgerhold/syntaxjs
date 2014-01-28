@@ -11805,10 +11805,6 @@ define("lib/api", function (require, exports, module) {
 
         printCodeEvaluationState();
 
-        getContext().state.resumingGenerator 
-
-
-
         var result = exports.ResumeEvaluate(body);
         if ((result = ifAbrupt(result)) && isAbrupt(result)) return result;
         //if (IteratorComplete(result)) {
@@ -25350,6 +25346,7 @@ define("lib/runtime", ["lib/parser", "lib/api", "lib/slower-static-semantics"], 
         return Evaluate2()
     }
 
+    exports.ResumeEvaluate = ResumeEvaluate;
     function ResumeEvaluate(a,b,c,d) {
         // dont push onto the stack
         return Evaluate2(null, a,b,c,d);
