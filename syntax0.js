@@ -3762,9 +3762,12 @@ define("lib/parser", ["lib/tables", "lib/tokenizer"], function (tables, tokenize
         throwError(new SyntaxError(C + " expected at line " + line + ", column " + column));
     }
 
-    // Issue Tracking: Use Assert for SyntaxErrors in the Parsers. Costs no variables.
+    // Issue Tracking: Use Assert for SyntaxErrors in the Parsers. Costs no variables. No if statements
     function Assert(test, message) {
-        if (!test) throwError(new SyntaxError(message));
+        if (!test) throwError(new Error(message));
+    }
+    function SyntaxAssert(test, message) {
+         if (!test) throwError(new SyntaxError(message));   
     }
 
     // ========================================================================================================
@@ -3775,15 +3778,16 @@ define("lib/parser", ["lib/tables", "lib/tokenizer"], function (tables, tokenize
 
     var EarlyErrorHandlers = Object.create(null);
     EarlyErrorHandlers.Program = function () {
+        SyntaxAssert(!contains.contains("BreakStatement"), "Break is not allowed in the outer script body");
         //if (contains.contains("BreakStatement")) throw new SyntaxError("Break is not allowed in the outer script body");     
-        //if (contains.contains("ContinueStatement")) throw new SyntaxError("Continue is not allowed in the outer script body");
-        //if (contains.contains("ReturnStatement")) throw new SyntaxError("Return is not allowed in the outer script body");
+        if (contains.contains("ContinueStatement")) throw new SyntaxError("Continue is not allowed in the outer script body");
+        if (contains.contains("ReturnStatement")) throw new SyntaxError("Return is not allowed in the outer script body");
     };
 
     EarlyErrorHandlers.FunctionDeclaration = function () {
-        //if (contains.contains("BreakStatement")) throw new SyntaxError("Break is not allowed outside of iterations");
-        //if (contains.contains("ContinueStatement")) throw new SyntaxError("Continue is not allowed outside of iterations");
-        //if (contains.contains("YieldExpression")) throw new SyntaxError("Yield must be an identifier outside of generators or strict mode");
+        if (contains.contains("BreakStatement")) throw new SyntaxError("Break is not allowed outside of iterations");
+        if (contains.contains("ContinueStatement")) throw new SyntaxError("Continue is not allowed outside of iterations");
+        if (contains.contains("YieldExpression")) throw new SyntaxError("Yield must be an identifier outside of generators or strict mode");
     };
     EarlyErrorHandlers.ModuleDeclaration = function () {
 
@@ -3862,7 +3866,7 @@ define("lib/parser", ["lib/tables", "lib/tokenizer"], function (tables, tokenize
 
         function new_container() {
             containers.push(container);
-            container = Object.create(container);
+            container = Object.create(null); // may have no chain.
         }
 
         function old_container() {
