@@ -25341,13 +25341,11 @@ define("lib/runtime", ["lib/parser", "lib/api", "lib/slower-static-semantics"], 
 
         // slow, just temporary for memozing
         // a little group uses evaluate arguments.
-        var args = [].slice.call(arguments)
-        // just for seperation of concetrns;
-        return Evaluate2()
+        return Evaluate2(a,b,c,d)
     }
 
     ecma.ResumeEvaluate = ResumeEvaluate;
-    
+
     function ResumeEvaluate(a,b,c,d) {
         // dont push onto the stack
         return Evaluate2(null, a,b,c,d);
