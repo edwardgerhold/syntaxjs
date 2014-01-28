@@ -26,10 +26,13 @@ es6>
 undefined
 es6>
 ```
-
 Sometimes i break code here, sometimes there. 
 
 The other day, i fix it :-)
+
+Current status is broken. A couple of mistakes is uncleared since december.
+
+But not the problem
 
 - Have to write up the documentation
 - Have filled out a few issues for myself.
