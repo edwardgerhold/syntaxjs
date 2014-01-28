@@ -1,3 +1,146 @@
+"use strict"
+
+Error.stackTraceLimit = 0;
+
+function makePromise (resolver) {
+
+    "use strict";
+    var state = "pending";
+    var value;
+    var reason;
+    var handlers = [];
+    var promise;
+
+    function isPromise (o) {
+        return o && typeof o === "object" && (typeof o.then === "function");
+    }
+    function isFunction (o) {
+        return typeof o === "function";
+    }
+
+    function makeFn(type, set, data) {
+        return function __resolve__() {
+            
+            var newValue, newReason;
+            var deferred = set.deferred;
+            var callback = set.onFulfilled;
+            var errback = set.onRejected;
+            try {
+                if (isPromise(data)) {
+                    data
+                    .then(callback, errback)
+                    .then(deferred.resolve, deferred.reject);
+                } else if (type === "resolve") {
+                    if (isFunction(callback)) newValue = callback(data);
+                    deferred.resolve(newValue);
+                } else if (type === "reject") {
+                    if (isFunction(errback)) errback(data);
+                    deferred.reject(data);
+                }
+            } catch (ex) {
+                if (isFunction(errback)) errback(ex);
+                deferred.reject(ex);
+            }
+        };
+    }
+
+    function resolve (_value_) {
+        if (state !== "pending") return;
+        state = "resolved";
+        value = _value_;
+        for (var i = 0, j = handlers.length; i < j; i++) {
+            setTimeout(makeFn("resolve", handlers[i], value), 0);
+        }
+    }
+
+    function reject (_reason_) {
+        if (state !== "pending") return;
+        state = "rejected";
+        reason = _reason_;
+        for (var i = 0, j = handlers.length; i < j; i++) {
+            setTimeout(makeFn("reject", handlers[i], reason), 0);
+        }
+    }
+
+    function then (onFulfilled, onRejected) {
+
+            if (isPromise(onFulfilled)) {
+                return onFulfilled.then(resolve, reject);
+            } 
+
+            var deferred = makePromise();
+            var set = {
+                    onFulfilled: onFulfilled,
+                    onRejected: onRejected,
+                    deferred: deferred
+            };
+            
+            if (state === "resolved") {
+                setTimeout(function () {
+                    try {
+                        if (isFunction(onFulfilled)) deferred.resolve(onFulfilled(value));
+                        else deferred.resolve(value);
+                    } catch (ex) {
+                        deferred.reject(ex);
+                    }
+                }, 0);
+            } else if (state == "rejected") {
+                setTimeout(function () {
+                    if (isFunction(onRejected)) onRejected(reason);
+                    deferred.reject(reason);
+                }, 0);
+            } else if (state === "pending") {
+                handlers.push(set);
+            }
+            return deferred.promise;
+    }
+    
+    if (resolver !== undefined) {
+
+        if (isFunction(resolver)) {
+            // scheduled async "promise = makePromise(function (res, rej) {});""
+            setTimeout(function () { resolver(resolve, reject); }, 0);
+        } else if (isPromise(resolver)) {
+            // makePromise(promise) returnt ein neues Promise, 
+            try {
+                return resolver.then(resolve, reject);
+                //return makePromise(function (resolve, reject) { _then(resolve, reject); });
+            } catch (ex) {
+                return makePromise(function (resolve, reject) { reject(ex) });
+            }
+        } 
+    } 
+    
+    promise = {
+        then: then,
+        get value () { return value; },
+        get reason () { return reason; },
+        get state () { return state; },
+        get isPromise () { return true; },
+        constructor: makePromise
+    };
+
+    // makePromise(function (resolve, reject)) returnt das promise und hat die function async scheduled.
+    if (isFunction(resolver)) return promise;
+    
+    // makePromise() mit no args returnt das deferred object 
+    var deferred = {
+        promise: promise,
+        resolve: resolve,
+        reject: reject
+    };
+    return deferred;
+}
+
+
+if (typeof exports !== "undefined") {
+    exports.makePromise = makePromise;
+    // promises-aplus-tests-adapter
+    exports.deferred = makePromise;
+    exports.resolve = function (value) { return makePromise(function (resolve) { resolve(value); }); };
+    exports.reject = function (reason) { return makePromise(function (resolve, reject) { reject(reason); }); };
+}
+
 
 function Module(id, exports, children, code) {
     "use strict"
@@ -5604,8 +5747,9 @@ define("lib/parser", ["lib/tables", "lib/tokenizer"], function (tables, tokenize
         var id;
         var x;
         do {
+            x = i;
             if (v) {
-                x = i;
+            
                 debug("formalparameters calling with " + v);
                 if (v === ")") break;
 
@@ -5631,7 +5775,7 @@ define("lib/parser", ["lib/tables", "lib/tokenizer"], function (tables, tokenize
                 }
 
             }
-                if (x == i) break;
+            if (x == i) break;
         } while (v !== undefined && v !== ")");
 
         return list;
@@ -8024,7 +8168,8 @@ define("lib/heap", function (require, exports, module) {
     exports.store = Store;
 
     function ToInteger(V) {
-        var ints = new Int8Array(8);
+        return V|0;
+        //var ints = new Int8Array(8);
     }
     exports.toInteger = ToInteger;
     var hp;
@@ -10437,7 +10582,8 @@ define("lib/api", function (require, exports, module) {
         if ((number = ifAbrupt(number)) && isAbrupt(number)) return number;
         if (ReturnNaN[number]) return +0;
         if (ReturnNum[number]) return number;
-        return sign(number) * floor(abs(number));
+        // return sign(number) * floor(abs(number));
+        return number|0;
     }
 
     function ToLength(V) {
@@ -11871,8 +12017,6 @@ define("lib/api", function (require, exports, module) {
         var result = generatorCallback(NormalCompletion(value));
         setInternalSlot(generator, "GeneratorState", "suspendedYield");
 
-        
-
         var x = getContext();
         
         if (x !== methodContext) {
@@ -11895,6 +12039,7 @@ define("lib/api", function (require, exports, module) {
             console.log("GENERATOR ACHTUNG 1: CONTEXT MISMATCH TEST NICHT BESTANDEN - yield");
         };
 
+        // compl = yield smth;
         genContext.generatorCallback = function (compl) {
             return compl;
         };
@@ -16384,6 +16529,8 @@ dependencygrouptransitions of kind load1.Kind.
 
 
 
+
+
         function GetReplaceSubstitution () {
 
         }
@@ -16506,16 +16653,72 @@ dependencygrouptransitions of kind load1.Kind.
             return NormalCompletion(array);
 
         };
+
+
+
+        // http://wiki.ecmascript.org/doku.php?id=strawman:strawman
+        // 29.1. i have read a post about es7 timeline and one
+        // said for es7 we should look into the strawman namespace except
+        // for observe which is in harmony. Here is string_extensions
+        // http://wiki.ecmascript.org/doku.php?id=strawman:string_extensions
+        // the document defines lpad and rpad
+        var StringPrototype_lpad = function (thisArg, argList) {
+            var minLength = argList[0];
+            var fillStr = argList[1];
+            var O = CheckObjectCoercible(thisArg);
+            var S = ToString(O);
+            if ((S=ifAbrupt(S)) && isAbrupt(S)) return S;
+            var intMinLength = ToInteger(minLength);
+            if ((intMinLength=ifAbrupt(intMinLength)) && isAbrupt(intMinLength)) return intMinLength;
+            if (intMinLength === undefined) return NormalCompletion(S);
+            var fillLen = S.length - intMinLength;
+            if (fillLen < 0) return withError("Range", "lpad: fillLen is smaller 0");
+            if (fillLen == Infinity) return withError("Range", "lpad: fillLen is Infinity");
+            var sFillStr;
+            if (fillStr === undefined) sFillStr = " ";
+            else sFillStr = ""+fillStr;
+            var sFillVal = sFillStr;
+            var sFillLen;
+            while ((sFillLen = sFillVal.length) < fillLen) sFillVal += sFillStr;
+            if (sFillLen > fillLen) sFillVal = sFillVal.substr(0, fillLen);
+            return NormalCompletion(sFillVal + S)
+        };
+        var StringPrototype_rpad = function (thisArg, argList) {
+            var minLength = argList[0];
+            var fillStr = argList[1];
+            var O = CheckObjectCoercible(thisArg);
+            var S = ToString(O);
+            if ((S=ifAbrupt(S)) && isAbrupt(S)) return S;
+            var intMinLength = ToInteger(minLength);
+            if ((intMinLength=ifAbrupt(intMinLength)) && isAbrupt(intMinLength)) return intMinLength;
+            if (intMinLength === undefined) return NormalCompletion(S);
+            var fillLen = S.length - intMinLength;
+            if (fillLen < 0) return withError("Range", "lpad: fillLen is smaller 0");
+            if (fillLen == Infinity) return withError("Range", "lpad: fillLen is Infinity");
+            var sFillStr;
+            if (fillStr === undefined) sFillStr = " ";
+            else sFillStr = ""+fillStr;
+            var sFillVal = sFillStr;
+            var sFillLen;
+            while ((sFillLen = sFillVal.length) < fillLen) sFillVal += sFillStr;
+            if (sFillLen > fillLen) sFillVal = sFillVal.substr(0, fillLen);
+            return NormalCompletion(S + sFillVal);
+        };
+
+        // I think i did it wrong, the function throws when i have a string of length 4 and a fillNumber which is 10;
+
+        LazyDefineBuiltinFunction(StringPrototype, "contains", 0, StringPrototype_contains);
+        LazyDefineBuiltinFunction(StringPrototype, "endsWith", 1, StringPrototype_endsWith);
+        LazyDefineBuiltinFunction(StringPrototype, "lpad", 1, StringPrototype_lpad);
+        LazyDefineBuiltinFunction(StringPrototype, "rpad", 1, StringPrototype_rpad);
         LazyDefineBuiltinFunction(StringPrototype, "match", 0, StringPrototype_match);
         LazyDefineBuiltinFunction(StringPrototype, "normalize", 0, StringPrototype_normalize);
         LazyDefineBuiltinFunction(StringPrototype, "repeat", 0, StringPrototype_repeat);
         LazyDefineBuiltinFunction(StringPrototype, "replace", 0, StringPrototype_replace);
-
-        LazyDefineBuiltinFunction(StringPrototype, "contains", 0, StringPrototype_contains);
         LazyDefineBuiltinFunction(StringPrototype, "startsWith", 1, StringPrototype_startsWith);
-        LazyDefineBuiltinFunction(StringPrototype, "endsWith", 1, StringPrototype_endsWith);
-        LazyDefineBuiltinFunction(StringPrototype, "valueOf", 0, StringPrototype_valueOf);
         LazyDefineBuiltinFunction(StringPrototype, "toArray", 0, StringPrototype_toArray);
+        LazyDefineBuiltinFunction(StringPrototype, "valueOf", 0, StringPrototype_valueOf);
+
         MakeConstructor(StringConstructor, false, StringPrototype);
         // ===========================================================================================================
         // String Iterator
@@ -16676,14 +16879,13 @@ dependencygrouptransitions of kind load1.Kind.
             var descString;
             var description = argList[0];
             if (description !== undefined) descString = ToString(description);
+            if ((descString=ifAbrupt(descString)) && isAbrupt(descString)) return descString;
             var symbol = SymbolPrimitiveType();
             setInternalSlot(symbol, "Description", descString);
-            return symbol;
+            return NormalCompletion(symbol);
         };
         var SymbolFunction_Construct = function Construct(argList) {
-            var F = SymbolFunction;
-            var argumentList = argList;
-            return OrdinaryConstruct(F, argumentList);
+            return OrdinaryConstruct(this, argList);
         };
 
         setInternalSlot(SymbolFunction, "Call", SymbolFunction_Call);
@@ -16772,13 +16974,14 @@ dependencygrouptransitions of kind load1.Kind.
         };
 
 
-        LazyDefineBuiltinFunction(SymbolPrototype, "toString", 0, SymbolPrototype_toString);
-        LazyDefineBuiltinFunction(SymbolPrototype, "valueOf", 0, SymbolPrototype_valueOf);
-        LazyDefineBuiltinConstant(SymbolPrototype, $$toStringTag, "Symbol");
-        LazyDefineBuiltinConstant(SymbolPrototype, $$toPrimitive, CreateBuiltinFunction(realm, SymbolPrototype_$$toPrimitive, 1, "[Symbol.toPrimitive]"));
 
         LazyDefineBuiltinFunction(SymbolFunction, "for", 1, SymbolFunction_for);
         LazyDefineBuiltinFunction(SymbolFunction, "keyFor", 1, SymbolFunction_keyFor /* ,realm */);
+        LazyDefineBuiltinFunction(SymbolPrototype, "toString", 0, SymbolPrototype_toString);
+        LazyDefineBuiltinFunction(SymbolPrototype, "valueOf", 0, SymbolPrototype_valueOf);
+        LazyDefineBuiltinConstant(SymbolPrototype, $$toStringTag, "Symbol");
+        LazyDefineBuiltinConstant(SymbolPrototype, $$toPrimitive, 
+            CreateBuiltinFunction(realm, SymbolPrototype_$$toPrimitive, 1, "[Symbol.toPrimitive]"));
 
 
         // ===========================================================================================================
@@ -24264,9 +24467,12 @@ define("lib/runtime", ["lib/parser", "lib/api", "lib/slower-static-semantics"], 
         var index = 0;
 
         // try for some resume. Hope to have not so many loops to update.
-        var state = getContext().state;
-        var instructionIndex = state[state.length-1].instructionIndex;
-        if (instructionIndex > 0) index = instructionIndex;
+        
+        if (getContext().generator) {
+            var state = getContext().state;
+            var instructionIndex = state[state.length-1].instructionIndex;
+            if (instructionIndex > 0) index = instructionIndex;
+        }
 
         var V = undefined;
         for (var i = index, j = stmtList.length; i < j; i++) {
@@ -25369,12 +25575,8 @@ define("lib/runtime", ["lib/parser", "lib/api", "lib/slower-static-semantics"], 
     function Evaluate(node, a, b, c, d) {
 
         var state = getContext().state;
-        // now one evaluate costs extra for today
-        state.push({ node: node, a: a, b: b, c: c, d: d });
-
-        // slow, just temporary for memozing
-        // a little group uses evaluate arguments.
-        var result = Evaluate2(node, a,b,c,d)
+        state.push({ node: node, a: a, b: b, c: c });
+        var result = Evaluate2(node, a,b,c)
 
         state.pop();
 
@@ -25383,39 +25585,34 @@ define("lib/runtime", ["lib/parser", "lib/api", "lib/slower-static-semantics"], 
 
     ecma.ResumeEvaluate = ResumeEvaluate;
 
-    // work the remaining stack down, activated by generators.
-    // statementlists check for their instruction pointer.
-    function GoDownEvaluate(a,b,c,d) {
+
+// Da ist noch eine Bottom Up Methode
+
+    function GoDownEvaluate(a,b,c) {
         var state = getContext().state;
-        while (state.length) {
-            var R = Evaluate2(null, a, b, c, d);
+            while (state.length) {
+            var state = getContext().state;
+            var stateRec = state[state.length-1];
+            a = stateRec.a;
+            b = stateRec.b;
+            c = stateRec.c;
+            node = stateRec.node;
+            var R = Evaluate2(node, a, b, c);
             if (isAbrupt(R)) return R;
-            // die completion noch storen (bestimmt)
             state.pop();
         }
         return R;
     }
 
-    function ResumeEvaluate(a,b,c,d) {
-        // dont push onto the stack
-        var result = GoDownEvaluate(null, a, b, c, d);    
+    function ResumeEvaluate(a,b,c) {
+        var result = GoDownEvaluate(a, b, c);    
         return result;
     }
 
-    function Evaluate2(node, a, b, c, d) {
+    function Evaluate2(node, a, b, c) {
         var E, R;
         var body, i, j;
  
-        
-        // expensive like everything here but a must to try for the first time
-        // currently pushing and popping the node is meaningless, but i am thinking
-        // about, how to maybe change the whole evaluation for
-        var state = getContext().state;
-        var stateRec = state[state.length-1];
-        node = stateRec.node;
-
-
-
         if (typeof node === "string") {
             debug("Evaluate(resolvebinding " + node + ")");
             R = ResolveBinding(node);
@@ -25423,15 +25620,15 @@ define("lib/runtime", ["lib/parser", "lib/api", "lib/slower-static-semantics"], 
         } else if (Array.isArray(node)) {
 
             debug("Evaluate(StatementList)");
-            if (node.type) R = evaluation[node.type](node, a, b, c, d);
-            else R = evaluation.StatementList(node, a, b, c, d);
+            if (node.type) R = evaluation[node.type](node, a, b, c);
+            else R = evaluation.StatementList(node, a, b, c);
 
         } else {
             
             debug("Evaluate(" + node.type + ")");
             if (E = evaluation[node.type]) {
                 tellExecutionContext(node, 0);
-                R = E(node, a, b, c, d);
+                R = E(node, a, b, c);
             }
             
         }
