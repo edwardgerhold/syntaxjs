@@ -25392,6 +25392,7 @@ define("lib/runtime", ["lib/parser", "lib/api", "lib/slower-static-semantics"], 
             var R = Evaluate2(null, a, b, c, d);
             if (isAbrupt(R)) return R;
             // die completion noch storen (bestimmt)
+            state.pop();
         }
         return R;
     }
@@ -25405,12 +25406,15 @@ define("lib/runtime", ["lib/parser", "lib/api", "lib/slower-static-semantics"], 
         var E, R;
         var body, i, j;
  
+        
         // expensive like everything here but a must to try for the first time
         // currently pushing and popping the node is meaningless, but i am thinking
         // about, how to maybe change the whole evaluation for
         var state = getContext().state;
         var stateRec = state[state.length-1];
         node = stateRec.node;
+
+        
 
         if (typeof node === "string") {
             debug("Evaluate(resolvebinding " + node + ")");
