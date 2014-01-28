@@ -3917,36 +3917,33 @@ define("lib/parser", ["lib/tables", "lib/tokenizer"], function (tables, tokenize
     // Early Errors
     // ========================================================================================================
 
-    var contains;   // used in the parser, to reference the tables.
-
-    var EarlyErrorHandlers = Object.create(null);
-    EarlyErrorHandlers.Program = function () {
-        SyntaxAssert(!contains.contains("BreakStatement"), "Break is not allowed in the outer script body");
-        //if (contains.contains("BreakStatement")) throw new SyntaxError("Break is not allowed in the outer script body");     
-        if (contains.contains("ContinueStatement")) throw new SyntaxError("Continue is not allowed in the outer script body");
-        if (contains.contains("ReturnStatement")) throw new SyntaxError("Return is not allowed in the outer script body");
-    };
-
-    EarlyErrorHandlers.FunctionDeclaration = function () {
-        if (contains.contains("BreakStatement")) throw new SyntaxError("Break is not allowed outside of iterations");
-        if (contains.contains("ContinueStatement")) throw new SyntaxError("Continue is not allowed outside of iterations");
-        if (contains.contains("YieldExpression")) throw new SyntaxError("Yield must be an identifier outside of generators or strict mode");
-    };
-    EarlyErrorHandlers.ModuleDeclaration = function () {
-
-    };
+    
 
     function EarlyErrors(node) {
-        var handler = EarlyErrorHandlers[node.type];
+        var handler = EarlyErrors[node.type];
         if (handler) handler();
         return node;
     }
-     
-    function makeSymbolAndContainsTable(tokens) {
-        contains = SymbolAndContainsTable();
-    }
-
     
+    EarlyErrors.Program = function () {
+        /*SyntaxAssert(!contains.contains("BreakStatement"), "Break is not allowed in the outer script body");
+        //if (contains.contains("BreakStatement")) throw new SyntaxError("Break is not allowed in the outer script body");     
+        if (contains.contains("ContinueStatement")) throw new SyntaxError("Continue is not allowed in the outer script body");
+        if (contains.contains("ReturnStatement")) throw new SyntaxError("Return is not allowed in the outer script body");*/
+    };
+
+    EarlyErrors.FunctionDeclaration = function () {
+        /*if (contains.contains("BreakStatement")) throw new SyntaxError("Break is not allowed outside of iterations");
+        if (contains.contains("ContinueStatement")) throw new SyntaxError("Continue is not allowed outside of iterations");
+        if (contains.contains("YieldExpression")) throw new SyntaxError("Yield must be an identifier outside of generators or strict mode");
+        */
+    };
+    EarlyErrors.ModuleDeclaration = function () {
+
+    };
+
+
+
     var ForbiddenArgumentsInStrict = {
         __proto__: null,
         "eval": true,
@@ -3994,9 +3991,10 @@ define("lib/parser", ["lib/tables", "lib/tokenizer"], function (tables, tokenize
     // ========================================================================================================
 
 
-// - needs to be cleaned up, maybe separated into it´s own module
-// - it has no dependencies, i just store names and node names inside
-// - maybe i change to public properties .currentEnv, .container and a .prototype for speedup and less unreadability
+    var contains;   // used in the parser, to reference the tables.
+    function makeSymbolAndContainsTable(tokens) {
+        contains = SymbolAndContainsTable();
+    }
     function SymbolAndContainsTable() {
         "use strict";
 
@@ -5662,6 +5660,8 @@ define("lib/parser", ["lib/tables", "lib/tokenizer"], function (tables, tokenize
             var id = this.Identifier();
             node.id = id.name;
 
+            scope.add_lex(id);
+
             if (v === "extends") {
                 pass("extends");
                 node.extends = this.AssignmentExpression();
@@ -5776,7 +5776,7 @@ define("lib/parser", ["lib/tables", "lib/tokenizer"], function (tables, tokenize
 
             }
             if (x == i) break;
-        } while (v !== undefined && v !== ")");
+        } while (v !== undefined && v !== ")" && i < j);
 
         return list;
     }
@@ -25574,12 +25574,14 @@ define("lib/runtime", ["lib/parser", "lib/api", "lib/slower-static-semantics"], 
 
     function Evaluate(node, a, b, c, d) {
 
+        // record everywhere oder nur bei generator?
+        // cheaper is if (cx.generator)
         var state = getContext().state;
         state.push({ node: node, a: a, b: b, c: c });
-        var result = Evaluate2(node, a,b,c)
+
+        var result = Evaluate2(node, a,b,c);
 
         state.pop();
-
         return result;
     }
 
