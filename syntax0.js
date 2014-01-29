@@ -13836,7 +13836,9 @@ define("lib/api", function (require, exports, module) {
         var ModuleFunction = createIntrinsicConstructor(intrinsics, "Module", 0, "%Module%");
         var ModulePrototype = null;
 
-        // that is something from the dom, which is useful for communication and its messaging need structured cloning
+        // that is something from the dom, which is useful for communication and its messaging needs structured cloning so i can check out both
+        var EventConstructor = createIntrinsicConstructor(intrinsics, "Event", 0, "%Event%");
+        var EventPrototype = createIntrinsicPrototype(intrinsics, "%EventPrototype%"); 
         var EventTargetConstructor = createIntrinsicConstructor(intrinsics, "EventTarget", 0, "%EventTarget%");
         var EventTargetPrototype = createIntrinsicPrototype(intrinsics, "%EventTargetPrototype%"); 
         var MessagePortConstructor = createIntrinsicConstructor(intrinsics, "MessagePort", 0, "%MessagePort%");
@@ -14600,11 +14602,9 @@ dependencygrouptransitions of kind load1.Kind.
             refactor the lists which are asked for by name for using the name as the key because dupes are
             forbidden anyways, but i didnt finish it.
 
-
             Now i wait for NewModuleEnvironment and my OrdinaryModule oder ObjectCreate(null)
             But i read about CreateImportBinding, which is the CreateImmutableBinding for ModuleEnvironments, i guess.
-            I read about getters or value. If the getters are interceptable, they would be much better, because acesses
-            to the module could be tracked.. But i dont know if in reality anyone tracks accesses to modules.
+
 
          */
 
@@ -16806,15 +16806,15 @@ dependencygrouptransitions of kind load1.Kind.
             var intMinLength = ToInteger(minLength);
             if ((intMinLength=ifAbrupt(intMinLength)) && isAbrupt(intMinLength)) return intMinLength;
             if (intMinLength === undefined) return NormalCompletion(S);
-            var fillLen = S.length - intMinLength;
-            if (fillLen < 0) return withError("Range", "lpad: fillLen is smaller 0");
+            var fillLen = intMinLength - S.length;
+            if (fillLen < 0) return withError("Range", "lpad: fillLen is smaller than the string"); // maybe auto cut just the string. too?
             if (fillLen == Infinity) return withError("Range", "lpad: fillLen is Infinity");
             var sFillStr;
             if (fillStr === undefined) sFillStr = " ";
             else sFillStr = ""+fillStr;
             var sFillVal = sFillStr;
             var sFillLen;
-            while ((sFillLen = sFillVal.length) < fillLen) sFillVal += sFillStr;
+            do { sFillVal += sFillStr; } while ((sFillLen = (sFillVal.length - S.length)) < fillLen);
             if (sFillLen > fillLen) sFillVal = sFillVal.substr(0, fillLen);
             return NormalCompletion(sFillVal + S)
         };
@@ -16827,15 +16827,15 @@ dependencygrouptransitions of kind load1.Kind.
             var intMinLength = ToInteger(minLength);
             if ((intMinLength=ifAbrupt(intMinLength)) && isAbrupt(intMinLength)) return intMinLength;
             if (intMinLength === undefined) return NormalCompletion(S);
-            var fillLen = S.length - intMinLength;
-            if (fillLen < 0) return withError("Range", "lpad: fillLen is smaller 0");
+            var fillLen = intMinLength - S.length;
+            if (fillLen < 0) return withError("Range", "lpad: fillLen is smaller than the string");
             if (fillLen == Infinity) return withError("Range", "lpad: fillLen is Infinity");
             var sFillStr;
             if (fillStr === undefined) sFillStr = " ";
             else sFillStr = ""+fillStr;
             var sFillVal = sFillStr;
             var sFillLen;
-            while ((sFillLen = sFillVal.length) < fillLen) sFillVal += sFillStr;
+            do { sFillVal += sFillStr; } while ((sFillLen = (sFillVal.length - S.length)) < fillLen);
             if (sFillLen > fillLen) sFillVal = sFillVal.substr(0, fillLen);
             return NormalCompletion(S + sFillVal);
         };
@@ -21225,12 +21225,6 @@ dependencygrouptransitions of kind load1.Kind.
             return iterator;
         }
 
-        DefineOwnProperty(MapIteratorPrototype, "constructor", {
-            value: undefined,
-            writable: false,
-            enumerable: false,
-            configurable: false
-        });
 
         DefineOwnProperty(MapIteratorPrototype, $$toStringTag, {
             value: "Map Iterator",
@@ -21569,7 +21563,6 @@ v            }
         // ===========================================================================================================
 
         setInternalSlot(EmitterPrototype, "Prototype", ObjectPrototype);
-
         setInternalSlot(EmitterConstructor, "Call", function Call(thisArg, argList) {
             var O = thisArg;
             var type = Type(O);
@@ -21786,7 +21779,43 @@ v            }
         });
         
         LazyDefineBuiltinConstant(EmitterPrototype, $$toStringTag, "Emitter");
-        
+
+
+        //
+        //
+        //
+        //
+
+        MakeConstructor(EventConstructor, true, EventPrototype);
+        MakeConstructor(EventTargetConstructor, true, EventTargetPrototype);
+        MakeConstructor(MessagePortConstructor, true, MessagePortPrototype);
+
+        var EventConstructor_Call = function (thisArg, argList) {
+        };
+
+        var EventTargetConstructor_Call = function (thisArg, argList) {
+        };
+        var EventTargetPrototype_addEventListener = function (thisArg, argList) {
+        };
+        var EventTargetPrototype_dispatchEvent = function (thisArg, argList) {
+        };
+        var EventTargetPrototype_removeEventListener = function (thisArg, argList) {
+        };
+
+        LazyDefineBuiltinFunction(EventTargetPrototype, "addEventListener", 3, EventTargetPrototype_addEventListener);
+        LazyDefineBuiltinFunction(EventTargetPrototype, "dispatchEvent", 1, EventTargetPrototype_dispatchEvent);
+        LazyDefineBuiltinFunction(EventTargetPrototype, "removeEventListener", 2, EventTargetPrototype_removeEventListener);
+
+        var MessagePortPrototype_close = function (thisArg, argList) {
+        };
+        var MessagePortPrototype_open = function (thisArg, argList) {
+        };
+        var MessagePortPrototype_postMessage = function (thisArg, argList) {
+        };
+
+        LazyDefineBuiltinFunction(MessagePortPrototype, "close", 0, MessagePortPrototype_close);
+        LazyDefineBuiltinFunction(MessagePortPrototype, "open", 0, MessagePortPrototype_open);
+        LazyDefineBuiltinFunction(MessagePortPrototype, "postMessage", 0, MessagePortPrototype_postMessage);
 
         // ===========================================================================================================
         // Globales This erzeugen (sollte mit dem realm und den builtins 1x pro neustart erzeugt werden)
@@ -21802,6 +21831,7 @@ v            }
             DefineOwnProperty(globalThis, "DataView", GetOwnProperty(intrinsics, "%DataView%"));
             DefineOwnProperty(globalThis, "Date", GetOwnProperty(intrinsics, "%Date%"));
             DefineOwnProperty(globalThis, "Emitter", GetOwnProperty(intrinsics, "%Emitter%"));
+            DefineOwnProperty(globalThis, "Event", GetOwnProperty(intrinsics, "%Event%"));
             DefineOwnProperty(globalThis, "EventTarget", GetOwnProperty(intrinsics, "%EventTarget%"));
             DefineOwnProperty(globalThis, "Error", GetOwnProperty(intrinsics, "%Error%"));
             DefineOwnProperty(globalThis, "EvalError", GetOwnProperty(intrinsics, "%EvalError%"));
@@ -23038,7 +23068,7 @@ define("lib/runtime", ["lib/parser", "lib/api", "lib/slower-static-semantics"], 
             if ((newG = ifAbrupt(newG)) && isAbrupt(newG)) return newG;
             G = newG;
         }
-        return GeneratorStart(G, F.Code);
+        return GeneratorStart(G, getInternalSlot(F, "Code"));
     }
 
     var SkipMeDeclarations = {
@@ -23089,13 +23119,13 @@ define("lib/runtime", ["lib/parser", "lib/api", "lib/slower-static-semantics"], 
         
         if (kind === "generator") {
             return CreateGeneratorInstance(F);
-        } else if (thisMode === "lexical" || kind === "arrow") {
+        } else if (thisMode === "lexical") {
             return EvaluateConciseBody(F);
         }
 
         // FunctionBody
         for (var i = 0, j = code.length; i < j; i++) {
-            if ((node = code[i]) && !SkipDecl(node)) {
+            if ((node = code[i]) /*&& !SkipDecl(node)*/) {
                 tellExecutionContext(node, i);
                 exprRef = Evaluate(node);
 
