@@ -8918,20 +8918,15 @@ define("lib/api", function (require, exports, module) {
 
     function OrdinaryObjectGet(O, P, R) {
         Assert(IsPropertyKey(P), "Get (object) expects a valid Property Key (got " + P + ")")
-
         var desc = callInternalSlot("GetOwnProperty", O, P);
         if ((desc = ifAbrupt(desc)) && isAbrupt(desc)) return desc;
-        
-
         if (desc === undefined) {
             var parent = GetPrototypeOf(O);
             if (isAbrupt(parent)) return parent;
             parent = ifAbrupt(parent);
-
             if (parent === null) return undefined;
             return parent.Get(P, R);
         }
-
         var getter;
         if (IsDataDescriptor(desc)) return desc.value;
         else if (IsAccessorDescriptor(desc)) {
@@ -8939,17 +8934,14 @@ define("lib/api", function (require, exports, module) {
             if (getter === undefined) return undefined;
             else return callInternalSlot("Call", getter, R, []);
         }
-
         return undefined;
     }
 
     function Set(O, P, V, R) {
         var ownDesc, parent, setter;
         Assert(IsPropertyKey(P), "Set (object) expects a valid Property Key")
-
         ownDesc = callInternalSlot("GetOwnProperty", O, P); // readPropertyDescriptor(O, P);
         if ((ownDesc == ifAbrupt(ownDesc)) && isAbrupt(ownDesc)) return ownDesc;
-        
         if (ownDesc === undefined) {
             parent = GetPrototypeOf(O);
             if ((parent = ifAbrupt(parent)) && isAbrupt(parent)) return parent;
@@ -8957,7 +8949,6 @@ define("lib/api", function (require, exports, module) {
                 return parent.Set(P, V, R);
             }
         }
-
         // von unter isdata hoch gehoben
         else if (IsAccessorDescriptor(ownDesc)) {
             var setter = ownDesc.set;
@@ -8966,19 +8957,15 @@ define("lib/api", function (require, exports, module) {
             if (isAbrupt(setterResult)) return setterResult;
             return true;
         }
-
         ownDesc = {
             value: undefined,
             writable: true,
             configurable: true,
             enumerable: true
         };
-
         if (IsDataDescriptor(ownDesc)) {
-
             if (ownDesc.writable == false) return false;
             if (Type(R) !== "object") return false;
-
             var existingDescriptor = R.GetOwnProperty(P);
             if ((existingDescriptor = ifAbrupt(existingDescriptor)) && isAbrupt(existingDescriptor)) return existingDescriptor;
 
@@ -8992,10 +8979,7 @@ define("lib/api", function (require, exports, module) {
             }
 
         }
-
-        
         return false;
-
     }
 
     function Invoke(O, P, args) {
@@ -13218,9 +13202,10 @@ define("lib/api", function (require, exports, module) {
             
 
             // my programming mistakes fixed
-                saveCodeRealm();
-                setCodeRealm(realmRec); 
-            // i have to have a stack
+            saveCodeRealm();
+            setCodeRealm(realmRec); 
+            // i have to have a stack, realm intriniscs
+            // and to remove the dependency
                 
         
             //var context = newContext(null);
@@ -13251,9 +13236,6 @@ define("lib/api", function (require, exports, module) {
             realmRec.Function = undefined;
 
 
-
-
-
             makeTaskQueues(realmRec);
     
             // my programming mistakes fixed.
@@ -13264,7 +13246,8 @@ define("lib/api", function (require, exports, module) {
             // them use exports would be another. I favor
             // the function. but from my p3/933mhz i know i kill
             // the program with        
-                restoreCodeRealm();
+            restoreCodeRealm();
+
 
             return realmRec;
         }
@@ -13277,12 +13260,10 @@ define("lib/api", function (require, exports, module) {
     function restoreCodeRealm() {
         setCodeRealm(realms.pop());
     }
-
     function setCodeRealm(r) {  // CREATE REALM (API)
         if (r) {
             realm = r;
             stack = realm.stack;
-       
             intrinsics = realm.intrinsics;
             globalEnv = realm.globalEnv;
             globalThis = realm.globalThis;
@@ -13300,17 +13281,14 @@ define("lib/api", function (require, exports, module) {
     }
 
     function createRealm(options) {
-        options = options || {}; // { createOnly: true, don´t set to current real
-        
+        options = options || {}; 
+        // { createOnly: true, don´t set to current real
         if (console.time) console.time("Creating Realm...");
 
         var realm = CreateRealm(); // new CodeRealm(); // CreateRealm();
-
         setCodeRealm(realm); 
 
-
-
-        if (console.time) console.timeEnd("Creating Realm...");
+        if (console.timeEnd) console.timeEnd("Creating Realm...");
         return realm;
     }
 
@@ -13333,8 +13311,8 @@ define("lib/api", function (require, exports, module) {
         if ((clone = ifAbrupt(clone)) && isAbrupt(clone)) return clone;
         for (var i = 0, j = transferList.length; i < j; i++) {
             var mapping = memory[i];
-            var transferResult = mapping.output;
-            transferable = mappinginput;
+            transferResult = mapping.output;
+            transferable = mapping.input;
             var OnSuccessTransfer = getInternalSlot(transferable, "OnSuccessTransfer");
             callInternalSlot("Call", OnSuccessTransfer, transferable, [transferResult, targetRealm]);
         }
@@ -13456,12 +13434,14 @@ define("lib/api", function (require, exports, module) {
         }
     };
 
+
+    /* Missing: MessagePort and postMessage and open und close */
+
     /*
         DataCloneError error object
         Indicates failure of the structured clone algorithm.
         {Rationale: typically, ECMAScript operations throw RangeError for similar failures, but we need to preserve DOM compatibnility}
     */
-
 
 
         // ##################################################################
@@ -13856,7 +13836,11 @@ define("lib/api", function (require, exports, module) {
         var ModuleFunction = createIntrinsicConstructor(intrinsics, "Module", 0, "%Module%");
         var ModulePrototype = null;
 
-
+        // that is something from the dom, which is useful for communication and its messaging need structured cloning
+        var EventTargetConstructor = createIntrinsicConstructor(intrinsics, "EventTarget", 0, "%EventTarget%");
+        var EventTargetPrototype = createIntrinsicPrototype(intrinsics, "%EventTargetPrototype%"); 
+        var MessagePortConstructor = createIntrinsicConstructor(intrinsics, "MessagePort", 0, "%MessagePort%");
+        var MessagePortPrototype = createIntrinsicPrototype(intrinsics, "%MessagePortPrototype%");
 
 
         // ##################################################################
@@ -21818,6 +21802,7 @@ v            }
             DefineOwnProperty(globalThis, "DataView", GetOwnProperty(intrinsics, "%DataView%"));
             DefineOwnProperty(globalThis, "Date", GetOwnProperty(intrinsics, "%Date%"));
             DefineOwnProperty(globalThis, "Emitter", GetOwnProperty(intrinsics, "%Emitter%"));
+            DefineOwnProperty(globalThis, "EventTarget", GetOwnProperty(intrinsics, "%EventTarget%"));
             DefineOwnProperty(globalThis, "Error", GetOwnProperty(intrinsics, "%Error%"));
             DefineOwnProperty(globalThis, "EvalError", GetOwnProperty(intrinsics, "%EvalError%"));
             DefineOwnProperty(globalThis, "Function", GetOwnProperty(intrinsics, "%Function%"));
@@ -21832,8 +21817,9 @@ v            }
             DefineOwnProperty(globalThis, "Loader", GetOwnProperty(intrinsics, "%Loader%"));
             DefineOwnProperty(globalThis, "Math", GetOwnProperty(intrinsics, "%Math%"));
             DefineOwnProperty(globalThis, "Map", GetOwnProperty(intrinsics, "%Map%"));
+            DefineOwnProperty(globalThis, "MessagePort", GetOwnProperty(intrinsics, "%MessagePort%"));
             DefineOwnProperty(globalThis, "Module", GetOwnProperty(intrinsics, "%Module%"));
-            LazyDefineBuiltinFunction(globalThis, "NaN", NaN);
+            LazyDefineBuiltinConstant(globalThis, "NaN", NaN);
             DefineOwnProperty(globalThis, "Number", GetOwnProperty(intrinsics, "%Number%"));
             DefineOwnProperty(globalThis, "Proxy", GetOwnProperty(intrinsics, "%Proxy%"));
             DefineOwnProperty(globalThis, "RangeError", GetOwnProperty(intrinsics, "%RangeError%"));
@@ -21877,10 +21863,12 @@ v            }
             LazyDefineBuiltinConstant(globalThis, "undefined", undefined);
             DefineOwnProperty(globalThis, "unescape", GetOwnProperty(intrinsics, "%Unescape%"));
             LazyDefineBuiltinConstant(globalThis, $$toStringTag, "syntaxjsGlobal")
+
+
             
 
         /*
-	           DOM Wrapper 
+	           DOM Wrapper, works for node.js process, too. Was usually able to call functions, but seems to have bug today.
         */
 
             if (typeof importScripts === "function") {
@@ -23189,12 +23177,7 @@ define("lib/runtime", ["lib/parser", "lib/api", "lib/slower-static-semantics"], 
                 if (isAbrupt(status)) return status;
             } else scope = getLexEnv();
             F = FunctionCreate("normal", params, body, scope, strict);
-
-            if (node.needsSuper) {
-                if (id) MakeMethod(F, id, undefined);
-                else MakeMethod(F, undefined, undefined);
-            }
-
+            if (node.needsSuper) MakeMethod(F, id, undefined);
             MakeConstructor(F);
             if (id) {
                 var status;
@@ -23215,9 +23198,7 @@ define("lib/runtime", ["lib/parser", "lib/api", "lib/slower-static-semantics"], 
     evaluation.MemberExpression = MemberExpression;
     function MemberExpression(node) {
         "use strict";
-
         var notSuperExpr = !isSuperMemberExpression(node);
-
         var propertyNameReference;
         var propertyNameValue;
         var propertyNameString;
@@ -23226,25 +23207,18 @@ define("lib/runtime", ["lib/parser", "lib/api", "lib/slower-static-semantics"], 
         var o = node.object;
         var p = node.property;
         var strict = cx.strict;
-
         if (notSuperExpr) {
             baseReference = Evaluate(o);
             baseValue = GetValue(baseReference);
             if ((baseValue=ifAbrupt(baseValue)) && isAbrupt(baseValue)) return baseValue;
-
         }
-
         if (node.computed) {
-
             propertyNameReference = Evaluate(p);
             if ((propertyNameReference = ifAbrupt(propertyNameReference)) && isAbrupt(propertyNameReference)) return propertyNameReference;
             propertyNameValue = GetValue(propertyNameReference);
             if ((propertyNameValue = ifAbrupt(propertyNameValue)) && isAbrupt(propertyNameValue)) return propertyNameValue;
-
         } else {
-
             propertyNameValue = p.name || p.value;
-
         }
 
         propertyNameString = ToPropertyKey(propertyNameValue);
@@ -23261,7 +23235,6 @@ define("lib/runtime", ["lib/parser", "lib/api", "lib/slower-static-semantics"], 
         } else {
             // super.name
             // super[nameExpr]
-
             return MakeSuperReference(propertyNameString, strict);
         }
     }
@@ -23275,7 +23248,6 @@ define("lib/runtime", ["lib/parser", "lib/api", "lib/slower-static-semantics"], 
         var cx = getContext();
         var strict = cx && cx.strict;
         var notSuperExpr = node.callee.type !== "SuperExpression";
-
         if (notSuperExpr) {
             exprRef = Evaluate(node.callee);
             if ((exprRef = ifAbrupt(exprRef)) && isAbrupt(exprRef)) return exprRef;
@@ -23285,7 +23257,6 @@ define("lib/runtime", ["lib/parser", "lib/api", "lib/slower-static-semantics"], 
             if ((exprRef = ifAbrupt(exprRef)) && isAbrupt(exprRef)) return exprRef;
             callee = GetValue(exprRef);
         }
-
         if ((callee = ifAbrupt(callee)) && isAbrupt(callee)) return callee;
         if (!IsConstructor(callee)) {
             return withError("Type", "expected function is not a constructor");
@@ -23293,7 +23264,6 @@ define("lib/runtime", ["lib/parser", "lib/api", "lib/slower-static-semantics"], 
         if (callee) {
             cx.callee = "new " + (Get(callee, "name") || "(anonymous)");
         }
-
         var args = node.arguments;
         var argList;
         if (args) argList = ArgumentListEvaluation(args);
@@ -23305,14 +23275,11 @@ define("lib/runtime", ["lib/parser", "lib/api", "lib/slower-static-semantics"], 
 
     function CallExpression(node) {
         "use strict";
-
         var callee = node.callee;
         var notSuperExpr = callee.type !== "SuperExpression";
         var strict = cx.strict;
-
         var tailCall = !! node.tailCall;
         var exprRef;
-
         if (notSuperExpr) {
             exprRef = Evaluate(callee);
             if ((exprRef = ifAbrupt(exprRef)) && isAbrupt(exprRef)) return exprRef;
@@ -23331,7 +23298,7 @@ define("lib/runtime", ["lib/parser", "lib/api", "lib/slower-static-semantics"], 
         var decl, decl2, init, arr, initialiser, status, env;
 
         // console.log("decl for "+node.type);
-        var env = isCodeType("VariableDeclaration") ? (node.kind === "var" ? getVarEnv() : getLexEnv()) : getLexEnv();
+        var env = isCodeType(node, "VariableDeclaration") ? (node.kind === "var" ? getVarEnv() : getLexEnv()) : getLexEnv();
         var i, j, p, q, type
 
         var name;
@@ -23341,28 +23308,20 @@ define("lib/runtime", ["lib/parser", "lib/api", "lib/slower-static-semantics"], 
         for (i = 0, j = node.declarations.length; i < j; i++) {
             decl = node.declarations[i];
             type = decl.type;
-
             // wird von binding intialisation vorher initialisiert,
             // hier wird das initialiser assignment durchgefuehrt, wenn
             // der code evaluiert wird.
-
             if (type === "ArrayPattern" || type === "ObjectPattern") {
-
                 if (decl.init) initialiser = GetValue(Evaluate(decl.init));
                 else return withError("Type", "Destructuring Patterns must have some = Initialiser.");
                 if (isAbrupt(initialiser)) return initialiser;
-
                 status = BindingInitialisation(decl, initialiser, env);
                 if ((status = ifAbrupt(status)) && isAbrupt(status)) return status;
-
             } else {
-
                 if (decl.init) {
                     name = decl.id;
                     initialiser = GetValue(Evaluate(decl.init));
-
                     if (isAbrupt(initialiser)) return initialiser;
-
                     if (IsCallable(initialiser)) {
                         if (IsAnonymousFunctionDefinition(decl.init) && !HasOwnProperty(initialiser, "name")) {
                             SetFunctionName(initialiser, name);
@@ -23372,7 +23331,6 @@ define("lib/runtime", ["lib/parser", "lib/api", "lib/slower-static-semantics"], 
                     if ((status = ifAbrupt(status)) && isAbrupt(status)) return status;
                 }
             }
-
         }
         return NormalCompletion();
     }
@@ -23920,7 +23878,7 @@ define("lib/runtime", ["lib/parser", "lib/api", "lib/slower-static-semantics"], 
                 }
 
                 // value
-                if (isCodeType("FunctionDeclaration")) {
+                if (isCodeType(node, "FunctionDeclaration")) {
 
                     status = defineFunctionOnObject(node, newObj, propName);
                     if (isAbrupt(status)) return status;
