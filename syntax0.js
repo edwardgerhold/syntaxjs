@@ -14215,6 +14215,7 @@ define("lib/api", function (require, exports, module) {
             setInternalSlot(F, "Call", CallTranslate_Call);
             return F;
         }
+ 
 
         // 27.1.
         function CallInstantiate() {
@@ -14582,34 +14583,12 @@ dependencygrouptransitions of kind load1.Kind.
         // 29.1.
 
 
+        // This one has the worst explaining for me, coz i dont see the forest by all these trees ;-)
         function LinkageGroups(start) {
             var G = start.Loads;
             var kind;
-            
-
-        /* first clear the linkage graph and what a linkage dependency load1 on load2.UnlinkedDependencies ist
-
-            then continue talking bullshit about the o^3 and o^4 complexity of the loops 
-
-            then say (they are a few modules, probably you have a hundred modules but not so many dependencies,
-            in reality a load of a module is not that expensive even with such a complicated tree (or graph) of modules)
-
-            couldnt use my graph data structure directly, coz i have no feeling for the loader code yet.
-            i didnt take the time to paint a diagram with, maybe i should try. That would make it easier for
-            me, to see the pipeline and the structures flowing.
-
-            But it´s better than a month ago, when i wrote it up for the first time. I directly tried to
-            refactor the lists which are asked for by name for using the name as the key because dupes are
-            forbidden anyways, but i didnt finish it.
-
-            Now i wait for NewModuleEnvironment and my OrdinaryModule oder ObjectCreate(null)
-            But i read about CreateImportBinding, which is the CreateImmutableBinding for ModuleEnvironments, i guess.
-
-
-         */
-
             for (var i = 0, j = G.length; i < j; i++) {
-                var load = G[i]
+                var load = G[i];
                 if (load.Kind != kind) {
                     if (kind === undefined)
                     kind = G[i].Kind;
@@ -14619,16 +14598,36 @@ dependencygrouptransitions of kind load1.Kind.
             var n = 0;
             for (i = 0, j = G.length; i < j; i++) {
                 load = G[i];
-                n = max(n, load.UnlinkedDependencies.length)
+                n = max(n, load.UnlinkedDependencies.length);
             }
 
-            var declarativeGroupCount;
-            var declarativeGroups = Array(declarativeGroupCount);
+                // Still figuring out how to get the GroupIndex
+                            // and GroupCount together.
+            var declarativeGroupCount = n;
+            var declarativeGroups = [];
+            var dynamicGroupCount = 0;
+            var declarativeGroups = [];
             var visited = [];
+
+            for (var i = 0, j = G.length; i < j; i++) {
+                var load = G[i];
+                BuildLinkageGroups(load, declarativeGroups, dynamicGroups, visited);
+            }
+            var first = declarativeGroups[0];
+            if (hasRecordInList(first, "Kind", "dynamic")) {
+                var groups = interleaveLists(dynamicGroups, declarativeGroups);
+            } else {
+                var groups = interleaveLists(declarativeGroups, dynamicGroups);
+            }
+
+            return groups;
 
         }
 
-
+        function interleaveLists(list1, list2) {
+            // temp. doing nothing
+            return list1.concat(list2);
+        }
 
 
         // 28.1.
@@ -14697,10 +14696,10 @@ dependencygrouptransitions of kind load1.Kind.
             var boundNames = getInternalSlot(M, "BoundNames");
             var knownExportEntries = getInternalSlot(M, "KnownExportEntries");
             var linkErrors = getInternalSlot(M, "LinkErrors");
-            for (var k in knownExportEntries) {
+            for (var i = 0, j = knownExportEntries.length; i < j; i++) {
 
-                var entry = knownExportEntries[k];
-                var modReq = entry.ModuleRequest // caps
+                var entry = knownExportEntries[i];
+                var modReq = entry.ModuleRequest 
                 var otherMod = LookupModuleDependency(M, modReq);
 
                 if (entry.Module !== null && entry.LocalName !== null && !boundNames[entry.LocalName]) { // caps
@@ -14708,17 +14707,17 @@ dependencygrouptransitions of kind load1.Kind.
                     linkErrors.push(error);
                 }
                 defs.push({ Module: otherMod, ImportName: entry.ImportName, LocalName: entry.LocalName, 
-                    ExportName: entry.ExportName, Explitic: true });
+                    ExportName: entry.ExportName, Explicit: true });
 
             }
-            for (var i = 0; i < M.UnknownExportEntries.length; i++) {
+            var MUEE = M.UnknownExportEntries;
+            for (var i = 0; i < MUUE.length; i++) {
                 modReq = LookupModuleDependency(M, modReq);
                 if (visited.indexOf(otherMod) > -1) {
                     error = withError("Syntax", "otherMod is alreay in visited");
                     linkErrors.push(error);
                 }
             }
-
             setInternalSlot(M, "ExportDefinitions", defs);
             return defs;
         }
@@ -14732,62 +14731,56 @@ dependencygrouptransitions of kind load1.Kind.
             }
         }
 
-
-// needs to be rewritten:
+        // 29.1
         function ResolveExport(M, exportName, visited) {
             var exports = getInternalSlot(M,"Exports");
-            if (exports[exportName]) {
-
-                // replace by O(n) Array.indexOf, to Replace it later by heart again with the hashtable.
-
-                // a specification with hashes would be less complex in times of iterations, to look up
-                // for a record, but the number of modules is quite small, so it doesnt take too long.
-                // 
-
-                return exports.binding;
+            var exported;
+            if (exported=getRecordInList(exports, "ExportName", exportName)) {
+                return NormalCompletion(exported.Binding)
             }
-            var ref = { module: M, exportName: exportName };
-            if (visited[exportName]) {
-                var error = withError("Syntax", "Visited Exports in ResolveExports");
+            var ref = { Module: M, ExportName: exportName };
+            if (visited.indexOf(ref) !== -1) {
+                var error = withError("Syntax", "ResolveExport: can not find ref in visited");
                 var linkErrors = getInternalSlot(M, "LinkErrors");
                 linkErrors.push(error);
-                return error;
             }
             var defs = getInternalSlot(M, "ExportDefinitions");
             var overlappingDefs = [];
-            var hasExplicit = 0;
-            var explicit;
             for (var i = 0, j = defs.length; i < j; i++) {
-                var def = defs[i]
-                if (def.exportName === exportName) {
-                    overlappingDefs.push(def);
-                    if (def.explicit) hasExplicit++, explicit = def;
-                }
+                var def = defs[i];
+                if (def.ExportName === exportName) overlappingDefs.push(def);
             }
             if (!overlappingDefs.length) {
-                error = withError("Reference", "can not find exportNames for overlappingDefs")
-                var linkErrors = getInternalSlot(M, "LinkErrors");
+                error = withError("Reference", "ResolveExport: overlappingDefs is empty");
+                linkErrors = getInternalSlot(M, "LinkErrors");
                 linkErrors.push(error);
-                return error;   
             }
-            if (overlappingDefs.length > 1 && hasExplicit != 1) {
-                var error = withError("Syntax", "");
-                var linkErrors = getInternalSlot(M, "LinkErrors");
-                linkErrors.push(error);
-                return error;   
+            var explicits = [];
+            for (var i = 0, j = overlappingDefs.length; i < j; i++) {
+                var overlappingDef = overlappingDefs[i];
+                if (overlappingDef.Explicit === true) explicits.push(overlappingDef);
             }
-            var def = explicit;
-            if (def.localName != null) {
-                var binding = { module: M, localName: def.localName };
-                var _export = {exportName:exportName, binding:binding};
-                exports[exportName] = _export;
+            if ((explicits.length > 1) || ((overlappingDefs.length > 1) && !explicit.length)) {
+                error = withError("Syntax", "");
+                linkErrors = getInternalSlot(M, "LinkErrors");
+                linkErrors.push(error);                
+                return error;
+            } 
+
+            def = getRecordInList(overlappingDefs, "Explicit", true);
+            if (!def) def = overlappingDefs[0];
+            Assert(def, "i should have a def here");
+            if (def.LocalName !== null) {
+                var binding = { Module: M, LocalName: def.LocalName };
+                var exported = { ExportName: exportName, Binding: binding };
+                exports.push(exported);
                 return binding;
+
             }
-            visited[exportName] = ref;
-            binding = ResolveExport(def.module, def.importName);
+            visited.push(ref);
+            var binding = ResolveExport(def.Module, def.ImportName);
             return binding;
         }
-
 
         // 28.1.
         function ResolveImportEntries(M) {
@@ -14837,38 +14830,34 @@ dependencygrouptransitions of kind load1.Kind.
                 var unlinkedDeps = [];
                 var pair = loads[i]
                 for (var k = 0; k < pair.Load.Dependencies.length; k++) {
-                       var dep = pair.Load.Dependencies[k];
-                       var requestName = dep.Key;
-                       var normalizedName = dep.Value;
-                       var load;
-                       if (load = getRecordInList(loads, "Name", normalizedName)) {
-                            if (load.Status === "linked") {
-                                var resolvedDep = { Key: requestName, Value: load.Module };
-                                resolvedDeps.push(resolvedDep);
-                            } else {
-                                for (var m = 0; m < unlinked.lengh; m++) {
-                                    var otherPair = unlinked[i];
-                                    if (otherPair.Load.Name == normalizedName) {
-                                        unlinkedDeps.push(otherPair.Load)
-                                    }
-                                } 
-                            }
-                       } else {
-                            var module = LoaderRegistryLookup(loader, normalizedName);
-                            if (module === null) {
-                                var error = withError("Reference","");
-                                pair.Module.LinkErrors.push(error);
-                            } else {
-                                resolvedDeps.push({ Key: requestName, Value: module });
-                            }
-                        
-
-                       }
-
-                    
-                    pair.Module.Dependencies = resolvedDeps;
-                    pair.Module.UnlinkedDependencies = unlinkedDeps;
+                   var dep = pair.Load.Dependencies[k];
+                   var requestName = dep.Key;
+                   var normalizedName = dep.Value;
+                   var load;
+                   if (load = getRecordInList(loads, "Name", normalizedName)) {
+                        if (load.Status === "linked") {
+                            var resolvedDep = { Key: requestName, Value: load.Module };
+                            resolvedDeps.push(resolvedDep);
+                        } else {
+                            for (var m = 0; m < unlinked.lengh; m++) {
+                                var otherPair = unlinked[i];
+                                if (otherPair.Load.Name == normalizedName) {
+                                    unlinkedDeps.push(otherPair.Load)
+                                }
+                            } 
+                        }
+                   } else {
+                        var module = LoaderRegistryLookup(loader, normalizedName);
+                        if (module === null) {
+                            var error = withError("Reference","");
+                            pair.Module.LinkErrors.push(error);
+                        } else {
+                            resolvedDeps.push({ Key: requestName, Value: module });
+                        }
+                   }         
                 }
+                pair.Module.Dependencies = resolvedDeps;
+                pair.Module.UnlinkedDependencies = unlinkedDeps;
             
             }
             for (i = 0, j = unlinked.length; i < j; i++) {
@@ -14884,6 +14873,60 @@ dependencygrouptransitions of kind load1.Kind.
         }
     
         
+        // 29.1
+        function EvaluateLoadedModule() {
+            var EvaluateLoadedModule_Call = function (thisArg, argList) {
+                var F = thisArg;
+                var load = argList[0];
+                var loader = getInternalSlot(F, "Loader");
+                Assert(load.Status === "linked", "load.Status has to be linked here");
+                var module = load.Module;
+                var result = EnsureEvaluated(module, [], loader);
+                if (isAbrupt(result)) return result;
+                return NormalCompletion(module);
+            };
+            var F = OrdinaryFunction(); 
+            setInternalSlot(F, "Call", EvaluateLoadedModule_Call);
+            return F;
+        }
+
+
+
+        // 29.1.
+        function EnsureEvaluated(mod, seen, loader) {
+            seen.push(mod);
+            var deps = mod.Dependencies;
+            for (var i = 0, j = deps.length; i < j; i++) {
+                var pair = deps[i];
+                var dep = pair.value;
+                if (seen.indexOf(dep) === -1) EnsureEvaluated(dep, seen, loader);
+                // index of is so expensive
+            }
+            if (getInternalSlot(mod, "Evaluated") === true) return NormalCompletion(undefined);
+            setInternalSlot(mod, "Evaluated", true);
+            var body;
+            if ((body=getInternalSlot(mod, "Body")) === undefined) return NormalCompletion(undefined);
+            var env = getInternalSlot(mod, "Environment");
+            var status = ModuleDeclarationInstantiation(body, env);
+            var initContext = new ExecutionContext();
+            initContext.realm = getInternalSlot(loader, "Realm");
+            initContext.varEnv = env;
+            initContext.lexEnv = env;
+            var stack = getStack();
+            if (stack.length) getStack().pop();
+            stack.push(initContext);
+            var r = Evaluate(body);
+            Assert(stack.pop() === initContext, "EnsureEvaluated: The right context could not be popped off the stack.");
+            return r;
+        }
+
+
+
+
+
+        // remaining 
+
+
         function IterableToList(iterable) {
             //var A = ArrayCreate();
             var A = [];
@@ -14903,44 +14946,6 @@ dependencygrouptransitions of kind load1.Kind.
             if (Type(options) !== "object") return withError("Type", "options is not an object");
             return Get(options, name);
         }
-        
-        function EvaluateLoadedModule() {
-            var EvaluateLoadedModule_Call = function (thisArg, argList) {
-                var F = thisArg;
-                var loader = getInternalSlot(F, "Loader");
-                Assert(load.Status === "linked", "load.Status has to be linked here");
-                var module = load.Module;
-                var result = EnsureEvaluated(module, [], loader);
-                if (isAbrupt(result)) return result;
-                return module;
-            };
-            var F = OrdinaryFunction(); 
-            setInternalSlot(F, "Call", EvaluateLoadedModule_Call);
-            return F;
-        }
-
-        //
-        // 1.3 Module Linking
-
-        function EnsureEvaluated(mod, seen, loader) {
-            var deps = mod.dependencies;
-            for (var p in deps) {
-                var dep = deps[p];
-                if (seen.indexOf(dep) === -1) {
-                    EnsureEvaluated(dep, seen, loader);
-                }
-            }
-            var body = getInternalSlot(mod, "Body");
-            if (body !== undefined && getInternalSlot(mod, "Evaluated") === false) {
-                setInternalSlot(mod, "Evaluated", true);
-                var initContext = cx = newContext();
-                initContext.realm = getInternalSlot(loader, "Realm");
-                initContext.varEnv = getInternalSlot(mod, "Environment");
-                var r = Evaluate(body);
-                cx = oldContext();
-                if (isAbrupt(r)) return r;
-            }
-        }
 
         function OrdinaryModule() {
             var mod = ObjectCreate(null, {
@@ -14956,7 +14961,7 @@ dependencygrouptransitions of kind load1.Kind.
         };
 
         function CreateConstantGetter(key, value) {
-            var getter = CreateBuiltinFunction(getRealm(),ConstantFunction_Call, 0, "get " + key);
+            var getter = CreateBuiltinFunction(getRealm(), ConstantFunction_Call, 0, "get " + key);
             setInternalSlot(getter, "ConstantValue", value);
             return getter;
         }
@@ -17403,17 +17408,11 @@ dependencygrouptransitions of kind load1.Kind.
         // SyntaxError, TypeError, ReferenceError, URIError, RangeError, EvalError
         // ===========================================================================================================
 
-        // SyntaxError
         createNativeError("Syntax", SyntaxErrorConstructor, SyntaxErrorPrototype);
-        // TypeError
         createNativeError("Type", TypeErrorConstructor, TypeErrorPrototype);
-        // ReferenceError
         createNativeError("Reference", ReferenceErrorConstructor, ReferenceErrorPrototype);
-        // RangeError
         createNativeError("Range", RangeErrorConstructor, RangeErrorPrototype);
-        // URIError
         createNativeError("URI", URIErrorConstructor, URIErrorPrototype);
-        // EvalError
         createNativeError("Eval", EvalErrorConstructor, EvalErrorPrototype);
 
         // ===========================================================================================================
@@ -20219,8 +20218,8 @@ dependencygrouptransitions of kind load1.Kind.
     }
 
     function InitializePromise(promise, executor) {
-        Assert(hasInternalSlot(promise, "PromiseStatus") 
-            && (getInternalSlot(promise, "PromiseStatus") === undefined), "intializepromise, promisestatus");
+        Assert(hasInternalSlot(promise, "PromiseStatus") && (getInternalSlot(promise, "PromiseStatus") === undefined), 
+            "InitializePromise: PromiseStatus doesnt exist or isnt undefined");
         Assert(IsCallable(executor), "executor has to be callable");
         setInternalSlot(promise, "PromiseStatus", "unresolved");
         setInternalSlot(promise, "PromiseResolveReactions", []);
@@ -20236,8 +20235,8 @@ dependencygrouptransitions of kind load1.Kind.
     }
 
         function AllocatePromise(constructor) {
-            var obj = OrdinaryCreateFromConstructor(constructor, "%PromisePrototype%", {
-               "PromiseStatus": undefined, 
+            var obj = CreateFromConstructor(constructor, "%PromisePrototype%", {
+                "PromiseStatus": undefined, 
                 "PromiseConstructor": constructor,   
                 "PromiseResult": undefined,    
                 "PromiseResolveReactions": undefined, 
@@ -21793,6 +21792,7 @@ v            }
         var EventConstructor_Call = function (thisArg, argList) {
         };
 
+
         var EventTargetConstructor_Call = function (thisArg, argList) {
         };
         var EventTargetPrototype_addEventListener = function (thisArg, argList) {
@@ -22317,7 +22317,7 @@ define("lib/runtime", ["lib/parser", "lib/api", "lib/slower-static-semantics"], 
         return false;
     }
 
-    function InstantiateModuleDeclaration(module, env) {
+    function ModuleDeclarationInstantiation(module, env) {
 
         var ex;
         var lexNames = module.lexNames;
@@ -26117,16 +26117,24 @@ if (typeof process === "undefined" && typeof window !== "undefined")
             for (var k in ClassNames) {
                 ClassTests[k] = true;
             }
+
             var Duties = {
                 "true": true,
                 "yes": true,
-                "y": true
+                "y": true,
+                "yo": true,
+                "yep": true,
+                "1": true
+
             };
             var OffDuties = {
                 "false": true,
                 "off": true,
                 "no": true,
-                "none": true
+                "nay": true,
+                "nope": true,
+                "none": true,
+                "0": true
             };
 
             var ButtonNames = {
@@ -26155,16 +26163,18 @@ if (typeof process === "undefined" && typeof window !== "undefined")
             var a = Object.create(null);
             var annotationDiv;
             var Annotations = a;
+            
             var ClassAnnotations = {
                 "syntaxjs-comment": "Kommentar",
                 "syntaxjs-string": "Ein Zeichenkette, String genannt",
                 "syntaxjs-regexp": "Regulaerer Ausdruck",
                 "syntaxjs-template": "TemplateStrings sind neu in ES6",
-                "syntaxjs-number": "Der Number Type ist ein 64 Bit Floating Point mit 11 Bit Exponent und 53 Bit Mantisse.",
+                "syntaxjs-number": "Der Number Type ist ein 64 Bit Floating Point mit 11 Bit Exponent und 53 Bit Mantisse. Das MSB steht für das Vorzeichen.",
                 "syntaxjs-null": "Das NullLiteral ist der NULL-Pointer im JavaScript. Sein Boolean Wert ist false.",
                 "syntaxjs-boolean": "Booleans stehen fuer 0 und 1 und koennen falsch oder wahr, false oder true sein. Damit kann man logische Verknuepfungen aufstellen.",
                 "syntaxjs-identifier": "Identifier sind Bezeichner. Der Parser liest Labels, die mit einem Doppelpunkt enden als Identifier ein. Identifier sind in der Regel die Namen von Variablen, oder von Objekteigenschaften. Sie werden aufgeloest (sie zeigen auf einen Speicherbereich) und geben einen Datentypen zurueck. In JavaScript entweder einen Primitive Type wie true, false, null oder undefined, oder einen Reference Type wie Object. Identifier identifizieren Objekte oder Variablen.",
             };
+
             a["&"] = "Bitweise UND Verknuepfung. Hier werden die Bits der Operanden (als int 1,2,4,8,16,...) einzeln verknuepft.",
             a["|"] = "Bitweise ODER Verknuepfung. Hier werden die Bits der Operanden  (als int 1,2,4,8,16,...) einzeln verknuepft.",
             a["<"] = "Kleiner als. Ist Links < Rechts ergibt true oder false",
@@ -26288,16 +26298,17 @@ if (typeof process === "undefined" && typeof window !== "undefined")
                 var att1, att2;
                 var opt;
                 var opt_rec;
-
+                var name;
 
                 if (options === undefined) {
                     options = defaultOptions();
                 }
-
                 if (!registered_annotation) {
                     registered_annotation = true;
                     addEventListener(window, "mouseover", annotateCode, false);
+                    addEventListener(window, "touchmove", annotateCode, false);
                     addEventListener(window, "mouseout", annotateCode, false);
+                    addEventListener(window, "touchcancel", annotateCode, false);
                 }
 
                 for (var tag in options) {
@@ -26329,17 +26340,17 @@ if (typeof process === "undefined" && typeof window !== "undefined")
                                         att2 = element.getAttribute("data-syntaxjs-controls");
 
                                         hl = true;
+
                                         if (OffDuties[att1]) hl = false;
                                         else if (Duties[att1]) hl = true;
 
-                                        if (!globalControls) ctrl = false;
-                                        else ctrl = true;
+                                        ctrl = globalControls;
 
                                         if (Duties[att2]) ctrl = true;
                                         else if (OffDuties[att2]) ctrl = false;
 
                                         rec = createRecord(element, opts);
-                                        if (controls && ctrl) createFeaturingElements(rec, options);
+                                        if (controls && ctrl) createFeaturingElements(rec);
 
                                         if (hl) highlight(null, null, rec);
                                         rec = null;
@@ -26641,9 +26652,8 @@ if (typeof process === "undefined" && typeof window !== "undefined")
                     var diviation;
                     e.target || (e.target = e.srcElement);
                     if (!flag) {
-                        if (!calculated) {
-                            calculate();
-                        }
+                        if (!calculated) calculate();
+                    
                         panel.style.position = "absolute";
                         panel.style.zIndex = "10000";
                         panel.style.top = (e.target.offsetTop - (2 * panel.clientHeight)) + "px";
@@ -26846,7 +26856,7 @@ if (typeof process === "undefined" && typeof window !== "undefined")
                             consoleElement += "Quitting the Shell...";
                             input.parentNode.removeChild(input);
                             input = null;
-                        } else {
+                         } else {
                             try {
                                 val = syntaxjs.toValue(code, true); // brauche map fuers realm
                             } catch (ex) {
@@ -26896,6 +26906,7 @@ if (typeof process === "undefined" && typeof window !== "undefined")
                 e = e || window.event; // wack browser programmer i am
                 target = e.target || e.srcElement;
                 className = target.className;
+
                 if (target.tagName === "SPAN" && clas.test(className) && !NoOvers[className]) {
                     if (e.type === "mouseout" && annotationDiv.parentNode) annotationDiv.parentNode.removeChild(annotationDiv);
                     if (e.type === "mouseover") {
@@ -26963,7 +26974,7 @@ if (typeof process === "undefined" && typeof window !== "undefined")
             function defaultOptions() {
                     var options = Object.create(null);
                     options["PRE"] = {
-                            controls: true,
+                            controls: false,
                             annotate: true,
                             syntaxerrors: true,
                             delegate: true // das war die worker option
@@ -26978,15 +26989,20 @@ if (typeof process === "undefined" && typeof window !== "undefined")
             }
 
             function startHighlighterOnLoad() {
+                
                 var script = document.querySelector("script[data-syntaxjs-config]");
+                
                 var config;
+                
                 if (script) config = script.getAttribute("data-syntaxjs-config");
 
                 if (config) config = JSON.parse(config);
                 else config = defaultOptions();        
+                
                 var onload = function (e) {
                     setTimeout(highlightElements.bind(syntaxjs, config));
                 };
+                
                 addEventListener(window, "DOMContentLoaded", onload, false);
             }
 
