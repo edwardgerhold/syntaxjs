@@ -6152,6 +6152,7 @@ define("lib/parser", ["lib/tables", "lib/tokenizer"], function (tables, tokenize
         var root = Node("Module");
         var l1 = loc && loc.start;
         root.body = this.ModuleBody();
+        root.strict = true;
         var l2 = loc && loc.end;
         root.loc = makeLoc(l1, l2);
         EarlyErrors(root);
@@ -8543,9 +8544,11 @@ define("lib/api", function (require, exports, module) {
         return realm.intrinsics;
     }
 
-    function getIntrinsic(name) {
+    function getIntrinsic(name, otherRealm) {
         //var desc = intrinsics.Bindings[name];
-        var desc = realm.intrinsics.Bindings[name];
+        var desc;
+        if (!otherRealm) desc = realm.intrinsics.Bindings[name];
+        else desc = otherRealm.intrinsics.Bindings[name];
         return desc && desc.value;
     }
 
@@ -13310,6 +13313,154 @@ define("lib/api", function (require, exports, module) {
         if (console.time) console.timeEnd("Creating Realm...");
         return realm;
     }
+
+    // Structured Clone Algorithms
+    // strawman for es7 
+    // https://github.com/dslomov-chromium/ecmascript-structured-clone
+    function StructuredClone (input, transferList, targetRealm) {
+        var memory = []; //mapping 
+        for (var i = 0, j = transferList.length; i< j; i++) {
+            var transferable = transferList[i];
+            if (!hasInternalSlot(transferable, "Transfer")) {
+                return withError("Range", "DataCloneError: transferable has no [[Transfer]] slot");
+            }
+            var Transfer = getInternalSlot(transferable, "Transfer");
+            var transferResult = callInternalSlot("Call", Transfer, transferable, [targetRealm]);
+            if ((transferResult=ifAbrupt(transferResult)) && isAbrupt(transferResult)) return transferResult;
+            memory.push({ input: transferable, output: transferResult });
+        }
+        var clone = InternalStructuredClone(input, memory, targetRealm);
+        if ((clone = ifAbrupt(clone)) && isAbrupt(clone)) return clone;
+        for (var i = 0, j = transferList.length; i < j; i++) {
+            var mapping = memory[i];
+            var transferResult = mapping.output;
+            transferable = mappinginput;
+            var OnSuccessTransfer = getInternalSlot(transferable, "OnSuccessTransfer");
+            callInternalSlot("Call", OnSuccessTransfer, transferable, [transferResult, targetRealm]);
+        }
+        return NormalCompletion(clone);
+    }
+
+    function InternalStructuredClone (input, memory, targetRealm) {
+        for (var i = 0, j = memory.length; i < j; i++) {
+            if (memory[i].transferable === input) return NormalCompletion(memory[i].output);
+        }
+        if (getInternalSlot(input, "Transfer") === "neutered") return withError("Range", "DataCloneError: inputs [[Transfer]] is neutered.");
+        var value;
+        // Here has some construction for being done within the other realm to be done, or i call that in the other realm?
+        // i´ll just write it up for now
+        if ((value = getInternalSlot(input, "BooleanData")) !== undefined) {
+            var output = OrdinaryConstruct(getIntrinsic("%Boolean%", targetRealm), [value]);
+        }
+        else if ((value = getInternalSlot(input, "NumberData")) !== undefined) {
+            var output = OrdinaryConstruct(getIntrinsic("%Number%", targetRealm), [value]);
+        }
+        else if ((value = getInternalSlot(input, "StringData")) !== undefined) {
+            var output = OrdinaryConstruct(getIntrinsic("%String%", targetRealm), [value]);
+        }
+        
+        else if ((value = getInternalSlot(input, "RegExpMatcher")) !== undefined) {
+            var output = OrdinaryConstruct(getIntrinsic("%RegExp%", targetRealm), []);
+            setInternalSlot(output, "RegExpMatcher", value);
+            setInternalSlot(output, "OriginalSource", getInternalSlot(input, "OriginalSource"));
+            setInternalSlot(output, "OriginalFlags", getInternalSlot(input, "OriginalFlags"));
+        } else if ((value = getInternalSlot(input, "ArrayBufferData")) !== undefined) {
+            output = CopyArrayBufferToRealm(input, targetRealm);
+            if ((output=ifAbrupt(output)) && isAbrupt(output)) return output;
+        } else if ((value = getInternalSlot(input, "ViewedArrayBuffer")) !== undefined) {
+            var arrayBuffer = value;
+            //if (OrdinaryHasInstance(getIntrinsic("%DataView%")), input) { // assumes i´m in source realm
+            if (!hasInternalSlot("TypedArrayConstructor")) {
+                var output = OrdinaryConstruct(getIntrinsic("%DataView%", targetRealm), []);
+                setInternalSlot(output, "ViewedArrayBuffer", getInternalSlot(input, "ViewedArrayBuffer"));
+                setInternalSlot(output, "ByteOffset", getInternalSlot(input, "ByteOffset"));
+                setInternalSlot(output, "ByteLength", getInternalSlot(input, "ByteLength"));
+            } else {
+                var output = OrdinaryConstruct(getIntrinsic("%"+getInternalSlot(input, "TypedArrayConstructor")+"%", targetRealm), []);
+                setInternalSlot(output, "ViewedArrayBuffer", getInternalSlot(input, "ViewedArrayBuffer"));
+                setInternalSlot(output, "ByteOffset", getInternalSlot(input, "ByteOffset"));
+                setInternalSlot(output, "ByteLength", getInternalSlot(input, "ByteLength"));
+            }
+        } else if (hasInternalSlot(input, "MapData")) {
+            // hmmm missing
+            // structured clone of values or what is the problem?
+        } else if (hasInternalSlot(input, "SetData")) {
+            // hmm missing
+            // this can be quite hard to have copy all values, but it would be correct to create them again.
+        } else if (input instanceof ArrayExoticObject) {
+            // i need to know when i am in which realm, first. The functions will not work like they are supposed to now.
+            var output = ArrayCreate(0); // how do i create them in targetRealm?
+            // shall i switch with setRealm(targetRealm), setRealm(sourceRealm) for demo? it has no effect in memory anyways for me yet.
+            var len = Get(input, "length", input);
+            Set(output, "length", len, output);
+
+        } else if (IsCallable(input)) {
+            return withError("Range", "DataCloneError: Can not clone a function.");
+        } else if (hasInternalSlot(input, "ErrorData")) {
+            return withError("Range", "DataCloneError: Can not clone error object.");
+        } else if (Type(input) === "object" && input.toString() !== "[object OrdinaryObject]") {
+            return withError("Range", "DataCloneError: Can only copy ordinary objects, no exotic objects");
+        } else {
+            // setRealm() img.
+            output = ObjectCreate();
+            // unsetRealm() img.
+            var deepClone = true;
+        }
+        memory.push({ input: input, output: output })
+        if (deepClone) {
+            var keys = OwnPropertyKeysAsList(output);
+            var outputKey;
+            for (var i = 0, j = keys.length; i < j; i++) {
+                if (Type(key) === "string") outputKey = key;
+                // if (Type(key) === "symbol") outputKey = key;
+                var sourceValue = Get(input, key);
+                if ((sourceValue = ifAbrupt(sourceValue)) && isAbrupt(sourceValue)) return sourceValue;
+                var clonedValue = InternalStructuredClone(sourceValue, memory);
+                if ((clonedValue = ifAbrupt(clonedValue)) && isAbrupt(clonedValue)) return clonedValue;
+                var outputSet = Set(output, outputKey, clonedValue, output)
+                if (isAbrupt(outputSet)) return outputSet;
+            }
+        }
+        return NormalCompletion(output);
+    }     
+        
+    // object.[[Transfer]](targetRealm)
+    var Transfer_Call = function (thisArg, argList) {
+        var targetRealm = argList[0];
+        var object = thisArg;
+        if (hasInternalSlot(object, "ArrayBufferData"))
+        return CopyArrayBufferToRealm(object, targetRealm);
+    };
+
+    function CopyArrayBufferToRealm(arrayBuffer, targetRealm) {
+        var ArrayBufferConstructor = getIntrinsic("%ArrayBuffer%", targetRealm);
+        var length = getInternalSlot(arrayBuffer, "ArrayBufferByteLength");
+        var srcBlock = getInternalSlot(arrayBuffer, "ArrayBufferData");
+        var result = OrdinaryConstruct(ArrayBufferConstructor, []);
+        var setStatus = SetArrayBufferData(result, length);
+        if (isAbrupt(setStatus)) return setStatus;
+        var copyStatus = CopyDataBlock(targetBlock, 0, srcBlock, 0, length);
+        if (isAbrupt(copyStatus)) return copyStatus;
+        return NormalCompletion(result);
+    }
+
+    // object.[[OnSuccessfulTransfer]](transferResult, targetRealm);
+    var OnSuccessfulTransfer_Call = function (thisArg, argList) {
+        var transferResult = argList[0];
+        var targetRealm = argList[1];
+        var object = thisArg;
+        if (hasInternalProperty(object, "ArrayBufferData")) {
+            var neuteringResult = SetArrayBufferData(object, 0);
+            if ((neuteringResult=ifAbrupt(neuteringResult)) && isAbrupt(neuteringResult)) return neuteringResult;
+            setInternalSlot(object, "Transfer", "neutered");
+        }
+    };
+
+    /*
+        DataCloneError error object
+        Indicates failure of the structured clone algorithm.
+        {Rationale: typically, ECMAScript operations throw RangeError for similar failures, but we need to preserve DOM compatibnility}
+    */
 
 
 
