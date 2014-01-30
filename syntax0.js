@@ -111,24 +111,24 @@ function makePromise (resolver) {
         } 
     } 
     
-    promise = {
+    promise = Object.freeze({
         then: then,
         get value () { return value; },
         get reason () { return reason; },
         get state () { return state; },
         get isPromise () { return true; },
         constructor: makePromise
-    };
+    });
 
     // makePromise(function (resolve, reject)) returnt das promise und hat die function async scheduled.
     if (isFunction(resolver)) return promise;
     
     // makePromise() mit no args returnt das deferred object 
-    var deferred = {
+    var deferred = Object.freeze({
         promise: promise,
         resolve: resolve,
         reject: reject
-    };
+    });
     return deferred;
 }
 
@@ -3913,37 +3913,6 @@ define("lib/parser", ["lib/tables", "lib/tokenizer"], function (tables, tokenize
          if (!test) throwError(new SyntaxError(message));   
     }
 
-    // ========================================================================================================
-    // Early Errors
-    // ========================================================================================================
-
-    
-
-    function EarlyErrors(node) {
-        var handler = EarlyErrors[node.type];
-        if (handler) handler();
-        return node;
-    }
-    
-    EarlyErrors.Program = function () {
-        /*SyntaxAssert(!contains.contains("BreakStatement"), "Break is not allowed in the outer script body");
-        //if (contains.contains("BreakStatement")) throw new SyntaxError("Break is not allowed in the outer script body");     
-        if (contains.contains("ContinueStatement")) throw new SyntaxError("Continue is not allowed in the outer script body");
-        if (contains.contains("ReturnStatement")) throw new SyntaxError("Return is not allowed in the outer script body");*/
-    };
-
-    EarlyErrors.FunctionDeclaration = function () {
-        /*if (contains.contains("BreakStatement")) throw new SyntaxError("Break is not allowed outside of iterations");
-        if (contains.contains("ContinueStatement")) throw new SyntaxError("Continue is not allowed outside of iterations");
-        if (contains.contains("YieldExpression")) throw new SyntaxError("Yield must be an identifier outside of generators or strict mode");
-        */
-    };
-    EarlyErrors.ModuleDeclaration = function () {
-
-    };
-
-
-
     var ForbiddenArgumentsInStrict = {
         __proto__: null,
         "eval": true,
@@ -3953,6 +3922,40 @@ define("lib/parser", ["lib/tables", "lib/tokenizer"], function (tables, tokenize
 //
 // Parameter
 //
+
+
+
+    // ========================================================================================================
+    // Early Errors - Attach Handler for Production as Property of EarlyErrors
+    // Symbol Table, Contains, Grammar Parameters
+    // ========================================================================================================    
+
+    function EarlyErrors(node) {
+        var handler = EarlyErrors[node.type];
+        if (handler) handler();
+        return node;
+    }
+    
+    EarlyErrors.Program = function () {
+        /*SyntaxAssert(!staticSemantics.contains("BreakStatement"), "Break is not allowed in the outer script body");
+        //if (staticSemantics.contains("BreakStatement")) throw new SyntaxError("Break is not allowed in the outer script body");     
+        if (staticSemantics.contains("ContinueStatement")) throw new SyntaxError("Continue is not allowed in the outer script body");
+        if (staticSemantics.contains("ReturnStatement")) throw new SyntaxError("Return is not allowed in the outer script body");*/
+    };
+
+    EarlyErrors.FunctionDeclaration = function () {
+        /*if (staticSemantics.contains("BreakStatement")) throw new SyntaxError("Break is not allowed outside of iterations");
+        if (staticSemantics.contains("ContinueStatement")) throw new SyntaxError("Continue is not allowed outside of iterations");
+        if (staticSemantics.contains("YieldExpression")) throw new SyntaxError("Yield must be an identifier outside of generators or strict mode");
+        */
+    };
+    EarlyErrors.ModuleDeclaration = function () {
+
+    };
+
+    // ############## ### ## #
+    //
+    // ############## ### ## #
 
     function ParameterStack () {
         var ps = Object.create(ParameterStack.prototype);
@@ -3970,7 +3973,7 @@ define("lib/parser", ["lib/tables", "lib/tokenizer"], function (tables, tokenize
             var stack = ps.stacks[name];
             return stack[stack.length-1];
         },
-        pushParameter: function (name, value) {
+        newParameter: function (name, value) {
             var stack = ps.stacks[name];
             var oldValue = this.getParameter(name);
             stack.push(value);
@@ -3986,35 +3989,61 @@ define("lib/parser", ["lib/tables", "lib/tokenizer"], function (tables, tokenize
     };
 
 
-    // ========================================================================================================
-    // Symbol Table
-    // ========================================================================================================
+    var staticSemantics;   
 
-
-    var contains;   // used in the parser, to reference the tables.
-    function makeSymbolAndContainsTable(tokens) {
-        contains = SymbolAndContainsTable();
+    function makeStaticSemantics(tokens) {
+        staticSemantics = StaticSemantics();
     }
-    function SymbolAndContainsTable() {
+
+
+    // GOT TO BE RENAMED.
+
+    function StaticSemantics() {
         "use strict";
 
+        // Parameter
+        var ps = Object.create(ParameterStack.prototype);
+        ps.stacks = Object.create(null);
+        ps.stacks["Default"] = [];
+        ps.stacks["GeneratorParameter"] = [];
+        ps.stacks["In"] = [];
+        ps.stacks["Return"] = [];
+        ps.stacks["Yield"] = [];
+      
+        // Contains
         var container = Object.create(null);
         var containers = [container];
+
+        // SymbolTable
         var LexEnv = Object.create(null);
         var VarEnv = LexEnv;
         var varEnvs = [VarEnv];
         var lexEnvs = [LexEnv];        
+        
+        // faster lexNames than the recursive slow-static-semantic function or to complicated with all the arrays?
+        /*
+        var lexNames;
+        var lexDecls;
+        var varNames;
+        var varDecls;
+        // stacks
+        var LexNames = [];
+        var LexDecls = [];
+        var VarNames = [];
+        var VarDecls = [];
+        */
+        // Contains
 
-        function new_container() {
+        function newContainer() {
             containers.push(container);
-            container = Object.create(null); // may have no chain.
+            container = Object.create(null);
         }
 
-        function old_container() {
+        function popContainer() {
             container = containers.pop();
         }
 
-        function add(production, value) {
+        function put(production, value) {
             container[production] = value === undefined ? true : value; 
         }
 
@@ -4024,21 +4053,57 @@ define("lib/parser", ["lib/tables", "lib/tokenizer"], function (tables, tokenize
             else return false;
         }
 
-        function new_var_scope() {
+        // Parameter 
+
+        function getParameter(name) {
+            var stack = ps.stacks[name];
+            return stack[stack.length-1];
+        }
+        
+        function newParameter(name, value) {
+            var stack = ps.stacks[name];
+            stack.push(value);
+            return value;
+        }
+
+        function popParameter(name) {
+            var stack = ps.stacks[name];
+            return stack.pop();
+        }
+
+        // Variable Environment
+
+        function newVarEnv() {
             varEnvs.push(VarEnv);
             VarEnv = Object.create(LexEnv);
+        /*
+            VarEnv.varNames = [];
+            VarEnv.varDecls = [];
+        */
             lexEnvs.push(LexEnv);
-            LexEnv = VarEnv;
+            LexEnv = Object.create(LexEnv);
+        /*
+            LexNames.push(lexNames);
+            lexNames = [];
+            LexDecls.push(lexDecls);
+            lexDecls = []; 
+        */
             return VarEnv;
         }
 
-        function new_lex_scope() {
+        function newLexEnv() {
             lexEnvs.push(LexEnv);
             LexEnv = Object.create(LexEnv);
+        /*
+            LexNames.push(lexNames);
+            lexNames = [];
+            LexDecls.push(lexDecls);
+            lexDecls = [];
+        */
             return LexEnv;
         }
 
-        function old_envs() {
+        function popEnvs() {
             container = containers.pop();
 
             if (LexEnv === VarEnv) {
@@ -4048,25 +4113,40 @@ define("lib/parser", ["lib/tables", "lib/tokenizer"], function (tables, tokenize
             return LexEnv;
         }
 
-        function add_lex(name, param) {
-            if (is_lex(name, param)) throwError(name + " is a duplicate identifier in lexical scope ");
-            LexEnv[name] = param;
+        function addLexBinding(name, param) {
+            SyntaxAssert(!hasLexBinding(name), name + "is a duplicate identifier in lexical scope!");
+            LexEnv[name] = param === undefined ? true : param;
         }
 
-        function add_var(name, param) {
-            if (is_var(name, param) && inStrictMode) throwError(name + " is a got duplicate identifier in variable scope ");
-            VarEnv[name] = param;
+
+        function addVarBinding(name, param) {
+            SyntaxAssert(!hasVarBinding(name) || !inStrictMode, name + "is a duplicate identifier in variable scope!");
+            VarEnv[name] = param === undefined ? true : param;
         }
 
-        function is_var(name, param) { // check var env
-            return Object.hasOwnProperty.call(VarEnv, name) && (VarEnv[name] === param);
+        function hasVarBinding(name) { 
+            return Object.hasOwnProperty.call(VarEnv, name);
+
         }
 
-        function is_lex(name, param) { // check local
-            return Object.hasOwnProperty.call(LexEnv, name) && (LexEnv[name] === param);
+        function hasLexBinding(name) { 
+            return Object.hasOwnProperty.call(LexEnv, name);
         }
 
-        function bound_lex() {
+        function addVarDecl(decl) {
+            varDecls.push(decl);
+        }
+        function varDecls() {
+            return varDecls;
+        }
+        function addLexDecl(decl) {
+            lexDecls.push(decl);
+        }
+        function lexDecls() {
+            return lexDecls;
+        }
+
+        function lexNames() {
             var boundNames = [];
             for (var v in LexEnv) {
                 if (Object.hasOwnProperty.call(LexEnv, v)) boundNames.push(v);
@@ -4074,32 +4154,41 @@ define("lib/parser", ["lib/tables", "lib/tokenizer"], function (tables, tokenize
             return boundNames;
         }
 
-        function bound_var() {
+        function varNames() {
             var boundNames = [];
             for (var v in VarEnv) if (Object.hasOwnProperty.call(VarEnv, v)) boundNames.push(v);
             return boundNames;
         }
 
         return {
+            // parameters
+            getParameter: getParameter,
+            newParameter: newParameter,
+            popParameter: popParameter,
             // contains
-            new_container: new_container,
-            old_container: old_container,
-            add: add,
+            newContainer: newContainer,
+            popContainer: popContainer,
+            put: put,
             contains: contains,
-
             // lexNames, varNAmes
-            new_var: new_var_scope, // var +& lex
-            new_lex: new_lex_scope, // lex
-            old_envs: old_envs,
-            add_lex: add_lex,
-            add_var: add_var,
-            is_var: is_var,
-            is_lex: is_lex,
-            bound_lex: bound_lex,
-            bound_var: bound_var,
-
+            newVarEnv: newVarEnv, // var +& lex
+            newLexEnv: newLexEnv, // lex
+            popEnvs: popEnvs,
+            addLexBinding: addLexBinding,
+            addVarBinding: addVarBinding,
+            hasVarBinding: hasVarBinding,
+            hasLexBinding: hasLexBinding,
+        /*
+            addVarDecl: addVarDecl,
+            addLexDecl: addLexDecl,
+            varDecls: varDecls,
+            lexDecls: lexDecls,
+        */
+            lexNames: lexNames,
+            varNames: varNames,
             //
-            constructor: SymbolAndContainsTable
+            constructor: StaticSemantics,
+            toString: function () { return "[object EcmaScript StaticSemantics]"}
         };
 
         // Needs to be renamed
@@ -4135,7 +4224,7 @@ define("lib/parser", ["lib/tables", "lib/tokenizer"], function (tables, tokenize
     function Node(type /*, linkToken*/ ) {
         var node = Object.create(null);
         node.ID = ++nodeId;
-        contains.add(type);
+        staticSemantics.put(type);
         node.type = type;
         return node;
     }
@@ -4219,7 +4308,7 @@ define("lib/parser", ["lib/tables", "lib/tokenizer"], function (tables, tokenize
         if (typeof t === "string") t = tokenize(t);
         tokens = t || [];
         
-        makeSymbolAndContainsTable();
+        makeStaticSemantics();
 
         i = -1;
         j = tokens.length;
@@ -5397,12 +5486,12 @@ define("lib/parser", ["lib/tables", "lib/tokenizer"], function (tables, tokenize
                     l2 = loc && loc.end;
                     n.loc = makeLoc(l1, l2);
 
-                    contains.add_lex(n.as.name);
+                    staticSemantics.addLexBinding(n.as.name);
 
                     list.push(n);
                 } else {
 
-                    contains.add_lex(id.name);
+                    staticSemantics.addLexBinding(id.name);
                     list.push(id);
                 }
 
@@ -5476,8 +5565,8 @@ define("lib/parser", ["lib/tables", "lib/tokenizer"], function (tables, tokenize
             var id = this.Identifier();
             node.id = id.name;
 
-            if (kind == "var") contains.add_var(id.name);
-            else contains.add_lex(id.name);
+            if (kind == "var") staticSemantics.addVarBinding(id.name);
+            else staticSemantics.addLexBinding(id.name);
 
             if (v === "=") node.init = this.Initialiser();
             else if (v === ",") node.init = null;
@@ -5647,7 +5736,7 @@ define("lib/parser", ["lib/tables", "lib/tokenizer"], function (tables, tokenize
         if (v === "class") {
 
             pushState("class");
-            contains.new_var();
+            staticSemantics.newVarEnv();
 
             node = Node("ClassDeclaration");
             node.id = null;
@@ -5659,7 +5748,7 @@ define("lib/parser", ["lib/tables", "lib/tokenizer"], function (tables, tokenize
             var id = this.Identifier();
             node.id = id.name;
 
-            scope.add_lex(id);
+            scope.addLexBinding(id);
 
             if (v === "extends") {
                 pass("extends");
@@ -5675,7 +5764,7 @@ define("lib/parser", ["lib/tables", "lib/tokenizer"], function (tables, tokenize
 
             pass("}");
             
-            contains.old_envs();
+            staticSemantics.popEnvs();
             popState();
             if (compile) return builder["classExpression"](node.id, node.extends, node.elements, node.loc);
             return node;
@@ -5692,7 +5781,7 @@ define("lib/parser", ["lib/tables", "lib/tokenizer"], function (tables, tokenize
             var node = Node("RestParameter");
             node.id = v;
 
-            contains.add_lex(v);
+            staticSemantics.addLexBinding(v);
 
             pass(v);
             var l2 = loc && loc.end;
@@ -5763,7 +5852,7 @@ define("lib/parser", ["lib/tables", "lib/tokenizer"], function (tables, tokenize
                         id = this.DefaultParameter();
                     } else {
                         id = this.Identifier();
-                        contains.add_lex(id.name);
+                        staticSemantics.addLexBinding(id.name);
                     }
                     if (id) list.push(id);
                 }
@@ -5852,12 +5941,12 @@ define("lib/parser", ["lib/tables", "lib/tokenizer"], function (tables, tokenize
                 }
             }
 
-            if (id && !isExpr) contains.add_var(id.name);
+            if (id && !isExpr) staticSemantics.addVarBinding(id.name);
 
-            contains.new_var();
-            contains.new_container();
+            staticSemantics.newVarEnv();
+            staticSemantics.newContainer();
 
-            if (id && isExpr) contains.add_var(id.name);
+            if (id && isExpr) staticSemantics.addVarBinding(id.name);
 
             pass("(");
             node.params = this.FormalParameterList();
@@ -5885,11 +5974,11 @@ define("lib/parser", ["lib/tables", "lib/tokenizer"], function (tables, tokenize
 
             defaultIsId = defaultStack.pop();
 
-            //node.lexNames = contains.bound_lex();
-            //node.varNames = contains.bound_var();
+            //node.lexNames = staticSemantics.lexNames();
+            //node.varNames = staticSemantics.varNames();
             
-            contains.old_container();
-            contains.old_envs();
+            staticSemantics.popContainer();
+            staticSemantics.popEnvs();
 
             curFunc = functionStack.pop();
 
@@ -5927,8 +6016,8 @@ define("lib/parser", ["lib/tables", "lib/tokenizer"], function (tables, tokenize
             var l1, l2;
             l1 = loc && loc.start;
 
-            contains.new_lex();
-            contains.new_container();
+            staticSemantics.newLexEnv();
+            staticSemantics.newContainer();
 
             var node = Node("BlockStatement");
 
@@ -5941,8 +6030,8 @@ define("lib/parser", ["lib/tables", "lib/tokenizer"], function (tables, tokenize
             node.loc = makeLoc(l1, l2);
 
             defaultIsId = defaultStack.pop();
-            contains.old_container();
-            contains.old_envs();
+            staticSemantics.popContainer();
+            staticSemantics.popEnvs();
 
             pass("}");
             return node;
@@ -6167,8 +6256,8 @@ define("lib/parser", ["lib/tables", "lib/tokenizer"], function (tables, tokenize
             var node, l1, l2;
             l1 = loc && loc.start;
 
-            contains.new_container();
-            contains.new_var();
+            staticSemantics.newContainer();
+            staticSemantics.newVarEnv();
             
             moduleStack.push(curModule);
             curModule = {
@@ -6189,8 +6278,8 @@ define("lib/parser", ["lib/tables", "lib/tokenizer"], function (tables, tokenize
 
             EarlyErrors(node);
 
-            contains.old_container();
-            contains.old_envs();
+            staticSemantics.popContainer();
+            staticSemantics.popEnvs();
             curModule = moduleStack.pop();
 
 
@@ -6462,8 +6551,7 @@ define("lib/parser", ["lib/tables", "lib/tokenizer"], function (tables, tokenize
             defaultIsId: defaultIsId,
             yieldStack: yieldStack,
             defaultStack: defaultStack,
-            
-            contains: contains
+            staticSemantics: staticSemantics
         };
         positions.push(o);
         return o;
@@ -6488,8 +6576,7 @@ define("lib/parser", ["lib/tables", "lib/tokenizer"], function (tables, tokenize
             defaultIsId = o.defaultIsId;
             yieldStack = o.yieldStack;
             defaultStack = o.defaultStack;
-            
-            contains = o.contains;
+            staticSemantics = o.staticSemantics;
         }
     }
 
@@ -6567,8 +6654,8 @@ define("lib/parser", ["lib/tables", "lib/tokenizer"], function (tables, tokenize
 
             /* parse */
 
-            contains.new_lex();
-            contains.new_container();
+            staticSemantics.newLexEnv();
+            staticSemantics.newContainer();
 
             if (numSemi === 2) {
                 node = Node("ForStatement");
@@ -6640,8 +6727,8 @@ define("lib/parser", ["lib/tables", "lib/tokenizer"], function (tables, tokenize
             node.loc = makeLoc(l1, l2);
             EarlyErrors(node);
 
-            contains.old_container();
-            contains.old_envs();
+            staticSemantics.popContainer();
+            staticSemantics.popEnvs();
 
             if (compile) {
                 if (node.type === "ForStatement") return builder["forStatement"](node.init, node.condition, node.update, node.body, loc);
@@ -6657,7 +6744,7 @@ define("lib/parser", ["lib/tables", "lib/tokenizer"], function (tables, tokenize
     function WhileStatement() {
         /* IterationStatement : while ( this.Expression ) Statement */
         if (v === "while") {
-            contains.new_container();
+            staticSemantics.newContainer();
             var l1, l2;
             l1 = loc && loc.start;
             var node = Node("WhileStatement");
@@ -6667,7 +6754,7 @@ define("lib/parser", ["lib/tables", "lib/tokenizer"], function (tables, tokenize
             node.body = this.Statement();
             l2 = loc && loc.end;
             EarlyErrors(node);
-            contains.old_container();
+            staticSemantics.popContainer();
             if (compile) return builder["whileStatement"](node.test, node.body, node.loc);
             return node;
         }
@@ -6703,7 +6790,7 @@ define("lib/parser", ["lib/tables", "lib/tokenizer"], function (tables, tokenize
             var l1, l2;
             l1 = loc && loc.start;
 
-            contains.new_container();
+            staticSemantics.newContainer();
 
             var node = Node("DoWhileStatement");
 
@@ -6718,7 +6805,7 @@ define("lib/parser", ["lib/tables", "lib/tokenizer"], function (tables, tokenize
             node.loc = makeLoc(l1, l2);
             EarlyErrors(node);
 
-            contains.old_container();
+            staticSemantics.popContainer();
 
             if (compile) return builder["doWhileStatement"](node.test, node.body, node.loc);
             return node;
@@ -6732,7 +6819,7 @@ define("lib/parser", ["lib/tables", "lib/tokenizer"], function (tables, tokenize
 
             defaultStack.push(defaultIsId);
             defaultIsId = false;
-            contains.new_container();
+            staticSemantics.newContainer();
 
             var c;
             var node = Node("SwitchStatement");
@@ -6757,7 +6844,7 @@ define("lib/parser", ["lib/tables", "lib/tokenizer"], function (tables, tokenize
             EarlyErrors(node);
 
             defaultIsId = defaultStack.pop();
-            contains.old_container();
+            staticSemantics.popContainer();
 
             if (compile) return builder["switchStatement"](node.discriminant, node.cases, node.loc);
             return node;
@@ -6857,8 +6944,8 @@ define("lib/parser", ["lib/tables", "lib/tokenizer"], function (tables, tokenize
 
     function Program() {
 
-        contains.new_container();
-        contains.new_var();
+        staticSemantics.newContainer();
+        staticSemantics.newVarEnv();
 
         var node = Node("Program");
         node.loc = loc = makeLoc();
@@ -6876,11 +6963,11 @@ define("lib/parser", ["lib/tables", "lib/tokenizer"], function (tables, tokenize
         EarlyErrors(node);
 
         /*
-		node.lexNames = contains.bound_lex();
-		node.varNames = contains.bound_var();
+		node.lexNames = staticSemantics.lexNames();
+		node.varNames = staticSemantics.varNames();
 				*/
 
-        contains.old_container();
+        staticSemantics.popContainer();
 
         if (compile) return builder["program"](node.body, loc);
         return node;
@@ -9656,28 +9743,28 @@ define("lib/api", function (require, exports, module) {
 
     function CodeRealm(intrinsics, gthis, genv, ldr) {
         "use strict";
-
-        this.intrinsics = intrinsics;
-        this.globalThis = gthis;
-        this.globalEnv = genv;
-        this.directEvalTranslate = undefined;
-        this.directEvalFallback = undefined;
-        this.indirectEval = undefined;
-        this.Function = undefined;
-        this.loader = ldr;
+        var cr = Object.create(CodeRealm.prototype);
+        cr.intrinsics = intrinsics;
+        cr.globalThis = gthis;
+        cr.globalEnv = genv;
+        cr.directEvalTranslate = undefined;
+        cr.directEvalFallback = undefined;
+        cr.indirectEval = undefined;
+        cr.Function = undefined;
+        cr.loader = ldr;
 
         // self defined
-        this.stack = [];
-        this.eventQueue = [];
-        this.xs = Object.create(null);
-
-        return this;
+        cr.stack = [];
+        cr.eventQueue = [];
+        cr.xs = Object.create(null);
+        return cr;
     }
     CodeRealm.prototype.toString = CodeRealm_toString;
+    CodeRealm.prototype.constructor = CodeRealm;
 
     CodeRealm.prototype.toValue = function (code) {
         saveCodeRealm();
-        setCodeRealm(realm);
+        setCodeRealm(this);
         var result = exports.Evaluate(code);    // here the realm argument...hmm. already in use all over
                                                 // maybe remove the module barriers and simply concat the file.
         restoreCodeRealm();
@@ -9702,7 +9789,7 @@ define("lib/api", function (require, exports, module) {
         ec.realm = realm;
         outer = outer || null;
         ec.VarEnv = NewDeclarativeEnvironment(outer);
-        ec.LexEnv = this.VarEnv;
+        ec.LexEnv = ec.VarEnv;
         ec.generator = generator;
         realm.cx = ec;
         return ec;
@@ -9720,9 +9807,11 @@ define("lib/api", function (require, exports, module) {
 
     function CompletionRecord(type, value, target) {
         "use strict";
-        this.type = type;
-        this.value = value;
-        this.target = target;
+        var cr = Object.create(CompletionRecord.prototype)
+        cr.type = type;
+        cr.value = value;
+        cr.target = target;
+        return cr;
     }
 
     CompletionRecord.prototype.toString = CompletionRecord_toString;
@@ -9742,14 +9831,17 @@ define("lib/api", function (require, exports, module) {
     }
 
     function NormalCompletion(argument, label) {
-        var completion = new CompletionRecord(); // realm.completion;
+        var completion;
 
     // dont reuse old completions
         if (argument instanceof CompletionRecord) {
             completion = argument;
-        } else completion.value = argument;
-        completion.type = "normal"
-        completion.target = label;
+        } else {    
+            completion = new CompletionRecord(); // realm.completion;
+            completion.value = argument;
+            completion.type = "normal"
+            completion.target = label;
+        }
         realm.completion = completion;
         return completion;
     }
@@ -16850,8 +16942,6 @@ dependencygrouptransitions of kind load1.Kind.
             return NormalCompletion(S + sFillVal);
         };
 
-        // I think i did it wrong, the function throws when i have a string of length 4 and a fillNumber which is 10;
-
         LazyDefineBuiltinFunction(StringPrototype, "contains", 0, StringPrototype_contains);
         LazyDefineBuiltinFunction(StringPrototype, "endsWith", 1, StringPrototype_endsWith);
         LazyDefineBuiltinFunction(StringPrototype, "lpad", 1, StringPrototype_lpad);
@@ -17845,8 +17935,6 @@ dependencygrouptransitions of kind load1.Kind.
                 return NormalCompletion(p);
         };
 
-
-
         setInternalSlot(MathObject, "MathTag", true);
         setInternalSlot(MathObject, "Prototype", ObjectPrototype);
         
@@ -17867,6 +17955,7 @@ dependencygrouptransitions of kind load1.Kind.
         LazyDefineBuiltinFunction(MathObject, "cos", 1, MathObject_cos);
         LazyDefineBuiltinFunction(MathObject, "exp", 1, MathObject_exp);
         LazyDefineBuiltinFunction(MathObject, "floor", 1, MathObject_floor);
+        LazyDefineBuiltinFunction(MathObject, "hypot", 2, MathObject_hypot);        
         LazyDefineBuiltinFunction(MathObject, "imul", 2, MathObject_imul);        
         LazyDefineBuiltinFunction(MathObject, "log", 1, MathObject_log);
         LazyDefineBuiltinFunction(MathObject, "log1p", 1, MathObject_log1p);
@@ -18365,6 +18454,7 @@ dependencygrouptransitions of kind load1.Kind.
         LazyDefineBuiltinFunction(ReflectObject, "set", 3, ReflectObject_set);
         LazyDefineBuiltinFunction(ReflectObject, "setPrototypeOf", 2, ReflectObject_setPrototypeOf);
         
+        LazyDefineBuiltinConstant(ReflectObject, $$toStringTag, "Reflect");
 
         // ===========================================================================================================
         // IsNaN
@@ -19934,37 +20024,41 @@ dependencygrouptransitions of kind load1.Kind.
             var promiseCapability = NewPromiseCapability(C);
             if ((promiseCapability = ifAbrupt(promiseCapability)) && isAbrupt(promiseCapability)) return promiseCapability;
             var iterator = GetIterator(iterable);
-            
             iterator = IfAbruptRejectPromise(iterator, promiseCapability);
             if (isAbrupt(iterator)) return iterator;
-            
             for (;;) {
                 var next = IteratorStep(iterator);
                 if ((next=ifAbrupt(next)) && isAbrupt(next)) return next;
                 if ((next = IfAbruptRejectPromise(next, promiseCapability)) &&isAbrupt(next)) return next
-                
                 if (next === false) return NormalCompletion(promiseCapability.Promise);
-
                 var nextValue = IteratorValue(next);
                 if ((nextValue=IfAbruptRejectPromise(nextValue, promiseCapability)) && isAbrupt(nextValue)) return nextValue;
                 var nextPromise = Invoke(C, "cast", [nextValue]);
                 if ((nextPromise=IfAbruptRejectPromise(nextPromise, promiseCapability)) && isAbrupt(nextPromise)) return nextPromise;
-
                 var result = Invoke(nextPromise, "then", [promiseCapability.Resolve, promiseCapability.Reject]);
                 if ((result = IfAbruptRejectPromise(result, promiseCapability)) && isAbrupt(result)) return result;
             }
             return NormalCompletion(undefined);
         };
 
-        function makePromiseAllResolveFunction () {
-            var F = OrdinaryFunction();
-            var PromiseAllResolve_Call = function (thisArg, argList) {
+        function makePromiseAllResolveElementsFunction () {
+            var PromiseAllResolveElements_Call = function (thisArg, argList) {
                 var x = argList[0];
                 var index = getInternalSlot(F, "Index");    
                 var values = getInternalSlot(F, "Values");
                 var promiseCapability = getInternalSlot(F, "Capabilities");
+                var remainingElementsCount = getInternalSlot(F, "RemainingElements");
+                var result = CreateDataProperty(values, ToString(index), x);
+                if ((result = IfAbruptRejectPromise(result, promiseCapability)) && isAbrupt(result)) return result;
+                remainingElementsCount.value -= 1;
+                if (remainingElementsCount.value === 0) {
+                    return callInternalSlot("Call", promiseCapability.Resolve, undefined, [values]);
+                }
+                return NormalCompletion(undefined);
             };            
-            setInternalSlot(F, "Call", PromiseAllResolve_Call);
+            //var F = CreateBuiltinFunction(getRealm(), "Promise.all Resolve Elements", 1, PromiseAllResolveElements_Call);
+            var F = OrdinaryFunction();
+            setInternalSlot(F, "Call", PromiseAllResolveElements_Call);
             return F;
         }
 
@@ -19993,7 +20087,7 @@ dependencygrouptransitions of kind load1.Kind.
                     if ((nextValue = IfAbruptRejectPromise(nextValue, promiseCapability)) && isAbrupt(nextValue)) return nextValue;
                     var nextPromise = Invoke(C, "cast", [nextValue]);
                     if ((nextPromise=IfAbruptRejectPromise(nextPromise, promiseCapability)) && isAbrupt(nextPromise)) return nextPromise;
-                    var resolveElement = makePromiseAllResolveFunction();
+                    var resolveElement = makePromiseAllResolveElementsFunction();
                     setInternalSlot(resolveElement, "Index", index);
                     setInternalSlot(resolveElement, "Values", values);
                     setInternalSlot(resolveElement, "Capabilities", resolveElement, promiseCapability);
@@ -20051,8 +20145,6 @@ dependencygrouptransitions of kind load1.Kind.
             return Invoke(thisArg, "then", [undefined, onRejected]);
         };
 
-
-
         //SetFunctionName(PromiseConstructor, "Promise");
         MakeConstructor(PromiseConstructor, true, PromisePrototype);
         setInternalSlot(PromiseConstructor, "Call", PromiseConstructor_Call);
@@ -20075,13 +20167,13 @@ dependencygrouptransitions of kind load1.Kind.
         // createIntrinsics has to become the DefineProperty rows only.
 
     function PromiseNew (executor) {
-        var promise = AllocatePromise("%Promise%");
+        var promise = AllocatePromise(getIntrinsic("%Promise%"));
         return InitializePromise(promise, executor);
     }
     
     function PromiseBuiltinCapability() {
-        var promise = AllocatePromise("%Promise%");
-        return CreatePromiseCapabilityRecord(promise, "%Promise%");
+        var promise = AllocatePromise(getIntrinsic("%Promise%"));
+        return CreatePromiseCapabilityRecord(promise, getIntrinsic("%Promise%"));
     }
     
     function PromiseOf(value) {
@@ -20095,13 +20187,12 @@ dependencygrouptransitions of kind load1.Kind.
     function PromiseAll(promiseList) {
 
     }
+
     function PromiseCatch(promise, rejectedAction) {
     }
+
     function PromiseThen(promise, resolvedAction, rejectedAction) {
-
     }
-
-
 
     function PromiseCapability(promise, resolve, reject) {
         var pc = Object.create(PromiseCapability.prototype);
@@ -20109,7 +20200,7 @@ dependencygrouptransitions of kind load1.Kind.
         pc.Resolve = resolve;
         pc.Reject = reject;
         return pc;
-    }
+    } 
     PromiseCapability.prototype.toString = function () { return "[object PromiseCapability]"; };
 
     function makePromiseReaction(capabilites, handler) {
@@ -21977,15 +22068,15 @@ define("lib/runtime", ["lib/parser", "lib/api", "lib/slower-static-semantics"], 
 
     var debugmode = false;
 
+    var isWorker = typeof importScripts === "function" && typeof window === "undefined";
+
     function debug() {
-        if (debugmode && typeof importScripts !== "function") console.log.apply(console, arguments);
+        if (debugmode && !isWorker) console.log.apply(console, arguments);
     }
 
     function debugdir() {
-        if (debugmode && typeof importScripts !== "function") console.dir.apply(console, arguments);
+        if (debugmode && !isWorker) console.dir.apply(console, arguments);
     }
-
-    var isWorker = typeof importScripts === "function" && typeof window === "undefined";
 
     function log() {
         if (!isWorker) console.log.apply(console, arguments);
@@ -22552,6 +22643,7 @@ define("lib/runtime", ["lib/parser", "lib/api", "lib/slower-static-semantics"], 
             if (name) SetFunctionName(F, name);
             MakeConstructor(F, true, prototype);
         }
+
         var realm = getRealm();
         setInternalSlot(F, "Realm", realm);
         return F;
