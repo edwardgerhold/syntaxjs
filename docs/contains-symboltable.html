@@ -7,129 +7,207 @@
 
 <p>How to check for Identifiers in constant time? How to check contains in constant time?</p>
 
-<p>This is a blueprint of a combined datastructure carrying the facilities for both. Plus an additional feature.
-	You can ask for VarDeclaredNames and LexicallyDeclaredNames and generate them from the symbol table.</p>
+<p><s>This is a blueprint of a combined datastructure carrying the facilities for both. Plus an additional feature.
+	You can ask for VarDeclaredNames and LexicallyDeclaredNames and generate them from the symbol table.</s></p>
 
-	<p>This will remove the static semantics module in syntax.js. I already developed this idea in december. 
-		But i hadnt integrated it, coz i broke my program otherwhere while working on it, without noticing
-		and got shocked by all the bloody red tests and didnt manage it to find it simply at once.</p>
+    <p>(isnt complete he says)</p>
 
-		<p>Later it will replace the static semantics.</p>
-
-		<p>Other things are listed in parserapi.html, there go the ast node interpretations. Or parameter_es6.html. There
-			is a stack idea for the grammar parameters.</p>
-
-		<p>The functions below say: new_container and old_container add a scope of contains onto the stack, or remove it from.
-			They are not linked by prototype. The Variable- and lexical Environments are linked by prototype. A Lexical Environment
-			at beginning of the Scope is variable and lexical Environment. Later all blocks the lexicals are added and all functions and modules and where spec says, a new variableenvironment is set for both. For beginning at scriptboddy.</p>
+		<p>Later it will replace the static semantics in syntax.js (terrible name for a software).</p>
 
 <pre>
-function SymbolAndContainsTable() {
+
+    function StaticSemantics() {
         "use strict";
 
-        var hasOwnProperty = Object.hasOwnProperty;
+        // Parameter
+        var ps = Object.create(ParameterStack.prototype);
+        ps.stacks = Object.create(null);
+        ps.stacks["Default"] = [];
+        ps.stacks["GeneratorParameter"] = [];
+        ps.stacks["In"] = [];
+        ps.stacks["Return"] = [];
+        ps.stacks["Yield"] = [];
+      
+        // Contains
         var container = Object.create(null);
         var containers = [container];
-        var lexEnv = Object.create(null);
-        var varEnv = lexEnv;
-        var varEnvs = [varEnv];
-        var lexEnvs = [lexEnv];        
 
-        function new_container() {
+        // SymbolTable
+        var LexEnv = Object.create(null);
+        var VarEnv = LexEnv;
+        var varEnvs = [VarEnv];
+        var lexEnvs = [LexEnv];        
+        
+        // faster lexNames than the recursive slow-static-semantic function or to complicated with all the arrays?
+        /*
+        var lexNames;
+        var lexDecls;
+        var varNames;
+        var varDecls;
+        // stacks
+        var LexNames = [];
+        var LexDecls = [];
+        var VarNames = [];
+        var VarDecls = [];
+        */
+        // Contains
+
+        function newContainer() {
             containers.push(container);
-            container = Object.create(null); // may have no chain.
+            container = Object.create(null);
         }
 
-        function old_container() {
+        function popContainer() {
             container = containers.pop();
         }
 
-        function add(production, value) {
+        function put(production, value) {
             container[production] = value === undefined ? true : value; 
         }
 
         function contains(production) {
             if (container)
-            if (Object.hasOwnProperty.call(container, production)) return container[production];
+            if (Object.hasOwnProperty.call(container, production)) return container[production] || true;
             else return false;
         }
 
-        function new_var_scope() {
-            varEnvs.push(varEnv);
-            varEnv = Object.create(lexEnv);
-            lexEnvs.push(lexEnv);
-            lexEnv = varEnv;
-            return varEnv;
+        // Parameter 
+
+        function getParameter(name) {
+            var stack = ps.stacks[name];
+            return stack[stack.length-1];
+        }
+        
+        
+        function newParameter(name, value) {
+            var stack = ps.stacks[name];
+            stack.push(value);
+            return value;
+        }
+        
+        function popParameter(name) {
+            var stack = ps.stacks[name];
+            return stack.pop();
         }
 
-        function new_lex_scope() {
-            lexEnvs.push(lexEnv);
-            lexEnv = Object.create(lexEnv);
-            return lexEnv;
+        // Variable Environment
+
+        function newVarEnv() {
+            varEnvs.push(VarEnv);
+            VarEnv = Object.create(LexEnv);
+        /*
+            VarEnv.varNames = [];
+            VarEnv.varDecls = [];
+        */
+            lexEnvs.push(LexEnv);
+            LexEnv = Object.create(LexEnv);
+        /*
+            LexNames.push(lexNames);
+            lexNames = [];
+            LexDecls.push(lexDecls);
+            lexDecls = []; 
+        */
+            return VarEnv;
         }
 
-        function old_envs() {
+        function newLexEnv() {
+            lexEnvs.push(LexEnv);
+            LexEnv = Object.create(LexEnv);
+        /*
+            LexNames.push(lexNames);
+            lexNames = [];
+            LexDecls.push(lexDecls);
+            lexDecls = [];
+        */
+            return LexEnv;
+        }
+
+        function popEnvs() {
             container = containers.pop();
 
-            if (lexEnv === varEnv) {
-                varEnv = varEnvs.pop();
+            if (LexEnv === VarEnv) {
+                VarEnv = varEnvs.pop();
             }
-            lexEnv = lexEnvs.pop();
-            return lexEnv;
+            LexEnv = lexEnvs.pop();
+            return LexEnv;
         }
 
-        function add_lex(name, param) {
-            if (is_lex(name, param)) throwError(name + " is a duplicate identifier in lexical scope ");
-            lexEnv[name] = param;
+        function addLexBinding(name, param) {
+            SyntaxAssert(!hasLexBinding(name), name + "is a duplicate identifier in lexical scope!");
+            LexEnv[name] = param === undefined ? true : param;
         }
 
-        function add_var(name, param) {
-            if (is_var(name, param) && inStrictMode) throwError(name + " is a got duplicate identifier in variable scope ");
-            varEnv[name] = param;
+
+        function addVarBinding(name, param) {
+            SyntaxAssert(!hasVarBinding(name) || !inStrictMode, name + "is a duplicate identifier in variable scope!");
+            VarEnv[name] = param === undefined ? true : param;
         }
 
-        function is_var(name, param) { // check var env
-            return Object.hasOwnProperty.call(varEnv, name) && (varEnv[name] === param);
+        function hasVarBinding(name) { 
+            return Object.hasOwnProperty.call(VarEnv, name);
+
         }
 
-        function is_lex(name, param) { // check local
-            return Object.hasOwnProperty.call(lexEnv, name) && (lexEnv[name] === param);
+        function hasLexBinding(name) { 
+            return Object.hasOwnProperty.call(LexEnv, name);
         }
 
-        function bound_lex() {
+        function addVarDecl(decl) {
+            varDecls.push(decl);
+        }
+        function varDecls() {
+            return varDecls;
+        }
+        function addLexDecl(decl) {
+            lexDecls.push(decl);
+        }
+        function lexDecls() {
+            return lexDecls;
+        }
+
+        function lexNames() {
             var boundNames = [];
-            for (var v in lexEnv) {
-                if (Object.hasOwnProperty.call(lexEnv, v)) boundNames.push(v);
+            for (var v in LexEnv) {
+                if (Object.hasOwnProperty.call(LexEnv, v)) boundNames.push(v);
             }
             return boundNames;
         }
 
-        function bound_var() {
+        function varNames() {
             var boundNames = [];
-            for (var v in varEnv) if (Object.hasOwnProperty.call(varEnv, v)) boundNames.push(v);
+            for (var v in VarEnv) if (Object.hasOwnProperty.call(VarEnv, v)) boundNames.push(v);
             return boundNames;
         }
 
         return {
+            // parameters
+            getParameter: getParameter,
+            newParameter: newParameter,
+            popParameter: popParameter,
             // contains
-            new_container: new_container,
-            old_container: old_container,
-            add: add,
+            newContainer: newContainer,
+            popContainer: popContainer,
+            put: put,
             contains: contains,
-
             // lexNames, varNAmes
-            new_var: new_var_scope, // var +& lex
-            new_lex: new_lex_scope, // lex
-            old_envs: old_envs,
-            add_lex: add_lex,
-            add_var: add_var,
-            is_var: is_var,
-            is_lex: is_lex,
-            bound_lex: bound_lex,
-            bound_var: bound_var,
-
+            newVarEnv: newVarEnv, // var +& lex
+            newLexEnv: newLexEnv, // lex
+            popEnvs: popEnvs,
+            addLexBinding: addLexBinding,
+            addVarBinding: addVarBinding,
+            hasVarBinding: hasVarBinding,
+            hasLexBinding: hasLexBinding,
+        /*
+            addVarDecl: addVarDecl,
+            addLexDecl: addLexDecl,
+            varDecls: varDecls,
+            lexDecls: lexDecls,
+        */
+            lexNames: lexNames,
+            varNames: varNames,
             //
-            constructor: SymbolAndContainsTable
+            constructor: StaticSemantics,
+            toString: function () { return "[object EcmaScript StaticSemantics]"}
         };
 
         // Needs to be renamed
@@ -138,17 +216,28 @@ function SymbolAndContainsTable() {
 
 </pre>
 
-<p>just a quick sketch, but i think you get it. it´s additional functionality for an ll(1) parser, to verify static semantics in constant time with the little factor of adding names to the hash, or nodenames to contains, or pushing and popping envs or contains from the stack (a fast array not a extra structure).</p>
+<p>lexDecls and varDecls and -names aren´t enabled yet. 
+
+
+<p>Here is how the thing works.</p>
+
+<pre>
+var staticSemantics = StaticSemantics();
+
+
+
+</pre>
+
 
 <pre>
 	function FunctionDeclaration () {
-		contains.new_container(); // add a new contains bucket, add e.g. the node.type and check for "YieldExpression".
-		contains.new_var(); // creates a new varEnv which is also a base lexEnv;
+		contains.newContainer(); // add a new contains bucket, add e.g. the node.type and check for "YieldExpression".
+		contains.newVarEnv(); // creates a new varEnv which is also a base lexEnv;
 		var node = { type: "FunctionDeclaration"};
 		// ...
 		EarlyErrors(node); // that would throw the early error
-		contains.old_scope(); // remove the scope
-		contains.old_container();	// after early error
+		contains.popEnvs(); // remove the scope
+		contains.popContainer();	// after early error
 	}
 
 
