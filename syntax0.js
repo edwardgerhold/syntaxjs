@@ -8550,10 +8550,7 @@ define("lib/api", function (require, exports, module) {
     }
 
     function getIntrinsicFromRealm(name, otherRealm) {
-        //var desc = intrinsics.Bindings[name];
-        var desc;
-        if (!otherRealm) desc = realm.intrinsics.Bindings[name];
-        else desc = otherRealm.intrinsics.Bindings[name];
+        var desc = otherRealm.intrinsics.Bindings[name];
         return desc && desc.value;
     }
 
@@ -19222,7 +19219,7 @@ dependencygrouptransitions of kind load1.Kind.
 
         LazyDefineBuiltinFunction(FunctionPrototype, "valueOf", 0, function valueOf(thisArg, argList) {
             return thisArg;
-        }));
+        });
 
         setInternalSlot(FunctionConstructor, "Call", function (thisArg, argList) {
 
