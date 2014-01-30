@@ -5390,8 +5390,7 @@ define("lib/parser", ["lib/tables", "lib/tokenizer"], function (tables, tokenize
 
                 if (v === ":") {
                     l1 = id.loc && id.loc.start;
-                    n = Object.create(null);
-                    n.type = "BindingElement";
+                    n = Node("BindingElement");
                     n.id = id;
                     pass(":");
                     n.as = this.Identifier();
@@ -8453,7 +8452,7 @@ define("lib/api", function (require, exports, module) {
 
     // I had these variables at the beginning, i return to;
     var realm, intrinsics, globalEnv, globalThis;
-    var stack, eventQueue;
+    var stack, eventQueue, cx;
     
 
     // ===========================================================================================================
@@ -8505,7 +8504,7 @@ define("lib/api", function (require, exports, module) {
     function getContext() {
         var stack = getStack();
         if (stack)
-            return stack[stack.length - 1];
+        return cx = stack[stack.length - 1];
     }
 
     function getEventQueue() {
@@ -8514,15 +8513,16 @@ define("lib/api", function (require, exports, module) {
 
     function newContext(outer, state, realm) {
         var env = outer !== undefined ? outer : getLexEnv();
-        var cx = new ExecutionContext(env, realm||(realm=getRealm()), state||[]);
+        cx = new ExecutionContext(env, realm||(realm=getRealm()), state||[]);
         getStack().push(cx);
         return cx;
     }
 
+
     function oldContext() {
         var stack = getStack();
         stack.pop();
-        return stack[stack.length - 1];
+        return (cx = stack[stack.length - 1]);
     }
 
     function dropExecutionContext() {
@@ -8544,7 +8544,12 @@ define("lib/api", function (require, exports, module) {
         return realm.intrinsics;
     }
 
-    function getIntrinsic(name, otherRealm) {
+    function getIntrinsic(name) {
+        var desc = realm.intrinsics.Bindings[name];
+        return desc && desc.value;
+    }
+
+    function getIntrinsicFromRealm(name, otherRealm) {
         //var desc = intrinsics.Bindings[name];
         var desc;
         if (!otherRealm) desc = realm.intrinsics.Bindings[name];
@@ -9702,6 +9707,7 @@ define("lib/api", function (require, exports, module) {
         ec.VarEnv = NewDeclarativeEnvironment(outer);
         ec.LexEnv = this.VarEnv;
         ec.generator = generator;
+        realm.cx = ec;
         return ec;
     }
     
@@ -10953,6 +10959,7 @@ define("lib/api", function (require, exports, module) {
         if (Type(result) === "object") return result;
         return obj;
     }
+    
     
     function MakeMethod (F, methodName, homeObject) {
         Assert(IsCallable(F), "MakeMethod: method is not a function");
@@ -13179,7 +13186,8 @@ define("lib/api", function (require, exports, module) {
         var nextPending = nextQueue.shift();
         var newContext = new ExecutionContext(null);
         newContext.realm = nextPending.realm;
-        getStack.push(newContext);
+        getStack().push(newContext);
+        cx  = newContext;
         callInternalSlot("Call", nextPending.Task, undefined, nextPending.Arguments);
     }
 
@@ -13211,7 +13219,8 @@ define("lib/api", function (require, exports, module) {
 
             var context = new ExecutionContext(null, realm);
             getStack().push(context);
-
+            cx  = context;
+            
             var intrinsics = createIntrinsics(realmRec);
 
             var loader = OrdinaryConstruct(getIntrinsic("%Loader%"), []);
@@ -13663,6 +13672,10 @@ define("lib/api", function (require, exports, module) {
     exports.thisNumberValue = thisNumberValue;
     exports.thisBooleanValue = thisBooleanValue;
     exports.thisStringValue = thisStringValue;
+
+
+    exports.MakeMethod = MakeMethod;
+    exports.CloneMethod = CloneMethod;
 
     // #################################################################################################################################################################################################
     // #################################################################################################################################################################################################
@@ -14909,6 +14922,7 @@ dependencygrouptransitions of kind load1.Kind.
             var stack = getStack();
             if (stack.length) getStack().pop();
             stack.push(initContext);
+            cx  = initContext;
             var r = Evaluate(body);
             Assert(stack.pop() === initContext, "EnsureEvaluated: The right context could not be popped off the stack.");
             return r;
@@ -16936,8 +16950,8 @@ dependencygrouptransitions of kind load1.Kind.
                 "IteratorNextIndex": undefined,
                 "IterationKind": undefined
             });
-            // for-of before worked without. there must be a mistake somewhere
-            if (string instanceof StringExoticObject) string = getInternalSlot(string, "StringData");
+            // for-of before worked without. there must be a mistake somewhere (found in ToPrimitive)
+            // if (string instanceof StringExoticObject) string = getInternalSlot(string, "StringData");
             // ---
             setInternalSlot(iterator, "IteratedString", string);
             setInternalSlot(iterator, "IteratorNextIndex", 0);
@@ -17246,9 +17260,9 @@ dependencygrouptransitions of kind load1.Kind.
             evalCxt.realm = evalRealm;
             evalCxt.VarEnv = VarEnv;
             evalCxt.LexEnv = LexEnv;
-
+            cx  = evalCxt;
             result = require("lib/runtime").Evaluate(script);
-            ctx = oldContext();
+            cx  = oldContext();
             return result;
         });
 
@@ -19206,7 +19220,7 @@ dependencygrouptransitions of kind load1.Kind.
         setInternalSlot(FunctionPrototype, "Prototype", ObjectPrototype);
         LazyDefineProperty(FunctionPrototype, $$toStringTag, "Function");
 
-        LazyDefineProperty(FunctionPrototype, "valueOf", CreateBuiltinFunction(realm, function valueOf(thisArg, argList) {
+        LazyDefineBuiltinFunction(FunctionPrototype, "valueOf", 0, function valueOf(thisArg, argList) {
             return thisArg;
         }));
 
@@ -22085,6 +22099,8 @@ define("lib/runtime", ["lib/parser", "lib/api", "lib/slower-static-semantics"], 
     var $$isRegExp = ecma.$$isRegExp;
     var $$isConcatSpreadable = ecma.isConcatSpreadable;
 
+
+    var MakeMethod = ecma.MakeMethod;
     var NewFunctionEnvironment = ecma.NewFunctionEnvironment;
     var NewObjectEnvironment = ecma.NewObjectEnvironment;
     var NewDeclarativeEnvironment = ecma.NewDeclarativeEnvironment;
@@ -22519,7 +22535,7 @@ define("lib/runtime", ["lib/parser", "lib/api", "lib/slower-static-semantics"], 
         var params = getCode(node, "params");
         var body = getCode(node, "body");
         var generator = node.generator;
-
+        var cx = getContext();
         var strict = cx.strict || node.strict;
         var scope = env;
 
@@ -22953,12 +22969,12 @@ define("lib/runtime", ["lib/parser", "lib/api", "lib/slower-static-semantics"], 
         }
 
 
-        cx = calleeContext;
+        cx  = calleeContext;
 
         var result;
         result = EvaluateBody(this);
 
-        cx = oldContext();
+        cx  = oldContext();
         Assert(cx === callerContext, "The right context could not be popped from the stack");
         return result;
     }
@@ -23382,6 +23398,7 @@ define("lib/runtime", ["lib/parser", "lib/api", "lib/slower-static-semantics"], 
             for (var p = 0, q = decl.elements.length; p < q; p++) {
 
                 if (elem = decl.elements[p]) {
+            
                     if (elem.id) {
                         identName = elem.id.name || elem.id.value;
                         newName = elem.as.name || elem.as.value;
@@ -25720,9 +25737,12 @@ define("lib/runtime", ["lib/parser", "lib/api", "lib/slower-static-semantics"], 
 
     function Evaluate(node, a, b, c, d) {
 
+        if (!node) return NormalCompletion(undefined);
         // record everywhere oder nur bei generator?
         // cheaper is if (cx.generator)
-        var state = getContext().state;
+        cx = getContext();
+
+        var state = cx.state;
         state.push([node,a,b,c]);
 
         var result = Evaluate2(node, a,b,c);
