@@ -4000,10 +4000,10 @@ define("lib/parser", ["lib/tables", "lib/tokenizer"], function (tables, tokenize
 
         var container = Object.create(null);
         var containers = [container];
-        var lexEnv = Object.create(null);
-        var varEnv = lexEnv;
-        var varEnvs = [varEnv];
-        var lexEnvs = [lexEnv];        
+        var LexEnv = Object.create(null);
+        var VarEnv = LexEnv;
+        var varEnvs = [VarEnv];
+        var lexEnvs = [LexEnv];        
 
         function new_container() {
             containers.push(container);
@@ -4020,63 +4020,63 @@ define("lib/parser", ["lib/tables", "lib/tokenizer"], function (tables, tokenize
 
         function contains(production) {
             if (container)
-            if (Object.hasOwnProperty.call(container, production)) return container[production];
+            if (Object.hasOwnProperty.call(container, production)) return container[production] || true;
             else return false;
         }
 
         function new_var_scope() {
-            varEnvs.push(varEnv);
-            varEnv = Object.create(lexEnv);
-            lexEnvs.push(lexEnv);
-            lexEnv = varEnv;
-            return varEnv;
+            varEnvs.push(VarEnv);
+            VarEnv = Object.create(LexEnv);
+            lexEnvs.push(LexEnv);
+            LexEnv = VarEnv;
+            return VarEnv;
         }
 
         function new_lex_scope() {
-            lexEnvs.push(lexEnv);
-            lexEnv = Object.create(lexEnv);
-            return lexEnv;
+            lexEnvs.push(LexEnv);
+            LexEnv = Object.create(LexEnv);
+            return LexEnv;
         }
 
         function old_envs() {
             container = containers.pop();
 
-            if (lexEnv === varEnv) {
-                varEnv = varEnvs.pop();
+            if (LexEnv === VarEnv) {
+                VarEnv = varEnvs.pop();
             }
-            lexEnv = lexEnvs.pop();
-            return lexEnv;
+            LexEnv = lexEnvs.pop();
+            return LexEnv;
         }
 
         function add_lex(name, param) {
             if (is_lex(name, param)) throwError(name + " is a duplicate identifier in lexical scope ");
-            lexEnv[name] = param;
+            LexEnv[name] = param;
         }
 
         function add_var(name, param) {
             if (is_var(name, param) && inStrictMode) throwError(name + " is a got duplicate identifier in variable scope ");
-            varEnv[name] = param;
+            VarEnv[name] = param;
         }
 
         function is_var(name, param) { // check var env
-            return Object.hasOwnProperty.call(varEnv, name) && (varEnv[name] === param);
+            return Object.hasOwnProperty.call(VarEnv, name) && (VarEnv[name] === param);
         }
 
         function is_lex(name, param) { // check local
-            return Object.hasOwnProperty.call(lexEnv, name) && (lexEnv[name] === param);
+            return Object.hasOwnProperty.call(LexEnv, name) && (LexEnv[name] === param);
         }
 
         function bound_lex() {
             var boundNames = [];
-            for (var v in lexEnv) {
-                if (Object.hasOwnProperty.call(lexEnv, v)) boundNames.push(v);
+            for (var v in LexEnv) {
+                if (Object.hasOwnProperty.call(LexEnv, v)) boundNames.push(v);
             }
             return boundNames;
         }
 
         function bound_var() {
             var boundNames = [];
-            for (var v in varEnv) if (Object.hasOwnProperty.call(varEnv, v)) boundNames.push(v);
+            for (var v in VarEnv) if (Object.hasOwnProperty.call(VarEnv, v)) boundNames.push(v);
             return boundNames;
         }
 
@@ -8516,13 +8516,13 @@ define("lib/api", function (require, exports, module) {
         var env = outer !== undefined ? outer : getLexEnv();
         var cx = new ExecutionContext(env, realm||(realm=getRealm()), state||[]);
         getStack().push(cx);
-        return (realm.context = cx);
+        return cx;
     }
 
     function oldContext() {
         var stack = getStack();
         stack.pop();
-        return (getRealm().context = stack[stack.length - 1]);
+        return stack[stack.length - 1];
     }
 
     function dropExecutionContext() {
@@ -8558,13 +8558,13 @@ define("lib/api", function (require, exports, module) {
 
     function getLexEnv() {
         var cx = getContext();
-        if (cx) return cx.lexEnv;
-        //    return getGlobalEnv().lexEnv;
+        if (cx) return cx.LexEnv;
+        //    return getGlobalEnv().LexEnv;
     }
 
     function getVarEnv() {
         var cx = getContext();
-        if (cx) return cx.varEnv;
+        if (cx) return cx.VarEnv;
         //    return getGlobalEnv().objEnv;
     }
 
@@ -9410,8 +9410,8 @@ define("lib/api", function (require, exports, module) {
             return "[object GlobalVariableEnvironment]";
         };
 
-        this.lexEnv = new DeclarativeEnvironment(this.objEnv);
-        this.lexEnv.toString = function () {
+        this.LexEnv = new DeclarativeEnvironment(this.objEnv);
+        this.LexEnv.toString = function () {
             return "[object GlobalLexicalEnvironment]";
         };
 
@@ -9429,33 +9429,33 @@ define("lib/api", function (require, exports, module) {
         },
 
         HasBinding: function (N) {
-            if (this.lexEnv.HasBinding(N)) return true;
+            if (this.LexEnv.HasBinding(N)) return true;
             if (this.objEnv.HasBinding(N)) return true;
             return false;
         },
         CreateMutableBinding: function (N, D) {
-            return this.lexEnv.CreateMutableBinding(N, D);
+            return this.LexEnv.CreateMutableBinding(N, D);
         },
         CreateImmutableBinding: function (N) {
-            return this.lexEnv.CreateImmutableBinding(N);
+            return this.LexEnv.CreateImmutableBinding(N);
         },
         GetBindingValue: function (N, S) {
-            if (this.lexEnv.HasBinding(N)) return this.lexEnv.GetBindingValue(N, S);
+            if (this.LexEnv.HasBinding(N)) return this.LexEnv.GetBindingValue(N, S);
             else if (this.objEnv.HasBinding(N)) return this.objEnv.GetBindingValue(N, S);
         },
         InitialiseBinding: function (N, V, S) {
-            if (this.lexEnv.HasBinding(N)) return this.lexEnv.InitialiseBinding(N, V, S);
+            if (this.LexEnv.HasBinding(N)) return this.LexEnv.InitialiseBinding(N, V, S);
             else if (this.objEnv.HasBinding(N)) return this.objEnv.InitialiseBinding(N, V, S);
             return false;
         },
         SetMutableBinding: function (N, V, S) {
-            if (this.lexEnv.HasBinding(N)) return this.lexEnv.SetMutableBinding(N, V, S);
+            if (this.LexEnv.HasBinding(N)) return this.LexEnv.SetMutableBinding(N, V, S);
             else if (this.objEnv.HasBinding(N)) return this.objEnv.SetMutableBinding(N, V, S);
             return false;
         },
         DeleteBinding: function (N) {
-            if (this.lexEnv.HasBinding(N)) {
-                return this.lexEnv.DeleteBinding(N);
+            if (this.LexEnv.HasBinding(N)) {
+                return this.LexEnv.DeleteBinding(N);
             } else if (this.objEnv.HasBinding(N)) {
                 var status = this.objEnv.DeleteBinding(N);
                 if (status === true) {
@@ -9482,7 +9482,7 @@ define("lib/api", function (require, exports, module) {
             return false;
         },
         HasLexicalDeclaration: function (N) {
-            if (this.lexEnv.HasBinding(N)) return true;
+            if (this.LexEnv.HasBinding(N)) return true;
             return false;
         },
         CanDeclareGlobalVar: function (N) {
@@ -9695,17 +9695,14 @@ define("lib/api", function (require, exports, module) {
 
     function ExecutionContext(outer, realm, state, generator) {
         "use strict";
-
-        this.state = [];
-        this.realm = realm;
-
+        var ec = Object.create(ExecutionContext.prototype);
+        ec.state = [];
+        ec.realm = realm;
         outer = outer || null;
-        this.varEnv = NewDeclarativeEnvironment(outer);
-        this.lexEnv = this.varEnv;
-        this.generator = generator;
-
-        realm.context = this;
-
+        ec.VarEnv = NewDeclarativeEnvironment(outer);
+        ec.LexEnv = this.VarEnv;
+        ec.generator = generator;
+        return ec;
     }
     
     ExecutionContext.prototype.toString = ExecutionContext_toString;
@@ -10425,14 +10422,18 @@ define("lib/api", function (require, exports, module) {
 
             var s = V.toString();
             if (s === "[object CompletionRecord ]") {
+            
                 return ToPrimitive(V.value, prefType);
-            } else if (s === "[object OrdinaryObject]") {
-                if (hasInternalSlot(V, "NumberData")) return thisNumberValue(V);
-                if (hasInternalSlot(V, "StringData")) return thisStringValue(V);
-                if (hasInternalSlot(V, "BooleanData")) return thisBooleanValue(V);
-                if (hasInternalSlot(V, "SymbolData")) return getInternalSlot(V, "SymbolData");
+            
+            } 
+            /* else if (s === "[object OrdinaryObject]") {*/
 
-            } else if (s === "[object SymbolPrimitiveType]") {
+                else if (hasInternalSlot(V, "NumberData")) return thisNumberValue(V);
+                else if (hasInternalSlot(V, "StringData")) return thisStringValue(V);
+                else if (hasInternalSlot(V, "BooleanData")) return thisBooleanValue(V);
+                else if (hasInternalSlot(V, "SymbolData")) return getInternalSlot(V, "SymbolData");
+
+             else if (s === "[object SymbolPrimitiveType]") {
 
                 return V;
 
@@ -10717,7 +10718,7 @@ define("lib/api", function (require, exports, module) {
     //    
 
     function thisBooleanValue(value) {
-        if (value instanceof CompletionRecord) return thisBooleanValue(value);
+        if (value instanceof CompletionRecord) return thisBooleanValue(value.value);
         if (typeof value === "boolean") return value;
         if (Type(value) === "boolean") return value;
         if (Type(value) === "object" && hasInternalSlot(value, "BooleanData")) {
@@ -10729,7 +10730,7 @@ define("lib/api", function (require, exports, module) {
 
     function thisStringValue(value) {
 
-        if (value instanceof CompletionRecord) return thisStringValue(value);
+        if (value instanceof CompletionRecord) return thisStringValue(value.value);
         if (typeof value === "string") return value;
         if (Type(value) === "string") return value;
         if (Type(value) === "object" && hasInternalSlot(value, "StringData")) {
@@ -10740,7 +10741,7 @@ define("lib/api", function (require, exports, module) {
     }
 
     function thisNumberValue(value) {
-        if (value instanceof CompletionRecord) return thisNumberValue(value);
+        if (value instanceof CompletionRecord) return thisNumberValue(value.value);
         if (typeof value === "number") return value;
         if (Type(value) === "number") return value;
         if (Type(value) === "object" && hasInternalSlot(value, "NumberData")) {
@@ -13198,35 +13199,31 @@ define("lib/api", function (require, exports, module) {
         exports.CreateRealm = CreateRealm;
 
         function CreateRealm () {
+            
             var realmRec = new CodeRealm();
             
-
             // my programming mistakes fixed
             saveCodeRealm();
             setCodeRealm(realmRec); 
-            // i have to have a stack, realm intriniscs
-            // and to remove the dependency
-                
-        
+            // i have to have a stack, realm, intriniscs
+            // and to remove the dependency        
             //var context = newContext(null);
 
             var context = new ExecutionContext(null, realm);
             getStack().push(context);
 
-
-
-            
             var intrinsics = createIntrinsics(realmRec);
 
             var loader = OrdinaryConstruct(getIntrinsic("%Loader%"), []);
             if ((loader = ifAbrupt(loader)) && isAbrupt(loader)) return loader;
+            
             realmRec.loader = loader;
-
             var newGlobal = createGlobalThis(realmRec, ObjectCreate(null), intrinsics);
             var newGlobalEnv = new GlobalEnvironment(newGlobal);
 
-            context.varEnv = newGlobalEnv;
-            context.lexEnv = newGlobalEnv;
+            // i think this is a bug and no execution context should be required
+            context.VarEnv = newGlobalEnv;
+            context.LexEnv = newGlobalEnv;
 
             realmRec.globalThis = newGlobal;
             realmRec.globalEnv = newGlobalEnv;
@@ -13234,8 +13231,7 @@ define("lib/api", function (require, exports, module) {
             realmRec.directEvalFallback = undefined;
             realmRec.indirectEval = undefined;
             realmRec.Function = undefined;
-
-
+            realmRec.GlobalSymbolRegistry = Object.create(null);
             makeTaskQueues(realmRec);
     
             // my programming mistakes fixed.
@@ -13325,8 +13321,6 @@ define("lib/api", function (require, exports, module) {
         }
         if (getInternalSlot(input, "Transfer") === "neutered") return withError("Range", "DataCloneError: inputs [[Transfer]] is neutered.");
         var value;
-        // Here has some construction for being done within the other realm to be done, or i call that in the other realm?
-        // i´ll just write it up for now
         if ((value = getInternalSlot(input, "BooleanData")) !== undefined) {
             var output = OrdinaryConstruct(getIntrinsic("%Boolean%", targetRealm), [value]);
         }
@@ -13336,7 +13330,6 @@ define("lib/api", function (require, exports, module) {
         else if ((value = getInternalSlot(input, "StringData")) !== undefined) {
             var output = OrdinaryConstruct(getIntrinsic("%String%", targetRealm), [value]);
         }
-        
         else if ((value = getInternalSlot(input, "RegExpMatcher")) !== undefined) {
             var output = OrdinaryConstruct(getIntrinsic("%RegExp%", targetRealm), []);
             setInternalSlot(output, "RegExpMatcher", value);
@@ -13349,12 +13342,12 @@ define("lib/api", function (require, exports, module) {
             var arrayBuffer = value;
             //if (OrdinaryHasInstance(getIntrinsic("%DataView%")), input) { // assumes i´m in source realm
             if (!hasInternalSlot("TypedArrayConstructor")) {
-                var output = OrdinaryConstruct(getIntrinsic("%DataView%", targetRealm), []);
+                var output = OrdinaryConstruct(getIntrinsicFromRealm("%DataView%", targetRealm), []);
                 setInternalSlot(output, "ViewedArrayBuffer", getInternalSlot(input, "ViewedArrayBuffer"));
                 setInternalSlot(output, "ByteOffset", getInternalSlot(input, "ByteOffset"));
                 setInternalSlot(output, "ByteLength", getInternalSlot(input, "ByteLength"));
             } else {
-                var output = OrdinaryConstruct(getIntrinsic("%"+getInternalSlot(input, "TypedArrayConstructor")+"%", targetRealm), []);
+                var output = OrdinaryConstruct(getIntrinsicFromRealm("%"+getInternalSlot(input, "TypedArrayConstructor")+"%", targetRealm), []);
                 setInternalSlot(output, "ViewedArrayBuffer", getInternalSlot(input, "ViewedArrayBuffer"));
                 setInternalSlot(output, "ByteOffset", getInternalSlot(input, "ByteOffset"));
                 setInternalSlot(output, "ByteLength", getInternalSlot(input, "ByteLength"));
@@ -13411,13 +13404,13 @@ define("lib/api", function (require, exports, module) {
     };
 
     function CopyArrayBufferToRealm(arrayBuffer, targetRealm) {
-        var ArrayBufferConstructor = getIntrinsic("%ArrayBuffer%", targetRealm);
+        var ArrayBufferConstructor = getIntrinsicFromRealm("%ArrayBuffer%", targetRealm);
         var length = getInternalSlot(arrayBuffer, "ArrayBufferByteLength");
         var srcBlock = getInternalSlot(arrayBuffer, "ArrayBufferData");
         var result = OrdinaryConstruct(ArrayBufferConstructor, []);
         var setStatus = SetArrayBufferData(result, length);
         if (isAbrupt(setStatus)) return setStatus;
-        var copyStatus = CopyDataBlock(targetBlock, 0, srcBlock, 0, length);
+        var copyStatus = CopyDataBlockBytes(targetBlock, 0, srcBlock, 0, length);
         if (isAbrupt(copyStatus)) return copyStatus;
         return NormalCompletion(result);
     }
@@ -13953,6 +13946,7 @@ define("lib/api", function (require, exports, module) {
         }
         
         function thisLoader(value) {
+            if (value instanceof CompletionRecord) return thisLoader(value.value);
             if (Type(value) === "object" && hasInternalSlot(value, "Modules")) {
                 var m = getInternalSlot(value, "Modules");
                 if (m !== undefined) return value;
@@ -14910,8 +14904,8 @@ dependencygrouptransitions of kind load1.Kind.
             var status = ModuleDeclarationInstantiation(body, env);
             var initContext = new ExecutionContext();
             initContext.realm = getInternalSlot(loader, "Realm");
-            initContext.varEnv = env;
-            initContext.lexEnv = env;
+            initContext.VarEnv = env;
+            initContext.LexEnv = env;
             var stack = getStack();
             if (stack.length) getStack().pop();
             stack.push(initContext);
@@ -16570,7 +16564,7 @@ dependencygrouptransitions of kind load1.Kind.
                     enumerable: false,
                     configurable: false
                 });
-                if ((O = ifAbrupt(O)) && isAbrupt(O)) return O;
+                if ((status = ifAbrupt(status)) && isAbrupt(status)) return status;
                 setInternalSlot(O, "StringData", s);
                 return O;
             }
@@ -16859,6 +16853,8 @@ dependencygrouptransitions of kind load1.Kind.
         LazyDefineBuiltinFunction(StringPrototype, "toArray", 0, StringPrototype_toArray);
         LazyDefineBuiltinFunction(StringPrototype, "valueOf", 0, StringPrototype_valueOf);
 
+
+        LazyDefineBuiltinConstant(StringPrototype, $$toStringTag, "String");
         MakeConstructor(StringConstructor, false, StringPrototype);
         // ===========================================================================================================
         // String Iterator
@@ -16910,6 +16906,7 @@ dependencygrouptransitions of kind load1.Kind.
                 var index = getInternalSlot(O, "IteratorNextIndex");
                 var result;
 
+
                 string = ToString(string);
                 var len = string.length;
 
@@ -16939,6 +16936,9 @@ dependencygrouptransitions of kind load1.Kind.
                 "IteratorNextIndex": undefined,
                 "IterationKind": undefined
             });
+            // for-of before worked without. there must be a mistake somewhere
+            if (string instanceof StringExoticObject) string = getInternalSlot(string, "StringData");
+            // ---
             setInternalSlot(iterator, "IteratedString", string);
             setInternalSlot(iterator, "IteratorNextIndex", 0);
             setInternalSlot(iterator, "IterationKind", kind);
@@ -17088,28 +17088,33 @@ dependencygrouptransitions of kind load1.Kind.
                 return withError("Type", "Symbol.prototype[@@toPrimitive] is supposed to throw a Type Error!");
         };
         
-        var GlobalSymbolRegistry = Object.create(null);
+
+
+        // var GlobalSymbolRegistry = Object.create(null);
+        // moved up to the realm
+
 
         var SymbolFunction_keyFor = function (thisArg, argList) {
             var sym = argList[0];
             if (Type(sym) !== "symbol") return withError("Type", "keyFor: sym is not a symbol");
             var key = getInternalSlot(sym, "Description");
             var e = GlobalSymbolRegistry[key];
-            if (SameValue(e.symbol, sym)) return NormalCompletion(e.key);
-            Assert(GlobalSymbolRegistry[key] === undefined, "GlobalSymbolRegistry must not contain an entry for sym");
+            if (SameValue(e.Symbol, sym)) return NormalCompletion(e.key);
+            Assert(getRealm().GlobalSymbolRegistry[key] === undefined, "GlobalSymbolRegistry must not contain an entry for sym");
             return NormalCompletion(undefined);
         };
+
 
         var SymbolFunction_for = function (thisArg, argList) {
             var key = argList[0];
             var stringKey = ToString(key)
             if ((stringKey = ifAbrupt(stringKey)) && isAbrupt(stringKey)) return stringKey;
-            var e = GlobalSymbolRegistry[key];
-            if (e !== undefined && SameValue(e.key, stringKey)) return NormalCompletion(e.symbol);
+            var e = getRealm().GlobalSymbolRegistry[key];
+            if (e !== undefined && SameValue(e.Key, stringKey)) return NormalCompletion(e.symbol);
             Assert(e === undefined, "GlobalSymbolRegistry must currently not contain an entry for stringKey");
             var newSymbol = SymbolPrimitiveType();
             setInternalSlot(newSymbol, "Description", stringKey);
-            GlobalSymbolRegistry[stringKey] = createGenericRecord({ key: stringKey, symbol: newSymbol });
+            getRealm().GlobalSymbolRegistry[stringKey] = { Key: stringKey, Symbol: newSymbol };
             return NormalCompletion(newSymbol); // There is a Typo newSumbol in the Spec. 
         };
 
@@ -17190,7 +17195,7 @@ dependencygrouptransitions of kind load1.Kind.
 
         setInternalSlot(EvalFunction, "Call", function (thisArg, argList) {
             var input, strict, direct, strictCaller, evalRealm, directCallToEval,
-                ctx, value, result, script, evalCxt, lexEnv, varEnv, strictVarEnv,
+                ctx, value, result, script, evalCxt, LexEnv, VarEnv, strictVarEnv,
                 strictScript;
 
             input = GetValue(argList[0]);
@@ -17225,22 +17230,22 @@ dependencygrouptransitions of kind load1.Kind.
                 // ValidInModule ist false throw SyntaxError
             }
             if (direct) {
-                lexEnv = ctx.lexEnv;
-                varEnv = ctx.varEnv;
+                LexEnv = ctx.LexEnv;
+                VarEnv = ctx.VarEnv;
             } else {
-                lexEnv = evalRealm.globalEnv;
-                varEnv = evalRealm.globalEnv;
+                LexEnv = evalRealm.globalEnv;
+                VarEnv = evalRealm.globalEnv;
             }
             if (strictScript || (direct && strictCaller)) {
-                strictVarEnv = NewDeclarativeEnvironment(lexEnv);
-                lexEnv = strictVarEnv;
-                varEnv = strictVarEnv;
+                strictVarEnv = NewDeclarativeEnvironment(LexEnv);
+                LexEnv = strictVarEnv;
+                VarEnv = strictVarEnv;
             }
 
             evalCxt = newContext(getLexEnv());
             evalCxt.realm = evalRealm;
-            evalCxt.varEnv = varEnv;
-            evalCxt.lexEnv = lexEnv;
+            evalCxt.VarEnv = VarEnv;
+            evalCxt.LexEnv = LexEnv;
 
             result = require("lib/runtime").Evaluate(script);
             ctx = oldContext();
@@ -19245,16 +19250,19 @@ dependencygrouptransitions of kind load1.Kind.
 
             var scope = getRealm().globalEnv;
             var F = thisArg;
-            if (F == undefined || !hasInternalSlot(F, "Code")) {
-                var FunctionPrototype = getIntrinsic("%FunctionPrototype%");
-                F = FunctionAllocate(FunctionPrototype);
+            if (F === undefined || !hasInternalSlot(F, "Code")) {
+                var C = FunctionConstructor;
+                var proto = GetPrototypeFromConstructor(C, "%FunctionPrototype%");
+                if ((proto == ifAbrupt(proto)) && isAbrupt(proto)) return proto;
+                F = FunctionAllocate(C);
             }
 
             if (getInternalSlot(F, "FunctionKind") !== "normal") return withError("Type", "function object not a 'normal' function");
-
             FunctionInitialise(F, "normal", parameters, funcBody, scope, true);
             var proto = ObjectCreate();
-            MakeConstructor(F);
+            var status = MakeConstructor(F);
+            if (isAbrupt(status)) return status;
+            SetFunctionName(F, "anonymous");
             return NormalCompletion(F);
 
         });
@@ -19390,7 +19398,7 @@ dependencygrouptransitions of kind load1.Kind.
                 methodName = ToPropertyKey(methodName);
                 if ((methodName = ifAbrupt(methodName)) && isAbrupt(methodName)) return methodName;
             }
-            return CloneMethod(thisArg, superBinding, methodName)
+            return CloneMethod(thisArg, superBinding, methodName);
         };
 
         LazyDefineBuiltinFunction(FunctionPrototype, "toMethod", 1, FunctionPrototype_toMethod /*, realm  !!!*/);
@@ -21328,7 +21336,7 @@ dependencygrouptransitions of kind load1.Kind.
             }
             if (comparator !== undefined) {
                 if (comparator !== "is") return withError("Range", "comparator argument has currently to be 'undefined' or 'is'");
-v            }
+            }
 
             setInternalSlot(set, "SetData", Object.create(null));
             setInternalSlot(set, "SetComparator", comparator);
@@ -22935,8 +22943,8 @@ define("lib/runtime", ["lib/parser", "lib/api", "lib/slower-static-semantics"], 
         }
 
 
-        calleeContext.varEnv = localEnv;
-        calleeContext.lexEnv = localEnv;
+        calleeContext.VarEnv = localEnv;
+        calleeContext.LexEnv = localEnv;
 
 
         var status = InstantiateFunctionDeclaration(this, argList, localEnv);
@@ -23618,9 +23626,9 @@ define("lib/runtime", ["lib/parser", "lib/api", "lib/slower-static-semantics"], 
         var l = getLexEnv();
         log("Running Execution Context on Top Of The Stack.");
         
-        log("+++ running +++ cx.[[varEnv]]");
+        log("+++ running +++ cx.[[VarEnv]]");
         dir(v);
-        log("+++ running +++ cx.[[lexEnv]]");
+        log("+++ running +++ cx.[[LexEnv]]");
         dir(l);
 
         log("## Environments (.outer follows each");
@@ -24106,10 +24114,10 @@ define("lib/runtime", ["lib/parser", "lib/api", "lib/slower-static-semantics"], 
 
                 if (leftElems[i].as) newName = leftElems[i].as.name;
 
-                var lexEnv = getLexEnv();
+                var LexEnv = getLexEnv();
 
-                if (newName) lexEnv.SetMutableBinding(newName, result)
-                else lexEnv.SetMutableBinding(identName, result);
+                if (newName) LexEnv.SetMutableBinding(newName, result)
+                else LexEnv.SetMutableBinding(identName, result);
                 newName = undefined;
             }
 
@@ -24639,9 +24647,9 @@ define("lib/runtime", ["lib/parser", "lib/api", "lib/slower-static-semantics"], 
             return status;
         }
 
-        getContext().lexEnv = blockEnv;
+        getContext().LexEnv = blockEnv;
         status = evaluation.StatementList(stmtList);
-        getContext().lexEnv = oldEnv;
+        getContext().LexEnv = oldEnv;
         if (isAbrupt(status)) return status;
         return NormalCompletion(empty);
 
@@ -24819,9 +24827,9 @@ define("lib/runtime", ["lib/parser", "lib/api", "lib/slower-static-semantics"], 
                 for (var i = 0, j = names.length; i < j; i++) {
                     iterationEnv.CreateMutableBinding(names[i], true);
                 }
-                getContext().lexEnv = iterationEnv;
+                getContext().LexEnv = iterationEnv;
                 status = BindingInitialisation(lhs, nextValue, iterationEnv);
-                if (isAbrupt(status)) return (getContext().lexEnv = oldEnv), status;
+                if (isAbrupt(status)) return (getContext().LexEnv = oldEnv), status;
                 status = NormalCompletion(undefined);
 
             }
@@ -24833,7 +24841,7 @@ define("lib/runtime", ["lib/parser", "lib/api", "lib/slower-static-semantics"], 
                 }
             }
 
-            getContext().lexEnv = oldEnv;
+            getContext().LexEnv = oldEnv;
             if (isAbrupt(status) && LoopContinues(status, labelSet) === false) return status;
         }
     }
@@ -24969,17 +24977,17 @@ define("lib/runtime", ["lib/parser", "lib/api", "lib/slower-static-semantics"], 
                     }
                 }
 
-                getContext().lexEnv = loopEnv;
+                getContext().LexEnv = loopEnv;
 
                 forDcl = Evaluate(initExpr);
                 if (!LoopContinues(forDcl, labelSet)) {
-                    getContext().lexEnv = oldEnv;
+                    getContext().LexEnv = oldEnv;
                     return forDcl;
                 }
 
                 bodyResult = ForBodyEvaluation(testExpr, incrExpr, body, labelSet);
 
-                getContext().lexEnv = oldEnv;
+                getContext().LexEnv = oldEnv;
                 return bodyResult;
 
             } else {
@@ -25098,9 +25106,9 @@ define("lib/runtime", ["lib/parser", "lib/api", "lib/slower-static-semantics"], 
         blockEnv = NewDeclarativeEnvironment(oldEnv);
         R = InstantiateBlockDeclaration(caseBlock, blockEnv);
         if (isAbrupt(R)) return R;
-        getContext().lexEnv = blockEnv;
+        getContext().LexEnv = blockEnv;
         R = CaseBlockEvaluation(switchValue, caseBlock);
-        getContext().lexEnv = oldEnv;
+        getContext().LexEnv = oldEnv;
         return R;
     }
 
@@ -25218,6 +25226,7 @@ define("lib/runtime", ["lib/parser", "lib/api", "lib/slower-static-semantics"], 
 
         var computed = node.computed;
 
+
         var strict = IsStrict(body);
         var scope = getLexEnv();
         var closure;
@@ -25326,10 +25335,10 @@ define("lib/runtime", ["lib/parser", "lib/api", "lib/slower-static-semantics"], 
         }
 
         var caller = cx.callee;
-        getContext().lexEnv = scope;
+        getContext().LexEnv = scope;
         cx.callee = className;
         cx.caller = caller;
-        getContext().lexEnv = scope;
+        getContext().LexEnv = scope;
         var F = FunctionCreate("normal", [], null, scope, true, FunctionPrototype, constructorParent);
 
         if (!constructor) {
@@ -25377,7 +25386,7 @@ define("lib/runtime", ["lib/parser", "lib/api", "lib/slower-static-semantics"], 
             lex.InitialiseBinding(className, F);
         }
 
-        getContext().lexEnv = lex;
+        getContext().LexEnv = lex;
         return NormalCompletion(F);
     }
 
@@ -25406,12 +25415,12 @@ define("lib/runtime", ["lib/parser", "lib/api", "lib/slower-static-semantics"], 
     function WithStatement(node) {
         var body = getCode(node, "body");
         var object = GetValue(Evaluate(node.object));
-        var objEnv = new ObjectEnvironment(object, cx.lexEnv);
+        var objEnv = new ObjectEnvironment(object, cx.LexEnv);
         objEnv.withEnvironment = true;
         var oldEnv = getLexEnv();
-        getContext().lexEnv = objEnv;
+        getContext().LexEnv = objEnv;
         var result = Evaluate(body);
-        getContext().lexEnv = oldEnv;
+        getContext().LexEnv = oldEnv;
         if (isAbrupt(result)) return result;
         return NormalCompletion(undefined);
     }
@@ -25491,9 +25500,9 @@ define("lib/runtime", ["lib/parser", "lib/api", "lib/slower-static-semantics"], 
                 status = BindingInitialisation(forBinding, nextValue, forEnv);
                 if (isAbrupt(status)) return status;
             }
-            getContext().lexEnv = forEnv;
+            getContext().LexEnv = forEnv;
             var continu = ComprehensionEvaluation(node, accumulator);
-            getContext().lexEnv = oldEnv;
+            getContext().LexEnv = oldEnv;
             if ((continu = ifAbrupt(continu)) && isAbrupt(continu)) return continu;
         }
 
@@ -25534,14 +25543,14 @@ define("lib/runtime", ["lib/parser", "lib/api", "lib/slower-static-semantics"], 
         var R;
         oldEnv = getLexEnv();
         catchEnv = NewDeclarativeEnvironment(oldEnv);
-        getContext().lexEnv = catchEnv;
+        getContext().LexEnv = catchEnv;
         for (var i = 0, j = boundNames.length; i < j; i++) {
             catchEnv.CreateMutableBinding(boundNames[i]);
         }
         status = BindingInitialisation(catchParameter, thrownValue, undefined);
         if (isAbrupt(status)) return status;
         R = Evaluate(catchBlock);
-        getContext().lexEnv = oldEnv;
+        getContext().LexEnv = oldEnv;
         return R;
     }
 
@@ -25604,10 +25613,8 @@ define("lib/runtime", ["lib/parser", "lib/api", "lib/slower-static-semantics"], 
         loc = node.loc || loc;
         
         var stateRec = cx.state[cx.state.length-1];
-
         if (stateRec) stateRec.instructionIndex = i;
         // unsure but i have to reenter statementlists at some point,
-
 
         cx.state.node = node;
         cx.line =   loc.start.line;
@@ -25716,7 +25723,7 @@ define("lib/runtime", ["lib/parser", "lib/api", "lib/slower-static-semantics"], 
         // record everywhere oder nur bei generator?
         // cheaper is if (cx.generator)
         var state = getContext().state;
-        state.push({ node: node, a: a, b: b, c: c });
+        state.push([node,a,b,c]);
 
         var result = Evaluate2(node, a,b,c);
 
@@ -25734,11 +25741,7 @@ define("lib/runtime", ["lib/parser", "lib/api", "lib/slower-static-semantics"], 
             while (state.length) {
             var state = getContext().state;
             var stateRec = state[state.length-1];
-            a = stateRec.a;
-            b = stateRec.b;
-            c = stateRec.c;
-            node = stateRec.node;
-            var R = Evaluate2(node, a, b, c);
+            var R = Evaluate2.apply(this, stateRec);
             if (isAbrupt(R)) return R;
             state.pop();
         }
@@ -27062,50 +27065,6 @@ define("lib/syntaxerror-file", function (require, exports, module) {
 });
 
 // *******************************************************************************************************************************
-// tester (note)
-// *******************************************************************************************************************************
-
-define("lib/syntaxjs-tester", function (require, exports, module) {
-
-    var evaluate = require("lib/runtime");
-
-    function testCode(result, code) {
-        //console.log("bool testCode(result, code):");
-        //console.log(code);
-
-        var myresult = evaluate(code);
-
-        if (result === myresult) {
-            console.log("PASSED");
-        } else {
-            console.err("FAILED");
-        }
-    }
-
-    function testCodeThrows(code) {
-        var threw, myEx;
-        console.log("bool testCodeThrows(code):");
-        console.log(code);
-        try {
-            var myresult = evaluate(code);
-        } catch (ex) {
-            threw = true;
-            myEx = ex;
-        }
-        if (!threw) {
-            console.err("FAILED");
-            return false;
-        }
-        console.log("PASSED");
-        return true;
-    }
-
-    exports.testCode = testCode;
-    exports.testCodeThrows = testCodeThrows;
-
-});
-
-// *******************************************************************************************************************************
 // SHELL is the ultimate node module
 // *******************************************************************************************************************************
 
@@ -27362,20 +27321,18 @@ define("lib/syntaxjs", function () {
     
     if (typeof window == "undefined" && typeof self !== "undefined" && typeof importScripts !== "undefined") {
         syntaxerror.system = "worker";
+ 
     } else if (typeof window !== "undefined") {
         syntaxerror.system = "browser";
         syntaxerror_highlighter_api.highlightElements = pdmacro(require("lib/syntaxerror-highlight-gui").highlightElements),
         syntaxerror_highlighter_api.startHighlighterOnLoad = pdmacro(require("lib/syntaxerror-highlight-gui").startHighlighterOnLoad)
+ 
     } else if (typeof process !== "undefined") {    
         
-        if (typeof exports !== "undefined") exports.syntaxjs = syntaxerror;
-        
-        
+        if (typeof exports !== "undefined") exports.syntaxjs = syntaxerror;       
         syntaxerror.system = "node";
-        
         syntaxerror._nativeRequire = nativeGlobal.require;
         syntaxerror._nativeModule = module;
-
         
         Object.defineProperties(exports, syntaxerror_public_api_readonly);
         Object.defineProperties(exports, syntaxerror_highlighter_api)
