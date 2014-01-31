@@ -14093,7 +14093,7 @@ define("lib/api", function (require, exports, module) {
             loader.Modules = [];
             loader.Loads = [];
             loader.LoaderObj = object;
-            return loader;
+            retrun loader;
         }       
 
         function LoadRecord() {
@@ -14797,7 +14797,7 @@ dependencygrouptransitions of kind load1.Kind.
         }
 
 
-        // 28.1.
+        // 31.1. 
         function ResolveExportEntries(M, visited) {
             var exportDefs = getInternalSlot(M, "ExportDefinitions");
             if (exportDefs != undefined) return exportDefs;
@@ -14825,6 +14825,14 @@ dependencygrouptransitions of kind load1.Kind.
                 if (visited.indexOf(otherMod) > -1) {
                     error = withError("Syntax", "otherMod is alreay in visited");
                     linkErrors.push(error);
+                } else {
+                    visited.push(otherMod);
+                    var otherDefs = ResolveExportEntries(otherMod, visited);
+                    for (var j = 0, k = otherDefs.length; j < k; j++) {
+                        var def = otherDefs[j];
+                        defs.push({ Module: otherMod, ImportName: def.ExportName, LocalName: null, ExportName: def.ExportName,
+                            Explicit: false });
+                    }
                 }
             }
             setInternalSlot(M, "ExportDefinitions", defs);
@@ -14938,20 +14946,23 @@ dependencygrouptransitions of kind load1.Kind.
                 var resolvedDeps = [];
                 var unlinkedDeps = [];
                 var pair = loads[i]
-                for (var k = 0; k < pair.Load.Dependencies.length; k++) {
-                   var dep = pair.Load.Dependencies[k];
+                var deps = pair.load.Dependencies;
+                var pairModule = pair.Module;
+                for (var k = 0; k < deps.length; k++) {
+                   var dep = deps[k];
                    var requestName = dep.Key;
                    var normalizedName = dep.Value;
                    var load;
                    if (load = getRecordInList(loads, "Name", normalizedName)) {
                         if (load.Status === "linked") {
-                            var resolvedDep = { Key: requestName, Value: load.Module };
+                            var resolvedDep = createGenericRecord({ Key: requestName, Value: load.Module });
                             resolvedDeps.push(resolvedDep);
                         } else {
                             for (var m = 0; m < unlinked.lengh; m++) {
                                 var otherPair = unlinked[i];
                                 if (otherPair.Load.Name == normalizedName) {
-                                    unlinkedDeps.push(otherPair.Load)
+                                    resolvedDeps.push(createGenericRecord({ Key: requestName, Value: otherPair.Module }));
+                                    unlinkedDeps.push(otherPair.Load);
                                 }
                             } 
                         }
@@ -14960,14 +14971,14 @@ dependencygrouptransitions of kind load1.Kind.
                         if (module === null) {
                             var error = withError("Reference","");
                             pair.Module.LinkErrors.push(error);
+
                         } else {
                             resolvedDeps.push({ Key: requestName, Value: module });
                         }
                    }         
                 }
-                pair.Module.Dependencies = resolvedDeps;
-                pair.Module.UnlinkedDependencies = unlinkedDeps;
-            
+                pairModule.Dependencies = resolvedDeps;
+                pairModule.UnlinkedDependencies = unlinkedDeps;
             }
             for (i = 0, j = unlinked.length; i < j; i++) {
                 pair = unlinked[i];
@@ -15340,8 +15351,7 @@ dependencygrouptransitions of kind load1.Kind.
             var module = argList[1];
             var loader = thisLoader(thisArg);
             if ((loader=ifAbrupt(loader)) && isAbrupt(loader)) return loader;
-            var loaderRecord = getInternalSlot(loader, "Loader");
-
+            var loaderRecord = getInternalSlot(loader, "LoaderRecord");
             var name = ToString(name);
             if ((name=ifAbrupt(name)) && isAbrupt(name)) return name;
             if (Type(module) !== "object") return withError("Type", "module is not an object");
