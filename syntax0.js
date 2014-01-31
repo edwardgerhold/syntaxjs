@@ -17064,12 +17064,12 @@ dependencygrouptransitions of kind load1.Kind.
             if (Type(regexp) === "object"  && HasProperty(regexp, $$isRegExp)) {
                 rx = regexp;
             } else {
-                rx = RegExpCreate(regexp, undefined)
+                rx = RegExpCreate(regexp, undefined);
             }
             if ((rx = ifAbrupt(rx)) && isAbrupt(rx)) return rx;
-            return Invoke(rx, "search", [string]);
+            return Invoke(rx, "search", [S]);
         };
-
+        // 31.1.
         var StringPrototype_toUpperCase = function (thisArg, argList) {
             var O = CheckObjectCoercible(thisArg);
             if ((O = ifAbrupt(O)) && isAbrupt(O)) return O;
@@ -17079,7 +17079,7 @@ dependencygrouptransitions of kind load1.Kind.
             return NormalCompletion(U);
         };
 
-
+        // 31.1.
         var StringPrototype_toLowerCase = function (thisArg, argList) {
             var O = CheckObjectCoercible(thisArg);
             if ((O = ifAbrupt(O)) && isAbrupt(O)) return O;
@@ -17089,6 +17089,29 @@ dependencygrouptransitions of kind load1.Kind.
             return NormalCompletion(L);
         };
 
+        var StringPrototype_charAt = function (thisArg, argList) {
+            var index = argList[0];
+            index = index|0;
+            var O = CheckObjectCoercible(thisArg);
+            if ((O = ifAbrupt(O)) && isAbrupt(O)) return O;
+            var S = ToString(O);
+            if ((S = ifAbrupt(S)) && isAbrupt(S)) return S;
+            var V = S.charAt(index);
+            return NormalCompletion(V);
+        };
+        var StringPrototype_charCodeAt = function (thisArg, argList) {
+            var index = argList[0];
+            index = index|0;
+            var O = CheckObjectCoercible(thisArg);
+            if ((O = ifAbrupt(O)) && isAbrupt(O)) return O;
+            var S = ToString(O);
+            if ((S = ifAbrupt(S)) && isAbrupt(S)) return S;
+            if (index < 0) return NormalCompletion(NaN);
+            if (index >= S.length) return NormalCompletion(NaN);
+            var C = S.charCodeAt(index);
+            return NormalCompletion(C);
+
+        };
 
         // http://wiki.ecmascript.org/doku.php?id=strawman:strawman
         // 29.1. i have read a post about es7 timeline and one
@@ -17141,6 +17164,8 @@ dependencygrouptransitions of kind load1.Kind.
 
 
 
+        LazyDefineBuiltinFunction(StringPrototype, "charAt", 0, StringPrototype_charAt);
+        LazyDefineBuiltinFunction(StringPrototype, "charCode", 0, StringPrototype_charCodeAt);
         LazyDefineBuiltinFunction(StringPrototype, "contains", 0, StringPrototype_contains);
         LazyDefineBuiltinFunction(StringPrototype, "endsWith", 1, StringPrototype_endsWith);
         LazyDefineBuiltinFunction(StringPrototype, "lpad", 1, StringPrototype_lpad);
