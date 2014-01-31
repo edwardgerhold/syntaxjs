@@ -8,7 +8,8 @@ I still have to figure out, which license is the right one.
 * Mozilla Parser API belongs to Mozilla, which is the Syntaxtree Format.
 * There is a module with a functional parser by Douglas Crockford, from a
 tutorial on his website, written down by hand. It´s currently not in use, 
-but inclusive.
+but inclusive (it will be split into an own file, yes, but i think, it will
+also get it´s time being in use for something in the future).
 * Esprimas Demo on it´s Website esprima.org inspired me to add a button, 
 to show the ast of a highlighted text, and to use JSON.stringify(code, null, 4);
 As i remember again. I have seen the array of tokens there. Already in 2012.
@@ -26,7 +27,9 @@ and make your own with
 and the same conditions, the others licenses grant me. I won´t change my mind,
 that´s for sure. But to be correct, i still have to figure out, what we got.u
 
-I should take the "Do what the fuck you wanna do with license"
+I should take the "Do what the fuck you wanna do with license", i have seen
+together with the releases of the promises-aplus-tests, by D.Denicola. I think
+it´s his public domain license. The license expresses what i mean.
 
 Have fun!
 
