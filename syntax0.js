@@ -8741,7 +8741,7 @@ define("lib/api", function (require, exports, module) {
     }
 
 
-    function createGenericRecord(obj) {
+    function genericRecord(obj) {
         // interface for bytecode encoding of objects
         return obj;
     }
@@ -13959,9 +13959,9 @@ define("lib/api", function (require, exports, module) {
 
         var RealmPrototype_get_global = function (thisArg, argList) {
             var realmObject = thisArg;
-            var realm = getInternalSlot(realmObject, "Realm");
             if ((Type(realmObject) != "object") || !hasInternalSlot(realmObject, "Realm")) return withError("Type", "The this value is no realm object");
-            var globalThis = getInternalSlot(realm, globalThis);
+            var realm = getInternalSlot(realmObject, "Realm");
+            var globalThis = realm.globalThis;
             return globalThis;
         };
 
@@ -13981,7 +13981,7 @@ define("lib/api", function (require, exports, module) {
             if (getInternalSlot(realmObject, "Realm") !== undefined) return withError("Type", "the realm property has to be undefined");
             if (options === undefined) options = ObjectCreate(null);
             else if (Type(options) !== "object") return withError("Type", "options is not an object");
-            var realm = CreateRealm(realmObject);
+            var realm = CreateRealm();
             var evalHooks = Get(options, "eval");
             if ((evalHooks=ifAbrupt(evalHooks)) && isAbrupt(evalHooks)) return evalHooks;
             if (evalHooks === undefined) evalHooks = ObjectCreate();
@@ -14005,6 +14005,12 @@ define("lib/api", function (require, exports, module) {
             if ((Function !== undefined) && !IsCallable(Function)) return withError("Type", "Function should be a function");
             setInternalSlot(realm, "FunctionHook", Function);
             setInternalSlot(realmObject, "Realm", realm);
+    
+            realm.directEvalTranslate = translate;
+            realm.directEvalFallback = fallback;
+            realm.indirectEval = indirectEval;
+            realm.Function = Function;
+
             if (initializer !== undefined) {
                 if (!IsCallable(initializer)) return withError("Type", "initializer should be a function");
                 var builtins = ObjectCreate();
@@ -14018,7 +14024,7 @@ define("lib/api", function (require, exports, module) {
         var RealmConstructor_Construct = function (argList) {
             var F = this;
             var args = argList;
-            return OrdinaryConstruct(F, argList);
+            return Construct(F, argList);
         };
 
         var RealmConstructor_$$create = function (thisArg, argList) {
@@ -14093,7 +14099,7 @@ define("lib/api", function (require, exports, module) {
             loader.Modules = [];
             loader.Loads = [];
             loader.LoaderObj = object;
-            retrun loader;
+            return loader;
         }       
 
         function LoadRecord() {
@@ -14877,7 +14883,7 @@ dependencygrouptransitions of kind load1.Kind.
                 var overlappingDef = overlappingDefs[i];
                 if (overlappingDef.Explicit === true) explicits.push(overlappingDef);
             }
-            if ((explicits.length > 1) || ((overlappingDefs.length > 1) && !explicit.length)) {
+            if ((explicits.length > 1) || ((overlappingDefs.length > 1) && !explicits.length)) {
                 error = withError("Syntax", "");
                 linkErrors = getInternalSlot(M, "LinkErrors");
                 linkErrors.push(error);                
@@ -14955,13 +14961,13 @@ dependencygrouptransitions of kind load1.Kind.
                    var load;
                    if (load = getRecordInList(loads, "Name", normalizedName)) {
                         if (load.Status === "linked") {
-                            var resolvedDep = createGenericRecord({ Key: requestName, Value: load.Module });
+                            var resolvedDep = genericRecord({ Key: requestName, Value: load.Module });
                             resolvedDeps.push(resolvedDep);
                         } else {
                             for (var m = 0; m < unlinked.lengh; m++) {
                                 var otherPair = unlinked[i];
                                 if (otherPair.Load.Name == normalizedName) {
-                                    resolvedDeps.push(createGenericRecord({ Key: requestName, Value: otherPair.Module }));
+                                    resolvedDeps.push(genericRecord({ Key: requestName, Value: otherPair.Module }));
                                     unlinkedDeps.push(otherPair.Load);
                                 }
                             } 
