@@ -1613,11 +1613,10 @@ define("lib/tokenizer", ["lib/tables"], function (tables) {
 			 if (lookahead === undefined && !AllowedLastChars[value]) throw SyntaxError("Unexpected end of input stream");
 			}
 			*/
-            if (!OneOfThesePunctuators[value])
-                inputElementGoal = inputElementRegExp;
-        } else {
-            inputElementGoal = inputElementDiv;
-        }
+            if (!OneOfThesePunctuators[value]) inputElementGoal = inputElementRegExp;
+        
+        } else inputElementGoal = inputElementDiv;
+        
 
         token.offset = offset;
 
@@ -1808,10 +1807,11 @@ define("lib/tokenizer", ["lib/tables"], function (tables) {
 
             if (inputElementGoal === inputElementRegExp) {
                 // saveTheDot();
+                
                 if (ok = RegularExpressionLiteral()) {
                     inputElementGoal = inputElementDiv;
                     return ok;
-                } else inputElementGoal = inputElementDiv;
+                } // else inputElementGoal = inputElementDiv;
                 // restoreTheDot();
             }
 
@@ -10808,11 +10808,15 @@ define("lib/api", function (require, exports, module) {
     }
 
     function CreateByteDataBlock(bytes) {
-
+        var dataBlock = new ArrayBuffer(bytes);
+        return dataBlock;
     }
 
     function CopyDataBlockBytes(toBlock, toIndex, fromBlock, fromIndex, count) {
-
+        for (var i = fromIndex, j = fromIndex + count, k = toIndex; i < j; i++, k++) {
+            var value = fromBlock[i];
+            toBlock[k] = value;
+        }
     }
 
     // 
@@ -16896,26 +16900,24 @@ dependencygrouptransitions of kind load1.Kind.
             configurable: true
         });
 
-        DefineOwnProperty(StringConstructor, "", {
-            value: CreateBuiltinFunction(realm, function (thisArg, argList) {}),
-            enumerable: false,
-            writable: true,
-            configurable: true
-        });
-
-        DefineOwnProperty(StringPrototype, "", {
-            value: CreateBuiltinFunction(realm, function (thisArg, argList) {}),
-            enumerable: false,
-            writable: true,
-            configurable: true
-        });
 
 
-
-
-
-        function GetReplaceSubstitution () {
-
+        function GetReplaceSubstitution (matched, string, postion, captures) {
+            Assert(Type(matched) === "string", "matched has to be a string");
+            var matchLength = matched.length;
+            Assert(Type(string) === "string");
+            var stringLength = string.length;
+            Assert(position >= 0, "position isnt a non negative integer");
+            Assert(position <= stringLength);
+            Assert(Array.isArray(captures), "captures is a possibly empty list but a list");
+            var tailPos = position + matchLength;
+            var m = captures.length;
+            result = matched.replace("$$", "$");
+            /*
+                Table 39 - Replacement Text Symbol Substitutions missing
+                Please fix your skills here
+            */
+            return result;
         }
 
         var StringPrototype_normalize = function (thisArg, argList) {
@@ -17037,6 +17039,55 @@ dependencygrouptransitions of kind load1.Kind.
 
         };
 
+        var trim_leading_space_expr = /^([\s]*)/;
+        var trim_trailing_space_expr = /([\s]*)$/;
+        // 31.1.
+        var StringPrototype_trim = function (thisArg, argList) {
+            var O = CheckObjectCoercible(thisArg);
+            if ((O = ifAbrupt(O)) && isAbrupt(O)) return O;
+            var S = ToString(O);
+            if ((S = ifAbrupt(S)) && isAbrupt(S)) return S;sy
+            var T;
+            T = S.replace(trim_leading_space_expr, "");
+            T = T.replace(trim_trailing_space_expr, "");
+            return NormalCompletion(T);
+        };
+
+        // 31.1.
+        var StringPrototype_search = function (thisArg, argList) {
+            var regexp = argList[0];
+            var O = CheckObjectCoercible(thisArg);
+            if ((O = ifAbrupt(O)) && isAbrupt(O)) return O;
+            var S = ToString(O);
+            if ((S = ifAbrupt(S)) && isAbrupt(S)) return S;
+            var rx;
+            if (Type(regexp) === "object"  && HasProperty(regexp, $$isRegExp)) {
+                rx = regexp;
+            } else {
+                rx = RegExpCreate(regexp, undefined)
+            }
+            if ((rx = ifAbrupt(rx)) && isAbrupt(rx)) return rx;
+            return Invoke(rx, "search", [string]);
+        };
+
+        var StringPrototype_toUpperCase = function (thisArg, argList) {
+            var O = CheckObjectCoercible(thisArg);
+            if ((O = ifAbrupt(O)) && isAbrupt(O)) return O;
+            var S = ToString(O);
+            if ((S = ifAbrupt(S)) && isAbrupt(S)) return S;
+            var U = S.toUpperCase();            
+            return NormalCompletion(U);
+        };
+
+
+        var StringPrototype_toLowerCase = function (thisArg, argList) {
+            var O = CheckObjectCoercible(thisArg);
+            if ((O = ifAbrupt(O)) && isAbrupt(O)) return O;
+            var S = ToString(O);
+            if ((S = ifAbrupt(S)) && isAbrupt(S)) return S;
+            var L = S.toLowerCase();            
+            return NormalCompletion(L);
+        };
 
 
         // http://wiki.ecmascript.org/doku.php?id=strawman:strawman
@@ -17088,6 +17139,8 @@ dependencygrouptransitions of kind load1.Kind.
             return NormalCompletion(S + sFillVal);
         };
 
+
+
         LazyDefineBuiltinFunction(StringPrototype, "contains", 0, StringPrototype_contains);
         LazyDefineBuiltinFunction(StringPrototype, "endsWith", 1, StringPrototype_endsWith);
         LazyDefineBuiltinFunction(StringPrototype, "lpad", 1, StringPrototype_lpad);
@@ -17096,8 +17149,14 @@ dependencygrouptransitions of kind load1.Kind.
         LazyDefineBuiltinFunction(StringPrototype, "normalize", 0, StringPrototype_normalize);
         LazyDefineBuiltinFunction(StringPrototype, "repeat", 0, StringPrototype_repeat);
         LazyDefineBuiltinFunction(StringPrototype, "replace", 0, StringPrototype_replace);
+        LazyDefineBuiltinFunction(StringPrototype, "search", 1, StringPrototype_search);
         LazyDefineBuiltinFunction(StringPrototype, "startsWith", 1, StringPrototype_startsWith);
         LazyDefineBuiltinFunction(StringPrototype, "toArray", 0, StringPrototype_toArray);
+
+        LazyDefineBuiltinFunction(StringPrototype, "toLowerCase", 0, StringPrototype_toLowerCase);
+        LazyDefineBuiltinFunction(StringPrototype, "toUpperCase", 0, StringPrototype_toUpperCase);        
+
+        LazyDefineBuiltinFunction(StringPrototype, "trim", 1, StringPrototype_trim);        
         LazyDefineBuiltinFunction(StringPrototype, "valueOf", 0, StringPrototype_valueOf);
 
 
