@@ -8745,6 +8745,13 @@ define("lib/api", function (require, exports, module) {
         // interface for bytecode encoding of objects
         return obj;
     }
+    function getRecordValue(obj, name) {
+        return obj[name]
+    }
+
+    function setRecordValue(obj, name, value) {
+        return obj[name] = value;
+    }
 
 
     function compareInternalSlot(O, N, V) {
@@ -13791,7 +13798,13 @@ define("lib/api", function (require, exports, module) {
         setFunctionLength(constructor, len);
         return constructor;
     }
-    
+    function createIntrinsicFunction (intrinsics, name, len, intrinsicName) {
+        var constructor = OrdinaryFunction();
+        define_intrinsic(intrinsics, intrinsicName, constructor);
+        SetFunctionName(constructor, name);
+        setFunctionLength(constructor, len);
+        return constructor;
+    }
     function createIntrinsicPrototype (intrinsics, intrinsicName) {
         var prototype = OrdinaryObject();
         define_intrinsic(intrinsics, intrinsicName, prototype);
@@ -13809,7 +13822,6 @@ define("lib/api", function (require, exports, module) {
         var intrinsics = OrdinaryObject(null);
         realm.intrinsics = intrinsics;
 
-
         var ObjectPrototype = createIntrinsicPrototype(intrinsics, "%ObjectPrototype%");
         setInternalSlot(ObjectPrototype, "Prototype", null);
         
@@ -13823,19 +13835,25 @@ define("lib/api", function (require, exports, module) {
         
     Assert(getInternalSlot(ObjectConstructor, "Prototype") === FunctionPrototype, "ObjectConstructor and FunctionPrototype have to have a link");
         
-        var EncodeURIFunction = createIntrinsicConstructor(intrinsics, "encodeURI", 0, "%EncodeURI%");
-        var DecodeURIFunction = createIntrinsicConstructor(intrinsics, "ecodeURI", 0, "%DecodeURI%");
-        var EncodeURIComponentFunction = createIntrinsicConstructor(intrinsics, "EncodeURIComponent", 0, "%EncodeURIComponent%");
-        var DecodeURIComponentFunction = createIntrinsicConstructor(intrinsics, "DecodeURIComponent", 0, "%DecodeURIComponent%");
-        var SetTimeoutFunction = createIntrinsicConstructor(intrinsics, "SetTimeout", 0, "%SetTimeout%");
-        var SetImmediateFunction = createIntrinsicConstructor(intrinsics, "SetImmediate", 0, "%SetImmediate%");
-        var IsNaNFunction = createIntrinsicConstructor(intrinsics, "isNaN", 0, "%IsNaN%");
-        var IsFiniteFunction = createIntrinsicConstructor(intrinsics, "isFinite", 0, "%IsFinite%");
-        var ParseFloatFunction = createIntrinsicConstructor(intrinsics, "parseFloat", 0, "%ParseFloat%");
-        var ParseIntFunction = createIntrinsicConstructor(intrinsics, "parseInt", 0, "%ParseInt%");
-        var EscapeFunction = createIntrinsicConstructor(intrinsics, "escape", 0, "%Escape%");
-        var UnescapeFunction = createIntrinsicConstructor(intrinsics, "unescape", 0, "%Unescape%");
-        var EvalFunction = createIntrinsicConstructor(intrinsics, "eval", 0, "%Eval%");
+        var EncodeURIFunction = createIntrinsicFunction(intrinsics, "encodeURI", 0, "%EncodeURI%");
+        var DecodeURIFunction = createIntrinsicFunction(intrinsics, "ecodeURI", 0, "%DecodeURI%");
+        var EncodeURIComponentFunction = createIntrinsicFunction(intrinsics, "EncodeURIComponent", 0, "%EncodeURIComponent%");
+        var DecodeURIComponentFunction = createIntrinsicFunction(intrinsics, "DecodeURIComponent", 0, "%DecodeURIComponent%");
+        var SetTimeoutFunction = createIntrinsicFunction(intrinsics, "SetTimeout", 0, "%SetTimeout%");
+        var SetImmediateFunction = createIntrinsicFunction(intrinsics, "SetImmediate", 0, "%SetImmediate%");
+        var IsNaNFunction = createIntrinsicFunction(intrinsics, "isNaN", 0, "%IsNaN%");
+        var IsFiniteFunction = createIntrinsicFunction(intrinsics, "isFinite", 0, "%IsFinite%");
+        var ParseFloatFunction = createIntrinsicFunction(intrinsics, "parseFloat", 0, "%ParseFloat%");
+        var ParseIntFunction = createIntrinsicFunction(intrinsics, "parseInt", 0, "%ParseInt%");
+        var EscapeFunction = createIntrinsicFunction(intrinsics, "escape", 0, "%Escape%");
+        var UnescapeFunction = createIntrinsicFunction(intrinsics, "unescape", 0, "%Unescape%");
+        var EvalFunction = createIntrinsicFunction(intrinsics, "eval", 0, "%Eval%");
+        var GeneratorFunction = createIntrinsicFunction(intrinsics, "Generator", 0, "%GeneratorFunction%");
+        var LoadFunction = createIntrinsicFunction(intrinsics, "load", 0, "%Load%");
+        var RequestFunction = createIntrinsicFunction(intrinsics, "Request", 0, "%Request%");
+        var ModuleFunction = createIntrinsicFunction(intrinsics, "Module", 0, "%Module%");
+        var SymbolFunction = createIntrinsicFunction(intrinsics, "Symbol", 0, "%Symbol%");
+
         var RegExpConstructor = createIntrinsicConstructor(intrinsics, "RegExp", 0, "%RegExp%");
         var RegExpPrototype = createIntrinsicPrototype(intrinsics, "%RegExpPrototype%");
         var ProxyConstructor = createIntrinsicConstructor(intrinsics, "Proxy", 0, "%Proxy%");
@@ -13845,7 +13863,7 @@ define("lib/api", function (require, exports, module) {
         var NumberConstructor = createIntrinsicConstructor(intrinsics, "Number", 0, "%Number%");
         var NumberPrototype = createIntrinsicPrototype(intrinsics, "%NumberPrototype%");
         var StringConstructor = createIntrinsicConstructor(intrinsics, "String", 0, "%String%");
-        var StringRawFunction;
+        
         var StringPrototype = createIntrinsicPrototype(intrinsics, "%StringPrototype%");
         var StringIteratorPrototype = createIntrinsicPrototype(intrinsics, "%StringIteratorPrototype%");
         var DateConstructor = createIntrinsicConstructor(intrinsics, "Date", 0, "%Date%");
@@ -13855,12 +13873,10 @@ define("lib/api", function (require, exports, module) {
         var ArrayConstructor = createIntrinsicConstructor(intrinsics, "Array", 0, "%Array%");
         var ArrayPrototype = createIntrinsicPrototype(intrinsics, "%ArrayPrototype%");
         var ArrayIteratorPrototype = createIntrinsicPrototype(intrinsics, "%ArrayIteratorPrototype%");
-        var GeneratorFunction = createIntrinsicConstructor(intrinsics, "Generator", 0, "%GeneratorFunction%");
+        
         var GeneratorPrototype = createIntrinsicPrototype(intrinsics, "%GeneratorPrototype%");
         var GeneratorObject = createIntrinsicObject(intrinsics, "%Generator%");
         var ReflectObject = createIntrinsicObject(intrinsics, "%Reflect%");
-        //var NativeError = OrdinaryFunction();
-        var SymbolFunction = createIntrinsicConstructor(intrinsics, "Symbol", 0, "%Symbol%");
         var SymbolPrototype = createIntrinsicPrototype(intrinsics, "%SymbolPrototype%");
         var TypeErrorConstructor = createIntrinsicConstructor(intrinsics, "TypeError", 0, "%TypeError%");
         var TypeErrorPrototype = createIntrinsicPrototype(intrinsics, "%TypeErrorPrototype%");
@@ -13886,7 +13902,7 @@ define("lib/api", function (require, exports, module) {
         var SetConstructor = createIntrinsicConstructor(intrinsics, "Set", 0, "%Set%");
         var SetPrototype = createIntrinsicPrototype(intrinsics, "%SetPrototype%");
         var SetIteratorPrototype = createIntrinsicPrototype(intrinsics, "%SetIteratorPrototype%");
-        var __mapSetUniqueInternalUniqueKeyCounter__ = 0;
+    var __mapSetUniqueInternalUniqueKeyCounter__ = 0;
         var TypedArrayConstructor = createIntrinsicConstructor(intrinsics, "TypedArray", 0, "%TypedArray%");
         var TypedArrayPrototype = createIntrinsicPrototype(intrinsics, "%TypedArrayPrototype%");
         var Uint8ArrayConstructor = createIntrinsicConstructor(intrinsics, "Uint8Array", 0, "%Uint8Array%");
@@ -13914,10 +13930,7 @@ define("lib/api", function (require, exports, module) {
         var JSONObject = createIntrinsicObject(intrinsics, "%JSON%");
         var MathObject = createIntrinsicObject(intrinsics, "%Math%");
         var ConsoleObject = createIntrinsicObject(intrinsics, "%Console%");
-        
-        var LoadFunction = createIntrinsicConstructor(intrinsics, "load", 0, "%Load%");
-        var RequestFunction = createIntrinsicConstructor(intrinsics, "Request", 0, "%Request%");
-        
+
         var EmitterConstructor = createIntrinsicConstructor(intrinsics, "Emitter", 0, "%Emitter%");
         var EmitterPrototype = createIntrinsicPrototype(intrinsics, "%EmitterPrototype%");
         // Object.observe
@@ -13928,7 +13941,7 @@ define("lib/api", function (require, exports, module) {
         var LoaderIteratorPrototype = createIntrinsicPrototype(intrinsics, "%LoaderIteratorPrototype%");
         var RealmConstructor = createIntrinsicConstructor(intrinsics, "Realm", 0, "%Realm%");
         var RealmPrototype = createIntrinsicPrototype(intrinsics, "%RealmPrototype%");
-        var ModuleFunction = createIntrinsicConstructor(intrinsics, "Module", 0, "%Module%");
+        
         var ModulePrototype = null;
 
         // that is something from the dom, which is useful for communication and its messaging needs structured cloning so i can check out both
@@ -14049,8 +14062,8 @@ define("lib/api", function (require, exports, module) {
         
         function thisLoader(value) {
             if (value instanceof CompletionRecord) return thisLoader(value.value);
-            if (Type(value) === "object" && hasInternalSlot(value, "Modules")) {
-                var m = getInternalSlot(value, "Modules");
+            var m;
+            if (Type(value) === "object" && (m=getInternalSlot(value, "LoaderRecord"))) {
                 if (m !== undefined) return value;
             }
             return withError("Type", "thisLoader(value): value is not a valid loader object");
@@ -14075,7 +14088,7 @@ define("lib/api", function (require, exports, module) {
 
         // 27.1.
         function CreateLoaderRecord(realm, object) {
-            var loader = LoadRecord();
+            var loader = LoaderRecord();
             loader.Realm = realm;
             loader.Modules = [];
             loader.Loads = [];
@@ -15089,11 +15102,6 @@ dependencygrouptransitions of kind load1.Kind.
 /************************* unupdated end ****/
 
 
-
-
-        //
-        // Down: LoaderConstructor, LoaderPrototype, LoaderIteratorPrototype
-        //
         var LoaderConstructor_Call = function (thisArg, argList) {
             var options = argList[0];
             var loader = thisArg;
@@ -15101,17 +15109,23 @@ dependencygrouptransitions of kind load1.Kind.
             if (options === undefined) options = ObjectCreate();
             if (Type(loader) !== "object") return withError("Type", "Loader is not an object");
 
-            if (getInternalSlot(loader, "Modules") !== undefined) return withError("Type", "loader.[[Modules]] isnt undefined");
+            if (getInternalSlot(loader, "LoaderRecord") !== undefined) return withError("Type", "loader.[[LoaderRecord]] isnt undefined");
             if (Type(options) !== "object") return withError("Type", "the Loader constructors´ options argument is not an object");
 
             var realmObject = Get(options, "realm");
             if ((realmObject = ifAbrupt(realmObject)) && isAbrupt(realmObject)) return realmObject;
+            
             var realm;
             if (realmObject === undefined) realm = getRealm();
-            else realm = getInternalSlot(realmObject, "Realm");
+            else {
+                if ((Type(realmObject) !== "object") || !hasInternalSlot(realmObject, "RealmRecord")) {
+                    return withError("Type", "realmObject has to be an object and to have a [[RealmRecord]] internal slot");
+                }
+                var realm = getInternalSlot(realmObject, "RealmRecord");
+                if (realm === undefined) return withError("Type", "[[RealmRecord]] of a realmObject must not be undefined here.")
+            }
 
-            var exc = null;
-            var help = function (name) {
+            var define_loader_pipeline_hook = function (name) {
                 var hook = Get(options, name);
                 if ((hook = ifAbrupt(hook)) && isAbrupt(hook)) return hook;
                 if (hook !== undefined) {
@@ -15121,48 +15135,61 @@ dependencygrouptransitions of kind load1.Kind.
                         enumerable: true,
                         configurable: true
                     });
-                    if (isAbrupt(result)) exc = result;
+                    if (isAbrupt(result)) return result;
                 }
+                return NormalCompletion();
             };
-            ["normalize", "locate", "fetch", "translate", "instantiate"].forEach(help);
-            if (exc) return exc;
-            setInternalSlot(loader, "Modules", Object.create(null));
-            setInternalSlot(loader, "Loads", []);
-            setInternalSlot(loader, "Realm", realm);
+            var status = define_loader_pipeline_hook("normalize");
+            if (isAbrupt(status)) return status;
+            status = define_loader_pipeline_hook("locate");
+            if (isAbrupt(status)) return status;
+            status = define_loader_pipeline_hook("fetch");
+            if (isAbrupt(status)) return status;
+            status = define_loader_pipeline_hook("translate");
+            if (isAbrupt(status)) return status;
+            status = define_loader_pipeline_hook("instantiate");
+            if (isAbrupt(status)) return status;
+            if (getInternalSlot(loader, "LoaderRecord") !== undefined) return withError("Type", "loader.[[LoaderRecord]] seems to have been changed, expected the undefined value.")
+            
+            var loaderRecord = CreateLoaderRecord(realm, loader);
+            setInternalSlot(loader, "LoaderRecord", loaderRecord);
             return NormalCompletion(loader);
         };
 
         var LoaderConstructor_Construct = function (argList) {
-            return OrdinaryConstruct(this, argList);
+            return Construct(this, argList);
         };
 
+        // 31.1.
         var LoaderConstructor_$$create = function (thisArg, argList) {
             var F = thisArg;
             var loader = OrdinaryCreateFromConstructor(F, "%LoaderPrototype%", {
-                "Modules": undefined,
-                "Loads": undefined,
-                "Realm": undefined
+                "LoaderRecord": undefined
             });
             return loader;
         };
 
+        // 31.1.
         var LoaderPrototype_get_realm = function (thisArg, argList) {
             var loader = thisArg;
             if (Type(loader) !== "object" || !hasInternalSlot(loader, "Realm")) {
                 return withError("Type", "the this value is not a valid loader object");
             }
-            var realm = getInternalSlot(loader, "Realm");
-            return getInternalSlot(realm, "realmObject");
+            var loaderRecord = getInternalSlot(loader, "LoaderRecord");
+            var realm = loaderRecord.Realm;
+            return NormalCompletion(realm);
         };
 
+        // 31.1.
         var LoaderPrototype_get_global = function (thisArg, argList) {
             var loader = thisArg;
             if (Type(loader) !== "object" || !hasInternalSlot(loader, "Realm")) {
                 return withError("Type", "the this value is not a valid loader object");
             }
-            var realm = getInternalSlot(loader, "Realm");
+            var loaderRecord = getInternalSlot(loader, "LoaderRecord");
+            var realm = loaderRecord.Realm;
             var global = realm.globalThis;
-            return global;
+            return NormalCompletion(global);
         };
 
         var ReturnUndefined_Call = function (thisArg, argList) {
@@ -15175,124 +15202,178 @@ dependencygrouptransitions of kind load1.Kind.
             return F;
         }
 
+        // 31.1.
         var LoaderPrototype_entries = function (thisArg, argList) {
-            return CreateLoaderIterator(thisArg, "key+value");
+            var loader = thisLoader(thisArg);
+            return CreateLoaderIterator(loader, "key+value");
         };
 
         var LoaderPrototype_values = function (thisArg, argList) {
-            return CreateLoaderIterator(thisArg, "value");
+            var loader = thisLoader(thisArg);
+            return CreateLoaderIterator(loader, "value");
         };
 
         var LoaderPrototype_keys = function (thisArg, argList) {
-            return CreateLoaderIterator(thisArg, "key");
+            var loader = thisLoader(thisArg);
+            return CreateLoaderIterator(loader, "key");
         };
-
+        // 31.1.
         var LoaderPrototype_define = function (thisArg, argList) {
+            var name = argList[0];
+            var source =argList[1];
+            var options = argList[2];
             var loader = thisArg;
             if ((loader = ifAbrupt(loader)) && isAbrupt(loader)) return loader;
-            setInternalSlot(F, "Loader", loader);
-            setInternalSlot(F, "ModuleName", name);
-            setInternalSlot(F, "Step", "translate");
-            setInternalSlot(F, "ModuleMetadata", metadata);
-            setInternalSlot(F, "ModuleSource", source);
-            setInternalSlot(F, "ModuleAddress", address);
-            var Promise = getIntrinsic("%Promise%");
-            var p = OrdinaryConstruct(Promise, [F]);
-            var G = ReturnUndefined;
+            var loaderRecord = getInternalSlot(loader, "LoaderRecord");
+            name = ToString(name);
+            if ((name=ifAbrupt(name))&&isAbrupt(name)) return name;
+            var address = GetOption(options, "address");
+            if ((address = ifAbrupt(address)) && isAbrupt(address)) return address;
+            var metadata = GetOption(options, "metadata");
+            if ((metadata = ifAbrupt(metadata)) && isAbrupt(metadata)) return metadata;
+            if (metadat === undefined) metadata = ObjectCreate();
+            var p = PromiseOfStartLoadPartWayThrough("translate", loaderRecord, name, metadata, source, address);
+            if ((p=ifAbrupt(p)) && isAbrupt(p)) return p;
+            var G = ReturnUndefined();
             p = PromiseThen(p, G);
             return p;
         };
+
+        // 31.1.
         var LoaderPrototype_load = function (thisArg, argList) {
-            var request = argList[0];
+            var name = argList[0];
             var options = argList[1];
             var loader = thisLoader(thisArg);
             if ((loader =ifAbrupt(loader)) && isAbrupt(loader)) return loader;
-            var p = LoadModule(loader, request, options);
+            var loaderRecord = getInternalSlot(loader,"LoaderRecord");
+            var p = LoadModule(loader, name, options);
+            if ((p=ifAbrupt(p)) && isAbrupt(p)) return p;
             var F = ReturnUndefined(); 
             p = PromiseThen(p, F);
             return p;
         };
 
+        // 31.1.
         var LoaderPrototype_module = function (thisArg, argList) {
+            var source = argList[0];
+            var options = argList[1];
             var loader = thisLoader(thisArg);
             if ((loader=ifAbrupt(loader)) && isAbrupt(loader)) return loader;
+            var loaderRecord = getInternalSlot(loader, "LoaderRecord");
             var address = GetOption(options, "address");
             if ((address=ifAbrupt(address)) && isAbrupt(address)) return address;
             var load = CreateLoad(undefined);
             load.Address = address;
-            var linkSet = CreateLinkSet(loader, load);
+            var linkSet = CreateLinkSet(loaderRecord, load);
             var successCallback = EvaluateLoadedModule();
-            setInternalSlot(successCallback, "Loader", loader);
+            setInternalSlot(successCallback, "Loader", loaderRecord);
             setInternalSlot(successCallback, "Load", load);
-            var p = PromiseThen(linkSet.done, successCallback);
+            var p = PromiseThen(linkSet.Done, successCallback)
             var sourcePromise = PromiseOf(source);
             ProceedToTranslate(loader, load, sourcePromise);
-            return p;
+            return NormalCompletion(p);
         };
 
+        // 31.1.
         var LoaderPrototype_import = function (thisArg, argList) {
             var name = argList[0];
             var options = argList[1];
             var loader = thisLoader(thisArg);
             if ((loader=ifAbrupt(loader)) && isAbrupt(loader)) return loader;
-            var p = LoadModule(loader, name, options);
-            if ((p=ifAbrupt(p)) && isAbrupt(p)) return p;
+            var loaderRecord = getInternalSlot(loader, "LoaderRecord");
+            var p = LoadModule(loaderRecord, name, option);
+            if ((p=ifAbrupt(p))&&isAbrupt(p)) return p;
             var F = EvaluateLoadedModule();
-            setInternalSlot(F, "Loader", loader);
-            p = PromiseThen(p, F);
+            setInternalSlot(F, "Loader", loaderRecord)
+            var p = PromiseThen(p, F);
             return p;
         };
+
+        // 31.1.
         var LoaderPrototype_eval = function (thisArg, argList) {
             var source = argList[0];
             var loader = thisLoader(thisArg);
             if ((loader=ifAbrupt(loader)) && isAbrupt(loader)) return loader;
-            return IndirectEval(getInternalSlot(loader, "Realm"), source);
+            var loaderRecord = getInternalSlot(loader, "LoaderRecord");
+            return IndirectEval(loaderRecord.Realm, source);
         };
 
-
+        // 31.1.
         var LoaderPrototype_get = function (thisArg, argList) {
             var loader = thisLoader(thisArg);
             if ((loader=ifAbrupt(loader)) && isAbrupt(loader)) return loader;
             var name = ToString(argList[0]);
             if ((name=ifAbrupt(name)) && isAbrupt(name)) return name;
+            var loaderRecord = getInternalSlot(loader, "LoaderRecord");
 
-            var modules = getInternalSlot(loader, "Modules");
-            if (modules[name]) {
-                var module = modules[name];
-                var result = EnsureEvaluated(module, [], loader);
+            var modules = loaderRecord.Modules;
+            var record, module;
+            if ((record = getRecordInList(modules, "Key", name))) {
+                var module = p.Value;
+                var result = EnsureEvaluated(module, [], loaderRecord);
                 if ((result=ifAbrupt(result)) && isAbrupt(result)) return result;
                 return NormalCompletion(module);
+                // has typo/bug in spec, let module = p.value. ensureenv(module) but return p.value
             }
             return NormalCompletion(undefined);
         };
+        // 31.1.
         var LoaderPrototype_has = function (thisArg, argList) {
             var loader = thisLoader(thisArg);
             if ((loader=ifAbrupt(loader)) && isAbrupt(loader)) return loader;
             var name = ToString(argList[0]);
             if ((name=ifAbrupt(name)) && isAbrupt(name)) return name;
 
-            var modules = getInternalSlot(loader, "Modules");
-            if (modules[name]) {
+            var loaderRecord = getInternalSlot(loader, "LoaderRecord");
+            var modules = loaderRecord.Modules;
+            if (hasRecordInList(modules, "Key", name)) return NormalCompletion(true);
+            /*  refactoring hasRecord in list. must result in this:
+                if (modules[name]) {  
                 return NormalCompletion(true);
-            }
+            }*/
             return NormalCompletion(false);
 
         };
+        // 31.1.
         var LoaderPrototype_set = function (thisArg, argList) {
             var name = argList[0];
             var module = argList[1];
             var loader = thisLoader(thisArg);
             if ((loader=ifAbrupt(loader)) && isAbrupt(loader)) return loader;
             var loaderRecord = getInternalSlot(loader, "Loader");
+
             var name = ToString(name);
             if ((name=ifAbrupt(name)) && isAbrupt(name)) return name;
             if (Type(module) !== "object") return withError("Type", "module is not an object");
             var modules = loaderRecord.Modules;
-            modules[name] = module;
+            var p;
+            if (p=getRecordInList(modules, "Key", name)) {
+                p.Value = module;
+                return NormalCompletion(loader);
+            }
+            p = { Key: name, Value: module };
+            loaderRecord.Modules.push(p);
             return NormalCompletion(loader);
         };
+        // 31.1.
         var LoaderPrototype_delete = function (thisArg, argList) {
-
+                var name = argList[0];
+                var loader = thisLoader(thisArg);
+                if ((loader=ifAbrupt(loader)) && isAbrupt(loader)) return loader;
+                var loaderRecord = getInternalSlot(loader, "LoaderRecord");
+                name = ToString(name);
+                if ((name=ifAbrupt(name)) && isAbrupt(name)) return name;
+                var modules = loaderRecord.Modules;
+                for (var i = 0, j = modules.length; i < j; i++) {
+                    var p = modules[i];
+                    if (SameValue(p.Key, name)) {
+                        // remove them from list otherwhere
+                        p.Key = empty;
+                        p.Value = empty;        
+                        return NormalCompletion(true);
+                    }
+                }
+                return NormalCompletion(false);
         };
         var LoaderPrototype_normalize = function (thisArg, argList) {
             var name = argList[0];
@@ -15302,11 +15383,11 @@ dependencygrouptransitions of kind load1.Kind.
             return NormalCompletion(name);
         };
         var LoaderPrototype_locate = function (thisArg, argList) {
-            var loadRequest = argList[0];
+            var loadRequest = argList[0];r
             return Get(loadRequest, "name");
         };
         var LoaderPrototype_fetch = function (thisArg, argList) {
-            return withError("Type", "The Loader.prototype.fetch function is supposed to throw a type error.")
+            return withError("Type", "The Loader.prototype.fetch function is supposed to throw a type error.");
         };
         var LoaderPrototype_translate = function (thisArg, argList) {
             var load = argList[0];
@@ -15354,24 +15435,46 @@ dependencygrouptransitions of kind load1.Kind.
         // Der Loader Iterator
         // ##################################################################
 
+        // 31.1.
         function CreateLoaderIterator(loader, kind) {
             var loaderIterator = ObjectCreate(LoaderIteratorPrototype, {
                 "Loader": loader,
-                "ModuleMapNextIndex": 0,
-                "MapIterationKind": kind
+                "LoaderNextIndex": 0,
+                "LoaderIterationKind": kind
             });
             return loaderIterator;
         }
-
+        // 31.1.
         var LoaderIteratorPrototype_next = function next(thisArg, argList) {
             var iterator = thisArg;
-            var loader = getInternalSlot(iterator, "Loader");
-            var nextIndex = getInternalSlot(iterator, "ModuleMapNextIndex");
-            var kind = getInternalSlot(iterator, "MapIterationKind");
-            var nextValue;
-            return nextValue;
+            var loaderRecord = getInternalSlot(iterator, "LoaderRecord");
+            var m = getInternalSlot(iterator, "Loader");
+            var index = getInternalSlot(iterator, "LoaderNextIndex");
+            var itemKind = getInternalSlot(iterator, "LoaderIterationKind");
+            if (m === undefined) return CreateItrResultObject(undefined, true);
+            var result;
+            var entries = loaderRecord.Modules;
+            while (index < entries.length) {
+                var e = entries[index];
+                index = index + 1;
+                setInternalSlot(iterator, "LoaderNextIndex", index);
+                if (e.Key !== empty) {
+                    if (itemKind === "key") result = e.Key;
+                    else if (itemKind === "value") result = e.Value;
+                    else {
+                        Assert(itemKind==="key+value", "itemKind has to be key+value here");
+                        result = ArrayCreate(2);
+                        CreateDataProperty(result, "0", e.Key);
+                        CreateDataProperty(result, "1", e.Value);
+                    }
+                    return CreateItrResultObject(result, false);
+                }
+            }
+            setInternalSlot(iterator, "Loader", undefined);
+            return CreateItrResultObject(undefined, true);
         };
 
+        // 31.1.
         var LoaderIteratorPrototype_$$iterator = function $$iterator(thisArg, argList) {
             return thisArg;
         };
@@ -15380,9 +15483,36 @@ dependencygrouptransitions of kind load1.Kind.
         LazyDefineProperty(LoaderIteratorPrototype, "next", CreateBuiltinFunction(realm, LoaderIteratorPrototype_next, 0, "next"));
         LazyDefineProperty(LoaderIteratorPrototype, $$toStringTag, "Loader Iterator");
 
-        // ##################################################################
-        // Loader Operationen 
-        // ##################################################################
+
+        // 31.1. 
+        function newModule (obj) {
+            if (Type(obj) !== "object") return withError("Type", "newModule: obj is not an object");
+            var mod = CreateLinkedModuleInstance();
+            var keys = OwnPropertyKeysAsList(obj);
+            if ((keys=ifAbrupt(keys)) && isAbrupt(keys)) return keys;
+            for (var i = 0, j = keys.length; i < j; i++) {
+                var key = keys[i];
+                var value = Get(obj, key);
+                if ((value=ifAbrupt(value)) && isAbrupt(value)) return value;
+                var F = CreateConstantGetter(key, value);
+                var desc = {
+                    configurable: false,
+                    enumerable: true,
+                    get: F,
+                    set: undefined
+                };
+                var status = DefinePropertyOrThrow(mod, key, desc);
+            }
+            callInternalSlot("PreventExtensions", mod);
+            return NormalCompletion(mod);
+        }
+
+
+
+
+
+
+
 
         // ===========================================================================================================
         // %ThrowTypeError%
@@ -16693,7 +16823,7 @@ dependencygrouptransitions of kind load1.Kind.
             configurable: true
         });
 
-        StringRawFunction = CreateBuiltinFunction(realm, function raw(thisArg, argList) {
+        var StringRawFunction = CreateBuiltinFunction(realm, function raw(thisArg, argList) {
             // String.raw(callSite, ...substitutions)
 
             var callSite = argList[0];
