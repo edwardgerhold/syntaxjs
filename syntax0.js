@@ -17177,16 +17177,12 @@ dependencygrouptransitions of kind load1.Kind.
         LazyDefineBuiltinFunction(StringPrototype, "search", 1, StringPrototype_search);
         LazyDefineBuiltinFunction(StringPrototype, "startsWith", 1, StringPrototype_startsWith);
         LazyDefineBuiltinFunction(StringPrototype, "toArray", 0, StringPrototype_toArray);
-
         LazyDefineBuiltinFunction(StringPrototype, "toLowerCase", 0, StringPrototype_toLowerCase);
         LazyDefineBuiltinFunction(StringPrototype, "toUpperCase", 0, StringPrototype_toUpperCase);        
-
         LazyDefineBuiltinFunction(StringPrototype, "trim", 1, StringPrototype_trim);        
         LazyDefineBuiltinFunction(StringPrototype, "valueOf", 0, StringPrototype_valueOf);
-
-
         LazyDefineBuiltinConstant(StringPrototype, $$toStringTag, "String");
-        MakeConstructor(StringConstructor, false, StringPrototype);
+        MakeConstructor(StringConstructor, true, StringPrototype);
         // ===========================================================================================================
         // String Iterator
         // ===========================================================================================================
