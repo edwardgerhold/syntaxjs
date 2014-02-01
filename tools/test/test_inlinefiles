@@ -1,0 +1,2 @@
+node ../inlinefiles.js in0.js out.js
+node out.js
