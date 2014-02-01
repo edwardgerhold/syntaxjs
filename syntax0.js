@@ -14845,7 +14845,7 @@ dependencygrouptransitions of kind load1.Kind.
                     }
                 }
             }
-            setInternalSlot(M, "ExportDefinitions", defs);
+            setInteranlSlot(M, "ExportDefinitions", defs);
             return defs;
         }
 
@@ -15086,17 +15086,6 @@ dependencygrouptransitions of kind load1.Kind.
             });
             return mod;
         }
-
-        var ConstantFunction_Call = function (thisArg, argList) {
-            return getInternalSlot(this, "ConstantValue");
-        };
-
-        function CreateConstantGetter(key, value) {
-            var getter = CreateBuiltinFunction(getRealm(), ConstantFunction_Call, 0, "get " + key);
-            setInternalSlot(getter, "ConstantValue", value);
-            return getter;
-        }
-
         function Module(obj) {
             if (Type(obj) !== "object") return withError("Type", "module obj is not an object");
             var mod = OrdinaryModule();
@@ -15527,12 +15516,15 @@ dependencygrouptransitions of kind load1.Kind.
             return NormalCompletion(mod);
         }
 
+        var ConstantFunction_Call = function (thisArg, argList) {
+            return getInternalSlot(this, "ConstantValue");
+        };
 
-
-
-
-
-
+        function CreateConstantGetter(key, value) {
+            var getter = CreateBuiltinFunction(getRealm(), ConstantFunction_Call, 0, "get " + key);
+            setInternalSlot(getter, "ConstantValue", value);
+            return getter;
+        }
 
         // ===========================================================================================================
         // %ThrowTypeError%
@@ -17163,11 +17155,103 @@ dependencygrouptransitions of kind load1.Kind.
         };
 
 
+        var StringPrototype_codePointAt = function (thisArg, argList) {
+            var O = CheckObjectCoercible(thisArg);
+            if ((O = ifAbrupt(O)) && isAbrupt(O)) return O;
+            var S = ToString(O);
+            if ((S = ifAbrupt(S)) && isAbrupt(S)) return S;
+            var position = ToInteger(pos);
+            var size = S.length;
+            if (position < 0 || position >= size) return NormalCompletion(undefined);
+            var first = S.charCodeAt(position);
+            if (first < 0xD800 || first > 0xDBFF || (position+1===size)) return S;
+            var second = S.charCodeAt(position+1);
+            if (second < 0xDC00 || second > 0xDFFF) return NormalCompletion(first);
+            var result = (((first - 0xD800)*1024) + (second - 0xDC00)) + 0x10000;
+            return NormalCompletion(result);
+        };
 
-        LazyDefineBuiltinFunction(StringPrototype, "charAt", 0, StringPrototype_charAt);
-        LazyDefineBuiltinFunction(StringPrototype, "charCode", 0, StringPrototype_charCodeAt);
-        LazyDefineBuiltinFunction(StringPrototype, "contains", 0, StringPrototype_contains);
+        var StringPrototype_concat = function (thisArg, argList) {
+            var O = CheckObjectCoercible(thisArg);
+            if ((O = ifAbrupt(O)) && isAbrupt(O)) return O;
+            var S = ToString(O);
+            if ((S = ifAbrupt(S)) && isAbrupt(S)) return S;
+            var R = S;
+            var next;
+            for (var i = 0, j = argList.length; i < j; i++ ) {
+                var next = argList[i];
+                var nextString = ToString(next);
+                if ((nextString = ifAbrupt(nextString)) && isAbrupt(nextString)) return nextString;
+                R = R + next;
+            }
+            return NormalCompletion(R);
+        };
+
+        var StringPrototype_indexOf = function (thisArg, argList) {
+            var searchString = argList[0];
+            var position = argList[1];
+            var O = CheckObjectCoercible(thisArg);
+            if ((O = ifAbrupt(O)) && isAbrupt(O)) return O;
+            var S = ToString(O);
+            if ((S = ifAbrupt(S)) && isAbrupt(S)) return S;
+            var searchStr = ToString(searchStr);
+            var pos = position | 0;
+            var len = S.length;
+            var start = min(max(pos, 0), len);
+            var searchLen = searchStr.length;
+            outer:
+            for (var i = 0, j = (S.length-searchLen); i < j; i++) {
+                var ch = S[i];
+                if (ch === searchStr[0]) {
+                    var k = 0;
+                    while (k < searchLen) {
+                        if (S[i+k] !== searchStr[k]) continue outer;
+                        k = k + 1;
+                    }
+                    return NormalCompletion(i);
+                }
+            }
+            return NormalCompletion(-1);
+        };
+
+
+        var StringPrototype_lastIndexOf = function (thisArg, argList)   {
+            var searchString = argList[0];
+            var position = argList[1];
+            var O = CheckObjectCoercible(thisArg);
+            if ((O = ifAbrupt(O)) && isAbrupt(O)) return O;
+            var S = ToString(O);
+            if ((S = ifAbrupt(S)) && isAbrupt(S)) return S;
+            var numPos = ToNumber(position);
+            if ((numPos=ifAbrupt(numPos)) && isAbrupt(numPos)) return numPos;
+            var pos;
+            if (numPos !== numPos) pos = Infinity;
+            else pos = numPos|0;
+            var start = min(max(pos, 0), len);
+            var searchLen = searchStr.length;
+
+
+        };
+
+        var StringPrototype_localeCompare = function (thisArg, argList) {
+            var that = argList[0];
+            var O = CheckObjectCoercible(thisArg);
+            if ((O = ifAbrupt(O)) && isAbrupt(O)) return O;
+            var S = ToString(O);
+            if ((S = ifAbrupt(S)) && isAbrupt(S)) return S;
+            var That = ToString(that);
+            if ((that = ifAbrupt(that)) && isAbrupt(that)) return that;
+            return NormalCompletion(undefined);
+        };
+
+        LazyDefineBuiltinFunction(StringPrototype, "charAt", 1, StringPrototype_charAt);
+        LazyDefineBuiltinFunction(StringPrototype, "charCode", 1, StringPrototype_charCodeAt);
+        LazyDefineBuiltinFunction(StringPrototype, "codePointAt", 1, StringPrototype_codePointAt);
+        LazyDefineBuiltinFunction(StringPrototype, "concat", 1, StringPrototype_concat);
+        LazyDefineBuiltinFunction(StringPrototype, "contains", 1, StringPrototype_contains);
+
         LazyDefineBuiltinFunction(StringPrototype, "endsWith", 1, StringPrototype_endsWith);
+        LazyDefineBuiltinFunction(StringPrototype, "indexOf", 1, StringPrototype_indexOf);
         LazyDefineBuiltinFunction(StringPrototype, "lpad", 1, StringPrototype_lpad);
         LazyDefineBuiltinFunction(StringPrototype, "rpad", 1, StringPrototype_rpad);
         LazyDefineBuiltinFunction(StringPrototype, "match", 0, StringPrototype_match);
@@ -17177,6 +17261,7 @@ dependencygrouptransitions of kind load1.Kind.
         LazyDefineBuiltinFunction(StringPrototype, "search", 1, StringPrototype_search);
         LazyDefineBuiltinFunction(StringPrototype, "startsWith", 1, StringPrototype_startsWith);
         LazyDefineBuiltinFunction(StringPrototype, "toArray", 0, StringPrototype_toArray);
+        LazyDefineBuiltinFunction(StringPrototype, "toLocaleCompare", 0, StringPrototype_localeCompare);
         LazyDefineBuiltinFunction(StringPrototype, "toLowerCase", 0, StringPrototype_toLowerCase);
         LazyDefineBuiltinFunction(StringPrototype, "toUpperCase", 0, StringPrototype_toUpperCase);        
         LazyDefineBuiltinFunction(StringPrototype, "trim", 1, StringPrototype_trim);        
@@ -17280,23 +17365,21 @@ dependencygrouptransitions of kind load1.Kind.
             var O = thisArg;
             var value = argList[0];
             var b = ToBoolean(value);
-            if (Type(O) === "object" && hasInternalSlot(O, "BooleanData") && typeof getInternalSlot(O, "BooleanData") !== "boolean") {
+            if (Type(O) === "object" && hasInternalSlot(O, "BooleanData") && getInternalSlot(O, "BooleanData") === undefined) {
                 setInternalSlot(O, "BooleanData", b);
-                return O;
+                return NormalCompletion(O);
             }
-            return b;
+            return NormalCompletion(b);
         });
         setInternalSlot(BooleanConstructor, "Construct", function Construct(argList) {
-            var F = this;
-            var argumentsList = argList;
-            return OrdinaryConstruct(F, argumentsList);
+            return OrdinaryConstruct(this, argList);
         });
         MakeConstructor(BooleanConstructor, true, BooleanPrototype);
         DefineOwnProperty(BooleanConstructor, $$create, {
             value: CreateBuiltinFunction(realm, function (thisArg, argList) {
                 var F = thisArg;
                 var obj = OrdinaryCreateFromConstructor(F, "%BooleanPrototype%", {
-                    "BooleanData": null
+                    "BooleanData": undefined
                 });
                 return obj;
             }),
