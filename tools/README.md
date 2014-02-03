@@ -5,7 +5,6 @@ tools:
 * returnifabrupt.js - contains a function to replace ReturnIfAbrupt(x) with the long form.
     I should have used macros from the beginning on, but most of the newbies get cleverer later..
 
-
 tester.js
 ========
 
@@ -73,12 +72,11 @@ promise.js
 =========
 
 This fails 65 and succeeds in 133 tests or around 1/3 in a promise aplus test.
-Maybe it has bugs. I have not used it in practice yet. But this file is the
-placeholder for _the_ promise i will use for the tools here, coz that´s my 
-best attempt to write one so far. This was developed cleanly and fast with the
-little knowledge i have about. The result says 1/3 fails, or it has unseen bugs.
-But it creates new Promises and uses setTimeout, so i think i can use it as
-placeholder for a compliant promise.
+There a points i am missing about the construction and architecture of promises,
+and maybe it has just bugs i haven´t seen. It was written "cleanly" (in much 
+under half an hour) and while ringing for words i see this as placeholder for the
+Promise i will using during development of possible additions. There is still an
+unsolved Communicationsproblem with other Vats, where this will apply certainly.
 
 ```javascript
 
