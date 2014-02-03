@@ -3963,6 +3963,7 @@ define("lib/parser", ["lib/tables", "lib/tokenizer"], function (tables, tokenize
         ps.stacks["Default"] = [];
         ps.stacks["GeneratorParameter"] = [];
         ps.stacks["In"] = [];
+        ps.stacks["NoReference"] = [];
         ps.stacks["Return"] = [];
         ps.stacks["Yield"] = [];
         return ps;
@@ -4002,13 +4003,13 @@ define("lib/parser", ["lib/tables", "lib/tokenizer"], function (tables, tokenize
         "use strict";
 
         // Parameter
-        var ps = Object.create(ParameterStack.prototype);
-        ps.stacks = Object.create(null);
-        ps.stacks["Default"] = [];
-        ps.stacks["GeneratorParameter"] = [];
-        ps.stacks["In"] = [];
-        ps.stacks["Return"] = [];
-        ps.stacks["Yield"] = [];
+        var parameters = Object.create(null);
+        parameters["Default"] = [];
+        parameters["GeneratorParameter"] = [];
+        parameters["NoReference"] = [];
+        parameters["In"] = [];
+        parameters["Return"] = [];
+        parameters["Yield"] = [];
       
         // Contains
         var container = Object.create(null);
@@ -4056,19 +4057,18 @@ define("lib/parser", ["lib/tables", "lib/tokenizer"], function (tables, tokenize
         // Parameter 
 
         function getParameter(name) {
-            var stack = ps.stacks[name];
-            return stack[stack.length-1];
+    	    var parameter = parameters[name];
+            return parameter[parameter.length-1];
         }
         
         function newParameter(name, value) {
-            var stack = ps.stacks[name];
-            stack.push(value);
-            return value;
+            var parameter = parameters[name];
+    	    return parameter.push(value);
         }
 
         function popParameter(name) {
-            var stack = ps.stacks[name];
-            return stack.pop();
+            var parameter = parameters[name];
+            return parameter.pop();
         }
 
         // Variable Environment
