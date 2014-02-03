@@ -5735,7 +5735,6 @@ define("lib/parser", ["lib/tables", "lib/tokenizer"], function (tables, tokenize
         var node, m;
         if (v === "class") {
 
-            pushState("class");
             staticSemantics.newVarEnv();
 
             node = Node("ClassDeclaration");
@@ -5747,8 +5746,8 @@ define("lib/parser", ["lib/tables", "lib/tokenizer"], function (tables, tokenize
             pass("class");
             var id = this.Identifier();
             node.id = id.name;
-
-            scope.addLexBinding(id);
+            
+            staticSemantics.addLexBinding(id);
 
             if (v === "extends") {
                 pass("extends");
@@ -5765,7 +5764,6 @@ define("lib/parser", ["lib/tables", "lib/tokenizer"], function (tables, tokenize
             pass("}");
             
             staticSemantics.popEnvs();
-            popState();
             if (compile) return builder["classExpression"](node.id, node.extends, node.elements, node.loc);
             return node;
         }
@@ -16912,17 +16910,99 @@ dependencygrouptransitions of kind load1.Kind.
             return result;
         }
 
-        var StringPrototype_normalize = function (thisArg, argList) {
+        var normalizeOneOfs = {
+            "NFC":true,
+            "NFD":true,
+            "NFKC":true,
+            "NFKD":true
+        };
 
+        var StringPrototype_normalize = function (thisArg, argList) {
+            var form = argList[0];
+            var S = CheckObjectCoercible(thisArg);
+            if ((S = ifAbrupt(S)) && isAbrupt(S)) return S;
+            S = ToString(S);
+            if ((S = ifAbrupt(S)) && isAbrupt(S)) return S;
+            if (form === undefined) from = "NFC";
+            var f = ToString(form);
+            if ((f = ifAbrupt(f)) && ifAbrupt(f)) return f;
+            if (!normalizeOneOfs[f]) return withError("Range", "f is not one of nfc, nfd, nfkc, nfkd.")
+            if (S.normalize) {
+                // powers of native es.
+                var ns = S.normalize(f);
+            } else {
+                // off point, but a fill-in
+                ns = ""+S;
+            }
+            return NormalCompletion(ns);
         };
 
         var StringPrototype_replace = function (thisArg, argList) {
+            var searchValue = argList[0];
+            var replaceValue = argList[1];
+            var S = CheckObjectCoercible(thisArg);
+            if ((S = ifAbrupt(S)) && isAbrupt(S)) return S;
+            S = ToString(S);
+            if ((S = ifAbrupt(S)) && isAbrupt(S)) return S;
+            if (Type(searchValue) === "object") && HasProperty(searchValue, $$isRegExp)) {
+                return Invoke(searchValue, "replace", [string, replaceValue]);
+            }
+            var searchString = ToString(searchValue);
+            if ((searchString=ifAbrupt(searchString)) && isAbrupt(searchString)) return searchString;
+            var i = 0;
+            var len = S.length;
+            var searchLen = searchString.length;
+            while (i < len) {
+                if ((S[i] == searchString[0]) && (S[i+searchLen-1] == searchString[searchLen-1])) {
+                    var k = 0;
+                    var match = true;
+                    while (k < searchLen) {
+                        if (S[k] !== searchString[k]) {
+                            match = false;
+                            break;
+                        }
+                        k = k + 1;
+                    }
 
+                    if (match) {
+                        matched = searchString;
+                        if (IsCallable(replaceValue)) {
+                            var replValue = callInternalSlot("Call", replaceValue, undefined, [matched, pos, string])
+                            if ((replValue=ifAbrupt(replValue)) && isAbrupt(replValue)) return replValue;
+                            var replStr = ToString(replValue);
+                            if ((replStr=ifAbrupt(replStr)) && isAbrupt(replStr)) return replStr;
+
+                        } else {
+                            var capstures = [];
+                            var replStr = GetReplaceSubstitution(matched, string, pos, captures);
+
+                        }
+                        var tailPos = pos - matched.length;
+                        var newString;
+
+
+                    }
+                }
+                i = i + 1;
+            }
+            return NormalCompletion(string);
         };
         var StringPrototype_match = function (thisArg, argList) {
-
+            var regexp = argList[0];
+            var S = CheckObjectCoercible(thisArg);
+            if ((S = ifAbrupt(S)) && isAbrupt(S)) return S;
+            S = ToString(S);
+            if ((S = ifAbrupt(S)) && isAbrupt(S)) return S;
+            var rx;
+            if (Type(regexp) === "object" && HasProperty(regexp, $$isRegExp)) {
+                rx = regexp;
+            } else {
+                rx = RegExpCreate(regexp, undefined);
+            }
+            if ((rx=ifAbrupt(rx)) && isAbrupt(rx)) return rx;
+            return Invoke(rx, "match", []);
         };
-        var StringPrototype_repeat = function (thisArg, argList) {
+        var StringPrototype_repeat = functoin (thisArg, argList) {
             var count = argList[0];
             var S = CheckObjectCoercible(thisArg);
             if ((S = ifAbrupt(S)) && isAbrupt(S)) return S;
@@ -17038,7 +17118,7 @@ dependencygrouptransitions of kind load1.Kind.
             var O = CheckObjectCoercible(thisArg);
             if ((O = ifAbrupt(O)) && isAbrupt(O)) return O;
             var S = ToString(O);
-            if ((S = ifAbrupt(S)) && isAbrupt(S)) return S;sy
+            if ((S = ifAbrupt(S)) && isAbrupt(S)) return S;
             var T;
             T = S.replace(trim_leading_space_expr, "");
             T = T.replace(trim_trailing_space_expr, "");
@@ -17103,6 +17183,27 @@ dependencygrouptransitions of kind load1.Kind.
             var C = S.charCodeAt(index);
             return NormalCompletion(C);
 
+        };
+
+        var StringPrototype_split = function (thisArg, argList) {
+            var separator = argList[0];
+            var limit = argList[1];
+            var O = CheckObjectCoercible(thisArg);
+            if ((O = ifAbrupt(O)) && isAbrupt(O)) return O;
+            if (Type(separator) === "object" && HasProperty(separator, $$isRegExp)) {
+                return Invoke(separator, "split", [O, limit]);
+            }
+            var S = ToString(O);
+            if ((S = ifAbrupt(S)) && isAbrupt(S)) return S;
+            var A = ArrayCreate(0);
+            var lengthA = 0;
+            var lim;
+            if (limit === undefined) lim = Math.pow(2,53)-1;
+            else lim = ToLength(limit);
+            var s = S.length;
+            var p = 0;
+            var R = ToString(separator);
+          
         };
 
         // http://wiki.ecmascript.org/doku.php?id=strawman:strawman
@@ -17356,7 +17457,7 @@ dependencygrouptransitions of kind load1.Kind.
             setInternalSlot(iterator, "IterationKind", kind);
             return iterator;
         }
-
+        
         // ===========================================================================================================
         // Boolean Constructor and Prototype
         // ===========================================================================================================
@@ -25743,6 +25844,7 @@ define("lib/runtime", ["lib/parser", "lib/api", "lib/slower-static-semantics"], 
         }
 
         Proto = ObjectCreate(protoParent);
+
         var lex = getLexEnv();
         var scope = NewDeclarativeEnvironment(lex);
         if (className) {
@@ -27514,6 +27616,7 @@ define("lib/syntaxjs-shell", function (require, exports) {
                 try {
                     val = syntaxjs.toValue(code, true);
                 } catch (ex) {
+            	    console.dir(ex);
                     val = ex.message + "\n" + ("" + ex.stack).split("\n").join("\n");
                 } finally {
                     console.log(val);
@@ -27576,7 +27679,7 @@ define("lib/syntaxjs-shell", function (require, exports) {
         }
         
         //
-        // prompt is now called again, and the inputBuffer is prepending the new inputted code.
+        // prompt is now called again, and the savedInput is prepending the new inputted code.
         //
 
         prompt = function prompt() {
@@ -27584,7 +27687,7 @@ define("lib/syntaxjs-shell", function (require, exports) {
             rl.question(prefix, function (code) {
 
                 if (code === ".break") {
-                    inputBuffer = "";
+                    savedInput = "";
                     prefix = defaultPrefix;
                     setTimeout(prompt);
                     return;
