@@ -1,3 +1,11 @@
+tools:
+* tester.js - simple tool with standard node.js style assertions and console and browser logging.
+* promise.js - handwritten promise (caution: not a+ compliant now! has mistakes!)
+* inlinefiles.js - Tool to recursivly inline files in a file.
+* returnifabrupt.js - contains a function to replace ReturnIfAbrupt(x) with the long form.
+    I should have used macros from the beginning on, but most of the newbies get cleverer later..
+
+
 tester.js
 ========
 
@@ -88,3 +96,4 @@ var promise2 = promise.then(function (value) { return value + "stuff"; }, functi
 // It exports the aplus test adapter with deferred, resolve, reject and the makePromise.
     
 ```
+
