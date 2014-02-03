@@ -16944,7 +16944,7 @@ dependencygrouptransitions of kind load1.Kind.
             if ((S = ifAbrupt(S)) && isAbrupt(S)) return S;
             S = ToString(S);
             if ((S = ifAbrupt(S)) && isAbrupt(S)) return S;
-            if (Type(searchValue) === "object") && HasProperty(searchValue, $$isRegExp)) {
+            if (Type(searchValue) === "object" && HasProperty(searchValue, $$isRegExp)) {
                 return Invoke(searchValue, "replace", [string, replaceValue]);
             }
             var searchString = ToString(searchValue);
@@ -17002,7 +17002,7 @@ dependencygrouptransitions of kind load1.Kind.
             if ((rx=ifAbrupt(rx)) && isAbrupt(rx)) return rx;
             return Invoke(rx, "match", []);
         };
-        var StringPrototype_repeat = functoin (thisArg, argList) {
+        var StringPrototype_repeat = function (thisArg, argList) {
             var count = argList[0];
             var S = CheckObjectCoercible(thisArg);
             if ((S = ifAbrupt(S)) && isAbrupt(S)) return S;
