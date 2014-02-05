@@ -3812,8 +3812,8 @@ define("lib/parser", ["lib/tables", "lib/tokenizer"], function (tables, tokenize
     //
     // VERY IMPORTANT
     //
-    var rhs, rhst;
-    var lhs, lhst;
+    var rhs, rhst; // lookahead
+    
     var tokens;
     var T = Object.create(null); // current token
     var t; // current token type
@@ -4365,7 +4365,6 @@ define("lib/parser", ["lib/tables", "lib/tokenizer"], function (tables, tokenize
 
         if (i < j) {
 
-            lhs = T;
             i += 1;
 
             lastloc = loc;
@@ -4522,9 +4521,9 @@ define("lib/parser", ["lib/tables", "lib/tokenizer"], function (tables, tokenize
             if (v === ",") {
                 if (rhs !== ",") pass(",");
                 continue;
-            } else if (v !== "]") {
+            } /*else if (v !== "]") {
                 throwError(new SyntaxError("buggy element list"));
-            }
+            }*/
 
         } while (v && v !== "]");
 
@@ -5342,7 +5341,9 @@ define("lib/parser", ["lib/tables", "lib/tokenizer"], function (tables, tokenize
 
     parser.AssignmentExpression = AssignmentExpression;
 
-    function AssignmentExpression(parent) {
+
+
+    function AssignmentExpression(parent) { // der parent parameter ist völlig dummsinnig. Aber wiederaufnahme der rekursion wäre gut. Für einen anderen Fall.
 
         var node = null,
             leftHand, l1, l2;
@@ -5844,7 +5845,7 @@ define("lib/parser", ["lib/tables", "lib/tokenizer"], function (tables, tokenize
                     list.push(id);
                 } else if (StartBinding[v]) {
                     id = this.BindingPattern();
-                    if (id) list.push(id);
+                    list.push(id);
                 } else if (t === "Identifier") {
                     if (rhs == "=") {
                         id = this.DefaultParameter();
@@ -5852,7 +5853,7 @@ define("lib/parser", ["lib/tables", "lib/tokenizer"], function (tables, tokenize
                         id = this.Identifier();
                         staticSemantics.addLexBinding(id.name);
                     }
-                    if (id) list.push(id);
+                    list.push(id);
                 }
 
                 if (v === ",") {
@@ -5943,7 +5944,7 @@ define("lib/parser", ["lib/tables", "lib/tokenizer"], function (tables, tokenize
 
             staticSemantics.newVarEnv();
             staticSemantics.newContainer();
-
+  
             if (id && isExpr) staticSemantics.addVarBinding(id.name);
 
             pass("(");
@@ -6256,18 +6257,19 @@ define("lib/parser", ["lib/tables", "lib/tokenizer"], function (tables, tokenize
 
             staticSemantics.newContainer();
             staticSemantics.newVarEnv();
-            
-            moduleStack.push(curModule);
-            curModule = {
-                __proto__: null,
-                knownExports: Object.create(null),
-                unknownExports: Object.create(null),
-                knownImports: Object.create(null),
-                moduleRequests: Object.create(null)
-            };
 
+                        
             node = Node("ModuleDeclaration");
             node.strict = true;
+
+            moduleStack.push(curModule);
+            curModule = node;
+            
+            node.knownExports = [];
+            node.unknownExports = [];
+            node.knownImports = [];
+            node.moduleRequests = [];
+
             pass("module");
             node.id = this.ModuleSpecifier();
             node.body = this.ModuleBody(node);
@@ -6278,8 +6280,8 @@ define("lib/parser", ["lib/tables", "lib/tokenizer"], function (tables, tokenize
 
             staticSemantics.popContainer();
             staticSemantics.popEnvs();
+            
             curModule = moduleStack.pop();
-
 
             return node;
         }
@@ -6442,25 +6444,39 @@ define("lib/parser", ["lib/tables", "lib/tokenizer"], function (tables, tokenize
         if (v === "export") {
             var l1 = loc && loc.start;
             var l2;
+
             var node = Node("ExportStatement");
             pass("export");
             if (v === "default") {
                 pass("default");
-                node.
-                default = true;
+                node.default = true;
                 node.exports = this.AssignmentExpression();
                 skip(";");
+
             } else if (v === "*") {
+                
                 node.all = true;
                 pass(v);
                 node.from = this.FromClause();
                 skip(";");
+
             } else {
                 node.exports = this.ExportsClause();
                 if (node.exports) node.from = this.FromClause();
+
                 else node.exports = this.VariableStatement() || this.DeclarationDefault();
+
+                if (node.from) {
+                    curModule.unknownExports.push(node); // got to open the docs first.
+                } else {
+                    curModule.knownExports.push(node);
+                }
+
                 skip(";");
+                if (!node.exports) throwError(new SyntaxError("should be an error in the export statement"));
             }
+
+
             l2 = loc && loc.end;
             makeLoc(l1, l2);
             EarlyErrors(node);
@@ -7308,7 +7324,7 @@ define("lib/parser", ["lib/tables", "lib/tokenizer"], function (tables, tokenize
             tokens = tokenize(text);
         }
 
-        lhs = rhs = rhst = T = v = t = undefined;
+        rhs = rhst = T = v = t = undefined;
         i = -1;
         j = tokens.length;
         next();
