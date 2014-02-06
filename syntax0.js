@@ -2056,7 +2056,7 @@ define("lib/tokenizer", ["lib/tables"], function (tables) {
 
     function resetVariables() {
 
-        tokenTable = Object.create(null);
+        //tokenTable = Object.create(null);
         sourceCode = "";
         result = [];
         cb = undefined;
@@ -2071,7 +2071,7 @@ define("lib/tokenizer", ["lib/tables"], function (tables) {
     function Error() {
         if (i >= 0 && i < j - 1) {
             var se = new SyntaxError("Can not parse token.");
-            se.stack = "syntax.js tokenizer,\nfunction tokenize,\n does not recognize actual input. ch=" + ch + ", lookahead=" + lookahead + ", line=" + line + ", col=" + column + ", offset=" + offset + " \nMeans it is not in the language. \nControl the source, not this tool. \nOr you may have to extend it.";
+            se.stack = "syntax.js tokenizer,\nfunction tokenize,\n does not recognize actual input. ch=" + ch + ", lookahead=" + lookahead + ", line=" + line + ", col=" + column + ", offset=" + offset + " \n";
             throw se;
         }
     }
@@ -2096,7 +2096,7 @@ define("lib/tokenizer", ["lib/tables"], function (tables) {
 
         }
 
-        result.tokenTable = tokenTable;
+        //result.tokenTable = tokenTable;
         return result;
 
     }
@@ -7300,7 +7300,7 @@ define("lib/parser", ["lib/tables", "lib/tokenizer"], function (tables, tokenize
             console.log(ex.message);
             console.log(ex.stack);
             ast = ex;
-            //    throw ex;
+            throw ex;
         }
         return ast;
     }
@@ -26348,6 +26348,7 @@ define("lib/runtime", ["lib/parser", "lib/api", "lib/slower-static-semantics"], 
         return nativeError;
     }
 
+
     function ExecuteTheCode(source, shellModeBool, resetEnvNowBool) {
         var exprRef, exprValue, text, type, message, stack, error, name, callstack;
 
@@ -26419,6 +26420,29 @@ define("lib/runtime", ["lib/parser", "lib/api", "lib/slower-static-semantics"], 
 
     ExecuteTheCode.setCodeRealm = setCodeRealm;
     ExecuteTheCode.Evaluate = Evaluate;
+
+
+    function ExecuteAsync (source) {
+        var p = makePromise(function (resolve, reject) {
+            initializeTheRuntime();
+            var result = Evaluate(parse(source));
+            console.dir(result);
+            if (isAbrupt(result)) {
+                if (result.type === "return") {
+                    resolve(result.value);
+                } else {
+                    reject(result.value);
+                }
+            } else {
+                resolve(result.value);
+            }
+            endRuntime();
+        });
+        return p;
+    }
+    
+    ExecuteTheCode.ExecuteAsync = ExecuteAsync;
+
 
     return ExecuteTheCode;
 });
@@ -27849,7 +27873,8 @@ define("lib/syntaxjs", function () {
         readFile: pdmacro(require("lib/syntaxerror-file").readFile),
         readFileSync: pdmacro(require("lib/syntaxerror-file").readFileSync),
         nodeShell: pdmacro(require("lib/syntaxjs-shell")),
-        subscribeWorker: pdmacro(require("lib/syntaxjs-worker").subscribeWorker)
+        subscribeWorker: pdmacro(require("lib/syntaxjs-worker").subscribeWorker),
+        evalAsync: pdmacro(require("lib/runtime").ExecuteAsync)
         //    toLLVM: pdmacro(require("lib/llvm-codegen"))
     };
     var syntaxerror_highlighter_api = {
