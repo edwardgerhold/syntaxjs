@@ -4775,13 +4775,14 @@ define("lib/parser", ["lib/tables", "lib/tokenizer"], function (tables, tokenize
                 node.computed = false;
 
                 if (t === "Identifier" || t === "Keyword" || propKeys[v] || t === "NumericLiteral") {
-                    var property = Object.create(null);
+                    var property = Object.create(null); 
                     property.type = "Identifier";
                     property.name = v;
                     property.loc = T.loc
                     node.property = property;
 
                 } else if (v === "!") {
+                    
                     // http://wiki.ecmascript.org/doku.php?id=strawman:concurrency
                     // MemberExpression ! [Expression]
                     // MemberExpression ! Arguments
@@ -4796,10 +4797,12 @@ define("lib/parser", ["lib/tables", "lib/tokenizer"], function (tables, tokenize
                 pass(v);
 
             } else return node.object;
-
+            // recur toString().toString().toString().valueOf().toString()
             if (v == "[" || v == ".") return this.MemberExpression(node);
             else if (v == "(") return this.CallExpression(node);
             else if (t == "TemplateLiteral") return this.CallExpression(node);
+            // strawman:concurrency addition 
+            else if (v == "!") return this.MemberExpression(node);
 
             EarlyErrors(node);
             if (compile) return builder["memberExpression"](node.object, node.property, node.computed, node.loc);
@@ -9941,7 +9944,7 @@ define("lib/api", function (require, exports, module) {
 
     function GetValue(V) {
 
-        if ((V = ifAbrupt(V)) && isAbrupt(V)) return V;
+        if (isAbrupt(V = ifAbrupt(V))) return V;
         if (Type(V) !== "reference") return V;
 
         var base = V.base;
@@ -9965,8 +9968,8 @@ define("lib/api", function (require, exports, module) {
     }
 
     function PutValue(V, W) {
-        if ((V = ifAbrupt(V)) && isAbrupt(V)) return V;
-        if ((W = ifAbrupt(W)) && isAbrupt(W)) return W;
+        if (isAbrupt(V = ifAbrupt(V))) return V;
+        if (isAbrupt(W = ifAbrupt(W))) return W;
         if (Type(V) !== "reference") return withError("Reference", "PutValue: V is not a reference");
         var base = V.base;
 
@@ -10032,7 +10035,7 @@ define("lib/api", function (require, exports, module) {
     }
 
     function GetThisValue(V) {
-        if ((V = ifAbrupt(V)) && isAbrupt(V)) return V;
+        if (isAbrupt(V = ifAbrupt(V))) return V;
         if (Type(V) !== "reference") return V;
         if (IsUnresolvableReference(V)) return withError("Reference", "GetThisValue: unresolvable reference");
         if (IsSuperReference(V)) return V.thisValue;
@@ -10125,7 +10128,7 @@ define("lib/api", function (require, exports, module) {
     }
 
     function ToPropertyDescriptor(O) {
-        if ((O = ifAbrupt(O)) && isAbrupt(O)) return O;
+        if (isAbrupt(O = ifAbrupt(O))) return O;
         if (Type(O) !== "object") return withError("Type", "ToPropertyDescriptor");
         var desc = Object.create(null);
         
@@ -10317,8 +10320,8 @@ define("lib/api", function (require, exports, module) {
     }
 
     function SameValue(x, y) {
-        if ((x = ifAbrupt(x)) && isAbrupt(x)) return x;
-        if ((y = ifAbrupt(y)) && isAbrupt(y)) return y;
+        if (isAbrupt(x = ifAbrupt(x))) return x;
+        if (isAbrupt(y = ifAbrupt(y))) return y;
         if (Type(x) !== Type(y)) return false;
         if (Type(x) === "null") return true;
         if (Type(x) === "undefined") return true;
@@ -10347,8 +10350,8 @@ define("lib/api", function (require, exports, module) {
     }
 
     function SameValueZero(x, y) {
-        if ((x = ifAbrupt(x)) && isAbrupt(x)) return x;
-        if ((y = ifAbrupt(y)) && isAbrupt(y)) return y;
+        if (isAbrupt(x = ifAbrupt(x))) return x;
+        if (isAbrupt(y = ifAbrupt(y))) return y;
         if (Type(x) !== Type(y)) return false;
         if (Type(x) === "null") return true;
         if (Type(x) === "undefined") return true;
@@ -11014,12 +11017,12 @@ define("lib/api", function (require, exports, module) {
         if (Type(O) !== "object") return false;
 
         P = Get(C, "prototype");
-        if ((P = ifAbrupt(P)) && isAbrupt(P)) return P;
+        if (isAbrupt(P = ifAbrupt(P))) return P;
 
         if (Type(P) !== "object") return withError("Type", "OrdinaryHasInstance: P not object");
 
         while (O = GetPrototypeOf(O)) {
-            if ((O = ifAbrupt(O)) && isAbrupt(O)) return O;
+            if (isAbrupt(O = ifAbrupt(O))) return O;
             if (O === null) return false;
             if (SameValue(P, O) === true) return true;
         }
@@ -11765,7 +11768,7 @@ define("lib/api", function (require, exports, module) {
         Assert(Type(index) === "number", "index type has to be number");
         Assert(index === ToInteger(index), "index has to be tointeger of index");
         var O = ToObject(ThisResolution());
-        if ((O = ifAbrupt(O)) && isAbrupt(O)) return O;
+        if (isAbrupt(O = ifAbrupt(O))) return O;
         var buffer = getInternalSlot(O, "ViewedArrayBuffer");
         if (!buffer) return withError("Type", "object is not a viewed array buffer");
         var length = getInternalSlot(O, "ArrayLength");
@@ -15265,7 +15268,7 @@ dependencygrouptransitions of kind load1.Kind.
             if ((metadata = ifAbrupt(metadata)) && isAbrupt(metadata)) return metadata;
             if (metadat === undefined) metadata = ObjectCreate();
             var p = PromiseOfStartLoadPartWayThrough("translate", loaderRecord, name, metadata, source, address);
-            if ((p=ifAbrupt(p)) && isAbrupt(p)) return p;
+            if (isAbrupt(p = ifAbrupt(p))) return p;
             var G = ReturnUndefined();
             p = PromiseThen(p, G);
             return p;
@@ -15279,7 +15282,7 @@ dependencygrouptransitions of kind load1.Kind.
             if ((loader =ifAbrupt(loader)) && isAbrupt(loader)) return loader;
             var loaderRecord = getInternalSlot(loader,"LoaderRecord");
             var p = LoadModule(loader, name, options);
-            if ((p=ifAbrupt(p)) && isAbrupt(p)) return p;
+            if (isAbrupt(p = ifAbrupt(p))) return p;
             var F = ReturnUndefined(); 
             p = PromiseThen(p, F);
             return p;
@@ -15958,7 +15961,7 @@ dependencygrouptransitions of kind load1.Kind.
                 } else {
                     A = ArrayCreate(len);
                 }
-                if ((A = ifAbrupt(A)) && isAbrupt(A)) return A;
+                if (isAbrupt(A = ifAbrupt(A))) return A;
                 var k = 0;
                 var Pk, kValue, defineStatus, putStatus;
                 while (k < len) {
@@ -16156,7 +16159,7 @@ dependencygrouptransitions of kind load1.Kind.
         DefineOwnProperty(ArrayPrototype, "join", {
             value: CreateBuiltinFunction(realm, function join(thisArg, argList) {
                 var O = ToObject(thisArg);
-                if ((O = ifAbrupt(O)) && isAbrupt(O)) return O;
+                if (isAbrupt(O = ifAbrupt(O))) return O;
                 var separator = argList[0];
                 var lenVal = Get(O, "length");
                 var len = ToUint32(lenVal);
@@ -16189,7 +16192,7 @@ dependencygrouptransitions of kind load1.Kind.
         DefineOwnProperty(ArrayPrototype, "pop", {
             value: CreateBuiltinFunction(realm, function pop(thisArg, argList) {
                 var O = ToObject(thisArg);
-                if ((O = ifAbrupt(O)) && isAbrupt(O)) return O;
+                if (isAbrupt(O = ifAbrupt(O))) return O;
                 var lenVal = Get(O, "length");
                 var len = ToUint32(lenVal);
                 if ((len = ifAbrupt(len)) && isAbrupt(len)) return len;
@@ -16218,10 +16221,10 @@ dependencygrouptransitions of kind load1.Kind.
         DefineOwnProperty(ArrayPrototype, "push", {
             value: CreateBuiltinFunction(realm, function push(thisArg, argList) {
                 var O = ToObject(thisArg);
-                if ((O = ifAbrupt(O)) && isAbrupt(O)) return O;
+                if (isAbrupt(O = ifAbrupt(O))) return O;
                 var lenVal = Get(O, "length");
                 var n = ToUint32(lenVal);
-                if ((n = ifAbrupt(n)) && isAbrupt(n)) return n;
+                if (isAbrupt(n = ifAbrupt(n))) return n;
                 var items = argList;
                 var E, putStatus;
                 for (var i = 0, j = items.length; i < j; i++) {
@@ -16242,7 +16245,7 @@ dependencygrouptransitions of kind load1.Kind.
         DefineOwnProperty(ArrayPrototype, "reverse", {
             value: CreateBuiltinFunction(realm, function reverse(thisArg, argList) {
                 var O = ToObject(thisArg);
-                if ((O = ifAbrupt(O)) && isAbrupt(O)) return O;
+                if (isAbrupt(O = ifAbrupt(O))) return O;
                 var lenVal = Get(O, "length");
                 var len = ToUint32(lenVal);
                 if ((len = ifAbrupt(len)) && isAbrupt(len)) return len;
@@ -16296,7 +16299,7 @@ dependencygrouptransitions of kind load1.Kind.
         DefineOwnProperty(ArrayPrototype, "shift", {
             value: CreateBuiltinFunction(realm, function shift(thisArg, argList) {
                 var O = ToObject(thisArg);
-                if ((O = ifAbrupt(O)) && isAbrupt(O)) return O;
+                if (isAbrupt(O = ifAbrupt(O))) return O;
                 var lenVal = Get(O, "length");
                 var len = ToUint32(lenVal);
                 if ((len = ifAbrupt(len)) && isAbrupt(len)) return len;
@@ -16313,7 +16316,7 @@ dependencygrouptransitions of kind load1.Kind.
                 var end = argList[1];
                 var O = ToObject(thisArg);
                 var A = ArrayCreate(0);
-                if ((O = ifAbrupt(O)) && isAbrupt(O)) return O;
+                if (isAbrupt(O = ifAbrupt(O))) return O;
                 var lenVal = Get(O, "length");
                 var len = ToUint32(lenVal);
                 if ((len = ifAbrupt(len)) && isAbrupt(len)) return len;
@@ -16359,7 +16362,7 @@ dependencygrouptransitions of kind load1.Kind.
         DefineOwnProperty(ArrayPrototype, "sort", {
             value: CreateBuiltinFunction(realm, function sort(thisArg, argList) {
                 var O = ToObject(thisArg);
-                if ((O = ifAbrupt(O)) && isAbrupt(O)) return O;
+                if (isAbrupt(O = ifAbrupt(O))) return O;
                 var lenVal = Get(O, "length");
                 var len = ToUint32(lenVal);
                 if ((len = ifAbrupt(len)) && isAbrupt(len)) return len;
@@ -16375,7 +16378,7 @@ dependencygrouptransitions of kind load1.Kind.
             var deleteCount = argList[1];
             var items = argList.slice(2);
             var O = ToObject(thisArg);
-            if ((O = ifAbrupt(O)) && isAbrupt(O)) return O;
+            if (isAbrupt(O = ifAbrupt(O))) return O;
             var lenVal = Get(O, "length");
             var len = ToLength(lenVal);
             if ((len = ifAbrupt(len)) && isAbrupt(len)) return len;
@@ -16407,7 +16410,7 @@ dependencygrouptransitions of kind load1.Kind.
             if (A === undefined) {
                 A = ArrayCreate(actualDeleteCount);
             }
-            if ((A=ifAbrupt(A)) && isAbrupt(A)) return A;
+            if (isAbrupt(A = ifAbrupt(A))) return A;
             var k = 0;
             while (k < actualDeleteCount) {
                 var from = ToString(actualStart + k);
@@ -16484,7 +16487,7 @@ dependencygrouptransitions of kind load1.Kind.
         DefineOwnProperty(ArrayPrototype, "indexOf", {
             value: CreateBuiltinFunction(realm, function indexOf(thisArg, argList) {
                 var O = ToObject(thisArg);
-                if ((O = ifAbrupt(O)) && isAbrupt(O)) return O;
+                if (isAbrupt(O = ifAbrupt(O))) return O;
                 var searchElement = argList[0];
                 var fromIndex = argList[1];
                 var lenValue = Get(O, "length");
@@ -16494,7 +16497,7 @@ dependencygrouptransitions of kind load1.Kind.
                 var k;
                 if (fromIndex !== undefined) n = ToInteger(fromIndex);
                 else n = 0;
-                if ((n = ifAbrupt(n)) && isAbrupt(n)) return n;
+                if (isAbrupt(n = ifAbrupt(n))) return n;
                 if (len === 0) return -1;
                 if (n >= 0) k = n;
                 else {
@@ -16523,7 +16526,7 @@ dependencygrouptransitions of kind load1.Kind.
         DefineOwnProperty(ArrayPrototype, "lastIndexOf", {
             value: CreateBuiltinFunction(realm, function lastIndexOf(thisArg, argList) {
                 var O = ToObject(thisArg);
-                if ((O = ifAbrupt(O)) && isAbrupt(O)) return O;
+                if (isAbrupt(O = ifAbrupt(O))) return O;
                 var searchElement = argList[0];
                 var fromIndex = argList[1];
                 var lenValue = Get(O, "length");
@@ -16534,7 +16537,7 @@ dependencygrouptransitions of kind load1.Kind.
                 if (len === 0) return -1;
                 if (fromIndex !== undefined) n = ToInteger(fromIndex);
                 else n = len - 1;
-                if ((n = ifAbrupt(n)) && isAbrupt(n)) return n;
+                if (isAbrupt(n = ifAbrupt(n))) return n;
                 if (n >= 0) k = min(n, len - 1);
                 else {
                     k = len - abs(n);
@@ -16564,7 +16567,7 @@ dependencygrouptransitions of kind load1.Kind.
                 var callback = argList[0];
                 var T = argList[1];
                 var O = ToObject(thisArg);
-                if ((O = ifAbrupt(O)) && isAbrupt(O)) return O;
+                if (isAbrupt(O = ifAbrupt(O))) return O;
                 var lenVal = Get(O, "length");
                 var len = ToUint32(lenVal);
                 if ((len = ifAbrupt(len)) && isAbrupt(len)) return len;
@@ -16595,7 +16598,7 @@ dependencygrouptransitions of kind load1.Kind.
                 var callback = argList[0];
                 var T = argList[1];
                 var O = ToObject(thisArg);
-                if ((O = ifAbrupt(O)) && isAbrupt(O)) return O;
+                if (isAbrupt(O = ifAbrupt(O))) return O;
                 var lenVal = Get(O, "length");
                 var len = ToUint32(lenVal);
                 if (!IsCallable(callback)) return withError("Type", "map: callback is not a function.");
@@ -16632,7 +16635,7 @@ dependencygrouptransitions of kind load1.Kind.
                 var callback = argList[0];
                 var T = argList[1];
                 var O = ToObject(thisArg);
-                if ((O = ifAbrupt(O)) && isAbrupt(O)) return O;
+                if (isAbrupt(O = ifAbrupt(O))) return O;
                 var lenVal = Get(O, "length");
                 var len = ToUint32(lenVal);
                 if (!IsCallable(callback)) return withError("Type", "filter: callback is not a function.");
@@ -16685,7 +16688,7 @@ dependencygrouptransitions of kind load1.Kind.
                 var callback = argList[0];
                 var T = argList[1];
                 var O = ToObject(thisArg);
-                if ((O = ifAbrupt(O)) && isAbrupt(O)) return O;
+                if (isAbrupt(O = ifAbrupt(O))) return O;
                 var lenVal = Get(O, "length");
                 var len = ToUint32(lenVal);
                 if (!IsCallable(callback)) return withError("Type", "every: callback is not a function.");
@@ -16716,7 +16719,7 @@ dependencygrouptransitions of kind load1.Kind.
                 var callback = argList[0];
                 var T = argList[1];
                 var O = ToObject(thisArg);
-                if ((O = ifAbrupt(O)) && isAbrupt(O)) return O;
+                if (isAbrupt(O = ifAbrupt(O))) return O;
                 var lenVal = Get(O, "length");
                 var len = ToUint32(lenVal);
                 if (!IsCallable(callback)) return withError("Type", "some: callback is not a function.");
@@ -16788,7 +16791,7 @@ dependencygrouptransitions of kind load1.Kind.
         DefineOwnProperty(ArrayPrototype, $$iterator, {
             value: CreateBuiltinFunction(realm, function $$iterator(thisArg, argList) {
                 var O = ToObject(thisArg);
-                if ((O = ifAbrupt(O)) && isAbrupt(O)) return O;
+                if (isAbrupt(O = ifAbrupt(O))) return O;
                 return CreateArrayIterator(O, "value");
             }),
             enumerable: false,
@@ -16822,7 +16825,7 @@ dependencygrouptransitions of kind load1.Kind.
             var s;
             if (!argList.length) s = "";
             else s = ToString(argList[0]);
-            if ((s = ifAbrupt(s)) && isAbrupt(s)) return s;
+            if (isAbrupt(s = ifAbrupt(s))) return s;
             if (Type(O) === "object" && hasInternalSlot(O, "StringData") && getInternalSlot(O, "StringData") === undefined) {
                 var length = s.length;
                 var status = DefineOwnPropertyOrThrow(O, "length", {
@@ -16944,9 +16947,9 @@ dependencygrouptransitions of kind load1.Kind.
         var StringPrototype_normalize = function (thisArg, argList) {
             var form = argList[0];
             var S = CheckObjectCoercible(thisArg);
-            if ((S = ifAbrupt(S)) && isAbrupt(S)) return S;
+            if (isAbrupt(S = ifAbrupt(S))) return S;
             S = ToString(S);
-            if ((S = ifAbrupt(S)) && isAbrupt(S)) return S;
+            if (isAbrupt(S = ifAbrupt(S))) return S;
             if (form === undefined) from = "NFC";
             var f = ToString(form);
             if ((f = ifAbrupt(f)) && ifAbrupt(f)) return f;
@@ -16965,9 +16968,9 @@ dependencygrouptransitions of kind load1.Kind.
             var searchValue = argList[0];
             var replaceValue = argList[1];
             var S = CheckObjectCoercible(thisArg);
-            if ((S = ifAbrupt(S)) && isAbrupt(S)) return S;
+            if (isAbrupt(S = ifAbrupt(S))) return S;
             S = ToString(S);
-            if ((S = ifAbrupt(S)) && isAbrupt(S)) return S;
+            if (isAbrupt(S = ifAbrupt(S))) return S;
             if (Type(searchValue) === "object" && HasProperty(searchValue, $$isRegExp)) {
                 return Invoke(searchValue, "replace", [string, replaceValue]);
             }
@@ -17014,9 +17017,9 @@ dependencygrouptransitions of kind load1.Kind.
         var StringPrototype_match = function (thisArg, argList) {
             var regexp = argList[0];
             var S = CheckObjectCoercible(thisArg);
-            if ((S = ifAbrupt(S)) && isAbrupt(S)) return S;
+            if (isAbrupt(S = ifAbrupt(S))) return S;
             S = ToString(S);
-            if ((S = ifAbrupt(S)) && isAbrupt(S)) return S;
+            if (isAbrupt(S = ifAbrupt(S))) return S;
             var rx;
             if (Type(regexp) === "object" && HasProperty(regexp, $$isRegExp)) {
                 rx = regexp;
@@ -17029,11 +17032,11 @@ dependencygrouptransitions of kind load1.Kind.
         var StringPrototype_repeat = function (thisArg, argList) {
             var count = argList[0];
             var S = CheckObjectCoercible(thisArg);
-            if ((S = ifAbrupt(S)) && isAbrupt(S)) return S;
+            if (isAbrupt(S = ifAbrupt(S))) return S;
             S = ToString(S);
-            if ((S = ifAbrupt(S)) && isAbrupt(S)) return S;
+            if (isAbrupt(S = ifAbrupt(S))) return S;
             var n = ToInteger(count);
-            if ((n=ifAbrupt(n)) && isAbrupt(n)) return n;
+            if (isAbrupt(n = ifAbrupt(n))) return n;
             if (n < 0) return withError("Range", "n is less than 0");
             if (n === Infinity) return withError("Range", "n is infinity");
             var T = "";
@@ -17045,9 +17048,9 @@ dependencygrouptransitions of kind load1.Kind.
             var searchString = argList[0];
             var position = argList[1];
             var S = CheckObjectCoercible(thisArg);
-            if ((S = ifAbrupt(S)) && isAbrupt(S)) return S;
+            if (isAbrupt(S = ifAbrupt(S))) return S;
             S = ToString(S);
-            if ((S = ifAbrupt(S)) && isAbrupt(S)) return S;
+            if (isAbrupt(S = ifAbrupt(S))) return S;
             var searchStr = ToString(searchString);
             var pos = ToInteger(position);
             var len = S.length;
@@ -17075,9 +17078,9 @@ dependencygrouptransitions of kind load1.Kind.
             var searchString = argList[0];
             var position = argList[1];
             var S = CheckObjectCoercible(thisArg);
-            if ((S=ifAbrupt(S)) && isAbrupt(S)) return S;
+            if (isAbrupt(S = ifAbrupt(S))) return S;
             S = ToString(S);
-            if ((S = ifAbrupt(S)) && isAbrupt(S)) return S;
+            if (isAbrupt(S = ifAbrupt(S))) return S;
             var searchStr = ToString(searchString);
             var pos = ToInteger(position);
             var len = S.length;
@@ -17094,9 +17097,9 @@ dependencygrouptransitions of kind load1.Kind.
             var searchString = argList[0];
             var endPosition = argList[1];
             var S = CheckObjectCoercible(thisArg);
-            if ((S=ifAbrupt(S)) && isAbrupt(S)) return S;
+            if (isAbrupt(S = ifAbrupt(S))) return S;
             S = ToString(S);
-            if ((S = ifAbrupt(S)) && isAbrupt(S)) return S;
+            if (isAbrupt(S = ifAbrupt(S))) return S;
             var searchStr = ToString(searchString);
             var pos = endPosition === undefined ? len : ToInteger(endPosition);
             var len = S.length;
@@ -17116,7 +17119,7 @@ dependencygrouptransitions of kind load1.Kind.
         };
         var StringPrototype_toArray = function (thisArg, argList) {
             var S = CheckObjectCoercible(thisArg);
-            if ((S=ifAbrupt(S)) && isAbrupt(S)) return S;
+            if (isAbrupt(S = ifAbrupt(S))) return S;
             S = ToString(S);
             var array = ArrayCreate(0);
             var len = S.length;
@@ -17140,9 +17143,9 @@ dependencygrouptransitions of kind load1.Kind.
         // 31.1.
         var StringPrototype_trim = function (thisArg, argList) {
             var O = CheckObjectCoercible(thisArg);
-            if ((O = ifAbrupt(O)) && isAbrupt(O)) return O;
+            if (isAbrupt(O = ifAbrupt(O))) return O;
             var S = ToString(O);
-            if ((S = ifAbrupt(S)) && isAbrupt(S)) return S;
+            if (isAbrupt(S = ifAbrupt(S))) return S;
             var T;
             T = S.replace(trim_leading_space_expr, "");
             T = T.replace(trim_trailing_space_expr, "");
@@ -17153,9 +17156,9 @@ dependencygrouptransitions of kind load1.Kind.
         var StringPrototype_search = function (thisArg, argList) {
             var regexp = argList[0];
             var O = CheckObjectCoercible(thisArg);
-            if ((O = ifAbrupt(O)) && isAbrupt(O)) return O;
+            if (isAbrupt(O = ifAbrupt(O))) return O;
             var S = ToString(O);
-            if ((S = ifAbrupt(S)) && isAbrupt(S)) return S;
+            if (isAbrupt(S = ifAbrupt(S))) return S;
             var rx;
             if (Type(regexp) === "object"  && HasProperty(regexp, $$isRegExp)) {
                 rx = regexp;
@@ -17168,9 +17171,9 @@ dependencygrouptransitions of kind load1.Kind.
         // 31.1.
         var StringPrototype_toUpperCase = function (thisArg, argList) {
             var O = CheckObjectCoercible(thisArg);
-            if ((O = ifAbrupt(O)) && isAbrupt(O)) return O;
+            if (isAbrupt(O = ifAbrupt(O))) return O;
             var S = ToString(O);
-            if ((S = ifAbrupt(S)) && isAbrupt(S)) return S;
+            if (isAbrupt(S = ifAbrupt(S))) return S;
             var U = S.toUpperCase();            
             return NormalCompletion(U);
         };
@@ -17178,9 +17181,9 @@ dependencygrouptransitions of kind load1.Kind.
         // 31.1.
         var StringPrototype_toLowerCase = function (thisArg, argList) {
             var O = CheckObjectCoercible(thisArg);
-            if ((O = ifAbrupt(O)) && isAbrupt(O)) return O;
+            if (isAbrupt(O = ifAbrupt(O))) return O;
             var S = ToString(O);
-            if ((S = ifAbrupt(S)) && isAbrupt(S)) return S;
+            if (isAbrupt(S = ifAbrupt(S))) return S;
             var L = S.toLowerCase();            
             return NormalCompletion(L);
         };
@@ -17189,9 +17192,9 @@ dependencygrouptransitions of kind load1.Kind.
             var index = argList[0];
             index = index|0;
             var O = CheckObjectCoercible(thisArg);
-            if ((O = ifAbrupt(O)) && isAbrupt(O)) return O;
+            if (isAbrupt(O = ifAbrupt(O))) return O;
             var S = ToString(O);
-            if ((S = ifAbrupt(S)) && isAbrupt(S)) return S;
+            if (isAbrupt(S = ifAbrupt(S))) return S;
             var V = S.charAt(index);
             return NormalCompletion(V);
         };
@@ -17199,9 +17202,9 @@ dependencygrouptransitions of kind load1.Kind.
             var index = argList[0];
             index = index|0;
             var O = CheckObjectCoercible(thisArg);
-            if ((O = ifAbrupt(O)) && isAbrupt(O)) return O;
+            if (isAbrupt(O = ifAbrupt(O))) return O;
             var S = ToString(O);
-            if ((S = ifAbrupt(S)) && isAbrupt(S)) return S;
+            if (isAbrupt(S = ifAbrupt(S))) return S;
             if (index < 0) return NormalCompletion(NaN);
             if (index >= S.length) return NormalCompletion(NaN);
             var C = S.charCodeAt(index);
@@ -17213,12 +17216,12 @@ dependencygrouptransitions of kind load1.Kind.
             var separator = argList[0];
             var limit = argList[1];
             var O = CheckObjectCoercible(thisArg);
-            if ((O = ifAbrupt(O)) && isAbrupt(O)) return O;
+            if (isAbrupt(O = ifAbrupt(O))) return O;
             if (Type(separator) === "object" && HasProperty(separator, $$isRegExp)) {
                 return Invoke(separator, "split", [O, limit]);
             }
             var S = ToString(O);
-            if ((S = ifAbrupt(S)) && isAbrupt(S)) return S;
+            if (isAbrupt(S = ifAbrupt(S))) return S;
             var A = ArrayCreate(0);
             var lengthA = 0;
             var lim;
@@ -17241,7 +17244,7 @@ dependencygrouptransitions of kind load1.Kind.
             var fillStr = argList[1];
             var O = CheckObjectCoercible(thisArg);
             var S = ToString(O);
-            if ((S=ifAbrupt(S)) && isAbrupt(S)) return S;
+            if (isAbrupt(S = ifAbrupt(S))) return S;
             var intMinLength = ToInteger(minLength);
             if ((intMinLength=ifAbrupt(intMinLength)) && isAbrupt(intMinLength)) return intMinLength;
             if (intMinLength === undefined) return NormalCompletion(S);
@@ -17262,7 +17265,7 @@ dependencygrouptransitions of kind load1.Kind.
             var fillStr = argList[1];
             var O = CheckObjectCoercible(thisArg);
             var S = ToString(O);
-            if ((S=ifAbrupt(S)) && isAbrupt(S)) return S;
+            if (isAbrupt(S = ifAbrupt(S))) return S;
             var intMinLength = ToInteger(minLength);
             if ((intMinLength=ifAbrupt(intMinLength)) && isAbrupt(intMinLength)) return intMinLength;
             if (intMinLength === undefined) return NormalCompletion(S);
@@ -17282,9 +17285,9 @@ dependencygrouptransitions of kind load1.Kind.
 
         var StringPrototype_codePointAt = function (thisArg, argList) {
             var O = CheckObjectCoercible(thisArg);
-            if ((O = ifAbrupt(O)) && isAbrupt(O)) return O;
+            if (isAbrupt(O = ifAbrupt(O))) return O;
             var S = ToString(O);
-            if ((S = ifAbrupt(S)) && isAbrupt(S)) return S;
+            if (isAbrupt(S = ifAbrupt(S))) return S;
             var position = ToInteger(pos);
             var size = S.length;
             if (position < 0 || position >= size) return NormalCompletion(undefined);
@@ -17298,9 +17301,9 @@ dependencygrouptransitions of kind load1.Kind.
 
         var StringPrototype_concat = function (thisArg, argList) {
             var O = CheckObjectCoercible(thisArg);
-            if ((O = ifAbrupt(O)) && isAbrupt(O)) return O;
+            if (isAbrupt(O = ifAbrupt(O))) return O;
             var S = ToString(O);
-            if ((S = ifAbrupt(S)) && isAbrupt(S)) return S;
+            if (isAbrupt(S = ifAbrupt(S))) return S;
             var R = S;
             var next;
             for (var i = 0, j = argList.length; i < j; i++ ) {
@@ -17316,9 +17319,9 @@ dependencygrouptransitions of kind load1.Kind.
             var searchString = argList[0];
             var position = argList[1];
             var O = CheckObjectCoercible(thisArg);
-            if ((O = ifAbrupt(O)) && isAbrupt(O)) return O;
+            if (isAbrupt(O = ifAbrupt(O))) return O;
             var S = ToString(O);
-            if ((S = ifAbrupt(S)) && isAbrupt(S)) return S;
+            if (isAbrupt(S = ifAbrupt(S))) return S;
             var searchStr = ToString(searchStr);
             var pos = position | 0;
             var len = S.length;
@@ -17344,9 +17347,9 @@ dependencygrouptransitions of kind load1.Kind.
             var searchString = argList[0];
             var position = argList[1];
             var O = CheckObjectCoercible(thisArg);
-            if ((O = ifAbrupt(O)) && isAbrupt(O)) return O;
+            if (isAbrupt(O = ifAbrupt(O))) return O;
             var S = ToString(O);
-            if ((S = ifAbrupt(S)) && isAbrupt(S)) return S;
+            if (isAbrupt(S = ifAbrupt(S))) return S;
             var numPos = ToNumber(position);
             if ((numPos=ifAbrupt(numPos)) && isAbrupt(numPos)) return numPos;
             var pos;
@@ -17361,9 +17364,9 @@ dependencygrouptransitions of kind load1.Kind.
         var StringPrototype_localeCompare = function (thisArg, argList) {
             var that = argList[0];
             var O = CheckObjectCoercible(thisArg);
-            if ((O = ifAbrupt(O)) && isAbrupt(O)) return O;
+            if (isAbrupt(O = ifAbrupt(O))) return O;
             var S = ToString(O);
-            if ((S = ifAbrupt(S)) && isAbrupt(S)) return S;
+            if (isAbrupt(S = ifAbrupt(S))) return S;
             var That = ToString(that);
             if ((that = ifAbrupt(that)) && isAbrupt(that)) return that;
             return NormalCompletion(undefined);
@@ -17810,7 +17813,7 @@ dependencygrouptransitions of kind load1.Kind.
                 O = OrdinaryCreateFromConstructor(func, "%ErrorPrototype%", {
                     "ErrorData": undefined
                 });
-                if ((O = ifAbrupt(O)) && isAbrupt(O)) return O;
+                if (isAbrupt(O = ifAbrupt(O))) return O;
             }
                 // or i read it wrong
             Assert(Type(O) === "object");
@@ -18359,9 +18362,9 @@ dependencygrouptransitions of kind load1.Kind.
         var MathObject_clz = function (thisArg, argList) {
                 var x = argList[0];
                 x = ToNumber(x);
-                if ((x=ifAbrupt(x)) && isAbrupt(x)) return x;
+                if (isAbrupt(x = ifAbrupt(x))) return x;
                 var n = ToUint32(x);
-                if ((n=ifAbrupt(n)) && isAbrupt(n)) return n;
+                if (isAbrupt(n = ifAbrupt(n))) return n;
                 if (n < 0) return 0;
                 if (n == 0) return 32;
                 var bitlen = Math.ceil(Math.log(Math.pow(n, Math.LOG2E)));
@@ -18421,7 +18424,7 @@ dependencygrouptransitions of kind load1.Kind.
             var n;
             if (argList.length === 0) n = +0;
             else n = ToNumber(value);
-            if ((n = ifAbrupt(n)) && isAbrupt(n)) return n;
+            if (isAbrupt(n = ifAbrupt(n))) return n;
             if (Type(O) === "object" /*&& hasInternalSlot(O, "NumberData")*/ && getInternalSlot(O, "NumberData") === undefined) {
                 setInternalSlot(O, "NumberData", n);
                 return O;
@@ -18451,9 +18454,9 @@ dependencygrouptransitions of kind load1.Kind.
         };
         var NumberPrototype_clz = function (thisArg, argList) {
                 var x = thisNumberValue(thisArg);
-                if ((x=ifAbrupt(x)) && isAbrupt(x)) return x;
+                if (isAbrupt(x = ifAbrupt(x))) return x;
                 var n = ToUint32(x);
-                if ((n=ifAbrupt(n)) && isAbrupt(n)) return n;
+                if (isAbrupt(n = ifAbrupt(n))) return n;
                 if (n < 0) return 0;
                 if (n === 0) return 32;
                 var bitlen = Math.floor(Math.log(Math.pow(n, Math.LOG2E))) + 1;
@@ -18475,10 +18478,10 @@ dependencygrouptransitions of kind load1.Kind.
         var NumberPrototype_toPrecision = function (thisArg, argList) {
                 var precision = argList[0];
                 var x = thisNumberValue(thisArg);
-                if ((x = ifAbrupt(x)) && isAbrupt(x)) return x;
+                if (isAbrupt(x = ifAbrupt(x))) return x;
                 if (precision === undefined) return ToString(x);
                 var p = ToInteger(precision);
-                if ((p = ifAbrupt(p)) && isAbrupt(p)) return p;
+                if (isAbrupt(p = ifAbrupt(p))) return p;
                 if (x !== x) return "NaN";
                 var s = "";
                 if (x < 0) {
@@ -18507,10 +18510,10 @@ dependencygrouptransitions of kind load1.Kind.
         var NumberPrototype_toFixed = function (thisArg, argList) {
                 var fractionDigits = argList[0];
                 var x = thisNumberValue(thisArg);
-                if ((x = ifAbrupt(x)) && isAbrupt(x)) return x;
+                if (isAbrupt(x = ifAbrupt(x))) return x;
                 if (fractionDigits === undefined) return ToString(x);
                 var f = ToInteger(fractionDigits);
-                if ((f = ifAbrupt(f)) && isAbrupt(f)) return f;
+                if (isAbrupt(f = ifAbrupt(f))) return f;
                 if ((f < 0) || (f > 20)) return withError("Range", "fractionDigits is less or more than 20")
                 if (x !== x) return "NaN";
                 var s = "";
@@ -18541,9 +18544,9 @@ dependencygrouptransitions of kind load1.Kind.
         var NumberPrototype_toExponential = function (thisArg, argList) {
                 var fractionDigits = argList[0];
                 var x = thisNumberValue(thisArg);
-                if ((x = ifAbrupt(x)) && isAbrupt(x)) return x;
+                if (isAbrupt(x = ifAbrupt(x))) return x;
                 var f = ToInteger(fractionDigits);
-                if ((f = ifAbrupt(f)) && isAbrupt(f)) return f;
+                if (isAbrupt(f = ifAbrupt(f))) return f;
                 if (x !== x) return "NaN";
                 var s = "";
                 if (x < 0) {
@@ -19239,9 +19242,9 @@ dependencygrouptransitions of kind load1.Kind.
 
         var ObjectPrototype_hasOwnProperty = function (thisArg, argList) {
             var P = ToPropertyKey(argList[0]);
-            if ((P = ifAbrupt(P)) && isAbrupt(P)) return P;
+            if (isAbrupt(P = ifAbrupt(P))) return P;
             var O = ToObject(thisArg);
-            if ((O = ifAbrupt(O)) && isAbrupt(O)) return O;
+            if (isAbrupt(O = ifAbrupt(O))) return O;
             return HasOwnProperty(O, P);
         };
         
@@ -19249,7 +19252,7 @@ dependencygrouptransitions of kind load1.Kind.
             var V = argList[0];
             if (Type(O) !== "object") return false;
             var O = ToObject(thisArg);
-            if ((O = ifAbrupt(O)) && isAbrupt(O)) return O;
+            if (isAbrupt(O = ifAbrupt(O))) return O;
             for (;;) {
                 V = GetPrototypeOf(V);
                 if (V == null) return false;
@@ -19262,9 +19265,9 @@ dependencygrouptransitions of kind load1.Kind.
             var ObjectPrototype_propertyIsEnumerable = function (thisArg, argList) {
                 var V = argList[0];
                 var P = ToString(V);
-                if ((P = ifAbrupt(P)) && isAbrupt(P)) return P;
+                if (isAbrupt(P = ifAbrupt(P))) return P;
                 var O = ToObject(thisArg);
-                if ((O = ifAbrupt(O)) && isAbrupt(O)) return O;
+                if (isAbrupt(O = ifAbrupt(O))) return O;
                 var desc = GetOwnProperty(O, P);
                 if (desc === undefined) return false;
                 return desc.enumerable;
@@ -19338,13 +19341,13 @@ dependencygrouptransitions of kind load1.Kind.
 
             var ObjectPrototype_get_proto = function (thisArg, argList) {
                 var O = ToObject(thisArg);
-                if ((O=ifAbrupt(O)) && isAbrupt(O)) return O;
+                if (isAbrupt(O = ifAbrupt(O))) return O;
                 return callInternalSlot("GetPrototypeOf", O);
             };
             var ObjectPrototype_set_proto = function (thisArg, argList) {
                 var proto = argList[0];
                 var O = CheckObjectCoercible(thisArg);
-                if ((O=ifAbrupt(O)) && isAbrupt(O)) return O;
+                if (isAbrupt(O = ifAbrupt(O))) return O;
                 var protoType = Type(proto);
                 if (protoType !== "object" && protoType !== null) return proto;
                 if (Type(O) !== "object") return proto;
@@ -20206,7 +20209,7 @@ dependencygrouptransitions of kind load1.Kind.
                 nextResult = IteratorNext(K);
                 if ((nextResult = ifAbrupt(nextResult)) && isAbrupt(nextResult)) return nextResult;
                 P = IteratorValue(nextResult);
-                if ((P = ifAbrupt(P)) && isAbrupt(P)) return P;
+                if (isAbrupt(P = ifAbrupt(P))) return P;
                 var strP = Str(P, value, _state);
                 if ((strP = ifAbrupt(strP)) && isAbrupt(strP)) return strP;
                 if (strP !== undefined) {
@@ -20539,7 +20542,7 @@ dependencygrouptransitions of kind load1.Kind.
             var promise = thisArg;
             if (!IsPromise(promise)) return withError("Type", "then: this is not a promise object");
             var C = Get(promise, "constructor");
-            if ((C=  ifAbrupt(C)) && isAbrupt(C)) return C;
+            if (isAbrupt(C = ifAbrupt(C))) return C;
 
             var promiseCapability = NewPromiseCapability(C);
             if ((promiseCapability = ifAbrupt(promiseCapability)) && isAbrupt(promiseCapability)) return promiseCapability;
@@ -21532,9 +21535,9 @@ dependencygrouptransitions of kind load1.Kind.
                 nextItem = IteratorValue(next);
                 if ((nextItem = ifAbrupt(nextItem)) && isAbrupt(nextItem)) return nextItem;
                 k = Get(nextItem, "0");
-                if ((k = ifAbrupt(k)) && isAbrupt(k)) return k;
+                if (isAbrupt(k = ifAbrupt(k))) return k;
                 v = Get(nextItem, "1");
-                if ((v = ifAbrupt(v)) && isAbrupt(v)) return v;
+                if (isAbrupt(v = ifAbrupt(v))) return v;
                 status = callInternalSlot("Call", adder, map, [k, v]);
                 if (isAbrupt(status)) return status;
             }
@@ -21753,7 +21756,7 @@ dependencygrouptransitions of kind load1.Kind.
 
         function CreateMapIterator(map, kind) {
             var M = ToObject(map);
-            if ((M = ifAbrupt(M)) && isAbrupt(M)) return M;
+            if (isAbrupt(M = ifAbrupt(M))) return M;
             if (!hasInternalSlot(M, "MapData")) return withError("Type", "object has no internal MapData slot");
             var entries = getInternalSlot(M, "MapData");
             var MapIteratorPrototype = Get(getIntrinsics(), "%MapIteratorPrototype%");
@@ -21889,9 +21892,9 @@ dependencygrouptransitions of kind load1.Kind.
                 nextItem = IteratorValue(next);
                 if ((nextItem = ifAbrupt(nextItem)) && isAbrupt(nextItem)) return nextItem;
                 k = Get(nextItem, "0");
-                if ((k = ifAbrupt(k)) && isAbrupt(k)) return k;
+                if (isAbrupt(k = ifAbrupt(k))) return k;
                 v = Get(nextItem, "1");
-                if ((v = ifAbrupt(v)) && isAbrupt(v)) return v;
+                if (isAbrupt(v = ifAbrupt(v))) return v;
                 status = callInternalSlot("Call", adder, set, [v]);
                 if (isAbrupt(status)) return status;
             }
@@ -22024,7 +22027,7 @@ dependencygrouptransitions of kind load1.Kind.
         // 
         function CreateSetIterator(set, kind) {
             var S = ToObject(set);
-            if ((S = ifAbrupt(S)) && isAbrupt(S)) return S;
+            if (isAbrupt(S = ifAbrupt(S))) return S;
             if (!hasInternalSlot(S, "SetData")) return withError("Type", "object has no internal SetData slot");
             var entries = getInternalSlot(S, "SetData");
             var SetIteratorPrototype = Get(getIntrinsics(), "%SetIteratorPrototype%");
@@ -27922,7 +27925,7 @@ var syntaxjs = require("lib/syntaxjs");
 if (syntaxjs.system === "node") {
     if (!module.parent) syntaxjs.nodeShell();
 } else if (syntaxjs.system === "browser") {
-    syntaxjs.startHighlighterOnLoad();
+    syntapxjs.startHighlighterOnLoad();
 } else if (syntaxjs.system === "worker") {
     syntaxjs.subscribeWorker();
 }
