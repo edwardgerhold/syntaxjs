@@ -1,6 +1,5 @@
-// Has to throw an exception
+// shouldnt throw and clobber the global
 
-"use strict";
 function F() {
     this.xxx = "gdfgdfg";
 }
