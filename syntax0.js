@@ -4780,6 +4780,14 @@ define("lib/parser", ["lib/tables", "lib/tokenizer"], function (tables, tokenize
                     property.name = v;
                     property.loc = T.loc
                     node.property = property;
+
+                } else if (v === "!") {
+                    // http://wiki.ecmascript.org/doku.php?id=strawman:concurrency
+                    // MemberExpression ! [Expression]
+                    // MemberExpression ! Arguments
+                    // MemberExpression ! Identifier
+                    // setzt .eventual auf true
+
                 } else {
 
                     throwError(new SyntaxError("MemberExpression . Identifier expects a valid IdentifierString or an IntegerString as PropertyKey."));
@@ -6917,7 +6925,7 @@ define("lib/parser", ["lib/tables", "lib/tokenizer"], function (tables, tokenize
 
         var node;
 
-        while (t === "Directive") {
+        while (t === "StringLiteral") { // this was set to "Directive" and killed strict mode last versions.
 
             if (v === "\"use strict\"" || v === "\'use strict\'") containingNode.strict = true;
             else if (v == "\"use asm\"" || v == "\'use asm\'") containingNode.asm = true;
@@ -7296,11 +7304,11 @@ define("lib/parser", ["lib/tables", "lib/tokenizer"], function (tables, tokenize
         try {
             ast = parser.Program();
         } catch (ex) {
+            console.log("[Parser Exception]")
             console.log(ex.name);
             console.log(ex.message);
-            console.log(ex.stack);
+            console.log(ex.stack.split("\n").join("\n"));
             ast = ex;
-            throw ex;
         }
         return ast;
     }
@@ -8632,7 +8640,7 @@ define("lib/api", function (require, exports, module) {
 
     function getGlobalThis() {
         //return globalThis;
-        return realm.globalThis;
+        return getRealm().globalThis;
     }
 
     function getGlobalEnv() {
@@ -22874,13 +22882,19 @@ define("lib/runtime", ["lib/parser", "lib/api", "lib/slower-static-semantics"], 
 
     }
 
+    var isFuncDecl = {
+        "GeneratorDeclaration":true,
+        "FunctionDeclaration":true,
+        __proto__:null
+    };
+
     function InstantiateGlobalDeclaration(script, env, deletableBindings) {
         "use strict";
 
         var name;
         var boundNamesInPattern;
-        var code = script.body;
-        var strict = !! script.strict;
+        var code = getCode(script,"body");
+        var strict = !!getCode(script,"strict");
 
         var cx = getContext();
         if (strict) cx.strict = true;
@@ -22912,11 +22926,9 @@ define("lib/runtime", ["lib/parser", "lib/api", "lib/slower-static-semantics"], 
         var fnDefinable;
         for (i = varDeclarations.length - 1, j = 0; i >= j; i--) {
             d = varDeclarations[i];
-            debug("got declaration " + i);
-            if (d.type === "FunctionDeclaration" || d.type === "GeneratorDeclaration") {
+            if (isFuncDecl[d.type]) {
                 fn = d && (d.id || d.id.name);
                 fnDefinable = env.CanDeclareGlobalFunction(fn);
-                debug("can declare global function " + fn + ", is " + fnDefinable);
                 if (!fnDefinable) return withError("Type", "Instantiate global: can not declare global function: " + fn);
                 declaredFunctionNames[fn] = d;
                 functionsToInitialize.push(d);
@@ -23029,7 +23041,7 @@ define("lib/runtime", ["lib/parser", "lib/api", "lib/slower-static-semantics"], 
                             status = env.CreateMutableBinding(decl.id);
                             if (isAbrupt(status)) return status;
                         }
-                    } else if ((type === "FunctionDeclaration" || type === "GeneratorDeclaration") && (!decl.expression)) {
+                    } else if (isFuncDecl[type] && (!decl.expression)) {
                         functionsToInitialize.push(decl);
                     }
                 }
@@ -23046,26 +23058,26 @@ define("lib/runtime", ["lib/parser", "lib/api", "lib/slower-static-semantics"], 
     function InstantiateFunctionObject(node, env) {
 
         var F;
+        var cx = getContext();
         var params = getCode(node, "params");
         var body = getCode(node, "body");
-        var generator = node.generator;
-        var cx = getContext();
-        var strict = cx.strict || node.strict;
+        var generator = !!getCode(node,"generator");
+        var needsSuper = getCode(node, "needsSuper");
+        var strict = cx.strict || !!getCode(node,"strict");
         var scope = env;
-
+        
         if (!generator) {
             var name = node.id;
             F = FunctionCreate("normal", params, body, scope, strict);
             // 14.1.16 4.
-            if (node.needsSuper) MakeMethod(F, name, undefined);
+            if (needsSuper) MakeMethod(F, name, undefined);
             MakeConstructor(F);
             if (name) SetFunctionName(F, name);
         } else if (generator) {
             strict = true;
             var name = node.id;
             F = GeneratorFunctionCreate("generator", params, body, scope, strict);
-            var GeneratorPrototype = getIntrinsic("%GeneratorPrototype%");
-            var prototype = ObjectCreate(GeneratorPrototype);
+            var prototype = ObjectCreate(getIntrinsic("%GeneratorPrototype%"));
             if (name) SetFunctionName(F, name);
             MakeConstructor(F, true, prototype);
         }
@@ -23081,7 +23093,7 @@ define("lib/runtime", ["lib/parser", "lib/api", "lib/slower-static-semantics"], 
 
         //console.log("ins=");
         //console.dir(argList);
-
+        var cx = getContext();
         var code = getInternalSlot(F, "Code");
         var formals = getInternalSlot(F, "FormalParameters");
         var strict = getInternalSlot(F, "Strict");
@@ -23399,13 +23411,15 @@ define("lib/runtime", ["lib/parser", "lib/api", "lib/slower-static-semantics"], 
 
     function EvaluateCall(ref, args, tailPosition) {
         var thisValue;
+
         var func = GetValue(ref);
         if ((func = ifAbrupt(func)) && isAbrupt(func)) return func;
         var argList = ArgumentListEvaluation(args);
-//console.dir(argList)
+
         if ((argList = ifAbrupt(argList)) && isAbrupt(argList)) return argList;
         if (Type(func) !== "object") return withError("Type", "EvaluateCall: func is not an object");
         if (!IsCallable(func)) return withError("Type", "EvaluateCall: func is not callable");
+        
         if (Type(ref) === "reference") {
             if (IsPropertyReference(ref)) {
                 thisValue = GetThisValue(ref);
@@ -23416,15 +23430,12 @@ define("lib/runtime", ["lib/parser", "lib/api", "lib/slower-static-semantics"], 
         } else {
             thisValue = undefined;
         }
+        
         if (tailPosition) {
             //    PrepareForTailCall();
         }
 
         var result = callInternalSlot("Call", func, thisValue, argList);
-
-        //var call = getInternalSlot(func, "Call");
-        //var result = call.call(func, thisValue, argList);
-        // var result = func.Call(thisValue, argList);
 
         //if (tailPosition) {
         //}
@@ -23433,22 +23444,18 @@ define("lib/runtime", ["lib/parser", "lib/api", "lib/slower-static-semantics"], 
     }
 
     function Call(thisArg, argList) {
-
+        var status, result, fname, localEnv;
         var F = this;
         var params = getInternalSlot(this, "FormalParameters");
         var code = getInternalSlot(this, "Code");
         var thisMode = getInternalSlot(this, "ThisMode");
         var scope = getInternalSlot(this, "Environment");
-        var status, result;
-        var fname;
-        var localEnv;
-
+        debug("thisMode = " + thisMode);
+        
         if (!code) return withError("Type", "Call: this value has no [[Code]] slot");
 
         var callerContext = getContext();
-
         var calleeContext = newContext();
-
         var calleeName = Get(this, "name");
         var callerName = callerContext.callee;
 
@@ -23458,17 +23465,23 @@ define("lib/runtime", ["lib/parser", "lib/api", "lib/slower-static-semantics"], 
         if (thisMode === "lexical") {
             localEnv = NewDeclarativeEnvironment(scope);
         } else {
+
             if (thisMode === "strict") {
+                
                 this.thisValue = thisArg;
+                calleeContext.strict = true;
+
             } else {
-                if (thisArg === null || thisArg === undefined) this.thisValue = getGlobalThis();
-                else if (Type(thisArg) !== "object") {
-                    var thisValue = ToObject(thisArg);
-                    // neu
-                   // if (isAbrupt(thisValue)) return thisValue;
-                    // 
-                    this.thisValue = thisValue;
-                } else this.thisValue = thisArg;
+                
+                if (thisArg === null || thisArg === undefined) {
+                    this.thisValue = getGlobalThis();
+                } else if (Type(thisArg) !== "object") {
+                    this.thisValue = ToObject(thisArg);
+                } else {
+                    this.thisValue = thisArg;
+                }
+
+
             }
             localEnv = NewFunctionEnvironment(this, this.thisValue);
         }
@@ -23477,16 +23490,12 @@ define("lib/runtime", ["lib/parser", "lib/api", "lib/slower-static-semantics"], 
         calleeContext.VarEnv = localEnv;
         calleeContext.LexEnv = localEnv;
 
-
-        var status = InstantiateFunctionDeclaration(this, argList, localEnv);
+        status = InstantiateFunctionDeclaration(this, argList, localEnv);
         if ((status = ifAbrupt(status)) && isAbrupt(status)) {
             return status;
         }
 
-
         cx  = calleeContext;
-
-        var result;
         result = EvaluateBody(this);
 
         cx  = oldContext();
@@ -23730,7 +23739,7 @@ define("lib/runtime", ["lib/parser", "lib/api", "lib/slower-static-semantics"], 
     evaluation.FunctionExpression = FunctionDeclaration;
     evaluation.FunctionDeclaration = FunctionDeclaration;
 
-    function FunctionDeclaration(node, objectdecl) {
+    function FunctionDeclaration(node) {
         "use strict";
         var F;
         var id = node.id;
@@ -23738,8 +23747,8 @@ define("lib/runtime", ["lib/parser", "lib/api", "lib/slower-static-semantics"], 
         var params = getCode(node, "params");
         var body = getCode(node,   "body");
         var scope;
-        var strict = cx.strict || node.strict;
-        if (expr || objectdecl) {
+        var strict = getContext().strict || node.strict;
+        if (expr) {
             if (id) {
                 scope = NewDeclarativeEnvironment(getLexEnv());
                 status = scope.CreateMutableBinding(id);
@@ -23815,7 +23824,7 @@ define("lib/runtime", ["lib/parser", "lib/api", "lib/slower-static-semantics"], 
         var exprRef;
         var O, callee;
         var cx = getContext();
-        var strict = cx && cx.strict;
+        var strict = cx.strict;
         var notSuperExpr = node.callee.type !== "SuperExpression";
         if (notSuperExpr) {
             exprRef = Evaluate(node.callee);
@@ -23846,7 +23855,7 @@ define("lib/runtime", ["lib/parser", "lib/api", "lib/slower-static-semantics"], 
         "use strict";
         var callee = node.callee;
         var notSuperExpr = callee.type !== "SuperExpression";
-        var strict = cx.strict;
+        var strict = getContext().strict;
         var tailCall = !! node.tailCall;
         var exprRef;
         if (notSuperExpr) {
@@ -23877,6 +23886,7 @@ define("lib/runtime", ["lib/parser", "lib/api", "lib/slower-static-semantics"], 
         for (i = 0, j = node.declarations.length; i < j; i++) {
             decl = node.declarations[i];
             type = decl.type;
+
             // wird von binding intialisation vorher initialisiert,
             // hier wird das initialiser assignment durchgefuehrt, wenn
             // der code evaluiert wird.
@@ -26065,7 +26075,7 @@ define("lib/runtime", ["lib/parser", "lib/api", "lib/slower-static-semantics"], 
         var binding;
 
         var closure = FunctionCreate("generator", [], [], getLexEnv(), true);
-        return closure.Call(undefined, []);
+        return callInternalSlot("Call", closure, undefined, []);
     }
 
     function CatchClauseEvaluation(thrownValue, catchNode) {
@@ -26141,14 +26151,12 @@ define("lib/runtime", ["lib/parser", "lib/api", "lib/slower-static-semantics"], 
     }
 
 
-
     function tellExecutionContext(node, i, parent) {
         loc = node.loc || loc;
-        
+        var cx = getContext(); // expensive putting such here
         var stateRec = cx.state[cx.state.length-1];
         if (stateRec) stateRec.instructionIndex = i;
         // unsure but i have to reenter statementlists at some point,
-
         cx.state.node = node;
         cx.line =   loc.start.line;
         cx.column = loc.start.column;
@@ -26164,9 +26172,10 @@ define("lib/runtime", ["lib/parser", "lib/api", "lib/slower-static-semantics"], 
 
         "use strict";
         var v;
+        var cx = getContext();
         
         if (program.strict) {
-            getContext().strict = true;
+            cx.strict = true;
         }
 
         var status = InstantiateGlobalDeclaration(program, getGlobalEnv(), []);
@@ -26191,7 +26200,6 @@ define("lib/runtime", ["lib/parser", "lib/api", "lib/slower-static-semantics"], 
             }
         }
 
-        getContext().strict = false;
         return NormalCompletion(V);
     }
 
