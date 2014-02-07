@@ -1300,18 +1300,18 @@ define("lib/tables", function (require, exports, module) {
     ExprEndOfs["case"] = true;
     ExprEndOfs["default"] = true;
     /*
-			__proto__: null,
-			")": true,
-			"}": true,
-			"]": true,
-			":": true,
-			";": true,
-			//",": true,
-			"case": true,
-			"default": true
-			
-		};
-		*/
+            __proto__: null,
+            ")": true,
+            "}": true,
+            "]": true,
+            ":": true,
+            ";": true,
+            //",": true,
+            "case": true,
+            "default": true
+            
+        };
+        */
     var Separators = {
         ";": true,
         ",": true
@@ -1599,8 +1599,8 @@ define("lib/tokenizer", ["lib/tables"], function (tables) {
         var token = Object.create(null);
 
         /*    var oid = token._oid_ = newNodeId();
-			tokenTable[oid] = token;
-			*/
+            tokenTable[oid] = token;
+            */
 
         if (!isWS) lastTokenType = type;
         token.type = type;
@@ -1609,10 +1609,10 @@ define("lib/tokenizer", ["lib/tables"], function (tables) {
         
         if (PunctOrLT[type]) {
             /*
-			if (type === "Punctuator") {
-			 if (lookahead === undefined && !AllowedLastChars[value]) throw SyntaxError("Unexpected end of input stream");
-			}
-			*/
+            if (type === "Punctuator") {
+             if (lookahead === undefined && !AllowedLastChars[value]) throw SyntaxError("Unexpected end of input stream");
+            }
+            */
             if (!OneOfThesePunctuators[value]) inputElementGoal = inputElementRegExp;
         
         } else inputElementGoal = inputElementDiv;
@@ -1948,7 +1948,7 @@ define("lib/tokenizer", ["lib/tables"], function (tables) {
                         next();
                         es += ch;
                         /*++i;
-						if (i == 4) break; // some type more */
+                        if (i == 4) break; // some type more */
                     }
                     // com = String.fromCharCode(+(es.substr(2, es.length-1)));
                     com = eval("\'" + es + "\'");
@@ -3581,7 +3581,7 @@ define("lib/slower-static-semantics", function (require, exports, modules) {
 /*
 ############################################################################################################################################################################################################
 
-	Parser - Converts a stream of EcmaScript Tokens into a Mozilla Parser API AST instead of into the good looking Original Strings
+    Parser - Converts a stream of EcmaScript Tokens into a Mozilla Parser API AST instead of into the good looking Original Strings
 
 ############################################################################################################################################################################################################
 */
@@ -4057,13 +4057,13 @@ define("lib/parser", ["lib/tables", "lib/tokenizer"], function (tables, tokenize
         // Parameter 
 
         function getParameter(name) {
-    	    var parameter = parameters[name];
+            var parameter = parameters[name];
             return parameter[parameter.length-1];
         }
         
         function newParameter(name, value) {
             var parameter = parameters[name];
-    	    return parameter.push(value);
+            return parameter.push(value);
         }
 
         function popParameter(name) {
@@ -6497,7 +6497,7 @@ define("lib/parser", ["lib/tables", "lib/tokenizer"], function (tables, tokenize
     }
 
     /*
-	Statement 
+    Statement 
 */
     parser.StatementList = StatementList;
     parser.SwitchStatementList = SwitchStatementList;
@@ -6545,7 +6545,7 @@ define("lib/parser", ["lib/tables", "lib/tokenizer"], function (tables, tokenize
     /*
 
 
-	Iteration
+    Iteration
 */
     parser.IterationStatement = IterationStatement;
 
@@ -6988,9 +6988,9 @@ define("lib/parser", ["lib/tables", "lib/tokenizer"], function (tables, tokenize
         EarlyErrors(node);
 
         /*
-		node.lexNames = staticSemantics.lexNames();
-		node.varNames = staticSemantics.varNames();
-				*/
+        node.lexNames = staticSemantics.lexNames();
+        node.varNames = staticSemantics.varNames();
+                */
 
         staticSemantics.popContainer();
 
@@ -7227,7 +7227,7 @@ define("lib/parser", ["lib/tables", "lib/tokenizer"], function (tables, tokenize
         if (v === "[") {
             var node = Node("JSONArray");
             var elements = JSONElementList();
-            if ((elements = ifAbrupt(elements)) && isAbrupt(elements)) return elements;
+            if (isAbrupt(elements = ifAbrupt(elements))) return elements;
             node.elements = elements;
             pass("]");
             return node;
@@ -7243,7 +7243,7 @@ define("lib/parser", ["lib/tables", "lib/tokenizer"], function (tables, tokenize
         next();
         while (v !== "]") {
             var node = JSONValue();
-            if ((node = ifAbrupt(node)) && isAbrupt(node)) return node;
+            if (isAbrupt(node = ifAbrupt(node))) return node;
             if (node) list.push(node);
             else return withError("JSONElementList: Error parsing Element");
             if (v === ",") pass(",");
@@ -7259,7 +7259,7 @@ define("lib/parser", ["lib/tables", "lib/tokenizer"], function (tables, tokenize
         if (v === "{") {
             var node = Node("JSONObject");
             var properties = JSONMemberList();
-            if ((properties = ifAbrupt(properties)) && isAbrupt(properties)) return properties;
+            if (isAbrupt(properties = ifAbrupt(properties))) return properties;
             node.properties = properties;
             pass("}");
             return node;
@@ -7273,10 +7273,10 @@ define("lib/parser", ["lib/tables", "lib/tokenizer"], function (tables, tokenize
         var node = Node("JSONMember");
         var key = JSONString();
         if (!key) return withError("Syntax", "JSONMember: Expecting double quoted string keys in object literals.");
-        if ((key = ifAbrupt(key)) && isAbrupt(key)) return key;
+        if (isAbrupt(key = ifAbrupt(key))) return key;
         pass(":");
         var value = JSONValue();
-        if ((value = ifAbrupt(value)) && isAbrupt(value)) return value;
+        if (isAbrupt(value = ifAbrupt(value))) return value;
         node.key = key;
         node.value = value;
         return node;
@@ -7288,7 +7288,7 @@ define("lib/parser", ["lib/tables", "lib/tokenizer"], function (tables, tokenize
         next();
         while (v !== "}") {
             var node = JSONMember();
-            if ((node = ifAbrupt(node)) && isAbrupt(node)) return node;
+            if (isAbrupt(node = ifAbrupt(node))) return node;
             if (node) list.push(node);
             else return withError("JSONMemberList: Error parsing Member");
             if (v === ",") pass(",");
@@ -7394,8 +7394,8 @@ define("lib/parser", ["lib/tables", "lib/tokenizer"], function (tables, tokenize
 /*
 ############################################################################################################################################################################################################
 
-	LLVM Codegen Placeholder for Future 
-		
+    LLVM Codegen Placeholder for Future 
+        
 ############################################################################################################################################################################################################
 */
 
@@ -7409,8 +7409,8 @@ define("lib/llvm-codegen", function (require, exports, module) {
 /*
 ############################################################################################################################################################################################################
 
-	JavaScript Codegenerator - This module transforms the AST back into ES6 Source Code.
-		
+    JavaScript Codegenerator - This module transforms the AST back into ES6 Source Code.
+        
 ############################################################################################################################################################################################################
 */
 
@@ -8072,9 +8072,9 @@ define("lib/js-codegen", function (require, exports, module) {
 
 /*
 ############################################################################################################################################################################################################
-	
-	The Heap Memory (ArrayBuffer plus Load and Store)
-	
+    
+    The Heap Memory (ArrayBuffer plus Load and Store)
+    
 ############################################################################################################################################################################################################
 */
 
@@ -8296,8 +8296,8 @@ define("lib/heap", function (require, exports, module) {
 /*
 ############################################################################################################################################################################################################
 
-	A Codegenerator which uses Heap Memory to Store the Data
-		
+    A Codegenerator which uses Heap Memory to Store the Data
+        
 ############################################################################################################################################################################################################
 */
 
@@ -8469,7 +8469,7 @@ define("lib/builder", function (require, exports, module) {
     builder.readNumberType = readNumberType;
 
     /*
-	Translating statements into ByteCode, recursivly
+    Translating statements into ByteCode, recursivly
 
 
 */
@@ -8551,7 +8551,7 @@ define("lib/builder", function (require, exports, module) {
 /*
 ############################################################################################################################################################################################################
 
-	
+    
 ############################################################################################################################################################################################################
 */
 
@@ -8856,10 +8856,10 @@ define("lib/api", function (require, exports, module) {
             return object["Bindings"][name];
         }
         /*if (IsSymbol(name)) {
-		return getInternalSlot(getInternalSlot(object, "Symbols"), getInternalSlot(name,"es5id"));
-	} else {
-		return getInternalSlot(getInternalSlot(object,"Bindings"),name);
-	}*/
+        return getInternalSlot(getInternalSlot(object, "Symbols"), getInternalSlot(name,"es5id"));
+    } else {
+        return getInternalSlot(getInternalSlot(object,"Bindings"),name);
+    }*/
     }
 
     exports.writePropertyDescriptor = writePropertyDescriptor;
@@ -8871,14 +8871,14 @@ define("lib/api", function (require, exports, module) {
             return object["Bindings"][name] = value;
         }
         /*if (IsSymbol(name)) {
-		return setInternalSlot(getInternalSlot(object, "Symbols"), getInternalSlot(name,"es5id"),  value);
-	} else {
-		return setInternalSlot(getInternalSlot(object,"Bindings"), name, value);
-	}*/
+        return setInternalSlot(getInternalSlot(object, "Symbols"), getInternalSlot(name,"es5id"),  value);
+    } else {
+        return setInternalSlot(getInternalSlot(object,"Bindings"), name, value);
+    }*/
     }
 
     // ===========================================================================================================
-    // ReturnIfAbrupt(argument) ==> if ((value=ifAbrupt(value))&&isAbrupt(value))return value;
+    // ReturnIfAbrupt(argument) ==> if (isAbrupt(value = ifAbrupt(value)))return value;
     // ===========================================================================================================
 
     function unwrap(arg) {
@@ -8915,9 +8915,9 @@ define("lib/api", function (require, exports, module) {
         var O = Object.create(OrdinaryObject.prototype);
         prototype = prototype === undefined ? getIntrinsic("%ObjectPrototype%") || null : prototype;
         setInternalSlot(O,"Bindings",Object.create(null));
-	    setInternalSlot(O,"Symbols",Object.create(null));
-	    setInternalSlot(O,"Prototype",prototype || null);
-	    setInternalSlot(O,"Extensible", true);
+        setInternalSlot(O,"Symbols",Object.create(null));
+        setInternalSlot(O,"Prototype",prototype || null);
+        setInternalSlot(O,"Extensible", true);
         return O;
     }
     OrdinaryObject.prototype = {
@@ -9002,7 +9002,7 @@ define("lib/api", function (require, exports, module) {
             while (p !== null) {
                 if (SameValue(p, O)) return false;
                 var nextp = GetPrototypeOf(p);
-                if ((nextp = ifAbrupt(nextp)) && isAbrupt(nextp)) return nextp;
+                if (isAbrupt(nextp = ifAbrupt(nextp))) return nextp;
                 p = nextp;
             }
         }
@@ -9040,7 +9040,7 @@ define("lib/api", function (require, exports, module) {
     function OrdinaryObjectGet(O, P, R) {
         Assert(IsPropertyKey(P), "Get (object) expects a valid Property Key (got " + P + ")")
         var desc = callInternalSlot("GetOwnProperty", O, P);
-        if ((desc = ifAbrupt(desc)) && isAbrupt(desc)) return desc;
+        if (isAbrupt(desc = ifAbrupt(desc))) return desc;
         if (desc === undefined) {
             var parent = GetPrototypeOf(O);
             if (isAbrupt(parent)) return parent;
@@ -9062,10 +9062,10 @@ define("lib/api", function (require, exports, module) {
         var ownDesc, parent, setter;
         Assert(IsPropertyKey(P), "Set (object) expects a valid Property Key")
         ownDesc = callInternalSlot("GetOwnProperty", O, P); // readPropertyDescriptor(O, P);
-        if ((ownDesc == ifAbrupt(ownDesc)) && isAbrupt(ownDesc)) return ownDesc;
+        if (isAbrupt(ownDesc = ifAbrupt(ownDesc))) return ownDesc;
         if (ownDesc === undefined) {
             parent = GetPrototypeOf(O);
-            if ((parent = ifAbrupt(parent)) && isAbrupt(parent)) return parent;
+            if (isAbrupt(parent = ifAbrupt(parent))) return parent;
             if (parent !== null) {
                 return parent.Set(P, V, R);
             }
@@ -9088,7 +9088,7 @@ define("lib/api", function (require, exports, module) {
             if (ownDesc.writable == false) return false;
             if (Type(R) !== "object") return false;
             var existingDescriptor = R.GetOwnProperty(P);
-            if ((existingDescriptor = ifAbrupt(existingDescriptor)) && isAbrupt(existingDescriptor)) return existingDescriptor;
+            if (isAbrupt(existingDescriptor = ifAbrupt(existingDescriptor))) return existingDescriptor;
 
             if (existingDescriptor !== undefined) {
                 var valueDesc = {
@@ -9108,10 +9108,10 @@ define("lib/api", function (require, exports, module) {
         Assert(IsPropertyKey(P), "Invoke: expecting property key");
         if (!Array.isArray(args)) args = [];
         obj = ToObject(O);
-        if ((obj = ifAbrupt(obj)) && isAbrupt(obj)) return obj;
+        if (isAbrupt(obj = ifAbrupt(obj))) return obj;
         var func = callInternalSlot("Get", obj, P, O);
         if (!IsCallable(func)) return withError("Type", "Invoke: expected function is not callable");
-        if ((func = ifAbrupt(func)) && isAbrupt(func)) return func;
+        if (isAbrupt(func = ifAbrupt(func))) return func;
         return callInternalSlot("Call", func, O, args);
     }
 
@@ -9119,7 +9119,7 @@ define("lib/api", function (require, exports, module) {
         Assert(IsPropertyKey(P), "expecting property key");
         Assert(Array.isArray(A), "expecting arguments list");
         var method = O.Get(P, R);
-        if ((method = ifAbrupt(method)) && isAbrupt(method)) return method;
+        if (isAbrupt(method = ifAbrupt(method))) return method;
         if (Type(method) !== "object") return withError("Type", "Invoke: method " + P + " is not an object");
         if (!IsCallable(method)) return withError("Type", "Invoke: method " + P + " is not callable");
         return method.Call(R, A);
@@ -9226,7 +9226,7 @@ define("lib/api", function (require, exports, module) {
         });
 
         var obj = ObjectCreate();
-        if ((obj = ifAbrupt(obj)) && isAbrupt(obj)) return obj;
+        if (isAbrupt(obj = ifAbrupt(obj))) return obj;
         CreateDataProperty(obj, "next", listIteratorNext);
         return obj;
     }
@@ -9340,8 +9340,8 @@ define("lib/api", function (require, exports, module) {
                     b.value = V;
                     if (!b.initialised) b.initialised = true;
                 }
-                //    	    else if (!b.writable) return withError("Reference", "Trying to set immutable binding.");
-                //    	    else if (!b.initialised) return withError("Reference", "Trying to set uninitialised binding.");
+                //          else if (!b.writable) return withError("Reference", "Trying to set immutable binding.");
+                //          else if (!b.initialised) return withError("Reference", "Trying to set uninitialised binding.");
                 return NormalCompletion(b.value);
             } else if (o = this.outer) return o.SetMutableBinding(N, V, S);
         },
@@ -9451,10 +9451,10 @@ define("lib/api", function (require, exports, module) {
             if (this.Unscopables[N]) return false;
             if (this.withEnvironment) {
                 var unscopables = bindings.Get($$unscopables, bindings);
-                if ((unscopables = ifAbrupt(unscopables)) && isAbrupt(unscopables)) return unscopables;
+                if (isAbrupt(unscopables = ifAbrupt(unscopables))) return unscopables;
                 if (Type(unscopables) === "object") {
                     var found = HasOwnProperty(unscopables, N);
-                    if ((found = ifAbrupt(found)) && isAbrupt(found)) return found;
+                    if (isAbrupt(found = ifAbrupt(found))) return found;
                     if (found === true) return false;
                 }
             }
@@ -9616,7 +9616,7 @@ define("lib/api", function (require, exports, module) {
             var objRec = this.objEnv;
             var globalObject = objRec.BoundObject;
             var extensible = globalObject.IsExtensible();
-            if ((extensible = ifAbrupt(extensible)) && isAbrupt(extensible)) return extensible;
+            if (isAbrupt(extensible = ifAbrupt(extensible))) return extensible;
             if (objRec.HasBinding(N) === false) return extensible;
             var existingProp = globalObject.GetOwnProperty(N);
             if (!existingProp) return extensible;
@@ -9627,17 +9627,17 @@ define("lib/api", function (require, exports, module) {
         CreateGlobalVarBinding: function (N, D) {
             debug("createglobalvar");
             var cpl = this.objEnv.CreateMutableBinding(N, D);
-            if ((cpl = ifAbrupt(cpl)) && isAbrupt(cpl)) return cpl;
+            if (isAbrupt(cpl = ifAbrupt(cpl))) return cpl;
             cpl = this.objEnv.InitialiseBinding(N, undefined);
-            if ((cpl = ifAbrupt(cpl)) && isAbrupt(cpl)) return cpl;
+            if (isAbrupt(cpl = ifAbrupt(cpl))) return cpl;
             this.VarNames[N] = true;
         },
         CreateGlobalFunctionBinding: function (N, V, D) {
             debug("createglobalfunction");
             var cpl = this.objEnv.CreateMutableBinding(N, D);
-            if ((cpl = ifAbrupt(cpl)) && isAbrupt(cpl)) return cpl;
+            if (isAbrupt(cpl = ifAbrupt(cpl))) return cpl;
             cpl = this.objEnv.InitialiseBinding(N, V);
-            if ((cpl = ifAbrupt(cpl)) && isAbrupt(cpl)) return cpl;
+            if (isAbrupt(cpl = ifAbrupt(cpl))) return cpl;
             this.VarNames[N] = true;
         }
     };
@@ -9986,7 +9986,7 @@ define("lib/api", function (require, exports, module) {
                 Assert(base !== null && base !== undefined, "PutValue: base is never null nor undefined");
                 base = ToObject(base);
                 var succeeded = base.Set(V.name, W, GetThisValue(V));
-                if ((succeeded = ifAbrupt(succeeded)) && isAbrupt(succeeded)) return succeeded;
+                if (isAbrupt(succeeded = ifAbrupt(succeeded))) return succeeded;
                 if (succeeded === false && V.strict) return withError("Type", "PutValue: succeeded false but strict true");
                 return NormalCompletion();
             }
@@ -10072,7 +10072,7 @@ define("lib/api", function (require, exports, module) {
         Assert(Type(O) === "object", "CreateDataPropertyOrThrow: first argument has to be an object.");
         Assert(IsPropertyKey(P), "CreateDataPropertyOrThrow: second argument has to be a valid property key.");
         var success = CreateDataProperty(O, P, V);
-        if ((success = ifAbrupt(success)) && isAbrupt(success)) return success;
+        if (isAbrupt(success = ifAbrupt(success))) return success;
         if (success === false) return withError("Type", "CreateDataPropertyOrThrow: CreateDataProperty failed and returned false.");
         return success;
     }
@@ -10134,33 +10134,33 @@ define("lib/api", function (require, exports, module) {
         
         if (HasProperty(O, "enumerable")) {
             var enume = Get(O, "enumerable");
-            if ((enume = ifAbrupt(enume)) && isAbrupt(enume)) return enume;
+            if (isAbrupt(enume = ifAbrupt(enume))) return enume;
             desc.enumerable = enume;
         }
         if (HasProperty(O, "writable")) {
             var write = Get(O, "writable");
-            if ((write = ifAbrupt(write)) && isAbrupt(write)) return write;
+            if (isAbrupt(write = ifAbrupt(write))) return write;
             desc.writable = write;
         }
         if (HasProperty(O, "configurable")) {
             var conf = Get(O, "configurable");
-            if ((conf = ifAbrupt(conf)) && isAbrupt(conf)) return conf;
+            if (isAbrupt(conf = ifAbrupt(conf))) return conf;
             desc.configurable = conf;
         }
         if (HasProperty(O, "value")) {
             var value = Get(O, "value");
-            if ((value = ifAbrupt(value)) && isAbrupt(value)) return value;
+            if (isAbrupt(value = ifAbrupt(value))) return value;
             desc.value = value;
         }
 
         if (HasProperty(O, "get")) {
             var get = Get(O, "get");
-            if ((get = ifAbrupt(get)) && isAbrupt(get)) return get;
+            if (isAbrupt(get = ifAbrupt(get))) return get;
             desc.get = get;
         }
         if (HasProperty(O, "set")) {
             var set = Get(O, "set");
-            if ((set = ifAbrupt(set)) && isAbrupt(set)) return set;
+            if (isAbrupt(set = ifAbrupt(set))) return set;
             desc.set = set;
         }
         desc.Origin = O;
@@ -10217,7 +10217,7 @@ define("lib/api", function (require, exports, module) {
                     writePropertyDescriptor(O, P, Desc);
                 }
             } 
-            //	var R = CreateChangeRecord("add", O, P, current, Desc);
+            //  var R = CreateChangeRecord("add", O, P, current, Desc);
             return true;
 
         } else if (current && Desc) {
@@ -10381,7 +10381,7 @@ define("lib/api", function (require, exports, module) {
     function GetMethod(O, P) {
         Assert(Type(O) === "object" && IsPropertyKey(P) === true, "o has to be object and p be a valid key");
         var method = callInternalSlot("Get", O, P, O);
-        if ((method = ifAbrupt(method)) && isAbrupt(method)) return method;
+        if (isAbrupt(method = ifAbrupt(method))) return method;
         if (IsCallable(method)) return method;
         else return withError("Type", "GetMethod: " + P + " can not be retrieved");
     }
@@ -10451,10 +10451,10 @@ define("lib/api", function (require, exports, module) {
         Assert(Type(O) === "object", "object expected");
         Assert(level === "sealed" || level === "frozen", "level must be sealed or frozen");
         var status = IsExtensible(O);
-        if ((status = ifAbrupt(status)) && isAbrupt(status)) return status;
+        if (isAbrupt(status = ifAbrupt(status))) return status;
         if (status === true) return false;
         var keys = OwnPropertyKeysAsList(O); // Array statt iterator
-        if ((keys = ifAbrupt(keys)) && isAbrupt(keys)) return keys;
+        if (isAbrupt(keys = ifAbrupt(keys))) return keys;
         var pendingException = undefined;
         var key;
         var configurable = false,
@@ -10462,7 +10462,7 @@ define("lib/api", function (require, exports, module) {
         for (var k in keys) {
             key = keys[k];
             status = GetOwnProperty(O, key);
-            if ((status = ifAbrupt(status)) && isAbrupt(status)) {
+            if (isAbrupt(status = ifAbrupt(status))) {
                 if (!pendingException) pendingException = status;
                 configurable = true;
             } else {
@@ -10588,12 +10588,12 @@ define("lib/api", function (require, exports, module) {
         if (prefType === "string") hint = "string";
         if (prefType === "number") hint = "number";
         exoticToPrim = Get(V, $$toPrimitive);
-        if ((exoticToPrim = ifAbrupt(exoticToPrim)) && isAbrupt(exoticToPrim)) return exoticToPrim;
+        if (isAbrupt(exoticToPrim = ifAbrupt(exoticToPrim))) return exoticToPrim;
         var result;
         if (exoticToPrim !== undefined) {
             if (!IsCallable(exoticToPrim)) return withError("Type", "exotic ToPrimitive of object is not a function");
             result = exoticToPrim.Call(V, [hint]);
-            if ((result = ifAbrupt(result)) && isAbrupt(result)) return result;
+            if (isAbrupt(result = ifAbrupt(result))) return result;
             if (result !== undefined && Type(result) !== "object") return result;
             else return withError("Type", "Can not convert the object to a primitive with exotic ToPrimitive")
         }
@@ -10613,10 +10613,10 @@ define("lib/api", function (require, exports, module) {
 
         for (var i = 0; i < 2; i++) {
             func = Get(O, list[i]);
-            if ((func = ifAbrupt(func)) && isAbrupt(func)) return func;
+            if (isAbrupt(func = ifAbrupt(func))) return func;
             if (IsCallable(func)) {
                 result = func.Call(O, []);
-                if ((result = ifAbrupt(result)) && isAbrupt(result)) return result;
+                if (isAbrupt(result = ifAbrupt(result))) return result;
                 if (result !== undefined && Type(result) !== "object") return result;
                 else return withError("Type", "Can not convert the object to a primitive with OrdinaryToPrimitive by calling " + list[i]);
             }
@@ -10661,7 +10661,7 @@ define("lib/api", function (require, exports, module) {
 
     function ToUint16(V) {
         var number = ToNumber(V);
-        if ((number = ifAbrupt(number)) && isAbrupt(number)) return number;
+        if (isAbrupt(number = ifAbrupt(number))) return number;
         if (ReturnZero[number]) return +0;
         var int = sign(number) * floor(abs(number));
         var int16bit = int % (Math.pow(2, 16));
@@ -10670,7 +10670,7 @@ define("lib/api", function (require, exports, module) {
 
     function ToInt32(V) {
         var number = ToNumber(V);
-        if ((number = ifAbrupt(number)) && isAbrupt(number)) return number;
+        if (isAbrupt(number = ifAbrupt(number))) return number;
         if (ReturnZero[number]) return +0;
         var int = sign(number) * floor(abs(number));
         var int32bit = int % (Math.pow(2, 32));
@@ -10680,12 +10680,12 @@ define("lib/api", function (require, exports, module) {
 
     function ToUint32(V) {
         /*
-		var view = new Uint32Array(1);
-	view[0] = ToNumber(V);
-	return view[0];
+        var view = new Uint32Array(1);
+    view[0] = ToNumber(V);
+    return view[0];
 */
         var number = ToNumber(V);
-        if ((number = ifAbrupt(number)) && isAbrupt(number)) return number;
+        if (isAbrupt(number = ifAbrupt(number))) return number;
         if (ReturnZero[number]) return +0;
         var int = sign(number) * floor(abs(number));
         var int32bit = int % (Math.pow(2, 32));
@@ -10694,7 +10694,7 @@ define("lib/api", function (require, exports, module) {
 
     function ToInteger(V) {
         var number = ToNumber(V);
-        if ((number = ifAbrupt(number)) && isAbrupt(number)) return number;
+        if (isAbrupt(number = ifAbrupt(number))) return number;
         if (ReturnNaN[number]) return +0;
         if (ReturnNum[number]) return number;
         // return sign(number) * floor(abs(number));
@@ -10703,7 +10703,7 @@ define("lib/api", function (require, exports, module) {
 
     function ToLength(V) {
         var len = ToInteger(V);
-        if ((len = ifAbrupt(len)) && isAbrupt(len)) return len;
+        if (isAbrupt(len = ifAbrupt(len))) return len;
         if (len <= 0) return Completion("normal", 0, "");
         return Completion("normal", min(len, (Math.pow(2, 53)) - 1), "");
     }
@@ -10955,7 +10955,7 @@ define("lib/api", function (require, exports, module) {
             enumerable: false,
             configurable: false
         });
-        if ((success = ifAbrupt(success)) && isAbrupt(success)) return success;
+        if (isAbrupt(success = ifAbrupt(success))) return success;
         if (success === false) return withError("Type", "Sorry, can not set name property of a non function");
         return NormalCompletion(undefined);
     }
@@ -11036,7 +11036,7 @@ define("lib/api", function (require, exports, module) {
         if (!IsConstructor(C)) return withError("Type", "GetPrototypeFromConstructor: C is no constructor");
 
         var proto = Get(C, "prototype");
-        if ((proto = ifAbrupt(proto)) && isAbrupt(proto)) return proto;
+        if (isAbrupt(proto = ifAbrupt(proto))) return proto;
 
         if (Type(proto) !== "object") {
             var realm = getInternalSlot(C, "Realm");
@@ -11053,7 +11053,7 @@ define("lib/api", function (require, exports, module) {
         Assert(HasProperty(getIntrinsics(), intrinsicDefaultProto), "the chosen intrinsic default proto has to be defined in the intrinsic");
         var O, result;
         var proto = GetPrototypeFromConstructor(constructor, intrinsicDefaultProto);
-        if ((proto = ifAbrupt(proto)) && isAbrupt(proto)) return proto;
+        if (isAbrupt(proto = ifAbrupt(proto))) return proto;
         return ObjectCreate(proto, internalDataList);
     }
 
@@ -11061,11 +11061,11 @@ define("lib/api", function (require, exports, module) {
 
     function CreateFromConstructor(F) {
         var creator = Get(F, $$create);
-        if ((creator = ifAbrupt(creator)) && isAbrupt(creator)) return creator;
+        if (isAbrupt(creator = ifAbrupt(creator))) return creator;
         if (creator === undefined) return undefined;
         if (IsCallable(creator) === false) return withError("Type", "CreateFromConstructor: creator has to be callable");
         var obj = callInternalSlot("Call", creator, F, []);
-        if ((obj = ifAbrupt(obj)) && isAbrupt(obj)) return obj;
+        if (isAbrupt(obj = ifAbrupt(obj))) return obj;
         if (Type(obj) !== "object") return withError("Type", "CreateFromConstructor: obj has to be an object");
         return obj;
     }
@@ -11073,14 +11073,14 @@ define("lib/api", function (require, exports, module) {
     function Construct(F, argList) {
         Assert(Type(F) === "object", "essential Construct: F is not an object");
         var obj = OrdinaryCreateFromConstructor(F);
-        if ((obj = ifAbrupt(obj)) && isAbrupt(obj)) return obj;
+        if (isAbrupt(obj = ifAbrupt(obj))) return obj;
         if (obj === undefined) {
             obj = OrdinaryCreateFromConstructor(F, "%ObjectPrototype%");
-            if ((obj = ifAbrupt(obj)) && isAbrupt(obj)) return obj;
+            if (isAbrupt(obj = ifAbrupt(obj))) return obj;
             if (Type(obj) !== "object") return withError("Type", "essential Construct: obj is not an object");
         }
         var result = callInternalSlot("Call", F, obj, argList);
-        if ((result = ifAbrupt(result)) && isAbrupt(result)) return result;
+        if (isAbrupt(result = ifAbrupt(result))) return result;
         if (Type(result) === "object") return result;
         return obj;
     }
@@ -11107,10 +11107,10 @@ define("lib/api", function (require, exports, module) {
         } else {
             obj = OrdinaryCreateFromConstructor(F, "%ObjectPrototype%");
         }
-        if ((obj = ifAbrupt(obj)) && isAbrupt(obj)) return obj;
+        if (isAbrupt(obj = ifAbrupt(obj))) return obj;
         if (Type(obj) !== "object") return withError("Type", "OrdinaryConstruct: Type(obj) is not object");
         var result = callInternalSlot("Call", F, obj, argList);
-        if ((result = ifAbrupt(result)) && isAbrupt(result)) return result;
+        if (isAbrupt(result = ifAbrupt(result))) return result;
         if (Type(result) === "object") return result;
         return obj;
     }
@@ -11169,7 +11169,7 @@ define("lib/api", function (require, exports, module) {
         var actualThis = env.GetThisBinding();
         var baseValue = env.GetSuperBase();
         var bv = CheckObjectCoercible(baseValue);
-        if ((bv = ifAbrupt(bv)) && isAbrupt(bv)) return bv;
+        if (isAbrupt(bv = ifAbrupt(bv))) return bv;
         if (propertyKey === undefined) propertyKey = env.GetMethodName();
         return new Reference(propertyKey, bv, strict, actualThis);
     }
@@ -11286,7 +11286,7 @@ define("lib/api", function (require, exports, module) {
         Assert(IsPropertyKey(P), "property key p expected");
         Assert(Throw === true || Throw === false, "throw has to be false or true");
         var success = callInternalSlot("Set", O, P, V, O);
-        if ((success = ifAbrupt(success)) && isAbrupt(success)) return success;
+        if (isAbrupt(success = ifAbrupt(success))) return success;
         if (success === false && Throw === true) return withError("Type", "Put: success false and throw true at P=" + P);
         return success;
     }
@@ -11295,7 +11295,7 @@ define("lib/api", function (require, exports, module) {
         Assert(Type(O) === "object", "object expected");
         Assert(IsPropertyKey(P), "P has to be a valid property key");
         var success = callInternalSlot("DefineOwnProperty", O, P, D);
-        if ((success = ifAbrupt(success)) && isAbrupt(success)) return success;
+        if (isAbrupt(success = ifAbrupt(success))) return success;
         if (success === false) return withError("Type", "DefinePropertyOrThrow: DefineOwnProperty failed.");
         return success;
     }
@@ -11304,7 +11304,7 @@ define("lib/api", function (require, exports, module) {
         Assert(Type(O) === "object", "object expected");
         Assert(IsPropertyKey(P), "P has to be a valid property key");
         var success = Delete(O, P);
-        if ((success = ifAbrupt(success)) && isAbrupt(success)) return success;
+        if (isAbrupt(success = ifAbrupt(success))) return success;
         if (success === false) return withError("Type", "DeletePropertyOrThrow: Delete failed.");
         return success;
     }
@@ -11546,11 +11546,11 @@ define("lib/api", function (require, exports, module) {
         HasOwnProperty: function (P) {
             Assert(IsPropertyKey(P), "P has to be a valid property key");
             var has = HasOwnProperty(O, P);
-            if ((has = ifAbrupt(has)) && isAbrupt(has)) return has;
+            if (isAbrupt(has = ifAbrupt(has))) return has;
             if (has) return has;
             if (Type(P) !== "string") return false;
             var index = ToInteger(P);
-            if ((index = ifAbrupt(index)) && isAbrupt(index)) return index;
+            if (isAbrupt(index = ifAbrupt(index))) return index;
             var absIndex = ToString(abs(index));
             if (SameValue(absIndex, P) === false) return false;
             var str = this.StringData;
@@ -11561,11 +11561,11 @@ define("lib/api", function (require, exports, module) {
         GetOwnProperty: function (P) {
             Assert(IsPropertyKey(P), "P has to be a valid property key");
             var desc = OrdinaryGetOwnProperty(this, P);
-            if ((desc = ifAbrupt(desc)) && isAbrupt(desc)) return desc;
+            if (isAbrupt(desc = ifAbrupt(desc))) return desc;
             if (desc !== undefined) return desc;
             if (Type(P) !== "string") return undefined;
             var index = ToInteger(P);
-            if ((index = ifAbrupt(index)) && isAbrupt(index)) return index;
+            if (isAbrupt(index = ifAbrupt(index))) return index;
             var absIndex = ToString(abs(index));
             if (SameValue(absIndex, P) === false) return undefined;
             var str = getInternalSlot(this, "StringData");
@@ -11621,7 +11621,7 @@ define("lib/api", function (require, exports, module) {
             "ArrayBufferData": undefined,
             "ArrayBufferByteLength": undefined
         });
-        if ((obj = ifAbrupt(obj)) && isAbrupt(obj)) return obj;
+        if (isAbrupt(obj = ifAbrupt(obj))) return obj;
         setInternalSlot(obj, "ArrayBufferByteLength", 0);
         return obj;
     }
@@ -11642,7 +11642,7 @@ define("lib/api", function (require, exports, module) {
             Assert(O.ArrayBufferData !== undefined, "arraybufferdata must not be undefined");
             if (Type(P) === "string") {
                 var intIndex = ToInteger(P);
-                if ((intIndex = ifAbrupt(intIndex)) && isAbrupt(intIndex)) return intIndex;
+                if (isAbrupt(intIndex = ifAbrupt(intIndex))) return intIndex;
                 if (SameValue(ToString(intIndex), P)) {
                     if (intIndex < 0) return false;
                     var len = O.ArrayLength;
@@ -11660,13 +11660,13 @@ define("lib/api", function (require, exports, module) {
                     if (Desc.value !== undefined) {
                         if (!writable) {
                             var oldValue = IntegerIndexedElementGet(O, intIndex);
-                            if ((oldValue = ifAbrupt(oldValue)) && isAbrupt(oldValue)) return oldValue;
+                            if (isAbrupt(oldValue = ifAbrupt(oldValue))) return oldValue;
                             if (value === undefined) return false;
                             if (!SameValue(value, oldValue)) return false;
                         }
                     }
                     var status = IntegerIndexedElementSet(O, intIndex, value);
-                    if ((status = ifAbrupt(status)) && isAbrupt(status)) return status;
+                    if (isAbrupt(status = ifAbrupt(status))) return status;
                     if (makeReadOnly) {
                         // mark as non-writable
                     }
@@ -11681,7 +11681,7 @@ define("lib/api", function (require, exports, module) {
             Assert(IsPropertyKey(P), "P has to be a valid property key");
             if ((Type(P) === "string") && SameValue(O, R)) {
                 var intIndex = ToInteger(P);
-                if ((intIndex = ifAbrupt(intIndex)) && isAbrupt(intIndex)) return intIndex;
+                if (isAbrupt(intIndex = ifAbrupt(intIndex))) return intIndex;
                 if (SameValue(ToString(intIndex), P)) return IntegerIndexedElementGet(O, intIndex);
             }
             return Get(O, P, R);
@@ -11691,7 +11691,7 @@ define("lib/api", function (require, exports, module) {
             Assert(IsPropertyKey(P), "P has to be a valid property key");
             if ((Type(P) === "string") && SameValue(O, R)) {
                 var intIndex = ToInteger(P);
-                if ((intIndex = ifAbrupt(intIndex)) && isAbrupt(intIndex)) return intIndex;
+                if (isAbrupt(intIndex = ifAbrupt(intIndex))) return intIndex;
                 if (SameValue(ToString(intIndex), P)) return ToBoolean(IntegerIndexedElementSet(O, intIndex, V));
             }
             return Set(O, P, V, R);
@@ -11703,10 +11703,10 @@ define("lib/api", function (require, exports, module) {
             Assert(O.ArrayBufferData !== undefined, "arraybufferdata must not be undefined");
             if (Type(P) === "string") {
                 var intIndex = ToInteger(P);
-                if ((intIndex = ifAbrupt(intIndex)) && isAbrupt(intIndex)) return intIndex;
+                if (isAbrupt(intIndex = ifAbrupt(intIndex))) return intIndex;
                 if (SameValue(ToString(intIndex), P)) {
                     var value = IntegerIndexedElementGet(O, intIndex);
-                    if ((value = ifAbrupt(value)) && isAbrupt(value)) return value;
+                    if (isAbrupt(value = ifAbrupt(value))) return value;
                     if (value === undefined) return undefined;
                     var writable = true;
                     // setze falsch, falls sie es nciht sind, die props vom integerindexed
@@ -11726,7 +11726,7 @@ define("lib/api", function (require, exports, module) {
             Assert(O.ArrayBufferData !== undefined, "arraybufferdata must not be undefined");
             if (Type(P) === "string") {
                 var intIndex = ToInteger(P);
-                if ((intIndex = ifAbrupt(intIndex)) && isAbrupt(intIndex)) return intIndex;
+                if (isAbrupt(intIndex = ifAbrupt(intIndex))) return intIndex;
                 if (SameValue(ToString(intIndex), P)) {
                     if (intIndex < 0) return false;
                     var len = O.ArrayLength;
@@ -11773,7 +11773,7 @@ define("lib/api", function (require, exports, module) {
         if (!buffer) return withError("Type", "object is not a viewed array buffer");
         var length = getInternalSlot(O, "ArrayLength");
         var numValue = ToNumber(value);
-        if ((numValue = ifAbrupt(numValue)) && isAbrupt(numValue)) return numValue;
+        if (isAbrupt(numValue = ifAbrupt(numValue))) return numValue;
         if (index < 0 || index >= length) return numValue;
         var offset = O.ByteOffset;
         var arrayTypeName = O.TypedArrayName;
@@ -11781,7 +11781,7 @@ define("lib/api", function (require, exports, module) {
         var indexedPosition = (index * elementSize) + offset;
         var elementType = TypedArrayElementType[arrayTypeName];
         var status = SetValueInBuffer(buffer, indexedPosition, elementType, numValue);
-        if ((status = ifAbrupt(status)) && isAbrupt(status)) return status;
+        if (isAbrupt(status = ifAbrupt(status))) return status;
         return numValue;
     }
 
@@ -11876,16 +11876,16 @@ define("lib/api", function (require, exports, module) {
 
     function SetViewValue(view, requestIndex, isLittleEndian, type, value) {
         var v = ToObject(view);
-        if ((v == ifAbrupt(v)) && isAbrupt(v)) return v;
+        if (isAbrupt(v = ifAbrupt(v))) return v;
         if (!hasInternalSlot(v, "DataArrayBuffer")) return withError("Type", "not a DataArrayBuffer");
         var buffer = getInternalSlot(v, "DataArrayBuffer");
         if (buffer === undefined) return withError("Type", "buffer is undefined");
         var numberIndex = ToNumber(requestIndex);
         var getIndex = ToInteger(numberIndex);
-        if ((getIndex = ifAbrupt(getIndex)) && isAbrupt(getIndex)) return getIndex;
+        if (isAbrupt(getIndex = ifAbrupt(getIndex))) return getIndex;
         if ((numberIndex !== getIndex) || (getIndex < 0)) return withError("Range", "index out of range");
         var littleEndian = ToBoolean(isLittleEndian);
-        if ((littleEndian = ifAbrupt(littleEndian)) && isAbrupt(littleEndian)) return littleEndian;
+        if (isAbrupt(littleEndian = ifAbrupt(littleEndian))) return littleEndian;
         var viewOffset = getInternalSlot(v, "ByteOffset");
         var viewSize = getInternalSlot(v, "ByteLength");
         var elementSize = TypedArrayElementSize[type];
@@ -11896,16 +11896,16 @@ define("lib/api", function (require, exports, module) {
 
     function GetViewValue(view, requestIndex, isLittleEndian, type) {
         var v = ToObject(view);
-        if ((v == ifAbrupt(v)) && isAbrupt(v)) return v;
+        if (isAbrupt(v = ifAbrupt(v))) return v;
         if (!hasInternalSlot(v, "DataArrayBuffer")) return withError("Type", "not a DataArrayBuffer");
         var buffer = getInternalSlot(v, "DataArrayBuffer");
         if (buffer === undefined) return withError("Type", "buffer is undefined");
         var numberIndex = ToNumber(requestIndex);
         var getIndex = ToInteger(numberIndex);
-        if ((getIndex = ifAbrupt(getIndex)) && isAbrupt(getIndex)) return getIndex;
+        if (isAbrupt(getIndex = ifAbrupt(getIndex))) return getIndex;
         if ((numberIndex !== getIndex) || (getIndex < 0)) return withError("Range", "index out of range");
         var littleEndian = ToBoolean(isLittleEndian);
-        if ((littleEndian = ifAbrupt(littleEndian)) && isAbrupt(littleEndian)) return littleEndian;
+        if (isAbrupt(littleEndian = ifAbrupt(littleEndian))) return littleEndian;
         var viewOffset = getInternalSlot(v, "ByteOffset");
         var viewSize = getInternalSlot(v, "ByteLength");
         var elementSize = TypedArrayElementSize[type];
@@ -12085,12 +12085,12 @@ define("lib/api", function (require, exports, module) {
         printCodeEvaluationState();
         var result = exports.ResumeEvaluate(body);
 
-        if ((result = ifAbrupt(result)) && isAbrupt(result)) return result;
+        if (isAbrupt(result = ifAbrupt(result))) return result;
   //      if (IteratorComplete(result)) {
-            if ((result = ifAbrupt(result)) && isAbrupt(result) && result.type === "return") {
+            if (isAbrupt(result = ifAbrupt(result)) && result.type === "return") {
                 Assert(isAbrupt(result) && result.type === "return", "expecting abrupt return completion");
                 setInternalSlot(generator, "GeneratorState", "completed");
-                if ((result = ifAbrupt(result)) && isAbrupt(result)) return result;
+                if (isAbrupt(result = ifAbrupt(result))) return result;
         
                 cx.generatorCallback = undefined;
                 getStack().pop();        
@@ -12185,7 +12185,7 @@ define("lib/api", function (require, exports, module) {
 
     function GetIterator(obj) {
         var iterator = Invoke(obj, $$iterator, []);
-        if ((iterator = ifAbrupt(iterator)) && isAbrupt(iterator)) return iterator;
+        if (isAbrupt(iterator = ifAbrupt(iterator))) return iterator;
         if (Type(iterator) !== "object") return withError("Type", "iterator is not an object");
         return iterator;
     }
@@ -12194,7 +12194,7 @@ define("lib/api", function (require, exports, module) {
         var result;
         if (arguments.length === 1) result = Invoke(itr, "next", []);
         else result = Invoke(itr, "next", [val]);
-        if ((result = ifAbrupt(result)) && isAbrupt(result)) return result;
+        if (isAbrupt(result = ifAbrupt(result))) return result;
         if (Type(result) !== "object") return withError("Type", "IteratorNext: result is not an object");
         return result;
     }
@@ -12222,9 +12222,9 @@ define("lib/api", function (require, exports, module) {
 
     function IteratorStep(iterator, value) {
         var result = IteratorNext(iterator, value);
-        if ((result = ifAbrupt(result)) && isAbrupt(result)) return result;
+        if (isAbrupt(result = ifAbrupt(result))) return result;
         var done = Get(result, "done");
-        if ((done = ifAbrupt(done)) && isAbrupt(done)) return done;
+        if (isAbrupt(done = ifAbrupt(done))) return done;
         if (done === true) return false;
         return result;
     }
@@ -12274,17 +12274,17 @@ define("lib/api", function (require, exports, module) {
             newLenDesc.writable = true;
         }
         var succeeded = OrdinaryDefineOwnProperty(A, "length", newLenDesc);
-        if ((succeeded = ifAbrupt(succeeded)) && isAbrupt(succeeded)) return succeeded;
+        if (isAbrupt(succeeded = ifAbrupt(succeeded))) return succeeded;
         if (succeeded === false) return false;
         while (newLen < oldLen) {
             oldLen = oldLen - 1;
             succeeded = A.Delete(ToString(oldLen));
-            if ((succeeded = ifAbrupt(succeeded)) && isAbrupt(succeeded)) return succeeded;
+            if (isAbrupt(succeeded = ifAbrupt(succeeded))) return succeeded;
             if (succeeded === false) {
                 newLenDesc.value = oldLen + 1;
                 if (newWritable === false) newLenDesc.writable = false;
                 succeeded = OrdinaryDefineOwnProperty(A, "length", newLenDesc);
-                if ((succeeded = ifAbrupt(succeeded)) && isAbrupt(succeeded)) return succeeded;
+                if (isAbrupt(succeeded = ifAbrupt(succeeded))) return succeeded;
                 return false;
             }
         }
@@ -12330,15 +12330,15 @@ define("lib/api", function (require, exports, module) {
                         if (!oldLenDesc) oldLenDesc = Object.create(null);
                         var oldLen = oldLenDesc.value;
                         var index = ToUint32(P);
-                        if ((index = ifAbrupt(index)) && isAbrupt(index)) return index;
+                        if (isAbrupt(index = ifAbrupt(index))) return index;
                         if (index >= oldLen && oldLenDesc.writable === false) return false;
                         var succeeded = OrdinaryDefineOwnProperty(this, P, Desc);
-                        if ((succeeded = ifAbrupt(succeeded)) && isAbrupt(succeeded)) return succeeded;
+                        if (isAbrupt(succeeded = ifAbrupt(succeeded))) return succeeded;
                         if (succeeded === false) return false;
                         if (index >= oldLen) {
                             oldLenDesc.value = index + 1;
                             succeeded = this.DefineOwnProperty("length", oldLenDesc);
-                            if ((succeeded = ifAbrupt(succeeded)) && isAbrupt(succeeded)) return succeeded;
+                            if (isAbrupt(succeeded = ifAbrupt(succeeded))) return succeeded;
                         }
                         return true;
                     }
@@ -12414,7 +12414,7 @@ define("lib/api", function (require, exports, module) {
             var allowed = OrdinaryDefineOwnProperty(ao, P, Desc);
             
             var putStatus;
-            if ((allowed = ifAbrupt(allowed)) && isAbrupt(allowed)) return allowed;
+            if (isAbrupt(allowed = ifAbrupt(allowed))) return allowed;
 
             if (!allowed) return allowed;
 
@@ -12434,7 +12434,7 @@ define("lib/api", function (require, exports, module) {
             var map = getInternalSlot(this, "ParameterMap");
             var isMapped = callInternalSlot("GetOwnProperty", map, P);
             var result = Delete(this, P);
-            if ((result = ifAbrupt(result)) && isAbrupt(result)) return result;
+            if (isAbrupt(result = ifAbrupt(result))) return result;
             if (result && isMapped) callInternalSlot("Delete", map, P);
         },
         
@@ -12466,12 +12466,12 @@ define("lib/api", function (require, exports, module) {
             var T = getInternalSlot(this, "ProxyTarget");
             var H = getInternalSlot(this, "ProxyHandler");
             var trap = GetMethod(H, "getPrototypeOf");
-            if ((trap = ifAbrupt(trap)) && isAbrupt(trap)) return trap;
+            if (isAbrupt(trap = ifAbrupt(trap))) return trap;
             if (trap === undefined) return GetPrototypeOf(T);
             var handlerProto = callInternalSlot("Call", trap, handler, [T]);
-            if ((handlerProto = ifAbrupt(handlerProto)) && isAbrupt(handlerProto)) return handlerProto;
+            if (isAbrupt(handlerProto = ifAbrupt(handlerProto))) return handlerProto;
             var targetProto = GetPrototypeOf(T);
-            if ((targetProto = ifAbrupt(targetProto)) && isAbrupt(targetProto)) return targetProto;
+            if (isAbrupt(targetProto = ifAbrupt(targetProto))) return targetProto;
             if (!SameValue(handlerProto, targetProto)) return withError("Type", "handler and target protos differ");
             return handlerProto;
         },
@@ -12480,16 +12480,16 @@ define("lib/api", function (require, exports, module) {
             var T = getInternalSlot(this, "ProxyTarget");
             var H = getInternalSlot(this, "ProxyHandler");
             var trap = GetMethod(H, "setPrototypeOf");
-            if ((trap = ifAbrupt(trap)) && isAbrupt(trap)) return trap;
+            if (isAbrupt(trap = ifAbrupt(trap))) return trap;
             if (trap === undefined) return SetPrototypeOf(T, V);
             var trapResult = callInternalSlot("Call", trap, H, [T, V]);
-            if ((trapResult = ifAbrupt(trapResult)) && isAbrupt(trapResult)) return trapResult;
+            if (isAbrupt(trapResult = ifAbrupt(trapResult))) return trapResult;
             trapResult = ToBoolean(trapResult);
             var extensibleTarget = IsExtensible(T);
-            if ((extensibleTarget = ifAbrupt(extensibleTarget)) && isAbrupt(extensibleTarget)) return extensibleTarget;
+            if (isAbrupt(extensibleTarget = ifAbrupt(extensibleTarget))) return extensibleTarget;
             if (extensibleTarget === true) return trapResult;
             var targetProto = GetPrototypeOf(T);
-            if ((targetProto = ifAbrupt(targetProto)) && isAbrupt(targetProto)) return targetProto;
+            if (isAbrupt(targetProto = ifAbrupt(targetProto))) return targetProto;
             if (!SameValue(V, targetProto)) return withError("Type", "prototype argument and targetProto differ");
             return trapResult;
         },
@@ -12498,15 +12498,15 @@ define("lib/api", function (require, exports, module) {
             var T = getInternalSlot(this, "ProxyTarget");
             var H = getInternalSlot(this, "ProxyHandler");
             var trap = GetMethod(H, "isExtensible");
-            if ((trap = ifAbrupt(trap)) && isAbrupt(trap)) return trap;
+            if (isAbrupt(trap = ifAbrupt(trap))) return trap;
             if (trap === undefined) return IsExtensible(T);
             var trapResult = callInternalSlot("Call", trap, H, [T]);
-            if ((trapResult = ifAbrupt(trapResult)) && isAbrupt(trapResult)) return trapResult;
+            if (isAbrupt(trapResult = ifAbrupt(trapResult))) return trapResult;
             trapResult = ToBoolean(trapResult);
             var booleanTrapResult = ToBoolean(trapResult);
-            if ((booleanTrapResult = ifAbrupt(booleanTrapResult)) && isAbrupt(booleanTrapResult)) return booleanTrapResult;
+            if (isAbrupt(booleanTrapResult = ifAbrupt(booleanTrapResult))) return booleanTrapResult;
             var targetResult = IsExtensible(T);
-            if ((targetResult = ifAbrupt(targetResult)) && isAbrupt(targetResult)) return targetResult;
+            if (isAbrupt(targetResult = ifAbrupt(targetResult))) return targetResult;
             if (!SameValue(booleanTrapResult, targetResult)) return withError("Type", "trap and target boolean results differ");
             return booleanTrapResult;
         },
@@ -12515,14 +12515,14 @@ define("lib/api", function (require, exports, module) {
             var T = getInternalSlot(this, "ProxyTarget");
             var H = getInternalSlot(this, "ProxyHandler");
             var trap = GetMethod(H, "preventExtensions");
-            if ((trap = ifAbrupt(trap)) && isAbrupt(trap)) return trap;
+            if (isAbrupt(trap = ifAbrupt(trap))) return trap;
             if (trap === undefined) return PreventExtensions(T);
             var trapResult = callInternalSlot("Call", trap, H, [T]);
-            if ((trapResult = ifAbrupt(trapResult)) && isAbrupt(trapResult)) return trapResult;
+            if (isAbrupt(trapResult = ifAbrupt(trapResult))) return trapResult;
             var booleanTrapResult = ToBoolean(trapResult);
-            if ((booleanTrapResult = ifAbrupt(booleanTrapResult)) && isAbrupt(booleanTrapResult)) return booleanTrapResult;
+            if (isAbrupt(booleanTrapResult = ifAbrupt(booleanTrapResult))) return booleanTrapResult;
             var targetIsExtensible = IsExtensible(T);
-            if ((targetIsExtensible = ifAbrupt(targetIsExtensible)) && isAbrupt(targetIsExtensible)) return targetIsExtensible;
+            if (isAbrupt(targetIsExtensible = ifAbrupt(targetIsExtensible))) return targetIsExtensible;
             if (booleanTrapResult === true && targetIsExtensible === true) return withError("Type", "target still extensible");
             return targetIsExtensible;
         },
@@ -12532,28 +12532,28 @@ define("lib/api", function (require, exports, module) {
             var T = getInternalSlot(this, "ProxyTarget");
             var H = getInternalSlot(this, "ProxyHandler");
             var trap = GetMethod(H, "hasOwn");
-            if ((trap = ifAbrupt(trap)) && isAbrupt(trap)) return trap;
+            if (isAbrupt(trap = ifAbrupt(trap))) return trap;
             if (trap === undefined) return HasOwnProperty(T, P);
             var trapResult = callInternalSlot("Call", trap, H, [T, P]);
-            if ((trapResult = ifAbrupt(trapResult)) && isAbrupt(trapResult)) return trapResult;
+            if (isAbrupt(trapResult = ifAbrupt(trapResult))) return trapResult;
             var success = ToBoolean(trapResult);
             var extensibleTarget;
             var targetDesc;
             if (!success) {
                 targetDesc = GetOwnProperty(T, P);
-                if ((targetDesc = ifAbrupt(targetDesc)) && isAbrupt(targetDesc)) return targetDesc;
+                if (isAbrupt(targetDesc = ifAbrupt(targetDesc))) return targetDesc;
                 if (targetDesc) {
                     if (targetDesc.configurable === false) return withError("Type", "targetDesc.configurable is false");
                     extensibleTarget = IsExtensible(T);
-                    if ((extensibleTarget = ifAbrupt(extensibleTarget)) && isAbrupt(extensibleTarget)) return extensibleTarget;
+                    if (isAbrupt(extensibleTarget = ifAbrupt(extensibleTarget))) return extensibleTarget;
                     if (ToBoolean(extensibleTarget) === false) return withError("Type", "target is not extensible");
                 }
             } else {
                 extensibleTarget = IsExtensible(T);
-                if ((extensibleTarget = ifAbrupt(extensibleTarget)) && isAbrupt(extensibleTarget)) return extensibleTarget;
+                if (isAbrupt(extensibleTarget = ifAbrupt(extensibleTarget))) return extensibleTarget;
                 if (ToBoolean(extensibleTarget) === true) return success;
                 targetDesc = GetOwnProperty(T, P);
-                if ((targetDesc = ifAbrupt(targetDesc)) && isAbrupt(targetDesc)) return targetDesc;
+                if (isAbrupt(targetDesc = ifAbrupt(targetDesc))) return targetDesc;
                 if (targetDesc === undefined) return withError("Type", "target descriptor is undefined");
             }
             return success;
@@ -12564,24 +12564,24 @@ define("lib/api", function (require, exports, module) {
             var T = getInternalSlot(this, "ProxyTarget");
             var H = getInternalSlot(this, "ProxyHandler");
             var trap = GetMethod(H, "getOwnPropertyDescriptor");
-            if ((trap = ifAbrupt(trap)) && isAbrupt(trap)) return trap;
+            if (isAbrupt(trap = ifAbrupt(trap))) return trap;
             if (trap === undefined) return GetOwnProperty(T, P);
             var trapResultObj = callInternalSlot("Call", trap, H, [T, P]);
-            if ((trapResultObj = ifAbrupt(trapResultObj)) && isAbrupt(trapResultObj)) return trapResultObj;
+            if (isAbrupt(trapResultObj = ifAbrupt(trapResultObj))) return trapResultObj;
             if (Type(trapResultObj) !== "object" && Type(trapResultObj) !== "undefined") return withError("Type", "getown - neither object nor undefined");
             var targetDesc = GetOwnProperty(T, P);
-            if ((targetDesc = ifAbrupt(targetDesc)) && isAbrupt(targetDesc)) return targetDesc;
+            if (isAbrupt(targetDesc = ifAbrupt(targetDesc))) return targetDesc;
             var extensibleTarget;
             if (Type(trapResultObj) === "undefined") {
                 if (targetDesc === undefined) return undefined;
                 if (targetDesc.configurable === false) return withError("Type", "inconfigurable target problem");
                 extensibleTarget = IsExtensible(T);
-                if ((extensibleTarget = ifAbrupt(extensibleTarget)) && isAbrupt(extensibleTarget)) return extensibleTarget;
+                if (isAbrupt(extensibleTarget = ifAbrupt(extensibleTarget))) return extensibleTarget;
                 if ((extensibleTarget = ToBoolean(extensibleTarget)) === false) return withError("Type", "target is not extensible");
                 return undefined;
             }
             extensibleTarget = IsExtensible(T);
-            if ((extensibleTarget = ifAbrupt(extensibleTarget)) && isAbrupt(extensibleTarget)) return extensibleTarget;
+            if (isAbrupt(extensibleTarget = ifAbrupt(extensibleTarget))) return extensibleTarget;
             extensibleTarget = ToBoolean(extensibleTarget);
             var resultDesc = ToPropertyDescriptor(trapResultObj);
             CompletePropertyDescriptor(resultDesc, targetDesc);
@@ -12598,12 +12598,12 @@ define("lib/api", function (require, exports, module) {
             var T = getInternalSlot(this, "ProxyTarget");
             var H = getInternalSlot(this, "ProxyHandler");
             var trap = GetMethod(H, "defineProperty");
-            if ((trap = ifAbrupt(trap)) && isAbrupt(trap)) return trap;
+            if (isAbrupt(trap = ifAbrupt(trap))) return trap;
             if (trap === undefined) return DefineOwnProperty(T, P, D);
             var trapResult = callInternalSlot("Call", trap, H, [T, P, D]);
-            if ((trapResult = ifAbrupt(trapResult)) && isAbrupt(trapResult)) return trapResult;
+            if (isAbrupt(trapResult = ifAbrupt(trapResult))) return trapResult;
             var targetDesc = GetOwnProperty(T, P);
-            if ((targetDesc = ifAbrupt(targetDesc)) && isAbrupt(targetDesc)) return targetDesc;
+            if (isAbrupt(targetDesc = ifAbrupt(targetDesc))) return targetDesc;
             var extensibleTarget = ToBoolean(extensibleTarget);
             var settingConfigFalse;
             if (D.configurable !== undefined && !D.configurable) {
@@ -12624,18 +12624,18 @@ define("lib/api", function (require, exports, module) {
             var T = getInternalSlot(this, "ProxyTarget");
             var H = getInternalSlot(this, "ProxyHandler");
             var trap = GetMethod(H, "has");
-            if ((trap = ifAbrupt(trap)) && isAbrupt(trap)) return trap;
+            if (isAbrupt(trap = ifAbrupt(trap))) return trap;
             if (trap === undefined) return HasProperty(T, P);
             var trapResult = callInternalSlot("Call", trap, H, [T, P]);
-            if ((trapResult = ifAbrupt(trapResult)) && isAbrupt(trapResult)) return trapResult;
+            if (isAbrupt(trapResult = ifAbrupt(trapResult))) return trapResult;
             var success = ToBoolean(trapResult);
             if (!success) {
                 var targetDesc = GetOwnProperty(T, P);
-                if ((targetDesc = ifAbrupt(targetDesc)) && isAbrupt(targetDesc)) return targetDesc;
+                if (isAbrupt(targetDesc = ifAbrupt(targetDesc))) return targetDesc;
                 if (targetDesc) {
                     if (targetDesc.configurable === false) return withError("Type", "targetDesc.configurable is false");
                     extensibleTarget = IsExtensible(T);
-                    if ((extensibleTarget = ifAbrupt(extensibleTarget)) && isAbrupt(extensibleTarget)) return extensibleTarget;
+                    if (isAbrupt(extensibleTarget = ifAbrupt(extensibleTarget))) return extensibleTarget;
                     if (ToBoolean(extensibleTarget) === false) return withError("Type", "target is not extensible");
                 }
             }
@@ -12647,13 +12647,13 @@ define("lib/api", function (require, exports, module) {
             var T = getInternalSlot(this, "ProxyTarget");
             var H = getInternalSlot(this, "ProxyHandler");
             var trap = GetMethod(H, "get");
-            if ((trap = ifAbrupt(trap)) && isAbrupt(trap)) return trap;
+            if (isAbrupt(trap = ifAbrupt(trap))) return trap;
             if (trap === undefined) return Get(T, P);
             var trapResult = callInternalSlot("Call", trap, H, [T, P]);
-            if ((trapResult = ifAbrupt(trapResult)) && isAbrupt(trapResult)) return trapResult;
+            if (isAbrupt(trapResult = ifAbrupt(trapResult))) return trapResult;
 
             var targetDesc = GetOwnProperty(T, P);
-            if ((targetDesc = ifAbrupt(targetDesc)) && isAbrupt(targetDesc)) return targetDesc;
+            if (isAbrupt(targetDesc = ifAbrupt(targetDesc))) return targetDesc;
             if (targetDesc) {
                 if (IsDataDescriptor(targetDesc) && targetDesc.configurable === false && targetDesc.writable === false) {
                     if (!SameValue(trapResult, targetDesc.value)) return withError("Type", "trap and target values differ");
@@ -12668,13 +12668,13 @@ define("lib/api", function (require, exports, module) {
             var T = getInternalSlot(this, "ProxyTarget");
             var H = getInternalSlot(this, "ProxyHandler");
             var trap = GetMethod(H, "set");
-            if ((trap = ifAbrupt(trap)) && isAbrupt(trap)) return trap;
+            if (isAbrupt(trap = ifAbrupt(trap))) return trap;
             if (trap === undefined) return Set(T, P, V, R);
             var trapResult = callInternalSlot("Call", trap, H, [T, P, V, R]);
-            if ((trapResult = ifAbrupt(trapResult)) && isAbrupt(trapResult)) return trapResult;
+            if (isAbrupt(trapResult = ifAbrupt(trapResult))) return trapResult;
             if (ToBoolean(trapResult) === false) return withError("Type", "cant set value with trap");
             var targetDesc = GetOwnProperty(T, P);
-            if ((targetDesc = ifAbrupt(targetDesc)) && isAbrupt(targetDesc)) return targetDesc;
+            if (isAbrupt(targetDesc = ifAbrupt(targetDesc))) return targetDesc;
             if (targetDesc) {
                 if (IsDataDescriptor(targetDesc) && targetDesc.configurable === false && targetDesc.writable === false) {
                     if (!SameValue(trapResult, targetDesc.value)) return withError("Type", "trap and target values differ");
@@ -12689,7 +12689,7 @@ define("lib/api", function (require, exports, module) {
             var T = getInternalSlot(this, "ProxyTarget");
             var H = getInternalSlot(this, "ProxyHandler");
             var trap = GetMethod(H, "invoke");
-            if ((trap = ifAbrupt(trap)) && isAbrupt(trap)) return trap;
+            if (isAbrupt(trap = ifAbrupt(trap))) return trap;
             if (trap === undefined) return Invoke(T, P, A, R);
             var argArray = CreateArrayFromList(A);
             return callInternalSlot("Call", trap, H, [T, P, argArray, R]);
@@ -12700,14 +12700,14 @@ define("lib/api", function (require, exports, module) {
             var T = getInternalSlot(this, "ProxyTarget");
             var H = getInternalSlot(this, "ProxyHandler");
             var trap = GetMethod(H, "deleteProperty");
-            if ((trap = ifAbrupt(trap)) && isAbrupt(trap)) return trap;
+            if (isAbrupt(trap = ifAbrupt(trap))) return trap;
             if (trap === undefined) return Delete(T, P);
             var trapResult = callInternalSlot("Call", trap, H, [T, P]);
-            if ((trapResult = ifAbrupt(trapResult)) && isAbrupt(trapResult)) return trapResult;
+            if (isAbrupt(trapResult = ifAbrupt(trapResult))) return trapResult;
 
             if (ToBoolean(trapResult) === false) return false;
             var targetDesc = GetOwnProperty(T, P);
-            if ((targetDesc = ifAbrupt(targetDesc)) && isAbrupt(targetDesc)) return targetDesc;
+            if (isAbrupt(targetDesc = ifAbrupt(targetDesc))) return targetDesc;
             if (targetDesc === undefined) return true;
             if (targetDesc.configurable === false) return withError("Type", "property is not configurable");
             return true;
@@ -12718,10 +12718,10 @@ define("lib/api", function (require, exports, module) {
             var T = getInternalSlot(this, "ProxyTarget");
             var H = getInternalSlot(this, "ProxyHandler");
             var trap = GetMethod(H, "enumerate");
-            if ((trap = ifAbrupt(trap)) && isAbrupt(trap)) return trap;
+            if (isAbrupt(trap = ifAbrupt(trap))) return trap;
             if (trap === undefined) return Enumerate(T);
             var trapResult = callInternalSlot("Call", trap, H, [T]);
-            if ((trapResult = ifAbrupt(trapResult)) && isAbrupt(trapResult)) return trapResult;
+            if (isAbrupt(trapResult = ifAbrupt(trapResult))) return trapResult;
             if (Type(trapResult) !== "object") return withError("Type", "trapResult is not an object");
             return trapResult;
         },
@@ -12729,10 +12729,10 @@ define("lib/api", function (require, exports, module) {
             var T = getInternalSlot(this, "ProxyTarget");
             var H = getInternalSlot(this, "ProxyHandler");
             var trap = GetMethod(H, "ownKeys");
-            if ((trap = ifAbrupt(trap)) && isAbrupt(trap)) return trap;
+            if (isAbrupt(trap = ifAbrupt(trap))) return trap;
             if (trap === undefined) return OwnPropertyKeys(T);
             var trapResult = callInternalSlot("Call", trap, H, [T]);
-            if ((trapResult = ifAbrupt(trapResult)) && isAbrupt(trapResult)) return trapResult;
+            if (isAbrupt(trapResult = ifAbrupt(trapResult))) return trapResult;
             if (Type(trapResult) !== "object") return withError("Type", "trapResult is not an object");
             return trapResult;
         },
@@ -12741,7 +12741,7 @@ define("lib/api", function (require, exports, module) {
             var T = getInternalSlot(this, "ProxyTarget");
             var H = getInternalSlot(this, "ProxyHandler");
             var trap = GetMethod(H, "apply");
-            if ((trap = ifAbrupt(trap)) && isAbrupt(trap)) return trap;
+            if (isAbrupt(trap = ifAbrupt(trap))) return trap;
             if (trap === undefined) return callInternalSlot("Call",T, thisArg, argList);
             var argArray = CreateArrayFromList(argList);
             return callInternalSlot("Call", trap, H, [T, thisArg, argArray]);
@@ -12751,11 +12751,11 @@ define("lib/api", function (require, exports, module) {
             var T = getInternalSlot(this, "ProxyTarget");
             var H = getInternalSlot(this, "ProxyHandler");
             var trap = GetMethod(H, "construct");
-            if ((trap = ifAbrupt(trap)) && isAbrupt(trap)) return trap;
+            if (isAbrupt(trap = ifAbrupt(trap))) return trap;
             if (trap === undefined) return callInternalSlot("Construct", T, argList);
             var argArray = CreateArrayFromList(argList);
             var newObj = callInternalSlot("Call", trap, H, [T, argArray]);
-            if ((newObj = ifAbrupt(newObj)) && isAbrupt(newObj)) return newObj;
+            if (isAbrupt(newObj = ifAbrupt(newObj))) return newObj;
             if (Type(newObj) !== "object") return withError("Type", "returned value is not an object");
             return newObj;
         }
@@ -12935,8 +12935,8 @@ define("lib/api", function (require, exports, module) {
                     if (kChar < 0xDC00 || kChar > 0xDFFF) return withError("URI", "kChar code unit is out of range");
                     V = ((cu - 0xD800) * 0x400 + (kChar - 0xDC00) + 0x10000);
                     /*
-			Achtung Oktett encodierung aus Tabelle 32 (rev 16)
-		*/
+            Achtung Oktett encodierung aus Tabelle 32 (rev 16)
+        */
                 }
                 var octets = UTF8Encode(V);
                 var L = octets.length;
@@ -13024,9 +13024,9 @@ define("lib/api", function (require, exports, module) {
         var descObj, desc;
         for (P in names) {
             descObj = Get(props, names[P]);
-            if ((descObj = ifAbrupt(descObj)) && isAbrupt(descObj)) return descObj;
+            if (isAbrupt(descObj = ifAbrupt(descObj))) return descObj;
             desc = ToPropertyDescriptor(descObj);
-            if ((desc = ifAbrupt(desc)) && isAbrupt(desc)) return desc;
+            if (isAbrupt(desc = ifAbrupt(desc))) return desc;
             descriptors.push({
                 P: names[P],
                 desc: desc
@@ -13040,7 +13040,7 @@ define("lib/api", function (require, exports, module) {
             status = DefineOwnPropertyOrThrow(O, P, desc);
             if (isAbrupt(status)) pendingException = status;
         }
-        if ((pendingException = ifAbrupt(pendingException)) && isAbrupt(pendingException)) return pendingException;
+        if (isAbrupt(pendingException = ifAbrupt(pendingException))) return pendingException;
         return O;
     }
 
@@ -13301,7 +13301,7 @@ define("lib/api", function (require, exports, module) {
 
     function NextTask (result, nextQueue) {
 
-        if ((result=ifAbrupt(result)) && isAbrupt(result)) {
+        if (isAbrupt(result = ifAbrupt(result))) {
             // performing implementation defined unhandled exception processing
             console.log("NextTask: Got exception - which will remain unhandled - for debugging, i print them out." )
             printException(result);
@@ -13349,7 +13349,7 @@ define("lib/api", function (require, exports, module) {
             var intrinsics = createIntrinsics(realmRec);
 
             var loader = OrdinaryConstruct(getIntrinsic("%Loader%"), []);
-            if ((loader = ifAbrupt(loader)) && isAbrupt(loader)) return loader;
+            if (isAbrupt(loader = ifAbrupt(loader))) return loader;
             
             realmRec.loader = loader;
             var newGlobal = createGlobalThis(realmRec, ObjectCreate(null), intrinsics);
@@ -13434,11 +13434,11 @@ define("lib/api", function (require, exports, module) {
             }
             var Transfer = getInternalSlot(transferable, "Transfer");
             var transferResult = callInternalSlot("Call", Transfer, transferable, [targetRealm]);
-            if ((transferResult=ifAbrupt(transferResult)) && isAbrupt(transferResult)) return transferResult;
+            if (isAbrupt(transferResult = ifAbrupt(transferResult))) return transferResult;
             memory.push({ input: transferable, output: transferResult });
         }
         var clone = InternalStructuredClone(input, memory, targetRealm);
-        if ((clone = ifAbrupt(clone)) && isAbrupt(clone)) return clone;
+        if (isAbrupt(clone = ifAbrupt(clone))) return clone;
         for (var i = 0, j = transferList.length; i < j; i++) {
             var mapping = memory[i];
             transferResult = mapping.output;
@@ -13471,7 +13471,7 @@ define("lib/api", function (require, exports, module) {
             setInternalSlot(output, "OriginalFlags", getInternalSlot(input, "OriginalFlags"));
         } else if ((value = getInternalSlot(input, "ArrayBufferData")) !== undefined) {
             output = CopyArrayBufferToRealm(input, targetRealm);
-            if ((output=ifAbrupt(output)) && isAbrupt(output)) return output;
+            if (isAbrupt(output = ifAbrupt(output))) return output;
         } else if ((value = getInternalSlot(input, "ViewedArrayBuffer")) !== undefined) {
             var arrayBuffer = value;
             //if (OrdinaryHasInstance(getIntrinsic("%DataView%")), input) { // assumes i´m in source realm
@@ -13519,9 +13519,9 @@ define("lib/api", function (require, exports, module) {
                 if (Type(key) === "string") outputKey = key;
                 // if (Type(key) === "symbol") outputKey = key;
                 var sourceValue = Get(input, key);
-                if ((sourceValue = ifAbrupt(sourceValue)) && isAbrupt(sourceValue)) return sourceValue;
+                if (isAbrupt(sourceValue = ifAbrupt(sourceValue))) return sourceValue;
                 var clonedValue = InternalStructuredClone(sourceValue, memory);
-                if ((clonedValue = ifAbrupt(clonedValue)) && isAbrupt(clonedValue)) return clonedValue;
+                if (isAbrupt(clonedValue = ifAbrupt(clonedValue))) return clonedValue;
                 var outputSet = Set(output, outputKey, clonedValue, output)
                 if (isAbrupt(outputSet)) return outputSet;
             }
@@ -13556,7 +13556,7 @@ define("lib/api", function (require, exports, module) {
         var object = thisArg;
         if (hasInternalProperty(object, "ArrayBufferData")) {
             var neuteringResult = SetArrayBufferData(object, 0);
-            if ((neuteringResult=ifAbrupt(neuteringResult)) && isAbrupt(neuteringResult)) return neuteringResult;
+            if (isAbrupt(neuteringResult = ifAbrupt(neuteringResult))) return neuteringResult;
             setInternalSlot(object, "Transfer", "neutered");
         }
     };
@@ -14012,25 +14012,25 @@ define("lib/api", function (require, exports, module) {
             else if (Type(options) !== "object") return withError("Type", "options is not an object");
             var realm = CreateRealm();
             var evalHooks = Get(options, "eval");
-            if ((evalHooks=ifAbrupt(evalHooks)) && isAbrupt(evalHooks)) return evalHooks;
+            if (isAbrupt(evalHooks = ifAbrupt(evalHooks))) return evalHooks;
             if (evalHooks === undefined) evalHooks = ObjectCreate();
             var directEval = Get(evalHooks, "directEval");
-            if ((directEval=ifAbrupt(directEval)) && isAbrupt(directEval)) return directEval;
+            if (isAbrupt(directEval = ifAbrupt(directEval))) return directEval;
             if (directEval === undefined) directEval = ObjectCreate();
             else if (Type(directEval) !== "object") return withError("Type", "directEval is not an object");
             var translate = Get(directEval, "translate");
-            if ((translate = ifAbrupt(translate)) && isAbrupt(translate)) return translate;
+            if (isAbrupt(translate = ifAbrupt(translate))) return translate;
             if ((translate !== undefined) && !IsCallable(translate)) return withError("Type", "translate has to be a function");
             setInternalSlot(realm, "translateDirectEvalHook", translate);
             var fallback = Get(directEval, "fallback");
-            if ((fallback=ifAbrupt(fallback)) && isAbrupt(fallback)) return fallback;
+            if (isAbrupt(fallback = ifAbrupt(fallback))) return fallback;
             setInternalSlot(realm, "fallbackDirectEvalHook", fallback);
             var indirectEval = Get(options, "indirect");
-            if ((indirectEval = ifAbrupt(indirectEval)) && isAbrupt(indirectEval)) return indirectEval;
+            if (isAbrupt(indirectEval = ifAbrupt(indirectEval))) return indirectEval;
             if ((indirectEval !== undefined) && !IsCallable(indirectEval)) return withError("Type", "indirectEval should be a function");
             setInternalSlot(realm, "indirectEvalHook", indirectEval);
             var Function = Get(options, "Function");
-            if ((Function = ifAbrupt(Function)) && isAbrupt(Function)) return Function;
+            if (isAbrupt(Function = ifAbrupt(Function))) return Function;
             if ((Function !== undefined) && !IsCallable(Function)) return withError("Type", "Function should be a function");
             setInternalSlot(realm, "FunctionHook", Function);
             setInternalSlot(realmObject, "Realm", realm);
@@ -14184,9 +14184,9 @@ define("lib/api", function (require, exports, module) {
         function LoadModule(loader, name, options) {
             
             var name = ToString(name);
-            if ((name = ifAbrupt(name)) && isAbrupt(name)) return name;
+            if (isAbrupt(name = ifAbrupt(name))) return name;
             var address = GetOption(options, "address");
-            if ((address = ifAbrupt(address)) && isAbrupt(address)) return address;
+            if (isAbrupt(address = ifAbrupt(address))) return address;
             var step;
             if (address === undefined) step = "locate";
             else step = "fetch";
@@ -14223,7 +14223,7 @@ define("lib/api", function (require, exports, module) {
                 var loaderObj = loader.LoaderObj;
                 var normalizeHook = Get(loaderObj, "normalize");
                 var name = callInternalSlot("Call", normalizeHook, loaderObj, [request, refererName, refererAddress]);
-                if ((name = ifAbrupt(name)) && isAbrupt(name)) return name;
+                if (isAbrupt(name = ifAbrupt(name))) return name;
                 return callInternalSlot("Call", resolve, undefined, [name]);
             };
             setInternalSlot(F, "Call", CallNormalizeFunction_Call);
@@ -14237,7 +14237,7 @@ define("lib/api", function (require, exports, module) {
                 var name = argList[0];
                 var loader = getInternalSlot(F, "Loader");
                 name = ToString(name);
-                if ((name=ifAbrupt(name)) && isAbrupt(name)) return name;
+                if (isAbrupt(name = ifAbrupt(name))) return name;
                 var modules = loaderRecord.Modules;
                 for (var i = 0, j = modules.length; i < j; i++) {
                     var p = modules[i];
@@ -14283,7 +14283,7 @@ define("lib/api", function (require, exports, module) {
                 var load = getInternalSlot(F, "Load");
                 var loaderObj = loader.LoaderObj;
                 var hook = Get(loaderObj, "locate");
-                if ((hook=ifAbrupt(hook)) && isAbrupt(hook)) return hook;
+                if (isAbrupt(hook = ifAbrupt(hook))) return hook;
                 if (!IsCallable(hook)) return withError("Type", "call locate hook is not callable");
                 var obj = CreateLoadRequestObject(load.Name, load.Metadata);
                 return callInternalSlot("Call", hook, loader, [obj])
@@ -14313,7 +14313,7 @@ define("lib/api", function (require, exports, module) {
                 load.Address = address;
                 var loaderObj = loader.LoaderObj;
                 var hook = Get(loaderObj, "fetch");
-                if ((hook=ifAbrupt(hook))&&isAbrupt(hook)) return hook;
+                if (isAbrupt(hook = ifAbrupt(hook))) return hook;
                 if (!IsCallable(hook)) return withError("Type", "fetch hook is not a function");
                 var obj = CreateLoadRequestObject(load.Name, load.Metadata, address);
                 return callInternalSlot("Call", hook, loader, [obj]);
@@ -14351,7 +14351,7 @@ define("lib/api", function (require, exports, module) {
                 var load = getInternalSlot(F, "Load");
                 if (load.LinkSets.length === 0) return NormalCompletion(undefined);
                 var hook = Get(loader, "translate");
-                if ((hook=ifAbrupt(hook)) && isAbrupt(hook)) return hook;
+                if (isAbrupt(hook = ifAbrupt(hook))) return hook;
                 if (!IsCallable(hook)) return withError("Type", "call translate hook is not callable");            
                 var obj = CreateLoadRequestObject(load.Name, load.Metadata, load.Address, source);
                 return callInternalSlot("Call", hook, loader, [obj]);
@@ -14371,7 +14371,7 @@ define("lib/api", function (require, exports, module) {
                 var load = getInternalSlot(F, "Load");
                 if (loader.LinkSets.length === 0) return NormalCompletion(undefined);
                 var hook = Get(loader, "instantiate");
-                if ((hook=ifAbrupt(hook)) && isAbrupt(hook)) return hook;
+                if (isAbrupt(hook = ifAbrupt(hook))) return hook;
                 if (!IsCallable(hook)) return withError("Type", "call instantiate hook is not callable");            
                 var obj = CreateLoadRequestObject(load.Name, load.Metadata, load.Address, source);
                 return callInternalSlot("Call", hook, loader, [obj]);
@@ -14399,14 +14399,14 @@ define("lib/api", function (require, exports, module) {
                     var depsList = ModuleRequests(body);
                 } else if (Type(instantiateResult) === "object") {
                     var deps = Get(instantiateResult, "deps");
-                    if ((deps=ifAbrupt(deps)) && isAbrupt(deps)) return deps;
+                    if (isAbrupt(deps = ifAbrupt(deps))) return deps;
                     if (deps === undefined) depsList = [];
                     else {
                         depsList = IterableToList(deps); // IterableToArray?
-                        if ((depsList = ifAbrupt(depsList)) && isAbrupt(depsList)) return depsList;
+                        if (isAbrupt(depsList = ifAbrupt(depsList))) return depsList;
                     }
                     var execute = Get(instantiateResult, "execute");
-                    if ((execute = ifAbrupt(execute)) && isAbrupt(execute)) return execute;
+                    if (isAbrupt(execute = ifAbrupt(execute))) return execute;
                     load.Execute = execute;
                     load.Kind = "dynamic";
                 } else {
@@ -14602,7 +14602,7 @@ define("lib/api", function (require, exports, module) {
             if (Type(loader) !== "object") return withError("Type", "CreateLinkSet: loader has to be an object");
             if (!hasInternalSlot("Loader", "Load")) return withError("Type", "CreateLinkSet: loader is missing internal properties");
             var promiseCapability = PromiseBuiltinCapability();
-            if ((promiseCapability = ifAbrupt(promiseCapability)) && isAbrupt(promiseCapability)) return promiseCapability;
+            if (isAbrupt(promiseCapability = ifAbrupt(promiseCapability))) return promiseCapability;
             var linkSet = LinkSet(loader, loads, promiseCapability.Promise, promiseCapability.Resolve, promiseCapability.Reject);
             AddLoadToLinkSet(linkSet, startingLoad);
             return NormalCompletion(linkSet);
@@ -14955,7 +14955,7 @@ dependencygrouptransitions of kind load1.Kind.
                 var load = loads[i];
                 var factory = load.Execute;
                 var module = callInternalSlot("Call", factory, undefined, []);
-                if ((module=ifAbrupt(module)) && isAbrupt(module)) return module;
+                if (isAbrupt(module = ifAbrupt(module))) return module;
 
                 if (!hasInternalSlot(module, "Exports")) {
                     return withError("Type", "module object has not the required internal properties");
@@ -15118,7 +15118,7 @@ dependencygrouptransitions of kind load1.Kind.
             for (var k in keys) {
                 var key = keys[k];
                 var value = Get(obj, key);
-                if ((value = ifAbrupt(value)) && isAbrupt(value)) return value;
+                if (isAbrupt(value = ifAbrupt(value))) return value;
                 var F = CreateConstantGetter(key, value);
                 var desc = {
                     get: F,
@@ -15127,7 +15127,7 @@ dependencygrouptransitions of kind load1.Kind.
                     configurable: false
                 };
                 var status = DefineOwnPropertyOrThrow(mod, key, desc);
-                if ((status = ifAbrupt(status)) && isAbrupt(status)) return status;
+                if (isAbrupt(status = ifAbrupt(status))) return status;
             }
             callInternalSlot("PreventExtensions", mod, mod, []);
             return mod;
@@ -15148,7 +15148,7 @@ dependencygrouptransitions of kind load1.Kind.
             if (Type(options) !== "object") return withError("Type", "the Loader constructors´ options argument is not an object");
 
             var realmObject = Get(options, "realm");
-            if ((realmObject = ifAbrupt(realmObject)) && isAbrupt(realmObject)) return realmObject;
+            if (isAbrupt(realmObject = ifAbrupt(realmObject))) return realmObject;
             
             var realm;
             if (realmObject === undefined) realm = getRealm();
@@ -15162,7 +15162,7 @@ dependencygrouptransitions of kind load1.Kind.
 
             var define_loader_pipeline_hook = function (name) {
                 var hook = Get(options, name);
-                if ((hook = ifAbrupt(hook)) && isAbrupt(hook)) return hook;
+                if (isAbrupt(hook = ifAbrupt(hook))) return hook;
                 if (hook !== undefined) {
                     var result = callInternalSlot("DefineOwnProperty", loader, name, {
                         value: hook,
@@ -15258,14 +15258,14 @@ dependencygrouptransitions of kind load1.Kind.
             var source =argList[1];
             var options = argList[2];
             var loader = thisArg;
-            if ((loader = ifAbrupt(loader)) && isAbrupt(loader)) return loader;
+            if (isAbrupt(loader = ifAbrupt(loader))) return loader;
             var loaderRecord = getInternalSlot(loader, "LoaderRecord");
             name = ToString(name);
-            if ((name=ifAbrupt(name))&&isAbrupt(name)) return name;
+            if (isAbrupt(name = ifAbrupt(name))) return name;
             var address = GetOption(options, "address");
-            if ((address = ifAbrupt(address)) && isAbrupt(address)) return address;
+            if (isAbrupt(address = ifAbrupt(address))) return address;
             var metadata = GetOption(options, "metadata");
-            if ((metadata = ifAbrupt(metadata)) && isAbrupt(metadata)) return metadata;
+            if (isAbrupt(metadata = ifAbrupt(metadata))) return metadata;
             if (metadat === undefined) metadata = ObjectCreate();
             var p = PromiseOfStartLoadPartWayThrough("translate", loaderRecord, name, metadata, source, address);
             if (isAbrupt(p = ifAbrupt(p))) return p;
@@ -15279,7 +15279,7 @@ dependencygrouptransitions of kind load1.Kind.
             var name = argList[0];
             var options = argList[1];
             var loader = thisLoader(thisArg);
-            if ((loader =ifAbrupt(loader)) && isAbrupt(loader)) return loader;
+            if (isAbrupt(loader = ifAbrupt(loader))) return loader;
             var loaderRecord = getInternalSlot(loader,"LoaderRecord");
             var p = LoadModule(loader, name, options);
             if (isAbrupt(p = ifAbrupt(p))) return p;
@@ -15293,10 +15293,10 @@ dependencygrouptransitions of kind load1.Kind.
             var source = argList[0];
             var options = argList[1];
             var loader = thisLoader(thisArg);
-            if ((loader=ifAbrupt(loader)) && isAbrupt(loader)) return loader;
+            if (isAbrupt(loader = ifAbrupt(loader))) return loader;
             var loaderRecord = getInternalSlot(loader, "LoaderRecord");
             var address = GetOption(options, "address");
-            if ((address=ifAbrupt(address)) && isAbrupt(address)) return address;
+            if (isAbrupt(address = ifAbrupt(address))) return address;
             var load = CreateLoad(undefined);
             load.Address = address;
             var linkSet = CreateLinkSet(loaderRecord, load);
@@ -15314,10 +15314,10 @@ dependencygrouptransitions of kind load1.Kind.
             var name = argList[0];
             var options = argList[1];
             var loader = thisLoader(thisArg);
-            if ((loader=ifAbrupt(loader)) && isAbrupt(loader)) return loader;
+            if (isAbrupt(loader = ifAbrupt(loader))) return loader;
             var loaderRecord = getInternalSlot(loader, "LoaderRecord");
             var p = LoadModule(loaderRecord, name, option);
-            if ((p=ifAbrupt(p))&&isAbrupt(p)) return p;
+            if (isAbrupt(p = ifAbrupt(p))) return p;
             var F = EvaluateLoadedModule();
             setInternalSlot(F, "Loader", loaderRecord)
             var p = PromiseThen(p, F);
@@ -15328,7 +15328,7 @@ dependencygrouptransitions of kind load1.Kind.
         var LoaderPrototype_eval = function (thisArg, argList) {
             var source = argList[0];
             var loader = thisLoader(thisArg);
-            if ((loader=ifAbrupt(loader)) && isAbrupt(loader)) return loader;
+            if (isAbrupt(loader = ifAbrupt(loader))) return loader;
             var loaderRecord = getInternalSlot(loader, "LoaderRecord");
             return IndirectEval(loaderRecord.Realm, source);
         };
@@ -15336,9 +15336,9 @@ dependencygrouptransitions of kind load1.Kind.
         // 31.1.
         var LoaderPrototype_get = function (thisArg, argList) {
             var loader = thisLoader(thisArg);
-            if ((loader=ifAbrupt(loader)) && isAbrupt(loader)) return loader;
+            if (isAbrupt(loader = ifAbrupt(loader))) return loader;
             var name = ToString(argList[0]);
-            if ((name=ifAbrupt(name)) && isAbrupt(name)) return name;
+            if (isAbrupt(name = ifAbrupt(name))) return name;
             var loaderRecord = getInternalSlot(loader, "LoaderRecord");
 
             var modules = loaderRecord.Modules;
@@ -15346,7 +15346,7 @@ dependencygrouptransitions of kind load1.Kind.
             if ((record = getRecordInList(modules, "Key", name))) {
                 var module = p.Value;
                 var result = EnsureEvaluated(module, [], loaderRecord);
-                if ((result=ifAbrupt(result)) && isAbrupt(result)) return result;
+                if (isAbrupt(result = ifAbrupt(result))) return result;
                 return NormalCompletion(module);
                 // has typo/bug in spec, let module = p.value. ensureenv(module) but return p.value
             }
@@ -15355,9 +15355,9 @@ dependencygrouptransitions of kind load1.Kind.
         // 31.1.
         var LoaderPrototype_has = function (thisArg, argList) {
             var loader = thisLoader(thisArg);
-            if ((loader=ifAbrupt(loader)) && isAbrupt(loader)) return loader;
+            if (isAbrupt(loader = ifAbrupt(loader))) return loader;
             var name = ToString(argList[0]);
-            if ((name=ifAbrupt(name)) && isAbrupt(name)) return name;
+            if (isAbrupt(name = ifAbrupt(name))) return name;
 
             var loaderRecord = getInternalSlot(loader, "LoaderRecord");
             var modules = loaderRecord.Modules;
@@ -15374,10 +15374,10 @@ dependencygrouptransitions of kind load1.Kind.
             var name = argList[0];
             var module = argList[1];
             var loader = thisLoader(thisArg);
-            if ((loader=ifAbrupt(loader)) && isAbrupt(loader)) return loader;
+            if (isAbrupt(loader = ifAbrupt(loader))) return loader;
             var loaderRecord = getInternalSlot(loader, "LoaderRecord");
             var name = ToString(name);
-            if ((name=ifAbrupt(name)) && isAbrupt(name)) return name;
+            if (isAbrupt(name = ifAbrupt(name))) return name;
             if (Type(module) !== "object") return withError("Type", "module is not an object");
             var modules = loaderRecord.Modules;
             var p;
@@ -15393,10 +15393,10 @@ dependencygrouptransitions of kind load1.Kind.
         var LoaderPrototype_delete = function (thisArg, argList) {
                 var name = argList[0];
                 var loader = thisLoader(thisArg);
-                if ((loader=ifAbrupt(loader)) && isAbrupt(loader)) return loader;
+                if (isAbrupt(loader = ifAbrupt(loader))) return loader;
                 var loaderRecord = getInternalSlot(loader, "LoaderRecord");
                 name = ToString(name);
-                if ((name=ifAbrupt(name)) && isAbrupt(name)) return name;
+                if (isAbrupt(name = ifAbrupt(name))) return name;
                 var modules = loaderRecord.Modules;
                 for (var i = 0, j = modules.length; i < j; i++) {
                     var p = modules[i];
@@ -15523,11 +15523,11 @@ dependencygrouptransitions of kind load1.Kind.
             if (Type(obj) !== "object") return withError("Type", "newModule: obj is not an object");
             var mod = CreateLinkedModuleInstance();
             var keys = OwnPropertyKeysAsList(obj);
-            if ((keys=ifAbrupt(keys)) && isAbrupt(keys)) return keys;
+            if (isAbrupt(keys = ifAbrupt(keys))) return keys;
             for (var i = 0, j = keys.length; i < j; i++) {
                 var key = keys[i];
                 var value = Get(obj, key);
-                if ((value=ifAbrupt(value)) && isAbrupt(value)) return value;
+                if (isAbrupt(value = ifAbrupt(value))) return value;
                 var F = CreateConstantGetter(key, value);
                 var desc = {
                     configurable: false,
@@ -15740,7 +15740,7 @@ dependencygrouptransitions of kind load1.Kind.
                 var lenValue = Get(a, "length");
                 var len = ToUint32(lenValue);
                 var elementKey, found, result, elementValue;
-                if ((len = ifAbrupt(len)) && isAbrupt(len)) return len;
+                if (isAbrupt(len = ifAbrupt(len))) return len;
                 if ((/sparse/).test(itemKind)) {
                     var found = false;
                     while (!found && (index < len)) {
@@ -15759,7 +15759,7 @@ dependencygrouptransitions of kind load1.Kind.
 
                 if (/key\+value/.test(itemKind)) {
                     elementValue = Get(a, elementKey);
-                    if ((elementValue = ifAbrupt(elementValue)) && isAbrupt(elementValue)) return elementValue;
+                    if (isAbrupt(elementValue = ifAbrupt(elementValue))) return elementValue;
 
                     result = ArrayCreate(2);
 
@@ -15784,7 +15784,7 @@ dependencygrouptransitions of kind load1.Kind.
                     return CreateItrResultObject(result, false);
                 } else if ((/value/).test(itemKind)) {
                     elementValue = Get(a, elementKey);
-                    if ((elementValue = ifAbrupt(elementValue)) && isAbrupt(elementValue)) return elementValue;
+                    if (isAbrupt(elementValue = ifAbrupt(elementValue))) return elementValue;
                     return CreateItrResultObject(elementValue, false);
                 } else if ((/key/).test(itemKind)) {
                     return CreateItrResultObject(elementKey, false);
@@ -15805,7 +15805,7 @@ dependencygrouptransitions of kind load1.Kind.
             var elem;
             for (var i = 0, j = ToUint32(len); i < j; i++) {
                 elem = Get(A, ToString(i));
-                if ((elem = ifAbrupt(elem)) && isAbrupt(elem)) return elem;
+                if (isAbrupt(elem = ifAbrupt(elem))) return elem;
                 if (elem === undefined) return true;
             }
             return false;
@@ -15818,7 +15818,7 @@ dependencygrouptransitions of kind load1.Kind.
             value: CreateBuiltinFunction(realm, function $$create(thisArg, argList) {
                 var F = thisArg;
                 var proto = GetPrototypeFromConstructor(F, "%ArrayPrototype%");
-                if ((proto = ifAbrupt(proto)) && isAbrupt(proto)) return proto;
+                if (isAbrupt(proto = ifAbrupt(proto))) return proto;
                 var obj = ArrayCreate(undefined, proto);
                 return obj;
             }),
@@ -16000,7 +16000,7 @@ dependencygrouptransitions of kind load1.Kind.
                 var iterator;
                 var done, Pk, kValue, defineStatus, putStatus, kPresent, mappedValue;
                 var newObj, A;
-                if ((items = ifAbrupt(items)) && isAbrupt(items)) return items;
+                if (isAbrupt(items = ifAbrupt(items))) return items;
                 if (mapfn == undefined) {
                     mapping = true;
                 } else {
@@ -16074,10 +16074,10 @@ dependencygrouptransitions of kind load1.Kind.
                         if (isAbrupt(kPresent)) return kPresent;
                         if (kPresent) {
                             kValue = Get(items, Pk);
-                            if ((kValue = ifAbrupt(kValue)) && isAbrupt(kValue)) return kValue;
+                            if (isAbrupt(kValue = ifAbrupt(kValue))) return kValue;
                             if (mapping) {
                                 mappedValue = mapfn.Call(T, [kValue, k, items]);
-                                if ((mappedValue = ifAbrupt(mappedValue)) && isAbrupt(mappedValue)) return mappedValue;
+                                if (isAbrupt(mappedValue = ifAbrupt(mappedValue))) return mappedValue;
                                 defineStatus = DefineOwnPropertyOrThrow(A, Pk, {
                                     value: mappedValue,
                                     writable: true,
@@ -16111,10 +16111,10 @@ dependencygrouptransitions of kind load1.Kind.
         DefineOwnProperty(ArrayPrototype, "toString", {
             value: CreateBuiltinFunction(realm, function toString(thisArg, argList) {
                 var array = ToObject(thisArg);
-                if ((array = ifAbrupt(array)) && isAbrupt(array)) return array;
+                if (isAbrupt(array = ifAbrupt(array))) return array;
                 array = GetValue(array);
                 var func = Get(array, "join");
-                if ((func = ifAbrupt(func)) && isAbrupt(func)) return func;
+                if (isAbrupt(func = ifAbrupt(func))) return func;
                 if (!IsCallable(func)) func = Get(ObjectPrototype, "toString");
                 return callInternalSlot("Call", func, array, []);
             }),
@@ -16131,7 +16131,7 @@ dependencygrouptransitions of kind load1.Kind.
         function IsConcatSpreadable(O) {
             if (isAbrupt(O)) return O;
             var spreadable = Get(O, $$isConcatSpreadable);
-            if ((spreadable = ifAbrupt(spreadable)) && isAbrupt(spreadable)) return spreadable;
+            if (isAbrupt(spreadable = ifAbrupt(spreadable))) return spreadable;
             if (spreadable !== undefined) return ToBoolean(spreadable);
             if (O instanceof ArrayExoticObject) return true;
             return false;
@@ -16163,7 +16163,7 @@ dependencygrouptransitions of kind load1.Kind.
                 var separator = argList[0];
                 var lenVal = Get(O, "length");
                 var len = ToUint32(lenVal);
-                if ((len = ifAbrupt(len)) && isAbrupt(len)) return len;
+                if (isAbrupt(len = ifAbrupt(len))) return len;
                 if (separator === undefined) separator = ",";
                 var sep = ToString(separator);
                 if (len === 0) return NormalCompletion("");
@@ -16178,7 +16178,7 @@ dependencygrouptransitions of kind load1.Kind.
                     var next;
                     if (element === undefined || element === null) next = "";
                     else next = ToString(element);
-                    if ((next = ifAbrupt(next)) && isAbrupt(next)) return next;
+                    if (isAbrupt(next = ifAbrupt(next))) return next;
                     R = S + next;
                     k = k + 1;
                 }
@@ -16195,21 +16195,21 @@ dependencygrouptransitions of kind load1.Kind.
                 if (isAbrupt(O = ifAbrupt(O))) return O;
                 var lenVal = Get(O, "length");
                 var len = ToUint32(lenVal);
-                if ((len = ifAbrupt(len)) && isAbrupt(len)) return len;
+                if (isAbrupt(len = ifAbrupt(len))) return len;
                 var putStatus, deleteStatus;
                 if (len === 0) {
                     putStatus = Put(O, "length", 0, true);
-                    if ((putStatus = ifAbrupt(putStatus)) && isAbrupt(putStatus)) return putStatus;
+                    if (isAbrupt(putStatus = ifAbrupt(putStatus))) return putStatus;
                     return undefined;
                 } else {
                     var newLen = len - 1;
                     var index = ToString(newLen);
                     var element = Get(O, index);
-                    if ((element = ifAbrupt(element)) && isAbrupt(element)) return element;
+                    if (isAbrupt(element = ifAbrupt(element))) return element;
                     deleteStatus = DeletePropertyOrThrow(O, index);
-                    if ((deleteStatus = ifAbrupt(deleteStatus)) && isAbrupt(deleteStatus)) return deleteStatus;
+                    if (isAbrupt(deleteStatus = ifAbrupt(deleteStatus))) return deleteStatus;
                     putStatus = Put(O, "length", newLen, true);
-                    if ((putStatus = ifAbrupt(putStatus)) && isAbrupt(putStatus)) return putStatus;
+                    if (isAbrupt(putStatus = ifAbrupt(putStatus))) return putStatus;
                     return NormalCompletion(element);
                 }
             }),
@@ -16230,11 +16230,11 @@ dependencygrouptransitions of kind load1.Kind.
                 for (var i = 0, j = items.length; i < j; i++) {
                     E = items[i];
                     putStatus = Put(O, ToString(n), E, true);
-                    if ((putStatus = ifAbrupt(putStatus)) && isAbrupt(putStatus)) return putStatus;
+                    if (isAbrupt(putStatus = ifAbrupt(putStatus))) return putStatus;
                     n = n + 1;
                 }
                 putStatus = Put(O, "length", n, true);
-                if ((putStatus = ifAbrupt(putStatus)) && isAbrupt(putStatus)) return putStatus;
+                if (isAbrupt(putStatus = ifAbrupt(putStatus))) return putStatus;
                 return NormalCompletion(n);
             }, 1),
             enumerable: false,
@@ -16248,7 +16248,7 @@ dependencygrouptransitions of kind load1.Kind.
                 if (isAbrupt(O = ifAbrupt(O))) return O;
                 var lenVal = Get(O, "length");
                 var len = ToUint32(lenVal);
-                if ((len = ifAbrupt(len)) && isAbrupt(len)) return len;
+                if (isAbrupt(len = ifAbrupt(len))) return len;
                 var middle = Math.floor(len / 2);
                 var lower = 0;
                 var putStatus;
@@ -16258,32 +16258,32 @@ dependencygrouptransitions of kind load1.Kind.
                     var upperP = ToString(upper);
                     var lowerP = ToString(lower);
                     var lowerValue = Get(O, lowerP);
-                    if ((lowerValue = ifAbrupt(lowerValue)) && isAbrupt(lowerValue)) return lowerValue;
+                    if (isAbrupt(lowerValue = ifAbrupt(lowerValue))) return lowerValue;
                     var upperValue = Get(O, upperP);
-                    if ((upperValue = ifAbrupt(upperValue)) && isAbrupt(upperValue)) return upperValue;
+                    if (isAbrupt(upperValue = ifAbrupt(upperValue))) return upperValue;
                     var lowerExists = HasProperty(O, lowerP);
-                    if ((lowerExists = ifAbrupt(lowerExists)) && isAbrupt(lowerExists)) return lowerExists;
+                    if (isAbrupt(lowerExists = ifAbrupt(lowerExists))) return lowerExists;
                     var upperExists = HasProperty(O, upperP);
-                    if ((upperExists = ifAbrupt(upperExists)) && isAbrupt(upperExists)) return upperExists;
+                    if (isAbrupt(upperExists = ifAbrupt(upperExists))) return upperExists;
                     if (lowerExists === true && upperExists === true) {
                         putStatus = Put(O, lowerP, upperValue, true);
-                        if ((putStatus = ifAbrupt(putStatus)) && isAbrupt(putStatus)) return putStatus;
+                        if (isAbrupt(putStatus = ifAbrupt(putStatus))) return putStatus;
                         putStatus = Put(O, upperP, lowerValue, true);
-                        if ((putStatus = ifAbrupt(putStatus)) && isAbrupt(putStatus)) return putStatus;
+                        if (isAbrupt(putStatus = ifAbrupt(putStatus))) return putStatus;
 
                     } else if (lowerExists === false && upperExists === true) {
 
                         putStatus = Put(O, lowerP, upperValue, true);
-                        if ((putStatus = ifAbrupt(putStatus)) && isAbrupt(putStatus)) return putStatus;
+                        if (isAbrupt(putStatus = ifAbrupt(putStatus))) return putStatus;
                         deleteStatus = DeletePropertyOrThrow(O, upperP);
-                        if ((deleteStatus = ifAbrupt(deleteStatus)) && isAbrupt(deleteStatus)) return deleteStatus;
+                        if (isAbrupt(deleteStatus = ifAbrupt(deleteStatus))) return deleteStatus;
 
                     } else if (lowerExists === true && upperExists === false) {
 
                         deleteStatus = DeletePropertyOrThrow(O, lowerP);
-                        if ((deleteStatus = ifAbrupt(deleteStatus)) && isAbrupt(deleteStatus)) return deleteStatus;
+                        if (isAbrupt(deleteStatus = ifAbrupt(deleteStatus))) return deleteStatus;
                         putStatus = Put(O, upperP, lowerValue, true);
-                        if ((putStatus = ifAbrupt(putStatus)) && isAbrupt(putStatus)) return putStatus;
+                        if (isAbrupt(putStatus = ifAbrupt(putStatus))) return putStatus;
 
                     }
 
@@ -16302,7 +16302,7 @@ dependencygrouptransitions of kind load1.Kind.
                 if (isAbrupt(O = ifAbrupt(O))) return O;
                 var lenVal = Get(O, "length");
                 var len = ToUint32(lenVal);
-                if ((len = ifAbrupt(len)) && isAbrupt(len)) return len;
+                if (isAbrupt(len = ifAbrupt(len))) return len;
 
             }),
             enumerable: false,
@@ -16319,10 +16319,10 @@ dependencygrouptransitions of kind load1.Kind.
                 if (isAbrupt(O = ifAbrupt(O))) return O;
                 var lenVal = Get(O, "length");
                 var len = ToUint32(lenVal);
-                if ((len = ifAbrupt(len)) && isAbrupt(len)) return len;
+                if (isAbrupt(len = ifAbrupt(len))) return len;
 
                 var relativeStart = ToInteger(start);
-                if ((relativeStart = ifAbrupt(relativeStart)) && isAbrupt(relativeStart)) return relativeStart;
+                if (isAbrupt(relativeStart = ifAbrupt(relativeStart))) return relativeStart;
 
                 var k;
                 if (relativeStart < 0) k = max((len + relativeStart), 0);
@@ -16330,7 +16330,7 @@ dependencygrouptransitions of kind load1.Kind.
                 var relativeEnd;
                 if (end === undefined) relativeEnd = len;
                 else relativeEnd = ToInteger(end);
-                if ((relativeEnd = ifAbrupt(relativeEnd)) && isAbrupt(relativeEnd)) return relativeEnd;
+                if (isAbrupt(relativeEnd = ifAbrupt(relativeEnd))) return relativeEnd;
                 var final;
                 if (relativeEnd < 0) final = max((len + relativeEnd), 0);
                 else final = min(relativeEnd, len);
@@ -16339,10 +16339,10 @@ dependencygrouptransitions of kind load1.Kind.
                 while (k < final) {
                     var Pk = ToString(k);
                     var kPresent = HasProperty(O, Pk);
-                    if ((kPresent = ifAbrupt(kPresent)) && isAbrupt(kPresent)) return kPresent;
+                    if (isAbrupt(kPresent = ifAbrupt(kPresent))) return kPresent;
                     if (kPresent) {
                         var kValue = Get(O, Pk);
-                        if ((kValue = ifAbrupt(kValue)) && isAbrupt(kValue)) return kValue;
+                        if (isAbrupt(kValue = ifAbrupt(kValue))) return kValue;
                         status = CreateDataProperty(A, ToString(n), kValue);
                         if (isAbrupt(status)) return status;
                         if (status === false) return withError("Type", "slice: CreateDataProperty on new Array returned false");
@@ -16365,7 +16365,7 @@ dependencygrouptransitions of kind load1.Kind.
                 if (isAbrupt(O = ifAbrupt(O))) return O;
                 var lenVal = Get(O, "length");
                 var len = ToUint32(lenVal);
-                if ((len = ifAbrupt(len)) && isAbrupt(len)) return len;
+                if (isAbrupt(len = ifAbrupt(len))) return len;
 
             }),
             enumerable: false,
@@ -16381,9 +16381,9 @@ dependencygrouptransitions of kind load1.Kind.
             if (isAbrupt(O = ifAbrupt(O))) return O;
             var lenVal = Get(O, "length");
             var len = ToLength(lenVal);
-            if ((len = ifAbrupt(len)) && isAbrupt(len)) return len;
+            if (isAbrupt(len = ifAbrupt(len))) return len;
             var relativeStart = ToInteger(start);
-            if ((relativeStart=ifAbrupt(relativeStart))&&isAbrupt(relativeStart)) return relativeStart;
+            if (isAbrupt(relativeStart = ifAbrupt(relativeStart))) return relativeStart;
             var actualStart;
             if (relativeStart < 0) actualStart = max((len+relativeStart),0);
             else actualStart=min(relativeStart,len);
@@ -16393,13 +16393,13 @@ dependencygrouptransitions of kind load1.Kind.
                 actualDeleteCount = len - actualStart;
             } else {
                 var dc = ToInteger(deleteCount);
-                if ((dc=ifAbrupt(dc)) && isAbrupt(dc)) return dc;
+                if (isAbrupt(dc = ifAbrupt(dc))) return dc;
                 actualDeleteCount = min(max(dc, 0), len - actualStart);
             }
             var A = undefined;
             if (O instanceof ArrayExoticObject) {
                 var C = Get(O, "constructor");
-                if ((C=ifAbrupt(C))&&isAbrupt(C)) return C;
+                if (isAbrupt(C = ifAbrupt(C))) return C;
                 if (IsConstructor(C) === true) {
                     var thisRealm = getRealm();
                     if (SameValue(thisRealm, getInternalSlot(C, "Realm"))) {
@@ -16415,10 +16415,10 @@ dependencygrouptransitions of kind load1.Kind.
             while (k < actualDeleteCount) {
                 var from = ToString(actualStart + k);
                 var fromPresent = HasProperty(O, from);
-                if ((fromPresent=ifAbrupt(fromPresent)) && isAbrupt(fromPresent));
+                if (isAbrupt(fromPresent = ifAbrupt(fromPresent))) return fromPresent;
                 if (fromPresent === true) {
                     var fromValue = Get(O, from);
-                    if ((fromValue=ifAbrupt(fromValue)) && isAbrupt(fromValue)) return fromValue;
+                    if (isAbrupt(fromValue = ifAbrupt(fromValue))) return fromValue;
                     var status = CreateDataPropertyOrThrow(A, ToString(k), fromValue);
                     if (isAbrupt(status)) return status;
                 }
@@ -16434,10 +16434,10 @@ dependencygrouptransitions of kind load1.Kind.
                     var from = ToString(k+actualDeleteCount);
                     var to = ToString(k+itemCount);
                     var fromPresent = HasProperty(O, from);
-                    if ((fromPresent = ifAbrupt(fromPresent)) && isAbrupt(fromPresent));
+                    if (isAbrupt(fromPresent = ifAbrupt(fromPresent)));
                     if (fromPresent  === true) {
                         var fromValue = Get(O, from);
-                        if ((fromValue = ifAbrupt(fromValue)) && isAbrupt(fromValue)) return fromValue;
+                        if (isAbrupt(fromValue = ifAbrupt(fromValue))) return fromValue;
                         putStatus = Put(O, to, fromValue, true);
                         if (isAbrupt(putStatus)) return putStatus;
 
@@ -16455,7 +16455,7 @@ dependencygrouptransitions of kind load1.Kind.
                     var fromPresent = HasProperty(O, from);
                     if (fromPresent === true) {
                         var fromValue = Get(O, from);
-                        if ((fromValue=ifAbrupt(fromValue)) && isAbrupt(fromValue)) return fromValue;
+                        if (isAbrupt(fromValue = ifAbrupt(fromValue))) return fromValue;
                         putStatus = Put(O, to, fromValue, true);
                         if (isAbrupt(putStatus)) return putStatus;
                     } else {
@@ -16492,7 +16492,7 @@ dependencygrouptransitions of kind load1.Kind.
                 var fromIndex = argList[1];
                 var lenValue = Get(O, "length");
                 var len = ToUint32(lenValue);
-                if ((len = ifAbrupt(len)) && isAbrupt(len)) return len;
+                if (isAbrupt(len = ifAbrupt(len))) return len;
                 var n;
                 var k;
                 if (fromIndex !== undefined) n = ToInteger(fromIndex);
@@ -16507,10 +16507,10 @@ dependencygrouptransitions of kind load1.Kind.
                 while (k < len) {
                     var Pk = ToString(k);
                     var kPresent = HasProperty(O, Pk);
-                    if ((kPresent = ifAbrupt(kPresent)) && isAbrupt(kPresent)) return kPresent;
+                    if (isAbrupt(kPresent = ifAbrupt(kPresent))) return kPresent;
                     if (kPresent) {
                         var elementK = Get(O, Pk);
-                        if ((elementK = ifAbrupt(elementK)) && isAbrupt(elementK)) return elementK;
+                        if (isAbrupt(elementK = ifAbrupt(elementK))) return elementK;
                         /* Replace mit Strict EQ Abstract Op */
                         var same = (searchElement === elementK);
                         if (same) return NormalCompletion(k);
@@ -16531,7 +16531,7 @@ dependencygrouptransitions of kind load1.Kind.
                 var fromIndex = argList[1];
                 var lenValue = Get(O, "length");
                 var len = ToUint32(lenValue);
-                if ((len = ifAbrupt(len)) && isAbrupt(len)) return len;
+                if (isAbrupt(len = ifAbrupt(len))) return len;
                 var n;
                 var k;
                 if (len === 0) return -1;
@@ -16545,10 +16545,10 @@ dependencygrouptransitions of kind load1.Kind.
                 while (k > 0) {
                     var Pk = ToString(k);
                     var kPresent = HasProperty(O, Pk);
-                    if ((kPresent = ifAbrupt(kPresent)) && isAbrupt(kPresent)) return kPresent;
+                    if (isAbrupt(kPresent = ifAbrupt(kPresent))) return kPresent;
                     if (kPresent) {
                         var elementK = Get(O, Pk);
-                        if ((elementK = ifAbrupt(elementK)) && isAbrupt(elementK)) return elementK;
+                        if (isAbrupt(elementK = ifAbrupt(elementK))) return elementK;
                         /* Replace mit Strict EQ Abstract Op */
                         var same = (searchElement === elementK);
                         if (same) return NormalCompletion(k);
@@ -16570,17 +16570,17 @@ dependencygrouptransitions of kind load1.Kind.
                 if (isAbrupt(O = ifAbrupt(O))) return O;
                 var lenVal = Get(O, "length");
                 var len = ToUint32(lenVal);
-                if ((len = ifAbrupt(len)) && isAbrupt(len)) return len;
+                if (isAbrupt(len = ifAbrupt(len))) return len;
                 if (!IsCallable(callback)) return withError("Type", "forEach: callback is not a function.");
                 if (argList.length < 2) T = undefined;
                 var k = 0;
                 while (k < len) {
                     var Pk = ToString(k);
                     var kPresent = HasProperty(O, Pk);
-                    if ((kPresent = ifAbrupt(kPresent)) && isAbrupt(kPresent)) return kPresent;
+                    if (isAbrupt(kPresent = ifAbrupt(kPresent))) return kPresent;
                     if (kPresent) {
                         var kValue = Get(O, Pk);
-                        if ((kValue = ifAbrupt(kValue)) && isAbrupt(kValue)) return kValue;
+                        if (isAbrupt(kValue = ifAbrupt(kValue))) return kValue;
                         var funcResult = callInternalSlot("Call", callback, T, [kValue, k, O]);
                         if (isAbrupt(funcResult)) return funcResult;
                     }
@@ -16608,12 +16608,12 @@ dependencygrouptransitions of kind load1.Kind.
                 while (k < len) {
                     var Pk = ToString(k);
                     var kPresent = HasProperty(O, Pk);
-                    if ((kPresent = ifAbrupt(kPresent)) && isAbrupt(kPresent)) return kPresent;
+                    if (isAbrupt(kPresent = ifAbrupt(kPresent))) return kPresent;
                     if (kPresent) {
                         var kValue = Get(O, Pk);
-                        if ((kValue = ifAbrupt(kValue)) && isAbrupt(kValue)) return kValue;
+                        if (isAbrupt(kValue = ifAbrupt(kValue))) return kValue;
                         var mappedValue = callInternalSlot("Call", callback, T, [kValue, k, O]);
-                        if ((mappedValue = ifAbrupt(mappedValue)) && isAbrupt(mappedValue)) return mappedValue;
+                        if (isAbrupt(mappedValue = ifAbrupt(mappedValue))) return mappedValue;
                         callInternalSlot("DefineOwnProperty", A, Pk, {
                             value: mappedValue,
                             writable: true,
@@ -16646,13 +16646,13 @@ dependencygrouptransitions of kind load1.Kind.
                 while (k < len) {
                     var Pk = ToString(k);
                     var kPresent = HasProperty(O, Pk);
-                    if ((kPresent = ifAbrupt(kPresent)) && isAbrupt(kPresent)) return kPresent;
+                    if (isAbrupt(kPresent = ifAbrupt(kPresent))) return kPresent;
                     if (kPresent) {
                         var kValue = Get(O, Pk);
-                        if ((kValue = ifAbrupt(kValue)) && isAbrupt(kValue)) return kValue;
+                        if (isAbrupt(kValue = ifAbrupt(kValue))) return kValue;
 
                         var selected = callInternalSlot("Call", callback, T, [kValue, k, O]);
-                        if ((selected = ifAbrupt(selected)) && isAbrupt(selected)) return selected;
+                        if (isAbrupt(selected = ifAbrupt(selected))) return selected;
                         if (ToBoolean(selected) === true) {
 
                             A.DefineOwnProperty(ToString(to), {
@@ -16697,12 +16697,12 @@ dependencygrouptransitions of kind load1.Kind.
                 while (k < len) {
                     var Pk = ToString(k);
                     var kPresent = HasProperty(O, Pk);
-                    if ((kPresent = ifAbrupt(kPresent)) && isAbrupt(kPresent)) return kPresent;
+                    if (isAbrupt(kPresent = ifAbrupt(kPresent))) return kPresent;
                     if (kPresent) {
                         var kValue = Get(O, Pk);
-                        if ((kValue = ifAbrupt(kValue)) && isAbrupt(kValue)) return kValue;
+                        if (isAbrupt(kValue = ifAbrupt(kValue))) return kValue;
                         var testResult = callInternalSlot("Call", callback, T, [kValue, k, O]);
-                        if ((testResult = ifAbrupt(testResult)) && isAbrupt(testResult)) return testResult;
+                        if (isAbrupt(testResult = ifAbrupt(testResult))) return testResult;
                         if (ToBoolean(testResult) === false) return NormalCompletion(false);
                     }
                     k = k + 1;
@@ -16728,12 +16728,12 @@ dependencygrouptransitions of kind load1.Kind.
                 while (k < len) {
                     var Pk = ToString(k);
                     var kPresent = HasProperty(O, Pk);
-                    if ((kPresent = ifAbrupt(kPresent)) && isAbrupt(kPresent)) return kPresent;
+                    if (isAbrupt(kPresent = ifAbrupt(kPresent))) return kPresent;
                     if (kPresent) {
                         var kValue = Get(O, Pk);
-                        if ((kValue = ifAbrupt(kValue)) && isAbrupt(kValue)) return kValue;
+                        if (isAbrupt(kValue = ifAbrupt(kValue))) return kValue;
                         var testResult = callInternalSlot("Call", callback, T, [kValue, k, O]);
-                        if ((testResult = ifAbrupt(testResult)) && isAbrupt(testResult)) return testResult;
+                        if (isAbrupt(testResult = ifAbrupt(testResult))) return testResult;
                         if (ToBoolean(testResult) === true) return NormalCompletion(true);
                     }
                     k = k + 1;
@@ -16834,7 +16834,7 @@ dependencygrouptransitions of kind load1.Kind.
                     enumerable: false,
                     configurable: false
                 });
-                if ((status = ifAbrupt(status)) && isAbrupt(status)) return status;
+                if (isAbrupt(status = ifAbrupt(status))) return status;
                 setInternalSlot(O, "StringData", s);
                 return O;
             }
@@ -16850,7 +16850,7 @@ dependencygrouptransitions of kind load1.Kind.
                 var F = thisArg;
                 var obj = StringExoticObject();
                 var proto = GetPrototypeFromConstructor(F, "%StringPrototype%");
-                if ((proto = ifAbrupt(proto)) && isAbrupt(proto)) return proto;
+                if (isAbrupt(proto = ifAbrupt(proto))) return proto;
                 setInternalSlot(obj, "Prototype", proto);
                 setInternalSlot(obj, "StringData", undefined);
                 return obj;
@@ -16867,13 +16867,13 @@ dependencygrouptransitions of kind load1.Kind.
             // ,...substitions)
             var substitutions = CreateArrayFromList(argList.slice(1));
             var cooked = ToObject(callSite);
-            if ((cooked = ifAbrupt(cooked)) && isAbrupt(cooked)) return cooked;
+            if (isAbrupt(cooked = ifAbrupt(cooked))) return cooked;
             var rawValue = Get(cooked, "raw");
             var raw = ToObject(rawValue);
-            if ((raw = ifAbrupt(raw)) && isAbrupt(raw)) return raw;
+            if (isAbrupt(raw = ifAbrupt(raw))) return raw;
             var len = Get(raw, "length");
             var literalSegments = ToLength(len);
-            if ((literalSegments = ifAbrupt(literalSegments)) && isAbrupt(literalSegments)) return literalSegments;
+            if (isAbrupt(literalSegments = ifAbrupt(literalSegments))) return literalSegments;
             if (literalSegments <= 0) return "";
             var stringElements = [];
             var nextIndex = 0;
@@ -16881,7 +16881,7 @@ dependencygrouptransitions of kind load1.Kind.
                 var nextKey = ToString(nextIndex);
                 var next = Get(raw, nextKey);
                 var nextSeg = ToString(next);
-                if ((nextSeg = ifAbrupt(nextSeg)) && isAbrupt(nextSeg)) return nextSeg;
+                if (isAbrupt(nextSeg = ifAbrupt(nextSeg))) return nextSeg;
                 stringElements.push(nextSeg);
                 if (nextIndex + 1 === literalSegments) {
                     var string = stringElements.join('');
@@ -16889,11 +16889,11 @@ dependencygrouptransitions of kind load1.Kind.
                 }
                 next = Get(substitutions, nextKey);
                 var nextSub = ToString(next);
-                if ((nextSub = ifAbrupt(nextSub)) && isAbrupt(nextSub)) return nextSub;
+                if (isAbrupt(nextSub = ifAbrupt(nextSub))) return nextSub;
                 stringElements.push(nextSub);
                 nextIndex = nextIndex + 1;
             }
-            if ((cooked = ifAbrupt(cooked)) && isAbrupt(cooked)) return cooked;
+            if (isAbrupt(cooked = ifAbrupt(cooked))) return cooked;
         });
 
         DefineOwnProperty(StringConstructor, "raw", {
@@ -16975,7 +16975,7 @@ dependencygrouptransitions of kind load1.Kind.
                 return Invoke(searchValue, "replace", [string, replaceValue]);
             }
             var searchString = ToString(searchValue);
-            if ((searchString=ifAbrupt(searchString)) && isAbrupt(searchString)) return searchString;
+            if (isAbrupt(searchString = ifAbrupt(searchString))) return searchString;
             var i = 0;
             var len = S.length;
             var searchLen = searchString.length;
@@ -16995,9 +16995,9 @@ dependencygrouptransitions of kind load1.Kind.
                         matched = searchString;
                         if (IsCallable(replaceValue)) {
                             var replValue = callInternalSlot("Call", replaceValue, undefined, [matched, pos, string])
-                            if ((replValue=ifAbrupt(replValue)) && isAbrupt(replValue)) return replValue;
+                            if (isAbrupt(replValue = ifAbrupt(replValue))) return replValue;
                             var replStr = ToString(replValue);
-                            if ((replStr=ifAbrupt(replStr)) && isAbrupt(replStr)) return replStr;
+                            if (isAbrupt(replStr = ifAbrupt(replStr))) return replStr;
 
                         } else {
                             var capstures = [];
@@ -17026,7 +17026,7 @@ dependencygrouptransitions of kind load1.Kind.
             } else {
                 rx = RegExpCreate(regexp, undefined);
             }
-            if ((rx=ifAbrupt(rx)) && isAbrupt(rx)) return rx;
+            if (isAbrupt(rx = ifAbrupt(rx))) return rx;
             return Invoke(rx, "match", []);
         };
         var StringPrototype_repeat = function (thisArg, argList) {
@@ -17165,7 +17165,7 @@ dependencygrouptransitions of kind load1.Kind.
             } else {
                 rx = RegExpCreate(regexp, undefined);
             }
-            if ((rx = ifAbrupt(rx)) && isAbrupt(rx)) return rx;
+            if (isAbrupt(rx = ifAbrupt(rx))) return rx;
             return Invoke(rx, "search", [S]);
         };
         // 31.1.
@@ -17246,7 +17246,7 @@ dependencygrouptransitions of kind load1.Kind.
             var S = ToString(O);
             if (isAbrupt(S = ifAbrupt(S))) return S;
             var intMinLength = ToInteger(minLength);
-            if ((intMinLength=ifAbrupt(intMinLength)) && isAbrupt(intMinLength)) return intMinLength;
+            if (isAbrupt(intMinLength = ifAbrupt(intMinLength))) return intMinLength;
             if (intMinLength === undefined) return NormalCompletion(S);
             var fillLen = intMinLength - S.length;
             if (fillLen < 0) return withError("Range", "lpad: fillLen is smaller than the string"); // maybe auto cut just the string. too?
@@ -17267,7 +17267,7 @@ dependencygrouptransitions of kind load1.Kind.
             var S = ToString(O);
             if (isAbrupt(S = ifAbrupt(S))) return S;
             var intMinLength = ToInteger(minLength);
-            if ((intMinLength=ifAbrupt(intMinLength)) && isAbrupt(intMinLength)) return intMinLength;
+            if (isAbrupt(intMinLength = ifAbrupt(intMinLength))) return intMinLength;
             if (intMinLength === undefined) return NormalCompletion(S);
             var fillLen = intMinLength - S.length;
             if (fillLen < 0) return withError("Range", "lpad: fillLen is smaller than the string");
@@ -17309,7 +17309,7 @@ dependencygrouptransitions of kind load1.Kind.
             for (var i = 0, j = argList.length; i < j; i++ ) {
                 var next = argList[i];
                 var nextString = ToString(next);
-                if ((nextString = ifAbrupt(nextString)) && isAbrupt(nextString)) return nextString;
+                if (isAbrupt(nextString = ifAbrupt(nextString))) return nextString;
                 R = R + next;
             }
             return NormalCompletion(R);
@@ -17351,7 +17351,7 @@ dependencygrouptransitions of kind load1.Kind.
             var S = ToString(O);
             if (isAbrupt(S = ifAbrupt(S))) return S;
             var numPos = ToNumber(position);
-            if ((numPos=ifAbrupt(numPos)) && isAbrupt(numPos)) return numPos;
+            if (isAbrupt(numPos = ifAbrupt(numPos))) return numPos;
             var pos;
             if (numPos !== numPos) pos = Infinity;
             else pos = numPos|0;
@@ -17368,7 +17368,7 @@ dependencygrouptransitions of kind load1.Kind.
             var S = ToString(O);
             if (isAbrupt(S = ifAbrupt(S))) return S;
             var That = ToString(that);
-            if ((that = ifAbrupt(that)) && isAbrupt(that)) return that;
+            if (isAbrupt(that = ifAbrupt(that))) return that;
             return NormalCompletion(undefined);
         };
 
@@ -17557,7 +17557,7 @@ dependencygrouptransitions of kind load1.Kind.
             var descString;
             var description = argList[0];
             if (description !== undefined) descString = ToString(description);
-            if ((descString=ifAbrupt(descString)) && isAbrupt(descString)) return descString;
+            if (isAbrupt(descString = ifAbrupt(descString))) return descString;
             var symbol = SymbolPrimitiveType();
             setInternalSlot(symbol, "Description", descString);
             return NormalCompletion(symbol);
@@ -17646,7 +17646,7 @@ dependencygrouptransitions of kind load1.Kind.
         var SymbolFunction_for = function (thisArg, argList) {
             var key = argList[0];
             var stringKey = ToString(key)
-            if ((stringKey = ifAbrupt(stringKey)) && isAbrupt(stringKey)) return stringKey;
+            if (isAbrupt(stringKey = ifAbrupt(stringKey))) return stringKey;
             var e = getRealm().GlobalSymbolRegistry[key];
             if (e !== undefined && SameValue(e.Key, stringKey)) return NormalCompletion(e.symbol);
             Assert(e === undefined, "GlobalSymbolRegistry must currently not contain an entry for stringKey");
@@ -17674,7 +17674,7 @@ dependencygrouptransitions of kind load1.Kind.
         setInternalSlot(EncodeURIFunction, "Call", function (thisArg, argList) {
             var uri = argList[0];
             var uriString = ToString(uri);
-            if ((uriString = ifAbrupt(uriString)) && isAbrupt(uriString)) return uriString;
+            if (isAbrupt(uriString = ifAbrupt(uriString))) return uriString;
             var unescapedUriSet = "" + uriReserved + uriUnescaped + "#";
             return Encode(uriString, unescapedUriSet);
         });
@@ -17682,7 +17682,7 @@ dependencygrouptransitions of kind load1.Kind.
         setInternalSlot(EncodeURIComponentFunction, "Call", function (thisArg, argList) {
             var uriComponent = argList[0];
             var uriComponentString = ToString(uriComponent);
-            if ((uriComponentString = ifAbrupt(uriComponentString)) && isAbrupt(uriComponentString)) return uriComponentString;
+            if (isAbrupt(uriComponentString = ifAbrupt(uriComponentString))) return uriComponentString;
             var unescapedUriComponentSet = "" + uriUnescaped;
             return Encode(uriComponentString, unescapedUriComponentSet);
         });
@@ -17690,7 +17690,7 @@ dependencygrouptransitions of kind load1.Kind.
         setInternalSlot(DecodeURIFunction, "Call", function (thisArg, argList) {
             var encodedUri = argList[0];
             var uriString = ToString(encodedUri);
-            if ((uriString = ifAbrupt(uriString)) && isAbrupt(uriString)) return uriString;
+            if (isAbrupt(uriString = ifAbrupt(uriString))) return uriString;
             var reservedUriSet = "" + uriReserved + "#";
             return Decode(uriString, reservedUriSet);
         });
@@ -17698,7 +17698,7 @@ dependencygrouptransitions of kind load1.Kind.
         setInternalSlot(DecodeURIComponentFunction, "Call", function (thisArg, argList) {
             var encodedUriComponent = argList[0];
             var uriComponentString = ToString(encodedUriComponent);
-            if ((uriComponentString = ifAbrupt(uriComponentString)) && isAbrupt(uriComponentString)) return uriComponentString;
+            if (isAbrupt(uriComponentString = ifAbrupt(uriComponentString))) return uriComponentString;
             var reservedUriComponentSet = "";
             return Decode(uriComponentString, reservedUriComponentSet);
         });
@@ -17820,7 +17820,7 @@ dependencygrouptransitions of kind load1.Kind.
             setInternalSlot(O, "ErrorData", "Error");
             if (message !== undefined) {
                 var msg = ToString(message);
-                if ((msg = ifAbrupt(msg)) && isAbrupt(msg)) return msg;
+                if (isAbrupt(msg = ifAbrupt(msg))) return msg;
                 var msgDesc = {
                     value: msg,
                     writable: true,
@@ -18013,7 +18013,7 @@ dependencygrouptransitions of kind load1.Kind.
                         } else {
                             tv = ToNumber(v);
                         }
-                        if ((tv = ifAbrupt(tv)) && isAbrupt(tv)) return tv;
+                        if (isAbrupt(tv = ifAbrupt(tv))) return tv;
                         setInternalSlot(O, "DateValue", TimeClip(tv));
                         return O;
                     }
@@ -18716,7 +18716,7 @@ dependencygrouptransitions of kind load1.Kind.
                     return withError("Syntax", message);
                 }
                 newAst = reflect_parse_transformASTtoOrdinaries(jsAst, options);
-                if ((newAst = ifAbrupt(newAst)) && isAbrupt(newAst)) return newAst;
+                if (isAbrupt(newAst = ifAbrupt(newAst))) return newAst;
                 return NormalCompletion(newAst);
             };
 
@@ -18736,7 +18736,7 @@ dependencygrouptransitions of kind load1.Kind.
                     return withError("Syntax", message);
                 }
                 newAst = reflect_parse_transformASTtoOrdinaries(jsAst);
-                if ((newAst = ifAbrupt(newAst)) && isAbrupt(newAst)) return newAst;
+                if (isAbrupt(newAst = ifAbrupt(newAst))) return newAst;
                 return NormalCompletion(newAst);
             };
 
@@ -18744,7 +18744,7 @@ dependencygrouptransitions of kind load1.Kind.
         var ReflectObject_getPrototypeOf = function (thisArg, argList) {
                 var target = argList[0];
                 var obj = ToObject(target);
-                if ((obj = ifAbrupt(obj)) && isAbrupt(obj)) return obj;
+                if (isAbrupt(obj = ifAbrupt(obj))) return obj;
                 return GetPrototypeOf(obj);
             };
 
@@ -18752,7 +18752,7 @@ dependencygrouptransitions of kind load1.Kind.
             var target = argList[0];
             var proto = argList[1];
             var obj = ToObject(target);
-            if ((obj = ifAbrupt(obj)) && isAbrupt(obj)) return obj;
+            if (isAbrupt(obj = ifAbrupt(obj))) return obj;
             if (Type(proto) !== "object" && proto !== null) return withError("Type", "Reflect.setPrototypeOf: proto is neither an object nor null!");
             return SetPrototypeOf(obj, proto);
         };
@@ -18761,32 +18761,32 @@ dependencygrouptransitions of kind load1.Kind.
         var ReflectObject_isExtensible = function (thisArg, argList) {
             var target = argList[0];
             var obj = ToObject(target);
-            if ((obj = ifAbrupt(obj)) && isAbrupt(obj)) return obj;
+            if (isAbrupt(obj = ifAbrupt(obj))) return obj;
             return IsExtensible(obj);
         };
 
         var ReflectObject_preventExtensions = function (thisArg, argList) {
                 var target = argList[0];
                 var obj = ToObject(target);
-                if ((obj = ifAbrupt(obj)) && isAbrupt(obj)) return obj;
+                if (isAbrupt(obj = ifAbrupt(obj))) return obj;
                 return PreventExtensions(obj);
         };
         var ReflectObject_has = function (thisArg, argList) {
             var target = argList[0];
             var propertyKey = argList[1];
             var obj = ToObject(target);
-            if ((obj = ifAbrupt(obj)) && isAbrupt(obj)) return obj;
+            if (isAbrupt(obj = ifAbrupt(obj))) return obj;
             var key = ToPropertyKey(propertyKey);
-            if ((key = ifAbrupt(key)) && isAbrupt(key)) return key;
+            if (isAbrupt(key = ifAbrupt(key))) return key;
             return HasProperty(obj, key);
         };
         var ReflectObject_hasOwn = function (thisArg, argList) {
             var target = argList[0];
             var propertyKey = argList[1];
             var obj = ToObject(target);
-            if ((obj = ifAbrupt(obj)) && isAbrupt(obj)) return obj;
+            if (isAbrupt(obj = ifAbrupt(obj))) return obj;
             var key = ToPropertyKey(propertyKey);
-            if ((key = ifAbrupt(key)) && isAbrupt(key)) return key;
+            if (isAbrupt(key = ifAbrupt(key))) return key;
             return HasOwnProperty(obj, key);
         };
 
@@ -18794,11 +18794,11 @@ dependencygrouptransitions of kind load1.Kind.
             var target = argList[0];
             var propertyKey = argList[1];
             var obj = ToObject(target);
-            if ((obj = ifAbrupt(obj)) && isAbrupt(obj)) return obj;
+            if (isAbrupt(obj = ifAbrupt(obj))) return obj;
             var key = ToPropertyKey(propertyKey);
-            if ((key = ifAbrupt(key)) && isAbrupt(key)) return key;
+            if (isAbrupt(key = ifAbrupt(key))) return key;
             var desc = GetOwnProperty(obj, key);
-            if ((desc = ifAbrupt(desc)) && isAbrupt(desc)) return desc;
+            if (isAbrupt(desc = ifAbrupt(desc))) return desc;
             return FromPropertyDescriptor(desc);
         };
 
@@ -18807,9 +18807,9 @@ dependencygrouptransitions of kind load1.Kind.
                 var propertyKey = argList[1];
                 var receiver = argList[2];
                 var obj = ToObject(target);
-                if ((obj = ifAbrupt(obj)) && isAbrupt(obj)) return obj;
+                if (isAbrupt(obj = ifAbrupt(obj))) return obj;
                 var key = ToPropertyKey(propertyKey);
-                if ((key = ifAbrupt(key)) && isAbrupt(key)) return key;
+                if (isAbrupt(key = ifAbrupt(key))) return key;
                 if (receiver === undefined) receiver = target;
                 return obj.Get(key, receiver);
             };
@@ -18820,9 +18820,9 @@ dependencygrouptransitions of kind load1.Kind.
             var V = argList[2];
             var receiver = argList[3];
             var obj = ToObject(target);
-            if ((obj = ifAbrupt(obj)) && isAbrupt(obj)) return obj;
+            if (isAbrupt(obj = ifAbrupt(obj))) return obj;
             var key = ToPropertyKey(propertyKey);
-            if ((key = ifAbrupt(key)) && isAbrupt(key)) return key;
+            if (isAbrupt(key = ifAbrupt(key))) return key;
             if (receiver === undefined) receiver = target;
             return obj.Set(key, V, receiver);
         };
@@ -18832,9 +18832,9 @@ dependencygrouptransitions of kind load1.Kind.
                 var argumentList = argList[2];
                 var receiver = argList[3];
                 var obj = ToObject(target);
-                if ((obj = ifAbrupt(obj)) && isAbrupt(obj)) return obj;
+                if (isAbrupt(obj = ifAbrupt(obj))) return obj;
                 var key = ToPropertyKey(propertyKey);
-                if ((key = ifAbrupt(key)) && isAbrupt(key)) return key;
+                if (isAbrupt(key = ifAbrupt(key))) return key;
                 if (receiver === undefined) receiver = target;
                 var A = CreateListFromArrayLike(argumentList);
                 return obj.Invoke(key, A, receiver);
@@ -18843,9 +18843,9 @@ dependencygrouptransitions of kind load1.Kind.
                 var target = argList[0];
                 var propertyKey = argList[1];
                 var obj = ToObject(target);
-                if ((obj = ifAbrupt(obj)) && isAbrupt(obj)) return obj;
+                if (isAbrupt(obj = ifAbrupt(obj))) return obj;
                 var key = ToPropertyKey(propertyKey);
-                if ((key = ifAbrupt(key)) && isAbrupt(key)) return key;
+                if (isAbrupt(key = ifAbrupt(key))) return key;
                 return obj.Delete(key);
             };
         var ReflectObject_defineProperty = function (thisArg, argList) {
@@ -18853,23 +18853,23 @@ dependencygrouptransitions of kind load1.Kind.
                 var propertyKey = argList[1];
                 var attributes = argList[2];
                 var obj = ToObject(target);
-                if ((obj = ifAbrupt(obj)) && isAbrupt(obj)) return obj;
+                if (isAbrupt(obj = ifAbrupt(obj))) return obj;
                 var key = ToPropertyKey(propertyKey);
-                if ((key = ifAbrupt(key)) && isAbrupt(key)) return key;
+                if (isAbrupt(key = ifAbrupt(key))) return key;
                 var desc = ToPropertyDescriptor(attributes);
-                if ((desc = ifAbrupt(desc)) && isAbrupt(desc)) return desc;
+                if (isAbrupt(desc = ifAbrupt(desc))) return desc;
                 return callInternalSlot("DefineOwnProperty", obj,key, desc);
             };
             var ReflectObject_enumerate = function (thisArg, argList) {
                 var target = argList[0];
                 var obj = ToObject(target);
-                if ((obj = ifAbrupt(obj)) && isAbrupt(obj)) return obj;
+                if (isAbrupt(obj = ifAbrupt(obj))) return obj;
                 return obj.Enumerate();
             };
             var ReflectObject_ownKeys = function (thisArg, argList) {
                 var target = argList[0];
                 var obj = ToObject(target);
-                if ((obj = ifAbrupt(obj)) && isAbrupt(obj)) return obj;
+                if (isAbrupt(obj = ifAbrupt(obj))) return obj;
                 return obj.OwnPropertyKeys();
             };
 
@@ -18919,21 +18919,21 @@ dependencygrouptransitions of kind load1.Kind.
                 var target = argList[0];
                 var source = argList[1];
                 var to = ToObject(target);
-                if ((to = ifAbrupt(to)) && isAbrupt(to)) return to;
+                if (isAbrupt(to = ifAbrupt(to))) return to;
                 var from = ToObject(source);
-                if ((source = ifAbrupt(source)) && isAbrupt(source)) return source;
+                if (isAbrupt(source = ifAbrupt(source))) return source;
                 var keys = OwnPropertyKeys(source);
-                if ((keys = ifAbrupt(keys)) && isAbrupt(keys)) return keys;
+                if (isAbrupt(keys = ifAbrupt(keys))) return keys;
                 var gotAllNames = false;
                 var pendingException = undefined;
                 var next, nextKey, desc, propValue, status;
                 while (!gotAllNames) {
                     next = IteratorStep(keys);
-                    if ((next = ifAbrupt(next)) && isAbrupt(next)) return next;
+                    if (isAbrupt(next = ifAbrupt(next))) return next;
                     if (!next) gotAllNames = true;
                     else {
                         nextKey = IteratorValue(next);
-                        if ((nextKey = ifAbrupt(nextKey)) && isAbrupt(nextKey)) return nextKey;
+                        if (isAbrupt(nextKey = ifAbrupt(nextKey))) return nextKey;
                         desc = GetOwnProperty(from, nextKey);
                         if (isAbrupt(desc)) pendingException = desc;
                         else if (desc !== undefined && desc.enumerable === true) {
@@ -18966,9 +18966,9 @@ dependencygrouptransitions of kind load1.Kind.
                 if (Type(O) !== "object") return withError("Type", "defineProperty: argument 1 is not an object");
                 var key = ToPropertyKey(P);
                 var desc = ToPropertyDescriptor(Attributes);
-                if ((desc = ifAbrupt(desc)) && isAbrupt(desc)) return desc;
+                if (isAbrupt(desc = ifAbrupt(desc))) return desc;
                 var success = DefineOwnPropertyOrThrow(O, key, desc);
-                if ((success = ifAbrupt(success)) && isAbrupt(success)) return success;
+                if (isAbrupt(success = ifAbrupt(success))) return success;
                 return O;
             };
             var ObjectConstructor_defineProperties = function (thisArg, argList) {
@@ -19016,7 +19016,7 @@ dependencygrouptransitions of kind load1.Kind.
                 O = argList[0];
                 if (Type(O) !== "object") return withError("Type", "First argument is object");
                 var status = SetIntegrityLevel(O, "sealed");
-                if ((status = ifAbrupt(status)) && isAbrupt(status)) return status;
+                if (isAbrupt(status = ifAbrupt(status))) return status;
                 if (status === false) return withError("Type", "seal: can not seal object");
                 return O;
             }
@@ -19028,7 +19028,7 @@ dependencygrouptransitions of kind load1.Kind.
                 O = argList[0];
                 if (Type(O) !== "object") return withError("Type", "First argument is object");
                 var status = SetIntegrityLevel(O, "frozen");
-                if ((status = ifAbrupt(status)) && isAbrupt(status)) return status;
+                if (isAbrupt(status = ifAbrupt(status))) return status;
                 if (status === false) return withError("Type", "freeze: can not freeze object");
                 return O;
             }
@@ -19039,10 +19039,10 @@ dependencygrouptransitions of kind load1.Kind.
                 var O = argList[0];
                 var P = argList[1];
                 var obj = ToObject(O);
-                if ((obj = ifAbrupt(obj)) && isAbrupt(obj)) return obj;
+                if (isAbrupt(obj = ifAbrupt(obj))) return obj;
                 var key = ToPropertyKey(P);
                 var desc = GetOwnProperty(obj, key);
-                if ((desc = ifAbrupt(desc)) && isAbrupt(desc)) return desc;
+                if (isAbrupt(desc = ifAbrupt(desc))) return desc;
                 return FromPropertyDescriptor(desc);
             }));
 
@@ -19054,19 +19054,19 @@ dependencygrouptransitions of kind load1.Kind.
 
         function GetOwnPropertyKeys(O, type) {
             var obj = ToObject(O);
-            if ((obj = ifAbrupt(obj)) && isAbrupt(obj)) return obj;
+            if (isAbrupt(obj = ifAbrupt(obj))) return obj;
             var keys = OwnPropertyKeys(O);
-            if ((keys = ifAbrupt(keys)) && isAbrupt(keys)) return keys;
+            if (isAbrupt(keys = ifAbrupt(keys))) return keys;
             var nameList = [];
             var gotAllNames = false;
             var next, nextKey;
             while (!gotAllNames) {
                 next = IteratorStep(keys);
-                if ((next = ifAbrupt(next)) && isAbrupt(next)) return next;
+                if (isAbrupt(next = ifAbrupt(next))) return next;
                 if (!next) gotAllNames = true;
                 else {
                     nextKey = IteratorValue(next);
-                    if ((nextKey = ifAbrupt(nextKey)) && isAbrupt(nextKey)) return nextKey;
+                    if (isAbrupt(nextKey = ifAbrupt(nextKey))) return nextKey;
                     if (Type(nextKey) === type)
                         nameList.push(nextKey);
                 }
@@ -19084,7 +19084,7 @@ dependencygrouptransitions of kind load1.Kind.
             function (thisArg, argList) {
                 var O = argList[0];
                 var obj = ToObject(O);
-                if ((obj = ifAbrupt(obj)) && isAbrupt(obj)) return obj;
+                if (isAbrupt(obj = ifAbrupt(obj))) return obj;
                 return GetPrototypeOf(obj);
             }));
 
@@ -19124,7 +19124,7 @@ dependencygrouptransitions of kind load1.Kind.
             var O = argList[0];
             if (Type(O) !== "object") return withError("Type", "argument is not an object");
             var status = PreventExtensions(O);
-            if ((status = ifAbrupt(status)) && isAbrupt(status)) return status;
+            if (isAbrupt(status = ifAbrupt(status))) return status;
             if (status === false) return withError("Type", "can not prevent extensions");
             return O;
         };
@@ -19133,21 +19133,21 @@ dependencygrouptransitions of kind load1.Kind.
         var ObjectConstructor_keys = function (thisArg, argList) {
             var O = argList[0];
             var obj = ToObject(O);
-            if ((obj = ifAbrupt(obj)) && isAbrupt(obj)) return obj;
+            if (isAbrupt(obj = ifAbrupt(obj))) return obj;
             var keys = OwnPropertyKeys(O);
-            if ((keys = ifAbrupt(keys)) && isAbrupt(keys)) return keys;
+            if (isAbrupt(keys = ifAbrupt(keys))) return keys;
 
             var nameList = [];
             var gotAllNames = false;
             var next, nextKey, desc;
             while (!gotAllNames) {
                 next = IteratorNext(keys);
-                if ((next = ifAbrupt(next)) && isAbrupt(next)) return next;
+                if (isAbrupt(next = ifAbrupt(next))) return next;
                 nextKey = IteratorValue(next);
-                if ((nextKey = ifAbrupt(nextKey)) && isAbrupt(nextKey)) return nextKey;
+                if (isAbrupt(nextKey = ifAbrupt(nextKey))) return nextKey;
                 if (Type(nextKey) === "string") {
                     desc = GetOwnProperty(O, nextKey);
-                    if ((desc = ifAbrupt(desc)) && isAbrupt(desc)) return desc;
+                    if (isAbrupt(desc = ifAbrupt(desc))) return desc;
                     if (desc !== undefined && desc.enumerable === true) {
                         nameList.push(nextKey);
                     }
@@ -19162,9 +19162,9 @@ dependencygrouptransitions of kind load1.Kind.
             var target = argList[0];
             var source = argList[1];
             var to = ToObject(target);
-            if ((to = ifAbrupt(to)) && isAbrupt(to)) return to;
+            if (isAbrupt(to = ifAbrupt(to))) return to;
             var from = ToObject(source);
-            if ((from = ifAbrupt(from)) && isAbrupt(from)) return from;
+            if (isAbrupt(from = ifAbrupt(from))) return from;
             return MixinProperties(to, from);
         };
 
@@ -19177,19 +19177,19 @@ dependencygrouptransitions of kind load1.Kind.
             Assert(Type(target) === "object");
             Assert(Type(source) === "object");
             var keys = OwnPropertyKeys(source);
-            if ((keys = ifAbrup(keys)) && isAbrupt(keys)) return keys;
+            if (isAbrupt(keys = ifAbrupt(keys))) return keys;
             var gotAllNames = false;
             var pendingException = undefined;
             var next, nextKey, desc, propValue, newFunc;
             var pendingException, getter, setter;
             while (!gotAllNames) {
                 next = IteratorStep(next);
-                if ((next = ifAbrupt(next)) && isAbrupt(next)) return next;
+                if (isAbrupt(next = ifAbrupt(next))) return next;
                 //    if ((=ifAbrupt()) && isAbrupt()) return ;
                 if (!next) gotAllNames = true;
                 else {
                     nextKey = IteratorValue(next);
-                    if ((nextKey = ifAbrupt(nextKey)) && isAbrupt(nextKey)) return nextKey;
+                    if (isAbrupt(nextKey = ifAbrupt(nextKey))) return nextKey;
                     var desc = GetOwnProperty(source, nextKey);
                     if (isAbrupt(desc)) pendingException = desc;
                     else if (desc !== undefined && desc.enumerable === true) {
@@ -19236,7 +19236,7 @@ dependencygrouptransitions of kind load1.Kind.
         var ObjectPrototype_$$create = function (thisArg, argList) {
             var F = thisArg;
             var proto = GetPrototypeFromConstructor(F, "%ObjectPrototype%");
-            if ((proto = ifAbrupt(proto)) && isAbrupt(proto)) return proto;
+            if (isAbrupt(proto = ifAbrupt(proto))) return proto;
             return ObjectCreate(proto);
         };
 
@@ -19320,7 +19320,7 @@ dependencygrouptransitions of kind load1.Kind.
                 else builtinTag = "Object";
 
                 var hasTag = HasProperty(O, $$toStringTag);
-                if ((hasTag = ifAbrupt(hasTag)) && isAbrupt(hasTag)) return hasTag;
+                if (isAbrupt(hasTag = ifAbrupt(hasTag))) return hasTag;
                 if (!hasTag) tag = builtinTag;
                 else {
                     tag = Get(O, $$toStringTag);
@@ -19352,7 +19352,7 @@ dependencygrouptransitions of kind load1.Kind.
                 if (protoType !== "object" && protoType !== null) return proto;
                 if (Type(O) !== "object") return proto;
                 var status = callInternalSlot("SetPrototypeOf", O, proto);
-                if ((status=ifAbrupt(status)) && isAbrupt(status)) return status;
+                if (isAbrupt(status = ifAbrupt(status))) return status;
                 if (status === false) return withError("Type", "__proto__: SetPrototypeOf failed.");
                 return proto;
             };
@@ -19403,7 +19403,7 @@ dependencygrouptransitions of kind load1.Kind.
                     if (Object.hasOwnProperty.call(bindings, N)) {
                         if (N !== "object") {
                             value = callInternalSlot("Get", changeRecord, N, changeRecord);
-                            if ((value = ifAbrupt(value)) && isAbrupt(value)) return value;
+                            if (isAbrupt(value = ifAbrupt(value))) return value;
                             status = callInternalSlot("DefineOwnProperty", newRecord, N, {
                                 value: value,
                                 writable: false,
@@ -19460,7 +19460,7 @@ dependencygrouptransitions of kind load1.Kind.
                     if (Object.hasOwnProperty.call(bindings, N)) {
                         if (N !== "object" && N !== "type") {
                             value = callInternalSlot("Get", changeRecord, N, changeRecord);
-                            if ((value = ifAbrupt(value)) && isAbrupt(value)) return value;
+                            if (isAbrupt(value = ifAbrupt(value))) return value;
                             status = callInternalSlot("DefineOwnProperty", newRecord, N, {
                                 value: value,
                                 writable: false,
@@ -19736,7 +19736,7 @@ dependencygrouptransitions of kind load1.Kind.
         // Function
         // ===========================================================================================================
 
-        //	
+        //  
         // Function
         //
 
@@ -19760,12 +19760,12 @@ dependencygrouptransitions of kind load1.Kind.
             else if (argCount > 1) {
                 firstArg = argList[0];
                 P = ToString(firstArg);
-                if ((firstArg = ifAbrupt(firstArg)) && isAbrupt(firstArg)) return firstArg;
+                if (isAbrupt(firstArg = ifAbrupt(firstArg))) return firstArg;
                 var k = 1;
                 while (k < argCount - 1) {
                     nextArg = argList[k];
                     nextArg = ToString(nextArg);
-                    if ((nextArg = ifAbrupt(nextArg)) && isAbrupt(nextArg)) return nextArg;
+                    if (isAbrupt(nextArg = ifAbrupt(nextArg))) return nextArg;
                     P = P + "," + nextArg;
                     k += 1;
                 }
@@ -19773,7 +19773,7 @@ dependencygrouptransitions of kind load1.Kind.
             }
 
             bodyText = ToString(bodyText);
-            if ((bodyText = ifAbrupt(bodyText)) && isAbrupt(bodyText)) return bodyText;
+            if (isAbrupt(bodyText = ifAbrupt(bodyText))) return bodyText;
             var parameters = parseGoal("FormalParameterList", P); // () sind fehlerhaft bei
             var funcBody = parseGoal("FunctionBody", bodyText);
 
@@ -19791,7 +19791,7 @@ dependencygrouptransitions of kind load1.Kind.
             if (F === undefined || !hasInternalSlot(F, "Code")) {
                 var C = FunctionConstructor;
                 var proto = GetPrototypeFromConstructor(C, "%FunctionPrototype%");
-                if ((proto == ifAbrupt(proto)) && isAbrupt(proto)) return proto;
+                if (isAbrupt(proto = ifAbrupt(proto))) return proto;
                 F = FunctionAllocate(C);
             }
 
@@ -19814,7 +19814,7 @@ dependencygrouptransitions of kind load1.Kind.
             value: CreateBuiltinFunction(realm, function (thisArg, argList) {
                 var F = thisArg;
                 var proto = GetPrototypeFromConstructor(F, "%FunctionPrototype%");
-                if ((proto = ifAbrupt(proto)) && isAbrupt(proto)) return proto;
+                if (isAbrupt(proto = ifAbrupt(proto))) return proto;
                 var obj = FunctionAllocate(proto);
                 return obj;
             }),
@@ -19884,7 +19884,7 @@ dependencygrouptransitions of kind load1.Kind.
                 else T = argList[0];
                 var argArray = argList[1] || ArrayCreate(0);
                 var argList2 = CreateListFromArrayLike(argArray);
-                if ((argList2 = ifAbrupt(argList2)) && isAbrupt(argList2)) return argList2;
+                if (isAbrupt(argList2 = ifAbrupt(argList2))) return argList2;
                 return callInternalSlot("Call", func, T, argList2);
             }),
             enumerable: false,
@@ -19934,7 +19934,7 @@ dependencygrouptransitions of kind load1.Kind.
             if (Type(superBinding) !== "object") return withError("Type", "superBinding is not an object");
             if (methodName !== undefined) {
                 methodName = ToPropertyKey(methodName);
-                if ((methodName = ifAbrupt(methodName)) && isAbrupt(methodName)) return methodName;
+                if (isAbrupt(methodName = ifAbrupt(methodName))) return methodName;
             }
             return CloneMethod(thisArg, superBinding, methodName);
         };
@@ -20012,12 +20012,12 @@ dependencygrouptransitions of kind load1.Kind.
             else if (argCount > 1) {
                 firstArg = argList[0];
                 P = ToString(firstArg);
-                if ((firstArg = ifAbrupt(firstArg)) && isAbrupt(firstArg)) return firstArg;
+                if (isAbrupt(firstArg = ifAbrupt(firstArg))) return firstArg;
                 var k = 1;
                 while (k < argCount - 1) {
                     nextArg = argList[k];
                     nextArg = ToString(nextArg);
-                    if ((nextArg = ifAbrupt(nextArg)) && isAbrupt(nextArg)) return nextArg;
+                    if (isAbrupt(nextArg = ifAbrupt(nextArg))) return nextArg;
                     P = P + "," + nextArg;
                     k += 1;
                 }
@@ -20025,7 +20025,7 @@ dependencygrouptransitions of kind load1.Kind.
             }
 
             bodyText = ToString(bodyText);
-            if ((bodyText = ifAbrupt(bodyText)) && isAbrupt(bodyText)) return bodyText;
+            if (isAbrupt(bodyText = ifAbrupt(bodyText))) return bodyText;
             var parameters = parseGoal("FormalParameterList", P);
 
             var funcBody = parseGoal("GeneratorBody", bodyText);
@@ -20061,7 +20061,7 @@ dependencygrouptransitions of kind load1.Kind.
         LazyDefineProperty(GeneratorFunction, $$create, CreateBuiltinFunction(realm, function (thisArg, argList) {
             var F = thisArg;
             var proto = GetPrototypeFromConstructor(F, "%Generator%");
-            if ((proto = ifAbrupt(proto)) && isAbrupt(proto)) return proto;
+            if (isAbrupt(proto = ifAbrupt(proto))) return proto;
             var obj = FunctionAllocate(proto, "generator");
             return obj;
         }));
@@ -20086,7 +20086,7 @@ dependencygrouptransitions of kind load1.Kind.
             var gap = _state.gap;
 
             var value = Get(holder, key);
-            if ((value = ifAbrupt(value)) && isAbrupt(value)) return value;
+            if (isAbrupt(value = ifAbrupt(value))) return value;
             if (Type(value) === "object") {
                 var toJSON = Get(value, "toJSON");
                 if (IsCallable(toJSON)) {
@@ -20155,7 +20155,7 @@ dependencygrouptransitions of kind load1.Kind.
 
             while (index < len) {
                 var strP = Str(ToString(index), value, _state);
-                if ((strP = ifAbrupt(strP)) && isAbrupt(strP)) return strP;
+                if (isAbrupt(strP = ifAbrupt(strP))) return strP;
                 if (strP == undefined) {
                     partial.push("null");
                 } else {
@@ -20207,11 +20207,11 @@ dependencygrouptransitions of kind load1.Kind.
 
             while (!done) {
                 nextResult = IteratorNext(K);
-                if ((nextResult = ifAbrupt(nextResult)) && isAbrupt(nextResult)) return nextResult;
+                if (isAbrupt(nextResult = ifAbrupt(nextResult))) return nextResult;
                 P = IteratorValue(nextResult);
                 if (isAbrupt(P = ifAbrupt(P))) return P;
                 var strP = Str(P, value, _state);
-                if ((strP = ifAbrupt(strP)) && isAbrupt(strP)) return strP;
+                if (isAbrupt(strP = ifAbrupt(strP))) return strP;
                 if (strP !== undefined) {
                     var member = Quote(P);
                     member = member + ":";
@@ -20249,12 +20249,12 @@ dependencygrouptransitions of kind load1.Kind.
             var nextValue;
             var status;
             var newElement;
-            if ((val = ifAbrupt(val)) && isAbrupt(val)) return val;
+            if (isAbrupt(val = ifAbrupt(val))) return val;
             if (Type(val) === "object") {
                 if (val instanceof ArrayExoticObject) {
                     var I = 0;
                     var len = Get(val, "length");
-                    if ((len = ifAbrupt(len)) && isAbrupt(len)) return len;
+                    if (isAbrupt(len = ifAbrupt(len))) return len;
                     while (I < len) {
                         newElement = Walk(val, ToString(I));
                         if (newElement === undefined) {
@@ -20267,14 +20267,14 @@ dependencygrouptransitions of kind load1.Kind.
                                 configurable: true
                             });
                         }
-                        if ((status = ifAbrupt(status)) && isAbrupt(status)) return status;
+                        if (isAbrupt(status = ifAbrupt(status))) return status;
                         I = I + 1;
                     }
                 } else {
                     var keys = OwnPropertyKeys(val);
                     while (!done) {
                         var nextResult = IteratorNext(keys);
-                        if ((nextResult = ifAbrupt(nextResult)) && isAbrupt(nextResult)) return nextResult;
+                        if (isAbrupt(nextResult = ifAbrupt(nextResult))) return nextResult;
                         var P = IteratorResult(nextResult);
                         newElement = Walk(val, P);
                         if (newElement === undefined) {
@@ -20287,7 +20287,7 @@ dependencygrouptransitions of kind load1.Kind.
                                 configurable: true
                             });
                         }
-                        if ((status = ifAbrupt(status)) && isAbrupt(status)) return status;
+                        if (isAbrupt(status = ifAbrupt(status))) return status;
                         done = IteratorComplete(nextResult);
                     }
                 }
@@ -20303,11 +20303,11 @@ dependencygrouptransitions of kind load1.Kind.
 
                 var tree = parseGoal("JSONText", text);
 
-                if ((tree = ifAbrupt(tree)) && isAbrupt(tree)) return tree;
+                if (isAbrupt(tree = ifAbrupt(tree))) return tree;
 
                 var scriptText = parseGoal("ParenthesizedExpression", text);
                 var exprRef = require("lib/runtime").Evaluate(scriptText);
-                if ((exprRef = ifAbrupt(exprRef)) && isAbrupt(exprRef)) return exprRef;
+                if (isAbrupt(exprRef = ifAbrupt(exprRef))) return exprRef;
 
                 var unfiltered = GetValue(exprRef);
                 if (IsCallable(reviver) === true) {
@@ -20426,18 +20426,18 @@ dependencygrouptransitions of kind load1.Kind.
                var x = argList[0];
                var C = thisArg;
                var promiseCapability = NewPromiseCapability(C);
-               if ((promiseCapability = ifAbrupt(promiseCapability)) && isAbrupt(promiseCapability)) return promiseCapability;
+               if (isAbrupt(promiseCapability = ifAbrupt(promiseCapability))) return promiseCapability;
                var resolveResult = callInternalSlot("Call", promiseCapability.Resolve, undefined, [x]);
-               if ((resolveResult=ifAbrupt(resolveResult)) && isAbrupt(resolveResult)) return resolveResult;
+               if (isAbrupt(resolveResult = ifAbrupt(resolveResult))) return resolveResult;
                return NormalCompletion(promiseCapability.Promise);
         };
         var PromiseConstructor_reject = function (thisArg, argList) {
                var r = argList[0];
                var C = thisArg;
                var promiseCapability = NewPromiseCapability(C);
-               if ((promiseCapability = ifAbrupt(promiseCapability)) && isAbrupt(promiseCapability)) return promiseCapability;
+               if (isAbrupt(promiseCapability = ifAbrupt(promiseCapability))) return promiseCapability;
                var rejectResult = callInternalSlot("Call", promiseCapability.Reject, undefined, [r]);
-               if ((rejectResult=ifAbrupt(rejectResult)) && isAbrupt(rejectResult)) return rejectResult;
+               if (isAbrupt(rejectResult = ifAbrupt(rejectResult))) return rejectResult;
                return NormalCompletion(promiseCapability.Promise)
         };
         
@@ -20449,9 +20449,9 @@ dependencygrouptransitions of kind load1.Kind.
                 if (SameValue(constructor, C)) return NormalCompletion(x);
             }
             var promiseCapability = NewPromiseCapability(C);
-            if ((promiseCapability = ifAbrupt(promiseCapability)) && isAbrupt(promiseCapability)) return promiseCapability;
+            if (isAbrupt(promiseCapability = ifAbrupt(promiseCapability))) return promiseCapability;
             var resolveResult = callInternalSlot("Call", promiseCapability.Resolve, undefined, [x]);
-            if ((resolveResult=ifAbrupt(resolveResult)) && isAbrupt(resolveResult)) return resolveResult;
+            if (isAbrupt(resolveResult = ifAbrupt(resolveResult))) return resolveResult;
             return NormalCompletion(promiseCapability.Promise);
         };
         
@@ -20459,13 +20459,13 @@ dependencygrouptransitions of kind load1.Kind.
             var iterable = argList[0];
             var C = thisArg;
             var promiseCapability = NewPromiseCapability(C);
-            if ((promiseCapability = ifAbrupt(promiseCapability)) && isAbrupt(promiseCapability)) return promiseCapability;
+            if (isAbrupt(promiseCapability = ifAbrupt(promiseCapability))) return promiseCapability;
             var iterator = GetIterator(iterable);
             iterator = IfAbruptRejectPromise(iterator, promiseCapability);
             if (isAbrupt(iterator)) return iterator;
             for (;;) {
                 var next = IteratorStep(iterator);
-                if ((next=ifAbrupt(next)) && isAbrupt(next)) return next;
+                if (isAbrupt(next = ifAbrupt(next))) return next;
                 if ((next = IfAbruptRejectPromise(next, promiseCapability)) &&isAbrupt(next)) return next
                 if (next === false) return NormalCompletion(promiseCapability.Promise);
                 var nextValue = IteratorValue(next);
@@ -20503,7 +20503,7 @@ dependencygrouptransitions of kind load1.Kind.
             var iterable = argList[0];
             var C = thisArg;
             var promiseCapability = NewPromiseCapability(C);
-            if ((promiseCapability = ifAbrupt(promiseCapability)) && isAbrupt(promiseCapability)) return promiseCapability;
+            if (isAbrupt(promiseCapability = ifAbrupt(promiseCapability))) return promiseCapability;
             var iterator = GetIterator(iterable);
             if ((iterator=IfAbruptRejectPromise(iterator, promiseCapability)) && isAbrupt(iterator)) return iterator;
             var values = ArrayCreate(0);
@@ -20511,12 +20511,12 @@ dependencygrouptransitions of kind load1.Kind.
             var index = 0;
             for (;;) {
                     var next = IteratorStep(iterator);
-                    if ((next=ifAbrupt(next)) && isAbrupt(next)) return next;
+                    if (isAbrupt(next = ifAbrupt(next))) return next;
                     if ((next=IfAbruptRejectPromise(next, promiseCapability)) && isAbrupt(next)) return next;
                     if (next === false) {
                         if (index == 0) {
                             var resolveResult = callInternalSlot("Call", promiseCapability.Resolve, undefined, [values]);
-                            if ((resolveResult=ifAbrupt(resolveResult)) && isAbrupt(resolveResult)) return resolveResult;
+                            if (isAbrupt(resolveResult = ifAbrupt(resolveResult))) return resolveResult;
                         }
                         return NormalCompletion(promiseCapability.Promise)
                     }
@@ -20545,7 +20545,7 @@ dependencygrouptransitions of kind load1.Kind.
             if (isAbrupt(C = ifAbrupt(C))) return C;
 
             var promiseCapability = NewPromiseCapability(C);
-            if ((promiseCapability = ifAbrupt(promiseCapability)) && isAbrupt(promiseCapability)) return promiseCapability;
+            if (isAbrupt(promiseCapability = ifAbrupt(promiseCapability))) return promiseCapability;
             if (IsCallable(onRejected)) {
                 var rejectionHandler = onRejected;
             } else {
@@ -20615,9 +20615,9 @@ dependencygrouptransitions of kind load1.Kind.
     
     function PromiseOf(value) {
         var capability = PromiseNewCapability();
-        if ((capability = ifAbrupt(capability)) && isAbrupt(capability)) return capability;
+        if (isAbrupt(capability = ifAbrupt(capability))) return capability;
         var resolveResult = callInternalSlot("Call", capability.Resolve, undefined, [value]);
-        if ((resolveResult=ifAbrupt(resolveResult)) && isAbrupt(resolveResult)) return resolveResult;
+        if (isAbrupt(resolveResult = ifAbrupt(resolveResult))) return resolveResult;
         return NormalCompletion(capability.Promise);
     }
 
@@ -20655,16 +20655,16 @@ dependencygrouptransitions of kind load1.Kind.
     function UpdatePromiseFromPotentialThenable(x, promiseCapability) {
         if (Type(x) !== "object") return NormalCompletion("not a thenable");
         var then = Get(x, "then");
-        if ((then=ifAbrupt(then)) && isAbrupt(then)) {
+        if (isAbrupt(then = ifAbrupt(then))) {
             var rejectResult = callInternalSlot("Call", promiseCapability.Reject, undefined, [then.value]);
-            if ((rejectResult = ifAbrupt(rejectResult)) && isAbrupt(rejectResult)) return rejectResult;
+            if (isAbrupt(rejectResult = ifAbrupt(rejectResult))) return rejectResult;
             return NormalCompletion(null);
         }
         if (!IsCallable(then)) return NormalCompletion("not a thenable");
         var thenCallResult = callInternalSlot("Call", then, x, [promiseCapability.Resolve, promiseCapability.Reject]);
-        if ((thenCallResult=ifAbrupt(thenCallResult)) && isAbrupt(thenCallResult)) {
+        if (isAbrupt(thenCallResult = ifAbrupt(thenCallResult))) {
             var rejectResult = callInternalSlot("Call", promiseCapability.Reject, undefined, [thenCallResult.value]);
-            if ((rejectResult = ifAbrupt(rejectResult)) && isAbrupt(rejectResult)) return rejectResult;      
+            if (isAbrupt(rejectResult = ifAbrupt(rejectResult))) return rejectResult;      
         }
         return NormalCompletion(null);
     }
@@ -20683,7 +20683,7 @@ dependencygrouptransitions of kind load1.Kind.
         var promiseCapability = reaction.Capabilities;
         var handler = reaction.Handler;
         var handlerResult = callInternalSlot("Call", handler, undefined, [argument]);
-        if ((handlerResult=ifAbrupt(handlerResult)) && isAbrupt(handlerResult)) {
+        if (isAbrupt(handlerResult = ifAbrupt(handlerResult))) {
             var status = callInternalSlot("Call", promiseCapability.Reject, undefined, [handlerResult.value]);
             return NextTask(status, PromiseTaskQueue);
         }
@@ -20693,7 +20693,7 @@ dependencygrouptransitions of kind load1.Kind.
             return NextTask(status, PromiseTaskQueue);
         }
         var status = UpdatePromiseFromPotentialThenable(handlerResult, promiseCapability);
-        if ((status = ifAbrupt(status)) && isAbrupt(status)) return status;
+        if (isAbrupt(status = ifAbrupt(status))) return status;
         var updateResult = status;
         if (updateResult === "not a thenable") {
             var status = callInternalSlot("Call", promiseCapability.Resolve, undefined, [handlerResult]);
@@ -20705,7 +20705,7 @@ dependencygrouptransitions of kind load1.Kind.
     function IfAbruptRejectPromise(value, capability) {
         if (isAbrupt(value)) {
             var rejectedResult = callInternalSlot("Call", capability.Reject, undefined, [value.value]);
-            if ((rejectedResult=ifAbrupt(rejectedResult)) && isAbrupt(rejectedResult)) return rejectedResult;
+            if (isAbrupt(rejectedResult = ifAbrupt(rejectedResult))) return rejectedResult;
             return NormalCompletion(capability.Promise);
         }
         return ifAbrupt(value);
@@ -20727,7 +20727,7 @@ dependencygrouptransitions of kind load1.Kind.
         if (!IsConstructor(C)) return withError("Type", "C is no constructor");
         // Assertion Step 2 missing 25.4.3.1
         var promise = CreateFromConstructor(C);
-        if ((promise=ifAbrupt(promise)) && isAbrupt(promise)) return promise;
+        if (isAbrupt(promise = ifAbrupt(promise))) return promise;
         return CreatePromiseCapabilityRecord(promise, C);
     }
 
@@ -20736,7 +20736,7 @@ dependencygrouptransitions of kind load1.Kind.
         var executor = GetCapabilitiesExecutor();
         setInternalSlot(executor, "Capability", promiseCapability);
         var constructorResult = callInternalSlot("Call", constructor, promise, [executor]);
-        if ((constructorResult=ifAbrupt(constructorResult)) && isAbrupt(constructorResult)) return constructorResult;
+        if (isAbrupt(constructorResult = ifAbrupt(constructorResult))) return constructorResult;
 
         if (!IsCallable(promiseCapability.Resolve)) return withError("Type", "capability.[[resolve]] is not a function");
         if (!IsCallable(promiseCapability.Reject)) return withError("Type", "capability.[[reject]] is not a function");
@@ -20776,7 +20776,7 @@ dependencygrouptransitions of kind load1.Kind.
         var completion = callInternalSlot("Call", executor, undefined, [resolve, reject]);
         if (isAbrupt(completion)) {
             var status = callInternalSlot("Call", reject, undefined, [completion.value]);
-            if ((status=ifAbrupt(status)) && isAbrupt(status)) return status;
+            if (isAbrupt(status = ifAbrupt(status))) return status;
         }
         return NormalCompletion(promise);
     }
@@ -20829,9 +20829,9 @@ dependencygrouptransitions of kind load1.Kind.
                 }
                 var C = getInternalSlot(promise, "PromiseConstructor");
                 var promiseCapability = NewPromiseCapability(C);
-                if ((promiseCapability = ifAbrupt(promiseCapability)) && isAbrupt(promiseCapability)) return promiseCapability;
+                if (isAbrupt(promiseCapability = ifAbrupt(promiseCapability))) return promiseCapability;
                 var updateResult = UpdatePromiseFromPotentialThenable(x, promiseCapability);
-                if ((updateResult = ifAbrupt(updateResult)) && isAbrupt(updateResult)) return updateResult;
+                if (isAbrupt(updateResult = ifAbrupt(updateResult))) return updateResult;
                 if (!HasProperty(updateResult, "then")) {
                     return Invoke(promiseCapability.Promise, "then", [fulfillmentHandler, rejectionHandler]);
                 }
@@ -20969,7 +20969,7 @@ dependencygrouptransitions of kind load1.Kind.
             Assert(getInternalSlot(O, "ArrayBufferData") === undefined, "ArrayBuffer has already to be initialised here but it is not.");
             var numberLength = ToNumber(length);
             var byteLength = ToInteger(numberLength);
-            if ((byteLength = ifAbrupt(byteLength)) && isAbrupt(byteLength)) return byteLength;
+            if (isAbrupt(byteLength = ifAbrupt(byteLength))) return byteLength;
             if ((numberLength != byteLength) || (byteLength < 0)) return withError("Range", "invalid byteLength");
             return SetArrayBufferData(O, byteLength);
         });
@@ -21151,14 +21151,14 @@ dependencygrouptransitions of kind load1.Kind.
                 elementType = TypedArrayElementType[constructorName];
                 numberLength = ToNumber(length);
                 elementLength = ToLength(numberLength);
-                if ((elementLength = ifAbrupt(elementLength)) && isAbrupt(elementLength)) return elementLength;
+                if (isAbrupt(elementLength = ifAbrupt(elementLength))) return elementLength;
                 if (SameValueZero(numberLength, elementLength) === false) return withError("Range", "TypedArray: numberLength and elementLength are not equal");
                 data = AllocateArrayBuffer("%ArrayBuffer%");
-                if ((data = ifAbrupt(data)) && isAbrupt(data)) return data;
+                if (isAbrupt(data = ifAbrupt(data))) return data;
                 elementSize = TypedArrayElementSize[elementType];
                 byteLength = elementSize * elementLength;
                 status = SetArrayBufferData(data, byteLength);
-                if ((status = ifAbrupt(status)) && isAbrupt(status)) return status;
+                if (isAbrupt(status = ifAbrupt(status))) return status;
                 setInternalSlot(O, "ViewedArrayBuffer", data);
                 setInternalSlot(O, "ByteLength", byteLength);
                 setInternalSlot(O, "ByteOffset", 0);
@@ -21182,7 +21182,7 @@ dependencygrouptransitions of kind load1.Kind.
                 elementType = TypedArrayElementType[constructorName];
                 elementSize = TypedArrayElementSize[elementType];
                 var offset = ToInteger(byteOffset);
-                if ((offset = ifAbrupt(offset)) && isAbrupt(offset)) return offset;
+                if (isAbrupt(offset = ifAbrupt(offset))) return offset;
                 if (offset < 0) return withError("Range", "offset is smaller 0");
                 if ((offset % elementSize) !== 0) return withError("Range", "offset mod elementSize is not 0");
                 var bufferByteLength = getInternalSlot(buffer, "ArrayBufferByteLength");
@@ -21194,7 +21194,7 @@ dependencygrouptransitions of kind load1.Kind.
                     if (newByteLength < 0) return withError("Range", "newByteLength < 0 underflow when adding offset to bufferByteLength");
                 } else {
                     var newLength = ToLength(length);
-                    if ((newLength = ifAbrupt(newLength)) && isAbrupt(newLength)) return newLength;
+                    if (isAbrupt(newLength = ifAbrupt(newLength))) return newLength;
                     newByteLength = newLength * elementSize;
                     if (offset + newByteLength > bufferByteLength) return withError("Range", "offset + newByteLength is larger than bufferByteLength");
                 }
@@ -21224,7 +21224,7 @@ dependencygrouptransitions of kind load1.Kind.
             if (Type(F) !== "object") return withError("Type", "the this value is not an object");
             if (!hasInternalSlot(F, "TypedArrayConstructor")) return withError("Type", "The this value has no [[TypedArrayConstructor]] property");
             var proto = GetPrototypeFromConstructor(F, typedArrayPrototypeNames[getInternalSlot(F, "TypedArrayConstructor")]);
-            if ((proto = ifAbrupt(proto)) && isAbrupt(proto)) return proto;
+            if (isAbrupt(proto = ifAbrupt(proto))) return proto;
             var obj = IntegerIndexedObjectCreate(proto);
             setInternalSlot(obj, "ViewedArrayBuffer", undefined);
             setInternalSlot(obj, "TypedArrayName", getInternalSlot(F, "TypedArrayConstructor"));
@@ -21245,7 +21245,7 @@ dependencygrouptransitions of kind load1.Kind.
             var putStatus;
             if (!IsConstructor(C)) return withError("Type", "The this value is no constructor function.");
             var items = ToObject(source);
-            if ((items = ifAbrupt(items)) && isAbrupt(items)) return items;
+            if (isAbrupt(items = ifAbrupt(items))) return items;
             var mapping;
             var k;
             var nextValue, kValue, Pk;
@@ -21257,7 +21257,7 @@ dependencygrouptransitions of kind load1.Kind.
                 mapping = true;
             }
             var usingIterator = HasProperty(items, $$iterator);
-            if ((usingIterator = ifAbrupt(usingIterator)) && isAbrupt(usingIterator)) return usingIterator;
+            if (isAbrupt(usingIterator = ifAbrupt(usingIterator))) return usingIterator;
             if (usingIterator) {
                 var iterator = Get(items, $$iterator);
                 iterator = unwrap(iterator);
@@ -21267,20 +21267,20 @@ dependencygrouptransitions of kind load1.Kind.
                     next = IteratorStept(iterator);
                     if (next !== false) {
                         nextValue = IteratorValue(next);
-                        if ((nextValue = ifAbrupt(nextValue)) && isAbrupt(nextValue)) return nextValue;
+                        if (isAbrupt(nextValue = ifAbrupt(nextValue))) return nextValue;
                         values.push(nextValue);
                     }
                 }
                 var len = values.length;
                 newObj = callInternalSlot("Construct", C, C, [len]);
-                if ((newObj = ifAbrupt(newObj)) && isAbrupt(newObj)) return newObj;
+                if (isAbrupt(newObj = ifAbrupt(newObj))) return newObj;
                 k = 0;
                 while (k < len) {
                     Pk = ToString(k);
                     kValue = values[k];
                     if (mapping) {
                         mappedValue = callInternalSlot("Call", mapfn, T, [kValue]);
-                        if ((mappedValue = ifAbrupt(mappedValue)) && isAbrupt(mappedValue)) return mappedValue;
+                        if (isAbrupt(mappedValue = ifAbrupt(mappedValue))) return mappedValue;
                     } else mappedValue = kValue;
                     putStatus = Put(newObj, Pk, mappedValue, true);
                     if (isAbrupt(putStatus)) return putStatus;
@@ -21291,19 +21291,19 @@ dependencygrouptransitions of kind load1.Kind.
             Assert(HasProperty(items, "length"), "items has to be an array like object");
             var lenValue = Get(items, "length");
             var len = ToLength(lenValue);
-            if ((len = ifAbrupt(len)) && isAbrupt(len)) return len;
+            if (isAbrupt(len = ifAbrupt(len))) return len;
             newObj = callInternalSlot("Construct", C, C, [len]);
-            if ((newObj = ifAbrupt(newObj)) && isAbrupt(newObj)) return newObj;
+            if (isAbrupt(newObj = ifAbrupt(newObj))) return newObj;
 
             var mappedValue;
             k = 0;
             while (k < len) {
                 Pk = ToString(k);
                 kValue = Get(items, Pk);
-                if ((kValue = ifAbrupt(kValue)) && isAbrupt(kValue)) return kValue;
+                if (isAbrupt(kValue = ifAbrupt(kValue))) return kValue;
                 if (mapping) {
                     mappedValue = callInternalSlot("Call", mapfn, T, [kValue, k, items]);
-                    if ((mappedValue = ifAbrupt(mappedValue)) && isAbrupt(mappedValue)) return mappedValue;
+                    if (isAbrupt(mappedValue = ifAbrupt(mappedValue))) return mappedValue;
                 } else {
                     mappedValue = kValue;
                 }
@@ -21322,7 +21322,7 @@ dependencygrouptransitions of kind load1.Kind.
 
             if (IsConstructor(C)) {
                 var newObj = callInternalSlot("Construct", C, C, [len]);
-                if ((newObj = ifAbrupt(newObj)) && isAbrupt(newObj)) return newObj;
+                if (isAbrupt(newObj = ifAbrupt(newObj))) return newObj;
             } else {
                 return withError("Type", "The thisValue has to be a constructor");
             }
@@ -21333,9 +21333,9 @@ dependencygrouptransitions of kind load1.Kind.
             while (k < len) {
                 Pk = ToString(k);
                 kValue = Get(items, Pk);
-                //if ((kValue=ifAbrupt(kValue))&&isAbrupt(kValue)) return kValue;
+                //if (isAbrupt(kValue = ifAbrupt(kValue))) return kValue;
                 status = Put(newObj, Pk, kValue, true);
-                if ((status = ifAbrupt(status)) && isAbrupt(status)) return status;
+                if (isAbrupt(status = ifAbrupt(status))) return status;
                 k = k + 1;
             }
             return NormalCompletion(newObj);
@@ -21509,11 +21509,11 @@ dependencygrouptransitions of kind load1.Kind.
             if (iterable === undefined || iterable === null) iter = undefined;
             else {
                 hasValues = HasProperty(iterable, "entries");
-                if ((hasValues = ifAbrupt(hasValues)) && isAbrupt(hasValues)) return hasValues;
+                if (isAbrupt(hasValues = ifAbrupt(hasValues))) return hasValues;
                 if (hasValues) iter = Invoke(iterable, "entries");
                 else iter = GetIterator(iterable);
                 adder = Get(map, "set");
-                if ((adder = ifAbrupt(adder)) && isAbrupt(adder)) return adder;
+                if (isAbrupt(adder = ifAbrupt(adder))) return adder;
                 if (!IsCallable(adder)) return withError("Type", "map adder (the set function) is not callable");
             }
             if (comparator !== undefined) {
@@ -21528,12 +21528,12 @@ dependencygrouptransitions of kind load1.Kind.
             var next, nextItem, done, k, v, status;
             for (;;) {
                 next = IteratorNext(iter);
-                if ((next = ifAbrupt(next)) && isAbrupt(next)) return next;
+                if (isAbrupt(next = ifAbrupt(next))) return next;
                 done = IteratorComplete(next);
-                if ((done = ifAbrupt(done)) && isAbrupt(done)) return done;
+                if (isAbrupt(done = ifAbrupt(done))) return done;
                 if (done) return NormalCompletion(map);
                 nextItem = IteratorValue(next);
-                if ((nextItem = ifAbrupt(nextItem)) && isAbrupt(nextItem)) return nextItem;
+                if (isAbrupt(nextItem = ifAbrupt(nextItem))) return nextItem;
                 k = Get(nextItem, "0");
                 if (isAbrupt(k = ifAbrupt(k))) return k;
                 v = Get(nextItem, "1");
@@ -21866,11 +21866,11 @@ dependencygrouptransitions of kind load1.Kind.
             if (iterable === undefined || iterable === null) iter = undefined;
             else {
                 hasValues = HasProperty(iterable, "entries");
-                if ((hasValues = ifAbrupt(hasValues)) && isAbrupt(hasValues)) return hasValues;
+                if (isAbrupt(hasValues = ifAbrupt(hasValues))) return hasValues;
                 if (hasValues) iter = Invoke(iterable, "entries");
                 else iter = GetIterator(iterable);
                 adder = Get(set, "set");
-                if ((adder = ifAbrupt(adder)) && isAbrupt(adder)) return adder;
+                if (isAbrupt(adder = ifAbrupt(adder))) return adder;
                 if (!IsCallable(adder)) return withError("Type", "set adder (the set function) is not callable");
             }
             if (comparator !== undefined) {
@@ -21885,12 +21885,12 @@ dependencygrouptransitions of kind load1.Kind.
             var next, nextItem, done, k, v, status;
             for (;;) {
                 next = IteratorNext(iter);
-                if ((next = ifAbrupt(next)) && isAbrupt(next)) return next;
+                if (isAbrupt(next = ifAbrupt(next))) return next;
                 done = IteratorComplete(next);
-                if ((done = ifAbrupt(done)) && isAbrupt(done)) return done;
+                if (isAbrupt(done = ifAbrupt(done))) return done;
                 if (done) return NormalCompletion(set);
                 nextItem = IteratorValue(next);
-                if ((nextItem = ifAbrupt(nextItem)) && isAbrupt(nextItem)) return nextItem;
+                if (isAbrupt(nextItem = ifAbrupt(nextItem))) return nextItem;
                 k = Get(nextItem, "0");
                 if (isAbrupt(k = ifAbrupt(k))) return k;
                 v = Get(nextItem, "1");
@@ -22445,7 +22445,7 @@ dependencygrouptransitions of kind load1.Kind.
             
 
         /*
-	           DOM Wrapper, works for node.js process, too. Was usually able to call functions, but seems to have bug today.
+               DOM Wrapper, works for node.js process, too. Was usually able to call functions, but seems to have bug today.
         */
 
             if (typeof importScripts === "function") {
@@ -23188,7 +23188,7 @@ define("lib/runtime", ["lib/parser", "lib/api", "lib/slower-static-semantics"], 
         var ao = InstantiateArgumentsObject(argList);
 
 
-        if ((ao = ifAbrupt(ao)) && isAbrupt(ao)) return ao;
+        if (isAbrupt(ao = ifAbrupt(ao))) return ao;
         var formalStatus = BindingInitialisation(formals, ao, undefined);
 
         if (argumentsObjectNeeded) {
@@ -23386,25 +23386,25 @@ define("lib/runtime", ["lib/parser", "lib/api", "lib/slower-static-semantics"], 
             if (type === "TemplateLiteral") {
                 var siteObj = GetTemplateCallSite(arg);
                 var substitutions = SubstitutionEvaluation(siteObj);
-                if ((substitutions = ifAbrupt(substitutions)) && isAbrupt(substitutions)) return substitutions;
+                if (isAbrupt(substitutions = ifAbrupt(substitutions))) return substitutions;
                 args.push(siteObj);
                 for (var k = 0, l = substitutions.length; k < l; k++) {
                     args.push(substitutions[k]);
                 }
             } else if (type === "SpreadExpression") {
                 var array = GetValue(Evaluate(arg));
-                if ((arg = ifAbrupt(arg)) && isAbrupt(arg)) return arg;
+                if (isAbrupt(arg = ifAbrupt(arg))) return arg;
                 for (var k = 0, l = Get(array, "length"); k < l; k++) {
                     value = Get(array, ToString(k));
-                    if ((value = ifAbrupt(value)) && isAbrupt(value)) return value;
+                    if (isAbrupt(value = ifAbrupt(value))) return value;
                     args.push(value);
                 }
             } else {
                 // Identifer und Literals.
                 var argRef = Evaluate(arg);
-                if ((argRef = ifAbrupt(argRef)) && isAbrupt(argRef)) return argRef;
+                if (isAbrupt(argRef = ifAbrupt(argRef))) return argRef;
                 var argValue = GetValue(argRef);
-                if ((argValue = ifAbrupt(argValue)) && isAbrupt(argValue)) return argValue;
+                if (isAbrupt(argValue = ifAbrupt(argValue))) return argValue;
                 args.push(argValue);
             }
         }
@@ -23416,10 +23416,10 @@ define("lib/runtime", ["lib/parser", "lib/api", "lib/slower-static-semantics"], 
         var thisValue;
 
         var func = GetValue(ref);
-        if ((func = ifAbrupt(func)) && isAbrupt(func)) return func;
+        if (isAbrupt(func = ifAbrupt(func))) return func;
         var argList = ArgumentListEvaluation(args);
 
-        if ((argList = ifAbrupt(argList)) && isAbrupt(argList)) return argList;
+        if (isAbrupt(argList = ifAbrupt(argList))) return argList;
         if (Type(func) !== "object") return withError("Type", "EvaluateCall: func is not an object");
         if (!IsCallable(func)) return withError("Type", "EvaluateCall: func is not callable");
         
@@ -23494,7 +23494,7 @@ define("lib/runtime", ["lib/parser", "lib/api", "lib/slower-static-semantics"], 
         calleeContext.LexEnv = localEnv;
 
         status = InstantiateFunctionDeclaration(this, argList, localEnv);
-        if ((status = ifAbrupt(status)) && isAbrupt(status)) {
+        if (isAbrupt(status = ifAbrupt(status))) {
             return status;
         }
 
@@ -23566,27 +23566,27 @@ define("lib/runtime", ["lib/parser", "lib/api", "lib/slower-static-semantics"], 
 
         var exprRef = Evaluate(expression);
         var value = GetValue(exprRef);
-        if ((value = ifAbrupt(value)) && isAbrupt(value)) return value;
+        if (isAbrupt(value = ifAbrupt(value))) return value;
         if (delegator) {
             var iterator = GetIterator(value);
-            if ((iterator = ifAbrupt(iterator)) && isAbrupt(iterator)) return iterator;
+            if (isAbrupt(iterator = ifAbrupt(iterator))) return iterator;
             var received = completion || NormalCompletion(undefined);
             var innerResult, done, innerValue;
             for (;;) {
                 if (received.type === "normal") {
                     innerResult = IteratorNext(iterator, received.value);
-                    if ((innerResult = ifAbrupt(innerResult)) && isAbrupt(innerResult)) return innerResult;
+                    if (isAbrupt(innerResult = ifAbrupt(innerResult))) return innerResult;
                 } else {
                     Assert(received.type === "throw", "YieldExpression: at this point the completion has to contain the throw type");
                     if (HasProperty(iterator, "throw")) {
                         innerResult = Invoke(iterator, "throw", [received.value]);
-                        if ((innerResult = ifAbrupt(innerResult)) && isAbrupt(innerResult)) return innerResult;
+                        if (isAbrupt(innerResult = ifAbrupt(innerResult))) return innerResult;
                     } else {
                         return received;
                     }
                 }
                 var done = IteratorComplete(iterator);
-                if ((done = ifAbrupt(done)) && isAbrupt(done)) return done;
+                if (isAbrupt(done = ifAbrupt(done))) return done;
                 if (done) {
                     innerValue = IteratorValue(innerResult);
                     return innerValue;
@@ -23616,7 +23616,7 @@ define("lib/runtime", ["lib/parser", "lib/api", "lib/slower-static-semantics"], 
                 "GeneratorState": undefined,
                 "GeneratorContext": undefined
             });
-            if ((newG = ifAbrupt(newG)) && isAbrupt(newG)) return newG;
+            if (isAbrupt(newG = ifAbrupt(newG))) return newG;
             G = newG;
         }
         return GeneratorStart(G, getInternalSlot(F, "Code"));
@@ -23791,13 +23791,13 @@ define("lib/runtime", ["lib/parser", "lib/api", "lib/slower-static-semantics"], 
         if (notSuperExpr) {
             baseReference = Evaluate(o);
             baseValue = GetValue(baseReference);
-            if ((baseValue=ifAbrupt(baseValue)) && isAbrupt(baseValue)) return baseValue;
+            if (isAbrupt(baseValue = ifAbrupt(baseValue))) return baseValue;
         }
         if (node.computed) {
             propertyNameReference = Evaluate(p);
-            if ((propertyNameReference = ifAbrupt(propertyNameReference)) && isAbrupt(propertyNameReference)) return propertyNameReference;
+            if (isAbrupt(propertyNameReference = ifAbrupt(propertyNameReference))) return propertyNameReference;
             propertyNameValue = GetValue(propertyNameReference);
-            if ((propertyNameValue = ifAbrupt(propertyNameValue)) && isAbrupt(propertyNameValue)) return propertyNameValue;
+            if (isAbrupt(propertyNameValue = ifAbrupt(propertyNameValue))) return propertyNameValue;
         } else {
             propertyNameValue = p.name || p.value;
         }
@@ -23809,7 +23809,7 @@ define("lib/runtime", ["lib/parser", "lib/api", "lib/slower-static-semantics"], 
             // object[nameExpr]
 
             var bv = CheckObjectCoercible(baseValue);
-            if ((bv = ifAbrupt(bv)) && isAbrupt(bv)) return bv;
+            if (isAbrupt(bv = ifAbrupt(bv))) return bv;
             var ref = new Reference(propertyNameString, bv, strict);
             return ref;
 
@@ -23831,14 +23831,14 @@ define("lib/runtime", ["lib/parser", "lib/api", "lib/slower-static-semantics"], 
         var notSuperExpr = node.callee.type !== "SuperExpression";
         if (notSuperExpr) {
             exprRef = Evaluate(node.callee);
-            if ((exprRef = ifAbrupt(exprRef)) && isAbrupt(exprRef)) return exprRef;
+            if (isAbrupt(exprRef = ifAbrupt(exprRef))) return exprRef;
             callee = GetValue(exprRef);
         } else {
             exprRef = MakeSuperReference(undefined, strict);
-            if ((exprRef = ifAbrupt(exprRef)) && isAbrupt(exprRef)) return exprRef;
+            if (isAbrupt(exprRef = ifAbrupt(exprRef))) return exprRef;
             callee = GetValue(exprRef);
         }
-        if ((callee = ifAbrupt(callee)) && isAbrupt(callee)) return callee;
+        if (isAbrupt(callee = ifAbrupt(callee))) return callee;
         if (!IsConstructor(callee)) {
             return withError("Type", "expected function is not a constructor");
         }
@@ -23863,11 +23863,11 @@ define("lib/runtime", ["lib/parser", "lib/api", "lib/slower-static-semantics"], 
         var exprRef;
         if (notSuperExpr) {
             exprRef = Evaluate(callee);
-            if ((exprRef = ifAbrupt(exprRef)) && isAbrupt(exprRef)) return exprRef;
+            if (isAbrupt(exprRef = ifAbrupt(exprRef))) return exprRef;
             return EvaluateCall(exprRef, node.arguments, tailCall);
         } else {
             exprRef = MakeSuperReference(undefined, strict);
-            if ((exprRef = ifAbrupt(exprRef)) && isAbrupt(exprRef)) return exprRef;
+            if (isAbrupt(exprRef = ifAbrupt(exprRef))) return exprRef;
             return EvaluateCall(exprRef, node.arguments, tailCall);
         }
     }
@@ -23898,7 +23898,7 @@ define("lib/runtime", ["lib/parser", "lib/api", "lib/slower-static-semantics"], 
                 else return withError("Type", "Destructuring Patterns must have some = Initialiser.");
                 if (isAbrupt(initialiser)) return initialiser;
                 status = BindingInitialisation(decl, initialiser, env);
-                if ((status = ifAbrupt(status)) && isAbrupt(status)) return status;
+                if (isAbrupt(status = ifAbrupt(status))) return status;
             } else {
                 if (decl.init) {
                     name = decl.id;
@@ -23910,7 +23910,7 @@ define("lib/runtime", ["lib/parser", "lib/api", "lib/slower-static-semantics"], 
                         }
                     }
                     status = BindingInitialisation(name, initialiser, env);
-                    if ((status = ifAbrupt(status)) && isAbrupt(status)) return status;
+                    if (isAbrupt(status = ifAbrupt(status))) return status;
                 }
             }
         }
@@ -23941,7 +23941,7 @@ define("lib/runtime", ["lib/parser", "lib/api", "lib/slower-static-semantics"], 
                         else env.InitialiseBinding(identName, val);
                     } else {
                         var lref = Evaluate(elem);
-                        if ((lref = ifAbrupt(lref)) && isAbrupt(lref)) return lref;
+                        if (isAbrupt(lref = ifAbrupt(lref))) return lref;
                         PutValue(lref, val);
                     }
                 }
@@ -23994,7 +23994,7 @@ define("lib/runtime", ["lib/parser", "lib/api", "lib/slower-static-semantics"], 
                         else env.InitialiseBinding(identName, val);
                     } else {
                         var lref = Evaluate(elem);
-                        if ((lref = ifAbrupt(lref)) && isAbrupt(lref)) return lref;
+                        if (isAbrupt(lref = ifAbrupt(lref))) return lref;
                         PutValue(lref, array);
                     }
                 }
@@ -24005,7 +24005,7 @@ define("lib/runtime", ["lib/parser", "lib/api", "lib/slower-static-semantics"], 
             debug("processing restparameter: " + name);
             for (var i = nextIndex; i < len; i++) {
                 elem = value.Get(ToString(i), value);
-                if ((elem = ifAbrupt(elem)) && isAbrupt(elem)) return elem;
+                if (isAbrupt(elem = ifAbrupt(elem))) return elem;
                 array.DefineOwnProperty(ToString(index), {
                     value: elem,
                     writable: true,
@@ -24019,7 +24019,7 @@ define("lib/runtime", ["lib/parser", "lib/api", "lib/slower-static-semantics"], 
                 env.InitialiseBinding(name, array);
             } else {
                 var lref = new Reference(name, getLexEnv(), cx.strict);
-                if ((lref = ifAbrupt(lref)) && isAbrupt(lref)) return lref;
+                if (isAbrupt(lref = ifAbrupt(lref))) return lref;
                 PutValue(lref, array);
             }
         }
@@ -24075,10 +24075,10 @@ define("lib/runtime", ["lib/parser", "lib/api", "lib/slower-static-semantics"], 
                 return NormalCompletion(undefined);
             } else {
                 //lhs = new Reference(name, getLexEnv(), strict);
-                //if ((lhs = ifAbrupt(lhs)) && isAbrupt(lhs)) return lhs;
+                //if (isAbrupt(lhs = ifAbrupt(lhs))) return lhs;
                 lhs = ResolveBinding(name);
-                //	console.log("lhs=");
-                //	console.dir(lhs);
+                //  console.log("lhs=");
+                //  console.dir(lhs);
                 ex = PutValue(lhs, value);
                 if (isAbrupt(ex)) return ex;
                 return NormalCompletion(undefined);
@@ -24159,10 +24159,10 @@ define("lib/runtime", ["lib/parser", "lib/api", "lib/slower-static-semantics"], 
     function printStackEntry(cx, key) {
         log("## stack[" + key + "] => " + cx.toString());
         /*for (var k in cx) {
-			log("# Execution Context: "+cx+", field "+k);
-			if (k >= stack.length-2) log(cx[k]);
-			// else dir(cx[k]);
-		}*/
+            log("# Execution Context: "+cx+", field "+k);
+            if (k >= stack.length-2) log(cx[k]);
+            // else dir(cx[k]);
+        }*/
     }
 
     function printEnvironment(cx) {
@@ -24258,10 +24258,10 @@ define("lib/runtime", ["lib/parser", "lib/api", "lib/slower-static-semantics"], 
 
     /*
 
-	ValueLiterals
-	- StringLiteral
-	- Numeric
-	- Boolean
+    ValueLiterals
+    - StringLiteral
+    - Numeric
+    - Boolean
 */
 
     evaluation.StringLiteral = StringLiteral;
@@ -24339,7 +24339,7 @@ define("lib/runtime", ["lib/parser", "lib/api", "lib/slower-static-semantics"], 
                 for (var k = 0; k < spreadLen; k++) {
 
                     exprValue = Get(spreadObj, ToString(k));
-                    if ((exprValue = ifAbrupt(exprValue)) && isAbrupt(exprValue)) return exprValue;
+                    if (isAbrupt(exprValue = ifAbrupt(exprValue))) return exprValue;
 
                     array.DefineOwnProperty(ToString(nextIndex), {
                         writable: true,
@@ -24354,9 +24354,9 @@ define("lib/runtime", ["lib/parser", "lib/api", "lib/slower-static-semantics"], 
             } else {
 
                 exprRef = Evaluate(element);
-                if ((exprRef = ifAbrupt(exprRef)) && isAbrupt(exprRef)) return exprRef;
+                if (isAbrupt(exprRef = ifAbrupt(exprRef))) return exprRef;
                 exprValue = GetValue(exprRef);
-                if ((exprValue = ifAbrupt(exprValue)) && isAbrupt(exprValue)) return exprValue;
+                if (isAbrupt(exprValue = ifAbrupt(exprValue))) return exprValue;
 
                 array.DefineOwnProperty(ToString(nextIndex), {
                     writable: true,
@@ -24400,7 +24400,7 @@ define("lib/runtime", ["lib/parser", "lib/api", "lib/slower-static-semantics"], 
         array = ArrayCreate(0);
         nextIndex = 0;
         nextIndex = ArrayAccumulation(node.elements, array, nextIndex);
-        if ((nextIndex = ifAbrupt(nextIndex)) && isAbrupt(nextIndex)) return nextIndex;
+        if (isAbrupt(nextIndex = ifAbrupt(nextIndex))) return nextIndex;
 
         array.Bindings["length"] = {
             value: nextIndex,
@@ -24450,7 +24450,7 @@ define("lib/runtime", ["lib/parser", "lib/api", "lib/slower-static-semantics"], 
                 if (isComputed) {
                     var symRef = Evaluate(key);
                     var symValue = GetValue(symRef);
-                    if ((symValue=ifAbrupt(symValue)) && isAbrupt(symValue)) return symValue;
+                    if (isAbrupt(symValue = ifAbrupt(symValue))) return symValue;
                     if (!IsSymbol(symValue)) return withError("Type", "A [computed] property inside an object literal has to evaluate to a Symbol primitive");
                     propName = symValue;
                 } else {
@@ -24469,9 +24469,9 @@ define("lib/runtime", ["lib/parser", "lib/api", "lib/slower-static-semantics"], 
                 } else {
 
                     propRef = Evaluate(node, newObj);
-                    if ((propRef = ifAbrupt(propRef)) && isAbrupt(propRef)) return propRef;
+                    if (isAbrupt(propRef = ifAbrupt(propRef))) return propRef;
                     propValue = GetValue(propRef);
-                    if ((propValue = ifAbrupt(propValue)) && isAbrupt(propValue)) return propValue;
+                    if (isAbrupt(propValue = ifAbrupt(propValue))) return propValue;
                     
                     // B 3.
                 // DOESNT WORK
@@ -24491,14 +24491,14 @@ define("lib/runtime", ["lib/parser", "lib/api", "lib/slower-static-semantics"], 
             
             } else if (kind === "method") {
                 propValue = Evaluate(node, newObj);
-                if ((propValue = ifAbrupt(propValue)) && isAbrupt(propValue)) return propValue;
+                if (isAbrupt(propValue = ifAbrupt(propValue))) return propValue;
 
             } else if (kind === "get" || kind === "set") {
                                 
                 // get [s] () { return 10 }
                 if (node.computed) {
                     propName = GetValue(Evaluate(key));
-                    if ((propName =ifAbrupt(propName)) && isAbrupt(propName)) return propName;
+                    if (isAbrupt(propName = ifAbrupt(propName))) return propName;
                         if (!IsSymbol(propName)) return withError("Type", "A [computed] property inside an object literal has to evaluate to a Symbol primitive");
                 } else {
                     propName = typeof key === "string" ? key : key.name || key.value;
@@ -24638,9 +24638,9 @@ define("lib/runtime", ["lib/parser", "lib/api", "lib/slower-static-semantics"], 
         var obj, array;
 
         rref = Evaluate(node.right);
-        if ((rref = ifAbrupt(rref)) && isAbrupt(rref)) return rref;
+        if (isAbrupt(rref = ifAbrupt(rref))) return rref;
         rval = GetValue(rref);
-        if ((rval = ifAbrupt(rval)) && isAbrupt(rval)) return rval;
+        if (isAbrupt(rval = ifAbrupt(rval))) return rval;
 
         if (type === "ObjectPattern" || type === "ObjectExpression") {
 
@@ -24739,12 +24739,12 @@ define("lib/runtime", ["lib/parser", "lib/api", "lib/slower-static-semantics"], 
 
             lref = Evaluate(node.left);
             rref = Evaluate(node.right);
-            if ((lref = ifAbrupt(lref)) && isAbrupt(lref)) return lref;
-            if ((rref = ifAbrupt(rref)) && isAbrupt(rref)) return rref;
+            if (isAbrupt(lref = ifAbrupt(lref))) return lref;
+            if (isAbrupt(rref = ifAbrupt(rref))) return rref;
             lval = GetValue(lref);
             rval = GetValue(rref);
-            if ((lval = ifAbrupt(lval)) && isAbrupt(lval)) return lval;
-            if ((rval = ifAbrupt(rval)) && isAbrupt(rval)) return rval;
+            if (isAbrupt(lval = ifAbrupt(lval))) return lval;
+            if (isAbrupt(rval = ifAbrupt(rval))) return rval;
             result = applyAssignmentOperator(op, lval, rval);
             status = PutValue(lref, result);
             if (isAbrupt(status)) return status;
@@ -24752,14 +24752,14 @@ define("lib/runtime", ["lib/parser", "lib/api", "lib/slower-static-semantics"], 
         } else if (ltype === "MemberExpression") {
         
             lref = Evaluate(node.left);
-            if ((lref = ifAbrupt(lref)) && isAbrupt(lref)) return lref;
+            if (isAbrupt(lref = ifAbrupt(lref))) return lref;
             rref = Evaluate(node.right);
-            if ((rref = ifAbrupt(rref)) && isAbrupt(rref)) return rref;
+            if (isAbrupt(rref = ifAbrupt(rref))) return rref;
             
             lval = GetValue(lref);
             rval = GetValue(rref);
-            if ((lval = ifAbrupt(lval)) && isAbrupt(lval)) return lval;
-            if ((rval = ifAbrupt(rval)) && isAbrupt(rval)) return rval;
+            if (isAbrupt(lval = ifAbrupt(lval))) return lval;
+            if (isAbrupt(rval = ifAbrupt(rval))) return rval;
             //console.dir(lref);
             result = applyAssignmentOperator(op, lval, rval);
             //    return PutValue(lref, result);
@@ -24848,16 +24848,16 @@ define("lib/runtime", ["lib/parser", "lib/api", "lib/slower-static-semantics"], 
         if (isAbrupt(exprValue)) return exprValue;
         if (exprValue) {
             var trueRef = Evaluate(trueExpr);
-            if ((trueRef = ifAbrupt(trueRef)) && isAbrupt(trueRef)) return trueRef;
+            if (isAbrupt(trueRef = ifAbrupt(trueRef))) return trueRef;
             var trueValue = GetValue(trueRef);
 
-            if ((trueValue = ifAbrupt(trueValue)) && isAbrupt(trueValue)) return trueValue;
+            if (isAbrupt(trueValue = ifAbrupt(trueValue))) return trueValue;
             return NormalCompletion(trueValue);
         } else {
             var falseRef = Evaluate(falseExpr);
-            if ((falseRef = ifAbrupt(falseRef)) && isAbrupt(falseRef)) return falseRef;
+            if (isAbrupt(falseRef = ifAbrupt(falseRef))) return falseRef;
             var falseValue = GetValue(falseRef);
-            if ((falseValue = ifAbrupt(falseValue)) && isAbrupt(falseValue)) return falseValue;
+            if (isAbrupt(falseValue = ifAbrupt(falseValue))) return falseValue;
             return NormalCompletion(falseValue);
         }
     }
@@ -24870,7 +24870,7 @@ define("lib/runtime", ["lib/parser", "lib/api", "lib/slower-static-semantics"], 
         var argument = getCode(node, "argument");
 
         var exprRef = Evaluate(argument);
-        if ((exprRef = ifAbrupt(exprRef)) && isAbrupt(exprRef)) return exprRef;
+        if (isAbrupt(exprRef = ifAbrupt(exprRef))) return exprRef;
 
         if (op === "typeof") {
 
@@ -24879,7 +24879,7 @@ define("lib/runtime", ["lib/parser", "lib/api", "lib/slower-static-semantics"], 
                 val = GetValue(exprRef);
             } else val = exprRef;
 
-            if ((val = ifAbrupt(val)) && isAbrupt(val)) return val;
+            if (isAbrupt(val = ifAbrupt(val))) return val;
 
             var lazyTypeString = Type(val);
 
@@ -25031,14 +25031,14 @@ define("lib/runtime", ["lib/parser", "lib/api", "lib/slower-static-semantics"], 
         var op = node.operator;
 
         var lref = Evaluate(node.left);
-        if ((lref = ifAbrupt(lref)) && isAbrupt(lref)) return lref;
+        if (isAbrupt(lref = ifAbrupt(lref))) return lref;
         var rref = Evaluate(node.right);
-        if ((rref = ifAbrupt(rref)) && isAbrupt(rref)) return rref;
+        if (isAbrupt(rref = ifAbrupt(rref))) return rref;
 
         var lval = GetValue(lref);
-        if ((lval = ifAbrupt(lval)) && isAbrupt(lval)) return lval;
+        if (isAbrupt(lval = ifAbrupt(lval))) return lval;
         var rval = GetValue(rref);
-        if ((rval = ifAbrupt(rval)) && isAbrupt(rval)) return rval;
+        if (isAbrupt(rval = ifAbrupt(rval))) return rval;
 
         var result;
         switch (op) {
@@ -25240,9 +25240,9 @@ define("lib/runtime", ["lib/parser", "lib/api", "lib/slower-static-semantics"], 
         for (;;) {
 
             var testRef = Evaluate(test);
-            if ((testRef = ifAbrupt(testRef)) && isAbrupt(testRef)) return testRef;
+            if (isAbrupt(testRef = ifAbrupt(testRef))) return testRef;
             var testValue = GetValue(testRef);
-            if ((testValue = ifAbrupt(testValue)) && isAbrupt(testValue)) return testValue;
+            if (isAbrupt(testValue = ifAbrupt(testValue))) return testValue;
 
             if (ToBoolean(testValue) === false) {
                 return NormalCompletion(V);
@@ -25273,9 +25273,9 @@ define("lib/runtime", ["lib/parser", "lib/api", "lib/slower-static-semantics"], 
             V = unwrap(exprValue);
 
             var testRef = Evaluate(test);
-            if ((testRef = ifAbrupt(testRef)) && isAbrupt(testRef)) return testRef;
+            if (isAbrupt(testRef = ifAbrupt(testRef))) return testRef;
             var testValue = GetValue(testRef);
-            if ((testValue = ifAbrupt(testValue)) && isAbrupt(testValue)) return testValue;
+            if (isAbrupt(testValue = ifAbrupt(testValue))) return testValue;
 
             if (ToBoolean(testValue) === false) {
                 return NormalCompletion(V);
@@ -25300,7 +25300,7 @@ define("lib/runtime", ["lib/parser", "lib/api", "lib/slower-static-semantics"], 
         var exprRef = Evaluate(expr);
         var exprValue = GetValue(exprRef);
         var iterator, obj, keys;
-        if ((exprValue = ifAbrupt(exprValue)) && isAbrupt(exprValue)) {
+        if (isAbrupt(exprValue = ifAbrupt(exprValue))) {
             if (LoopContinues(exprValue, labelSet) === false) return exprValue;
             else return Completion("break");
         }
@@ -25340,13 +25340,13 @@ define("lib/runtime", ["lib/parser", "lib/api", "lib/slower-static-semantics"], 
 
         for (;;) {
             nextResult = Invoke(keys, "next", noArgs);
-            if ((nextResult = ifAbrupt(nextResult)) && isAbrupt(nextResult)) return nextResult;
+            if (isAbrupt(nextResult = ifAbrupt(nextResult))) return nextResult;
             if (Type(nextResult) !== "object") return withError("Type", "ForInOfBodyEvaluation: nextResult is not an object");
             done = IteratorComplete(nextResult);
-            if ((done = ifAbrupt(done)) && isAbrupt(done)) return done;
+            if (isAbrupt(done = ifAbrupt(done))) return done;
             if (done === true) return NormalCompletion(V);
             nextValue = IteratorValue(nextResult);
-            if ((nextValue = ifAbrupt(nextValue)) && isAbrupt(nextValue)) return nextValue;
+            if (isAbrupt(nextValue = ifAbrupt(nextValue))) return nextValue;
             if (lhsKind === "assignment") {
 
                 if (lhs.type !== "ObjectPattern" && lhs.type !== "ArrayPattern") {
@@ -25674,8 +25674,8 @@ define("lib/runtime", ["lib/parser", "lib/api", "lib/slower-static-semantics"], 
 
             if (raw) {
                 /*
-			strings = TRV(head).concat(TRV(middle)).concat(TRV(tail));
-			*/
+            strings = TRV(head).concat(TRV(middle)).concat(TRV(tail));
+            */
                 if (sparseVars[i] === undefined) { // auf Span
                     strings.push(sparseSpans[i]);
                 } else { // auf Element
@@ -25683,8 +25683,8 @@ define("lib/runtime", ["lib/parser", "lib/api", "lib/slower-static-semantics"], 
                 }
             } else {
                 /*
-			strings = TV(head).concat(TV(middle)).concat(TV(tail));
-			*/
+            strings = TV(head).concat(TV(middle)).concat(TV(tail));
+            */
                 if (sparseVars[i] === undefined) { // auf Span
                     // strings.push(sparseSpans[i]);
                 } else { // auf Element
@@ -25700,12 +25700,12 @@ define("lib/runtime", ["lib/parser", "lib/api", "lib/slower-static-semantics"], 
         var results = [];
         for (var i = 0; i < len; i++) {
             var expr = Get(siteObj, ToString(i));
-            if ((expr = ifAbrupt(expr)) && isAbrupt(expr)) return expr;
+            if (isAbrupt(expr = ifAbrupt(expr))) return expr;
             if (typeof expr === "string") {
                 expr = parseGoal("Expression", expr);
                 var exprRef = Evaluate(expr);
                 var exprValue = GetValue(exprRef);
-                if ((exprValue = ifAbrupt(exprValue)) && isAbrupt(exprValue)) return exprValue;
+                if (isAbrupt(exprValue = ifAbrupt(exprValue))) return exprValue;
                 results.push(exprValue);
             }
         }
@@ -25781,14 +25781,14 @@ define("lib/runtime", ["lib/parser", "lib/api", "lib/slower-static-semantics"], 
         
         if (computed) {
             propKey = GetValue(Evaluate(key));
-            if ((propKey=ifAbrupt(propKey)) && isAbrupt(propKey)) return propKey;
+            if (isAbrupt(propKey = ifAbrupt(propKey))) return propKey;
             if (!IsSymbol(propKey)) return withError("Type", "A [computed] property inside an object literal has to evaluate to a Symbol primitive");
         } else {
             propKey = PropName(node);
         }
 
         var methodName = propKey;
-        if ((propKey = ifAbrupt(propKey)) && isAbrupt(propKey)) return propKey;
+        if (isAbrupt(propKey = ifAbrupt(propKey))) return propKey;
 
         
         if (ReferencesSuper(node)) {
@@ -25800,7 +25800,7 @@ define("lib/runtime", ["lib/parser", "lib/api", "lib/slower-static-semantics"], 
 
         if (generator) closure = GeneratorFunctionCreate("method", formals, body, scope, strict, functionPrototype, home, methodName);
         else closure = FunctionCreate("method", formals, body, scope, strict, functionPrototype, home, methodName);
-        if ((closure=ifAbrupt(closure)) && isAbrupt(closure)) return closure;
+        if (isAbrupt(closure = ifAbrupt(closure))) return closure;
         
         var rec = {
             key: propKey,
@@ -25822,7 +25822,7 @@ define("lib/runtime", ["lib/parser", "lib/api", "lib/slower-static-semantics"], 
         } 
 
         var methodDef = DefineMethod(node, object, fproto);
-        if ((methodDef = ifAbrupt(methodDef)) && isAbrupt(methodDef)) return methodDef;
+        if (isAbrupt(methodDef = ifAbrupt(methodDef))) return methodDef;
         SetFunctionName(methodDef.closure, methodDef.key);
         
         var desc = {
@@ -25985,7 +25985,7 @@ define("lib/runtime", ["lib/parser", "lib/api", "lib/slower-static-semantics"], 
                     if (filter = filters[i]) {
                         var filterRef = Evaluate(filter);
                         var filterValue = GetValue(filterRef);
-                        if ((filterValue = ifAbrupt(filterValue)) && isAbrupt(filterValue)) return filterValue;
+                        if (isAbrupt(filterValue = ifAbrupt(filterValue))) return filterValue;
                         if (ToBoolean(filterValue) === false) break;
                     }
                 }
@@ -25999,10 +25999,10 @@ define("lib/runtime", ["lib/parser", "lib/api", "lib/slower-static-semantics"], 
                 if (len >= (Math.pow(2, 53) - 1)) return withError("Range", "Range limit exceeded");
 
                 var putStatus = Put(accumulator, ToString(len), exprValue, true);
-                if ((putStatus = ifAbrupt(putStatus)) && isAbrupt(putStatus)) return putStatus;
+                if (isAbrupt(putStatus = ifAbrupt(putStatus))) return putStatus;
                 len = len + 1;
                 var putStatus = Put(accumulator, "length", len, true);
-                if ((putStatus = ifAbrupt(putStatus)) && isAbrupt(putStatus)) return putStatus;
+                if (isAbrupt(putStatus = ifAbrupt(putStatus))) return putStatus;
 
             }
 
@@ -26010,7 +26010,7 @@ define("lib/runtime", ["lib/parser", "lib/api", "lib/slower-static-semantics"], 
 
         } else {
             var yieldStatus = GeneratorYield(CreateItrResultObject(value, false));
-            if ((yieldStatus = ifAbrupt(yieldStatus)) && isAbrupt(yieldStatus)) return yieldStatus;
+            if (isAbrupt(yieldStatus = ifAbrupt(yieldStatus))) return yieldStatus;
             return NormalCompletion(undefined);
         }
     }
@@ -26022,7 +26022,7 @@ define("lib/runtime", ["lib/parser", "lib/api", "lib/slower-static-semantics"], 
         var exprRef = Evaluate(assignmentExpr);
         var exprValue = GetValue(exprRef);
         var obj = ToObject(exprValue);
-        if ((obj = ifAbrupt(obj)) && isAbrupt(obj)) return obj;
+        if (isAbrupt(obj = ifAbrupt(obj))) return obj;
         var iterator = Invoke(obj, $$iterator, []);
         var keys = ToObject(iterator);
         var oldEnv = getLexEnv();
@@ -26032,13 +26032,13 @@ define("lib/runtime", ["lib/parser", "lib/api", "lib/slower-static-semantics"], 
         for (;;) {
 
             var nextResult = Invoke(keys, "next", noArgs);
-            if ((nextResult = ifAbrupt(nextResult)) && isAbrupt(nextResult)) return nextResult;
+            if (isAbrupt(nextResult = ifAbrupt(nextResult))) return nextResult;
             if (Type(nextResult) !== "object") return withError("Type", "QualifierEvaluation: nextResult is not an object");
             var done = IteratorComplete(nextResult);
-            if ((done = ifAbrupt(done)) && isAbrupt(done)) return done;
+            if (isAbrupt(done = ifAbrupt(done))) return done;
             if (done === true) return true;
             var nextValue = IteratorValue(nextResult);
-            if ((nextValue = ifAbrupt(nextValue)) && isAbrupt(nextValue)) return nextValue;
+            if (isAbrupt(nextValue = ifAbrupt(nextValue))) return nextValue;
             var forEnv = NewDeclarativeEnvironment(oldEnv);
             var bn = BoundNames(forBinding);
             for (var i = 0, j = bn.length; i < j; i++) {
@@ -26049,7 +26049,7 @@ define("lib/runtime", ["lib/parser", "lib/api", "lib/slower-static-semantics"], 
             getContext().LexEnv = forEnv;
             var continu = ComprehensionEvaluation(node, accumulator);
             getContext().LexEnv = oldEnv;
-            if ((continu = ifAbrupt(continu)) && isAbrupt(continu)) return continu;
+            if (isAbrupt(continu = ifAbrupt(continu))) return continu;
         }
 
         return accumulator;
@@ -26065,7 +26065,7 @@ define("lib/runtime", ["lib/parser", "lib/api", "lib/slower-static-semantics"], 
 
         for (var i = 0, j = blocks.length; i < j; i++) {
             status = QualifierEvaluation(blocks[i], node, array);
-            if ((status = ifAbrupt(status)) && isAbrupt(status)) return status;
+            if (isAbrupt(status = ifAbrupt(status))) return status;
         }
 
         return array;
@@ -26379,7 +26379,7 @@ define("lib/runtime", ["lib/parser", "lib/api", "lib/slower-static-semantics"], 
 
 
         // exception handling.
-        if ((exprValue = ifAbrupt(exprValue)) && isAbrupt(exprValue)) {
+        if (isAbrupt(exprValue = ifAbrupt(exprValue))) {
             if (exprValue.type === "throw") {
                 error = exprValue.value;
                 if (Type(error) === "object") {
@@ -27011,10 +27011,10 @@ if (typeof process === "undefined" && typeof window !== "undefined")
                         element.innerHTML = ast;
                         if (editor.scrollIntoView) editor.scrollIntoView();
                         /*
-				newsel  = window.getSelection();
-				newrange = newsel.getRangeAt(0);
-				newrange.setStart(range.startContainer, range.startOffset);
-				newrange.setEnd(range.endContainer, range.endOffset);*/
+                newsel  = window.getSelection();
+                newrange = newsel.getRangeAt(0);
+                newrange.setStart(range.startContainer, range.startOffset);
+                newrange.setEnd(range.endContainer, range.endOffset);*/
                         // cursor.moveToPoint(e.pageX, e.pageY);
                     }
                     addEventListener(editor, "keyup", function (e) {
@@ -27487,32 +27487,32 @@ if (typeof process === "undefined" && typeof window !== "undefined")
                         key = target.innerText || target.textContent || target.innerHTML;
                         html = "";
                         /*
-						var oid;
-						if (oid=target.getAttribute("data-syntaxjs-oid")) {
-						
-						}
-						*/
+                        var oid;
+                        if (oid=target.getAttribute("data-syntaxjs-oid")) {
+                        
+                        }
+                        */
                         /*
-						Falls parse tree:
-						Was muss ich tun, um zu wissen, dass ich, wenn ich ueber a+b+c und dem
-						2. + hover, dass ich in der expression a+b+c bin?
-						Wie lege ich den Code Flow aus dem AST ab?
-						gebe ast-node eine id?
-						speichere alle nodes untereinander by id?
-						o(1) zugriff fuer die suche im tree?
-						in tokens objekt zu T
-						speichere: "node.type"
-						sagt mir, gehoere zu "binaryexpression"
-						speichere: parentnode ???
-					*/
+                        Falls parse tree:
+                        Was muss ich tun, um zu wissen, dass ich, wenn ich ueber a+b+c und dem
+                        2. + hover, dass ich in der expression a+b+c bin?
+                        Wie lege ich den Code Flow aus dem AST ab?
+                        gebe ast-node eine id?
+                        speichere alle nodes untereinander by id?
+                        o(1) zugriff fuer die suche im tree?
+                        in tokens objekt zu T
+                        speichere: "node.type"
+                        sagt mir, gehoere zu "binaryexpression"
+                        speichere: parentnode ???
+                    */
                         // 1. Zeile key ist ein
                         if (str = TypeOfToken[key]) { // mal ausprobieren.
                             html += key + " ist ein " + str + "<br>\n";
                             /* ungeeignet genauer
-						if (str = PunctToExprName[key]) {
-							html += str + "<br>\n";
-						}
-						*/
+                        if (str = PunctToExprName[key]) {
+                            html += str + "<br>\n";
+                        }
+                        */
                         }
                         // 2. Zeile annotation
                         if ((str = Annotations[key])) html += str;
@@ -27522,11 +27522,11 @@ if (typeof process === "undefined" && typeof window !== "undefined")
                         }
 
                         /*
-						var oid;
-						if (oid=target.getAttribute("data-syntaxjs-oid")) {
-							html += "<br>Newsflash: dieses Token hat eine spezielle Id, die es ermoeglicht in den anderen Syntaxtree zu navigieren.<br>";
-						}
-						*/
+                        var oid;
+                        if (oid=target.getAttribute("data-syntaxjs-oid")) {
+                            html += "<br>Newsflash: dieses Token hat eine spezielle Id, die es ermoeglicht in den anderen Syntaxtree zu navigieren.<br>";
+                        }
+                        */
 
                         annotationDiv.innerHTML = html;
                         annotationDiv.innerHTML += development_version;
@@ -27542,8 +27542,8 @@ if (typeof process === "undefined" && typeof window !== "undefined")
             annotationDiv.className = "syntaxjs-annotation";
 
             /*
-		Startet den Highlighter *****
-	*/
+        Startet den Highlighter *****
+    */
 
             function defaultOptions() {
                     var options = Object.create(null);
@@ -27667,7 +27667,7 @@ define("lib/syntaxjs-shell", function (require, exports) {
                 try {
                     val = syntaxjs.toValue(code, true);
                 } catch (ex) {
-            	    console.dir(ex);
+                    console.dir(ex);
                     val = ex.message + "\n" + ("" + ex.stack).split("\n").join("\n");
                 } finally {
                     console.log(val);
@@ -27849,7 +27849,7 @@ define("lib/syntaxjs-worker", function (require, exports, module) {
 });
 
 // #######################################################################################################################
-//	Exporting the Syntax Object after Importing and Assembling the Components
+//  Exporting the Syntax Object after Importing and Assembling the Components
 // #######################################################################################################################
 
 // This is the App ?
@@ -27875,7 +27875,7 @@ define("lib/syntaxjs", function () {
     
     var syntaxerror = Object.create(null);
     var syntaxerror_public_api_readonly = {
-	    version: pdmacro(VERSION),
+        version: pdmacro(VERSION),
         tokenize: pdmacro(require("lib/tokenizer")),
         createAst: pdmacro(require("lib/parser")),
         toValue: pdmacro(require("lib/runtime")),
