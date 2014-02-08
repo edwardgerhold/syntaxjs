@@ -10105,12 +10105,12 @@ define("lib/api", function (require, exports, module) {
         if (desc == undefined) return undefined;
         if (desc.Origin) return desc.Origin;
         var obj = ObjectCreate();
-        callInternalSlot("DefineOwnProperty", obj,"value",      new PropertyDescriptor(desc.value, true, true, true));
-        callInternalSlot("DefineOwnProperty", obj,"writable",   new PropertyDescriptor(desc.writable, true, true, true));
-        callInternalSlot("DefineOwnProperty", obj,"get",        new PropertyDescriptor(desc.get, true, true, true));
-        callInternalSlot("DefineOwnProperty", obj,"set",        new PropertyDescriptor(desc.set, true, true, true));
-        callInternalSlot("DefineOwnProperty", obj,"enumerable",   new PropertyDescriptor(desc.enumerable, true, true, true));
-        callInternalSlot("DefineOwnProperty", obj,"configurable", new PropertyDescriptor(desc.configurable, true, true, true));
+        callInternalSlot("DefineOwnProperty", obj,"value",        PropertyDescriptor(desc.value, true, true, true));
+        callInternalSlot("DefineOwnProperty", obj,"writable",     PropertyDescriptor(desc.writable, true, true, true));
+        callInternalSlot("DefineOwnProperty", obj,"get",          PropertyDescriptor(desc.get, true, true, true));
+        callInternalSlot("DefineOwnProperty", obj,"set",          PropertyDescriptor(desc.set, true, true, true));
+        callInternalSlot("DefineOwnProperty", obj,"enumerable",   PropertyDescriptor(desc.enumerable, true, true, true));
+        callInternalSlot("DefineOwnProperty", obj,"configurable", PropertyDescriptor(desc.configurable, true, true, true));
         return obj;
     }
 
@@ -11244,15 +11244,17 @@ define("lib/api", function (require, exports, module) {
     }
 
     function createIdentifierBinding(envRec, N, V, D, W) {
-        return (envRec[N] = new IdentifierBinding(N, V, D, W));
+        return (envRec[N] = IdentifierBinding(N, V, D, W));
     }
 
     function IdentifierBinding(N, V, D, W) {
-        this.name = N;
-        this.value = V;
-        this.writable = W === undefined ? true : W;
-        this.initialised = false;
-        this.configurable = D;
+        var ib = Object.create(null);
+        ib.name = N;
+        ib.value = V;
+        ib.writable = W === undefined ? true : W;
+        ib.initialised = false;
+        ib.configurable = !!D;
+        return ib;
     }
 
     function GetIdentifierReference(lex, name, strict) {
@@ -11285,7 +11287,7 @@ define("lib/api", function (require, exports, module) {
         Assert(IsPropertyKey(P), "P has to be a valid property key");
         var success = callInternalSlot("DefineOwnProperty", O, P, D);
         if (isAbrupt(success = ifAbrupt(success))) return success;
-        if (success === false) return withError("Type", "DefinePropertyOrThrow: DefineOwnProperty failed.");
+        if (success === false) return withError("Type", "DefinePropertyOrThrow: DefineOwnProperty has to return true. But success is false. At P="+P);
         return success;
     }
 
@@ -11369,9 +11371,9 @@ define("lib/api", function (require, exports, module) {
             var o = this.Target;
             var p = o[P];
             if (typeof p === "object" && p) {
-                return new ExoticDOMObjectWrapper(p);
+                return ExoticDOMObjectWrapper(p);
             } else if (typeof p === "function") {
-                return new ExoticDOMFunctionWrapper(p, o);
+                return ExoticDOMFunctionWrapper(p, o);
             }
             return p;
         },
@@ -11386,9 +11388,9 @@ define("lib/api", function (require, exports, module) {
             if ((f = this.Get(P)) && (typeof f === "function")) {
                 var result = f.apply(o, argList);
                 if (typeof result === "object" && result) {
-                    result = new ExoticDOMObjectWrapper(result);
+                    result = ExoticDOMObjectWrapper(result);
                 } else if (typeof result === "function") {
-                    result = new ExoticDOMFunctionWrapper(result, o);
+                    result = ExoticDOMFunctionWrapper(result, o);
                 }
                 return result;
             } else if (IsCallable(f)) {
@@ -11446,9 +11448,9 @@ define("lib/api", function (require, exports, module) {
             var that = this.NativeThat;
             var result = f.apply(that, argList);
             if (typeof result === "object" && result) {
-                result = new ExoticDOMObjectWrapper(result);
+                result = ExoticDOMObjectWrapper(result);
             } else if (typeof result === "function") {
-                result = new ExoticDOMFunctionWrapper(result, that);
+                result = ExoticDOMFunctionWrapper(result, that);
             }
             return result;
         }
@@ -12226,7 +12228,7 @@ define("lib/api", function (require, exports, module) {
 
     function ArrayCreate(len, proto) {
         var p = proto || getIntrinsic("%ArrayPrototype%");
-        var array = new ArrayExoticObject(p);
+        var array = ArrayExoticObject(p);
         array.Extensible = true;
         if (len !== undefined) {
             array.ArrayInitialisationState = true;
@@ -22451,7 +22453,7 @@ dependencygrouptransitions of kind load1.Kind.
         }
 
 
-        LazyDefineProperty(intrinsics, "%DOMWrapper%", new ExoticDOMObjectWrapper(
+        LazyDefineProperty(intrinsics, "%DOMWrapper%", ExoticDOMObjectWrapper(
                 typeof importScripts === "function" ? self : typeof window === "object" ? window : process)
         );
  
@@ -27729,19 +27731,19 @@ define("lib/syntaxjs-shell", function (require, exports) {
 
         evaluate = function evaluate(code, continuation) {
                 var val;
-                   val = syntaxjs.toValue(code, true);
+                // uncomment to debug; then comment out the try block;
+              /*     val = syntaxjs.toValue(code, true);
                    console.log(val);
-                    if (continuation) setTimeout(continuation, 0);
-                    /*
+                    if (continuation) setTimeout(continuation, 0); */
                 try {
                     val = syntaxjs.toValue(code, true);
                 } catch (ex) {
-                    val = ex.message + "\n" + ("" + ex.stack).split("\n").join("\n");
+                    val = ex.message + "\n" + ("" + ex.stack).split("\n").join("\r\n");
                 } finally {
                     console.log(val);
                     if (continuation) setTimeout(continuation, 0);
                 }
-                */
+                
         };
 
         evaluateFile = function evaluateFile(file, continuation) {
@@ -27863,7 +27865,8 @@ define("lib/syntaxjs-shell", function (require, exports) {
             });
         };
 
-        shell = function main() {
+        
+        function main() {
             var file;
             startup();
             if (process.argv[2]) file = process.argv[2];
