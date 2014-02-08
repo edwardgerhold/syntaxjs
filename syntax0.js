@@ -4580,7 +4580,7 @@ define("lib/parser", ["lib/tables", "lib/tokenizer"], function (tables, tokenize
     parser.PropertyKey = PropertyKey;
     function PropertyKey() {
         var node;
-        node = /*this.ComputedPropertyName() ||*/ this.Identifier() || this.Literal();
+        node = this.ComputedPropertyName() || this.Identifier() || this.Literal();
         if (!node && (Keywords[v])) {
             node = Node("Identifier");
             node.name = v;
@@ -4618,7 +4618,6 @@ define("lib/parser", ["lib/tables", "lib/tokenizer"], function (tables, tokenize
                     and used PropertyKey() for both. It looked nice and clean. But it failed. So i restored it for now. I want to write
                     it again (from scratch), but tomorrow.
                 */
-
                 
                 if (v === "[") {
                     computedPropertyName = this.ComputedPropertyName();
@@ -4666,7 +4665,7 @@ define("lib/parser", ["lib/tables", "lib/tokenizer"], function (tables, tokenize
                         node.value = method;
                         list.push(node);                        
 
-                    } else if (((BindingIdentifiers[t] || v === "constructor") && rhs === "(") || (v === "*" && (rhs == "[" || BindingIdentifiers[rhst] || rhs === "constructor"))) {
+                    } else if (((v == "[" || BindingIdentifiers[t] || v === "constructor") && rhs === "(") || (v === "*" && (rhs == "[" || BindingIdentifiers[rhst] || rhs === "constructor"))) {
 
                         node.kind = "method";    
                         var method = this.MethodDefinition(parent, true);
@@ -5679,48 +5678,40 @@ define("lib/parser", ["lib/tables", "lib/tokenizer"], function (tables, tokenize
         }
 
 
-        if ((v == "[" || computedPropertyName) || MethodKeyByType[t] || v === "constructor") {
 
-            if (v == "[" && !computedPropertyName) {
-                computedPropertyName = this.ComputedPropertyName();
-                if (!computedPropertyName) throwError("can not parse [computed] methoddefinition key");
-            }
 
-            if ((computedPropertyName && v ==="(") || rhs === "(" ) {
 
-                node = Node("MethodDefinition");
+                    node = Node("MethodDefinition");
 
-                functionStack.push(curFunc)
-                curFunc = node;
+                    functionStack.push(curFunc)
+                    curFunc = node;
 
-                if (computedPropertyName) {
-                    node.id = computedPropertyName
-                    node.computed = true;
-                } else {
-                    node.id = v;
-                    pass(v);
-                }
+                    if (v =="[") node.computed = true;
+                    node.id = this.PropertyKey();
+                    
 
-                node.generator = isGenerator;
-                if (!isObjectMethod) node.static = isStaticMethod;
-                
-                if (isGetter) node.kind = "get";
-                if (isSetter) node.kind = "set";
-                pass("(");
-                node.params = this.FormalParameterList();
-                pass(")");
-                pass("{");
-                node.body = this.FunctionBody(node);
-                pass("}");
-                l2 = loc && loc.end;
-                node.loc = makeLoc(l1, l2);
-                EarlyErrors(node);
-                if (compile) return builder.methodDefinition(node.id, node.params, node.body, node.strict, node.static, node.generator, node.loc);
+                    node.generator = isGenerator;
+                    if (!isObjectMethod) node.static = isStaticMethod;
+                    
+                    if (isGetter) node.kind = "get";
+                    if (isSetter) node.kind = "set";
+                    pass("(");
+                    node.params = this.FormalParameterList();
+                    pass(")");
+                    pass("{");
+                    node.body = this.FunctionBody(node);
+                    pass("}");
+                    l2 = loc && loc.end;
+                    node.loc = makeLoc(l1, l2);
+                    EarlyErrors(node);
+                    if (compile) return builder.methodDefinition(node.id, node.params, node.body, node.strict, node.static, node.generator, node.loc);
 
-                curFunc = functionStack.pop();
+                    curFunc = functionStack.pop();
 
-                return node;
+                    return node;
+                  
 
+                /*
             } else if (((computedPropertyName && v === "=") || rhs === "=") && !isObjectMethod) {    
 
                 node = Node("PropertyDefinition");
@@ -5738,9 +5729,10 @@ define("lib/parser", ["lib/tables", "lib/tokenizer"], function (tables, tokenize
                 node.loc = makeLoc(l1, l2);
                 if (compile) return builder.propertyDefinition(node.id, node.static, node.value, node.loc);
                 return node;
-            }
-        }
-        return null;
+            }*/
+        
+        return node;
+
     }
 
     parser.ClassDeclaration = ClassDeclaration;
@@ -8636,7 +8628,7 @@ define("lib/api", function (require, exports, module) {
     function getEventQueue() {
         return realm.eventQueue;
     }
-    
+
     function getGlobalThis() {
         //return globalThis;
         return realm.globalThis;
@@ -24741,8 +24733,8 @@ define("lib/runtime", ["lib/parser", "lib/api", "lib/slower-static-semantics"], 
         var op = node.operator;
         var result, status;
         var ltype = node.left.type;
-
-        if (cx.generator) {}
+        //var cx = getContext();
+        //if (cx.generator) {}
 
         if (ltype === "Identifier") {
 
@@ -25240,11 +25232,12 @@ define("lib/runtime", ["lib/parser", "lib/api", "lib/slower-static-semantics"], 
     evaluation.WhileStatement = WhileStatement;
 
     function WhileStatement(node, labelSet) {
+
         var test = node.test;
         var body = getCode(node, "body");
         var exprRef, exprValue;
         var V, stmt;
-        labelSet = labelSet || cx.labelSet || Object.create(null);
+        labelSet = labelSet || Object.create(null);
 
         for (;;) {
 
@@ -25267,12 +25260,11 @@ define("lib/runtime", ["lib/parser", "lib/api", "lib/slower-static-semantics"], 
     }
 
     function DoWhileStatement(node, labelSet) {
-
         var test = node.test;
         var body = getCode(node, "body");
         var exprRef, exprValue;
         var V, stmt;
-        labelSet = labelSet || cx.labelSet || Object.create(null);
+        labelSet = labelSet || Object.create(null);
 
         for (;;) {
 
@@ -25407,8 +25399,8 @@ define("lib/runtime", ["lib/parser", "lib/api", "lib/slower-static-semantics"], 
         var tleft = left.type;
         var tright = right.type;
 
-        var cx = getContext();
-        var labelSet = cx.labelSet || Object.create(null);
+        
+        var labelSet = labelSet || Object.create(null);
         var lhsKind = "assignment";
         var iterationKind = "enumerate";
 
@@ -25430,8 +25422,8 @@ define("lib/runtime", ["lib/parser", "lib/api", "lib/slower-static-semantics"], 
         var body = getCode(node, "body");
         var tleft = left.type;
         var tright = right.type;
-        var cx = getContext();
-        var labelSet = cx.labelSet || Object.create(null);
+        
+        var labelSet = labelSet || Object.create(null);
         var lhsKind;
         var iterationKind = "iterate";
 
@@ -25463,19 +25455,18 @@ define("lib/runtime", ["lib/parser", "lib/api", "lib/slower-static-semantics"], 
         var exists;
         var label = node.label.name || node.label.value;
         var statement = node.statement;
-        var cx = getContext();
-        var labelSet = cx.labelSet || Object.create(null);
-        var labelSet = cx.labelSet;
+        var labelSet = labelSet || Object.create(null);
+        
         if (!labelSet) {
             exists = false;
             labelSet = Object.create(null);
-            cx.labelSet = labelSet;
+            
         } else exists = true;
 
         labelSet[label] = node;
 
         var result = LabelledEvaluation(statement, labelSet);
-        if (!exists) cx.labelSet = undefined;
+        //if (!exists) cx.labelSet = undefined;
         return result;
     }
 
@@ -25492,7 +25483,7 @@ define("lib/runtime", ["lib/parser", "lib/api", "lib/slower-static-semantics"], 
     };
 
 // TODO: RESUME for Generator
-    function ForStatement(node) {
+    function ForStatement(node, labelSet) {
         "use strict";
         var initExpr = node.init;
         var testExpr = node.test;
@@ -25502,10 +25493,10 @@ define("lib/runtime", ["lib/parser", "lib/api", "lib/slower-static-semantics"], 
         var varDcl, isConst, dn, forDcl;
         var oldEnv, loopEnv, bodyResult;
         var cx = getContext();
-        var labelSet = cx.labelSet;
+        
         if (!labelSet) {
             labelSet = Object.create(null);
-            cx.labelSet = labelSet;
+            //cx.labelSet = labelSet;
         }
 
         if (initExpr) {
@@ -27738,6 +27729,10 @@ define("lib/syntaxjs-shell", function (require, exports) {
 
         evaluate = function evaluate(code, continuation) {
                 var val;
+                   val = syntaxjs.toValue(code, true);
+                   console.log(val);
+                    if (continuation) setTimeout(continuation, 0);
+                    /*
                 try {
                     val = syntaxjs.toValue(code, true);
                 } catch (ex) {
@@ -27746,6 +27741,7 @@ define("lib/syntaxjs-shell", function (require, exports) {
                     console.log(val);
                     if (continuation) setTimeout(continuation, 0);
                 }
+                */
         };
 
         evaluateFile = function evaluateFile(file, continuation) {
