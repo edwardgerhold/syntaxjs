@@ -27866,7 +27866,7 @@ define("lib/syntaxjs-shell", function (require, exports) {
         };
 
         
-        function main() {
+        shell = function main() {
             var file;
             startup();
             if (process.argv[2]) file = process.argv[2];
