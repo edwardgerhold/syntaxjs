@@ -27775,10 +27775,11 @@ define("lib/syntaxjs-shell", function (require, exports) {
         evaluate = function evaluate(code, continuation) {
                 var val;
                 // uncomment to debug; then comment out the try block;
+                /*
                    val = syntaxjs.toValue(code, true);
                    console.log(val);
                     if (continuation) setTimeout(continuation, 0); 
-                    /*
+                */    
                 try {
                     val = syntaxjs.toValue(code, true);
                 } catch (ex) {
@@ -27787,7 +27788,7 @@ define("lib/syntaxjs-shell", function (require, exports) {
                     console.log(val);
                     if (continuation) setTimeout(continuation, 0);
                 }
-                */
+                
                 
         };
 
