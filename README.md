@@ -3,6 +3,12 @@ syntaxjs
 
 Not bugfree EcmaScript 6 Interpreter written in EcmaScript 5
 
+Almost "feature complete" prototype of an Interpreter. But with
+some design issues, like heap and compiler, which will be added
+in a later iteration, over already introduced interfaces, from
+one day to another. The standard library is still incomplete, a
+lot of functions have to be added to their prototypes still.
+
 It can be tried with simply typing node syntax0.js. 
 
 linux-www5:~ # node syntax0.js [exec_me.js]
@@ -26,14 +32,18 @@ es6>
 undefined
 es6>
 ```
+
 Sometimes i break code here, sometimes there. 
+Sometimes i don´t call for a week.
 
 The other day, i fix it :-)
+---------------------------
 
 Current status is "broken". A couple of mistakes is uncleared since december.
 But not the problem. 
 
 - Currently underspecified, but the documents may arrive fast the next days.
+- Or a few weeks later. But a complete documentation is one goal.
 - Have to write up the documentation, and to split the file up into modules, 
 that you can have and edit pieces of.
 - Have filled out a few issues for myself.
@@ -43,7 +53,32 @@ that you can have and edit pieces of.
 Hope to annoy you not too much with the bugs!
 
 
-# currently strict mode fails
+### from time to time nothing happens
+
+I opened the repo last month, and thought i could be straight.
+But i am not and sometimes nothing happens. Other days a little.
+And on some i will write the good code.
+
+### meanwhile, i invented a new function
+
+```js
+var syntaxjs = require("syntaxjs").syntaxjs;
+var promise = syntaxjs.evalAsync(code);
+
+var syntaxjs = require("syntaxjs").syntaxjs;
+var promise2 = syntaxjs.evalAsyncXfrm(code);
+
+```
+
+The latter tries to convert the internal ordinary object
+into normal javascript objects and may call functions behind
+wrappers. The function is just outlined and not really a specified
+one. But asynchronous communication with the results over promises
+is an idea i have in mind for a long time now.
+
+### currently strict mode fails (one of many current bugs)
+
+(I discovered, that i changed the code in many places, meanwhile)
 
 Which is not a problem. it just fails in the current version. i´ll remove this note,
 when i fixed it. I need to, because i want the test262 cases to pass in strict mode again.
@@ -54,10 +89,14 @@ checked the parser first with the .print command but strict mode is parsed corre
 be somewhere while evaluating. At instantiate global or function or when evaluating the call,
 nothing special, but is a to do.
 
+
+### i tried test262 with syntax0.js 
+
+(passing test262 is a longterm goal to close this tools file as a successful project)
+
 https://github.com/tc39/test262 is the official testsuite for ecmascript. If you remove
 in the last block of the file the command syntaxjs.nodeShell() which starts the shell, 
 test262 is running without break
-
 
 ```bash
 annexB/B.2.1 passed in non-strict mode
