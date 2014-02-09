@@ -262,8 +262,9 @@ define("lib/i18n-messages", function (require, exports, module) {
 
     var la = {
         "not_an_object" : "objectum non est",
-        "not_to_primitivus" : "primitive type non est",
-        "not_coercible" : "non coerciblus"
+        "not_to_primitive" : "primitivus typus non est",
+        "not_coercible" : "non coercibus",
+        "unresolvable_ref": "non resolvum referencum"
 
     };
 
@@ -1758,8 +1759,7 @@ define("lib/tokenizer", ["lib/tables"], function (tables) {
 */
 
     function RegularExpressionLiteral() {
-        var expr = "",
-        flags = "";
+        var expr = "", flags = "";
         var n, l;
         if (ch === "/" && !NotBeforeRegExp[lastTokenType]) { // <--- grammatik
 
@@ -3600,6 +3600,17 @@ define("lib/parser", ["lib/tables", "lib/tokenizer"], function (tables, tokenize
     // O(1) XS Tables, candidate for export into tables module
     // ==========================================================
 
+    /*
+        exports.FinishStatementList = FinishStatementList;
+        exports.FinishSwitchStatementList = FinishSwitchStatementList;
+        exports.PrimaryValues = PrimaryValues;
+        exports.PrimaryTypes = PrimaryTypes;
+        exports.varKinds = varKinds;
+        exports.StatementParsers = StatementParsers;
+        exports.PrimaryExpressionByValue = PrimaryExpressionByValue;
+        exports.PrimaryExpressionByType = PrimaryExpressionByType;
+    */
+
     var FinishStatementList = {
         __proto__: null,
         ")": true,
@@ -3841,8 +3852,8 @@ define("lib/parser", ["lib/tables", "lib/tokenizer"], function (tables, tokenize
     var generatorParameterStack = [];
     var strictModeStack = [];
     var inStrictMode = false;
-    var parameterStack = [];
-    var curParameter = "";
+    
+    
     var moduleStack = [];
     var curModule;
     var curFunc;
@@ -3958,38 +3969,6 @@ define("lib/parser", ["lib/tables", "lib/tokenizer"], function (tables, tokenize
     // ############## ### ## #
     //
     // ############## ### ## #
-
-    function ParameterStack () {
-        var ps = Object.create(ParameterStack.prototype);
-        ps.stacks = Object.create(null);
-        ps.stacks["Default"] = [];
-        ps.stacks["GeneratorParameter"] = [];
-        ps.stacks["In"] = [];
-        ps.stacks["NoReference"] = [];
-        ps.stacks["Return"] = [];
-        ps.stacks["Yield"] = [];
-        return ps;
-    }
-
-    ParameterStack.prototype = {
-        getParameter: function (name) {
-            var stack = ps.stacks[name];
-            return stack[stack.length-1];
-        },
-        newParameter: function (name, value) {
-            var stack = ps.stacks[name];
-            var oldValue = this.getParameter(name);
-            stack.push(value);
-            return oldValue;
-        },
-        popParameter: function (name) {
-            var stack = ps.stacks[name];
-            return stack.pop();
-        },
-        toString: function () {
-            return "[object ParameterStack]";
-        }
-    };
 
 
     var staticSemantics;   
@@ -4122,7 +4101,7 @@ define("lib/parser", ["lib/tables", "lib/tokenizer"], function (tables, tokenize
 
 
         function addVarBinding(name, param) {
-            SyntaxAssert(!hasVarBinding(name) || !inStrictMode, name + "is a duplicate identifier in variable scope!");
+            SyntaxAssert(!hasVarBinding(name) || !curFunc.strict, name + "is a duplicate identifier in variable scope!");
             VarEnv[name] = param === undefined ? true : param;
         }
 
@@ -7316,6 +7295,10 @@ var BoundNames = require("lib/slower-static-semantics").BoundNames;
         } catch (ex) {
             console.log("[Parser Exception]")
             console.dir(ex);
+            console.log(ex.name);
+            console.log(ex.message);
+            console.log(ex.stack);
+            
             ast = ex;
             throw ex;
         }
@@ -8609,6 +8592,11 @@ define("lib/api", function (require, exports, module) {
     function debug() {
         if (debugmode && typeof importScripts !== "function") console.log.apply(console, arguments);
     }
+
+    function debug2() {
+        if (typeof importScripts !== "function") console.log.apply(console, arguments);
+    }
+
 
     function debugdir() {
         if (debugmode && typeof importScripts !== "function") console.dir.apply(console, arguments);
@@ -13454,7 +13442,7 @@ define("lib/api", function (require, exports, module) {
         } else if ((value = getInternalSlot(input, "ViewedArrayBuffer")) !== undefined) {
             var arrayBuffer = value;
             //if (OrdinaryHasInstance(getIntrinsic("%DataView%")), input) { // assumes i´m in source realm
-            if (!hasInternalSlot("TypedArrayConstructor")) {
+            if (!hasInternalSlot(input, "TypedArrayConstructor")) {
                 var output = OrdinaryConstruct(getIntrinsicFromRealm("%DataView%", targetRealm), []);
                 setInternalSlot(output, "ViewedArrayBuffer", getInternalSlot(input, "ViewedArrayBuffer"));
                 setInternalSlot(output, "ByteOffset", getInternalSlot(input, "ByteOffset"));
@@ -14058,6 +14046,7 @@ define("lib/api", function (require, exports, module) {
 
 
         function hasRecordInList(list, field, value) {
+            if (!list) return false
             for (var i = 0, j = list.length; i < j; i++) {
                 var r = list[i];
                 if (r[field] === value) return true;
@@ -14065,6 +14054,7 @@ define("lib/api", function (require, exports, module) {
             return false;
         }
         function getRecordInList(list, field, value) {
+            if (!list) return false;
             for (var i = 0, j = list.length; i < j; i++) {
                 var r = list[i];
                 if (r[field] === value) return r;
@@ -14129,12 +14119,12 @@ define("lib/api", function (require, exports, module) {
         // 27.1. check
         function CreateLoad(name) {
             var load = LoadRecord();
+            var metadata = ObjectCreate();
             load.Status = "loading";
             load.Name = name;
             load.LinkSets = [];
-            var metadata = ObjectCreate();
             load.Metadata = metadata;
-            // all other fields are undefined.
+            // all other fields are exisiting but undefined.
             return load;
         }
 
@@ -14159,7 +14149,8 @@ define("lib/api", function (require, exports, module) {
 
         // 27.1. updated
         function LoadModule(loader, name, options) {
-            
+            debug2("loadmodule")
+            if (!options) options = ObjectCreate();
             var name = ToString(name);
             if (isAbrupt(name = ifAbrupt(name))) return name;
             var address = GetOption(options, "address");
@@ -14475,6 +14466,7 @@ define("lib/api", function (require, exports, module) {
 
         // 27.1.
         function PromiseOfStartLoadPartWayThrough(step, loader, name, metadata, source, address) {
+            debug2("PromiseOfStartLoadPartWayThrough: start");
             var F = AsyncStartLoadPartwayThrough();
             var state = Object.create(null);
             state.Step = "translate";
@@ -14491,19 +14483,24 @@ define("lib/api", function (require, exports, module) {
         // 26.1
         function AsyncStartLoadPartwayThrough() {
             var F = OrdinaryFunction();
+            debug2("AsyncStartLoadPartwayThrough: start")
             var AsyncStartLoadPartwayThrough_Call = function (thisArg, argList) {
-                var F = thisArg;
+                debug2("AsyncStartLoadPartwayThrough_Call");
+                var resolve = argList[0];
+                var reject = argList[1];
                 var state = getInternalSlot(F, "StepState");
                 var loader = state.Loader;
                 var name = state.ModuleName;
                 var step = state.Step;
                 var source = state.ModuleSource;
-                if (loader.Modules[name]) return withError("Type", "Got name in loader.Modules")
+
+                if (hasRecordInList(loader.Modules, "Name", name)) return withError("Type", "Got name in loader.Modules")
                 if (hasRecordInList(loader.Loads, "Name", name)) return withError("Type", "loader.Loads contains another entry with name '"+name+"'");
-                load = CreateLoad(name);
-                load.Metadata = metadata;
+                var load = CreateLoad(name);
+                load.Metadata = state.ModuleMetadata;
                 var linkSet = CreateLinkSet(loader, load);
-                loader.loads.push(load);
+
+                loader.Loads.push(load);
                 var result = callInternalSlot("Call", resolve, null, [linkSet.done]);
                 if (step === "locate") {
                     ProceedToLocate(loader, load);
@@ -14512,7 +14509,7 @@ define("lib/api", function (require, exports, module) {
                     ProceedToFetch(loader, load, addressPromise);
                 } else {
                     Assert(step === "translate", "step has to be translate");
-                    load.Address = address;
+                    load.Address = state.ModuleAddress;
                     var sourcePromise = PromiseOf(source);
                     ProceedToTranslate(loader, load, sourcePromise);
                 }
@@ -14576,8 +14573,9 @@ define("lib/api", function (require, exports, module) {
 
         // 27.1.
         function CreateLinkSet(loader, startingLoad) {
+            debug2("createlinkset")
             if (Type(loader) !== "object") return withError("Type", "CreateLinkSet: loader has to be an object");
-            if (!hasInternalSlot("Loader", "Load")) return withError("Type", "CreateLinkSet: loader is missing internal properties");
+            if (!hasInternalSlot(loader, "Load")) return withError("Type", "CreateLinkSet: loader is missing internal properties");
             var promiseCapability = PromiseBuiltinCapability();
             if (isAbrupt(promiseCapability = ifAbrupt(promiseCapability))) return promiseCapability;
             var linkSet = LinkSet(loader, loads, promiseCapability.Promise, promiseCapability.Resolve, promiseCapability.Reject);
@@ -14587,6 +14585,7 @@ define("lib/api", function (require, exports, module) {
 
         // 27.1.
         function AddLoadToLinkSet(linkSet, load) {
+            debug2("add load to linkset");
             Assert(load.Status === "loading" || load.Status === "loaded", "load.Status is either loading or loaded.");
             var loader = linkSet.Loader;
             if (linkSet.indexOf(load) === -1) {     // INDEX-OF (Das ist dieser O(n) den fast jeder bedenkenlos und viel zu oft nimmt)
@@ -14609,8 +14608,9 @@ define("lib/api", function (require, exports, module) {
 
         // 27.1.
         function UpdateLinkSetOnLoad(linkSet, load) {
+            debug2("updatelinksetonload")
             var loads = linkSet.Loads;
-            Assert(loads.indexOf(loads) > -1, "linkset.loads has to contain load");
+            Assert(loads.indexOf(loads) > -1, "linkset.Loads has to contain load");
             Assert(load.Status === "loaded" || load.Status === "linked", "load.Status must be one of loaded or linked");
             for (var i = 0, j = loads.length; i < j; i++) {
                 var load = loads[i];
@@ -14621,7 +14621,7 @@ define("lib/api", function (require, exports, module) {
             if (isAbrupt(status)) {
                 return LinkSetFailed(linkSet, status.value);
             }
-            Assert(linkSet.Loads.length === 0, "linkset.loads has to be empty here");
+            Assert(linkSet.Loads.length === 0, "linkset.Loads has to be empty here");
             var result = callInternalSlot("Call", linkset.Resolve, undefined, [startingLoad]);
             Assert(!isAbrupt(result), "linkSet.resolve had to terminate normally");
             return result;
@@ -14629,6 +14629,7 @@ define("lib/api", function (require, exports, module) {
 
         // 27.1.
         function LinkSetFailed(linkSet, exc) {
+            debug2("linksetfailed")
             var loader = linkSet.Loader;
             var loads = linkSet.Loads; 
             for (var i = 0, j = loads.length; i < j; i++) {
@@ -14647,6 +14648,7 @@ define("lib/api", function (require, exports, module) {
 
         // 27.1.    USING EXPENSIVE SPLICES to EMPTY the array (and .indexOf Arrays )
         function FinishLoad(loader, load) {
+            debug2("finishload")
             var name = load.Name;
             if (name !== undefined) {
                 Assert(!hasRecordInList(loader.Modules, "Key", load.Name), "there may be no duplicate records in loader.Modules")
@@ -14704,8 +14706,10 @@ dependencygrouptransitions of kind load1.Kind.
         // 29.1.
 
 
-        // This one has the worst explaining for me, coz i dont see the forest by all these trees ;-)
+
         function LinkageGroups(start) {
+            Assert(Array.isArray(start), "start has to be a list of LinkSet Records");
+            debug2("linkage groups starts")
             var G = start.Loads;
             var kind;
             for (var i = 0, j = G.length; i < j; i++) {
@@ -14722,8 +14726,7 @@ dependencygrouptransitions of kind load1.Kind.
                 n = max(n, load.UnlinkedDependencies.length);
             }
 
-                // Still figuring out how to get the GroupIndex
-                            // and GroupCount together.
+                
             var declarativeGroupCount = n;
             var declarativeGroups = [];
             var dynamicGroupCount = 0;
@@ -14740,7 +14743,6 @@ dependencygrouptransitions of kind load1.Kind.
             } else {
                 var groups = interleaveLists(declarativeGroups, dynamicGroups);
             }
-
             return groups;
 
         }
@@ -14853,7 +14855,8 @@ dependencygrouptransitions of kind load1.Kind.
 
         // 28.1.
         function ResolveExports(M) {
-            var exportDefinitions = getInternalSlot("M", "ExportDefinitions");
+            debug2("resolve exports");
+            var exportDefinitions = getInternalSlot(M, "ExportDefinitions");
             for (var i = 0, j = exportDefinitions.length; i < j; i++) {
                 var def = exportDefinitions[i];
                 ResolveExport(M, def.exportName, []);
@@ -14862,6 +14865,7 @@ dependencygrouptransitions of kind load1.Kind.
 
         // 29.1
         function ResolveExport(M, exportName, visited) {
+            debug2("resolve export");
             var exports = getInternalSlot(M,"Exports");
             var exported;
             if (exported=getRecordInList(exports, "ExportName", exportName)) {
@@ -15055,12 +15059,11 @@ dependencygrouptransitions of kind load1.Kind.
 
 
 
-
-
         // remaining 
 
 
         function IterableToList(iterable) {
+            debug2("iterable2list");
             //var A = ArrayCreate();
             var A = [];
             var next, status;
@@ -15075,12 +15078,14 @@ dependencygrouptransitions of kind load1.Kind.
         // Seite 21 von 43
 
         function GetOption(options, name) {
+            debug2("get options")
             if (options == undefined) return undefined;
             if (Type(options) !== "object") return withError("Type", "options is not an object");
             return Get(options, name);
         }
 
         function OrdinaryModule() {
+            debug2("ordinarymodule");
             var mod = ObjectCreate(null, {
                 "Environment": undefined,
                 "Exports": undefined,
@@ -15130,10 +15135,10 @@ dependencygrouptransitions of kind load1.Kind.
             var realm;
             if (realmObject === undefined) realm = getRealm();
             else {
-                if ((Type(realmObject) !== "object") || !hasInternalSlot(realmObject, "RealmRecord")) {
+                if ((Type(realmObject) !== "object") || !hasInternalSlot(realmObject, "Realm")) {
                     return withError("Type", "realmObject has to be an object and to have a [[RealmRecord]] internal slot");
                 }
-                var realm = getInternalSlot(realmObject, "RealmRecord");
+                var realm = getInternalSlot(realmObject, "Realm");
                 if (realm === undefined) return withError("Type", "[[RealmRecord]] of a realmObject must not be undefined here.")
             }
 
@@ -15231,6 +15236,7 @@ dependencygrouptransitions of kind load1.Kind.
         };
         // 31.1.
         var LoaderPrototype_define = function (thisArg, argList) {
+            debug2("loaderprotodefine")
             var name = argList[0];
             var source =argList[1];
             var options = argList[2];
@@ -15243,7 +15249,7 @@ dependencygrouptransitions of kind load1.Kind.
             if (isAbrupt(address = ifAbrupt(address))) return address;
             var metadata = GetOption(options, "metadata");
             if (isAbrupt(metadata = ifAbrupt(metadata))) return metadata;
-            if (metadat === undefined) metadata = ObjectCreate();
+            if (metadata === undefined) metadata = ObjectCreate();
             var p = PromiseOfStartLoadPartWayThrough("translate", loaderRecord, name, metadata, source, address);
             if (isAbrupt(p = ifAbrupt(p))) return p;
             var G = ReturnUndefined();
@@ -15253,6 +15259,7 @@ dependencygrouptransitions of kind load1.Kind.
 
         // 31.1.
         var LoaderPrototype_load = function (thisArg, argList) {
+            debug2("loaderprotoload")
             var name = argList[0];
             var options = argList[1];
             var loader = thisLoader(thisArg);
@@ -15267,6 +15274,7 @@ dependencygrouptransitions of kind load1.Kind.
 
         // 31.1.
         var LoaderPrototype_module = function (thisArg, argList) {
+            debug2("loaderprotomodule")
             var source = argList[0];
             var options = argList[1];
             var loader = thisLoader(thisArg);
@@ -15288,12 +15296,13 @@ dependencygrouptransitions of kind load1.Kind.
 
         // 31.1.
         var LoaderPrototype_import = function (thisArg, argList) {
+            debug2("loaderprototypeimport")
             var name = argList[0];
             var options = argList[1];
             var loader = thisLoader(thisArg);
             if (isAbrupt(loader = ifAbrupt(loader))) return loader;
             var loaderRecord = getInternalSlot(loader, "LoaderRecord");
-            var p = LoadModule(loaderRecord, name, option);
+            var p = LoadModule(loaderRecord, name, options);
             if (isAbrupt(p = ifAbrupt(p))) return p;
             var F = EvaluateLoadedModule();
             setInternalSlot(F, "Loader", loaderRecord)
@@ -15303,6 +15312,7 @@ dependencygrouptransitions of kind load1.Kind.
 
         // 31.1.
         var LoaderPrototype_eval = function (thisArg, argList) {
+            debug2("loaderprototypeeval")
             var source = argList[0];
             var loader = thisLoader(thisArg);
             if (isAbrupt(loader = ifAbrupt(loader))) return loader;
@@ -15312,6 +15322,7 @@ dependencygrouptransitions of kind load1.Kind.
 
         // 31.1.
         var LoaderPrototype_get = function (thisArg, argList) {
+            debug2("loaderprototypeget")
             var loader = thisLoader(thisArg);
             if (isAbrupt(loader = ifAbrupt(loader))) return loader;
             var name = ToString(argList[0]);
@@ -15331,6 +15342,7 @@ dependencygrouptransitions of kind load1.Kind.
         };
         // 31.1.
         var LoaderPrototype_has = function (thisArg, argList) {
+            debug2("loaderprototypehas")
             var loader = thisLoader(thisArg);
             if (isAbrupt(loader = ifAbrupt(loader))) return loader;
             var name = ToString(argList[0]);
@@ -15348,6 +15360,7 @@ dependencygrouptransitions of kind load1.Kind.
         };
         // 31.1.
         var LoaderPrototype_set = function (thisArg, argList) {
+            debug2("loaderprototypeset")
             var name = argList[0];
             var module = argList[1];
             var loader = thisLoader(thisArg);
@@ -20581,6 +20594,7 @@ dependencygrouptransitions of kind load1.Kind.
         // createIntrinsics has to become the DefineProperty rows only.
 
     function PromiseNew (executor) {
+        debug2("promisenew")
         var promise = AllocatePromise(getIntrinsic("%Promise%"));
         return InitializePromise(promise, executor);
     }
@@ -20591,7 +20605,7 @@ dependencygrouptransitions of kind load1.Kind.
     }
     
     function PromiseOf(value) {
-        var capability = PromiseNewCapability();
+        var capability = NewPromiseCapability();
         if (isAbrupt(capability = ifAbrupt(capability))) return capability;
         var resolveResult = callInternalSlot("Call", capability.Resolve, undefined, [value]);
         if (isAbrupt(resolveResult = ifAbrupt(resolveResult))) return resolveResult;
@@ -20599,12 +20613,9 @@ dependencygrouptransitions of kind load1.Kind.
     }
 
     function PromiseAll(promiseList) {
-
     }
-
     function PromiseCatch(promise, rejectedAction) {
     }
-
     function PromiseThen(promise, resolvedAction, rejectedAction) {
     }
 
@@ -20701,6 +20712,7 @@ dependencygrouptransitions of kind load1.Kind.
     }
 
     function NewPromiseCapability(C) {
+        debug2("newpromisecap")
         if (!IsConstructor(C)) return withError("Type", "C is no constructor");
         // Assertion Step 2 missing 25.4.3.1
         var promise = CreateFromConstructor(C);
@@ -20742,6 +20754,7 @@ dependencygrouptransitions of kind load1.Kind.
     }
 
     function InitializePromise(promise, executor) {
+        debug2("initializePromise: start");
         Assert(hasInternalSlot(promise, "PromiseStatus") && (getInternalSlot(promise, "PromiseStatus") === undefined), 
             "InitializePromise: PromiseStatus doesnt exist or isnt undefined");
         Assert(IsCallable(executor), "executor has to be callable");
@@ -20759,7 +20772,8 @@ dependencygrouptransitions of kind load1.Kind.
     }
 
         function AllocatePromise(constructor) {
-            var obj = CreateFromConstructor(constructor, "%PromisePrototype%", {
+            debug2("allocatePromise")
+            var obj = OrdinaryCreateFromConstructor(constructor, "%PromisePrototype%", {
                 "PromiseStatus": undefined, 
                 "PromiseConstructor": constructor,   
                 "PromiseResult": undefined,    
@@ -23687,6 +23701,33 @@ define("lib/runtime", ["lib/parser", "lib/api", "lib/slower-static-semantics"], 
         return exprRef;
     }
 
+
+
+    function EvaluateModuleBody(M) {
+        "use strict";
+        var exprRef, exprValue;
+        var node;
+        var code = getCode(M, "body");
+
+    
+    
+        for (var i = 0, j = code.length; i < j; i++) {
+            if ((node = code[i]) /*&& !SkipDecl(node)*/) {
+                tellExecutionContext(node, i);
+                exprRef = Evaluate(node);
+
+                if (isAbrupt(exprRef)) {
+                    if (exprRef.type === "return") {
+                        return NormalCompletion(exprRef.value);
+                    } else return exprRef;
+                }
+            }
+        }
+        return exprRef;
+    }
+
+
+
     /******************************************************************************************************************************************************************/
     evaluation.GeneratorExpression = GeneratorDeclaration;
     evaluation.GeneratorDeclaration = GeneratorDeclaration;
@@ -25950,7 +25991,7 @@ define("lib/runtime", ["lib/parser", "lib/api", "lib/slower-static-semantics"], 
 
 
     function ModuleDeclaration(node) {
-        
+        var body = getCode(node, "body");
         var oldContext = getContext();
         var initContext = ExecutionContext(getLexEnv(), getRealm());
         var env = NewDeclarativeEnvironment(getLexEnv());
@@ -25958,8 +25999,10 @@ define("lib/runtime", ["lib/parser", "lib/api", "lib/slower-static-semantics"], 
         var status = InstantiateModuleDeclaration(node, env);
         if (isAbrupt(status)) return status;
 
-        return NormalCompletion(empty);
-    
+        var result = EvaluateModuleBody(node);
+        if (isAbrupt(result)) return result;
+
+        return NormalCompletion(undefined);
     }
     evaluation.ImportStatement = ImportStatement;
     evaluation.ExportStatement = ExportStatement;
@@ -27732,9 +27775,10 @@ define("lib/syntaxjs-shell", function (require, exports) {
         evaluate = function evaluate(code, continuation) {
                 var val;
                 // uncomment to debug; then comment out the try block;
-              /*     val = syntaxjs.toValue(code, true);
+                   val = syntaxjs.toValue(code, true);
                    console.log(val);
-                    if (continuation) setTimeout(continuation, 0); */
+                    if (continuation) setTimeout(continuation, 0); 
+                    /*
                 try {
                     val = syntaxjs.toValue(code, true);
                 } catch (ex) {
@@ -27743,6 +27787,7 @@ define("lib/syntaxjs-shell", function (require, exports) {
                     console.log(val);
                     if (continuation) setTimeout(continuation, 0);
                 }
+                */
                 
         };
 

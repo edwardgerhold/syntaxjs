@@ -1,5 +1,6 @@
-module "Unberechenbar" {
-
-    import x from "Wunderbar";
-
+module "b" {
+    let y;
+    import x from "a";
+    y = x;
+    export y;
 }

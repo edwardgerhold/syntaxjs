@@ -1,5 +1,4 @@
-module "Wunderbar" {
-
-    export let x = 10;
-
+module "a" {
+    let x = 10;
+    export x;
 }

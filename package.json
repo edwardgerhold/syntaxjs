@@ -2,7 +2,7 @@
 
   "name": "syntaxjs",
 
-  "description": "ugly javascript syntaxhighlighter and buggy interpreter",
+  "description": "ugly javascript syntaxhighlighter and buggy 1o1 es6 interpreter",
 
   "version": "0.0.1",
 
@@ -22,7 +22,8 @@
   "keywords": [
     "parser",
     "highlighter",
-    "interpreter"
+    "interpreter",
+    "harmony"
   ],
 
   "main": "syntax0.js"
