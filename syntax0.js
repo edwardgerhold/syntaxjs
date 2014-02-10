@@ -6475,9 +6475,9 @@ var BoundNames = require("lib/slower-static-semantics").BoundNames;
         list.type = "StatementList";
         list.switch = true;
         var s;
+            debug("swstmtlist():");
         do {
             if (i >= j) break;
-            debug("swstmtlist():");
             s = this.Statement();
             list.push(s);
         } while (!FinishSwitchStatementList[v]);
@@ -6488,9 +6488,9 @@ var BoundNames = require("lib/slower-static-semantics").BoundNames;
         var list = [];
         list.type = "StatementList";
         var s;
+            debug("stmtlist():");
         do {
             if (i >= j) break;
-            debug("stmtlist():");
             s = this.Statement();
             list.push(s);
         } while (!FinishStatementList[v]);
@@ -20970,6 +20970,7 @@ dependencygrouptransitions of kind load1.Kind.
             return OrdinaryConstruct(F, argList);
         });
 
+        
         setInternalSlot(ArrayBufferConstructor, "Prototype", FunctionPrototype);
         DefineOwnProperty(ArrayBufferConstructor, "prototype", {
             value: ArrayBufferPrototype,
@@ -20989,7 +20990,6 @@ dependencygrouptransitions of kind load1.Kind.
             enumerable: false,
             configurable: false
         });
-
         DefineOwnProperty(ArrayBufferConstructor, $$create, {
             value: CreateBuiltinFunction(realm, function (thisArg, argList) {
                 var F = thisArg;
@@ -20999,23 +20999,19 @@ dependencygrouptransitions of kind load1.Kind.
             enumerable: false,
             configurable: false
         });
-
         DefineOwnProperty(ArrayBufferPrototype, "constructor", {
             value: ArrayBufferConstructor,
             writable: false,
             enumerable: false,
             configurable: false
         });
-
         DefineOwnProperty(ArrayBufferPrototype, $$toStringTag, {
             value: "ArrayBuffer",
             writable: false,
             enumerable: false,
             configurable: false
         });
-
-        setInternalSlot(ArrayBufferPrototype, "Prototype", ObjectPrototype);
-
+        setInternalSlot(ArrayBufferPrototype, "Prototype", ObjectPrototype)
         DefineOwnProperty(ArrayBufferPrototype, "byteLength", {
             get: CreateBuiltinFunction(realm, function (thisArg, argList) {
                 var O = thisArg;
@@ -21028,7 +21024,6 @@ dependencygrouptransitions of kind load1.Kind.
             enumerable: false,
             configurable: false
         });
-
         DefineOwnProperty(ArrayBufferPrototype, "slice", {
             value: CreateBuiltinFunction(realm, function (thisArg, argList) {
                 var start = argList[0];
@@ -21043,67 +21038,245 @@ dependencygrouptransitions of kind load1.Kind.
         // DataView
         // ===========================================================================================================
 
-        setInternalSlot(DataViewConstructor, "Call", function (thisArg, argList) {
+        
 
-        });
+        var DataViewConstructor_Call= function (thisArg, argList) {
+            var O = thisArg;
+            var buffer = argList[0];
+            var byteOffset = argList[1];
+            var byteLength = argList[2];
+            if (byteOffset === undefined) byteOffset = 0;
+            if (Type(O) !== "object" || !hasInternalSlot(O, "DataView")) return withError("Type", "DataView object expected")
+            Assert(hasInternalSlot(O, "ViewedArrayBuffer"), "O has to have a ViewedArrayBuffer slot.");
+            var viewedArrayBuffer = getInternalSlot(O, "ViewedArrayBuffer");
+            if (viewedArrayBuffer !== undefined) return withError("Type", "ViewedArrayBuffer of DataView has to be undefined.");
+            if (Type(buffer) !== "object") return withError("Type", "buffer has to be an arraybuffer object");
+            var arrayBufferData;
+            if (!hasInternalSlot(buffer, "ArrayBufferData")) return withError("Type", "In DataView(buffer), buffer has to have ArrayBufferData slot");
+            arrayBufferData = getInternalSlot(buffer, "ArrayBufferData");
+            if (arrayBufferData === undefined) return withError("Type", "arrayBufferData of buffer may not be undefined"); 
+            var numberOffset = ToNumber(byteOffset);
+            var offset = ToInteger(numberOffset);
+            if (isAbrupt(offset=ifAbrupt(offset))) return offset;
+            if (numberOffset !== offset || offset < 0) return withError("Range", "numberOffset is not equal to offset or is less than 0.")
+            var byteBufferLength = getInternalSlot(buffer, "ArrayBufferByteLength");
+            if (offset > byteBufferLength) return withError("Range", "offset > byteBufferLength");
+            if (byteLength === undefined) {
+                var viewByteLength = byteBufferLength - offset;
+            } else {
+                var numberLength = ToNumber(byteLength);
+                var viewLength = ToInteger(numberLength);
+                if (isAbrupt(viewLength=ifAbrupt(viewLength))) return viewLength;
+                if ((numberLength != viewLength) || viewLength < 0) return withError("Range","numberLength != viewLength or viewLength < 0");
+                var viewByteLength = viewLength;
+                if ((offset+viewByteLength) > byteBufferLength) return withError("Range","offset + viewByteLength > byteBufferLength");
+            }
+            if (getInternalSlot(O, "ViewedArrayBuffer") !== undefined) return withError("Type", "ViewedArrayBuffer of O has to be undefined here");
+            setInternalSlot(O, "ViewedArrayBuffer", buffer);
+            setInternalSlot(O, "ByteLength", viewByteLength);
+            setInternalSlot(O, "ByteOffset", offset);
+            return NormalCompletion(O);
+        };
+        
+        var DataViewConstructor_Construct = function (thisArg, argList) {
+            return OrdinaryConstruct(this, argList);
+        };
+        
+        var DataViewConstructor_$$create = function (thisArg, argList) {
+            var F = thisArg;
+            var obj = OrdinaryCreateFromConstructor(F, "%DataViewPrototype%", {
+                "DataView": undefined,
+                "ViewedArrayBuffer": undefined,
+                "ByteLength": undefined,
+                "ByteOffset": undefined
+            });
+            setInternalSlot(obj, "DataView", true);
+            return obj;
+        };
 
-        setInternalSlot(DataViewConstructor, "Contruct", function (thisArg, argList) {
+        var DataViewPrototype_get_buffer = function (thisArg, argList) {
+            var O = thisArg;
+            if (Type(O) !== "object") return withError("Type", "O is not an object");
+            if (!hasInternalSlot(O, "ViewedArrayBuffer")) return withError("Type", "O has no ViewedArrayBuffer slot");
+            var buffer = getInternalSlot(O, "ViewedArrayBuffer");
+            if (buffer === undefined) return withError("Type", "buffer is undefined but must not");
+            return NormalCompletion(buffer);
+        };
 
-        });
+        var DataViewPrototype_get_byteLength = function (thisArg, argList) {
+            var O = thisArg;
+            if (Type(O) !== "object") return withError("Type", "O is not an object");
+            if (!hasInternalSlot(O, "ViewedArrayBuffer")) return withError("Type", "O has no ViewedArrayBuffer property");
+            var buffer = getInternalSlot(O, "ViewedArrayBuffer");
+            if (buffer === undefined) return withError("Type", "buffer is undefined");
+            var size = getInternalSlot(O, "ByteLength");
+            return NormalCompletion(size);
+        };
 
-        setInternalSlot(DataViewConstructor, "Prototype", DataViewPrototype);
+        var DataViewPrototype_get_byteOffset = function (thisArg, argList) {
+            var O = thisArg;
+            if (Type(O) !== "object") return withError("Type", "O is not an object");
+            if (!hasInternalSlot(O, "ViewedArrayBuffer")) return withError("Type", "O has no ViewedArrayBuffer property");
+            var buffer = getInternalSlot(O, "ViewedArrayBuffer");
+            if (buffer === undefined) return withError("Type", "buffer is undefined");
+            var offset = getInternalSlot(O, "ByteOffset");
+            return NormalCompletion(offset);
+        };
+        
+        
+        var DataViewPrototype_getFloat32 = function (thisArg, argList) {
+                var v = thisArg;
+                var byteOffset = argList[0];
+                var littleEndian = argList[1];
+                if (littleEndian == undefined) littleEndian = false;
+                return GetViewValue(v, byteOffset, littleEndian, "Float32");
+        };
+        
+        var DataViewPrototype_getFloat64 = function (thisArg, argList) {
+                var v = thisArg;
+                var byteOffset = argList[0];
+                var littleEndian = argList[1];
+                if (littleEndian == undefined) littleEndian = false;
+                return GetViewValue(v, byteOffset, littleEndian, "Float64");
+        };
 
-        DefineOwnProperty(DataViewConstructor, $$create, {
-            value: CreateBuiltinFunction(realm, function (thisArg, argList) {
+        var DataViewPrototype_getInt8 = function (thisArg, argList) {
+            var byteOffset = argList[0];
+            var v = thisArg;
+            return GetViewValue(v, byteOffset, undefined, "Int8");
+        };
 
-            }),
-            writable: false,
-            enumerable: false,
-            configurable: false
-        });
+        var DataViewPrototype_getInt16 = function (thisArg, argList) {
+                var v = thisArg;
+                var byteOffset = argList[0];
+                var littleEndian = argList[1];
+                if (littleEndian == undefined) littleEndian = false;
+                return GetViewValue(v, byteOffset, littleEndian, "Int16");
+        };
 
-        DefineOwnProperty(DataViewPrototype, $$toStringTag, {
-            value: "DataView",
-            writable: false,
-            enumerable: false,
-            configurable: false
-        });
 
-        DefineOwnProperty(DataViewPrototype, "readInt8", {
-            value: CreateBuiltinFunction(realm, function (thisArg, argList) {
+        var DataViewPrototype_getInt32 = function (thisArg, argList) {
+                var v = thisArg;
+                var byteOffset = argList[0];
+                var littleEndian = argList[1];
+                if (littleEndian == undefined) littleEndian = false;
+                return GetViewValue(v, byteOffset, littleEndian, "Int32");
+        };
 
-            }),
-            writable: true,
-            enumerable: false,
-            configurable: true
-        });
 
-        DefineOwnProperty(DataViewPrototype, "readInt16", {
-            value: CreateBuiltinFunction(realm, function (thisArg, argList) {
+        var DataViewPrototype_getUint8 = function (thisArg, argList) {
+            var byteOffset = argList[0];
+            var v = thisArg;
+            return GetViewValue(v, byteOffset, undefined, "Uint8");
+        };
 
-            }),
-            writable: true,
-            enumerable: false,
-            configurable: true
-        });
+        var DataViewPrototype_getUint16 = function (thisArg, argList) {
+                var v = thisArg;
+                var byteOffset = argList[0];
+                var littleEndian = argList[1];
+                if (littleEndian == undefined) littleEndian = false;
+                return GetViewValue(v, byteOffset, littleEndian, "Uint16");
+        };
+        var DataViewPrototype_getUint32 = function (thisArg, argList) {
+                var v = thisArg;
+                var byteOffset = argList[0];
+                var littleEndian = argList[1];
+                if (littleEndian == undefined) littleEndian = false;
+                return GetViewValue(v, byteOffset, littleEndian, "Uint32");
+        };
 
-        DefineOwnProperty(DataViewPrototype, "writeInt8", {
-            value: CreateBuiltinFunction(realm, function (thisArg, argList) {
+        var DataViewPrototype_setFloat32 = function (thisArg, argList) {
+                var v = thisArg;
+                var byteOffset = argList[0];
+                var value = argList[1];
+                var littleEndian = argList[2];
+                if (littleEndian == undefined) littleEndian = false;
+                return SetViewValue(v, byteOffset, littleEndian, "Float32", value);
+        };
 
-            }),
-            writable: true,
-            enumerable: false,
-            configurable: true
-        });
+        var DataViewPrototype_setFloat64 = function (thisArg, argList) {
+                var v = thisArg;
+                var byteOffset = argList[0];
+                var value = argList[1];
+                var littleEndian = argList[2];
+                if (littleEndian == undefined) littleEndian = false;
+                return SetViewValue(v, byteOffset, littleEndian, "Float64", value);
+        };
+                
+        var DataViewPrototype_setInt8 = function (thisArg, argList) {
+                var v = thisArg;
+                var byteOffset = argList[0];
+                var value = argList[1];
+                return SetViewValue(v, byteOffset, undefined, "Int8", value);
+        };
+        var DataViewPrototype_setInt16 = function (thisArg, argList) {
+                var v = thisArg;
+                var byteOffset = argList[0];
+                var value = argList[1];
+                var littleEndian = argList[2];
+                if (littleEndian == undefined) littleEndian = false;
+                return SetViewValue(v, byteOffset, littleEndian, "Int16", value);
+        };
+        
+        var DataViewPrototype_setInt32 = function (thisArg, argList) {
+                var v = thisArg;
+                var byteOffset = argList[0];
+                var value = argList[1];
+                var littleEndian = argList[2];
+                if (littleEndian == undefined) littleEndian = false;
+                return SetViewValue(v, byteOffset, littleEndian, "Int32", value);
+        };
 
-        DefineOwnProperty(DataViewPrototype, "writeInt16", {
-            value: CreateBuiltinFunction(realm, function (thisArg, argList) {
+        var DataViewPrototype_setUint8 = function (thisArg, argList) {
+                var v = thisArg;
+                var byteOffset = argList[0];
+                var value = argList[1];
+                return SetViewValue(v, byteOffset, undefined, "Uint8", value);
+        };
+        var DataViewPrototype_setUint16 = function (thisArg, argList) {
+                var v = thisArg;
+                var byteOffset = argList[0];
+                var value = argList[1];
+                var littleEndian = argList[2];
+                if (littleEndian == undefined) littleEndian = false;
+                return SetViewValue(v, byteOffset, littleEndian, "Uint16", value);
+        };
+        
+        var DataViewPrototype_setUint32 = function (thisArg, argList) {
+                var v = thisArg;
+                var byteOffset = argList[0];
+                var value = argList[1];
+                var littleEndian = argList[2];
+                if (littleEndian == undefined) littleEndian = false;
+                return SetViewValue(v, byteOffset, littleEndian, "Uint32", value);
+        };
+        
 
-            }),
-            writable: true,
-            enumerable: false,
-            configurable: true
-        });
+
+        MakeConstructor(DataViewConstructor, true, DataViewPrototype);
+        setInternalSlot(DataViewConstructor, "Call", DataViewConstructor_Call);
+        setInternalSlot(DataViewConstructor, "Construct", DataViewConstructor_Construct);
+        LazyDefineBuiltinFunction(DataViewConstructor, $$create, 1, DataViewConstructor_$$create);
+        LazyDefineAccessor(DataViewPrototype, "buffer", CreateBuiltinFunction(realm, DataViewPrototype_get_buffer, 0, "get buffer"));
+        LazyDefineAccessor(DataViewPrototype, "byteLength", CreateBuiltinFunction(realm, DataViewPrototype_get_byteLength, 0, "get byteLength"));
+        LazyDefineAccessor(DataViewPrototype, "byteOffset", CreateBuiltinFunction(realm, DataViewPrototype_get_byteOffset, 0, "get byteOffset"));
+        LazyDefineBuiltinFunction(DataViewPrototype, "getFloat32", 1, DataViewPrototype_getFloat32);
+        LazyDefineBuiltinFunction(DataViewPrototype, "getFloat64", 1, DataViewPrototype_getFloat64);
+        LazyDefineBuiltinFunction(DataViewPrototype, "getInt8", 1, DataViewPrototype_getInt8);
+        LazyDefineBuiltinFunction(DataViewPrototype, "getInt16", 1, DataViewPrototype_getInt16);
+        LazyDefineBuiltinFunction(DataViewPrototype, "getInt32", 1, DataViewPrototype_getInt32);
+        LazyDefineBuiltinFunction(DataViewPrototype, "getUint8", 1, DataViewPrototype_getUint8);
+        LazyDefineBuiltinFunction(DataViewPrototype, "getUint16", 1, DataViewPrototype_getUint16);
+        LazyDefineBuiltinFunction(DataViewPrototype, "getUint32", 1, DataViewPrototype_getUint32);
+        LazyDefineBuiltinFunction(DataViewPrototype, "setFloat32", 2, DataViewPrototype_setFloat32);
+        LazyDefineBuiltinFunction(DataViewPrototype, "setFloat64", 2, DataViewPrototype_setFloat64);
+        LazyDefineBuiltinFunction(DataViewPrototype, "setInt8", 2, DataViewPrototype_setInt8);
+        LazyDefineBuiltinFunction(DataViewPrototype, "setInt16", 2, DataViewPrototype_setInt16);
+        LazyDefineBuiltinFunction(DataViewPrototype, "setInt32", 2, DataViewPrototype_setInt32);
+        LazyDefineBuiltinFunction(DataViewPrototype, "setUint8", 2, DataViewPrototype_setUint8);
+        LazyDefineBuiltinFunction(DataViewPrototype, "setUint16", 2, DataViewPrototype_setUint16);
+        LazyDefineBuiltinFunction(DataViewPrototype, "setUint32", 2, DataViewPrototype_setUint32);
+        LazyDefineBuiltinConstant(DataViewConstructor, $$toStringTag, "DataView");
 
         // ===========================================================================================================
         // TypedArray
@@ -21176,18 +21349,18 @@ dependencygrouptransitions of kind load1.Kind.
                 if (isAbrupt(offset = ifAbrupt(offset))) return offset;
                 if (offset < 0) return withError("Range", "offset is smaller 0");
                 if ((offset % elementSize) !== 0) return withError("Range", "offset mod elementSize is not 0");
-                var bufferByteLength = getInternalSlot(buffer, "ArrayBufferByteLength");
-                if (offset + elementSize >= bufferByteLength) return withError("Range", "offset + elementSize is >= bufferByteLength");
+                var byteBufferLength = getInternalSlot(buffer, "ArrayBufferByteLength");
+                if (offset + elementSize >= byteBufferLength) return withError("Range", "offset + elementSize is >= byteBufferLength");
                 var newByteLength;
                 if (length === undefined) {
-                    if (bufferByteLength % elementSize !== 0) return withError("Range", "bufferByteLength mod elementSize is not 0");
-                    newByteLength = bufferByteLength + offset;
-                    if (newByteLength < 0) return withError("Range", "newByteLength < 0 underflow when adding offset to bufferByteLength");
+                    if (byteBufferLength % elementSize !== 0) return withError("Range", "byteBufferLength mod elementSize is not 0");
+                    newByteLength = byteBufferLength + offset;
+                    if (newByteLength < 0) return withError("Range", "newByteLength < 0 underflow when adding offset to byteBufferLength");
                 } else {
                     var newLength = ToLength(length);
                     if (isAbrupt(newLength = ifAbrupt(newLength))) return newLength;
                     newByteLength = newLength * elementSize;
-                    if (offset + newByteLength > bufferByteLength) return withError("Range", "offset + newByteLength is larger than bufferByteLength");
+                    if (offset + newByteLength > byteBufferLength) return withError("Range", "offset + newByteLength is larger than byteBufferLength");
                 }
                 if (viewedArrayBuffer !== undefined) return withError("Type", "the [[ViewedArrayBuffer]] of O is not empty");
                 setInternalSlot(O, "ViewedArrayBuffer", buffer);
@@ -22534,8 +22707,6 @@ define("lib/runtime", ["lib/parser", "lib/api", "lib/slower-static-semantics"], 
         if (code)
         return code[field];
     }
-
-
 
     function isCodeType(code, type) {
         return code.type === type;
@@ -27684,7 +27855,7 @@ if (typeof process === "undefined" && typeof window !== "undefined")
                 else config = defaultOptions();        
                 
                 var onload = function (e) {
-                    setTimeout(highlightElements.bind(syntaxjs, config));
+                    setTimeout(function () { highlightElements(config); }, 0);
                 };
                 
                 addEventListener(window, "DOMContentLoaded", onload, false);
@@ -27970,11 +28141,6 @@ define("lib/syntaxjs-worker", function (require, exports, module) {
 //  Exporting the Syntax Object after Importing and Assembling the Components
 // #######################################################################################################################
 
-// This is the App ?
-
-
-
-
 define("lib/syntaxjs", function () {
     "use strict";
     
@@ -28037,14 +28203,11 @@ define("lib/syntaxjs", function () {
     return syntaxerror;
 });
 
-
-// No, This is the App.
-
 var syntaxjs = require("lib/syntaxjs");
 if (syntaxjs.system === "node") {
     if (!module.parent) syntaxjs.nodeShell();
 } else if (syntaxjs.system === "browser") {
-    syntapxjs.startHighlighterOnLoad();
+    syntaxjs.startHighlighterOnLoad();
 } else if (syntaxjs.system === "worker") {
     syntaxjs.subscribeWorker();
 }
