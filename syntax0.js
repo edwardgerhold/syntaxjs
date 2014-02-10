@@ -9105,7 +9105,6 @@ define("lib/api", function (require, exports, module) {
     function HasOwnProperty(O, P) {
         Assert(Type(O) === "object", "HasOwnProperty: first argument has to be an object");
         Assert(IsPropertyKey(P), "HasOwnProperty: second argument has to be a valid property key, got " + P);
-
         var desc = callInternalSlot("GetOwnProperty", O, P);
         if (desc === undefined) return false;
         return true;
@@ -11049,7 +11048,7 @@ define("lib/api", function (require, exports, module) {
 
     function Construct(F, argList) {
         Assert(Type(F) === "object", "essential Construct: F is not an object");
-        var obj = OrdinaryCreateFromConstructor(F);
+        var obj = CreateFromConstructor(F);
         if (isAbrupt(obj = ifAbrupt(obj))) return obj;
         if (obj === undefined) {
             obj = OrdinaryCreateFromConstructor(F, "%ObjectPrototype%");
@@ -11335,6 +11334,33 @@ define("lib/api", function (require, exports, module) {
         if ((P = ifAbrupt(P)) && (isAbrupt(P) || P instanceof SymbolPrimitiveType)) return P;
         return ToString(P);
     }
+
+
+
+
+        function GetOwnPropertyKeys(O, type) {
+            var obj = ToObject(O);
+            if (isAbrupt(obj = ifAbrupt(obj))) return obj;
+            var keys = OwnPropertyKeys(O);
+            if (isAbrupt(keys = ifAbrupt(keys))) return keys;
+            var nameList = [];
+            var gotAllNames = false;
+            var next, nextKey;
+            while (!gotAllNames) {
+                next = IteratorStep(keys);
+                if (isAbrupt(next = ifAbrupt(next))) return next;
+                if (!next) gotAllNames = true;
+                else {
+                    nextKey = IteratorValue(next);
+                    if (isAbrupt(nextKey = ifAbrupt(nextKey))) return nextKey;
+                    if (Type(nextKey) === type)
+                        nameList.push(nextKey);
+                }
+            }
+            return CreateArrayFromList(nameList);
+        }
+
+
 
     // ===========================================================================================================
     // Personal DOM Wrapper (wrap native js into this big bullshit)
@@ -13650,6 +13676,8 @@ define("lib/api", function (require, exports, module) {
     exports.GetPrototypeFromConstructor = GetPrototypeFromConstructor;
     exports.OrdinaryCreateFromConstructor = OrdinaryCreateFromConstructor;
     exports.OrdinaryConstruct = OrdinaryConstruct;
+    exports.Construct = Construct;
+    exports.CreateFromConstructor = CreateFromConstructor;
     exports.MakeConstructor = MakeConstructor;
     exports.CreateEmptyIterator = CreateEmptyIterator;
     exports.ArgumentsExoticObject = ArgumentsExoticObject;
@@ -13744,6 +13772,7 @@ define("lib/api", function (require, exports, module) {
     exports.GetOwnProperty = GetOwnProperty;
     exports.OwnPropertyKeys = OwnPropertyKeys;
     exports.OwnPropertyKeysAsList = OwnPropertyKeysAsList;
+    exports.GetOwnPropertyKeys = GetOwnPropertyKeys;
     exports.MakeListIterator = MakeListIterator;
     exports.DefineOwnPropertyOrThrow = DefineOwnPropertyOrThrow;
     exports.Delete = Delete;
@@ -17790,11 +17819,12 @@ dependencygrouptransitions of kind load1.Kind.
         MakeConstructor(ErrorConstructor, true, ErrorPrototype);
         LazyDefineBuiltinConstant(ErrorConstructor, "prototype", ErrorPrototype);
         LazyDefineBuiltinConstant(ErrorPrototype, "constructor", ErrorConstructor);
-        //SetFunctionName(ErrorConstructor, "Error");
-
+        LazyDefineBuiltinConstant(ErrorPrototype, "name", "Error");
+        
         setInternalSlot(ErrorConstructor, "Call", function (thisArg, argList) {
             var func = ErrorConstructor;
             var message = argList[0];
+            var name = "Error";
             var O = thisArg;
             var isObject = Type(O) === "object";
                 // This is different from the others in the spec
@@ -17822,7 +17852,6 @@ dependencygrouptransitions of kind load1.Kind.
             }
 
             CreateDataProperty(O, "stack", stringifyErrorStack());
-
             setInternalSlot(O, "toString", function () { return "[object Error]"; })
             return O;
         });
@@ -17844,7 +17873,6 @@ dependencygrouptransitions of kind load1.Kind.
             writable: false,
             configurable: false,
             enumerable: false
-
         });
 
         DefineOwnProperty(ErrorPrototype, "toString", {
@@ -17896,7 +17924,7 @@ dependencygrouptransitions of kind load1.Kind.
                     var status = DefineOwnPropertyOrThrow(O, "message", msgDesc);
                     if (isAbrupt(status)) return status;
                 }
-
+                
                 CreateDataProperty(O, "stack", stringifyErrorStack())
 
                 // interne representation
@@ -18613,7 +18641,7 @@ dependencygrouptransitions of kind load1.Kind.
             setInternalSlot(proxy, "Prototype", ProxyPrototype);
             setInternalSlot(proxy, "ProxyTarget", target);
             setInternalSlot(proxy, "ProxyHandler", handler);
-            if (!IsConstructor(target)) setInternalSlot(p, "Construct", undefined);
+            if (!IsConstructor(target)) setInternalSlot(proxy, "Construct", undefined);
             return proxy;
         }
 
@@ -18621,7 +18649,7 @@ dependencygrouptransitions of kind load1.Kind.
 
         var ProxyConstructor_revocable = function revocable(thisArg, argList) {
                 var target = argList[0];
-                var handler = argList[1]
+                var handler = argList[1];
 
                 var revoker = CreateBuiltinFunction(realm, function revoke(thisArg, argList) {
                     var p = getInternalSlot(revoker, "RevokableProxy");
@@ -18638,10 +18666,10 @@ dependencygrouptransitions of kind load1.Kind.
                 var result = ObjectCreate();
                 CreateDataProperty(result, "proxy", proxy);
                 CreateDataProperty(result, "revoke", revoker);
-                return result;
+                return NormalCompletion(result);
         };
 
-        var ProxyConstructor_Call = function Call(thisArg, argList) {
+        var ProxyConstructor_Call = function (thisArg, argList) {
             return withError("Type", "The Proxy Constructor is supposed to throw when called without new.");
         };
 
@@ -19012,8 +19040,8 @@ dependencygrouptransitions of kind load1.Kind.
             }
         ));
 
-        LazyDefineProperty(ObjectConstructor, "freeze", CreateBuiltinFunction(realm, 
-            function (thisArg, argList) {
+        
+        var ObjectConstructor_freeze =function (thisArg, argList) {
                 var O;
                 O = argList[0];
                 if (Type(O) !== "object") return withError("Type", "First argument is object");
@@ -19021,11 +19049,9 @@ dependencygrouptransitions of kind load1.Kind.
                 if (isAbrupt(status = ifAbrupt(status))) return status;
                 if (status === false) return withError("Type", "freeze: can not freeze object");
                 return O;
-            }
-        ));
+            };
 
-        LazyDefineProperty(ObjectConstructor, "getOwnPropertyDescriptor", CreateBuiltinFunction(realm, 
-            function (thisArg, argList) {
+            var ObjectConstructor_getOwnPropertyDescriptor = function (thisArg, argList) {
                 var O = argList[0];
                 var P = argList[1];
                 var obj = ToObject(O);
@@ -19034,35 +19060,15 @@ dependencygrouptransitions of kind load1.Kind.
                 var desc = GetOwnProperty(obj, key);
                 if (isAbrupt(desc = ifAbrupt(desc))) return desc;
                 return FromPropertyDescriptor(desc);
-            }));
-
-        LazyDefineProperty(ObjectConstructor, "getOwnPropertyNames", CreateBuiltinFunction(realm, 
-            function (thisArg, argList) {
+            };
+            var ObjectConstructor_getOwnPropertyNames = function (thisArg, argList) {
                 var O = argList[0];
                 return GetOwnPropertyKeys(O, "string");
-            }));
+            };
 
-        function GetOwnPropertyKeys(O, type) {
-            var obj = ToObject(O);
-            if (isAbrupt(obj = ifAbrupt(obj))) return obj;
-            var keys = OwnPropertyKeys(O);
-            if (isAbrupt(keys = ifAbrupt(keys))) return keys;
-            var nameList = [];
-            var gotAllNames = false;
-            var next, nextKey;
-            while (!gotAllNames) {
-                next = IteratorStep(keys);
-                if (isAbrupt(next = ifAbrupt(next))) return next;
-                if (!next) gotAllNames = true;
-                else {
-                    nextKey = IteratorValue(next);
-                    if (isAbrupt(nextKey = ifAbrupt(nextKey))) return nextKey;
-                    if (Type(nextKey) === type)
-                        nameList.push(nextKey);
-                }
-            }
-            return CreateArrayFromList(nameList);
-        }
+        LazyDefineBuiltinFunction(ObjectConstructor, "getOwnPropertyDescriptor", 2, ObjectConstructor_getOwnPropertyDescriptor);
+        LazyDefineBuiltinFunction(ObjectConstructor, "getOwnPropertyNames", 1, ObjectConstructor_getOwnPropertyNames);
+        LazyDefineBuiltinFunction(ObjectConstructor, "freeze", 1, ObjectConstructor_freeze);
 
         LazyDefineProperty(ObjectConstructor, "getOwnPropertySymbols", CreateBuiltinFunction(realm, 
             function (thisArg, argList) {
@@ -22808,6 +22814,8 @@ define("lib/runtime", ["lib/parser", "lib/api", "lib/slower-static-semantics"], 
     var IsCallable = ecma.IsCallable;
     var IsConstructor = ecma.IsConstructor;
     var OrdinaryConstruct = ecma.OrdinaryConstruct;
+    var Construct = ecma.Construct;
+    var CreateFromConstructor = ecma.CreateFromConstructor;
     var OrdinaryCreateFromConstructor = ecma.OrdinaryCreateFromConstructor;
     var FunctionCreate = ecma.FunctionCreate;
     var FunctionAllocate = ecma.FunctionAllocate;
@@ -22842,6 +22850,7 @@ define("lib/runtime", ["lib/parser", "lib/api", "lib/slower-static-semantics"], 
     var GetIdentifierReference = ecma.GetIdentifierReference;
     var GetThisEnvironment = ecma.GetThisEnvironment;
     var OrdinaryCreateFromConstructor = OrdinaryCreateFromConstructor;
+    var GetOwnProperty = ecma.GetOwnProperty;
     var GetValue = ecma.GetValue;
     var PutValue = ecma.PutValue;
     var SameValue = ecma.SameValue;
@@ -22886,9 +22895,10 @@ define("lib/runtime", ["lib/parser", "lib/api", "lib/slower-static-semantics"], 
     var Set = ecma.Set;
     var DefineOwnProperty = ecma.DefineOwnProperty;
     var DefineOwnPropertyOrThrow = ecma.DefineOwnPropertyOrThrow;
-    var Delete = ecma.Delete;
+    var Delete = ecma.Delete
     var Enumerate = ecma.Enumerate;
     var OwnPropertyKeys = ecma.OwnPropertyKeys;
+    var OwnPropertyKeysAsList = ecma.OwnPropertyKeysAsList;
     var SetPrototypeOf = ecma.SetPrototypeOf;
     var GetPrototypeOf = ecma.GetPrototypeOf;
     var PreventExtensions = ecma.PreventExtensions;
@@ -24059,7 +24069,7 @@ define("lib/runtime", ["lib/parser", "lib/api", "lib/slower-static-semantics"], 
         var argList;
         if (args) argList = ArgumentListEvaluation(args);
         else argList = [];
-        return OrdinaryConstruct(callee, argList);
+        return callInternalSlot("Construct", callee, argList);
     }
 
     evaluation.CallExpression = CallExpression;
@@ -26448,13 +26458,12 @@ define("lib/runtime", ["lib/parser", "lib/api", "lib/slower-static-semantics"], 
     function TransformObjectToJSObject(O) {
 
         var o = {};
-        var dd;
-
         var keys = OwnPropertyKeysAsList(O);
+
         keys.forEach(function (key) {
 
             var desc = GetOwnProperty(O, key);
-
+            var dd;
             if (!(dd=IsDataDescriptor(desc))) {
                 var get = desc.get;
                 var set = desc.set;
@@ -26465,7 +26474,7 @@ define("lib/runtime", ["lib/parser", "lib/api", "lib/slower-static-semantics"], 
                     return TransformObjectToJSObject(result);
                 };
                 newSetter = function (v) {
-                    var result = callInternalSlot("Call", get, O, [v]);
+                    var result = callInternalSlot("Call", set, O, [v]);
                     if (isAbrupt(result = ifAbrupt(result))) throw result;
                     return v;
                 };
@@ -26497,7 +26506,6 @@ define("lib/runtime", ["lib/parser", "lib/api", "lib/slower-static-semantics"], 
                         description: value.Description
                     };
                 } else newValue = value;
-
                 Object.defineProperty(o, key, {
                     value: newValue,
                     writable: desc.writable,
@@ -26718,21 +26726,25 @@ define("lib/runtime", ["lib/parser", "lib/api", "lib/slower-static-semantics"], 
     ExecuteTheCode.ExecuteAsyncTransform = ExecuteAsyncTransform;
 
     function ExecuteAsyncTransform (source) {
-        var p = makePromise(function (resolve, reject) {
+        
+        return makePromise(function (resolve, reject) {
+            ;
             initializeTheRuntime();    
             var result = Evaluate(parse(source));
+            
             if (isAbrupt(result)) {
+            
                 if (result.type === "return") {
-                    resolve(TransformObjectToJSObject(result.value));
+                    resolve(TransformObjectToJSObject(GetValue(result.value)));
                 } else {
-                    reject(TransformObjectToJSObject(result.value));
+                    reject(TransformObjectToJSObject(GetValue(result.value)));
                 }
             } else { 
-                resolve(TransformObjectToJSObject(result.value));
+                resolve(TransformObjectToJSObject(GetValue(result.value)));
             }
-            endRuntime();
+
+            //endRuntime();
         });
-        return p;
     }
 
 
