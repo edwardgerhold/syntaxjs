@@ -16,6 +16,9 @@ With a lot of complexity and hash tables for faster lookups than a linear number
 with possible rounding error at e.g. 0.0000999999999 (0.0001), but not many, 
 which have to be debugged.
 
+5. horner1.js - Converting a decimal nval*=10, nval+=decVals[string[i]], maybe better with += Math.pow(base, k);, maybe not, e.+- are still missign in file 1.
+6. 10to16.js - Converting with the euclidian algorithm by finding and dividing from the highest power of 16 being <= the number.
+
 I noticed, the decimal value has still no exponent conversion. The e is not checked.
 
 ##### Bits
