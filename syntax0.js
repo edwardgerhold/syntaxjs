@@ -14,6 +14,7 @@ function makePromise (resolver) {
     function isPromise (o) {
         return o && typeof o === "object" && (typeof o.then === "function");
     }
+
     function isFunction (o) {
         return typeof o === "function";
     }
@@ -3597,7 +3598,8 @@ define("lib/parser", ["lib/tables", "lib/tokenizer"], function (tables, tokenize
     var withError, ifAbrupt, isAbrupt;
 
     // ==========================================================
-    // O(1) XS Tables, candidate for export into tables module
+    // O(1) XS Tables, for export into tables module
+    // (meanwhile the whole define is "deprecated, coz its too ugly")
     // ==========================================================
 
     /*
@@ -3713,12 +3715,12 @@ define("lib/parser", ["lib/tables", "lib/tokenizer"], function (tables, tokenize
     };
 
     var InOrOfInsOf = Object.create(null);
-    InOrOfInsOf. in = true;
+    InOrOfInsOf.in = true;
     InOrOfInsOf.of = true;
     InOrOfInsOf.instanceof = true;
 
     var InOrOf = Object.create(null);
-    InOrOf. in = true;
+    InOrOf.in = true;
     InOrOf.of = true;
 
     var BindingIdentifiers = {
@@ -3824,7 +3826,7 @@ define("lib/parser", ["lib/tables", "lib/tokenizer"], function (tables, tokenize
     //
     // VERY IMPORTANT
     //
-    var rhs, rhst; // lookahead
+    var lookahead, lookaheadt; // lookahead
     
     var tokens;
     var T = Object.create(null); // current token
@@ -3948,27 +3950,63 @@ define("lib/parser", ["lib/tables", "lib/tokenizer"], function (tables, tokenize
         if (handler) handler();
         return node;
     }
-    
-    EarlyErrors.Program = function () {
+
+    // EarlyErros.Script = i am for re-defining the whole mozilla api for ES6 and making a document with, but i am not informed about
+    // e.g. esprimas extensions of the AST (never seen). 
+
+    EarlyErrors.Program = function (node) {
         /*SyntaxAssert(!staticSemantics.contains("BreakStatement"), "Break is not allowed in the outer script body");
         //if (staticSemantics.contains("BreakStatement")) throw new SyntaxError("Break is not allowed in the outer script body");     
         if (staticSemantics.contains("ContinueStatement")) throw new SyntaxError("Continue is not allowed in the outer script body");
         if (staticSemantics.contains("ReturnStatement")) throw new SyntaxError("Return is not allowed in the outer script body");*/
     };
 
-    EarlyErrors.FunctionDeclaration = function () {
+    EarlyErrors.FunctionDeclaration = function (node) {
         /*if (staticSemantics.contains("BreakStatement")) throw new SyntaxError("Break is not allowed outside of iterations");
         if (staticSemantics.contains("ContinueStatement")) throw new SyntaxError("Continue is not allowed outside of iterations");
         if (staticSemantics.contains("YieldExpression")) throw new SyntaxError("Yield must be an identifier outside of generators or strict mode");
         */
     };
-    EarlyErrors.ModuleDeclaration = function () {
+    EarlyErrors.ModuleDeclaration = function (node) {};
+    EarlyErrors.Statement = function (node) {};
+    EarlyErrors.StatementList = function (node) {};
+    EarlyErrors.ObjectExpression = function (node) {};
+    EarlyErrors.ArrayExpression = function (node) {};
+    EarlyErrors.ArrayComprehension = function (node) {};
+    EarlyErrors.GeneratorComprehension = function (node) {};
+    EarlyErrors.GeneratorDeclaration = function (node) {};
+    EarlyErrors.ForStatement = function (node) {};
+    EarlyErrors.WhileStatement = function (node) {};
+    EarlyErrors.DoWhileStatement = function (node) {};
+    EarlyErrors.IfStatement = function (node) {};
+    EarlyErrors.SwitchStatement = function (node) {};
+    EarlyErrors.VariableDeclaration = function (node) {};
+    EarlyErrors.LexicalDeclaration = function (node) {};
+    EarlyErrors.ClassDeclaration = function (node) {};
+    EarlyErrors.BlockDeclaration = function (node) {};
+    EarlyErrors.Expression = function (node) {};
+    EarlyErrors.ArrowExpression = function (node) {};
+    EarlyErrors.FormalParameterList = function (node) {};
 
-    };
+    function DefaultDuplicateCheck(/* ...lists */) {
+        // O(n) each list.
+        // They should be checked against a memo[id]
+        // already when being read in
+        // Means: This function here will not survive.
+        var dupes = [];
+        for (var i = 0, j = arguments.length; i < j; i++) {
+            var list = arguments[i];
+            for (var k = 0, l = list.length; k < l; k++) {
+                var id = list[i];
+                SyntaxAssert(!memo[id], "duplicate identifier in list: "+id)
+                memo[id] = true;
+            }
+        }
+        // They should be checked against a memo[id]
+        // already when being read in (!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! do this !!!)
 
-    // ############## ### ## #
-    //
-    // ############## ### ## #
+        // reading addLexBinding and addVarBinding in Static Semantics i had already the idea and already wrote SyntaxAssert(!hasLexBinding(name), name + " is a dupe ..") 
+    }
 
 
     var staticSemantics;   
@@ -4002,7 +4040,8 @@ define("lib/parser", ["lib/tables", "lib/tokenizer"], function (tables, tokenize
         var varEnvs = [VarEnv];
         var lexEnvs = [LexEnv];        
         
-        // faster lexNames than the recursive slow-static-semantic function or to complicated with all the arrays?
+        // faster lexNames than the recursive slow-static-semantic i tried to write first (with knowing the cost of its recursion all nodes long but to get it working 
+       //     - didnt know a "symboltable" or to use hashmaps to keep the data on the fly)
         /*
         var lexNames;
         var lexDecls;
@@ -4095,13 +4134,13 @@ define("lib/parser", ["lib/tables", "lib/tokenizer"], function (tables, tokenize
         }
 
         function addLexBinding(name, param) {
-            SyntaxAssert(!hasLexBinding(name), name + "is a duplicate identifier in lexical scope!");
+            SyntaxAssert(!hasLexBinding(name), name + " is a duplicate identifier in lexical scope!");
             LexEnv[name] = param === undefined ? true : param;
         }
 
 
         function addVarBinding(name, param) {
-            SyntaxAssert(!hasVarBinding(name) || !curFunc.strict, name + "is a duplicate identifier in variable scope!");
+            SyntaxAssert(!hasVarBinding(name) || !curFunc.strict, name + " is a duplicate identifier in variable scope!");
             VarEnv[name] = param === undefined ? true : param;
         }
 
@@ -4174,12 +4213,12 @@ define("lib/parser", ["lib/tables", "lib/tokenizer"], function (tables, tokenize
 
         // Needs to be renamed
 
+
     }
 
     // ========================================================================================================
     // debug the parser
     // ========================================================================================================
-
     // parserdebug
     var debugmode = false;
 
@@ -4224,7 +4263,7 @@ define("lib/parser", ["lib/tables", "lib/tokenizer"], function (tables, tokenize
     // ========================================================================================================
 
     function righthand(tokens, i) {
-        var rhs; // = " ";
+        var lookahead; // = " ";
         var b = 0;
         var t;
         ltNext = false;
@@ -4232,12 +4271,12 @@ define("lib/parser", ["lib/tables", "lib/tokenizer"], function (tables, tokenize
             b++;
             t = tokens[i + b];
             if (t === undefined) return undefined;
-            rhs = t.value;
-            if (WhiteSpaces[rhs[0]]) continue;
-            rhst = t.type;
-            if (LineTerminators[rhs]) ltNext = true;
-        } while (WhiteSpaces[rhs[0]]);
-        return rhs;
+            lookahead = t.value;
+            if (WhiteSpaces[lookahead[0]]) continue;
+            lookaheadt = t.type;
+            if (LineTerminators[lookahead]) ltNext = true;
+        } while (WhiteSpaces[lookahead[0]]);
+        return lookahead;
     }
 
     function error(err) {
@@ -4295,7 +4334,7 @@ define("lib/parser", ["lib/tables", "lib/tokenizer"], function (tables, tokenize
         i = -1;
         j = tokens.length;
         T = v = t = undefined;
-        rhs = rhst = undefined;
+        lookahead = lookaheadt = undefined;
     }
 
     // ========================================================================================================
@@ -4308,7 +4347,7 @@ define("lib/parser", ["lib/tables", "lib/tokenizer"], function (tables, tokenize
 
     function scan(C) {
         debug("scan (advance 2 tokens): " + C);
-        if (rhs === C) next();
+        if (lookahead === C) next();
         else syntaxError(C);
         next();
         return C;
@@ -4316,7 +4355,7 @@ define("lib/parser", ["lib/tables", "lib/tokenizer"], function (tables, tokenize
 
     function advance(C) {
         debug("advance (advance 1 token): " + C);
-        if (rhs === C) next();
+        if (lookahead === C) next();
         else syntaxError(C);
     }
 
@@ -4377,7 +4416,7 @@ define("lib/parser", ["lib/tables", "lib/tokenizer"], function (tables, tokenize
                 t = v = undefined;
             }
 
-            rhs = righthand(tokens, i);
+            lookahead = righthand(tokens, i);
 
             return T;
 
@@ -4487,7 +4526,7 @@ define("lib/parser", ["lib/tables", "lib/tokenizer"], function (tables, tokenize
 
         do {
 
-            if (v === "," && rhs == ",") {
+            if (v === "," && lookahead == ",") {
                 el = null;
                 do {
                     el = this.Elision(el);
@@ -4501,7 +4540,7 @@ define("lib/parser", ["lib/tables", "lib/tokenizer"], function (tables, tokenize
             list.push(el);
 
             if (v === ",") {
-                if (rhs !== ",") pass(",");
+                if (lookahead !== ",") pass(",");
                 continue;
             } /*else if (v !== "]") {
                 throwError(new SyntaxError("buggy element list"));
@@ -4518,7 +4557,7 @@ define("lib/parser", ["lib/tables", "lib/tokenizer"], function (tables, tokenize
         if (v === "[") {
             l1 = loc && loc.start;
 
-            if (rhs === "for") return this.ArrayComprehension();
+            if (lookahead === "for") return this.ArrayComprehension();
 
             pass("[");
 
@@ -4580,7 +4619,7 @@ define("lib/parser", ["lib/tables", "lib/tokenizer"], function (tables, tokenize
 
             if (v == "}") break;
 
-            if ((v === "get" || v === "set") && rhs !== ":" && rhs !== "(") {
+            if ((v === "get" || v === "set") && lookahead !== ":" && lookahead !== "(") {
 
                 node = Node("PropertyDefinition");
                 node.kind = v;
@@ -4606,7 +4645,7 @@ define("lib/parser", ["lib/tables", "lib/tokenizer"], function (tables, tokenize
                     
                     node = Node("PropertyDefinition");
 
-                    if ((rhs === "," || rhs === "}") && (BindingIdentifiers[t] || v === "constructor")) { // {x,y}
+                    if ((lookahead === "," || lookahead === "}") && (BindingIdentifiers[t] || v === "constructor")) { // {x,y}
                         
                         node.kind = "init";
                         id = this.PropertyKey();
@@ -4625,7 +4664,7 @@ define("lib/parser", ["lib/tables", "lib/tokenizer"], function (tables, tokenize
                         if (!node.value) throwError(new SyntaxError("error parsing objectliteral := [symbol_expr]: assignmentexpression"))
                         list.push(node);
 
-                    } else if (rhs === ":") { // key: AssignmentExpression
+                    } else if (lookahead === ":") { // key: AssignmentExpression
                         
                         node.kind = "init";
                         node.key = this.PropertyKey();
@@ -4644,7 +4683,7 @@ define("lib/parser", ["lib/tables", "lib/tokenizer"], function (tables, tokenize
                         node.value = method;
                         list.push(node);                        
 
-                    } else if (((v == "[" || BindingIdentifiers[t] || v === "constructor") && rhs === "(") || (v === "*" && (rhs == "[" || BindingIdentifiers[rhst] || rhs === "constructor"))) {
+                    } else if (((v == "[" || BindingIdentifiers[t] || v === "constructor") && lookahead === "(") || (v === "*" && (lookahead == "[" || BindingIdentifiers[lookaheadt] || lookahead === "constructor"))) {
 
                         node.kind = "method";    
                         var method = this.MethodDefinition(parent, true);
@@ -4671,60 +4710,25 @@ define("lib/parser", ["lib/tables", "lib/tokenizer"], function (tables, tokenize
 
     parser.ObjectExpression = ObjectExpression;
 
-    function lookForEqualSignBehindBracesBeforeUsingTheObjectCoverGrammarForThis() {
-        var tok;
-        var typ;
-        var parens = [];
-
-        for (var y = i; y < j; y++) {
-            if (tok = tokens[y]) {
-                var v = tok.value;
-                if (v == "{") {
-                    parens.push("{");
-                } else if (v === "}") {
-                    parens.pop();
-                    if (!parens.length) {
-                        do {
-                            if (tok = tokens[++y]) {
-                                if (tok.value === "=") {
-                                    return true;
-                                } else if (tok.type === "WhiteSpace") continue;
-                                else return false;
-                            } else return false;
-                        } while (1);
-                    }
-                }
-            }
-        }
-        return false;
-    }
-
+    
     function ObjectExpression() {
         var node, l1, l2;
         if (v === "{") {
 
-            if (!lookForEqualSignBehindBracesBeforeUsingTheObjectCoverGrammarForThis()) {
-
+    
                 l1 = loc && loc.start;
                 node = Node("ObjectExpression");
                 node.properties = [];
                 pass("{");
-
                 node.properties = this.PropertyDefinitionList();
-
                 l2 = loc && loc.end;
-
                 pass("}");
-
                 node.loc = makeLoc(l1, l2);
                 EarlyErrors(node);
 
                 return compile ? builder["objectExpression"](node.properties, node.loc) : node;
 
-            } else {
-                return this.BindingPattern();
-            }
-
+    
         }
         return null;
     }
@@ -5049,7 +5053,7 @@ define("lib/parser", ["lib/tables", "lib/tokenizer"], function (tables, tokenize
 
         var hasStop = typeof stop === "string";
 
-        if (!parenthesised && (ExprNoneOfs[v] || (v === "let" && rhs === "["))) return null;
+        if (!parenthesised && (ExprNoneOfs[v] || (v === "let" && lookahead === "["))) return null;
 
         do {
             debug("expr at " + v);
@@ -5136,13 +5140,13 @@ define("lib/parser", ["lib/tables", "lib/tokenizer"], function (tables, tokenize
         var expr, node, l1, l2;
         l1 = loc && loc.start;
 
-        if (t === "Identifier" && rhs === "=>") {
+        if (t === "Identifier" && lookahead === "=>") {
 
             expr = this.Identifier();
             cover = true;
 
         } else if (v === "(") {
-            if (rhs === "for") return this.GeneratorComprehension();
+            if (lookahead === "for") return this.GeneratorComprehension();
 
             cover = true;
 
@@ -5691,7 +5695,7 @@ define("lib/parser", ["lib/tables", "lib/tokenizer"], function (tables, tokenize
                   
 
                 /*
-            } else if (((computedPropertyName && v === "=") || rhs === "=") && !isObjectMethod) {    
+            } else if (((computedPropertyName && v === "=") || lookahead === "=") && !isObjectMethod) {    
 
                 node = Node("PropertyDefinition");
                 if (computedPropertyName) {
@@ -5793,7 +5797,7 @@ define("lib/parser", ["lib/tables", "lib/tokenizer"], function (tables, tokenize
 
     function DefaultParameter() { // ES6
         var node;
-        if (t == "Identifier" && rhs == "=") {
+        if (t == "Identifier" && lookahead == "=") {
             var l1 = loc.start;
             node = Node("DefaultParameter");
             var id = this.Identifier();
@@ -5831,7 +5835,7 @@ define("lib/parser", ["lib/tables", "lib/tokenizer"], function (tables, tokenize
                     id = this.BindingPattern();
                     list.push(id);
                 } else if (t === "Identifier") {
-                    if (rhs == "=") {
+                    if (lookahead == "=") {
                         id = this.DefaultParameter();
                     } else {
                         id = this.Identifier();
@@ -6131,7 +6135,7 @@ define("lib/parser", ["lib/tables", "lib/tokenizer"], function (tables, tokenize
     parser.LabelledStatement = LabelledStatement;
 
     function LabelledStatement() {
-        if (t === "Identifier" && rhs === ":") {
+        if (t === "Identifier" && lookahead === ":") {
             var node = Node("LabelledStatement");
             var l1 = loc && loc.start;
             var label = this.Identifier();
@@ -6538,7 +6542,7 @@ var BoundNames = require("lib/slower-static-semantics").BoundNames;
             T: T,
             t: t,
             v: v,
-            rhs: rhs,
+            lookahead: lookahead,
             isNoIn: isNoIn,
             yieldIsId: yieldIsId,
             defaultIsId: defaultIsId,
@@ -6562,8 +6566,8 @@ var BoundNames = require("lib/slower-static-semantics").BoundNames;
             T = o.T;
             t = o.t;
             v = o.v;
-            rhs = o.rhs;
-            rhst = o.rhst;
+            lookahead = o.lookahead;
+            lookaheadt = o.lookaheadt;
             isNoIn = o.isNoIn;
             yieldIsId = o.yieldIsId;
             defaultIsId = o.defaultIsId;
@@ -6695,7 +6699,7 @@ var BoundNames = require("lib/slower-static-semantics").BoundNames;
 
                 if (!node.left) throwError(new SyntaxError("can not parse a valid lefthandside expression for for statement"));
 
-                if (rhs === "in" || rhs === "of") next();
+                if (lookahead === "in" || lookahead === "of") next();
 
                 if (v === "in") {
                     node.type = "ForInStatement";
@@ -6847,7 +6851,7 @@ var BoundNames = require("lib/slower-static-semantics").BoundNames;
     parser.DefaultCase = DefaultCase;
 
     function DefaultCase() {
-        if (v === "default" && rhs === ":") {
+        if (v === "default" && lookahead === ":") {
             var node = Node("DefaultCase");
             pass("default");
             pass(":");
@@ -6953,8 +6957,8 @@ var BoundNames = require("lib/slower-static-semantics").BoundNames;
 
     function Program() {
 
-        staticSemantics.newContainer();
-        staticSemantics.newVarEnv();
+        staticSemantics.newContainer(); // (node) attach contains and order it
+        staticSemantics.newVarEnv(); // newVarEnv(node) directly attach and save time
 
         var node = Node("Program");
         node.loc = loc = makeLoc();
@@ -6997,7 +7001,7 @@ var BoundNames = require("lib/slower-static-semantics").BoundNames;
         if (!qf) return null;
         var node = Node("Quantifier");
         node.quantifier = qf;
-        if (rhs === "?") {
+        if (lookahead === "?") {
             next();
             node.questionmark = true;
         }
@@ -7039,11 +7043,11 @@ var BoundNames = require("lib/slower-static-semantics").BoundNames;
 
         } else if (v === "$") {
 
-        } else if ((v === "\\" && rhs === "b") || (v === "\\" && rhs === "B")) {
+        } else if ((v === "\\" && lookahead === "b") || (v === "\\" && lookahead === "B")) {
 
-        } else if (v === "(" && rhs === "=") {
+        } else if (v === "(" && lookahead === "=") {
 
-        } else if (v === "(" && rhs === "!") {
+        } else if (v === "(" && lookahead === "!") {
 
         } else {
             return null;
@@ -7102,7 +7106,7 @@ var BoundNames = require("lib/slower-static-semantics").BoundNames;
     function Disjunction() {
         var node = Node("disjunction");
         var alternative = Alternative();
-        if (rhs === "|") {
+        if (lookahead === "|") {
             scan("|");
             var disjunction = Disjunction();
             if (disjunction) node.disjunction = disjunction;
@@ -7324,7 +7328,7 @@ var BoundNames = require("lib/slower-static-semantics").BoundNames;
             tokens = tokenize(text);
         }
 
-        rhs = rhst = T = v = t = undefined;
+        lookahead = lookaheadt = T = v = t = undefined;
         i = -1;
         j = tokens.length;
         next();
@@ -9837,7 +9841,6 @@ define("lib/api", function (require, exports, module) {
     function NormalCompletion(argument, label) {
         var completion;
 
-    // dont reuse old completions
         if (argument instanceof CompletionRecord) {
             completion = argument;
         } else {    
@@ -10103,7 +10106,7 @@ define("lib/api", function (require, exports, module) {
 
     function ToPropertyDescriptor(O) {
         if (isAbrupt(O = ifAbrupt(O))) return O;
-        if (Type(O) !== "object") return withError("Type", "ToPropertyDescriptor");
+        if (Type(O) !== "object") return withError("Type", "ToPropertyDescriptor: argument is not an object");
         var desc = Object.create(null);
         
         if (HasProperty(O, "enumerable")) {
@@ -12051,9 +12054,12 @@ define("lib/api", function (require, exports, module) {
 
     // This Function returns the Errors, say the spec says "Throw a TypeError", then return withError("Type", message);
 
+    function withReferenceError(message) {
+        return Completion("throw", OrdinaryConstruct(getIntrinsic("%ReferenceError%"), [message]));
+    }
 
-    function withRangError(message) {
-        return Completion("throw", OrdinaryConstruct(getIntrinsic("%SyntaxError%"), [message]));
+    function withRangeError(message) {
+        return Completion("throw", OrdinaryConstruct(getIntrinsic("%RangeError%"), [message]));
     }
 
 
@@ -12063,6 +12069,14 @@ define("lib/api", function (require, exports, module) {
 
     function withTypeError(message) {
         return Completion("throw", OrdinaryConstruct(getIntrinsic("%TypeError%"), [message]));
+    }
+    
+    function withURIError(message) {
+        return Completion("throw", OrdinaryConstruct(getIntrinsic("%URIError%"), [message]));
+    }
+    
+    function withEvalError(message) {
+        return Completion("throw", OrdinaryConstruct(getIntrinsic("%EvalError%"), [message]));
     }
 
     function withError(type, message) {
@@ -12091,20 +12105,20 @@ define("lib/api", function (require, exports, module) {
         var result = exports.ResumeEvaluate(body);
 
         if (isAbrupt(result = ifAbrupt(result))) return result;
-  //      if (IteratorComplete(result)) {
+        
+        // if (IteratorComplete(result)) {
             if (isAbrupt(result = ifAbrupt(result)) && result.type === "return") {
-                Assert(isAbrupt(result) && result.type === "return", "expecting abrupt return completion");
+                //Assert(isAbrupt(result) && result.type === "return", "expecting abrupt return completion");
                 setInternalSlot(generator, "GeneratorState", "completed");
                 if (isAbrupt(result = ifAbrupt(result))) return result;
-        
                 getContext().generatorCallback = undefined;
-                getStack().pop();        
                 return CreateItrResultObject(result, true);
             }
-    //    }
+
+       //}
+      
       //
-        getStack().pop();        
-        return result;
+        //return result;
     }
 
     function GeneratorStart(generator, body) {
@@ -12133,21 +12147,19 @@ define("lib/api", function (require, exports, module) {
         var genContext = getInternalSlot(generator, "GeneratorContext");
 
         var methodContext = getContext();
-        
         getStack().push(genContext);
         
         setInternalSlot(generator, "GeneratorState", "executing");
-
         var generatorCallback = genContext.generatorCallback;
+
         var result = generatorCallback(NormalCompletion(value));
         setInternalSlot(generator, "GeneratorState", "suspendedYield");
 
+
         var x = getContext();
-        
         if (x !== methodContext) {
             console.log("GENERATOR ACHTUNG 2: CONTEXT MISMATCH TEST NICHT BESTANDEN - resume");
-        };
-
+        }
         return result;
     }
 
@@ -18306,65 +18318,74 @@ dependencygrouptransitions of kind load1.Kind.
         var LN2 = Math.LN2;
         var LOG10E = Math.LOG10E;
         var E = Math.E;
+        
+        var MathObject_sign = function (thisArg, argList) {
+            var x = ToNumber(argList[0]);
+            if (isAbrupt(x)) return x;
+            return NormalCompletion(x > 0 ? 1 : -1);
+        };
 
         var MathObject_random = function (thisArg, argList) {
-            return Math.random();
+            return NormalCompletion(Math.random());
         };
+
         var MathObject_log = function (thisArg, argList) {
-            var x = argList[0];
-            return Math.log(x);
+            var x = +argList[0];
+            return NormalCompletion(Math.log(x));
         };
         var MathObject_ceil = function (thisArg, argList) {
-            var x = argList[0];
-            return Math.ceil(x);
+            var x = +argList[0];
+            return NormalCompletion(Math.ceil(x));
         };
         var MathObject_floor = function (thisArg, argList) {
-            var x = argList[0];
-            return Math.floor(x);
+            var x = +argList[0];
+            return NormalCompletion(Math.floor(x));
         };
         var MathObject_abs = function (thisArg, argList) {
-            var a = argList[0];
-            return Math.abs(a);
+            var a = +argList[0];
+            return NormalCompletion(Math.abs(a));
         };
 
         var MathObject_pow = function (thisArg, argList) {
-            var b = argList[0];
-            var e = argList[1];
-            return Math.pow(b, e)
+            var b = +argList[0];
+            var e = +argList[1];
+            return NormalCompletion(Math.pow(b, e));
         };
         var MathObject_sin = function (thisArg, argList) {
-            var x = argList[0];
-            return Math.sin(x);
+            var x = +argList[0];
+            return NormalCompletion(Math.sin(x));
         };
         var MathObject_cos = function (thisArg, argList) {
-            var x = argList[0];
-            return Math.cos(x);
+            var x = +argList[0];
+            return NormalCompletion(Math.cos(x));
         };
         var MathObject_atan = function (thisArg, argList) {
-            var x = argList[0];
-            var y = argList[1];
-            return Math.atan(x,y);
+            var x = +argList[0];
+            var y = +argList[1];
+            return NormalCompletion(Math.atan(x,y));
         };
         var MathObject_atan2 = function (thisArg, argList) {
-            var x = argList[0];
-            var y = argList[1];
-            return Math.atan2(x,y);
+            var x = +argList[0];
+            var y = +argList[1];
+            return NormalCompletion(Math.atan2(x,y));
         };
         var MathObject_max = function (thisArg, argList) {
             var args = CreateListFromArray(argList);
-            return Math.max.apply(Math, args);
+            if (isAbrupt(args)) return args;
+            return NormalCompletion(Math.max.apply(Math, args));
         }; 
         var MathObject_min = function (thisArg, argList) {
             var args = CreateListFromArray(argList);
-            return Math.min.apply(Math, args);
+            if (isAbrupt(args)) return args;
+            return NormalCompletion(Math.min.apply(Math, args));
         }; 
         var MathObject_tan = function (thisArg, argList) {
-            var x = argList[0];
-            return Math.tan(x);
+            var x = +argList[0];
+            return NormalCompletion(Math.tan(x));
         };
         var MathObject_exp = function (thisArg, argList) {
             var x = argList[0];
-            return Math.exp(x);
+            return NormalCompletion(Math.exp(x));
         };
         var MathObject_hypot = function (thisArg, argList) {
 
@@ -18418,6 +18439,7 @@ dependencygrouptransitions of kind load1.Kind.
         LazyDefineBuiltinFunction(MathObject, "min", 0, MathObject_min);
         LazyDefineBuiltinFunction(MathObject, "pow", 2, MathObject_pow);
         LazyDefineBuiltinFunction(MathObject, "sin", 1, MathObject_sin);
+        LazyDefineBuiltinFunction(MathObject, "sign", 1, MathObject_sign);
         LazyDefineBuiltinFunction(MathObject, "tan", 1, MathObject_tan);
         LazyDefineBuiltinFunction(MathObject, "random", 0, MathObject_random);
             
@@ -18462,13 +18484,25 @@ dependencygrouptransitions of kind load1.Kind.
                 });
                 return obj;
         };
-        var NumberConstructor_isFinite = IsFiniteFunction;
+        var NumberConstructor_isFinite = function (thisArg, argList) {
+            var number = argList[0];
+            if (Type(number) !== "number") return NormalCompletion(false);
+            if ((number != number) || number === Infinity || number === -Infinity) return NormalCompletion(false);
+            return NormalCompletion(true);
+        };
+        var NumberConstructor_isNaN = function (thisArg, argList) {
+            var number = argList[0];
+            if (Type(number) !== "number") return NormalCompletion(false);
+            if (number != number) return NormalCompletion(true);
+            return NormalCompletion(false);
+        };
+
         var NumberConstructor_isInteger = function (thisArg, argList) {
                 var number = argList[0];
-                if (Type(number) !== "number") return false;
+                if (Type(number) !== "number") return NormalCompletion(false);
                 if ((number != number) ||
-                    number === +Infinity || number === -Infinity) return false;
-                return true;
+                    number === +Infinity || number === -Infinity) return NormalCompletion(false);
+                return NormalCompletion(true);
         };
         var NumberPrototype_clz = function (thisArg, argList) {
                 var x = thisNumberValue(thisArg);
@@ -18491,7 +18525,7 @@ dependencygrouptransitions of kind load1.Kind.
         };
         var NumberPrototype_valueOf = function (thisArg, argList) {
                 var x = thisNumberValue(thisArg);
-                return x;
+                return NormalCompletion(x);
         };
         var NumberPrototype_toPrecision = function (thisArg, argList) {
                 var precision = argList[0];
@@ -18613,6 +18647,7 @@ dependencygrouptransitions of kind load1.Kind.
         };
 
         LazyDefineBuiltinFunction(NumberConstructor, "isFinite", 0, NumberConstructor_isFinite);
+        LazyDefineBuiltinFunction(NumberConstructor, "isNaN", 0, NumberConstructor_isNaN);
         LazyDefineBuiltinFunction(NumberConstructor, "isInteger", 0, NumberConstructor_isInteger);
         LazyDefineBuiltinFunction(NumberConstructor, $$create, 0, NumberConstructor_$$create);
         LazyDefineBuiltinConstant(NumberConstructor, "EPSILON", EPSILON);
@@ -20733,8 +20768,8 @@ dependencygrouptransitions of kind load1.Kind.
         var constructorResult = callInternalSlot("Call", constructor, promise, [executor]);
         if (isAbrupt(constructorResult = ifAbrupt(constructorResult))) return constructorResult;
 
-        if (!IsCallable(promiseCapability.Resolve)) return withError("Type", "capability.[[resolve]] is not a function");
-        if (!IsCallable(promiseCapability.Reject)) return withError("Type", "capability.[[reject]] is not a function");
+        if (!IsCallable(promiseCapability.Resolve)) return withError("Type", "capability.[[Resolve]] is not a function");
+        if (!IsCallable(promiseCapability.Reject)) return withError("Type", "capability.[[Reject]] is not a function");
         if (Type(constructorResult) === "object" && (SameValue(promise, constructorResult) === false)) return withError("Type","constructorResult is not the same as promise");
         return promiseCapability;
 
