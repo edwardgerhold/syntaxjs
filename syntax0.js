@@ -1321,18 +1321,41 @@ define("lib/tables", function (require, exports, module) {
     Separators.prototype = Object.create(LineTerminators);
 
     var OperatorPrecedence = {
+        // higher is calculated first
+        
         __proto__: null,
+
         ";": 0,
         ",": 1,
         "=": 10,
+        "+=": 10,        
+        "-=": 10,        
+        "*=": 10,        
+        "/=": 10,        
+        "%=": 10,        
+        "~=": 10,        
+        "^=": 10,        
+	"<<=": 10,                
+	">>=": 10,        
+	">>>=": 10,        
+	"&=": 10,
+	"|=": 10,        
+
+        
         "?": 20,
         "|": 20,
         "&": 20,
+        "<<": 20,
+        ">>": 20,
+        ">>>": 20,
+
+        "^": 20,
+
+        
         "||": 30,
         "&&": 30,
-        "+": 50,
-        "-": 50,
 
+        
         "===": 40,
         "==": 40,
         "!==": 40,
@@ -1344,17 +1367,30 @@ define("lib/tables", function (require, exports, module) {
         "instanceof": 40,
         "in": 40,
         "of": 40,
+
+
+        "+": 50,
+        "-": 50,
+
+
         "*": 60,
         "/": 60,
         "%": 60,
+        
+        
         "!": 70,
         "~": 70,
-        //"-":70,   <- unary - dupl key
-        //"+":70,   <- unary + dupl key
+        
+        //"-":70,   <- unary - dupl key (hey! fix me!)
+        //"+":70,   <- unary + dupl key 
         "!!": 70,
+        
+        
+
         ".": 80,
         "[": 80,
         "(": 80
+
     };
 
     var RegExpFlags = {
@@ -17403,6 +17439,26 @@ dependencygrouptransitions of kind load1.Kind.
             return NormalCompletion(undefined);
         };
 
+        var StringPrototype_at = function (thisArg, argList) {
+            var position = argList[0];
+            var O = CheckObjectCoercible(thisArg);
+            var S = ToString(O);
+            if (isAbrupt(S=ifAbrupt(S))) return S;
+            var position = ToInteger(pos);
+            if (isAbrupt(pos=ifAbrupt(pos))) return pos;
+            var size = S.length;
+            if (position < size || position > size) return NormalCompletion("");
+            var first = S[position];
+            var cuFirst = s.charCodeAt(0);
+            if (cuFirst < 0xD800 || cuFirst > 0xDBFF || (position + 1 === size)) return NormalCompletion(first);
+            var cuSecond = S.charCodeAt[position+1];
+            if (cuSecond < 0xDC00 || cuSecond > 0xDFFF) return NormalCompletion(first);
+            var second = S.charCodeAt[position+1];
+            var cp = (first - 0xD800) * 0x400+(second-0xDC00)+0x1000
+            return String.fromCharCode(cuFirst, cuSecond);
+        };
+
+        LazyDefineBuiltinFunction(StringPrototype, "at", 1, StringPrototype_at);
         LazyDefineBuiltinFunction(StringPrototype, "charAt", 1, StringPrototype_charAt);
         LazyDefineBuiltinFunction(StringPrototype, "charCode", 1, StringPrototype_charCodeAt);
         LazyDefineBuiltinFunction(StringPrototype, "codePointAt", 1, StringPrototype_codePointAt);

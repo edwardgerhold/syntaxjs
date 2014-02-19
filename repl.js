@@ -10,7 +10,7 @@ function evalWithSyntaxJs(cmd, context, filename, callback) {
     var result = syntaxjs.toValue(cmd, true);
     callback(null, result);
 }
-var port = +process.argv[2]
+var port = +process.argv[2];
 if (!port) {
 // node repl.js starts the repl
     repl.start({
@@ -24,7 +24,7 @@ if (!port) {
 // node repl.js <portnum 5001> starts the server
     net.createServer(function(socket) {
 	repl.start({
-    	    prompt: "es6:5001> ",
+    	    prompt: "es6:"+port+"> ",
             input: socket,
 	    output: socket,
     	    useColors: true,
