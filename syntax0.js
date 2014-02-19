@@ -19453,7 +19453,7 @@ dependencygrouptransitions of kind load1.Kind.
             DefineOwnProperty(ObjectPrototype, "__proto__", ObjectPrototype_proto_)
 
 
-        LazyDefineBuiltinFunction(ObjectPrototype, $$create, 0, ObjectPrototype_propertyIsEnumerable);
+        LazyDefineBuiltinFunction(ObjectPrototype, $$create, 0, ObjectPrototype_$$create);
         LazyDefineBuiltinFunction(ObjectPrototype, "hasOwnProperty", 0, ObjectPrototype_hasOwnProperty);
         LazyDefineBuiltinFunction(ObjectPrototype, "isPrototypeOf", 0, ObjectPrototype_isPrototypeOf);
         LazyDefineBuiltinFunction(ObjectPrototype, "propertyIsEnumerable", 0, ObjectPrototype_propertyIsEnumerable);
