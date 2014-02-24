@@ -3,48 +3,59 @@
 (function main () {
     "use strict";
     
-    function inlineFiles(filename) {
+    function inlineFiles(filename) {	
+	console.log("inlineFiles(\"+filename+\")");
         return makePromise(function (resolve, reject) {
             fs.readFile(filename, "utf8", function (err, data) {
-            if (err) reject(err);
-            else resolve(data);
+        	if (err) reject(err);
+        	else resolve(data);
+            });
         });
     }
     
     function transFormSync(input) {
+    	console.log("transFormSync()");
         return input.replace(include, function (all, filename) {
+    	    console.log("inserting "+filename+" sync recursivly");
+    	    if (!fs.existsSync(filename)) console.log("error: "+filename+" not found!");
             var content = fs.readFileSync(filename, "utf8");
-            content = transForm(content);
+            content = transFormSync(content);
             return content;
         });
     }
     
-    function writeFile(toDrive, data) {
-        fs.writeFile(toDrive, data, "utf8", function (err) {
+    function writeFile(toFile, data) {
+        console.log("writeFile(\""+toFile+"\")");
+        fs.writeFile(toFile, data, "utf8", function (err) {
             if (err) console.err(err);
-            else console.log(toDrive + " successfully written.");
+            else console.log(toFile + " successfully written.");
         });
         return data;
     }
     
     function logOrWrite (data) {
-        var toDrive = process.argv[3];
-        if (typeof toDrive === "string") {
-            if (fromFile === toDrive) console.log("input "+fromFile+" and output "+toDrive+" are the same");
-            else writeFile(toDrive, data);    
+        console.log("logOrWrite()");
+        if (typeof toFile === "string") {
+            if (fromFile === toFile) console.log("input "+fromFile+" and output "+toFile+" are the same");
+            else writeFile(toFile, data);    
         } else {
             console.log(data);
         }
         return data;
     }
     
-    var include = /(?:\#include "([^\"]+)";)/g;
+    
+    console.log("inlinefiles.js replaces //#include \"name.js\" with name.js - syntax.js /tools");
+    var include = /(?:[\/]{2}#include "([^\"]+)";)/g;
     var makePromise = require("./promise.js").makePromise;
     var fs = require("fs");
     var fromFile = process.argv[2];
+    var toFile = process.argv[3];
+
     if (!fs.existsSync(fromFile)) throw new TypeError(fromFile + " does not exist");
     
-    var ausgabeP = inlineFiles(fromFile).then(transFormSync).then(logOrWrite);
-    console.log("A promise - Diese Zeile wird vor der Zeile ausgegeben, die wir soeben riefen.");
-    // ausgabeP.then(console.log.bind(console.log.bind(console)))    
+    inlineFiles(fromFile).then(transFormSync).then(logOrWrite);
+    
+    // i had the worst comments and stupidest oneliners
+    
 }());
