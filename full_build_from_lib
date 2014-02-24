@@ -1,0 +1,1 @@
+node tools/inlinefiles.js full_build_from_lib.js ./syntax.full.js

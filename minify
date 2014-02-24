@@ -1,0 +1,10 @@
+tool="jsmin"
+
+if [ -z "$1" ]; 
+then
+    echo "usage: minifiy [name_no_ext]"
+    echo "minifies name_no_ext.js to name_no_ext.min.js with ${tool}"
+    exit
+fi
+
+$tool < ${1}.js > ${1}.min.js

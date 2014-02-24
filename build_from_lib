@@ -1,0 +1,1 @@
+node tools/inlinefiles.js build_from_lib.js ./syntax.js

@@ -8810,6 +8810,8 @@ define("lib/api", function (require, exports, module) {
     }
 
 
+
+
     //
     // call internal
     // 
@@ -8819,19 +8821,14 @@ define("lib/api", function (require, exports, module) {
         // return getFunction(object, name).call(object, a, b, c, d, e, f, g);
     }
 
-/*
+    function applyInternal(name, object, argList) {
+        return getFunction(object, name).apply(object, argList);
+    }
+
     function Call(F, thisArg, argList) {
         var call = getInternalSlot(F, "Call");
         if (call) return call.call(F, thisArg, argList);
     }
-*/
-
-
-
-
-
-
-
 
     
     //
@@ -13694,7 +13691,7 @@ define("lib/api", function (require, exports, module) {
     exports.setInternalSlot = setInternalSlot;
     exports.hasInternalSlot = hasInternalSlot;
     exports.callInternalSlot = callInternalSlot;
-    
+    exports.applyInternal = applyInternal;
     exports.CreateArrayIterator = CreateArrayIterator;
     exports.CreateByteDataBlock = CreateByteDataBlock;
     exports.CopyDataBlockBytes = CopyDataBlockBytes;
@@ -23032,7 +23029,7 @@ define("lib/runtime", ["lib/parser", "lib/api", "lib/slower-static-semantics"], 
     var getInternalSlot = ecma.getInternalSlot;
     var hasInternalSlot = ecma.hasInternalSlot;
     var callInternalSlot = ecma.callInternalSlot;
-    
+    var applyInternal = ecma.applyInternal;
     var SetFunctionLength = ecma.SetFunctionLength;
 
     //-----------------------------------------------------------

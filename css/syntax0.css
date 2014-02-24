@@ -1,0 +1,218 @@
+pre span[class^='syntaxjs-'], code span[class^='syntaxjs-'] { font-familiy:monospace; } 
+.syntaxjs-function{color:#000;}
+.syntaxjs-control{color:#444;}
+.syntaxjs-exception{color:darkred;}
+.syntaxjs-comment{color:green;}
+.syntaxjs-string{color:blue;}
+.syntaxjs-property {
+    color:#220355;
+}
+.syntaxjs-number {
+    color:darkgreen;
+}
+.syntaxjs-identifier {
+    color:#783247;
+}
+.syntaxjs-template {
+    color:#113344;
+}
+.syntaxjs-keyword {
+    color:#001122;
+}
+.syntaxjs-regexp {
+    color:#1166FF;
+}
+.syntaxjs-name {
+    color:yellow;
+    text-shadow: 1px 1px 1px brown;
+}
+
+.syntaxjs-dom {
+    color:#110011;
+}
+
+/*
+[data-syntaxjs] {
+    text-shadow: 0px -1px darkgrey;
+}
+*/
+
+.syntaxjs-types{color:#333;}
+.syntaxjs-monkey {color:black;} .syntaxjs-libuv { color:black; }
+.syntaxjs-v8 { color:black; }
+.syntaxjs-preprocessor{color:maroon;}
+.syntaxjs-annotation { 
+    /* wird vom js gekillt */
+    position:fixed; z-index:99; 
+    top:25%;left:25%;
+    /* bleibt vom css */
+    margin:4%;
+    padding:4%;
+    border-radius:18px;
+    border:1px solid darkgrey;
+    box-shadow: 3px 3px 3px black;
+    background:white;
+    color:black;
+    font-family: lucidatypewriter, arial;
+    line-height:1.3em;
+}
+.syntaxjs-php{color:seagreen;}
+.syntaxjs-punctuator{color:red; text-shadow:0px -1px lightgrey; }
+.syntaxjs-builtin{color:black;}
+
+.syntaxjs-wordcount-panel {
+    z-index:10000;
+    opacity: 1;
+    padding:1%;
+    background:lightgrey;
+    color:black;
+    border: 1px solid darkgrey;
+    box-shadow: 1px 1px 1px black;
+}
+.syntaxjs-wordcount-panel:hover {
+    border: 5px solid black;
+    opacity: 1;
+}
+.syntaxjs-wordcount-panel ol {
+    list-style:none;
+}
+.syntaxjs-wordcount-panel li {
+    opacity: 1;
+    list-style:none;
+    margin-left: 10px;
+    font-family:monospace;
+}
+.syntaxjs-lineno {
+    background: lightgrey;
+    color: black;
+    box-shadow: 1px 1px 1px silver;
+}
+.syntaxjs-container {
+    opacity:1;
+    background:transparent;
+}
+.syntaxjs-container * {
+    opacity: 0.9;
+}
+.syntaxjs-button-container {
+    width:100%;
+    font-size:0.8em;
+    font-family: helvetica;
+    font-weight:bold;
+    position:relative;
+    top: -1em;
+    opacity:1;
+    margin:4px;
+    padding:4;
+    float:right;
+    background: beige;
+    /*box-shadow: 1px 3px 6px black;*/
+}
+.syntaxjs-button-container button {
+    font-size:0.9em;
+    cursor: pointer !important;
+    background: silver;
+    color: black;
+    opacity:1;
+    border: 1px inset darkgrey; 
+    border-radius:4px;
+    margin:4px;
+    paddin:2px;
+    box-shadow: -3px -3px 3px lightgrey; 
+    float:right;
+}
+
+[data-syntaxjs-filename]::before {
+    position:relative;
+    z-index:5;
+    font-size:0.9em;
+    content: attr(data-syntaxjs-filename);
+    -webkit-transform: skewY(-33deg);
+    -moz-transform: skewY(-33deg);    
+    -ms-transform: skewY(-33deg);        
+    transform: skewY(-33deg);
+    opacity: 0.9;
+    background:lightgrey;
+    top:-0.5em;
+    left:-10px;
+    color:yellow;
+    text-shadow:1px 1px 3px black;
+    font-family:monospace;
+    clear:all;
+}
+.syntaxjs-wordcount-table tr {
+    vertical-align:bottom;
+}
+
+
+.syntaxjs-view {
+    padding:5px;
+    margin:5px;
+    background-color:transparent;
+    color:black;
+    opacity:1.0;
+    border-radius:20px;
+    /*transition: opacity 100ms;
+    -webkit-transition: opacity 100ms;
+    -moz-transition: opacity 100ms;    
+    -ms-transition: opacity 100ms;    
+    -o-transition: opacity 100ms;    */
+}
+
+.syntaxjs-view:hover {
+    opacity: 1.0;
+    border-radius:20px;
+}
+
+.syntaxjs-editor {
+    background-color:white;
+    color:black;
+    height:250px;
+    max-height:250px;
+    overflow:auto;
+    word-wrap:none;
+    float:none;
+    text-align:left;
+    clear:all;
+    padding:10px;
+    border-radius: 5px;
+}
+.syntaxjs-shell-input {
+    border: 1px solid darkgrey;
+    padding-left: 3px;
+    width:80%;
+    border-bottom-width: 1px;
+}
+
+.syntaxjs-shell-input::before {
+    content: "shell>";
+}
+
+
+.syntaxjs-shell-input::after {
+    content: "(Enter)";
+}
+
+
+
+.syntaxjs-shell-button {
+
+    background-image: -moz-linear-gradient(bottom, #DEF, white);
+    background-image: -webkit-linear-gradient(bottom, #DEF, white);
+    background-image: -o-linear-gradient(bottom, #DEF, white);
+    background-image: -ms-linear-gradient(bottom, #DEF, white);
+    
+}
+
+
+.syntaxjs-eval-console {
+    background: white;
+    padding:10px;
+    max-height:150px;
+    overflow:auto;
+}
+
+.syntaxjs-view > pre {
+    max-height:550px !important;
+    overflow:auto !important;
+}

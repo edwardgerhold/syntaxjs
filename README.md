@@ -8,10 +8,10 @@ It´s "feature complete" like ES6 already is, but the features aren´t
 completed yet. Some thing fail, some don´t, some didn´t before, 
 some do now. 
 
-
-
 _Usage_
 It can be tried with simply typing node syntax0.js. 
+
+
 
 linux-www5:~ # node syntax0.js [exec_me.js]
 
@@ -35,6 +35,7 @@ undefined
 es6>
 ```
 
+
 _Known Bugs_
 * Generators: The code Evaluation Stack is not fixed. The tool started with Evaluate(node) as indirect recursion function (being called again from a function called by Evaluate), but using a stack instead of real recursion makes resumability available, which is needed for the generator. I had little trouble imagining resuming and suspending a context, coz i forgot to directly use a stack machine. The problem can be fixed locally just for the generator i estimate by thinking it out.
 * btw. i never tried to create code blocks from the ast to put the loops into blocks each iteration. From the function body of SomeIterationStatement the inner could become extracted. A little
@@ -48,12 +49,43 @@ got not to work with PHP or Linux a decade ago..) ]]
 * Have to rewrite in parser.PropertyDefinitionList and MethodDefinition the part for the computedPropertyName [sym](). It´s working, but not DRY but DUPING the Code extra for the computed key.
 * Lock-Ups, Hanging Terminals: After releasing it and writing wrong inputs i got it. I have one of the loops not breaking.
 * Source Characters: The character set is incomplete and unicode is disabled.
+* TypedArrays: Incomplete Implementation (used TypedArrays in the background then)
+* Date: Incomplete
+* String Functions: Incomplete
+* Number Functions: Incomplete .toFixed, .toPrecision, but i have managed converting numbers meanwhile (four weeks ago i hadn´t practiced much, but meanwhile i did for a lot of number)
+
+_Still learning how to encode_
+* Encoding: I managed converting numbers now with the right algorithms like (((x[0]*10)+x[1]*10)+x[2]*) or value *= Math.pow(base, pos) and know how to | or bits to add 1,2,4,8,16,32,64 and so on,
+or to test with &, if the bit is in the sum of the number. I know how to shift left or right to divide or multiply or to subtract the base2^bit from the byte. But i did not manage to implement all
+the encoding and decoding and conversion algorithms.
+* I really still am confused a little by making and getting surrogate pairs, coz like crockford says "Programmers have problems entering a character which is not on the keyboard" （Ctrl-Space）安定 
+i 哈年哦童 and i have not tested some scripts with the characters yet. Sorry for this _real_ inconvenience admitted, but i have not really played around with yet. 
+* Floating Point: When i started, i didn´t even know how a floating point is made. Meanwhile i watched videos about reading and making the numbers, normalizing them and interpreting the bits in 
+various ways. I can read the set and unset bits by asking wheter (quadword & Math.pow(2, bit)) or not, and beeing not stupid, the highest bit is the sign, the next 11 for the exponent, the rest
+is mantissa. Then the thing i made up like in the lectures. I think we get floating point to work here. I still have not printed IEEE 754, but i want. But to access a printer, i have to wait until
+i get to some office where i can print, which will be in march next time. Oh, by the way, i would also know how a fixed point number is made now. And i know about the complements.
+
 
 _Long Term Goal_
 Long Term Goal: Completing it. Keeping it up-to-date with ES7 and
 adding a a) Compiler and b) TypedArray Heap, which could have been
 there from the beginning on, but i decided to stick with the begun
 code and to refactor it with Search & Replace. 
+
+_Before i forget, meeting esprima´s output is a long term goal, too_
+Oh, and before i 
+forget, because of the use of the Mozilla-AST i would prefer to have
+later full compatibility to esprima-harmony nodes, but correctly said 
+i have not even read the code yet,
+that i can not tell, what to fix in this evaluators code for reading
+it´s syntax tree. Meeting esprima is a real long term goal, but i 
+preferred to write my code alone first, just for self-educational 
+purposes and not getting told to have rewritten someone elses tool.. 
+But i´ve seen it and like it and i basically influenced my syntax-
+highlighter getting a print-ast button for mozilla´s ast reflection
+forever. So that´s something this program should work together with.
+I think this here could do something, too, in it´s tool chain, some day.
+
 
 _Design Mistakes_
 Issue to do for b): Replacing all {} with createGenericRecord({}), all
@@ -86,9 +118,9 @@ MIT for Algorithms and such.
 
 _AST_
 I found out, that the AST Evaluation is reusable for ByteCode if i fetch
-the nodes Contents by and Interface Function, which could in effect return
+the nodes contents by an interface function, which could in effect return
 bytecode. For that, all the accesses have to be searched and replaced, too,
-i just added it to a handful of accesses to begin.
+i just added into a handful of accesses to begin.
 After replacing this, and the Array Accesses (StatementLists, FunctionBodies)
 with a getIndex(list, x), the SAME Function can be used with a ByteCode.
 Coz the Evaluate() returns the result in a completion, which can be explored
@@ -109,12 +141,12 @@ the feeling, that some exception stack is lost in my last edits. Mainly i miss
 my regular exceptions, but am not to stupid not to know what i am doing or did,
 so i wonder a little.
 
-
 _Object Refactoring_
 For the ByteCode + Heap (ByteCode can be run without putting them all into
 an Array, ByteCode ist not depending on Heap, while Heap can only store Bytecode)
 all OrdinaryObject.prototype (Essential Methods) have to be replaced by a function
 taking the object (ptr) as argument.
+The GOOD. They are already called by callInternalSlot("DefineOwnProperty", obj, ...)
 
 _Design Patterns_
 Doing something else than JavaScript. I wanted i typed version of Ecma-262 and started
@@ -129,7 +161,6 @@ to drop. Future compatibility with Esprima is easily achieved by editing the ES6
 evaluation a little. Developers helping me with are always welcome.
 
 _Optimizing_
-
 For Proof of Concept i really wrote down the whole type checks. This can be
 replaced with some easier JavaScript which will speed up the thing a lot. 
 As this was my first code and first attempt i wanted to try out what´s really
@@ -148,14 +179,15 @@ Java language after times of letting them pass me by. This will influence
 the syntax.js JavaScript Version soon, coz i am sometimes hot to refactor.
 
 
+
 Missing
 
 * Developer Documentation
-
 
 Tests 
 
 * There are some handwritten files, and some handwritten tests existing, but
 the final testsuite shall be test262, the official testsuite for ecmascript,
 which can already be run from the commandline.
+
 
