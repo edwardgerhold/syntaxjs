@@ -1,12 +1,18 @@
-tools:
+primitive tools:
+================
+
+tools which help
+
 * tester.js - simple tool with standard node.js style assertions and console and browser logging.
 * promise.js - handwritten promise (caution: not a+ compliant now! has mistakes!)
 * inlinefiles.js - Tool to recursivly inline files in a file.
-* returnifabrupt.js - contains a function to replace ReturnIfAbrupt(x) with the long form.
-    I should have used macros from the beginning on, but most of the newbies get cleverer later..
+* returnifabrupt.js - contains a function to replace ReturnIfAbrupt(x) with the long form. (unused macro)
+  I should have used macros from the beginning on, but most of the newbies get cleverer later...
+  Like "i should have learned design patterns from the beginning on" to communicate the code structure...
+* replace_strings.js - replaces a string-regexp arg with g flag case sensitive with a new string arg in the remaining file args
 
 tester.js
-========
+=========
 
 Tester is a simple tool, which can test results of syntaxjs.
 
@@ -92,6 +98,18 @@ var promise2 = promise.then(function (value) { return value + "stuff"; }, functi
 
 
 // It exports the aplus test adapter with deferred, resolve, reject and the makePromise.
-    
+
 ```
 
+replace_strings.js
+================
+
+```bash
+
+node replace_strings.js "old" "new" file1.js file2.js ... filen.js
+
+```
+
+should replace all occurences of "old" with "new"
+first used to replace the module names beetween files
+can be used for few refactorings
