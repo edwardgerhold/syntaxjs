@@ -1,96 +1,203 @@
-FILES IN THE PROJECT
-===================
 
-Currently everything is underspecified.
+Just split it up
+================
 
+Have to describe it
 
-The first megabyte, whitespaces and a few comments inclusive, had been written
-with mcedit of the midnight commander on a Pentium III Computer in a dorm in 
-Berlin, Germany. The computer wasn´t powerful enough to let me use an IDE or 
-a better Text Editor like Sublime Text 2. At the 28th of December, 2013, i 
-bought an used notebook for 199EUR (which is really already too much money for me)
-and suddenly i have the possibility to use IDEs and tools.
+Here are stitchwords
 
-Basic knowledge of software engineering mainly forbid me to write a big single
-file. But i hadn´t really had an option. Now i have to spend a few hours with
-sorting by cutting and pasting. And a few hours with splitting the files into
-modules.
-
-To do it correctly, i have to keep track of everything i do. For this, documents
-like this will hold the informations.
-
-Directories
-===========
-
-
-* /	- Root directory
-
-contains syntax0.js, the current development file, which will be split into
-modules in the coming days for us, to make it easy for us, to share and edit files.
-
-
-* /css - Stylesheets for the Syntaxhighlighter
-will contain the stylesheets for the browser, probably modern sass or less, but until we do, just css.
-
-* /docs - Documentation and technical papers
-Will contain documentation and useful documents explaining difficult things you need to know to write your own, or to help us making this become a good tool.
 
 * /lib - JavaScript
- here the js files will go into, currently everything is stored in the big /syntax0.js, which
+
+here the js files will go into, currently everything is stored in the big /syntax0.js, which
 was my development file on my Pentium III. 
 
-* /test	- Testing
-files related to tests will be put into /test
-
-* /tools
-Will contain useful stuff like tester.js or promise.js
-
-Files
-=====
-
-Some files
-* /README.md - Each directory should get a leading README.md and one index.html (for a website) to explain what´s inside the directory
-* /es6 - a script to copy into /usr/local/bin and chmod +x after editing the directory variable inside, replaces "node $path/syntax0.js $1" with "es6 $1".
-* /syntax0.js - Currently the one and only file, containing all "modules". (the modules are placeholders for real modules, which will arrive within the next days).
-* /package.json - So npm install syntaxjs would work.
-* /tools/tester.js - An easy to use unit testing tool.
-
-```javascript
-var Test = require("tools/tester0.js").Test;
-var test = new Test();
-test.add(function (test) {
-    this.assert(this === test, "The test library is passed as argument and as this value into each added testfunction");
-    test.assert();
-});
-test.run();
-test.print(); 
-// test.html({ el: "#findMeById" }); in the browser
-
-```
-
-
-Some documents
-* /docs/parameters_es6.html	- some words about the new plalr(1) grammar production parameters and ll(1) parsers.
-* /docs/contains-symboltable.html - some interesting idea to save symbols and contains information in constant time while parsing.
-* /docs/parserapi.html - some additions to mozillas parser api
-
-Some tests (a few may be out of date, or wrong, i didnt manage it, to write a testsuite until today)
-
-* test/direct
-    some filename.js which can be run with "node syntax.js filename.js".
-
-* test/mktest
-    with ./mktest number it copies test0.js to testnumber.js and  and code0.js to codenumber.js,
-    code.js is a file with a code, which will be tested.
-    test.js is a file which starts tester.js and evaluates code.js with syntax.js and
-    executes tester.js on the results and environments of syntaxjs.
+* lib/amd-prolly.js
     
-* test/node
-    these files are supposed to be run with "node $name"
+    has makePromise, define, module, require
+
+* lib/i18n.js
+
+    placeholder for i18n functions and the message table
+    with a default language
     
-* test/test262
-    this is not only a reminder. with ./test262.py --command="node syntax0.js" --tests=/test262/"
-    you can start the test262 suite.
-    If the shell is configured for auto-start you have to press ctrl-d after every test (the
-    prompt is invisible) and you get the results.
+* lib/tables.js
+
+    hashsets shared by the tokenizer, parser, runtime.
+    each of them access a few tables from the module
+    
+    the tables are faster than if-else-if or switch()
+    coz it is just one get per key, no O(n) comparison
+    of if conditions or case expressions.
+
+* lib/tokenizer.js
+
+    the tokenizer was separate for use in my syntaxhighlighter.
+    this is how the project begun.
+
+    is integrated with a few edits in the parser again, what
+    is not even a requirement, but standalone requires checking
+    last token and lookahead to decide which inputelementgoal 
+    comes. remember /regexps/ are lefthandsides of a member
+    expressions and not replacing a / operator position if no
+    lineterminator or semicolon follows after an identifier or
+    literal. (and a little more i hacked into for)
+    
+    has still to get template tokenization, just get´s `...`
+    which is split later by a not-conforming implementation
+    giving almost same results. i in the issue tracker, too.
+
+* lib/crockfords-parser.js
+
+    this parser is not in use, but lightweight, fast, functional,
+    it´s a write-up of crockfords tutorial, not continued yet,
+    but it´s here, because it will also get it´s time!
+    
+* lib/semantics.js
+
+    static semantics which run very slow, coz they recursivly
+    analyze the ast
+    
+    in parser.js replacement objects are already prepared.
+    will take some sessions, till i come to and replace.
+    
+* lib/parser.js
+
+    is a recursive descent parser. this is no esprima copy.
+    mozilla ast was the one ast the other was jsonml and i
+    preferred this one, maybe because of the existing tools.
+    a long term goal is to let this become interchangable
+    with esprima. That esprima ast could use evaluation,
+    compilation, generation,
+    
+    have some observer based extensions in mind getting
+    called with the node to process it.
+    
+    and some decorator based enhancements for parse()
+    in mind returning a new parse()
+    
+    and some parser adapter to exchange this and esprima
+    (which i don´t know yet, coz our es6 ast will vary,
+    i´ve never seen his yet, but want the compatiblity
+    for the long term goals)
+    
+* lib/heap.js
+
+    sorry, unfinished, coz i was typing down the draft,
+    deferring it a little, coz i had already a lot of
+    functions working. (learned about what to do first
+    by)
+
+* lib/compiler.js
+
+    future music. still have no official instruction set.
+    i didn´t know one before.
+    I could use own numbers at once.
+    I looked, what emscripten does, but not enough to make
+    sure the stuff it compiles is same as the compiled stuff
+    in the typed array of an asm.js compiled project.
+    see, where it should go
+    
+* lib/llvm-codegen.js
+
+    deferred generate llvm ir from javascript,
+    write your api in a typed language for
+    this is a special project meaningful after finishing
+    the interpreter (i mean then i should have gotten it)
+    
+* lib/jscodegen.js
+
+    recreates js-strings from the AST.
+    this is used by Function.prototype.toString() in Evaluate, too.
+    
+* lib/api.js
+
+    the essential methods and data types of the ecma-262 specification
+    all ast-independet functions
+    
+    the object system relies a little on prototype methods, but has
+    a useless mapping-gate beetween which simulates the bytecode interface,
+    and some working functions like getinternalslot and setinternalslot
+    and callinternalslot, which are called with the object as arguments,
+    not on the object. i already removed most of .member direct accesses
+    on any of the ordinary objects, coz the callinternalslot and all other
+    accessing functions can be 
+    exchanged by createASTEvaluator(), or createHeapEvaluator()
+    
+    i have lot´s of plans for except for design pattern, which i just
+    started with, but they will be essentially very soon, coz i can 
+    communicate the source then to you.
+    
+* lib/runtime.js
+
+    the runtime semantics for ecma-262.
+    can be reused with bytecode after enhancing it with some functionality,
+    i described currently in the main readme and later in /docs
+    
+* lib/highlighter.js
+
+    a browser-independet highlighter function, which returns tokens replaced
+    by spans. got some hashtables for classnames.
+    
+* lib/highlighter-app.js
+
+    a browser app, this finds pre and code and highlight´s both. pre with
+    menu, if desired, and code like a bold or italics
+    has mouseover features with annotation
+    
+    cooler would be a subexpression-evaluation showing intermediate results
+    when mousing over. The interpreter could do that, so i have ideas like
+    doing this via observer-notifier, where i notify the highlighter about
+    the evaluated node and the result, that it can update it´s annotation
+    or view. but i hadn´t time for yet because the rest is unstable.
+
+    createFeaturingElements is a perfect thing for one of these patterns,
+    i read in the books like "head first design patterns" since some hours
+    the last days. So i already have in mind to change the code for you to
+    make it more impressive or better said "readable"
+
+* lib/worker.js
+
+    was the web worker startup. worked, hat to disable console.log for.
+    should be able to receive messages like parse or tokenize and some
+    data.
+    
+    worker computation can help e.g. the highlighter to calculate and
+    highlight and evaluate the stuff for the sub-expression informations.
+    what´s the result of (a+b) in (a+b)+c ? just mouseover and read.
+    (is not impl but a feature idea i write down to make sure to write)
+    
+* lib/fswraps.js
+
+    fs.readFileSync wrapped ?
+    whatever i wanted this for
+    to read files.
+    
+* lib/shell.js
+
+    a fs.readline interface with multiline-input by scanning open parens
+    nothing special, but the thing that starts if node syntax0.js is called
+    (can be disabled by replacing syntaxjs.nodeShell() in app.js);
+    
+    has a special option
+    (mainly in the wrong module?)
+    takes a second argument on the command line node syntax0.js [filename]
+    and evaluates that passed filename.
+    this makes test-262 possible i guess. but i am missing some points, what´s
+    going on inside yet, so it will take a while till test262 is reliably working with.
+
+* lib/syntaxjs.js
+
+    here i assemble the modules to the syntaxjs object
+    
+    the thing is this can be replaced by some design patterns.
+    a builder for example or a factory, depending on a config 
+    object. 
+
+* lib/app.js
+
+    the old main if-else-block from the end of the file,
+    deciding what to start on which platform.
+    
+    (there are patterns for)
     
