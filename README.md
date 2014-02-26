@@ -11,8 +11,6 @@ some do now.
 _Usage_
 It can be tried with simply typing node syntax0.js. 
 
-
-
 linux-www5:~ # node syntax0.js [exec_me.js]
 
 ```javascript
@@ -36,35 +34,33 @@ es6>
 ```
 
 
-_Known Bugs_
+_New is /lib_
+New overview: Meanwhile i´ve cut the Megabyte of code into the
+big modules and can already see the mess i left in some modules,
+i didn´t develop very far. And what was going on. Softwareengineering
+is right and empiric with the knowledge about codes. The mess i see
+is that what they said.
+But i´m optimistic and like do continue. Pieces like the parser look
+now very small and handy to browse and to edit. Scrolling around doesnt
+let you end up in some other code block. Hey. The API module is around
+500k, and i think first i will cut out the make of the intrinsics and
+then the making of the global object.
+
+
+_Known Bugs, _
 * Generators: The code Evaluation Stack is not fixed. The tool started with Evaluate(node) as indirect recursion function (being called again from a function called by Evaluate), but using a stack instead of real recursion makes resumability available, which is needed for the generator. I had little trouble imagining resuming and suspending a context, coz i forgot to directly use a stack machine. The problem can be fixed locally just for the generator i estimate by thinking it out.
-* btw. i never tried to create code blocks from the ast to put the loops into blocks each iteration. From the function body of SomeIterationStatement the inner could become extracted. A little
-editing is to be done for reentering the loops for the generators. That´s done by looking up "am resuming" ok "then get index of next instruction plus my environment" and
-the special case for returning the value to yield is not working through the mistake with the
-Evaluate(node) at the beginning. [[ Apologies block: It´s the first time i tried to write such a thing and if i finish it,
-it is my first project ever. (I have neither studied CS nor worked in the job yet, but on a website for a jobcenter euro-job, four years ago, and have no
-experience since i wrote tools with 16/17 in PPL for PCBoard in ´93/´94. I just kept the hobby from time to time, but
-got not to work with PHP or Linux a decade ago..) ]]
+* I found already various possibilities by thinking through, the latest is putting the last child of a list first onto the stack (much work) or just reading the doubly linked list forward with a pop_front. just fifo. but the stack storage is needed for suspending and resuming of the context, which indirect recursion by calls has not.
 * Classes. I just have a bug in the code, they are easy. Super References. I just have a bug in the code, they are easy.
 * Have to rewrite in parser.PropertyDefinitionList and MethodDefinition the part for the computedPropertyName [sym](). It´s working, but not DRY but DUPING the Code extra for the computed key.
-* Lock-Ups, Hanging Terminals: After releasing it and writing wrong inputs i got it. I have one of the loops not breaking.
+* Lock-Ups, Hanging Terminals: After releasing it and writing wrong inputs, i got it. I have one of the loops not breaking.
 * Source Characters: The character set is incomplete and unicode is disabled.
-* TypedArrays: Incomplete Implementation (used TypedArrays in the background then)
-* Date: Incomplete
-* String Functions: Incomplete
-* Number Functions: Incomplete .toFixed, .toPrecision, but i have managed converting numbers meanwhile (four weeks ago i hadn´t practiced much, but meanwhile i did for a lot of number)
+* TypedArrays: Incomplete Implementation (used TypedArrays in the background then) am not finished writing it down from the spec. 
+* Date: Incomplete but already installed with a lot of functions.
+* String Functions: Incomplete but already a lot of functions
+* Number Functions: Incomplete .toFixed, .toPrecision, but i have managed converting numbers meanwhile (four weeks ago i hadn´t practiced much, but meanwhile i did for a lot of numbers)
+* More? Probably. But the list of done things is longer. :-)
 
-_Still learning how to encode_
-* Encoding: I managed converting numbers now with the right algorithms like (((x[0]*10)+x[1]*10)+x[2]*) or value *= Math.pow(base, pos) and know how to | or bits to add 1,2,4,8,16,32,64 and so on,
-or to test with &, if the bit is in the sum of the number. I know how to shift left or right to divide or multiply or to subtract the base2^bit from the byte. But i did not manage to implement all
-the encoding and decoding and conversion algorithms.
-* I really still am confused a little by making and getting surrogate pairs, coz like crockford says "Programmers have problems entering a character which is not on the keyboard" （Ctrl-Space）安定 
-i 哈年哦童 and i have not tested some scripts with the characters yet. Sorry for this _real_ inconvenience admitted, but i have not really played around with yet. 
-* Floating Point: When i started, i didn´t even know how a floating point is made. Meanwhile i watched videos about reading and making the numbers, normalizing them and interpreting the bits in 
-various ways. I can read the set and unset bits by asking wheter (quadword & Math.pow(2, bit)) or not, and beeing not stupid, the highest bit is the sign, the next 11 for the exponent, the rest
-is mantissa. Then the thing i made up like in the lectures. I think we get floating point to work here. I still have not printed IEEE 754, but i want. But to access a printer, i have to wait until
-i get to some office where i can print, which will be in march next time. Oh, by the way, i would also know how a fixed point number is made now. And i know about the complements.
-
+Uh, oh? Not really. Had a lot of fun with until today.
 
 _Long Term Goal_
 Long Term Goal: Completing it. Keeping it up-to-date with ES7 and
@@ -72,19 +68,8 @@ adding a a) Compiler and b) TypedArray Heap, which could have been
 there from the beginning on, but i decided to stick with the begun
 code and to refactor it with Search & Replace. 
 
-_Before i forget, meeting esprima´s output is a long term goal, too_
-Oh, and before i 
-forget, because of the use of the Mozilla-AST i would prefer to have
-later full compatibility to esprima-harmony nodes, but correctly said 
-i have not even read the code yet,
-that i can not tell, what to fix in this evaluators code for reading
-it´s syntax tree. Meeting esprima is a real long term goal, but i 
-preferred to write my code alone first, just for self-educational 
-purposes and not getting told to have rewritten someone elses tool.. 
-But i´ve seen it and like it and i basically influenced my syntax-
-highlighter getting a print-ast button for mozilla´s ast reflection
-forever. So that´s something this program should work together with.
-I think this here could do something, too, in it´s tool chain, some day.
+Compatibility with Esprima is not achieved now, but a long term goal
+and a must, too.
 
 
 _Design Mistakes_
