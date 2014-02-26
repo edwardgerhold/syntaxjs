@@ -85,14 +85,53 @@ _How?_
 2. If you come along a variable statement, push it into the declarations list
 and forget about saving the original statement with an extra entry in the
 StatementList.
-(which is same as static semantics vardeclarations, but with parser api nodes)
+3. Nope- Dont forget about. If "initialiser" is present (a = followed by an
+assignmentexpression) save a "AssignmentExpression"-Node at it´s place.
+We just move the name declarative part to the top, like js ever did. But
+on the first parse. 
+
+```js
+var x,y = 20, z = 100;
+```
+becomes
+
+```js
+var x,y,z;
+y = 20;
+z = 100;
+```
+in the syntax tree
+this is much more convenient than analyzing each variablestatement in a second
+turn, what costs more time.
 
 A dedicated Top-Level VariableDeclarationList,
 which gathers all "var" Statements of one function in one list.
-And not line by line with a new node
+And not line by line with a new node.
+That´s the idea i try to note here.
+
+```js
+
+// 
+function parseVariableStatement() {
+
+    // got "var x = 20"
+    
+    // after var x;
+    id = "x";
+    topLevelVarDeclaredNames.push(id);
+    
+    // has = ?
+    if (initialiser) {
+	initialiser = parseInitialiser();
+	// return the assignment, the x is hoisted.
+	return createAssignmentExpression(id, initialiser)
+    }
+    
+    // while (pos == ",") repeat
+}
+```
 
 Other thing could be to add the optimizing of the VariableDeclarations into the
 VariableStatement. That they will be collected, but with correct loc information
 already in only one node each kind "var", "let", "const" being added to the declarations.
-
 
