@@ -34,14 +34,17 @@ var Colors = {
 };
 
 function SimpleTest () {
-    this.tests = [];
-    this.results = [];
-    this.count = Object.create(null);
-    this.count.assertions = 0;
-    this.count.currentTest = 0;
-    this.count.passed = 0;
-    this.count.failed = 0;
-    this.count.exceptions = 0;
+    var test = Object.create(SimpleTest.prototype);
+    
+    test.tests = [];
+    test.results = [];
+    test.count = Object.create(null);
+    test.count.assertions = 0;
+    test.count.currentTest = 0;
+    test.count.passed = 0;
+    test.count.failed = 0;
+    test.count.exceptions = 0;
+    return test;
 }
 
 /* Assertions */

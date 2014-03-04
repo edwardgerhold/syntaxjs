@@ -244,13 +244,162 @@ define("tables", function (require, exports, module) {
 
     "use strict";
 
-    exports.uriAlpha = uriAlpha;
-    exports.uriMark = uriMark;
-    exports.uriReserved = uriReserved;
-    exports.NotPatternCharacter = NotPatternCharacter;
-    exports.CharacterClassEscape = CharacterClassEscape;
-    exports.ControlLetter = ControlLetter;
-    exports.ControlEscape = ControlEscape;
+
+    var BindingIdentifiers = {
+        __proto__: null,
+        "Identifier": true,
+        "Keyword": true,
+        "FutureReservedWord": true,
+        "StringLiteral": true,
+        "NumericLiteral": true,
+        "BooleanLiteral": true,
+        "NullLiteral": true
+    };
+
+    var propKeys = Object.create(null);
+    propKeys.true = true;
+    propKeys.false = true;
+    propKeys.null = true;
+
+    var ExprNoneOfs = Object.create(null);
+    ExprNoneOfs["function"] = true;
+    ExprNoneOfs["class"] = true;
+    ExprNoneOfs["module"] = true;
+    ExprNoneOfs["{"] = true;
+
+    var MethodKeyByType = {
+        __proto__: null,
+        "Identifier": true,
+        "StringLiteral": true,
+        "NumericLiteral": true,
+        "BooleanLiteral": true,
+        "NullLiteral": true,
+        "FutureReservedWord": true
+    };
+
+    var MethodKeyByValue = {
+        __proto__: null,
+        "constructor": true
+    };
+
+    var StartBinding = {
+        __proto__: null,
+        "{": true,
+        "[": true
+    };
+
+
+
+    var SkipableWhiteSpace = {
+        __proto__: null,
+        "WhiteSpace": true,
+        "LineTerminator": true,
+        "LineComment": true,
+        "MultiLineComment": true
+    };
+    var SkipableWhiteSpaceNoLT = {
+        __proto__: null,
+        "WhiteSpace": true,
+        "LineComment": true,
+        "MultiLineComment": true
+    };
+
+    var InOrOfInsOf = Object.create(null);
+    InOrOfInsOf.in = true;
+    InOrOfInsOf.of = true;
+    InOrOfInsOf.instanceof = true;
+
+    var InOrOf = Object.create(null);
+    InOrOf.in = true;
+    InOrOf.of = true;
+
+    var FinishStatementList = {
+        __proto__: null,
+        ")": true,
+        "]": true,
+        "}": true
+    };
+
+    var FinishSwitchStatementList = {
+        __proto__: null,
+        ")": true,
+        "]": true,
+        "}": true,
+        "case": true,
+        "default": true,
+    };
+
+    var PrimaryValues = {
+        __proto__: null,
+        "function": "FunctionExpression",
+        "this": "ThisExpression",
+        "class": "ClassExpression",
+        "super": "SuperExpression"
+    };
+
+    var PrimaryTypes = {
+        __proto__: null,
+        "TemplateLiteral": "TemplateLiteral",
+        "Identifier": "Identifier",
+        "StringLiteral": "Literal",
+        "NumericLiteral": "Literal",
+        "BooleanLiteral": "Literal",
+        "NullLiteral": "Literal",
+        "ArrayExpression": "ArrayExpression",
+        "ObjectExpression": "ObjectExpression",
+        "ArrayComprehension": "ArrayComprehension"
+    };
+
+    var varKinds = {
+        "var": true,
+        "let": true,
+        "const": true
+    };
+
+    var StatementParsers = {
+        __proto__: null,
+        "{": "BlockStatement",
+        "var": "VariableStatement",
+        "let": "VariableStatement",
+        "const": "VariableStatement",
+        "if": "IfStatement",
+        "for": "IterationStatement",
+        "while": "IterationStatement",
+        "do": "IterationStatement",
+        "continue": "ContinueStatement",
+        "break": "BreakStatement",
+        "return": "ReturnStatement",
+        "with": "WithStatement",
+        "switch": "SwitchStatement",
+        "try": "TryStatement",
+        "throw": "ThrowStatement",
+        "debugger": "DebuggerStatement",
+        "import": "ImportStatement",
+        "export": "ExportStatement",
+        ";": "EmptyStatement"
+    };
+
+    var PrimaryExpressionByValue = {
+        __proto__: null,
+        "(": "CoverParenthesizedExpressionAndArrowParameterList",
+        "[": "ArrayExpression",
+        "{": "ObjectExpression",
+        "class": "ClassExpression",
+        "function": "FunctionExpression",
+        "this": "ThisExpression",
+        "super": "SuperExpression"
+    };
+
+    var PrimaryExpressionByType = {
+        __proto__: null,
+        "Identifier": "Identifier",
+        "NumericLiteral": "Literal",
+        "TemplateLiteral": "TemplateLiteral",
+        "StringLiteral": "Literal",
+        "BooleanLiteral": "Literal",
+        "NullLiteral": "Literal"
+    };
+
 
     var uriAlpha = {
         __proto__: null,
@@ -447,11 +596,6 @@ define("tables", function (require, exports, module) {
         "{": "}"
     };
 
-    exports.LPAREN = LPAREN;
-    exports.RPAREN = RPAREN;
-    exports.LPARENOF = LPARENOF;
-    exports.RPARENOF = RPAREN
-
     var TypedArrayElementSize = {
         "Float64": 8,
         "Float32": 4,
@@ -476,10 +620,7 @@ define("tables", function (require, exports, module) {
         "Uint8ClampedArray": "Uint8C"
     };
 
-    exports.TypedArrayElementSize = TypedArrayElementSize;
-    exports.TypedArrayElementType = TypedArrayElementType;
-
-    var Building = {
+    var BuildingPatterns = {
         "Identifier": "identifier",
         "Literal": "literal",
         "WhileStatement": "whileStatement",
@@ -1432,7 +1573,35 @@ define("tables", function (require, exports, module) {
         "SwitchStatement": true
     };
 
-    // var tables = Object.create(null);
+
+
+    exports.FinishStatementList = FinishStatementList;
+    exports.FinishSwitchStatementList = FinishSwitchStatementList;
+    exports.PrimaryValues = PrimaryValues;
+    exports.PrimaryTypes = PrimaryTypes;
+    exports.varKinds = varKinds;
+    exports.StatementParsers = StatementParsers;
+    exports.PrimaryExpressionByValue = PrimaryExpressionByValue;
+    exports.PrimaryExpressionByType = PrimaryExpressionByType;
+    exports.SkipableWhiteSpace = SkipableWhiteSpace;
+    exports.SkipableWhiteSpaceNoLT = SkipableWhiteSpaceNoLT;
+    exports.InOrOfInsOf = InOrOfInsOf;
+    exports.InOrOf = InOrOf;
+    exports.BindingIdentifiers = BindingIdentifiers;
+    exports.propKeys = propKeys;
+    exports.ExprNoneOfs = ExprNoneOfs;
+    exports.MethodKeyByType = MethodKeyByType;
+    exports.MethodKeyByValue = MethodKeyByValue;
+    exports.StartBinding = StartBinding;
+
+
+    exports.uriAlpha = uriAlpha;
+    exports.uriMark = uriMark;
+    exports.uriReserved = uriReserved;
+    exports.NotPatternCharacter = NotPatternCharacter;
+    exports.CharacterClassEscape = CharacterClassEscape;
+    exports.ControlLetter = ControlLetter;
+    exports.ControlEscape = ControlEscape;
     exports.DOM = DOM;
     exports.HTML5Objects = HTML5Objects;
     exports.NodeJSObjects = NodeJSObjects;
@@ -1485,6 +1654,14 @@ define("tables", function (require, exports, module) {
     exports.NotExpressionStatement = NotExpressionStatement;
     exports.DeclarationKind = DeclarationKind;
     exports.Continuations = Continuations;
+    exports.LPAREN = LPAREN;
+    exports.RPAREN = RPAREN;
+    exports.LPARENOF = LPARENOF;
+    exports.RPARENOF = RPAREN
+    exports.TypedArrayElementSize = TypedArrayElementSize;
+    exports.TypedArrayElementType = TypedArrayElementType;
+    exports.BuildingPatterns = BuildingPatterns;
+
     // return tables;
 });
 
@@ -2593,24 +2770,24 @@ define("tokenizer", ["tables"], function (tables) {
         var token = Object.create(null);
 
         /*    var oid = token._oid_ = newNodeId();
-            tokenTable[oid] = token;
-            */
+         tokenTable[oid] = token;
+         */
 
         if (!isWS) lastTokenType = type;
         token.type = type;
         token.goal = details;
         token.value = value;
-        
+
         if (PunctOrLT[type]) {
             /*
-            if (type === "Punctuator") {
+             if (type === "Punctuator") {
              if (lookahead === undefined && !AllowedLastChars[value]) throw SyntaxError("Unexpected end of input stream");
-            }
-            */
+             }
+             */
             if (!OneOfThesePunctuators[value]) inputElementGoal = inputElementRegExp;
-        
+
         } else inputElementGoal = inputElementDiv;
-        
+
 
         token.offset = offset;
 
@@ -2619,7 +2796,8 @@ define("tokenizer", ["tables"], function (tables) {
             source: filename,
             start: {
                 line: line,
-                column: column,
+                column: column
+                ,
             }
         };
 
@@ -2748,8 +2926,8 @@ define("tokenizer", ["tables"], function (tables) {
     }
 
     /*
- Regex schreiben
-*/
+     Regex schreiben
+     */
 
     function RegularExpressionLiteral() {
         var expr = "", flags = "";
@@ -2800,11 +2978,11 @@ define("tokenizer", ["tables"], function (tables) {
 
             if (inputElementGoal === inputElementRegExp) {
                 // saveTheDot();
-                
+
                 if (ok = RegularExpressionLiteral()) {
                     inputElementGoal = inputElementDiv;
                     return ok;
-                } // else inputElementGoal = inputElementDiv;
+                } else inputElementGoal = inputElementDiv;
                 // restoreTheDot();
             }
 
@@ -2817,7 +2995,7 @@ define("tokenizer", ["tables"], function (tables) {
                     return pushtoken("Punctuator", ch, undefined, PunctToExprName[ch]);
                 }
 
-            } 
+            }
 
         }
         return false;
@@ -2826,14 +3004,14 @@ define("tokenizer", ["tables"], function (tables) {
     function Punctuation() {
         if (ParensSemicolonComma[ch]) {
 
-            if (LPAREN[ch]) {
+/*            if (LPAREN[ch]) {
                 parens.push(ch);
             } else if (RPAREN[ch]) {
                 var p = parens.pop();
                 if (LPARENOF[ch] !== p) {
-                    
+
                 }
-            }
+            } */
             return pushtoken("Punctuator", ch, undefined, PunctToExprName[ch]);
         }
         var punct = sourceCode[i] + sourceCode[i + 1] + sourceCode[i + 2] + sourceCode[i + 3];
@@ -2941,7 +3119,7 @@ define("tokenizer", ["tables"], function (tables) {
                         next();
                         es += ch;
                         /*++i;
-                        if (i == 4) break; // some type more */
+                         if (i == 4) break; // some type more */
                     }
                     // com = String.fromCharCode(+(es.substr(2, es.length-1)));
                     com = eval("\'" + es + "\'");
@@ -3133,6 +3311,7 @@ define("tokenizer", ["tables"], function (tables) {
         }
     }
 
+    var customTokenMaker = null;
     function setCustomTokenMaker(func) {
 
         if (typeof func === null) {
@@ -3656,12 +3835,12 @@ define("crockfords-parser", ["tables", "tokenizer"], function (tables, tokenize)
 
 
 /*
-############################################################################################################################################################################################################
+ ############################################################################################################################################################################################################
 
-    Parser - Converts a stream of EcmaScript Tokens into a Mozilla Parser API AST instead of into the good looking Original Strings
+ Parser - Converts a stream of EcmaScript Tokens into a Mozilla Parser API AST instead of into the good looking Original Strings
 
-############################################################################################################################################################################################################
-*/
+ ############################################################################################################################################################################################################
+ */
 
 define("parser", ["tables", "tokenizer"], function (tables, tokenize) {
 
@@ -3672,174 +3851,29 @@ define("parser", ["tables", "tokenizer"], function (tables, tokenize) {
     var parseGoalParameters;
     var withError, ifAbrupt, isAbrupt;
 
-    // ==========================================================
-    // O(1) XS Tables, for export into tables module
-    // (meanwhile the whole define is "deprecated, coz its too ugly")
-    // ==========================================================
 
-    /*
-        exports.FinishStatementList = FinishStatementList;
-        exports.FinishSwitchStatementList = FinishSwitchStatementList;
-        exports.PrimaryValues = PrimaryValues;
-        exports.PrimaryTypes = PrimaryTypes;
-        exports.varKinds = varKinds;
-        exports.StatementParsers = StatementParsers;
-        exports.PrimaryExpressionByValue = PrimaryExpressionByValue;
-        exports.PrimaryExpressionByType = PrimaryExpressionByType;
-    */
 
-    var FinishStatementList = {
-        __proto__: null,
-        ")": true,
-        "]": true,
-        "}": true
-    };
+    var FinishStatementList = tables.FinishStatementList;
+    var FinishSwitchStatementList = tables.FinishSwitchStatementList;
+    var PrimaryValues = tables.PrimaryValues;
+    var PrimaryTypes = tables.PrimaryTypes;
+    var varKinds = tables.varKinds;
+    var StatementParsers = tables.StatementParsers;
+    var PrimaryExpressionByValue = tables.PrimaryExpressionByValue;
+    var PrimaryExpressionByType = tables.PrimaryExpressionByType;
 
-    var FinishSwitchStatementList = {
-        __proto__: null,
-        ")": true,
-        "]": true,
-        "}": true,
-        "case": true,
-        "default": true,
-    };
+    var SkipableWhiteSpace = tables.SkipableWhiteSpace;
+    var SkipableWhiteSpaceNoLT = tables.SkipableWhiteSpaceNoLT;
+    var InOrOfInsOf = tables.InOrOfInsOf;
+    var InOrOf = tables.InOrOf;
 
-    var PrimaryValues = {
-        __proto__: null,
-        "function": "FunctionExpression",
-        "this": "ThisExpression",
-        "class": "ClassExpression",
-        "super": "SuperExpression"
-    };
 
-    var PrimaryTypes = {
-        __proto__: null,
-        "TemplateLiteral": "TemplateLiteral",
-        "Identifier": "Identifier",
-        "StringLiteral": "Literal",
-        "NumericLiteral": "Literal",
-        "BooleanLiteral": "Literal",
-        "NullLiteral": "Literal",
-        "ArrayExpression": "ArrayExpression",
-        "ObjectExpression": "ObjectExpression",
-        "ArrayComprehension": "ArrayComprehension"
-    };
-
-    var varKinds = {
-        "var": true,
-        "let": true,
-        "const": true
-    };
-
-    var StatementParsers = {
-        __proto__: null,
-        "{": "BlockStatement",
-        "var": "VariableStatement",
-        "let": "VariableStatement",
-        "const": "VariableStatement",
-        "if": "IfStatement",
-        "for": "IterationStatement",
-        "while": "IterationStatement",
-        "do": "IterationStatement",
-        "continue": "ContinueStatement",
-        "break": "BreakStatement",
-        "return": "ReturnStatement",
-        "with": "WithStatement",
-        "switch": "SwitchStatement",
-        "try": "TryStatement",
-        "throw": "ThrowStatement",
-        "debugger": "DebuggerStatement",
-        "import": "ImportStatement",
-        "export": "ExportStatement",
-        ";": "EmptyStatement"
-    };
-
-    var PrimaryExpressionByValue = {
-        __proto__: null,
-        "(": "CoverParenthesizedExpressionAndArrowParameterList",
-        "[": "ArrayExpression",
-        "{": "ObjectExpression",
-        "class": "ClassExpression",
-        "function": "FunctionExpression",
-        "this": "ThisExpression",
-        "super": "SuperExpression"
-    };
-
-    var PrimaryExpressionByType = {
-        __proto__: null,
-        "Identifier": "Identifier",
-        "NumericLiteral": "Literal",
-        "TemplateLiteral": "TemplateLiteral",
-        "StringLiteral": "Literal",
-        "BooleanLiteral": "Literal",
-        "NullLiteral": "Literal"
-    };
-
-    var SkipableWhiteSpace = {
-        __proto__: null,
-        "WhiteSpace": true,
-        "LineTerminator": true,
-        "LineComment": true,
-        "MultiLineComment": true
-    };
-    var SkipableWhiteSpaceNoLT = {
-        __proto__: null,
-        "WhiteSpace": true,
-        "LineComment": true,
-        "MultiLineComment": true
-    };
-
-    var InOrOfInsOf = Object.create(null);
-    InOrOfInsOf.in = true;
-    InOrOfInsOf.of = true;
-    InOrOfInsOf.instanceof = true;
-
-    var InOrOf = Object.create(null);
-    InOrOf.in = true;
-    InOrOf.of = true;
-
-    var BindingIdentifiers = {
-        __proto__: null,
-        "Identifier": true,
-        "Keyword": true,
-        "FutureReservedWord": true,
-        "StringLiteral": true,
-        "NumericLiteral": true,
-        "BooleanLiteral": true,
-        "NullLiteral": true
-    };
-
-    var propKeys = Object.create(null);
-    propKeys.true = true;
-    propKeys.false = true;
-    propKeys.null = true;
-
-    var ExprNoneOfs = Object.create(null);
-    ExprNoneOfs["function"] = true;
-    ExprNoneOfs["class"] = true;
-    ExprNoneOfs["module"] = true;
-    ExprNoneOfs["{"] = true;
-
-    var MethodKeyByType = {
-        __proto__: null,
-        "Identifier": true,
-        "StringLiteral": true,
-        "NumericLiteral": true,
-        "BooleanLiteral": true,
-        "NullLiteral": true,
-        "FutureReservedWord": true
-    };
-
-    var MethodKeyByValue = {
-        __proto__: null,
-        "constructor": true
-    };
-
-    var StartBinding = {
-        __proto__: null,
-        "{": true,
-        "[": true
-    };
+    var propKeys = tables.propKeys;
+    var BindingIdentifiers = tables.BindingIdentifiers;
+    var ExprNoneOfs = tables.ExprNoneOfs;
+    var MethodKeyByType = tables.MethodKeyByType;
+    var MethodKeyByValue = tables.MethodKeyByValue;
+    var StartBinding = tables.StartBinding;
 
     // ==========================================================
     // Imported Tables Re-Usable From the Tables Module
@@ -3863,11 +3897,11 @@ define("parser", ["tables", "tokenizer"], function (tables, tokenize) {
     var PunctToExprName = tables.PunctToExprName;
     var BinaryOperators = tables.BinaryOperators;
     var AssignmentOperators = tables.AssignmentOperators;
-    var RelationalOperators = tables.RelationalOperators;
+    //var RelationalOperators = tables.RelationalOperators;
     var UnaryOperators = tables.UnaryOperators;
     var UpdateOperators = tables.UpdateOperators;
     var EqualityOperators = tables.EqualityOperators;
-    var RelationalOperators = tables.RelationalOperators;
+    //var RelationalOperators = tables.RelationalOperators;
     var LogicalOperators = tables.LogicalOperators;
     var BitwiseOperators = tables.BitwiseOperators;
     var InOperator = tables.InOperator;
@@ -3889,7 +3923,7 @@ define("parser", ["tables", "tokenizer"], function (tables, tokenize) {
     var lparen = false;
     var rparen = false;
     var tbl;
-    
+
     var isWorker = typeof importScripts === "function";
     var isNode = typeof process !== "undefined" && typeof global !== "undefined";
     var isBrowser = typeof window !== "undefined";
@@ -3902,7 +3936,7 @@ define("parser", ["tables", "tokenizer"], function (tables, tokenize) {
     // VERY IMPORTANT
     //
     var lookahead, lookaheadt; // lookahead
-    
+
     var tokens;
     var T = Object.create(null); // current token
     var t; // current token type
@@ -3929,8 +3963,8 @@ define("parser", ["tables", "tokenizer"], function (tables, tokenize) {
     var generatorParameterStack = [];
     var strictModeStack = [];
     var inStrictMode = false;
-    
-    
+
+
     var moduleStack = [];
     var curModule;
     var curFunc;
@@ -4001,7 +4035,7 @@ define("parser", ["tables", "tokenizer"], function (tables, tokenize) {
         if (!test) throwError(new Error(message));
     }
     function SyntaxAssert(test, message) {
-         if (!test) throwError(new SyntaxError(message));   
+        if (!test) throwError(new SyntaxError(message));
     }
 
     var ForbiddenArgumentsInStrict = {
@@ -4032,16 +4066,16 @@ define("parser", ["tables", "tokenizer"], function (tables, tokenize) {
 
     EarlyErrors.Program = function (node) {
         /*SyntaxAssert(!staticSemantics.contains("BreakStatement"), "Break is not allowed in the outer script body");
-        //if (staticSemantics.contains("BreakStatement")) throw new SyntaxError("Break is not allowed in the outer script body");     
-        if (staticSemantics.contains("ContinueStatement")) throw new SyntaxError("Continue is not allowed in the outer script body");
-        if (staticSemantics.contains("ReturnStatement")) throw new SyntaxError("Return is not allowed in the outer script body");*/
+         //if (staticSemantics.contains("BreakStatement")) throw new SyntaxError("Break is not allowed in the outer script body");
+         if (staticSemantics.contains("ContinueStatement")) throw new SyntaxError("Continue is not allowed in the outer script body");
+         if (staticSemantics.contains("ReturnStatement")) throw new SyntaxError("Return is not allowed in the outer script body");*/
     };
 
     EarlyErrors.FunctionDeclaration = function (node) {
         /*if (staticSemantics.contains("BreakStatement")) throw new SyntaxError("Break is not allowed outside of iterations");
-        if (staticSemantics.contains("ContinueStatement")) throw new SyntaxError("Continue is not allowed outside of iterations");
-        if (staticSemantics.contains("YieldExpression")) throw new SyntaxError("Yield must be an identifier outside of generators or strict mode");
-        */
+         if (staticSemantics.contains("ContinueStatement")) throw new SyntaxError("Continue is not allowed outside of iterations");
+         if (staticSemantics.contains("YieldExpression")) throw new SyntaxError("Yield must be an identifier outside of generators or strict mode");
+         */
     };
     EarlyErrors.ModuleDeclaration = function (node) {};
     EarlyErrors.Statement = function (node) {};
@@ -4085,7 +4119,7 @@ define("parser", ["tables", "tokenizer"], function (tables, tokenize) {
     }
 
 
-    var staticSemantics;   
+    var staticSemantics;
 
     function makeStaticSemantics(tokens) {
         staticSemantics = StaticSemantics();
@@ -4105,7 +4139,7 @@ define("parser", ["tables", "tokenizer"], function (tables, tokenize) {
         parameters["In"] = [];
         parameters["Return"] = [];
         parameters["Yield"] = [];
-      
+
         // Contains
         var container = Object.create(null);
         var containers = [container];
@@ -4114,21 +4148,21 @@ define("parser", ["tables", "tokenizer"], function (tables, tokenize) {
         var LexEnv = Object.create(null);
         var VarEnv = LexEnv;
         var varEnvs = [VarEnv];
-        var lexEnvs = [LexEnv];        
-        
+        var lexEnvs = [LexEnv];
+
         // faster lexNames than the recursive slow-static-semantic i tried to write first (with knowing the cost of its recursion all nodes long but to get it working 
-       //     - didnt know a "symboltable" or to use hashmaps to keep the data on the fly)
+        //     - didnt know a "symboltable" or to use hashmaps to keep the data on the fly)
         /*
-        var lexNames;
-        var lexDecls;
-        var varNames;
-        var varDecls;
-        // stacks
-        var LexNames = [];
-        var LexDecls = [];
-        var VarNames = [];
-        var VarDecls = [];
-        */
+         var lexNames;
+         var lexDecls;
+         var varNames;
+         var varDecls;
+         // stacks
+         var LexNames = [];
+         var LexDecls = [];
+         var VarNames = [];
+         var VarDecls = [];
+         */
         // Contains
 
         function newContainer() {
@@ -4141,13 +4175,13 @@ define("parser", ["tables", "tokenizer"], function (tables, tokenize) {
         }
 
         function put(production, value) {
-            container[production] = value === undefined ? true : value; 
+            container[production] = value === undefined ? true : value;
         }
 
         function contains(production) {
             if (container)
-            if (Object.hasOwnProperty.call(container, production)) return container[production] || true;
-            else return false;
+                if (Object.hasOwnProperty.call(container, production)) return container[production] || true;
+            return false;
         }
 
         // Parameter 
@@ -4156,7 +4190,7 @@ define("parser", ["tables", "tokenizer"], function (tables, tokenize) {
             var parameter = parameters[name];
             return parameter[parameter.length-1];
         }
-        
+
         function newParameter(name, value) {
             var parameter = parameters[name];
             return parameter.push(value);
@@ -4172,30 +4206,30 @@ define("parser", ["tables", "tokenizer"], function (tables, tokenize) {
         function newVarEnv() {
             varEnvs.push(VarEnv);
             VarEnv = Object.create(LexEnv);
-        /*
-            VarEnv.varNames = [];
-            VarEnv.varDecls = [];
-        */
+            /*
+             VarEnv.varNames = [];
+             VarEnv.varDecls = [];
+             */
             lexEnvs.push(LexEnv);
             LexEnv = Object.create(LexEnv);
-        /*
-            LexNames.push(lexNames);
-            lexNames = [];
-            LexDecls.push(lexDecls);
-            lexDecls = []; 
-        */
+            /*
+             LexNames.push(lexNames);
+             lexNames = [];
+             LexDecls.push(lexDecls);
+             lexDecls = [];
+             */
             return VarEnv;
         }
 
         function newLexEnv() {
             lexEnvs.push(LexEnv);
             LexEnv = Object.create(LexEnv);
-        /*
-            LexNames.push(lexNames);
-            lexNames = [];
-            LexDecls.push(lexDecls);
-            lexDecls = [];
-        */
+            /*
+             LexNames.push(lexNames);
+             lexNames = [];
+             LexDecls.push(lexDecls);
+             lexDecls = [];
+             */
             return LexEnv;
         }
 
@@ -4220,13 +4254,15 @@ define("parser", ["tables", "tokenizer"], function (tables, tokenize) {
             VarEnv[name] = param === undefined ? true : param;
         }
 
-        function hasVarBinding(name) { 
-            return Object.hasOwnProperty.call(VarEnv, name);
+        function hasVarBinding(name) {
+            if (typeof name == "string")
+                return Object.hasOwnProperty.call(VarEnv, name);
 
         }
 
-        function hasLexBinding(name) { 
-            return Object.hasOwnProperty.call(LexEnv, name);
+        function hasLexBinding(name) {
+            if (typeof name == "string")
+                return Object.hasOwnProperty.call(LexEnv, name);
         }
 
         function addVarDecl(decl) {
@@ -4274,12 +4310,12 @@ define("parser", ["tables", "tokenizer"], function (tables, tokenize) {
             addVarBinding: addVarBinding,
             hasVarBinding: hasVarBinding,
             hasLexBinding: hasLexBinding,
-        /*
-            addVarDecl: addVarDecl,
-            addLexDecl: addLexDecl,
-            varDecls: varDecls,
-            lexDecls: lexDecls,
-        */
+            /*
+             addVarDecl: addVarDecl,
+             addLexDecl: addLexDecl,
+             varDecls: varDecls,
+             lexDecls: lexDecls,
+             */
             lexNames: lexNames,
             varNames: varNames,
             //
@@ -4404,7 +4440,7 @@ define("parser", ["tables", "tokenizer"], function (tables, tokenize) {
 
         if (typeof t === "string") t = tokenize(t);
         tokens = t || [];
-        
+
         makeStaticSemantics();
 
         i = -1;
@@ -4460,7 +4496,7 @@ define("parser", ["tables", "tokenizer"], function (tables, tokenize) {
 
 
     function hasNext() {
-	return lookahead != undefined;
+        return lookahead != undefined;
     }
 
 
@@ -4472,8 +4508,6 @@ define("parser", ["tables", "tokenizer"], function (tables, tokenize) {
 
             lastloc = loc;
 
-            lparen = false;
-            rparen = false;
 
             T = tokens[i] || {};
 
@@ -4625,8 +4659,8 @@ define("parser", ["tables", "tokenizer"], function (tables, tokenize) {
                 if (lookahead !== ",") pass(",");
                 continue;
             } /*else if (v !== "]") {
-                throwError(new SyntaxError("buggy element list"));
-            }*/
+             throwError(new SyntaxError("buggy element list"));
+             }*/
 
         } while (v && v !== "]");
 
@@ -4673,7 +4707,7 @@ define("parser", ["tables", "tokenizer"], function (tables, tokenize) {
             propertyName = this.AssignmentExpression("]");
             pass("]");
             return propertyName;
-        } 
+        }
         return null;
     }
 
@@ -4696,7 +4730,7 @@ define("parser", ["tables", "tokenizer"], function (tables, tokenize) {
         list.type = "PropertyDefinitionList";
         var id;
         var node, hasAsterisk, computedPropertyName; // p ist hier der node-name (renamen)
-
+        var method;
         do {
 
             if (v == "}") break;
@@ -4705,7 +4739,7 @@ define("parser", ["tables", "tokenizer"], function (tables, tokenize) {
 
                 node = Node("PropertyDefinition");
                 node.kind = v;
-                var method = this.MethodDefinition(parent, true);
+                method = this.MethodDefinition(parent, true);
                 if (!method) throwError(new SyntaxError("Error parsing MethodDefinition in ObjectExpression"));
                 node.key = method.id;
                 node.value = method;
@@ -4714,21 +4748,21 @@ define("parser", ["tables", "tokenizer"], function (tables, tokenize) {
             } else {
 
                 /* 
-                    This has to be cleaned up. I did today, and removed the double method, the double "init", the computedPropertyName,
-                    and used PropertyKey() for both. It looked nice and clean. But it failed. So i restored it for now. I want to write
-                    it again (from scratch), but tomorrow.
-                */
-                
+                 This has to be cleaned up. I did today, and removed the double method, the double "init", the computedPropertyName,
+                 and used PropertyKey() for both. It looked nice and clean. But it failed. So i restored it for now. I want to write
+                 it again (from scratch), but tomorrow.
+                 */
+
                 if (v === "[") {
                     computedPropertyName = this.ComputedPropertyName();
                 } else computedPropertyName = undefined;
 
                 if (v === "*" || computedPropertyName || (BindingIdentifiers[t] || v === "constructor")) { //*[ Id
-                    
+
                     node = Node("PropertyDefinition");
 
                     if ((lookahead === "," || lookahead === "}") && (BindingIdentifiers[t] || v === "constructor")) { // {x,y}
-                        
+
                         node.kind = "init";
                         id = this.PropertyKey();
                         if (!id) throwError(new SyntaxError("error parsing objectliteral shorthand"))
@@ -4737,7 +4771,7 @@ define("parser", ["tables", "tokenizer"], function (tables, tokenize) {
                         list.push(node);
 
                     } else if (computedPropertyName && v === ":") { // [s]:
-                        
+
                         node.kind = "init";
                         node.key = computedPropertyName;
                         node.computed = true;
@@ -4747,7 +4781,7 @@ define("parser", ["tables", "tokenizer"], function (tables, tokenize) {
                         list.push(node);
 
                     } else if (lookahead === ":") { // key: AssignmentExpression
-                        
+
                         node.kind = "init";
                         node.key = this.PropertyKey();
                         pass(":");
@@ -4757,18 +4791,18 @@ define("parser", ["tables", "tokenizer"], function (tables, tokenize) {
 
                     } else if (computedPropertyName && v == "(") {
 
-                        node.kind = "method";    
-                        var method = this.MethodDefinition(parent, true, computedPropertyName);
+                        node.kind = "method";
+                        method = this.MethodDefinition(parent, true, computedPropertyName);
                         if (!method) throwError(new SyntaxError("Error parsing method definition in ObjectExpression."));
                         node.key = method.id;
                         node.computed = method.computed;
                         node.value = method;
-                        list.push(node);                        
+                        list.push(node);
 
                     } else if (((v == "[" || BindingIdentifiers[t] || v === "constructor") && lookahead === "(") || (v === "*" && (lookahead == "[" || BindingIdentifiers[lookaheadt] || lookahead === "constructor"))) {
 
-                        node.kind = "method";    
-                        var method = this.MethodDefinition(parent, true);
+                        node.kind = "method";
+                        method = this.MethodDefinition(parent, true);
                         if (!method) throwError(new SyntaxError("Error parsing method definition in ObjectExpression."));
                         node.key = method.id;
                         node.computed = method.computed;
@@ -4779,7 +4813,7 @@ define("parser", ["tables", "tokenizer"], function (tables, tokenize) {
                 }
             }
             computedPropertyName = undefined;
-            
+
             if (v === ",") {
                 pass(",");
             } else break;
@@ -4792,25 +4826,25 @@ define("parser", ["tables", "tokenizer"], function (tables, tokenize) {
 
     parser.ObjectExpression = ObjectExpression;
 
-    
+
     function ObjectExpression() {
         var node, l1, l2;
         if (v === "{") {
 
-    
-                l1 = loc && loc.start;
-                node = Node("ObjectExpression");
-                node.properties = [];
-                pass("{");
-                node.properties = this.PropertyDefinitionList();
-                l2 = loc && loc.end;
-                pass("}");
-                node.loc = makeLoc(l1, l2);
-                EarlyErrors(node);
 
-                return compile ? builder["objectExpression"](node.properties, node.loc) : node;
+            l1 = loc && loc.start;
+            node = Node("ObjectExpression");
+            node.properties = [];
+            pass("{");
+            node.properties = this.PropertyDefinitionList();
+            l2 = loc && loc.end;
+            pass("}");
+            node.loc = makeLoc(l1, l2);
+            EarlyErrors(node);
 
-    
+            return compile ? builder["objectExpression"](node.properties, node.loc) : node;
+
+
         }
         return null;
     }
@@ -4842,14 +4876,14 @@ define("parser", ["tables", "tokenizer"], function (tables, tokenize) {
                 node.computed = false;
 
                 if (t === "Identifier" || t === "Keyword" || propKeys[v] || t === "NumericLiteral") {
-                    var property = Object.create(null); 
+                    var property = Object.create(null);
                     property.type = "Identifier";
                     property.name = v;
                     property.loc = T.loc
                     node.property = property;
 
                 } else if (v === "!") {
-                    
+
                     // http://wiki.ecmascript.org/doku.php?id=strawman:concurrency
                     // MemberExpression ! [Expression]
                     // MemberExpression ! Arguments
@@ -5008,10 +5042,10 @@ define("parser", ["tables", "tokenizer"], function (tables, tokenize) {
 
     /*
 
- - ( GeneratorComprehension )
- abkuerzung fuer eine (function * () { for (k of a) yield k; }());
+     - ( GeneratorComprehension )
+     abkuerzung fuer eine (function * () { for (k of a) yield k; }());
 
-*/
+     */
 
     parser.ComprehensionForList = ComprehensionForList;
 
@@ -5139,7 +5173,7 @@ define("parser", ["tables", "tokenizer"], function (tables, tokenize) {
 
         do {
             debug("expr at " + v);
-            
+
             if (hasStop && v === stop) break;
             ae = this.AssignmentExpression();
             if (ae) list.push(ae);
@@ -5155,17 +5189,17 @@ define("parser", ["tables", "tokenizer"], function (tables, tokenize) {
         l2 = loc && loc.end;
 
         switch (list.length) {
-        case 0:
-            return null;
-            break;
-        case 1:
-            node = list[0];
-            return this.ExpressionStatement(node, l1, l2);
-            break;
-        default:
-            node = this.SequenceExpression(list, l1, l2);
-            if (parenthesised) return this.ExpressionStatement(node, l1, l2);
-            else return node;
+            case 0:
+                return null;
+                break;
+            case 1:
+                node = list[0];
+                return this.ExpressionStatement(node, l1, l2);
+                break;
+            default:
+                node = this.SequenceExpression(list, l1, l2);
+                if (parenthesised) return this.ExpressionStatement(node, l1, l2);
+                else return node;
         }
     }
 
@@ -5247,8 +5281,8 @@ define("parser", ["tables", "tokenizer"], function (tables, tokenize) {
                 }
                 covered.push(T);
             }
- 
-           if (i >= j) throwError(new SyntaxError("no tokens left over covering expression"));
+
+            if (i >= j) throwError(new SyntaxError("no tokens left over covering expression"));
 
             pass(")");
 
@@ -5502,12 +5536,12 @@ define("parser", ["tables", "tokenizer"], function (tables, tokenize) {
 
     function SuperExpression(parent) {
         if (v === "super") {
-            
+
             var l1 = loc && loc.start;
             var node = Node("SuperExpression");
             node.loc = makeLoc(l1, l1);
             pass("super");
-            
+
             if (curFunc) curFunc.needsSuper = true;
 
             if (compile) return builder.superExpression(node.loc);
@@ -5706,7 +5740,7 @@ define("parser", ["tables", "tokenizer"], function (tables, tokenize) {
 
     parser.MethodDefinition = MethodDefinition;
     function MethodDefinition(parent, isObjectMethod, computedPropertyName) {
-        
+
         var l1, l2;
         var node;
         var isStaticMethod = false;
@@ -5722,7 +5756,7 @@ define("parser", ["tables", "tokenizer"], function (tables, tokenize) {
 
         if (v === ";") {
             if (!isObjectMethod) pass(";");
-        } 
+        }
 
         if (v === "static" && !isObjectMethod) {
             isStaticMethod = true;
@@ -5746,56 +5780,56 @@ define("parser", ["tables", "tokenizer"], function (tables, tokenize) {
 
 
 
-                    node = Node("MethodDefinition");
+        node = Node("MethodDefinition");
 
-                    functionStack.push(curFunc)
-                    curFunc = node;
+        functionStack.push(curFunc)
+        curFunc = node;
 
-                    if (v =="[") node.computed = true;
-                    node.id = this.PropertyKey();
-                    
+        if (v =="[") node.computed = true;
+        node.id = this.PropertyKey();
 
-                    node.generator = isGenerator;
-                    if (!isObjectMethod) node.static = isStaticMethod;
-                    
-                    if (isGetter) node.kind = "get";
-                    if (isSetter) node.kind = "set";
-                    pass("(");
-                    node.params = this.FormalParameterList();
-                    pass(")");
-                    pass("{");
-                    node.body = this.FunctionBody(node);
-                    pass("}");
-                    l2 = loc && loc.end;
-                    node.loc = makeLoc(l1, l2);
-                    EarlyErrors(node);
-                    if (compile) return builder.methodDefinition(node.id, node.params, node.body, node.strict, node.static, node.generator, node.loc);
 
-                    curFunc = functionStack.pop();
+        node.generator = isGenerator;
+        if (!isObjectMethod) node.static = isStaticMethod;
 
-                    return node;
-                  
+        if (isGetter) node.kind = "get";
+        if (isSetter) node.kind = "set";
+        pass("(");
+        node.params = this.FormalParameterList();
+        pass(")");
+        pass("{");
+        node.body = this.FunctionBody(node);
+        pass("}");
+        l2 = loc && loc.end;
+        node.loc = makeLoc(l1, l2);
+        EarlyErrors(node);
+        if (compile) return builder.methodDefinition(node.id, node.params, node.body, node.strict, node.static, node.generator, node.loc);
 
-                /*
-            } else if (((computedPropertyName && v === "=") || lookahead === "=") && !isObjectMethod) {    
+        curFunc = functionStack.pop();
 
-                node = Node("PropertyDefinition");
-                if (computedPropertyName) {
-                    node.id = computedPropertyName
-                    node.computed = true;
-                } else {
-                    node.id = v;
-                    pass(v);
-                }
-                node.static = isStatic;
-                pass("=");
-                node.value = this.AssignmentExpression();
-                l2 = loc && loc.end;
-                node.loc = makeLoc(l1, l2);
-                if (compile) return builder.propertyDefinition(node.id, node.static, node.value, node.loc);
-                return node;
-            }*/
-        
+        return node;
+
+
+        /*
+         } else if (((computedPropertyName && v === "=") || lookahead === "=") && !isObjectMethod) {
+
+         node = Node("PropertyDefinition");
+         if (computedPropertyName) {
+         node.id = computedPropertyName
+         node.computed = true;
+         } else {
+         node.id = v;
+         pass(v);
+         }
+         node.static = isStatic;
+         pass("=");
+         node.value = this.AssignmentExpression();
+         l2 = loc && loc.end;
+         node.loc = makeLoc(l1, l2);
+         if (compile) return builder.propertyDefinition(node.id, node.static, node.value, node.loc);
+         return node;
+         }*/
+
         return node;
 
     }
@@ -5817,7 +5851,7 @@ define("parser", ["tables", "tokenizer"], function (tables, tokenize) {
             pass("class");
             var id = this.Identifier();
             node.id = id.name;
-            
+
             staticSemantics.addLexBinding(id);
 
             if (v === "extends") {
@@ -5833,7 +5867,7 @@ define("parser", ["tables", "tokenizer"], function (tables, tokenize) {
             }
 
             pass("}");
-            
+
             staticSemantics.popEnvs();
             if (compile) return builder["classExpression"](node.id, node.extends, node.elements, node.loc);
             return node;
@@ -5897,7 +5931,7 @@ define("parser", ["tables", "tokenizer"], function (tables, tokenize) {
 
     function FormalParameterList() {
         var list = [];
-        
+
         list.type = "FormalParameterList";
 
         var defaults;
@@ -5906,7 +5940,7 @@ define("parser", ["tables", "tokenizer"], function (tables, tokenize) {
         do {
             x = i;
             if (v) {
-            
+
                 debug("formalparameters calling with " + v);
                 if (v === ")") break;
 
@@ -6014,7 +6048,7 @@ define("parser", ["tables", "tokenizer"], function (tables, tokenize) {
 
             staticSemantics.newVarEnv();
             staticSemantics.newContainer();
-  
+
             if (id && isExpr) staticSemantics.addVarBinding(id.name);
 
             pass("(");
@@ -6038,14 +6072,14 @@ define("parser", ["tables", "tokenizer"], function (tables, tokenize) {
             node.loc = makeLoc(start, end);
 
             /*if (node.generator) {
-                AddParentPointers(node);
-            }*/
+             AddParentPointers(node);
+             }*/
 
             defaultIsId = defaultStack.pop();
 
             //node.lexNames = staticSemantics.lexNames();
             //node.varNames = staticSemantics.varNames();
-            
+
             staticSemantics.popContainer();
             staticSemantics.popEnvs();
 
@@ -6174,7 +6208,7 @@ define("parser", ["tables", "tokenizer"], function (tables, tokenize) {
             skip(";");
             l2 = loc && loc.end;
             node.loc = makeLoc(l1, l2);
-                return node;
+            return node;
         }
         return null;
     }
@@ -6205,7 +6239,7 @@ define("parser", ["tables", "tokenizer"], function (tables, tokenize) {
             l1 = loc && loc.start;
             pass("throw");
             if (v !== ";") {
-                if (ltNext) if (notify) return notifyObservers(node); 
+                if (ltNext) if (notify) return notifyObservers(node);
                 node.argument = this.Expression();
             } else skip(";");
             l2 = loc && loc.end;
@@ -6314,7 +6348,7 @@ define("parser", ["tables", "tokenizer"], function (tables, tokenize) {
             staticSemantics.newContainer();
             staticSemantics.newVarEnv();
 
-                        
+
             node = Node("ModuleDeclaration");
             node.strict = true;
 
@@ -6337,7 +6371,7 @@ define("parser", ["tables", "tokenizer"], function (tables, tokenize) {
 
             staticSemantics.popContainer();
             staticSemantics.popEnvs();
-            
+
             curModule = moduleStack.pop();
 
             return node;
@@ -6498,7 +6532,7 @@ define("parser", ["tables", "tokenizer"], function (tables, tokenize) {
     parser.ExportStatement = ExportStatement;
 
 
-var BoundNames = require("slower-static-semantics").BoundNames;
+    var BoundNames = require("slower-static-semantics").BoundNames;
 
     function ExportStatement() {
         if (v === "export") {
@@ -6514,12 +6548,12 @@ var BoundNames = require("slower-static-semantics").BoundNames;
                 skip(";");
 
             } else if (v === "*") {
-                
+
                 node.all = true;
                 pass(v);
                 node.from = this.FromClause();
 
-                
+
 
                 skip(";");
 
@@ -6529,13 +6563,13 @@ var BoundNames = require("slower-static-semantics").BoundNames;
 
                 else node.exports = this.VariableStatement() || this.DeclarationDefault();
 
-                
+
                 var names = BoundNames(node.exports);
                 for (var i = 0, j = names.length; i < j; i++) {
                     var name = names[i];
-                    curModule.exportEntries.push({ ModuleRequest: null, ImportName: null, LocalName: name, ExportName: name })    
+                    curModule.exportEntries.push({ ModuleRequest: null, ImportName: null, LocalName: name, ExportName: name })
                 }
-                
+
 
                 skip(";");
                 if (!node.exports) throwError(new SyntaxError("should be an error in the export statement"));
@@ -6551,8 +6585,8 @@ var BoundNames = require("slower-static-semantics").BoundNames;
     }
 
     /*
-    Statement 
-*/
+     Statement
+     */
     parser.StatementList = StatementList;
     parser.SwitchStatementList = SwitchStatementList;
 
@@ -6561,7 +6595,7 @@ var BoundNames = require("slower-static-semantics").BoundNames;
         list.type = "StatementList";
         list.switch = true;
         var s;
-            debug("swstmtlist():");
+        debug("swstmtlist():");
         do {
             if (i >= j) break;
             s = this.Statement();
@@ -6574,7 +6608,7 @@ var BoundNames = require("slower-static-semantics").BoundNames;
         var list = [];
         list.type = "StatementList";
         var s;
-            debug("stmtlist():");
+        debug("stmtlist():");
         do {
             if (i >= j) break;
             s = this.Statement();
@@ -6599,8 +6633,8 @@ var BoundNames = require("slower-static-semantics").BoundNames;
     /*
 
 
-    Iteration
-*/
+     Iteration
+     */
     parser.IterationStatement = IterationStatement;
 
     function IterationStatement() {
@@ -7019,7 +7053,7 @@ var BoundNames = require("slower-static-semantics").BoundNames;
         return nodes;
     }
 
-    
+
     parser.Module = Module;
 
     function Module() {
@@ -7050,7 +7084,7 @@ var BoundNames = require("slower-static-semantics").BoundNames;
         var l2;
 
         next();
-        
+
         curFunc = node;
         curModule = node;
 
@@ -7061,9 +7095,9 @@ var BoundNames = require("slower-static-semantics").BoundNames;
         EarlyErrors(node);
 
         /*
-        node.lexNames = staticSemantics.lexNames();
-        node.varNames = staticSemantics.varNames();
-                */
+         node.lexNames = staticSemantics.lexNames();
+         node.varNames = staticSemantics.varNames();
+         */
 
         staticSemantics.popContainer();
         if (compile) return builder["program"](node.body, loc);
@@ -7206,7 +7240,7 @@ var BoundNames = require("slower-static-semantics").BoundNames;
     }
 
     function PatternCharacter() {
-        
+
     }
 
     parser.RegularExpressionLiteral = RegularExpressionLiteral;
@@ -7377,17 +7411,17 @@ var BoundNames = require("slower-static-semantics").BoundNames;
     function CreateTheAST(tokens, options, inlineLexBool) {
         resetVariables(tokens, inlineLexBool);
         //try {
-            ast = parser.Program();
+        ast = parser.Program();
         /*} catch (ex) {
-            console.log("[Parser Exception]")
-            console.dir(ex);
-            console.log(ex.name);
-            console.log(ex.message);
-            console.log(ex.stack);
-            
-            ast = ex;
-            throw ex;
-        }*/
+         console.log("[Parser Exception]")
+         console.dir(ex);
+         console.log(ex.name);
+         console.log(ex.message);
+         console.log(ex.stack);
+
+         ast = ex;
+         throw ex;
+         }*/
         return ast;
     }
 
@@ -7432,31 +7466,32 @@ var BoundNames = require("slower-static-semantics").BoundNames;
             restoreTheDot();
             return node;
         }
-        
+
     }
-    
+
     var exports = CreateTheAST;
     exports.parse = CreateTheAST;
     exports.parseGoal = parseGoal;
     exports.setBuilder = setBuilder;
     exports.unsetBuilder = unsetBuilder;
-    
+    exports.registerObserver = registerObserver;
+    exports.unregisterObserver = unregisterObserver;
+
+
     var observers = [];
     function registerObserver(f) {
         if (typeof f === "function")
-	   obervers.push(f);
+            obervers.push(f);
         else throw new TypeError("registerObserver: argument f is not a function")
     }
     function unregisterObserver(f) {
-	observers = observers.filter(function (g) { return f !== g; });
+        observers = observers.filter(function (g) { return f !== g; });
     }
     function notifyObservers(node) {
-	   observers.forEach(function (observer) { observer(node); });
-	return node;
-    }    
-    exports.registerObserver = registerObserver;
-    exports.unregisterObserver = unregisterObserver;
-    
+        observers.forEach(function (observer) { observer(node); });
+        return node;
+    }
+
 
     var saveBuilder = [];
     function unsetBuilder(objBuilder) {
@@ -7494,217 +7529,8 @@ var BoundNames = require("slower-static-semantics").BoundNames;
 
 define("heap", function (require, exports, module) {
 
-    var DataType = {
-        "object": 1,
-        "string": 2,
-        "number": 3,
-        "boolean": 4,
-        "null": 5,
-        "environment": 6,
-        "context": 7,
-        "descriptor": 8,
-        "bindingrecord": 9,
-        "completion": 10,
-        "declarative": 11,
-        "global": 12,
-        "function": 13,
-        "objectenvironment": 14,
-        "functionenvironment": 15,
-        "symbol": 16
-    };
 
-    function makeDynamicHash() {
 
-    }
-
-    function makeFixedSizeHash(N) {
-        var ptr;
-
-        return ptr;
-    }
-
-    var encodes = Object.create(null);
-    encodes["object"] = 1;
-    encodes["undefined"] = 2;
-    encodes["null"] = 3;
-    encodes["true"] = 4;
-    encodes["false"] = 5;
-    encodes["function"] = 6;
-    encodes["string"] = 7;
-    encodes["number"] = 8;
-    encodes["Program"] = 100;
-    encodes["Identifier"] = 102;
-    encodes["FunctionDeclaration"] = 103;
-    encodes["FunctionExpression"] = 104;
-    encodes["VariableDeclaration"] = 105;
-    encodes["LexialDeclaration"] = 106;
-    encodes["VariableDeclarator"] = 107;
-    encodes["WhileStatement"] = 108;
-    encodes["DoWhileStatement"] = 111;
-    encodes["ForStatement"] = 112;
-    encodes["IfStatement"] = 113;
-    encodes["TryStatement"] = 114;
-    encodes["ReturnStatement"] = 115;
-    encodes["BreakStatement"] = 116;
-    encodes["ThrowStatement"] = 117;
-    encodes["ContinueStatement"] = 118;
-    encodes["EmptyStatement"] = 127;
-
-    var decodes = Object.create(null);
-    for (var c in encodes) {
-        if (Object.hasOwnProperty.call(encodes, c)) {
-            decodes[encodes[c]] = c;
-        }
-    }
-
-    var symbols = {
-        0: 0,
-        1: 1,
-        2: 2,
-        3: 3,
-        4: 4,
-        5: 5,
-        6: 6,
-        7: 7,
-        8: 8,
-        9: 9,
-        A: 10,
-        B: 11,
-        C: 12,
-        D: 13,
-        E: 14,
-        F: 15,
-        "undefined": 16,
-        "null": 17,
-        "true": 0,
-        "false": 1,
-    };
-    var exports = {};
-    var heap;
-
-    var MAX_HEAPSIZE = 2048;
-    var DEFAULT_ALIGNMENT = 8;
-    var ALIGNMENT = 8;
-
-    function align(number, alignment) {
-        if (alignment === undefined) alignment = ALIGNMENT;
-        var rest = number % alignment;
-        if (rest === 0) return number;
-        else return number + (alignment - rest);
-    }
-
-    function gc() {
-        mark_reachable();
-        copy_space();
-    }
-
-    function copy_space() {}
-
-    function mark_reachable() {}
-
-    function alloc(bytes) {}
-
-    function make_hash(buf, ofs, N) {
-        // offset: 
-        // 1) Flags
-        // 2) N
-        // 3...) NAME, VALUE (offset, offset)
-
-    }
-
-    function createSpace(size) {
-
-        size = alignWith8(size);
-        var byteSize = size * Int8Array.BYTES_PER_ELEMENT
-
-        var buf = new ArrayBuffer(byteSize);
-        var view = new DataView(buf);
-        var heap = {
-            from: buf,
-            view: view,
-            root: Object.create(null),
-            all: Object.create(null),
-            freeList: Object.create(null),
-            size: size,
-            bytes: byteSize,
-            sp: 0,
-            hp: byteSize
-        };
-        return heap;
-    }
-
-    exports.createSpace = createSpace;
-
-    exports.alignWith8 = alignWith8;
-
-    function alignWith8(bytes) {
-        var r = bytes % 8;
-        if (r != 0) bytes += 8 - r;
-        return bytes;
-    }
-
-    function make_heap() {}
-    exports.make_heap = make_heap;
-
-    function Allocate(buffer, bytes, root) {
-        var sp = heap.sp;
-        var rnd = alignWith8(bytes);
-        heap.sp += rnd;
-        var ptr = {
-            ofs: sp,
-            len: bytes,
-            aln: rnd
-        };
-        // look at freelist
-        // or give new mem
-        if (root) heap.root[sp] = ptr;
-        heap.all[sp] = ptr;
-        return ptr;
-    }
-
-    exports.allocate = Allocate;
-
-    function store_string() {}
-
-    function store_number() {}
-
-    function store_object() {}
-
-    function store_array() {}
-
-    function store_function() {}
-
-    function store_global_environment() {}
-
-    function store_fn_environment() {}
-
-    function store_decl_environment() {}
-
-    function store_context() {}
-
-    function store_intrinsics() {}
-
-    function store_realm() {}
-
-    function store_completion() {}
-
-    function Store(ptr, value, size, type) {
-        if (type === "string") {} else if (type === "number") {} else if (type === "object" && value !== null) {} else if (value === undefined) {}
-    }
-    exports.store = Store;
-
-    function ToInteger(V) {
-        return V|0;
-        //var ints = new Int8Array(8);
-    }
-    exports.toInteger = ToInteger;
-    var hp;
-    exports.init = function (size) {
-        hp = make_heap(size);
-    };
-    exports.destroy = function (size) {
-        hp = null;
-    };
 });
 
 
@@ -7712,194 +7538,24 @@ define("heap", function (require, exports, module) {
 /*
 ############################################################################################################################################################################################################
 
-    A Codegenerator which uses Heap Memory to Store the Data
-        
+    A Codegenerator which transforms the AST nodes into a smaller format.
+
+    This could be stored on the heap. But i should make sure to write them independently.
+
+    This file will fulfill using the mozilla parser api builder interface.
+
 ############################################################################################################################################################################################################
 */
 
 define("builder", function (require, exports, module) {
     var builder = exports;
 
-    builder.StringToByteCode = StringToByteCode;
-
-    function ByteCodeToString(code) {
-        var string = "";
-        var view = new Uint16Array(code);
-        for (var i = 0, j = view.length; i < j; i++) {
-            string += String.fromCharCode(view[i]);
-        }
-        return string;
-    }
-
-    function StringToByteCode(string) {
-        var code = new Float64Array(Math.ceil(string.length / 4));
-        var trns = new Uint16Array(code);
-        for (var i = 0, j = string.length; i < j; i++) {
-            trns[i] = string.charCodeAt(i);
-        }
-        return code;
-    }
-    builder.LocToByteCode = LocToByteCode;
-
-    function LocToByteCode(loc) {
-
-    }
-
-    // sizeOfLoc - 4 doubles = 32 bytes
-
-    var sizeOfLoc = 32;
-
-    // writeLoc (buf, ofs, loc):
-    // schreibt start.line, start.column, end.* = 32 bytes (!!! big)
-    // in buf ab position ofs
-    // returns ofs (<=> pointer zur loc zum abspeichern)
-
-    function writeLoc(buf, ofs, loc) {
-        var line = loc.start.line;
-        var column = loc.start.column;
-        var endline = loc.end.line;
-        var endcolumn = loc.end.colum;
-        var code = new Float64Array(buf, ofs, 4);
-        code[0] = DataType["loc"];
-        code[1] = line;
-        code[2] = column;
-        code[3] = endline;
-        code[4] = endcolumn;
-        return ofs;
-    }
-
-    // readLoc (buf, ofs)
-    // returnt typed [type==DataType["loc"], startline,startcolumn,endline,endcolumn] array von buf an position ofs
-
-    function readLoc(buf, ofs) {
-        var code = new Float64Array(buf, ofs, 1)
-        return code;
-    }
-
-    //
-    // writeString(buf, ofs, data[, len]) 
-    // schreibt Uint16Array len oder data.length ab buf[ofs]
-    // returnt ofs;
-
-    function writeString(buf, ofs, data, len) {
-        if (data === undefined) throw "writeString: no data";
-        data = "" + data;
-        if (len === undefined) len = data.length + 2;
-        else len = len + 2;
-        var array = new Uint16Array(buf, ofs, len);
-
-        array[0] = DataType["string"];
-        var char;
-        for (var i = 1, j = len + 1; i < j; i++) {
-            char = data[i];
-            array[i] = data.charCodeAt(0);
-            // Hier UTF16-Encode nutzen!!!
-        }
-        array[len] = 0;
-        return ofs;
-    }
-
-    //
-    // readString (buf, ofs, len)
-    // liest bis len oder den ganzen String bis 0 
-    // len = len + 2 ([0] = type, [len] = \0)
-    // von buf ab pos ofs
-    // returnt einen string
-
-    // buf, ofs to string
-    function readString(buf, ofs, len) {
-        var array = readString(buf, ofs, len);
-        return decodeStringType(array);
-    }
-
-    // buf, ofs, to array
-    function readStringType(buf, ofs, len) {
-        if (len !== undefined) len = len + 2;
-        var array = new Uint16Array(buf, ofs, len);
-        var type = buf[0];
-        if (type !== DataType["string"]) throw "value is not a string";
-        return array;
-    }
-
-    // array zu string
-    function decodeStringType(array) {
-        var string = "";
-        var code;
-        var i = 1;
-        if (array[0] !== DataType["string"]) throw "array is not a string";
-        while ((code = array[i]) != 0) {
-            string += String.fromCharCode(code);
-            i++;
-            if (len && i === len) break;
-        }
-        return string;
-    }
-
-    //
-    // writeNumber (buf, ofs, value) schreibt eine number 
-    //
-
-    function writeNumber(buf, ofs, value) {
-        var code = new Float64Array(buf, ofs, 2);
-        code[0] = DataType["number"];
-        code[1] = value;
-        return ofs;
-    }
-
-    //
-    // readNumberType -> liest einen Typed Array
-    // decodeNumberType -> returnt number value des arrays
-    // readNumber -> liest von buf ofs und returnt value
-    //
-
-    function readNumberType(buf, ofs) {
-        var code = new Float64Array(buf, ofs, 2);
-        var type = buf[0];
-        if (type !== DataType["number"]) throw "value is not a number";
-        return code;
-    }
-
-    function readNumber(buf, ofs) {
-        var num = readNumberType(buf, ofs);
-        var value = num[1];
-        return value;
-    }
-
-    function decodeNumberType(num) {
-        if (num[0] !== DataType["number"]) throw "num is not a number";
-        var value = num[1];
-        return value;
-    }
-
-    //
-    // Adding to the builder
-    //
-
-    builder.readLoc = readLoc;
-    builder.writeLoc = writeLoc;
-    builder.readStringType = readStringType;
-    builder.decodeStringType = decodeStringType;
-    builder.readString = readString;
-    builder.writeString = writeString;
-    builder.writeNumber = writeNumber;
-    builder.readNumberType = readNumberType;
-
-    /*
-    Translating statements into ByteCode, recursivly
-
-
-*/
 
     builder.emptyStatement = function emptyStatement(loc) {
-        var ptr = allocate();
-        var code = Bytecode["EmptyStatement"];
-        var locinfo = LocToByteCode(loc);
+
     };
 
     builder.literal = function (type, value) {
-        var bc = new Int8Array(8);
-        bc[0] = encodes[type];
-        return Store(hp, bc, 1);
     };
 
     builder.functionDeclaration = function (body, params, strict, generator, loc) {};
@@ -7910,28 +7566,8 @@ define("builder", function (require, exports, module) {
     builder.callExpression = function (callee, args, loc) {};
     builder.newExpression = function (callee, args, loc) {};
     builder.objectExpression = function (properties, loc) {
-        var p;
-        // allocate object auf heap
-        // addiere properties und values auf dem hash
-        // [offs] = ptr = name + ptr to value
-        // return offs von objekt mit offsets zu properties
-        var obj;
-        for (var i = 0, j = properties.length; i < j; i++) {
-            if (p = properties[i]) {
-
-            }
-        }
-        return obj;
     };
     builder.arrayExpression = function (elements, loc) {
-        var arr, e;
-        for (var i = 0, j = elements.length; i < j; i++) {
-            if (e = elements[i]) {
-
-            }
-        }
-        return arr;
-
     };
 
     builder.blockStatement = function (body, loc) {};
@@ -7939,7 +7575,6 @@ define("builder", function (require, exports, module) {
 
     };
     builder.assignmentExpression = function (left, operator, right, loc) {
-
     };
 
     builder.pattern = function () {};
@@ -8640,7 +8275,7 @@ define("api", function (require, exports, module) {
     // I had these variables at the beginning, i return to;
     var realm, intrinsics, globalEnv, globalThis;
     var stack, eventQueue, cx;
-    
+
 
     // ===========================================================================================================
     // all and empty are special objects
@@ -8669,6 +8304,7 @@ define("api", function (require, exports, module) {
     var dupesInTheTwoLists = statics.dupesInTheTwoLists
     var ExpectedArgumentCount = statics.ExpectedArgumentCount;
     var ModuleRequests = statics.ModuleRequests;
+
     var parse = require("parser");
     var parseGoal = parse.parseGoal;
     var debugmode = false;
@@ -8690,7 +8326,7 @@ define("api", function (require, exports, module) {
     // quick getters for realm, env, intrnscs
     // ===========================================================================================================
 
-    
+
     exports.getEventQueue = getEventQueue;
 
     function getContext() {
@@ -8742,7 +8378,7 @@ define("api", function (require, exports, module) {
         //    return getGlobalEnv().objEnv;
     }
 
-    
+
     function getStack() {
         return realm.stack;
     }
@@ -8750,7 +8386,7 @@ define("api", function (require, exports, module) {
     // ===========================================================================================================
     // notes for the encoder 
     // ===========================================================================================================
-
+/*
     var object_types = {
         "1": "[object OrdinaryObject]",
         "2": "[object ArrayExoticObject]",
@@ -8774,11 +8410,6 @@ define("api", function (require, exports, module) {
         "6": "object",
         "7": "symbol"
     };
-
-    // ===========================================================================================================
-    // xs internal slots of objects (later xses bytecode instead of properties)
-    // ===========================================================================================================
-
     var internals_encode = {
         // Objects
         "Type": 0,
@@ -8819,20 +8450,43 @@ define("api", function (require, exports, module) {
     var internals_decode = Object.create(null);
     for (var k in internals_encode) {
         internals_decode[internals_encode[k]] = k;
-    
+
+    }
+*/
+    exports.Push = Push;
+    exports.Length = Length;
+    exports.getField = getField;
+    exports.setField = setField;
+    exports.setRec = setRec;
+    exports.getRec = getRec;
+    exports.genericArray = genericArray;
+    exports.genericRecord = genericRecord;
+
+    function Push(array, data) {
+        return array.push(data);
+    }
+    function Length(array) {
+        return array.length;
+    }
+    function getField(array, index) {
+        return array[index];
+    }
+    function setField(array, index, value) {
+        return array[index] = value;
+    }
+    function getRec(obj, key) {
+        return obj[key];
+    }
+    function setRec(obj, key, value) {
+        return obj[key] = value;
     }
 
+    function genericArray(arr) {
+        return arr;
+    }
 
     function genericRecord(obj) {
-        // interface for bytecode encoding of objects
         return obj;
-    }
-    function getRecordValue(obj, name) {
-        return obj[name]
-    }
-
-    function setRecordValue(obj, name, value) {
-        return obj[name] = value;
     }
 
 
@@ -8853,31 +8507,10 @@ define("api", function (require, exports, module) {
         return N in O;
     }
 
-
-    //
-    // call internal
-    // 
-
-    function callInternalSlot(name, object, a, b, c, d, e, f, g) {
-        return object[name](a,b,c,d,e,f,g);
-        // return getFunction(object, name).call(object, a, b, c, d, e, f, g);
+    function callInternalSlot(name, object, a, b, c, d) {
+        return object[name](a,b,c,d);
     }
 
-/*
-    function Call(F, thisArg, argList) {
-        var call = getInternalSlot(F, "Call");
-        if (call) return call.call(F, thisArg, argList);
-    }
-*/
-
-
-
-
-
-
-
-
-    
     //
     // choose right internal function of object (got no polymorphism and auto type detection)
     //
@@ -8916,10 +8549,10 @@ define("api", function (require, exports, module) {
             return object["Bindings"][name];
         }
         /*if (IsSymbol(name)) {
-        return getInternalSlot(getInternalSlot(object, "Symbols"), getInternalSlot(name,"es5id"));
-    } else {
-        return getInternalSlot(getInternalSlot(object,"Bindings"),name);
-    }*/
+         return getInternalSlot(getInternalSlot(object, "Symbols"), getInternalSlot(name,"es5id"));
+         } else {
+         return getInternalSlot(getInternalSlot(object,"Bindings"),name);
+         }*/
     }
 
     exports.writePropertyDescriptor = writePropertyDescriptor;
@@ -8931,10 +8564,10 @@ define("api", function (require, exports, module) {
             return object["Bindings"][name] = value;
         }
         /*if (IsSymbol(name)) {
-        return setInternalSlot(getInternalSlot(object, "Symbols"), getInternalSlot(name,"es5id"),  value);
-    } else {
-        return setInternalSlot(getInternalSlot(object,"Bindings"), name, value);
-    }*/
+         return setInternalSlot(getInternalSlot(object, "Symbols"), getInternalSlot(name,"es5id"),  value);
+         } else {
+         return setInternalSlot(getInternalSlot(object,"Bindings"), name, value);
+         }*/
     }
 
     // ===========================================================================================================
@@ -9588,7 +9221,7 @@ define("api", function (require, exports, module) {
 
     function GlobalEnvironment(globalThis, intrinsics) {
         var ge = Object.create(GlobalEnvironment.prototype);
-        
+
         ge.outer = null;
         ge.objEnv = NewObjectEnvironment(globalThis, ge.outer);
         ge.objEnv.toString = function () {
@@ -9602,7 +9235,7 @@ define("api", function (require, exports, module) {
         for (var k in globalThis.Bindings) {
             if (HasOwnProperty(globalThis, k)) varNames[k] = true;
         }
-        
+
         return ge;
     }
     GlobalEnvironment.prototype = {
@@ -9861,11 +9494,11 @@ define("api", function (require, exports, module) {
     CodeRealm.prototype.constructor = CodeRealm;
 
     CodeRealm.prototype.toValue = function (code) {
-        
+
         saveCodeRealm();
         setCodeRealm(this);
         var result = exports.Evaluate(code);    // here the realm argument...hmm. already in use all over
-                                                // maybe remove the module barriers and simply concat the file.
+        // maybe remove the module barriers and simply concat the file.
         restoreCodeRealm();
         return result;
     };
@@ -9893,7 +9526,7 @@ define("api", function (require, exports, module) {
         if (realm) realm.cx = ec;
         return ec;
     }
-    
+
     ExecutionContext.prototype.toString = ExecutionContext_toString;
     ExecutionContext.prototype.constructor = ExecutionContext;
     function ExecutionContext_toString() {
@@ -9920,13 +9553,13 @@ define("api", function (require, exports, module) {
         return "[object CompletionRecord]";
     }
 
-    
+
     function NormalCompletion(argument, label) {
         var completion;
 
         if (argument instanceof CompletionRecord) {
             completion = argument;
-        } else {    
+        } else {
             completion = CompletionRecord(); // realm.completion;
             completion.value = argument;
             completion.type = "normal"
@@ -9966,40 +9599,40 @@ define("api", function (require, exports, module) {
         toString: function () {
             return "[object Reference]";
         } /*,
-        GetValue: function () {
-            return GetValue(this);
-        },
-        PutValue: function (W) {
-            return PutValue(this, W);
-        },
-        IsPropertyReference: function () {
-            return IsPropertyReference(this);
-        },
-        IsSuperReference: function () {
-            return IsSuperReference(this);
-        },
-        IsStrictReference: function () {
-            return IsStrictReference(this);
-        },
-        IsUnresolvableReference: function () {
-            return IsUnresolvableReference(this);
-        },
-        GetReferencedName: function () {
-            return GetReferencedName(this);
-        },
-        GetReferencedKey: function () {
-            return GetReferencedKey(this);
-        },
-        GetBase: function () {
-            return GetBase(this);
-        },
-        HasPrimitiveBase: function () {
-            return HasPrimitiveBase(this);
-        },
-        GetThisValue: function () {
-            return GetThisValue(this);
-        }*/
-        
+         GetValue: function () {
+         return GetValue(this);
+         },
+         PutValue: function (W) {
+         return PutValue(this, W);
+         },
+         IsPropertyReference: function () {
+         return IsPropertyReference(this);
+         },
+         IsSuperReference: function () {
+         return IsSuperReference(this);
+         },
+         IsStrictReference: function () {
+         return IsStrictReference(this);
+         },
+         IsUnresolvableReference: function () {
+         return IsUnresolvableReference(this);
+         },
+         GetReferencedName: function () {
+         return GetReferencedName(this);
+         },
+         GetReferencedKey: function () {
+         return GetReferencedKey(this);
+         },
+         GetBase: function () {
+         return GetBase(this);
+         },
+         HasPrimitiveBase: function () {
+         return HasPrimitiveBase(this);
+         },
+         GetThisValue: function () {
+         return GetThisValue(this);
+         }*/
+
     };
 
     function GetValue(V) {
@@ -10191,7 +9824,7 @@ define("api", function (require, exports, module) {
         if (isAbrupt(O = ifAbrupt(O))) return O;
         if (Type(O) !== "object") return withError("Type", "ToPropertyDescriptor: argument is not an object");
         var desc = Object.create(null);
-        
+
         if (HasProperty(O, "enumerable")) {
             var enume = Get(O, "enumerable");
             if (isAbrupt(enume = ifAbrupt(enume))) return enume;
@@ -10273,10 +9906,10 @@ define("api", function (require, exports, module) {
             Assert(extensible, "object has to be extensible");
 
             if (isGenericDesc || isDataDesc || isAccessorDesc) {
-                if (O !== undefined) {    
+                if (O !== undefined) {
                     writePropertyDescriptor(O, P, Desc);
                 }
-            } 
+            }
             //  var R = CreateChangeRecord("add", O, P, current, Desc);
             return true;
 
@@ -10297,7 +9930,7 @@ define("api", function (require, exports, module) {
 
             for (d in Desc) {
                 if (Object.hasOwnProperty.call(Desc, d))
-                if (current[d] !== Desc[d]) same = false;
+                    if (current[d] !== Desc[d]) same = false;
             }
             if (same) return true;
 
@@ -10308,7 +9941,7 @@ define("api", function (require, exports, module) {
 
             if (isDataCurrent && isDataDesc) {
 
-                 if (current.configurable === false) {
+                if (current.configurable === false) {
                     if (!current.writable === Desc.writable) return false;
                     if (!current.writable) {
                         if (("value" in Desc) && (current.value !== Desc.value)) return false;
@@ -10316,21 +9949,21 @@ define("api", function (require, exports, module) {
                 }
 
                 /*if (current.writable) {
-                    writePropertyDescriptor(O, P, Desc);
-                    return true;
-                }*/
+                 writePropertyDescriptor(O, P, Desc);
+                 return true;
+                 }*/
 
             } else if (isAccessorCurrent && isAccessorDesc) {
-                
+
                 if (current.configurable === false) {
                     if (("set" in Desc) && (Desc.set !== current.set)) return false;
                     if (("get" in Desc) && (Desc.get !== current.get)) return false;
                 }/* else {
-                    if (Desc.set === undefined) Desc.set === current.set;
-                    if (Desc.get === undefined) Desc.get === current.get;
-                    writePropertyDescriptor(O, P, Desc);
-                    return true;
-                }*/
+                 if (Desc.set === undefined) Desc.set === current.set;
+                 if (Desc.get === undefined) Desc.get === current.get;
+                 writePropertyDescriptor(O, P, Desc);
+                 return true;
+                 }*/
 
             } else if (isGenericDesc) {
                 if (current.configurable === false) return false;
@@ -10345,7 +9978,7 @@ define("api", function (require, exports, module) {
                         });
                         return true;
                     }
-                // convert to data
+                    // convert to data
                 } else if (isAccessorCurrent) {
                     if (O !== undefined) {
                         writePropertyDescriptor(O, P, {
@@ -10361,14 +9994,14 @@ define("api", function (require, exports, module) {
 
             if (O !== undefined) {
                 if (isDataDesc && !current.writable) return false;
-                
+
                 for (d in Desc) {
                     if (Object.hasOwnProperty.call(Desc, d)) {
                         current[d] = Desc[d];
                     }
                 }
                 writePropertyDescriptor(O, P, current);
-                
+
             }
 
             return true;
@@ -10517,7 +10150,7 @@ define("api", function (require, exports, module) {
         if (isAbrupt(keys = ifAbrupt(keys))) return keys;
         var pendingException = undefined;
         var key;
-        var configurable = false,
+        var configurable = false, 
             writable = false;
         for (var k in keys) {
             key = keys[k];
@@ -10609,18 +10242,18 @@ define("api", function (require, exports, module) {
 
             var s = V.toString();
             if (s === "[object CompletionRecord]") {
-            
+
                 return ToPrimitive(V.value, prefType);
-            
-            } 
+
+            }
             /* else if (s === "[object OrdinaryObject]") {*/
 
-                else if (hasInternalSlot(V, "NumberData")) return thisNumberValue(V);
-                else if (hasInternalSlot(V, "StringData")) return thisStringValue(V);
-                else if (hasInternalSlot(V, "BooleanData")) return thisBooleanValue(V);
-                else if (hasInternalSlot(V, "SymbolData")) return getInternalSlot(V, "SymbolData");
+            else if (hasInternalSlot(V, "NumberData")) return thisNumberValue(V);
+            else if (hasInternalSlot(V, "StringData")) return thisStringValue(V);
+            else if (hasInternalSlot(V, "BooleanData")) return thisBooleanValue(V);
+            else if (hasInternalSlot(V, "SymbolData")) return getInternalSlot(V, "SymbolData");
 
-             else if (s === "[object SymbolPrimitiveType]") {
+            else if (s === "[object SymbolPrimitiveType]") {
 
                 return V;
 
@@ -10740,10 +10373,10 @@ define("api", function (require, exports, module) {
 
     function ToUint32(V) {
         /*
-        var view = new Uint32Array(1);
-    view[0] = ToNumber(V);
-    return view[0];
-*/
+         var view = new Uint32Array(1);
+         view[0] = ToNumber(V);
+         return view[0];
+         */
         var number = ToNumber(V);
         if (isAbrupt(number = ifAbrupt(number))) return number;
         if (ReturnZero[number]) return +0;
@@ -11109,9 +10742,9 @@ define("api", function (require, exports, module) {
 
         return proto;
     }
-    
+
     function OrdinaryCreateFromConstructor(constructor, intrinsicDefaultProto, internalDataList) {
-    
+
         Assert(HasProperty(getIntrinsics(), intrinsicDefaultProto), "the chosen intrinsic default proto has to be defined in the intrinsic");
         var O, result;
         var proto = GetPrototypeFromConstructor(constructor, intrinsicDefaultProto);
@@ -11146,8 +10779,8 @@ define("api", function (require, exports, module) {
         if (Type(result) === "object") return result;
         return obj;
     }
-    
-    
+
+
     function MakeMethod (F, methodName, homeObject) {
         Assert(IsCallable(F), "MakeMethod: method is not a function");
         Assert(methodName === undefined || IsPropertyKey(methodName), "MakeMethod: methodName is neither undefined nor a valid property key");
@@ -11158,7 +10791,7 @@ define("api", function (require, exports, module) {
         setInternalSlot(F, "MethodName", methodName);
         return NormalCompletion(undefined);
     }
-    
+
     // vorher 
     function OrdinaryConstruct(F, argList) {
         var creator = Get(F, $$create);
@@ -11176,11 +10809,11 @@ define("api", function (require, exports, module) {
         if (Type(result) === "object") return result;
         return obj;
     }
-    
+
 
     function MakeConstructor(F, writablePrototype, prototype) {
         var installNeeded = false;
-        
+
         if (!prototype) {
             installNeeded = true;
             prototype = ObjectCreate();
@@ -11212,15 +10845,15 @@ define("api", function (require, exports, module) {
 
         var type = Type(argument);
         switch (type) {
-        case "boolean":
-        case "number":
-        case "string":
-        case "symbol":
-        case "object":
-            return argument;
-            break;
-        default:
-            break;
+            case "boolean":
+            case "number":
+            case "string":
+            case "symbol":
+            case "object":
+                return argument;
+                break;
+            default:
+                break;
         }
         return argument;
     }
@@ -11266,7 +10899,7 @@ define("api", function (require, exports, module) {
         }
         return newFunc;
     }
-    
+
     function RebindSuper(func, newHome) {
         Assert(IsCallable(func) && func.HomeObject, "func got to be callable and have a homeobject");
         Assert(Type(newHome) === "object", "newhome has to be an object");
@@ -11424,27 +11057,27 @@ define("api", function (require, exports, module) {
 
 
 
-        function GetOwnPropertyKeys(O, type) {
-            var obj = ToObject(O);
-            if (isAbrupt(obj = ifAbrupt(obj))) return obj;
-            var keys = OwnPropertyKeys(O);
-            if (isAbrupt(keys = ifAbrupt(keys))) return keys;
-            var nameList = [];
-            var gotAllNames = false;
-            var next, nextKey;
-            while (!gotAllNames) {
-                next = IteratorStep(keys);
-                if (isAbrupt(next = ifAbrupt(next))) return next;
-                if (!next) gotAllNames = true;
-                else {
-                    nextKey = IteratorValue(next);
-                    if (isAbrupt(nextKey = ifAbrupt(nextKey))) return nextKey;
-                    if (Type(nextKey) === type)
-                        nameList.push(nextKey);
-                }
+    function GetOwnPropertyKeys(O, type) {
+        var obj = ToObject(O);
+        if (isAbrupt(obj = ifAbrupt(obj))) return obj;
+        var keys = OwnPropertyKeys(O);
+        if (isAbrupt(keys = ifAbrupt(keys))) return keys;
+        var nameList = [];
+        var gotAllNames = false;
+        var next, nextKey;
+        while (!gotAllNames) {
+            next = IteratorStep(keys);
+            if (isAbrupt(next = ifAbrupt(next))) return next;
+            if (!next) gotAllNames = true;
+            else {
+                nextKey = IteratorValue(next);
+                if (isAbrupt(nextKey = ifAbrupt(nextKey))) return nextKey;
+                if (Type(nextKey) === type)
+                    nameList.push(nextKey);
             }
-            return CreateArrayFromList(nameList);
         }
+        return CreateArrayFromList(nameList);
+    }
 
 
 
@@ -12089,7 +11722,7 @@ define("api", function (require, exports, module) {
         text += "\r\n";
         return text;
     }
-    
+
 
 
 
@@ -12110,9 +11743,9 @@ define("api", function (require, exports, module) {
             stack += message;
             stack += "\r\n";
         }
-        
+
         if (len > stackTraceLimit) start = len - stackTraceLimit;
-        
+
         for (pos = len - 1; pos >= start; pos--) {
             if (frame = callStack[pos]) {
                 node = frame.state.node;
@@ -12153,11 +11786,11 @@ define("api", function (require, exports, module) {
     function withTypeError(message) {
         return Completion("throw", OrdinaryConstruct(getIntrinsic("%TypeError%"), [message]));
     }
-    
+
     function withURIError(message) {
         return Completion("throw", OrdinaryConstruct(getIntrinsic("%URIError%"), [message]));
     }
-    
+
     function withEvalError(message) {
         return Completion("throw", OrdinaryConstruct(getIntrinsic("%EvalError%"), [message]));
     }
@@ -12171,7 +11804,7 @@ define("api", function (require, exports, module) {
     // ===========================================================================================================
 
     function printCodeEvaluationState() {
-        
+
         var state = getContext().state;
         var node;
         for (var i = state.length-1; i >= 0; i--) {
@@ -12188,26 +11821,26 @@ define("api", function (require, exports, module) {
         var result = exports.ResumeEvaluate(body);
 
         if (isAbrupt(result = ifAbrupt(result))) return result;
-        
-        // if (IteratorComplete(result)) {
-            if (isAbrupt(result = ifAbrupt(result)) && result.type === "return") {
-                //Assert(isAbrupt(result) && result.type === "return", "expecting abrupt return completion");
-                setInternalSlot(generator, "GeneratorState", "completed");
-                if (isAbrupt(result = ifAbrupt(result))) return result;
-                getContext().generatorCallback = undefined;
-                return CreateItrResultObject(result, true);
-            }
 
-       //}
-      
-      //
+        // if (IteratorComplete(result)) {
+        if (isAbrupt(result = ifAbrupt(result)) && result.type === "return") {
+            //Assert(isAbrupt(result) && result.type === "return", "expecting abrupt return completion");
+            setInternalSlot(generator, "GeneratorState", "completed");
+            if (isAbrupt(result = ifAbrupt(result))) return result;
+            getContext().generatorCallback = undefined;
+            return CreateItrResultObject(result, true);
+        }
+
+        //}
+
+        //
         //return result;
     }
 
     function GeneratorStart(generator, body) {
-        
+
         Assert(getInternalSlot(generator, "GeneratorState") === undefined, "GeneratorStart: GeneratorState has to be undefined");
-        
+
         var cx = getContext();
         cx.generator = generator;
         cx.generatorCallback = function () {
@@ -12215,7 +11848,7 @@ define("api", function (require, exports, module) {
             // a little piece, how to obtain the right node from the stack has to be cleared
             return generatorCallbackWrong(generator, body);
         };
-        
+
         setInternalSlot(generator, "GeneratorContext", cx);
         setInternalSlot(generator, "GeneratorState", "suspendedStart");
         return generator;
@@ -12231,7 +11864,7 @@ define("api", function (require, exports, module) {
 
         var methodContext = getContext();
         getStack().push(genContext);
-        
+
         setInternalSlot(generator, "GeneratorState", "executing");
         var generatorCallback = genContext.generatorCallback;
 
@@ -12248,7 +11881,7 @@ define("api", function (require, exports, module) {
 
     function GeneratorYield(itrNextObj) {
         Assert(HasOwnProperty(itrNextObj, "value") && HasOwnProperty(itrNextObj, "done"), "expecting itrNextObj to have value and done properties");
-        
+
         var genContext = getContext();
         var generator = genContext.generator;
 
@@ -12298,7 +11931,7 @@ define("api", function (require, exports, module) {
         if (Type(result) !== "object") return withError("Type", "IteratorNext: result is not an object");
         return result;
     }
-    
+
     function IteratorComplete(itrResult) {
         Assert(Type(itrResult) === "object");
         var done = Get(itrResult, "done");
@@ -12457,10 +12090,10 @@ define("api", function (require, exports, module) {
 
     function ArgumentsExoticObject() {
         var O = Object.create(ArgumentsExoticObject.prototype);
-        
+
         setInternalSlot(O, "Bindings", Object.create(null));
         setInternalSlot(O, "Symbols", Object.create(null));
-        
+
         setInternalSlot(O, "Prototype", getIntrinsic("%ArrayPrototype%"));
 
         var map = ObjectCreate();
@@ -12506,20 +12139,20 @@ define("api", function (require, exports, module) {
         },
 
 
-    // Muss definitiv einen Bug haben.
+        // Muss definitiv einen Bug haben.
         DefineOwnProperty: function (P, Desc) {
             var ao = this;
             var map = getInternalSlot(ao, "ParameterMap");
             var isMapped = callInternalSlot("GetOwnProperty", map, P);
             var allowed = OrdinaryDefineOwnProperty(ao, P, Desc);
-            
+
             var putStatus;
             if (isAbrupt(allowed = ifAbrupt(allowed))) return allowed;
 
             if (!allowed) return allowed;
 
             if (isMapped) {
-                
+
                 if (IsAccessorDescriptor(Desc)) {
                     callInternalSlot("Delete", map, P);
                 } else {
@@ -12537,7 +12170,7 @@ define("api", function (require, exports, module) {
             if (isAbrupt(result = ifAbrupt(result))) return result;
             if (result && isMapped) callInternalSlot("Delete", map, P);
         },
-        
+
         constructor: ArgumentsExoticObject
     });
 
@@ -13035,8 +12668,8 @@ define("api", function (require, exports, module) {
                     if (kChar < 0xDC00 || kChar > 0xDFFF) return withError("URI", "kChar code unit is out of range");
                     V = ((cu - 0xD800) * 0x400 + (kChar - 0xDC00) + 0x10000);
                     /*
-            Achtung Oktett encodierung aus Tabelle 32 (rev 16)
-        */
+                     Achtung Oktett encodierung aus Tabelle 32 (rev 16)
+                     */
                 }
                 var octets = UTF8Encode(V);
                 var L = octets.length;
@@ -13177,7 +12810,7 @@ define("api", function (require, exports, module) {
             configurable: false,
             enumerable: true,
             value: value,
-            writable: false 
+            writable: false
         });
     }
 
@@ -13186,7 +12819,7 @@ define("api", function (require, exports, module) {
             configurable: false,
             enumerable: false,
             value: value,
-            writable: false 
+            writable: false
         });
     }
 
@@ -13215,7 +12848,7 @@ define("api", function (require, exports, module) {
     }
 
     function LazyDefineProperty(O, P, V, w, e, c) {
-        var desc; 
+        var desc;
         if (w === undefined) w = true;
         if (e === undefined) e = false;
         if (c === undefined) c = true;
@@ -13259,7 +12892,7 @@ define("api", function (require, exports, module) {
     // ===========================================================================================================
 
     function CreateBuiltinFunction(realm, steps, len, name) {
-        
+
         var tmp;
         var realm = getRealm();
         var F = OrdinaryFunction();
@@ -13278,7 +12911,7 @@ define("api", function (require, exports, module) {
         }
         // the .steps reference is needed by function.prototype.toString to put out the right function
         Call.steps = steps;
-        
+
         setInternalSlot(F, "Call", Call);
         setInternalSlot(F, "Code", undefined);
         setInternalSlot(F, "Construct", undefined);
@@ -13292,7 +12925,7 @@ define("api", function (require, exports, module) {
             tmp = name;
             name = len;
             len = tmp;
-        }     
+        }
         if (typeof name !== "string") name = steps.name;
         if (name) SetFunctionName(F, name);
         if (typeof len !== "number") len = 0;
@@ -13382,20 +13015,20 @@ define("api", function (require, exports, module) {
         "PromiseTasks": true
     };
 
-    function EnqueueTask(queueName, task, args) {        
-            Assert(Type(queueName) === "string" && queueNames[queueName], "EnqueueTask: queueName has to be valid");
-            // Assert(isTaskName[task])
-            Assert(Array.isArray(args), "arguments have to be a list and to be equal in the number of arguments of task");
-            var callerContext = getContext();
-            var callerRealm = callerContext.realm;
-            var pending = PendingTaskRecord(task, arguments, callerRealm);
-            switch(queueName) {
-                case "PromiseTasks": realm.PromiseTasks.push(pending);
+    function EnqueueTask(queueName, task, args) {
+        Assert(Type(queueName) === "string" && queueNames[queueName], "EnqueueTask: queueName has to be valid");
+        // Assert(isTaskName[task])
+        Assert(Array.isArray(args), "arguments have to be a list and to be equal in the number of arguments of task");
+        var callerContext = getContext();
+        var callerRealm = callerContext.realm;
+        var pending = PendingTaskRecord(task, arguments, callerRealm);
+        switch(queueName) {
+            case "PromiseTasks": realm.PromiseTasks.push(pending);
                 break;
-                case "LoadingTasks": realm.LoadingTasks.push(pending);
+            case "LoadingTasks": realm.LoadingTasks.push(pending);
                 break;
-            }
-            return NormalCompletion(empty);
+        }
+        return NormalCompletion(empty);
     }
 
     function NextTask (result, nextQueue) {
@@ -13417,72 +13050,72 @@ define("api", function (require, exports, module) {
     //
     // Realm und Loader
     //
-        function IndirectEval(realm, source) {            
-            saveCodeRealm(); 
-            setCodeRealm(realm);
-            if (typeof source === "string") {
-                var code = parse(source);
-            } else code = source;
-            var result = exports.Evaluate(code);
-            restoreCodeRealm();
-            return result;
-            //return realm.toValue(source);
-        }
+    function IndirectEval(realm, source) {
+        saveCodeRealm();
+        setCodeRealm(realm);
+        if (typeof source === "string") {
+            var code = parse(source);
+        } else code = source;
+        var result = exports.Evaluate(code);
+        restoreCodeRealm();
+        return result;
+        //return realm.toValue(source);
+    }
 
-        exports.IndirectEval = IndirectEval;
-        exports.CreateRealm = CreateRealm;
+    exports.IndirectEval = IndirectEval;
+    exports.CreateRealm = CreateRealm;
 
-        function CreateRealm () {
-            
-            saveCodeRealm();
+    function CreateRealm () {
 
-            var realmRec = CodeRealm();
-            setCodeRealm(realmRec); 
-            // i have to have a stack, realm, intriniscs
-            // and to remove the dependency        
-            //var context = newContext(null);
-            
-            var context = ExecutionContext(null);
-            context.realm = realmRec;
-            realmRec.stack.push(context);
+        saveCodeRealm();
+
+        var realmRec = CodeRealm();
+        setCodeRealm(realmRec);
+        // i have to have a stack, realm, intriniscs
+        // and to remove the dependency
+        //var context = newContext(null);
+
+        var context = ExecutionContext(null);
+        context.realm = realmRec;
+        realmRec.stack.push(context);
 
 
-            var intrinsics = createIntrinsics(realmRec);
+        var intrinsics = createIntrinsics(realmRec);
 
-            var loader = OrdinaryConstruct(getIntrinsic("%Loader%"), []);
-            if (isAbrupt(loader = ifAbrupt(loader))) return loader;
-            
-            realmRec.loader = loader;
-            var newGlobal = createGlobalThis(realmRec, ObjectCreate(null), intrinsics);
-            var newGlobalEnv = GlobalEnvironment(newGlobal);
-            // i think this is a bug and no execution context should be required
-            context.VarEnv = newGlobalEnv;
-            context.LexEnv = newGlobalEnv;
+        var loader = OrdinaryConstruct(getIntrinsic("%Loader%"), []);
+        if (isAbrupt(loader = ifAbrupt(loader))) return loader;
 
-            realmRec.globalThis = newGlobal;
-            realmRec.globalEnv = newGlobalEnv;
-            realmRec.directEvalTranslate = undefined;
-            realmRec.directEvalFallback = undefined;
-            realmRec.indirectEval = undefined;
-            realmRec.Function = undefined;
-            realmRec.GlobalSymbolRegistry = Object.create(null);
-            makeTaskQueues(realmRec);
-    
-            // my programming mistakes fixed.
-            // there are variables realm, intrinsics, stack, ..
-            // in the other module
-            // i think hiding behind ONE function will help
-            // or adding it to it´s modules exports and let
-            // them use exports would be another. I favor
-            // the function. but from my p3/933mhz i know i kill
-            // the program with        
-        
-            restoreCodeRealm();
-        
-            return realmRec;
-        }
+        realmRec.loader = loader;
+        var newGlobal = createGlobalThis(realmRec, ObjectCreate(null), intrinsics);
+        var newGlobalEnv = GlobalEnvironment(newGlobal);
+        // i think this is a bug and no execution context should be required
+        context.VarEnv = newGlobalEnv;
+        context.LexEnv = newGlobalEnv;
 
-    
+        realmRec.globalThis = newGlobal;
+        realmRec.globalEnv = newGlobalEnv;
+        realmRec.directEvalTranslate = undefined;
+        realmRec.directEvalFallback = undefined;
+        realmRec.indirectEval = undefined;
+        realmRec.Function = undefined;
+        realmRec.GlobalSymbolRegistry = Object.create(null);
+        makeTaskQueues(realmRec);
+
+        // my programming mistakes fixed.
+        // there are variables realm, intrinsics, stack, ..
+        // in the other module
+        // i think hiding behind ONE function will help
+        // or adding it to it´s modules exports and let
+        // them use exports would be another. I favor
+        // the function. but from my p3/933mhz i know i kill
+        // the program with
+
+        restoreCodeRealm();
+
+        return realmRec;
+    }
+
+
     var realms = [];
     function saveCodeRealm() {
         realms.push(realm);
@@ -13615,14 +13248,14 @@ define("api", function (require, exports, module) {
             }
         }
         return NormalCompletion(output);
-    }     
-        
+    }
+
     // object.[[Transfer]](targetRealm)
     var Transfer_Call = function (thisArg, argList) {
         var targetRealm = argList[0];
         var object = thisArg;
         if (hasInternalSlot(object, "ArrayBufferData"))
-        return CopyArrayBufferToRealm(object, targetRealm);
+            return CopyArrayBufferToRealm(object, targetRealm);
     };
 
     function CopyArrayBufferToRealm(arrayBuffer, targetRealm) {
@@ -13653,36 +13286,36 @@ define("api", function (require, exports, module) {
     /* Missing: MessagePort and postMessage and open und close */
 
     /*
-        DataCloneError error object
-        Indicates failure of the structured clone algorithm.
-        {Rationale: typically, ECMAScript operations throw RangeError for similar failures, but we need to preserve DOM compatibnility}
-    */
+     DataCloneError error object
+     Indicates failure of the structured clone algorithm.
+     {Rationale: typically, ECMAScript operations throw RangeError for similar failures, but we need to preserve DOM compatibnility}
+     */
 
 
-        // ##################################################################
-        // DefineBuiltinProperties::: Modules and Loaders (linking.docx)
-        // ##################################################################
+    // ##################################################################
+    // DefineBuiltinProperties::: Modules and Loaders (linking.docx)
+    // ##################################################################
 
-        var standard_properties = {
-            __proto__: null,
-            "Array": true,
-            "Error": true,
-            "Function": true,
-            "Object": true,
-            "Symbol": true
-        };
+    var standard_properties = {
+        __proto__: null,
+        "Array": true,
+        "Error": true,
+        "Function": true,
+        "Object": true,
+        "Symbol": true
+    };
 
-        function DefineBuiltinProperties(O) {
-            var globalThis = getGlobalThis();
-            for (var name in standard_properties) {
-                if (standard_properties[name] === true) {
-                    var desc = callInternalSlot("GetOwnProperty", globalThis, name);
-                    var status = callInternalSlot("DefineOwnProperty", O, name, desc);
-                    if (isAbrupt(status)) return status;
-                }
+    function DefineBuiltinProperties(O) {
+        var globalThis = getGlobalThis();
+        for (var name in standard_properties) {
+            if (standard_properties[name] === true) {
+                var desc = callInternalSlot("GetOwnProperty", globalThis, name);
+                var status = callInternalSlot("DefineOwnProperty", O, name, desc);
+                if (isAbrupt(status)) return status;
             }
-            return O;
         }
+        return O;
+    }
 
 
     // ===========================================================================================================
@@ -13707,7 +13340,7 @@ define("api", function (require, exports, module) {
     exports.$$isRegExp           = $$isRegExp;
     exports.$$isConcatSpreadable = $$isConcatSpreadable;
     exports.IndirectEval = IndirectEval;
-    
+
     exports.CreateBuiltinFunction = CreateBuiltinFunction;
     exports.AddRestrictedFunctionProperties = AddRestrictedFunctionProperties;
     exports.LazyDefineProperty = LazyDefineProperty;
@@ -13722,7 +13355,7 @@ define("api", function (require, exports, module) {
     exports.HasOwnProperty = HasOwnProperty;
     exports.Put = Put;
     exports.Invoke = Invoke;
-    
+
     exports.withError = withError; // This Function returns the Errors, say the spec says "Throw a TypeError", then return withError("Type", message);
     exports.getContext = getContext;
     exports.getRealm = getRealm;
@@ -13733,12 +13366,12 @@ define("api", function (require, exports, module) {
     exports.getGlobalEnv = getGlobalEnv;
     exports.getGlobalThis = getGlobalThis;
     exports.getStack = getStack;
-    
+
     exports.getInternalSlot = getInternalSlot;
     exports.setInternalSlot = setInternalSlot;
     exports.hasInternalSlot = hasInternalSlot;
     exports.callInternalSlot = callInternalSlot;
-    
+
     exports.CreateArrayIterator = CreateArrayIterator;
     exports.CreateByteDataBlock = CreateByteDataBlock;
     exports.CopyDataBlockBytes = CopyDataBlockBytes;
@@ -13756,7 +13389,7 @@ define("api", function (require, exports, module) {
     exports.stringifyErrorStack = stringifyErrorStack;
     exports.addMissingProperties = addMissingProperties;
     exports.NormalCompletion = NormalCompletion;
-    
+
     exports.Completion = Completion;
     exports.NewDeclarativeEnvironment = NewDeclarativeEnvironment;
     exports.NewObjectEnvironment = NewObjectEnvironment;
@@ -13906,10 +13539,10 @@ define("api", function (require, exports, module) {
         descriptor.writable = true;
         callInternalSlot("DefineOwnProperty", intrinsics, intrinsicName, descriptor);
     }
-    
+
 
     function createIntrinsicConstructor (intrinsics, name, len, intrinsicName) {
-        
+
         var constructor = OrdinaryFunction();
         define_intrinsic(intrinsics, intrinsicName, constructor);
         SetFunctionName(constructor, name);
@@ -13936,23 +13569,23 @@ define("api", function (require, exports, module) {
     }
 
     function createIntrinsics(realm) {
-        
+
         var intrinsics = OrdinaryObject(null);
         realm.intrinsics = intrinsics;
 
         var ObjectPrototype = createIntrinsicPrototype(intrinsics, "%ObjectPrototype%");
         setInternalSlot(ObjectPrototype, "Prototype", null);
-        
+
         var FunctionPrototype = createIntrinsicPrototype(intrinsics, "%FunctionPrototype%");
         setInternalSlot(FunctionPrototype, "Prototype", ObjectPrototype);
-        
+
         var FunctionConstructor = createIntrinsicConstructor(intrinsics, "Function", 0, "%Function%");
         setInternalSlot(FunctionConstructor, "Prototype", FunctionPrototype);
-        
+
         var ObjectConstructor = createIntrinsicConstructor(intrinsics, "Object", 0, "%Object%");
-        
-    Assert(getInternalSlot(ObjectConstructor, "Prototype") === FunctionPrototype, "ObjectConstructor and FunctionPrototype have to have a link");
-        
+
+        Assert(getInternalSlot(ObjectConstructor, "Prototype") === FunctionPrototype, "ObjectConstructor and FunctionPrototype have to have a link");
+
         var EncodeURIFunction = createIntrinsicFunction(intrinsics, "encodeURI", 0, "%EncodeURI%");
         var DecodeURIFunction = createIntrinsicFunction(intrinsics, "ecodeURI", 0, "%DecodeURI%");
         var EncodeURIComponentFunction = createIntrinsicFunction(intrinsics, "EncodeURIComponent", 0, "%EncodeURIComponent%");
@@ -13981,7 +13614,7 @@ define("api", function (require, exports, module) {
         var NumberConstructor = createIntrinsicConstructor(intrinsics, "Number", 0, "%Number%");
         var NumberPrototype = createIntrinsicPrototype(intrinsics, "%NumberPrototype%");
         var StringConstructor = createIntrinsicConstructor(intrinsics, "String", 0, "%String%");
-        
+
         var StringPrototype = createIntrinsicPrototype(intrinsics, "%StringPrototype%");
         var StringIteratorPrototype = createIntrinsicPrototype(intrinsics, "%StringIteratorPrototype%");
         var DateConstructor = createIntrinsicConstructor(intrinsics, "Date", 0, "%Date%");
@@ -13991,7 +13624,7 @@ define("api", function (require, exports, module) {
         var ArrayConstructor = createIntrinsicConstructor(intrinsics, "Array", 0, "%Array%");
         var ArrayPrototype = createIntrinsicPrototype(intrinsics, "%ArrayPrototype%");
         var ArrayIteratorPrototype = createIntrinsicPrototype(intrinsics, "%ArrayIteratorPrototype%");
-        
+
         var GeneratorPrototype = createIntrinsicPrototype(intrinsics, "%GeneratorPrototype%");
         var GeneratorObject = createIntrinsicObject(intrinsics, "%Generator%");
         var ReflectObject = createIntrinsicObject(intrinsics, "%Reflect%");
@@ -14020,7 +13653,7 @@ define("api", function (require, exports, module) {
         var SetConstructor = createIntrinsicConstructor(intrinsics, "Set", 0, "%Set%");
         var SetPrototype = createIntrinsicPrototype(intrinsics, "%SetPrototype%");
         var SetIteratorPrototype = createIntrinsicPrototype(intrinsics, "%SetIteratorPrototype%");
-    var __mapSetUniqueInternalUniqueKeyCounter__ = 0;
+        var __mapSetUniqueInternalUniqueKeyCounter__ = 0;
         var TypedArrayConstructor = createIntrinsicConstructor(intrinsics, "TypedArray", 0, "%TypedArray%");
         var TypedArrayPrototype = createIntrinsicPrototype(intrinsics, "%TypedArrayPrototype%");
         var Uint8ArrayConstructor = createIntrinsicConstructor(intrinsics, "Uint8Array", 0, "%Uint8Array%");
@@ -14059,14 +13692,14 @@ define("api", function (require, exports, module) {
         var LoaderIteratorPrototype = createIntrinsicPrototype(intrinsics, "%LoaderIteratorPrototype%");
         var RealmConstructor = createIntrinsicConstructor(intrinsics, "Realm", 0, "%Realm%");
         var RealmPrototype = createIntrinsicPrototype(intrinsics, "%RealmPrototype%");
-        
+
         var ModulePrototype = null;
 
         // that is something from the dom, which is useful for communication and its messaging needs structured cloning so i can check out both
         var EventConstructor = createIntrinsicConstructor(intrinsics, "Event", 0, "%Event%");
-        var EventPrototype = createIntrinsicPrototype(intrinsics, "%EventPrototype%"); 
+        var EventPrototype = createIntrinsicPrototype(intrinsics, "%EventPrototype%");
         var EventTargetConstructor = createIntrinsicConstructor(intrinsics, "EventTarget", 0, "%EventTarget%");
-        var EventTargetPrototype = createIntrinsicPrototype(intrinsics, "%EventTargetPrototype%"); 
+        var EventTargetPrototype = createIntrinsicPrototype(intrinsics, "%EventTargetPrototype%");
         var MessagePortConstructor = createIntrinsicConstructor(intrinsics, "MessagePort", 0, "%MessagePort%");
         var MessagePortPrototype = createIntrinsicPrototype(intrinsics, "%MessagePortPrototype%");
 
@@ -14123,7 +13756,7 @@ define("api", function (require, exports, module) {
             if ((Function !== undefined) && !IsCallable(Function)) return withError("Type", "Function should be a function");
             setInternalSlot(realm, "FunctionHook", Function);
             setInternalSlot(realmObject, "Realm", realm);
-    
+
             realm.directEvalTranslate = translate;
             realm.directEvalFallback = fallback;
             realm.indirectEval = indirectEval;
@@ -14167,8 +13800,6 @@ define("api", function (require, exports, module) {
         // %Loader% und Loader.prototype
         // ##################################################################
 
-
-
         function hasRecordInList(list, field, value) {
             if (!list) return false
             for (var i = 0, j = list.length; i < j; i++) {
@@ -14177,7 +13808,7 @@ define("api", function (require, exports, module) {
             }
             return false;
         }
-        function getRecordInList(list, field, value) {
+        function getRecordFromList(list, field, value) {
             if (!list) return false;
             for (var i = 0, j = list.length; i < j; i++) {
                 var r = list[i];
@@ -14185,7 +13816,7 @@ define("api", function (require, exports, module) {
             }
             return undefined;
         }
-        
+
         function thisLoader(value) {
             if (value instanceof CompletionRecord) return thisLoader(value.value);
             var m;
@@ -14194,8 +13825,8 @@ define("api", function (require, exports, module) {
             }
             return withError("Type", "thisLoader(value): value is not a valid loader object");
         }
-        
-        
+
+
         //
         // Runtime Semantics
         // Loader State
@@ -14220,7 +13851,7 @@ define("api", function (require, exports, module) {
             loader.Loads = [];
             loader.LoaderObj = object;
             return loader;
-        }       
+        }
 
         function LoadRecord() {
             var lr = Object.create(LoadRecord.prototype);
@@ -14304,7 +13935,7 @@ define("api", function (require, exports, module) {
 
         // neu 27.1.
         function CallNormalize() {
-            var F = OrdinaryFunction();            
+            var F = OrdinaryFunction();
             var CallNormalizeFunction_Call = function (thisArg, argList) {
                 var resolve = argList[0];
                 var reject = argList[1];
@@ -14444,14 +14075,14 @@ define("api", function (require, exports, module) {
                 if (load.LinkSets.length === 0) return NormalCompletion(undefined);
                 var hook = Get(loader, "translate");
                 if (isAbrupt(hook = ifAbrupt(hook))) return hook;
-                if (!IsCallable(hook)) return withError("Type", "call translate hook is not callable");            
+                if (!IsCallable(hook)) return withError("Type", "call translate hook is not callable");
                 var obj = CreateLoadRequestObject(load.Name, load.Metadata, load.Address, source);
                 return callInternalSlot("Call", hook, loader, [obj]);
             };
             setInternalSlot(F, "Call", CallTranslate_Call);
             return F;
         }
- 
+
 
         // 27.1.
         function CallInstantiate() {
@@ -14464,10 +14095,10 @@ define("api", function (require, exports, module) {
                 if (loader.LinkSets.length === 0) return NormalCompletion(undefined);
                 var hook = Get(loader, "instantiate");
                 if (isAbrupt(hook = ifAbrupt(hook))) return hook;
-                if (!IsCallable(hook)) return withError("Type", "call instantiate hook is not callable");            
+                if (!IsCallable(hook)) return withError("Type", "call instantiate hook is not callable");
                 var obj = CreateLoadRequestObject(load.Name, load.Metadata, load.Address, source);
                 return callInternalSlot("Call", hook, loader, [obj]);
-            };            
+            };
             setInternalSlot(F, "Call", CallInstantiate_Call);
             return F;
         }
@@ -14578,7 +14209,7 @@ define("api", function (require, exports, module) {
                 Assert(load.Status === "loading", "load.Status should have been loading but isnt");
                 load.Status = "loaded";
                 var linkSets = load.LinkSets;
-                for (var i = 0, j = linkSets.length; i < j; i++) {   
+                for (var i = 0, j = linkSets.length; i < j; i++) {
                     UpdateLinkSetOnLoad(linkSets[i], load);
                 }
                 return NormalCompletion(undefined);
@@ -14669,7 +14300,7 @@ define("api", function (require, exports, module) {
         function LookupExport(M, exportName) {
             var mExp = getInternalSlot(M, "Exports");
             var exp;
-            if (!(exp=getRecordInList(mExp, "ExportName", exportName))) {
+            if (!(exp=getRecordFromList(mExp, "ExportName", exportName))) {
                 return NormalCompletion(undefined);
             }
             return exp.Binding;
@@ -14678,7 +14309,7 @@ define("api", function (require, exports, module) {
         function LookupModuleDependency(M, requestName) {
             if (requestName === null) return M;
             var deps = getInternalSlot(M, "Dependencies");
-            var pair = getRecordInList(deps, "Key", requestName);
+            var pair = getRecordFromList(deps, "Key", requestName);
             return pair.Module;
         }
 
@@ -14716,15 +14347,15 @@ define("api", function (require, exports, module) {
                 linkSet.Loads.push(load);
                 load.LinkSets.push(linkSet);
                 if (load.Status === "loaded") {
-                     for (var i = 0, j = load.Dependencies.length; i < j; i++) {
+                    for (var i = 0, j = load.Dependencies.length; i < j; i++) {
                         var r = load.Dependencies[i];
                         if (!hasRecordInList(loader.Modules, "Key", name)) {       // Evil cubic stuff.
                             var depLoad;
-                            if ((depLoad=getRecordInList(loader.Loads, "Name", name))) {
+                            if ((depLoad=getRecordFromList(loader.Loads, "Name", name))) {
                                 AddLoadToLinkSet(linkSet, depLoad);
                             }
                         }
-                     }
+                    }
                 }
             }
         }
@@ -14755,7 +14386,7 @@ define("api", function (require, exports, module) {
         function LinkSetFailed(linkSet, exc) {
             debug2("linksetfailed")
             var loader = linkSet.Loader;
-            var loads = linkSet.Loads; 
+            var loads = linkSet.Loads;
             for (var i = 0, j = loads.length; i < j; i++) {
                 var load = loads[i];
                 var idx;
@@ -14798,34 +14429,34 @@ define("api", function (require, exports, module) {
         //
 
 
-/*
+        /*
 
 
-1. Ein load record load hat eine "Verknüpfungsabhängigkeit" auf einem load record "load2 ", wenn load2 in
-load1.UnlinkedDependencies enthalten ist, oder ein load record load1.UnlinkedDependencies existiert, dass
-load eine Verknüpfungsabhängigkeit auf load2 hat.
+         1. Ein load record load hat eine "Verknüpfungsabhängigkeit" auf einem load record "load2 ", wenn load2 in
+         load1.UnlinkedDependencies enthalten ist, oder ein load record load1.UnlinkedDependencies existiert, dass
+         load eine Verknüpfungsabhängigkeit auf load2 hat.
 
-2. Ein Verknüpfungsgraph einer Liste "list" aus load records ist die MEnge der Load Records load, so daß 
-irgendein load record in "list" eine Verknüpfungsabhängigkeit auf load hat.
+         2. Ein Verknüpfungsgraph einer Liste "list" aus load records ist die MEnge der Load Records load, so daß
+         irgendein load record in "list" eine Verknüpfungsabhängigkeit auf load hat.
 
-3. eine Abhängigkeitskette von load1 zu load2 ist eine Liste von load records, die die transitive 
-Verknüpfungsabhängigkeit von load1 nach load2 beweist.
+         3. eine Abhängigkeitskette von load1 zu load2 ist eine Liste von load records, die die transitive
+         Verknüpfungsabhängigkeit von load1 nach load2 beweist.
 
-4. Ein Abhängigkeitscycle ist eine Abhängigkeitskette deren erstes und letztes Elements [[Name]] Felder
-den gleichen Wert haben.
+         4. Ein Abhängigkeitscycle ist eine Abhängigkeitskette deren erstes und letztes Elements [[Name]] Felder
+         den gleichen Wert haben.
 
-Eine Abhängigkeitskette ist zyklisch wenn sie eine Subsequence enthält, die ein Abhängigkeitszyklus ist. Eine
-KEtte ist azyklisch wenn sie nicht zyklisch ist.
+         Eine Abhängigkeitskette ist zyklisch wenn sie eine Subsequence enthält, die ein Abhängigkeitszyklus ist. Eine
+         KEtte ist azyklisch wenn sie nicht zyklisch ist.
 
 
-Eine dependency chain ist mixed, wenn sie zwei elemente mit unterschiedlichen Kind Feldern enthält. Eine 
-dependency-group-transition mit Kind Kind ist eine Zwei-Element-Subsequence load1 und load2 einer 
-Abhängigkeitskette, so daß load1.Kind nicht gleich kind ist und load2.Kind gleich kind ist.
+         Eine dependency chain ist mixed, wenn sie zwei elemente mit unterschiedlichen Kind Feldern enthält. Eine
+         dependency-group-transition mit Kind Kind ist eine Zwei-Element-Subsequence load1 und load2 einer
+         Abhängigkeitskette, so daß load1.Kind nicht gleich kind ist und load2.Kind gleich kind ist.
 
-Der dependency group count ist eine dependency kette mit dem ersten element load1 ist die Nummer der unterschiedlichen
-dependencygrouptransitions of kind load1.Kind.
+         Der dependency group count ist eine dependency kette mit dem ersten element load1 ist die Nummer der unterschiedlichen
+         dependencygrouptransitions of kind load1.Kind.
 
-*/
+         */
 
         // 29.1.
 
@@ -14840,7 +14471,7 @@ dependencygrouptransitions of kind load1.Kind.
                 var load = G[i];
                 if (load.Kind != kind) {
                     if (kind === undefined)
-                    kind = G[i].Kind;
+                        kind = G[i].Kind;
                     else return withError("Syntax", "all loads must be of the same kind");
                 }
             }
@@ -14850,7 +14481,7 @@ dependencygrouptransitions of kind load1.Kind.
                 n = max(n, load.UnlinkedDependencies.length);
             }
 
-                
+
             var declarativeGroupCount = n;
             var declarativeGroups = [];
             var dynamicGroupCount = 0;
@@ -14925,7 +14556,7 @@ dependencygrouptransitions of kind load1.Kind.
                         var error = withError("Reference", "Can not resolve export to a binding record");
                         var linkErrors = getInternalSlot(M, "LinkErrors");
                         linkErrors.push(error);
-                        return error;   
+                        return error;
                     }  else {
                         env.CreateImportBinding(envRec, def.LocalName);
                         // THIS FUNCTION DOES NOT EXIST YET.
@@ -14946,14 +14577,14 @@ dependencygrouptransitions of kind load1.Kind.
             for (var i = 0, j = knownExportEntries.length; i < j; i++) {
 
                 var entry = knownExportEntries[i];
-                var modReq = entry.ModuleRequest 
+                var modReq = entry.ModuleRequest
                 var otherMod = LookupModuleDependency(M, modReq);
 
                 if (entry.Module !== null && entry.LocalName !== null && !boundNames[entry.LocalName]) { // caps
                     var error = withError("Reference", "linkError created in ResolveExportEntries");
                     linkErrors.push(error);
                 }
-                defs.push({ Module: otherMod, ImportName: entry.ImportName, LocalName: entry.LocalName, 
+                defs.push({ Module: otherMod, ImportName: entry.ImportName, LocalName: entry.LocalName,
                     ExportName: entry.ExportName, Explicit: true });
 
             }
@@ -14992,7 +14623,7 @@ dependencygrouptransitions of kind load1.Kind.
             debug2("resolve export");
             var exports = getInternalSlot(M,"Exports");
             var exported;
-            if (exported=getRecordInList(exports, "ExportName", exportName)) {
+            if (exported=getRecordFromList(exports, "ExportName", exportName)) {
                 return NormalCompletion(exported.Binding)
             }
             var ref = { Module: M, ExportName: exportName };
@@ -15020,11 +14651,11 @@ dependencygrouptransitions of kind load1.Kind.
             if ((explicits.length > 1) || ((overlappingDefs.length > 1) && !explicits.length)) {
                 error = withError("Syntax", "");
                 linkErrors = getInternalSlot(M, "LinkErrors");
-                linkErrors.push(error);                
+                linkErrors.push(error);
                 return error;
-            } 
+            }
 
-            def = getRecordInList(overlappingDefs, "Explicit", true);
+            def = getRecordFromList(overlappingDefs, "Explicit", true);
             if (!def) def = overlappingDefs[0];
             Assert(def, "i should have a def here");
             if (def.LocalName !== null) {
@@ -15072,7 +14703,7 @@ dependencygrouptransitions of kind load1.Kind.
             }
         }
 
-        
+
 
 
         function LinkDeclarativeModules(loads, loader) {
@@ -15089,11 +14720,11 @@ dependencygrouptransitions of kind load1.Kind.
                 var deps = pair.load.Dependencies;
                 var pairModule = pair.Module;
                 for (var k = 0; k < deps.length; k++) {
-                   var dep = deps[k];
-                   var requestName = dep.Key;
-                   var normalizedName = dep.Value;
-                   var load;
-                   if (load = getRecordInList(loads, "Name", normalizedName)) {
+                    var dep = deps[k];
+                    var requestName = dep.Key;
+                    var normalizedName = dep.Value;
+                    var load;
+                    if (load = getRecordFromList(loads, "Name", normalizedName)) {
                         if (load.Status === "linked") {
                             var resolvedDep = genericRecord({ Key: requestName, Value: load.Module });
                             resolvedDeps.push(resolvedDep);
@@ -15104,9 +14735,9 @@ dependencygrouptransitions of kind load1.Kind.
                                     resolvedDeps.push(genericRecord({ Key: requestName, Value: otherPair.Module }));
                                     unlinkedDeps.push(otherPair.Load);
                                 }
-                            } 
+                            }
                         }
-                   } else {
+                    } else {
                         var module = LoaderRegistryLookup(loader, normalizedName);
                         if (module === null) {
                             var error = withError("Reference","");
@@ -15115,7 +14746,7 @@ dependencygrouptransitions of kind load1.Kind.
                         } else {
                             resolvedDeps.push({ Key: requestName, Value: module });
                         }
-                   }         
+                    }
                 }
                 pairModule.Dependencies = resolvedDeps;
                 pairModule.UnlinkedDependencies = unlinkedDeps;
@@ -15131,8 +14762,8 @@ dependencygrouptransitions of kind load1.Kind.
                 ResolveExports(pair.Module);
             }
         }
-    
-        
+
+
         // 29.1
         function EvaluateLoadedModule() {
             var EvaluateLoadedModule_Call = function (thisArg, argList) {
@@ -15145,7 +14776,7 @@ dependencygrouptransitions of kind load1.Kind.
                 if (isAbrupt(result)) return result;
                 return NormalCompletion(module);
             };
-            var F = OrdinaryFunction(); 
+            var F = OrdinaryFunction();
             setInternalSlot(F, "Call", EvaluateLoadedModule_Call);
             return F;
         }
@@ -15198,7 +14829,7 @@ dependencygrouptransitions of kind load1.Kind.
             }
             return A;
         }
-        
+
         // Seite 21 von 43
 
         function GetOption(options, name) {
@@ -15240,7 +14871,7 @@ dependencygrouptransitions of kind load1.Kind.
         }
 
 
-/************************* unupdated end ****/
+        /************************* unupdated end ****/
 
 
         var LoaderConstructor_Call = function (thisArg, argList) {
@@ -15255,7 +14886,7 @@ dependencygrouptransitions of kind load1.Kind.
 
             var realmObject = Get(options, "realm");
             if (isAbrupt(realmObject = ifAbrupt(realmObject))) return realmObject;
-            
+
             var realm;
             if (realmObject === undefined) realm = getRealm();
             else {
@@ -15291,7 +14922,7 @@ dependencygrouptransitions of kind load1.Kind.
             status = define_loader_pipeline_hook("instantiate");
             if (isAbrupt(status)) return status;
             if (getInternalSlot(loader, "LoaderRecord") !== undefined) return withError("Type", "loader.[[LoaderRecord]] seems to have been changed, expected the undefined value.")
-            
+
             var loaderRecord = CreateLoaderRecord(realm, loader);
             setInternalSlot(loader, "LoaderRecord", loaderRecord);
             return NormalCompletion(loader);
@@ -15391,7 +15022,7 @@ dependencygrouptransitions of kind load1.Kind.
             var loaderRecord = getInternalSlot(loader,"LoaderRecord");
             var p = LoadModule(loader, name, options);
             if (isAbrupt(p = ifAbrupt(p))) return p;
-            var F = ReturnUndefined(); 
+            var F = ReturnUndefined();
             p = PromiseThen(p, F);
             return p;
         };
@@ -15455,7 +15086,7 @@ dependencygrouptransitions of kind load1.Kind.
 
             var modules = loaderRecord.Modules;
             var record, module;
-            if ((record = getRecordInList(modules, "Key", name))) {
+            if ((record = getRecordFromList(modules, "Key", name))) {
                 var module = p.Value;
                 var result = EnsureEvaluated(module, [], loaderRecord);
                 if (isAbrupt(result = ifAbrupt(result))) return result;
@@ -15476,9 +15107,9 @@ dependencygrouptransitions of kind load1.Kind.
             var modules = loaderRecord.Modules;
             if (hasRecordInList(modules, "Key", name)) return NormalCompletion(true);
             /*  refactoring hasRecord in list. must result in this:
-                if (modules[name]) {  
-                return NormalCompletion(true);
-            }*/
+             if (modules[name]) {
+             return NormalCompletion(true);
+             }*/
             return NormalCompletion(false);
 
         };
@@ -15495,7 +15126,7 @@ dependencygrouptransitions of kind load1.Kind.
             if (Type(module) !== "object") return withError("Type", "module is not an object");
             var modules = loaderRecord.Modules;
             var p;
-            if (p=getRecordInList(modules, "Key", name)) {
+            if (p=getRecordFromList(modules, "Key", name)) {
                 p.Value = module;
                 return NormalCompletion(loader);
             }
@@ -15505,23 +15136,23 @@ dependencygrouptransitions of kind load1.Kind.
         };
         // 31.1.
         var LoaderPrototype_delete = function (thisArg, argList) {
-                var name = argList[0];
-                var loader = thisLoader(thisArg);
-                if (isAbrupt(loader = ifAbrupt(loader))) return loader;
-                var loaderRecord = getInternalSlot(loader, "LoaderRecord");
-                name = ToString(name);
-                if (isAbrupt(name = ifAbrupt(name))) return name;
-                var modules = loaderRecord.Modules;
-                for (var i = 0, j = modules.length; i < j; i++) {
-                    var p = modules[i];
-                    if (SameValue(p.Key, name)) {
-                        // remove them from list otherwhere
-                        p.Key = empty;
-                        p.Value = empty;        
-                        return NormalCompletion(true);
-                    }
+            var name = argList[0];
+            var loader = thisLoader(thisArg);
+            if (isAbrupt(loader = ifAbrupt(loader))) return loader;
+            var loaderRecord = getInternalSlot(loader, "LoaderRecord");
+            name = ToString(name);
+            if (isAbrupt(name = ifAbrupt(name))) return name;
+            var modules = loaderRecord.Modules;
+            for (var i = 0, j = modules.length; i < j; i++) {
+                var p = modules[i];
+                if (SameValue(p.Key, name)) {
+                    // remove them from list otherwhere
+                    p.Key = empty;
+                    p.Value = empty;
+                    return NormalCompletion(true);
                 }
-                return NormalCompletion(false);
+            }
+            return NormalCompletion(false);
         };
         var LoaderPrototype_normalize = function (thisArg, argList) {
             var name = argList[0];
@@ -15541,7 +15172,7 @@ dependencygrouptransitions of kind load1.Kind.
             var load = argList[0];
             return Get(load, "source");
         };
-        
+
         var LoaderPrototype_instantiate = function (thisArg, argList) {
             var loadRequest = argList[0];
             return NormalCompletion(undefined);
@@ -15729,7 +15360,7 @@ dependencygrouptransitions of kind load1.Kind.
             var url = argList[0];
             var d, p;
             if (isWindow()) {
-
+                
                 var handler = CreateBuiltinFunction(realm, function handler(thisArg, argList) {
                     var resolve = argList[0];
                     var reject = argList[1];
@@ -15744,8 +15375,9 @@ dependencygrouptransitions of kind load1.Kind.
                 };
 
                 xhr.send();
-
+                
                 return xhr.responseText;
+                return d;
             } else if (isNode()) {
 
             } else if (isWorker()) {
@@ -16214,7 +15846,7 @@ dependencygrouptransitions of kind load1.Kind.
             writable: true,
             configurable: true
         });
-        
+
         DefineOwnProperty(ArrayPrototype, "constructor", {
             value: ArrayConstructor,
             enumerable: false,
@@ -16597,7 +16229,7 @@ dependencygrouptransitions of kind load1.Kind.
         };
         LazyDefineBuiltinFunction(ArrayPrototype, "splice", 2, ArrayPrototype_splice);
         LazyDefineBuiltinFunction(ArrayPrototype, "unshift", 1, ArrayPrototype_unshift);
-        
+
         DefineOwnProperty(ArrayPrototype, "indexOf", {
             value: CreateBuiltinFunction(realm, function indexOf(thisArg, argList) {
                 var O = ToObject(thisArg);
@@ -16865,11 +16497,11 @@ dependencygrouptransitions of kind load1.Kind.
         var ArrayPrototype_findIndex = function (thisArg, argList) {
 
         };
-        
+
         LazyDefineBuiltinFunction(ArrayPrototype, "predicate", 1, ArrayPrototype_predicate);
         LazyDefineBuiltinFunction(ArrayPrototype, "findIndex", 1, ArrayPrototype_findIndex);
 
-        
+
         DefineOwnProperty(ArrayPrototype, "entries", {
             value: CreateBuiltinFunction(realm, function entries(thisArg, argList) {
                 var O = ToObject(thisArg);
@@ -17045,9 +16677,9 @@ dependencygrouptransitions of kind load1.Kind.
             var m = captures.length;
             result = matched.replace("$$", "$");
             /*
-                Table 39 - Replacement Text Symbol Substitutions missing
-                Please fix your skills here
-            */
+             Table 39 - Replacement Text Symbol Substitutions missing
+             Please fix your skills here
+             */
             return result;
         }
 
@@ -17174,7 +16806,7 @@ dependencygrouptransitions of kind load1.Kind.
             var j = len;
             var result = false;
             while (i < len-searchLen) {
-                
+
                 if ((searchStr[0] === S[i]) && (searchStr[searchLen-1] === S[i+searchLen-1])) {
                     result = true;
                     for (var k = i+1, l = i+searchLen-1, m = 1; k < l; k++, m++) {
@@ -17288,7 +16920,7 @@ dependencygrouptransitions of kind load1.Kind.
             if (isAbrupt(O = ifAbrupt(O))) return O;
             var S = ToString(O);
             if (isAbrupt(S = ifAbrupt(S))) return S;
-            var U = S.toUpperCase();            
+            var U = S.toUpperCase();
             return NormalCompletion(U);
         };
 
@@ -17298,7 +16930,7 @@ dependencygrouptransitions of kind load1.Kind.
             if (isAbrupt(O = ifAbrupt(O))) return O;
             var S = ToString(O);
             if (isAbrupt(S = ifAbrupt(S))) return S;
-            var L = S.toLowerCase();            
+            var L = S.toLowerCase();
             return NormalCompletion(L);
         };
 
@@ -17344,7 +16976,7 @@ dependencygrouptransitions of kind load1.Kind.
             var s = S.length;
             var p = 0;
             var R = ToString(separator);
-          
+
         };
 
         // http://wiki.ecmascript.org/doku.php?id=strawman:strawman
@@ -17442,17 +17074,17 @@ dependencygrouptransitions of kind load1.Kind.
             var start = min(max(pos, 0), len);
             var searchLen = searchStr.length;
             outer:
-            for (var i = 0, j = (S.length-searchLen); i < j; i++) {
-                var ch = S[i];
-                if (ch === searchStr[0]) {
-                    var k = 0;
-                    while (k < searchLen) {
-                        if (S[i+k] !== searchStr[k]) continue outer;
-                        k = k + 1;
+                for (var i = 0, j = (S.length-searchLen); i < j; i++) {
+                    var ch = S[i];
+                    if (ch === searchStr[0]) {
+                        var k = 0;
+                        while (k < searchLen) {
+                            if (S[i+k] !== searchStr[k]) continue outer;
+                            k = k + 1;
+                        }
+                        return NormalCompletion(i);
                     }
-                    return NormalCompletion(i);
                 }
-            }
             return NormalCompletion(-1);
         };
 
@@ -17525,8 +17157,8 @@ dependencygrouptransitions of kind load1.Kind.
         LazyDefineBuiltinFunction(StringPrototype, "toArray", 0, StringPrototype_toArray);
         LazyDefineBuiltinFunction(StringPrototype, "toLocaleCompare", 0, StringPrototype_localeCompare);
         LazyDefineBuiltinFunction(StringPrototype, "toLowerCase", 0, StringPrototype_toLowerCase);
-        LazyDefineBuiltinFunction(StringPrototype, "toUpperCase", 0, StringPrototype_toUpperCase);        
-        LazyDefineBuiltinFunction(StringPrototype, "trim", 1, StringPrototype_trim);        
+        LazyDefineBuiltinFunction(StringPrototype, "toUpperCase", 0, StringPrototype_toUpperCase);
+        LazyDefineBuiltinFunction(StringPrototype, "trim", 1, StringPrototype_trim);
         LazyDefineBuiltinFunction(StringPrototype, "valueOf", 0, StringPrototype_valueOf);
         LazyDefineBuiltinConstant(StringPrototype, $$toStringTag, "String");
         MakeConstructor(StringConstructor, true, StringPrototype);
@@ -17618,7 +17250,7 @@ dependencygrouptransitions of kind load1.Kind.
             setInternalSlot(iterator, "IterationKind", kind);
             return iterator;
         }
-        
+
         // ===========================================================================================================
         // Boolean Constructor and Prototype
         // ===========================================================================================================
@@ -17755,11 +17387,11 @@ dependencygrouptransitions of kind load1.Kind.
             var sym = getInternalSlot(s, "SymbolData");
             return NormalCompletion(sym);
         };
-        
+
         var SymbolPrototype_$$toPrimitive = function (thisArg, argList) {
-                return withError("Type", "Symbol.prototype[@@toPrimitive] is supposed to throw a Type Error!");
+            return withError("Type", "Symbol.prototype[@@toPrimitive] is supposed to throw a Type Error!");
         };
-        
+
 
 
         // var GlobalSymbolRegistry = Object.create(null);
@@ -17797,7 +17429,7 @@ dependencygrouptransitions of kind load1.Kind.
         LazyDefineBuiltinFunction(SymbolPrototype, "toString", 0, SymbolPrototype_toString);
         LazyDefineBuiltinFunction(SymbolPrototype, "valueOf", 0, SymbolPrototype_valueOf);
         LazyDefineBuiltinConstant(SymbolPrototype, $$toStringTag, "Symbol");
-        LazyDefineBuiltinConstant(SymbolPrototype, $$toPrimitive, 
+        LazyDefineBuiltinConstant(SymbolPrototype, $$toPrimitive,
             CreateBuiltinFunction(realm, SymbolPrototype_$$toPrimitive, 1, "[Symbol.toPrimitive]"));
 
 
@@ -17935,14 +17567,14 @@ dependencygrouptransitions of kind load1.Kind.
         LazyDefineBuiltinConstant(ErrorConstructor, "prototype", ErrorPrototype);
         LazyDefineBuiltinConstant(ErrorPrototype, "constructor", ErrorConstructor);
         LazyDefineBuiltinConstant(ErrorPrototype, "name", "Error");
-        
+
         setInternalSlot(ErrorConstructor, "Call", function (thisArg, argList) {
             var func = ErrorConstructor;
             var message = argList[0];
             var name = "Error";
             var O = thisArg;
             var isObject = Type(O) === "object";
-                // This is different from the others in the spec
+            // This is different from the others in the spec
             if (!isObject || (isObject &&
                 (!hasInternalSlot(O, "ErrorData") || (getInternalSlot(O, "ErrorData") === undefined)))) {
                 O = OrdinaryCreateFromConstructor(func, "%ErrorPrototype%", {
@@ -17950,7 +17582,7 @@ dependencygrouptransitions of kind load1.Kind.
                 });
                 if (isAbrupt(O = ifAbrupt(O))) return O;
             }
-                // or i read it wrong
+            // or i read it wrong
             Assert(Type(O) === "object");
             setInternalSlot(O, "ErrorData", "Error");
             if (message !== undefined) {
@@ -18039,7 +17671,7 @@ dependencygrouptransitions of kind load1.Kind.
                     var status = DefineOwnPropertyOrThrow(O, "message", msgDesc);
                     if (isAbrupt(status)) return status;
                 }
-                
+
                 CreateDataProperty(O, "stack", stringifyErrorStack())
 
                 // interne representation
@@ -18096,13 +17728,13 @@ dependencygrouptransitions of kind load1.Kind.
         // ===========================================================================================================
 
         setInternalSlot(DateConstructor, "Call", function (thisArg, argList) {
-            
+
             var O = thisArg;
             var numberOfArgs = argList.length;
             var y, m, dt, h, min, milli, finalDate;
 
             if (numberOfArgs >= 2) {
-                
+
                 var year = argList[0];
                 var month = argList[1];
                 var date = argList[2];
@@ -18110,9 +17742,9 @@ dependencygrouptransitions of kind load1.Kind.
                 var minutes = argList[4];
                 var seconds = argList[5];
                 var ms = argList[6];
-                
-                if (Type(O) === "object" 
-                    && hasInternalSlot(O, "DateValue") 
+
+                if (Type(O) === "object"
+                    && hasInternalSlot(O, "DateValue")
                     && (getInternalSlot(O, "DateValue") === undefined)) {
 
                     y = ToNumber(year);
@@ -18421,7 +18053,7 @@ dependencygrouptransitions of kind load1.Kind.
         var LN2 = Math.LN2;
         var LOG10E = Math.LOG10E;
         var E = Math.E;
-        
+
         var MathObject_sign = function (thisArg, argList) {
             var x = ToNumber(argList[0]);
             if (isAbrupt(x)) return x;
@@ -18476,12 +18108,12 @@ dependencygrouptransitions of kind load1.Kind.
             var args = CreateListFromArray(argList);
             if (isAbrupt(args)) return args;
             return NormalCompletion(Math.max.apply(Math, args));
-        }; 
+        };
         var MathObject_min = function (thisArg, argList) {
             var args = CreateListFromArray(argList);
             if (isAbrupt(args)) return args;
             return NormalCompletion(Math.min.apply(Math, args));
-        }; 
+        };
         var MathObject_tan = function (thisArg, argList) {
             var x = +argList[0];
             return NormalCompletion(Math.tan(x));
@@ -18500,23 +18132,23 @@ dependencygrouptransitions of kind load1.Kind.
         var MathObject_log1p = function (thisArg, argList) {
 
         };
-        
+
         var MathObject_clz = function (thisArg, argList) {
-                var x = argList[0];
-                x = ToNumber(x);
-                if (isAbrupt(x = ifAbrupt(x))) return x;
-                var n = ToUint32(x);
-                if (isAbrupt(n = ifAbrupt(n))) return n;
-                if (n < 0) return 0;
-                if (n == 0) return 32;
-                var bitlen = Math.ceil(Math.log(Math.pow(n, Math.LOG2E)));
-                var p = 32 - bitlen; 
-                return NormalCompletion(p);
+            var x = argList[0];
+            x = ToNumber(x);
+            if (isAbrupt(x = ifAbrupt(x))) return x;
+            var n = ToUint32(x);
+            if (isAbrupt(n = ifAbrupt(n))) return n;
+            if (n < 0) return 0;
+            if (n == 0) return 32;
+            var bitlen = Math.ceil(Math.log(Math.pow(n, Math.LOG2E)));
+            var p = 32 - bitlen;
+            return NormalCompletion(p);
         };
 
         setInternalSlot(MathObject, "MathTag", true);
         setInternalSlot(MathObject, "Prototype", ObjectPrototype);
-        
+
         LazyDefineBuiltinConstant(MathObject, "PI", PI);
         LazyDefineBuiltinConstant(MathObject, "LOG2E", LOG2E);
         LazyDefineBuiltinConstant(MathObject, "SQRT1_2", SQRT1_2);
@@ -18530,12 +18162,12 @@ dependencygrouptransitions of kind load1.Kind.
         LazyDefineBuiltinFunction(MathObject, "atan", 2, MathObject_atan);
         LazyDefineBuiltinFunction(MathObject, "atan2", 1, MathObject_atan2);
         LazyDefineBuiltinFunction(MathObject, "ceil", 1, MathObject_ceil);
-        LazyDefineBuiltinFunction(MathObject, "clz", 1, MathObject_clz);        
+        LazyDefineBuiltinFunction(MathObject, "clz", 1, MathObject_clz);
         LazyDefineBuiltinFunction(MathObject, "cos", 1, MathObject_cos);
         LazyDefineBuiltinFunction(MathObject, "exp", 1, MathObject_exp);
         LazyDefineBuiltinFunction(MathObject, "floor", 1, MathObject_floor);
-        LazyDefineBuiltinFunction(MathObject, "hypot", 2, MathObject_hypot);        
-        LazyDefineBuiltinFunction(MathObject, "imul", 2, MathObject_imul);        
+        LazyDefineBuiltinFunction(MathObject, "hypot", 2, MathObject_hypot);
+        LazyDefineBuiltinFunction(MathObject, "imul", 2, MathObject_imul);
         LazyDefineBuiltinFunction(MathObject, "log", 1, MathObject_log);
         LazyDefineBuiltinFunction(MathObject, "log1p", 1, MathObject_log1p);
         LazyDefineBuiltinFunction(MathObject, "max", 0, MathObject_max);
@@ -18545,7 +18177,7 @@ dependencygrouptransitions of kind load1.Kind.
         LazyDefineBuiltinFunction(MathObject, "sign", 1, MathObject_sign);
         LazyDefineBuiltinFunction(MathObject, "tan", 1, MathObject_tan);
         LazyDefineBuiltinFunction(MathObject, "random", 0, MathObject_random);
-            
+
         // ===========================================================================================================
         // Number 
         // ===========================================================================================================
@@ -18581,11 +18213,11 @@ dependencygrouptransitions of kind load1.Kind.
         });
 
         var NumberConstructor_$$create = function (thisArg, argList) {
-                var F = thisArg;
-                var obj = OrdinaryCreateFromConstructor(F, "%NumberPrototype%", {
-                    "NumberData": undefined
-                });
-                return obj;
+            var F = thisArg;
+            var obj = OrdinaryCreateFromConstructor(F, "%NumberPrototype%", {
+                "NumberData": undefined
+            });
+            return obj;
         };
         var NumberConstructor_isFinite = function (thisArg, argList) {
             var number = argList[0];
@@ -18601,52 +18233,52 @@ dependencygrouptransitions of kind load1.Kind.
         };
 
         var NumberConstructor_isInteger = function (thisArg, argList) {
-                var number = argList[0];
-                if (Type(number) !== "number") return NormalCompletion(false);
-                if ((number != number) ||
-                    number === +Infinity || number === -Infinity) return NormalCompletion(false);
-                return NormalCompletion(true);
+            var number = argList[0];
+            if (Type(number) !== "number") return NormalCompletion(false);
+            if ((number != number) ||
+                number === +Infinity || number === -Infinity) return NormalCompletion(false);
+            return NormalCompletion(true);
         };
         var NumberPrototype_clz = function (thisArg, argList) {
-                var x = thisNumberValue(thisArg);
-                if (isAbrupt(x = ifAbrupt(x))) return x;
-                var n = ToUint32(x);
-                if (isAbrupt(n = ifAbrupt(n))) return n;
-                if (n < 0) return 0;
-                if (n === 0) return 32;
-                var bitlen = Math.floor(Math.log(Math.pow(n, Math.LOG2E))) + 1;
-                var p = 32 - bitlen; 
-                return NormalCompletion(p);
+            var x = thisNumberValue(thisArg);
+            if (isAbrupt(x = ifAbrupt(x))) return x;
+            var n = ToUint32(x);
+            if (isAbrupt(n = ifAbrupt(n))) return n;
+            if (n < 0) return 0;
+            if (n === 0) return 32;
+            var bitlen = Math.floor(Math.log(Math.pow(n, Math.LOG2E))) + 1;
+            var p = 32 - bitlen;
+            return NormalCompletion(p);
         };
         var NumberPrototype_toString = function (thisArg, argList) {
-                var radix = argList[0];
-                var n = thisNumberValue(thisArg);
-                if (radix) {
-                    return (+n).toString(radix);
-                } 
-                return ToString(thisArg);
+            var radix = argList[0];
+            var n = thisNumberValue(thisArg);
+            if (radix) {
+                return (+n).toString(radix);
+            }
+            return ToString(thisArg);
         };
         var NumberPrototype_valueOf = function (thisArg, argList) {
-                var x = thisNumberValue(thisArg);
-                return NormalCompletion(x);
+            var x = thisNumberValue(thisArg);
+            return NormalCompletion(x);
         };
         var NumberPrototype_toPrecision = function (thisArg, argList) {
-                var precision = argList[0];
-                var x = thisNumberValue(thisArg);
-                if (isAbrupt(x = ifAbrupt(x))) return x;
-                if (precision === undefined) return ToString(x);
-                var p = ToInteger(precision);
-                if (isAbrupt(p = ifAbrupt(p))) return p;
-                if (x !== x) return "NaN";
-                var s = "";
-                if (x < 0) {
-                    s = "-";
-                    x = -x;
-                }
-                if (x === +Infinity || x === -Infinity) {
-                        return NormalCompletion(s + "Infinity");
+            var precision = argList[0];
+            var x = thisNumberValue(thisArg);
+            if (isAbrupt(x = ifAbrupt(x))) return x;
+            if (precision === undefined) return ToString(x);
+            var p = ToInteger(precision);
+            if (isAbrupt(p = ifAbrupt(p))) return p;
+            if (x !== x) return "NaN";
+            var s = "";
+            if (x < 0) {
+                s = "-";
+                x = -x;
+            }
+            if (x === +Infinity || x === -Infinity) {
+                return NormalCompletion(s + "Infinity");
 
-                }
+            }
 
         };
 
@@ -18663,90 +18295,90 @@ dependencygrouptransitions of kind load1.Kind.
 // -->
 
         var NumberPrototype_toFixed = function (thisArg, argList) {
-                var fractionDigits = argList[0];
-                var x = thisNumberValue(thisArg);
-                if (isAbrupt(x = ifAbrupt(x))) return x;
-                if (fractionDigits === undefined) return ToString(x);
-                var f = ToInteger(fractionDigits);
-                if (isAbrupt(f = ifAbrupt(f))) return f;
-                if ((f < 0) || (f > 20)) return withError("Range", "fractionDigits is less or more than 20")
-                if (x !== x) return "NaN";
-                var s = "";
-                if (x < 0) {
-                    s = "-";
-                    x = -x;
-                }
-                if (x >= 1021) {
-                    var m = ToString(x);
-                } else {
-                    var n;
-                    if (n === 0) m = "0";
-                    else m = ""+n;
-                    if (f != 0) {
-                        var k = Math.ceil(Math.log(Math.pow(n, Math.LOG2E))); // = number of elements in n
-                        if (k <= f)  {
-                            var z = repeatString(0x0030, f+1-k);
-                            m = z + m;
-                            k = f + 1;
-                        }
-                        var a = m.substr(0, k-f);
-                        var b = m.substr(k-f);
-                        m = a + "." + b;
+            var fractionDigits = argList[0];
+            var x = thisNumberValue(thisArg);
+            if (isAbrupt(x = ifAbrupt(x))) return x;
+            if (fractionDigits === undefined) return ToString(x);
+            var f = ToInteger(fractionDigits);
+            if (isAbrupt(f = ifAbrupt(f))) return f;
+            if ((f < 0) || (f > 20)) return withError("Range", "fractionDigits is less or more than 20")
+            if (x !== x) return "NaN";
+            var s = "";
+            if (x < 0) {
+                s = "-";
+                x = -x;
+            }
+            if (x >= 1021) {
+                var m = ToString(x);
+            } else {
+                var n;
+                if (n === 0) m = "0";
+                else m = ""+n;
+                if (f != 0) {
+                    var k = Math.ceil(Math.log(Math.pow(n, Math.LOG2E))); // = number of elements in n
+                    if (k <= f)  {
+                        var z = repeatString(0x0030, f+1-k);
+                        m = z + m;
+                        k = f + 1;
                     }
+                    var a = m.substr(0, k-f);
+                    var b = m.substr(k-f);
+                    m = a + "." + b;
                 }
-                return NormalCompletion(s + m);
+            }
+            return NormalCompletion(s + m);
         };
         var NumberPrototype_toExponential = function (thisArg, argList) {
-                var fractionDigits = argList[0];
-                var x = thisNumberValue(thisArg);
-                if (isAbrupt(x = ifAbrupt(x))) return x;
-                var f = ToInteger(fractionDigits);
-                if (isAbrupt(f = ifAbrupt(f))) return f;
-                if (x !== x) return "NaN";
-                var s = "";
-                if (x < 0) {
-                    s = "-";
-                    x = -x;
-                }
-                var n;
-                if (x === Infinity || s === -Infinity) {
-                    return s + "Infinity";
-                }
-                if (fractionDigits !== undefined && ((f < 0) || (f > 20))) return withError("Range", "toExponential: fractionDigits < 0 or > 20");
-                if (x === 0) {
-                    if (fractionDigits === undefined) f = 0;
-                    var m = stringRepeat(0x0030, f+1);
-                    var e = 0;
-                } else {
-                    if (fractionDigits !== undefined) {
+            var fractionDigits = argList[0];
+            var x = thisNumberValue(thisArg);
+            if (isAbrupt(x = ifAbrupt(x))) return x;
+            var f = ToInteger(fractionDigits);
+            if (isAbrupt(f = ifAbrupt(f))) return f;
+            if (x !== x) return "NaN";
+            var s = "";
+            if (x < 0) {
+                s = "-";
+                x = -x;
+            }
+            var n;
+            if (x === Infinity || s === -Infinity) {
+                return s + "Infinity";
+            }
+            if (fractionDigits !== undefined && ((f < 0) || (f > 20))) return withError("Range", "toExponential: fractionDigits < 0 or > 20");
+            if (x === 0) {
+                if (fractionDigits === undefined) f = 0;
+                var m = stringRepeat(0x0030, f+1);
+                var e = 0;
+            } else {
+                if (fractionDigits !== undefined) {
 
-                        // ich konnte das im mcview nicht lesen ob 10f oder 10^f 
-                        // ich hab das unterwegs geschrieben, todo 
-                        e;
-                        n;
-                    } else {
-                        e;
-                        n;
-                    }
-                    m = ""+n;
-                }
-                if (f != 0) {
-                    var a = m.substr(m, 1);
-                    var b = m.substr(1);
-                } 
-                if (e === 0) {
-                    var c = "+";
-                    var d = "0";
+                    // ich konnte das im mcview nicht lesen ob 10f oder 10^f
+                    // ich hab das unterwegs geschrieben, todo
+                    e;
+                    n;
                 } else {
-                    if (e > 0) c = "+";
-                    else if (e <= 0) {
-                        c = "-";
-                        e = -e;
-                    }
-                    d = ""+e;
-                    m = m + "e" + c + d;
+                    e;
+                    n;
                 }
-                return NormalCompletion(s + m)
+                m = ""+n;
+            }
+            if (f != 0) {
+                var a = m.substr(m, 1);
+                var b = m.substr(1);
+            }
+            if (e === 0) {
+                var c = "+";
+                var d = "0";
+            } else {
+                if (e > 0) c = "+";
+                else if (e <= 0) {
+                    c = "-";
+                    e = -e;
+                }
+                d = ""+e;
+                m = m + "e" + c + d;
+            }
+            return NormalCompletion(s + m)
         };
 
         LazyDefineBuiltinFunction(NumberConstructor, "isFinite", 0, NumberConstructor_isFinite);
@@ -18760,8 +18392,8 @@ dependencygrouptransitions of kind load1.Kind.
         LazyDefineBuiltinConstant(NumberConstructor, "MAX_VALUE", MAX_VALUE);
         LazyDefineBuiltinConstant(NumberConstructor, "NaN", NAN);
         LazyDefineBuiltinConstant(NumberConstructor, "NEGATIVE_INFINITY", NEGATIVE_INFINITY);
-        
-        LazyDefineBuiltinFunction(NumberPrototype, "clz", 0, NumberPrototype_clz); 
+
+        LazyDefineBuiltinFunction(NumberPrototype, "clz", 0, NumberPrototype_clz);
         LazyDefineBuiltinFunction(NumberPrototype, "toExponential", 0, NumberPrototype_toExponential);
         LazyDefineBuiltinFunction(NumberPrototype, "toFixed", 0, NumberPrototype_toFixed);
         LazyDefineBuiltinFunction(NumberPrototype, "toPrecision", 0, NumberPrototype_toPrecision);
@@ -18786,25 +18418,25 @@ dependencygrouptransitions of kind load1.Kind.
         MakeConstructor(ProxyConstructor, true, ProxyPrototype);
 
         var ProxyConstructor_revocable = function revocable(thisArg, argList) {
-                var target = argList[0];
-                var handler = argList[1];
+            var target = argList[0];
+            var handler = argList[1];
 
-                var revoker = CreateBuiltinFunction(realm, function revoke(thisArg, argList) {
-                    var p = getInternalSlot(revoker, "RevokableProxy");
-                    if (p === null) return NormalCompletion(undefined);
-                    setInternalSlot(revoker, "RevokableProxy", null);
-                    Assert(p instanceof ProxyExoticObject, "revoke: object is not a proxy");
-                    setInternalSlot(p, "ProxyTarget", null);
-                    setInternalSlot(p, "ProxyHandler", null);
-                    return NormalCompletion(undefined);
-                });
+            var revoker = CreateBuiltinFunction(realm, function revoke(thisArg, argList) {
+                var p = getInternalSlot(revoker, "RevokableProxy");
+                if (p === null) return NormalCompletion(undefined);
+                setInternalSlot(revoker, "RevokableProxy", null);
+                Assert(p instanceof ProxyExoticObject, "revoke: object is not a proxy");
+                setInternalSlot(p, "ProxyTarget", null);
+                setInternalSlot(p, "ProxyHandler", null);
+                return NormalCompletion(undefined);
+            });
 
-                var proxy = ProxyCreate(target, handler);
-                setInternalSlot(revoker, "RevokableProxy", proxy);
-                var result = ObjectCreate();
-                CreateDataProperty(result, "proxy", proxy);
-                CreateDataProperty(result, "revoke", revoker);
-                return NormalCompletion(result);
+            var proxy = ProxyCreate(target, handler);
+            setInternalSlot(revoker, "RevokableProxy", proxy);
+            var result = ObjectCreate();
+            CreateDataProperty(result, "proxy", proxy);
+            CreateDataProperty(result, "revoke", revoker);
+            return NormalCompletion(result);
         };
 
         var ProxyConstructor_Call = function (thisArg, argList) {
@@ -18820,7 +18452,7 @@ dependencygrouptransitions of kind load1.Kind.
         LazyDefineBuiltinFunction(ProxyConstructor, "revocable", 2, ProxyConstructor_revocable);
         setInternalSlot(ProxyConstructor, "Call", ProxyConstructor_Call);
         setInternalSlot(ProxyConstructor, "Construct", ProxyConstructor_Construct);
-        
+
 
 
         // ===========================================================================================================
@@ -18859,50 +18491,50 @@ dependencygrouptransitions of kind load1.Kind.
 
 
         var ReflectObject_parse = function (thisArg, argList) {
-                var parse = require("parser");
-                var parseGoal = parse.parseGoal;
-                var source = argList[0];
-                var options = argList[1];
-                var jsAst, newAst, message;
-                if (Type(source) !== "string") return withError("Type", "String to parse expected");
-                try {
-                    jsAst = parse(source);
-                } catch (ex) {
-                    message = ex.message;
-                    return withError("Syntax", message);
-                }
-                newAst = reflect_parse_transformASTtoOrdinaries(jsAst, options);
-                if (isAbrupt(newAst = ifAbrupt(newAst))) return newAst;
-                return NormalCompletion(newAst);
-            };
+            var parse = require("parser");
+            var parseGoal = parse.parseGoal;
+            var source = argList[0];
+            var options = argList[1];
+            var jsAst, newAst, message;
+            if (Type(source) !== "string") return withError("Type", "String to parse expected");
+            try {
+                jsAst = parse(source);
+            } catch (ex) {
+                message = ex.message;
+                return withError("Syntax", message);
+            }
+            newAst = reflect_parse_transformASTtoOrdinaries(jsAst, options);
+            if (isAbrupt(newAst = ifAbrupt(newAst))) return newAst;
+            return NormalCompletion(newAst);
+        };
 
         var ReflectObject_parseGoal = function (thisArg, argList) {
-                var parse = require("parser");
-                var parseGoal = parse.parseGoal;
-                var source = argList[1];
-                var goal = argList[0];
-                var jsAst, newAst, message;
+            var parse = require("parser");
+            var parseGoal = parse.parseGoal;
+            var source = argList[1];
+            var goal = argList[0];
+            var jsAst, newAst, message;
 
-                if (Type(goal) !== "string") return withError("Type", "Goal to parse expected");
-                if (Type(source) !== "string") return withError("Type", "String to parse expected");
-                try {
-                    jsAst = parseGoal(goal, source);
-                } catch (ex) {
-                    message = ex.message;
-                    return withError("Syntax", message);
-                }
-                newAst = reflect_parse_transformASTtoOrdinaries(jsAst);
-                if (isAbrupt(newAst = ifAbrupt(newAst))) return newAst;
-                return NormalCompletion(newAst);
-            };
+            if (Type(goal) !== "string") return withError("Type", "Goal to parse expected");
+            if (Type(source) !== "string") return withError("Type", "String to parse expected");
+            try {
+                jsAst = parseGoal(goal, source);
+            } catch (ex) {
+                message = ex.message;
+                return withError("Syntax", message);
+            }
+            newAst = reflect_parse_transformASTtoOrdinaries(jsAst);
+            if (isAbrupt(newAst = ifAbrupt(newAst))) return newAst;
+            return NormalCompletion(newAst);
+        };
 
 
         var ReflectObject_getPrototypeOf = function (thisArg, argList) {
-                var target = argList[0];
-                var obj = ToObject(target);
-                if (isAbrupt(obj = ifAbrupt(obj))) return obj;
-                return GetPrototypeOf(obj);
-            };
+            var target = argList[0];
+            var obj = ToObject(target);
+            if (isAbrupt(obj = ifAbrupt(obj))) return obj;
+            return GetPrototypeOf(obj);
+        };
 
         var ReflectObject_setPrototypeOf = function (thisArg, argList) {
             var target = argList[0];
@@ -18922,10 +18554,10 @@ dependencygrouptransitions of kind load1.Kind.
         };
 
         var ReflectObject_preventExtensions = function (thisArg, argList) {
-                var target = argList[0];
-                var obj = ToObject(target);
-                if (isAbrupt(obj = ifAbrupt(obj))) return obj;
-                return PreventExtensions(obj);
+            var target = argList[0];
+            var obj = ToObject(target);
+            if (isAbrupt(obj = ifAbrupt(obj))) return obj;
+            return PreventExtensions(obj);
         };
         var ReflectObject_has = function (thisArg, argList) {
             var target = argList[0];
@@ -18959,16 +18591,16 @@ dependencygrouptransitions of kind load1.Kind.
         };
 
         var ReflectObject_get = function (thisArg, argList) {
-                var target = argList[0];
-                var propertyKey = argList[1];
-                var receiver = argList[2];
-                var obj = ToObject(target);
-                if (isAbrupt(obj = ifAbrupt(obj))) return obj;
-                var key = ToPropertyKey(propertyKey);
-                if (isAbrupt(key = ifAbrupt(key))) return key;
-                if (receiver === undefined) receiver = target;
-                return obj.Get(key, receiver);
-            };
+            var target = argList[0];
+            var propertyKey = argList[1];
+            var receiver = argList[2];
+            var obj = ToObject(target);
+            if (isAbrupt(obj = ifAbrupt(obj))) return obj;
+            var key = ToPropertyKey(propertyKey);
+            if (isAbrupt(key = ifAbrupt(key))) return key;
+            if (receiver === undefined) receiver = target;
+            return obj.Get(key, receiver);
+        };
 
         var ReflectObject_set =function (thisArg, argList) {
             var target = argList[0];
@@ -18983,70 +18615,70 @@ dependencygrouptransitions of kind load1.Kind.
             return obj.Set(key, V, receiver);
         };
         var ReflectObject_invoke = function (thisArg, argList) {
-                var target = argList[0];
-                var propertyKey = argList[1];
-                var argumentList = argList[2];
-                var receiver = argList[3];
-                var obj = ToObject(target);
-                if (isAbrupt(obj = ifAbrupt(obj))) return obj;
-                var key = ToPropertyKey(propertyKey);
-                if (isAbrupt(key = ifAbrupt(key))) return key;
-                if (receiver === undefined) receiver = target;
-                var A = CreateListFromArrayLike(argumentList);
-                return obj.Invoke(key, A, receiver);
-            };
+            var target = argList[0];
+            var propertyKey = argList[1];
+            var argumentList = argList[2];
+            var receiver = argList[3];
+            var obj = ToObject(target);
+            if (isAbrupt(obj = ifAbrupt(obj))) return obj;
+            var key = ToPropertyKey(propertyKey);
+            if (isAbrupt(key = ifAbrupt(key))) return key;
+            if (receiver === undefined) receiver = target;
+            var A = CreateListFromArrayLike(argumentList);
+            return obj.Invoke(key, A, receiver);
+        };
         var ReflectObject_deleteProperty = function (thisArg, argList) {
-                var target = argList[0];
-                var propertyKey = argList[1];
-                var obj = ToObject(target);
-                if (isAbrupt(obj = ifAbrupt(obj))) return obj;
-                var key = ToPropertyKey(propertyKey);
-                if (isAbrupt(key = ifAbrupt(key))) return key;
-                return obj.Delete(key);
-            };
+            var target = argList[0];
+            var propertyKey = argList[1];
+            var obj = ToObject(target);
+            if (isAbrupt(obj = ifAbrupt(obj))) return obj;
+            var key = ToPropertyKey(propertyKey);
+            if (isAbrupt(key = ifAbrupt(key))) return key;
+            return obj.Delete(key);
+        };
         var ReflectObject_defineProperty = function (thisArg, argList) {
-                var target = argList[0];
-                var propertyKey = argList[1];
-                var attributes = argList[2];
-                var obj = ToObject(target);
-                if (isAbrupt(obj = ifAbrupt(obj))) return obj;
-                var key = ToPropertyKey(propertyKey);
-                if (isAbrupt(key = ifAbrupt(key))) return key;
-                var desc = ToPropertyDescriptor(attributes);
-                if (isAbrupt(desc = ifAbrupt(desc))) return desc;
-                return callInternalSlot("DefineOwnProperty", obj,key, desc);
-            };
-            var ReflectObject_enumerate = function (thisArg, argList) {
-                var target = argList[0];
-                var obj = ToObject(target);
-                if (isAbrupt(obj = ifAbrupt(obj))) return obj;
-                return obj.Enumerate();
-            };
-            var ReflectObject_ownKeys = function (thisArg, argList) {
-                var target = argList[0];
-                var obj = ToObject(target);
-                if (isAbrupt(obj = ifAbrupt(obj))) return obj;
-                return obj.OwnPropertyKeys();
-            };
+            var target = argList[0];
+            var propertyKey = argList[1];
+            var attributes = argList[2];
+            var obj = ToObject(target);
+            if (isAbrupt(obj = ifAbrupt(obj))) return obj;
+            var key = ToPropertyKey(propertyKey);
+            if (isAbrupt(key = ifAbrupt(key))) return key;
+            var desc = ToPropertyDescriptor(attributes);
+            if (isAbrupt(desc = ifAbrupt(desc))) return desc;
+            return callInternalSlot("DefineOwnProperty", obj,key, desc);
+        };
+        var ReflectObject_enumerate = function (thisArg, argList) {
+            var target = argList[0];
+            var obj = ToObject(target);
+            if (isAbrupt(obj = ifAbrupt(obj))) return obj;
+            return obj.Enumerate();
+        };
+        var ReflectObject_ownKeys = function (thisArg, argList) {
+            var target = argList[0];
+            var obj = ToObject(target);
+            if (isAbrupt(obj = ifAbrupt(obj))) return obj;
+            return obj.OwnPropertyKeys();
+        };
 
 
         LazyDefineBuiltinFunction(ReflectObject, "defineProperty", 2, ReflectObject_defineProperty);
         LazyDefineBuiltinFunction(ReflectObject, "deleteProperty", 3, ReflectObject_deleteProperty);
-        LazyDefineBuiltinFunction(ReflectObject, "enumerate", 1, ReflectObject_enumerate);    
-        LazyDefineBuiltinFunction(ReflectObject, "invoke", 3, ReflectObject_invoke);        
+        LazyDefineBuiltinFunction(ReflectObject, "enumerate", 1, ReflectObject_enumerate);
+        LazyDefineBuiltinFunction(ReflectObject, "invoke", 3, ReflectObject_invoke);
         LazyDefineBuiltinFunction(ReflectObject, "isExtensible", 1, ReflectObject_isExtensible);
         LazyDefineBuiltinFunction(ReflectObject, "get", 2, ReflectObject_get);
         LazyDefineBuiltinFunction(ReflectObject, "getOwnPropertyDescriptor", 2, ReflectObject_getOwnPropertyDescriptor);
         LazyDefineBuiltinFunction(ReflectObject, "getPrototypeOf", 1, ReflectObject_getPrototypeOf);
         LazyDefineBuiltinFunction(ReflectObject, "has", 2, ReflectObject_has);
         LazyDefineBuiltinFunction(ReflectObject, "hasOwn", 2, ReflectObject_hasOwn);
-        LazyDefineBuiltinFunction(ReflectObject, "ownKeys", 1, ReflectObject_ownKeys);        
+        LazyDefineBuiltinFunction(ReflectObject, "ownKeys", 1, ReflectObject_ownKeys);
         LazyDefineBuiltinFunction(ReflectObject, "parse", 1, ReflectObject_parse);
         LazyDefineBuiltinFunction(ReflectObject, "parseGoal", 1, ReflectObject_parseGoal);
         LazyDefineBuiltinFunction(ReflectObject, "preventExtensions", 1, ReflectObject_preventExtensions);
         LazyDefineBuiltinFunction(ReflectObject, "set", 3, ReflectObject_set);
         LazyDefineBuiltinFunction(ReflectObject, "setPrototypeOf", 2, ReflectObject_setPrototypeOf);
-        
+
         LazyDefineBuiltinConstant(ReflectObject, $$toStringTag, "Reflect");
 
         // ===========================================================================================================
@@ -19066,72 +18698,72 @@ dependencygrouptransitions of kind load1.Kind.
             var number = ToNumber(argList[0]);
             if (number == Infinity || number == -Infinity || number != number) return false;
             return true
-       }, 1, "isFinite");
+        }, 1, "isFinite");
 
         // ===========================================================================================================
         // Object
         // ===========================================================================================================
         var ObjectConstructor_assign = function (thisArg, argList) {
-                var target = argList[0];
-                var source = argList[1];
-                var to = ToObject(target);
-                if (isAbrupt(to = ifAbrupt(to))) return to;
-                var from = ToObject(source);
-                if (isAbrupt(source = ifAbrupt(source))) return source;
-                var keys = OwnPropertyKeys(source);
-                if (isAbrupt(keys = ifAbrupt(keys))) return keys;
-                var gotAllNames = false;
-                var pendingException = undefined;
-                var next, nextKey, desc, propValue, status;
-                while (!gotAllNames) {
-                    next = IteratorStep(keys);
-                    if (isAbrupt(next = ifAbrupt(next))) return next;
-                    if (!next) gotAllNames = true;
-                    else {
-                        nextKey = IteratorValue(next);
-                        if (isAbrupt(nextKey = ifAbrupt(nextKey))) return nextKey;
-                        desc = GetOwnProperty(from, nextKey);
-                        if (isAbrupt(desc)) pendingException = desc;
-                        else if (desc !== undefined && desc.enumerable === true) {
-                            propValue = Get(from, nextKey);
-                            if (isAbrupt(propValue)) pendingException = propValue;
-                            else {
-                                status = Put(to, nextKey, propValue, true);
-                                if (isAbrupt(status)) pendingException = status;
-                            }
+            var target = argList[0];
+            var source = argList[1];
+            var to = ToObject(target);
+            if (isAbrupt(to = ifAbrupt(to))) return to;
+            var from = ToObject(source);
+            if (isAbrupt(source = ifAbrupt(source))) return source;
+            var keys = OwnPropertyKeys(source);
+            if (isAbrupt(keys = ifAbrupt(keys))) return keys;
+            var gotAllNames = false;
+            var pendingException = undefined;
+            var next, nextKey, desc, propValue, status;
+            while (!gotAllNames) {
+                next = IteratorStep(keys);
+                if (isAbrupt(next = ifAbrupt(next))) return next;
+                if (!next) gotAllNames = true;
+                else {
+                    nextKey = IteratorValue(next);
+                    if (isAbrupt(nextKey = ifAbrupt(nextKey))) return nextKey;
+                    desc = GetOwnProperty(from, nextKey);
+                    if (isAbrupt(desc)) pendingException = desc;
+                    else if (desc !== undefined && desc.enumerable === true) {
+                        propValue = Get(from, nextKey);
+                        if (isAbrupt(propValue)) pendingException = propValue;
+                        else {
+                            status = Put(to, nextKey, propValue, true);
+                            if (isAbrupt(status)) pendingException = status;
                         }
                     }
                 }
-                if (pendingException !== undefined) return pendingException;
-                return to;
-            };
-            var ObjectConstructor_create = function (thisArg, argList) {
-                var O = argList[0]
-                var Properties = argList[1];
-                if (Type(O) !== "object" && Type(O) !== "null") return withError("Type", "create: argument is not an object or null");
-                var obj = ObjectCreate(O);
-                if (Properties !== undefined) {
-                    return ObjectDefineProperties(obj, Properties);
-                }
-                return obj;
-            };
-            var ObjectConstructor_defineProperty = function (thisArg, argList) {
-                var O = argList[0];
-                var P = argList[1];
-                var Attributes = argList[2];
-                if (Type(O) !== "object") return withError("Type", "defineProperty: argument 1 is not an object");
-                var key = ToPropertyKey(P);
-                var desc = ToPropertyDescriptor(Attributes);
-                if (isAbrupt(desc = ifAbrupt(desc))) return desc;
-                var success = DefineOwnPropertyOrThrow(O, key, desc);
-                if (isAbrupt(success = ifAbrupt(success))) return success;
-                return O;
-            };
-            var ObjectConstructor_defineProperties = function (thisArg, argList) {
-                var O = argList[0];
-                var Properties = argList[1];
-                return ObjectDefineProperties(O, Properties);
-            };
+            }
+            if (pendingException !== undefined) return pendingException;
+            return to;
+        };
+        var ObjectConstructor_create = function (thisArg, argList) {
+            var O = argList[0]
+            var Properties = argList[1];
+            if (Type(O) !== "object" && Type(O) !== "null") return withError("Type", "create: argument is not an object or null");
+            var obj = ObjectCreate(O);
+            if (Properties !== undefined) {
+                return ObjectDefineProperties(obj, Properties);
+            }
+            return obj;
+        };
+        var ObjectConstructor_defineProperty = function (thisArg, argList) {
+            var O = argList[0];
+            var P = argList[1];
+            var Attributes = argList[2];
+            if (Type(O) !== "object") return withError("Type", "defineProperty: argument 1 is not an object");
+            var key = ToPropertyKey(P);
+            var desc = ToPropertyDescriptor(Attributes);
+            if (isAbrupt(desc = ifAbrupt(desc))) return desc;
+            var success = DefineOwnPropertyOrThrow(O, key, desc);
+            if (isAbrupt(success = ifAbrupt(success))) return success;
+            return O;
+        };
+        var ObjectConstructor_defineProperties = function (thisArg, argList) {
+            var O = argList[0];
+            var Properties = argList[1];
+            return ObjectDefineProperties(O, Properties);
+        };
 
         //SetFunctionName(ObjectConstructor, "Object");
         //SetFunctionLength(ObjectConstructor, 1);
@@ -19152,21 +18784,21 @@ dependencygrouptransitions of kind load1.Kind.
             var value = argList[0];
             var type = Type(value);
             switch (type) {
-            case "object":
-                return value;
-                break;
-            case "string":
-            case "number":
-            case "symbol":
-            case "boolean":
-                return ToObject(value);
-                break;
+                case "object":
+                    return value;
+                    break;
+                case "string":
+                case "number":
+                case "symbol":
+                case "boolean":
+                    return ToObject(value);
+                    break;
             }
             return ObjectCreate();
         });
 
 
-        LazyDefineProperty(ObjectConstructor, "seal", CreateBuiltinFunction(realm, 
+        LazyDefineProperty(ObjectConstructor, "seal", CreateBuiltinFunction(realm,
             function (thisArg, argList) {
                 var O;
                 O = argList[0];
@@ -19178,43 +18810,43 @@ dependencygrouptransitions of kind load1.Kind.
             }
         ));
 
-        
-        var ObjectConstructor_freeze =function (thisArg, argList) {
-                var O;
-                O = argList[0];
-                if (Type(O) !== "object") return withError("Type", "First argument is object");
-                var status = SetIntegrityLevel(O, "frozen");
-                if (isAbrupt(status = ifAbrupt(status))) return status;
-                if (status === false) return withError("Type", "freeze: can not freeze object");
-                return O;
-            };
 
-            var ObjectConstructor_getOwnPropertyDescriptor = function (thisArg, argList) {
-                var O = argList[0];
-                var P = argList[1];
-                var obj = ToObject(O);
-                if (isAbrupt(obj = ifAbrupt(obj))) return obj;
-                var key = ToPropertyKey(P);
-                var desc = GetOwnProperty(obj, key);
-                if (isAbrupt(desc = ifAbrupt(desc))) return desc;
-                return FromPropertyDescriptor(desc);
-            };
-            var ObjectConstructor_getOwnPropertyNames = function (thisArg, argList) {
-                var O = argList[0];
-                return GetOwnPropertyKeys(O, "string");
-            };
+        var ObjectConstructor_freeze =function (thisArg, argList) {
+            var O;
+            O = argList[0];
+            if (Type(O) !== "object") return withError("Type", "First argument is object");
+            var status = SetIntegrityLevel(O, "frozen");
+            if (isAbrupt(status = ifAbrupt(status))) return status;
+            if (status === false) return withError("Type", "freeze: can not freeze object");
+            return O;
+        };
+
+        var ObjectConstructor_getOwnPropertyDescriptor = function (thisArg, argList) {
+            var O = argList[0];
+            var P = argList[1];
+            var obj = ToObject(O);
+            if (isAbrupt(obj = ifAbrupt(obj))) return obj;
+            var key = ToPropertyKey(P);
+            var desc = GetOwnProperty(obj, key);
+            if (isAbrupt(desc = ifAbrupt(desc))) return desc;
+            return FromPropertyDescriptor(desc);
+        };
+        var ObjectConstructor_getOwnPropertyNames = function (thisArg, argList) {
+            var O = argList[0];
+            return GetOwnPropertyKeys(O, "string");
+        };
 
         LazyDefineBuiltinFunction(ObjectConstructor, "getOwnPropertyDescriptor", 2, ObjectConstructor_getOwnPropertyDescriptor);
         LazyDefineBuiltinFunction(ObjectConstructor, "getOwnPropertyNames", 1, ObjectConstructor_getOwnPropertyNames);
         LazyDefineBuiltinFunction(ObjectConstructor, "freeze", 1, ObjectConstructor_freeze);
 
-        LazyDefineProperty(ObjectConstructor, "getOwnPropertySymbols", CreateBuiltinFunction(realm, 
+        LazyDefineProperty(ObjectConstructor, "getOwnPropertySymbols", CreateBuiltinFunction(realm,
             function (thisArg, argList) {
                 var O = argList[0];
                 return GetOwnPropertyKeys(O, "symbol");
             }));
 
-        LazyDefineProperty(ObjectConstructor, "getPrototypeOf", CreateBuiltinFunction(realm, 
+        LazyDefineProperty(ObjectConstructor, "getPrototypeOf", CreateBuiltinFunction(realm,
             function (thisArg, argList) {
                 var O = argList[0];
                 var obj = ToObject(O);
@@ -19222,14 +18854,14 @@ dependencygrouptransitions of kind load1.Kind.
                 return GetPrototypeOf(obj);
             }));
 
-        LazyDefineProperty(ObjectConstructor, "is", CreateBuiltinFunction(realm, 
+        LazyDefineProperty(ObjectConstructor, "is", CreateBuiltinFunction(realm,
             function (thisArg, argList) {
                 var value1 = argList[0];
                 var value2 = argList[1];
                 return SameValue(value1, value2);
             }));
 
-        LazyDefineProperty(ObjectConstructor, "isExtensible", CreateBuiltinFunction(realm, 
+        LazyDefineProperty(ObjectConstructor, "isExtensible", CreateBuiltinFunction(realm,
             function (thisArg, argList) {
                 var O = argList[0];
                 if (Type(O) !== "object") return false;
@@ -19237,7 +18869,7 @@ dependencygrouptransitions of kind load1.Kind.
             }
         ));
 
-        LazyDefineProperty(ObjectConstructor, "isSealed", CreateBuiltinFunction(realm, 
+        LazyDefineProperty(ObjectConstructor, "isSealed", CreateBuiltinFunction(realm,
             function (thisArg, argList) {
                 var O = argList[0];
                 if (Type(O) !== "object") return true;
@@ -19245,7 +18877,7 @@ dependencygrouptransitions of kind load1.Kind.
             }
         ));
 
-        LazyDefineProperty(ObjectConstructor, "isFrozen", CreateBuiltinFunction(realm, 
+        LazyDefineProperty(ObjectConstructor, "isFrozen", CreateBuiltinFunction(realm,
             function (thisArg, argList) {
                 var O = argList[0];
                 if (Type(O) !== "object") return true;
@@ -19350,7 +18982,7 @@ dependencygrouptransitions of kind load1.Kind.
                                 else desc.set = newFunc;
                             }
                         }
-                        status = DefineOwnPropertyOrThrow(target, nextKey, desc);
+                        var status = DefineOwnPropertyOrThrow(target, nextKey, desc);
                         if (isAbrupt(status)) pendingException = status;
                     }
                 }
@@ -19381,7 +19013,7 @@ dependencygrouptransitions of kind load1.Kind.
             if (isAbrupt(O = ifAbrupt(O))) return O;
             return HasOwnProperty(O, P);
         };
-        
+
         var ObjectPrototype_isPrototypeOf = function (thisArg, argList) {
             var V = argList[0];
             if (Type(O) !== "object") return false;
@@ -19396,16 +19028,16 @@ dependencygrouptransitions of kind load1.Kind.
         };
 
 
-            var ObjectPrototype_propertyIsEnumerable = function (thisArg, argList) {
-                var V = argList[0];
-                var P = ToString(V);
-                if (isAbrupt(P = ifAbrupt(P))) return P;
-                var O = ToObject(thisArg);
-                if (isAbrupt(O = ifAbrupt(O))) return O;
-                var desc = GetOwnProperty(O, P);
-                if (desc === undefined) return false;
-                return desc.enumerable;
-            };
+        var ObjectPrototype_propertyIsEnumerable = function (thisArg, argList) {
+            var V = argList[0];
+            var P = ToString(V);
+            if (isAbrupt(P = ifAbrupt(P))) return P;
+            var O = ToObject(thisArg);
+            if (isAbrupt(O = ifAbrupt(O))) return O;
+            var desc = GetOwnProperty(O, P);
+            if (desc === undefined) return false;
+            return desc.enumerable;
+        };
 
         var OneOfTheseTags = {
             __proto__: null,
@@ -19431,73 +19063,73 @@ dependencygrouptransitions of kind load1.Kind.
         };
 
 
-            var ObjectPrototype_toString = function toString(thisArg, argList) {
-                var i = 0;
-                if (thisArg === undefined) return "[object Undefined]";
-                if (thisArg === null) return "[object Null]";
+        var ObjectPrototype_toString = function toString(thisArg, argList) {
+            var i = 0;
+            if (thisArg === undefined) return "[object Undefined]";
+            if (thisArg === null) return "[object Null]";
 
-                var O = ToObject(thisArg);
-                var builtinTag, tag;
+            var O = ToObject(thisArg);
+            var builtinTag, tag;
 
-                var intrToStr = O.toString();
+            var intrToStr = O.toString();
 
-                if (builtinTag = builtinTagsByToString[intrToStr]) {} 
-                else if (hasInternalSlot(O, "SymbolData")) builtinTag = "Symbol";
-                else if (hasInternalSlot(O, "StringData")) builtinTag = "String";
-                else if (hasInternalSlot(O, "ErrorData")) builtinTag = "Error";
-                else if (hasInternalSlot(O, "BooleanData")) builtinTag = "Boolean";
-                else if (hasInternalSlot(O, "NumberData")) builtinTag = "Number";
-                else if (hasInternalSlot(O, "DateValue")) builtinTag = "Date";
-                else if (hasInternalSlot(O, "RegExpMatcher")) builtinTag = "RegExp";
-                else if (hasInternalSlot(O, "MathTag")) builtinTag = "Math";
-                else if (hasInternalSlot(O, "JSONTag")) builtinTag = "JSON";
-                else builtinTag = "Object";
+            if (builtinTag = builtinTagsByToString[intrToStr]) {}
+            else if (hasInternalSlot(O, "SymbolData")) builtinTag = "Symbol";
+            else if (hasInternalSlot(O, "StringData")) builtinTag = "String";
+            else if (hasInternalSlot(O, "ErrorData")) builtinTag = "Error";
+            else if (hasInternalSlot(O, "BooleanData")) builtinTag = "Boolean";
+            else if (hasInternalSlot(O, "NumberData")) builtinTag = "Number";
+            else if (hasInternalSlot(O, "DateValue")) builtinTag = "Date";
+            else if (hasInternalSlot(O, "RegExpMatcher")) builtinTag = "RegExp";
+            else if (hasInternalSlot(O, "MathTag")) builtinTag = "Math";
+            else if (hasInternalSlot(O, "JSONTag")) builtinTag = "JSON";
+            else builtinTag = "Object";
 
-                var hasTag = HasProperty(O, $$toStringTag);
-                if (isAbrupt(hasTag = ifAbrupt(hasTag))) return hasTag;
-                if (!hasTag) tag = builtinTag;
-                else {
-                    tag = Get(O, $$toStringTag);
-                    if (isAbrupt(tag)) tag = NormalCompletion("???");
-                    tag = unwrap(tag);
-                    if (Type(tag) !== "string") tag = "???";
-                    if (OneOfTheseTags[tag] && (!SameValue(tag, builtinTag))) tag = "~" + tag;
-                }
-                return "[object " + tag + "]";
-            };
-        
-            var ObjectPrototype_valueOf = function valueOf(thisArg, argList) {
-                var O = ToObject(thisArg);
-                return O;
-            };
+            var hasTag = HasProperty(O, $$toStringTag);
+            if (isAbrupt(hasTag = ifAbrupt(hasTag))) return hasTag;
+            if (!hasTag) tag = builtinTag;
+            else {
+                tag = Get(O, $$toStringTag);
+                if (isAbrupt(tag)) tag = NormalCompletion("???");
+                tag = unwrap(tag);
+                if (Type(tag) !== "string") tag = "???";
+                if (OneOfTheseTags[tag] && (!SameValue(tag, builtinTag))) tag = "~" + tag;
+            }
+            return "[object " + tag + "]";
+        };
+
+        var ObjectPrototype_valueOf = function valueOf(thisArg, argList) {
+            var O = ToObject(thisArg);
+            return O;
+        };
 
         // B.2.2.1  Object.prototype.__proto__
 
-            var ObjectPrototype_get_proto = function (thisArg, argList) {
-                var O = ToObject(thisArg);
-                if (isAbrupt(O = ifAbrupt(O))) return O;
-                return callInternalSlot("GetPrototypeOf", O);
-            };
-            var ObjectPrototype_set_proto = function (thisArg, argList) {
-                var proto = argList[0];
-                var O = CheckObjectCoercible(thisArg);
-                if (isAbrupt(O = ifAbrupt(O))) return O;
-                var protoType = Type(proto);
-                if (protoType !== "object" && protoType !== null) return proto;
-                if (Type(O) !== "object") return proto;
-                var status = callInternalSlot("SetPrototypeOf", O, proto);
-                if (isAbrupt(status = ifAbrupt(status))) return status;
-                if (status === false) return withError("Type", "__proto__: SetPrototypeOf failed.");
-                return proto;
-            };
-            var ObjectPrototype_proto_ = {
-                __proto__:null,
-                configurable: true,
-                enumerable: false,
-                get: CreateBuiltinFunction(realm, ObjectPrototype_get_proto, "get __proto__", 0),
-                set: CreateBuiltinFunction(realm, ObjectPrototype_set_proto, "set __proto___", 0)
-            };
-            DefineOwnProperty(ObjectPrototype, "__proto__", ObjectPrototype_proto_)
+        var ObjectPrototype_get_proto = function (thisArg, argList) {
+            var O = ToObject(thisArg);
+            if (isAbrupt(O = ifAbrupt(O))) return O;
+            return callInternalSlot("GetPrototypeOf", O);
+        };
+        var ObjectPrototype_set_proto = function (thisArg, argList) {
+            var proto = argList[0];
+            var O = CheckObjectCoercible(thisArg);
+            if (isAbrupt(O = ifAbrupt(O))) return O;
+            var protoType = Type(proto);
+            if (protoType !== "object" && protoType !== null) return proto;
+            if (Type(O) !== "object") return proto;
+            var status = callInternalSlot("SetPrototypeOf", O, proto);
+            if (isAbrupt(status = ifAbrupt(status))) return status;
+            if (status === false) return withError("Type", "__proto__: SetPrototypeOf failed.");
+            return proto;
+        };
+        var ObjectPrototype_proto_ = {
+            __proto__:null,
+            configurable: true,
+            enumerable: false,
+            get: CreateBuiltinFunction(realm, ObjectPrototype_get_proto, "get __proto__", 0),
+            set: CreateBuiltinFunction(realm, ObjectPrototype_set_proto, "set __proto___", 0)
+        };
+        DefineOwnProperty(ObjectPrototype, "__proto__", ObjectPrototype_proto_)
 
 
         LazyDefineBuiltinFunction(ObjectPrototype, $$create, 0, ObjectPrototype_$$create);
@@ -19988,10 +19620,10 @@ dependencygrouptransitions of kind load1.Kind.
             if (!C && (callfn=getInternalSlot(F, "Call"))) {
                 var code = "// [[Builtin Function native JavaScript Code]]\r\n";
                 // createbuiltin wraps the builtin
-                if (callfn.steps) callfn = callfn.steps; 
+                if (callfn.steps) callfn = callfn.steps;
                 // setinternalslot call has no wrapper
                 // this requires a double check here
-                code += callfn.toString(); 
+                code += callfn.toString();
                 return code;
             }
             var paramString, bodyString;
@@ -20035,7 +19667,7 @@ dependencygrouptransitions of kind load1.Kind.
             writable: true,
             enumerable: false,
             configurable: true
-            
+
         });
         DefineOwnProperty(FunctionPrototype, "call", {
             value: CreateBuiltinFunction(realm, function call(thisArg, argList) {
@@ -20557,24 +20189,24 @@ dependencygrouptransitions of kind load1.Kind.
         };
 
         var PromiseConstructor_resolve = function (thisArg, argList) {
-               var x = argList[0];
-               var C = thisArg;
-               var promiseCapability = NewPromiseCapability(C);
-               if (isAbrupt(promiseCapability = ifAbrupt(promiseCapability))) return promiseCapability;
-               var resolveResult = callInternalSlot("Call", promiseCapability.Resolve, undefined, [x]);
-               if (isAbrupt(resolveResult = ifAbrupt(resolveResult))) return resolveResult;
-               return NormalCompletion(promiseCapability.Promise);
+            var x = argList[0];
+            var C = thisArg;
+            var promiseCapability = NewPromiseCapability(C);
+            if (isAbrupt(promiseCapability = ifAbrupt(promiseCapability))) return promiseCapability;
+            var resolveResult = callInternalSlot("Call", promiseCapability.Resolve, undefined, [x]);
+            if (isAbrupt(resolveResult = ifAbrupt(resolveResult))) return resolveResult;
+            return NormalCompletion(promiseCapability.Promise);
         };
         var PromiseConstructor_reject = function (thisArg, argList) {
-               var r = argList[0];
-               var C = thisArg;
-               var promiseCapability = NewPromiseCapability(C);
-               if (isAbrupt(promiseCapability = ifAbrupt(promiseCapability))) return promiseCapability;
-               var rejectResult = callInternalSlot("Call", promiseCapability.Reject, undefined, [r]);
-               if (isAbrupt(rejectResult = ifAbrupt(rejectResult))) return rejectResult;
-               return NormalCompletion(promiseCapability.Promise)
+            var r = argList[0];
+            var C = thisArg;
+            var promiseCapability = NewPromiseCapability(C);
+            if (isAbrupt(promiseCapability = ifAbrupt(promiseCapability))) return promiseCapability;
+            var rejectResult = callInternalSlot("Call", promiseCapability.Reject, undefined, [r]);
+            if (isAbrupt(rejectResult = ifAbrupt(rejectResult))) return rejectResult;
+            return NormalCompletion(promiseCapability.Promise)
         };
-        
+
         var PromiseConstructor_cast = function (thisArg, argList) {
             var x = argList[0];
             var C = thisArg;
@@ -20588,7 +20220,7 @@ dependencygrouptransitions of kind load1.Kind.
             if (isAbrupt(resolveResult = ifAbrupt(resolveResult))) return resolveResult;
             return NormalCompletion(promiseCapability.Promise);
         };
-        
+
         var PromiseConstructor_race = function (thisArg, argList) {
             var iterable = argList[0];
             var C = thisArg;
@@ -20615,7 +20247,7 @@ dependencygrouptransitions of kind load1.Kind.
         function makePromiseAllResolveElementsFunction () {
             var PromiseAllResolveElements_Call = function (thisArg, argList) {
                 var x = argList[0];
-                var index = getInternalSlot(F, "Index");    
+                var index = getInternalSlot(F, "Index");
                 var values = getInternalSlot(F, "Values");
                 var promiseCapability = getInternalSlot(F, "Capabilities");
                 var remainingElementsCount = getInternalSlot(F, "RemainingElements");
@@ -20626,7 +20258,7 @@ dependencygrouptransitions of kind load1.Kind.
                     return callInternalSlot("Call", promiseCapability.Resolve, undefined, [values]);
                 }
                 return NormalCompletion(undefined);
-            };            
+            };
             //var F = CreateBuiltinFunction(getRealm(), "Promise.all Resolve Elements", 1, PromiseAllResolveElements_Call);
             var F = OrdinaryFunction();
             setInternalSlot(F, "Call", PromiseAllResolveElements_Call);
@@ -20644,29 +20276,29 @@ dependencygrouptransitions of kind load1.Kind.
             var remainingElementsCount = { value: 0 };
             var index = 0;
             for (;;) {
-                    var next = IteratorStep(iterator);
-                    if (isAbrupt(next = ifAbrupt(next))) return next;
-                    if ((next=IfAbruptRejectPromise(next, promiseCapability)) && isAbrupt(next)) return next;
-                    if (next === false) {
-                        if (index == 0) {
-                            var resolveResult = callInternalSlot("Call", promiseCapability.Resolve, undefined, [values]);
-                            if (isAbrupt(resolveResult = ifAbrupt(resolveResult))) return resolveResult;
-                        }
-                        return NormalCompletion(promiseCapability.Promise)
+                var next = IteratorStep(iterator);
+                if (isAbrupt(next = ifAbrupt(next))) return next;
+                if ((next=IfAbruptRejectPromise(next, promiseCapability)) && isAbrupt(next)) return next;
+                if (next === false) {
+                    if (index == 0) {
+                        var resolveResult = callInternalSlot("Call", promiseCapability.Resolve, undefined, [values]);
+                        if (isAbrupt(resolveResult = ifAbrupt(resolveResult))) return resolveResult;
                     }
-                    var nextValue = IteratorValue(next);
-                    if ((nextValue = IfAbruptRejectPromise(nextValue, promiseCapability)) && isAbrupt(nextValue)) return nextValue;
-                    var nextPromise = Invoke(C, "cast", [nextValue]);
-                    if ((nextPromise=IfAbruptRejectPromise(nextPromise, promiseCapability)) && isAbrupt(nextPromise)) return nextPromise;
-                    var resolveElement = makePromiseAllResolveElementsFunction();
-                    setInternalSlot(resolveElement, "Index", index);
-                    setInternalSlot(resolveElement, "Values", values);
-                    setInternalSlot(resolveElement, "Capabilities", resolveElement, promiseCapability);
-                    setInternalSlot(resolveElement, "RemainingElements", remainingElementsCount);
-                    var result = Invoke(nextPromise, "then", [resolveElement, promiseCapability.Reject]);
-                    if ((result = IfAbruptRejectPromise(result, promiseCapability)) && isAbrupt(result)) return result;
-                    index = index + 1;
-                    remainingElementsCount.value += 1;
+                    return NormalCompletion(promiseCapability.Promise)
+                }
+                var nextValue = IteratorValue(next);
+                if ((nextValue = IfAbruptRejectPromise(nextValue, promiseCapability)) && isAbrupt(nextValue)) return nextValue;
+                var nextPromise = Invoke(C, "cast", [nextValue]);
+                if ((nextPromise=IfAbruptRejectPromise(nextPromise, promiseCapability)) && isAbrupt(nextPromise)) return nextPromise;
+                var resolveElement = makePromiseAllResolveElementsFunction();
+                setInternalSlot(resolveElement, "Index", index);
+                setInternalSlot(resolveElement, "Values", values);
+                setInternalSlot(resolveElement, "Capabilities", resolveElement, promiseCapability);
+                setInternalSlot(resolveElement, "RemainingElements", remainingElementsCount);
+                var result = Invoke(nextPromise, "then", [resolveElement, promiseCapability.Reject]);
+                if ((result = IfAbruptRejectPromise(result, promiseCapability)) && isAbrupt(result)) return result;
+                index = index + 1;
+                remainingElementsCount.value += 1;
             }
         };
 
@@ -20737,195 +20369,195 @@ dependencygrouptransitions of kind load1.Kind.
         // got to be moved outside of the createIntrinsics function
         // createIntrinsics has to become the DefineProperty rows only.
 
-    function PromiseNew (executor) {
-        debug2("promisenew")
-        var promise = AllocatePromise(getIntrinsic("%Promise%"));
-        return InitializePromise(promise, executor);
-    }
-    
-    function PromiseBuiltinCapability() {
-        var promise = AllocatePromise(getIntrinsic("%Promise%"));
-        return CreatePromiseCapabilityRecord(promise, getIntrinsic("%Promise%"));
-    }
-    
-    function PromiseOf(value) {
-        var capability = NewPromiseCapability();
-        if (isAbrupt(capability = ifAbrupt(capability))) return capability;
-        var resolveResult = callInternalSlot("Call", capability.Resolve, undefined, [value]);
-        if (isAbrupt(resolveResult = ifAbrupt(resolveResult))) return resolveResult;
-        return NormalCompletion(capability.Promise);
-    }
-
-    function PromiseAll(promiseList) {
-    }
-    function PromiseCatch(promise, rejectedAction) {
-    }
-    function PromiseThen(promise, resolvedAction, rejectedAction) {
-    }
-
-    function PromiseCapability(promise, resolve, reject) {
-        var pc = Object.create(PromiseCapability.prototype);
-        pc.Promise = promise;
-        pc.Resolve = resolve;
-        pc.Reject = reject;
-        return pc;
-    } 
-    PromiseCapability.prototype.toString = function () { return "[object PromiseCapability]"; };
-
-    function makePromiseReaction(capabilites, handler) {
-        return PromiseReaction(capabilites, handler);
-    }
-    function PromiseReaction(caps, hdl) {
-        var pr = Object.create(PromiseReaction.prototype);
-        pr.Capabilities = caps;
-        pr.Handler = hdl;
-        return pr;
-    }
-    PromiseReaction.prototype.toString = function () { return "[object PromiseReaction]"; };
-
-
-    function UpdatePromiseFromPotentialThenable(x, promiseCapability) {
-        if (Type(x) !== "object") return NormalCompletion("not a thenable");
-        var then = Get(x, "then");
-        if (isAbrupt(then = ifAbrupt(then))) {
-            var rejectResult = callInternalSlot("Call", promiseCapability.Reject, undefined, [then.value]);
-            if (isAbrupt(rejectResult = ifAbrupt(rejectResult))) return rejectResult;
-            return NormalCompletion(null);
+        function PromiseNew (executor) {
+            debug2("promisenew")
+            var promise = AllocatePromise(getIntrinsic("%Promise%"));
+            return InitializePromise(promise, executor);
         }
-        if (!IsCallable(then)) return NormalCompletion("not a thenable");
-        var thenCallResult = callInternalSlot("Call", then, x, [promiseCapability.Resolve, promiseCapability.Reject]);
-        if (isAbrupt(thenCallResult = ifAbrupt(thenCallResult))) {
-            var rejectResult = callInternalSlot("Call", promiseCapability.Reject, undefined, [thenCallResult.value]);
-            if (isAbrupt(rejectResult = ifAbrupt(rejectResult))) return rejectResult;      
-        }
-        return NormalCompletion(null);
-    }
 
-    function TriggerPromiseReactions(reactions, argument) {
-        for (var i = 0, j = reactions.length; i < j; i++) {
-            var reaction = reactions[i];
-            EnqueueTask("PromiseTasks", PromiseReactionTask, [reaction, argument])
+        function PromiseBuiltinCapability() {
+            var promise = AllocatePromise(getIntrinsic("%Promise%"));
+            return CreatePromiseCapabilityRecord(promise, getIntrinsic("%Promise%"));
         }
-        return NormalCompletion(undefined);
-    }
 
-
-    function PromiseReactionTask(reaction, argument) {
-        Assert(reaction instanceof PromiseReaction, "reaction must be a PromiseReaction record");
-        var promiseCapability = reaction.Capabilities;
-        var handler = reaction.Handler;
-        var handlerResult = callInternalSlot("Call", handler, undefined, [argument]);
-        if (isAbrupt(handlerResult = ifAbrupt(handlerResult))) {
-            var status = callInternalSlot("Call", promiseCapability.Reject, undefined, [handlerResult.value]);
-            return NextTask(status, PromiseTaskQueue);
-        }
-        if (SameValue(handlerResult, promiseCapability.Promise)) {
-            var selfResolutionError = withError("Type", "selfResolutionError in PromiseReactionTask");
-            var status = callInternalSlot("Call", promiseCapability.Reject, undefined, [selfResolutionError]);
-            return NextTask(status, PromiseTaskQueue);
-        }
-        var status = UpdatePromiseFromPotentialThenable(handlerResult, promiseCapability);
-        if (isAbrupt(status = ifAbrupt(status))) return status;
-        var updateResult = status;
-        if (updateResult === "not a thenable") {
-            var status = callInternalSlot("Call", promiseCapability.Resolve, undefined, [handlerResult]);
-        }
-        return NextTask(status, PromiseTaskQueue);
-    }
-
-
-    function IfAbruptRejectPromise(value, capability) {
-        if (isAbrupt(value)) {
-            var rejectedResult = callInternalSlot("Call", capability.Reject, undefined, [value.value]);
-            if (isAbrupt(rejectedResult = ifAbrupt(rejectedResult))) return rejectedResult;
+        function PromiseOf(value) {
+            var capability = NewPromiseCapability();
+            if (isAbrupt(capability = ifAbrupt(capability))) return capability;
+            var resolveResult = callInternalSlot("Call", capability.Resolve, undefined, [value]);
+            if (isAbrupt(resolveResult = ifAbrupt(resolveResult))) return resolveResult;
             return NormalCompletion(capability.Promise);
         }
-        return ifAbrupt(value);
-    }
 
-
-    function CreateRejectFunction (promise) {
-        var reject = makeRejectFunction();
-        setInternalSlot(reject, "Promise", promise);
-        return reject;
-    }
-    function CreateResolveFunction (promise) {
-        var resolve = makeResolveFunction();
-        setInternalSlot(resolve, "Promise", promise);
-        return resolve;
-    }
-
-    function NewPromiseCapability(C) {
-        debug2("newpromisecap")
-        if (!IsConstructor(C)) return withError("Type", "C is no constructor");
-        // Assertion Step 2 missing 25.4.3.1
-        var promise = CreateFromConstructor(C);
-        if (isAbrupt(promise = ifAbrupt(promise))) return promise;
-        return CreatePromiseCapabilityRecord(promise, C);
-    }
-
-    function CreatePromiseCapabilityRecord(promise, constructor) {
-        var promiseCapability = PromiseCapability(promise, undefined, undefined);
-        var executor = GetCapabilitiesExecutor();
-        setInternalSlot(executor, "Capability", promiseCapability);
-        var constructorResult = callInternalSlot("Call", constructor, promise, [executor]);
-        if (isAbrupt(constructorResult = ifAbrupt(constructorResult))) return constructorResult;
-
-        if (!IsCallable(promiseCapability.Resolve)) return withError("Type", "capability.[[Resolve]] is not a function");
-        if (!IsCallable(promiseCapability.Reject)) return withError("Type", "capability.[[Reject]] is not a function");
-        if (Type(constructorResult) === "object" && (SameValue(promise, constructorResult) === false)) return withError("Type","constructorResult is not the same as promise");
-        return promiseCapability;
-
-    }
-
-
-    function GetCapabilitiesExecutor () {
-
-        var F = OrdinaryFunction();
-        var GetCapabilitiesExecutor_Call = function (thisArg, argList) {
-            var resolve = argList[0];
-            var reject = argList[1];
-            var promiseCapability = getInternalSlot(F, "Capability");
-            Assert(promiseCapability !== undefined, "executor has to have a capability slot");
-            if (promiseCapability.Resolve !== undefined) return withError("Type", "promiseCapability has to have some undefined fields");
-            if (promiseCapability.Reject !== undefined) return withError("Type", "promiseCapability has to have some undefined fields");
-            promiseCapability.Resolve = resolve;
-            promiseCapability.Reject = reject;
-            return NormalCompletion(undefined);
-        };
-        setInternalSlot(F, "Call", GetCapabilitiesExecutor_Call);
-        return F;
-    }
-
-    function InitializePromise(promise, executor) {
-        debug2("initializePromise: start");
-        Assert(hasInternalSlot(promise, "PromiseStatus") && (getInternalSlot(promise, "PromiseStatus") === undefined), 
-            "InitializePromise: PromiseStatus doesnt exist or isnt undefined");
-        Assert(IsCallable(executor), "executor has to be callable");
-        setInternalSlot(promise, "PromiseStatus", "unresolved");
-        setInternalSlot(promise, "PromiseResolveReactions", []);
-        setInternalSlot(promise, "PromiseRejectReactions", []);
-        var resolve = CreateResolveFunction(promise);
-        var reject = CreateRejectFunction(promise);
-        var completion = callInternalSlot("Call", executor, undefined, [resolve, reject]);
-        if (isAbrupt(completion)) {
-            var status = callInternalSlot("Call", reject, undefined, [completion.value]);
-            if (isAbrupt(status = ifAbrupt(status))) return status;
+        function PromiseAll(promiseList) {
         }
-        return NormalCompletion(promise);
-    }
+        function PromiseCatch(promise, rejectedAction) {
+        }
+        function PromiseThen(promise, resolvedAction, rejectedAction) {
+        }
+
+        function PromiseCapability(promise, resolve, reject) {
+            var pc = Object.create(PromiseCapability.prototype);
+            pc.Promise = promise;
+            pc.Resolve = resolve;
+            pc.Reject = reject;
+            return pc;
+        }
+        PromiseCapability.prototype.toString = function () { return "[object PromiseCapability]"; };
+
+        function makePromiseReaction(capabilites, handler) {
+            return PromiseReaction(capabilites, handler);
+        }
+        function PromiseReaction(caps, hdl) {
+            var pr = Object.create(PromiseReaction.prototype);
+            pr.Capabilities = caps;
+            pr.Handler = hdl;
+            return pr;
+        }
+        PromiseReaction.prototype.toString = function () { return "[object PromiseReaction]"; };
+
+
+        function UpdatePromiseFromPotentialThenable(x, promiseCapability) {
+            if (Type(x) !== "object") return NormalCompletion("not a thenable");
+            var then = Get(x, "then");
+            if (isAbrupt(then = ifAbrupt(then))) {
+                var rejectResult = callInternalSlot("Call", promiseCapability.Reject, undefined, [then.value]);
+                if (isAbrupt(rejectResult = ifAbrupt(rejectResult))) return rejectResult;
+                return NormalCompletion(null);
+            }
+            if (!IsCallable(then)) return NormalCompletion("not a thenable");
+            var thenCallResult = callInternalSlot("Call", then, x, [promiseCapability.Resolve, promiseCapability.Reject]);
+            if (isAbrupt(thenCallResult = ifAbrupt(thenCallResult))) {
+                var rejectResult = callInternalSlot("Call", promiseCapability.Reject, undefined, [thenCallResult.value]);
+                if (isAbrupt(rejectResult = ifAbrupt(rejectResult))) return rejectResult;
+            }
+            return NormalCompletion(null);
+        }
+
+        function TriggerPromiseReactions(reactions, argument) {
+            for (var i = 0, j = reactions.length; i < j; i++) {
+                var reaction = reactions[i];
+                EnqueueTask("PromiseTasks", PromiseReactionTask, [reaction, argument])
+            }
+            return NormalCompletion(undefined);
+        }
+
+
+        function PromiseReactionTask(reaction, argument) {
+            Assert(reaction instanceof PromiseReaction, "reaction must be a PromiseReaction record");
+            var promiseCapability = reaction.Capabilities;
+            var handler = reaction.Handler;
+            var handlerResult = callInternalSlot("Call", handler, undefined, [argument]);
+            if (isAbrupt(handlerResult = ifAbrupt(handlerResult))) {
+                var status = callInternalSlot("Call", promiseCapability.Reject, undefined, [handlerResult.value]);
+                return NextTask(status, PromiseTaskQueue);
+            }
+            if (SameValue(handlerResult, promiseCapability.Promise)) {
+                var selfResolutionError = withError("Type", "selfResolutionError in PromiseReactionTask");
+                var status = callInternalSlot("Call", promiseCapability.Reject, undefined, [selfResolutionError]);
+                return NextTask(status, PromiseTaskQueue);
+            }
+            var status = UpdatePromiseFromPotentialThenable(handlerResult, promiseCapability);
+            if (isAbrupt(status = ifAbrupt(status))) return status;
+            var updateResult = status;
+            if (updateResult === "not a thenable") {
+                var status = callInternalSlot("Call", promiseCapability.Resolve, undefined, [handlerResult]);
+            }
+            return NextTask(status, PromiseTaskQueue);
+        }
+
+
+        function IfAbruptRejectPromise(value, capability) {
+            if (isAbrupt(value)) {
+                var rejectedResult = callInternalSlot("Call", capability.Reject, undefined, [value.value]);
+                if (isAbrupt(rejectedResult = ifAbrupt(rejectedResult))) return rejectedResult;
+                return NormalCompletion(capability.Promise);
+            }
+            return ifAbrupt(value);
+        }
+
+
+        function CreateRejectFunction (promise) {
+            var reject = makeRejectFunction();
+            setInternalSlot(reject, "Promise", promise);
+            return reject;
+        }
+        function CreateResolveFunction (promise) {
+            var resolve = makeResolveFunction();
+            setInternalSlot(resolve, "Promise", promise);
+            return resolve;
+        }
+
+        function NewPromiseCapability(C) {
+            debug2("newpromisecap")
+            if (!IsConstructor(C)) return withError("Type", "C is no constructor");
+            // Assertion Step 2 missing 25.4.3.1
+            var promise = CreateFromConstructor(C);
+            if (isAbrupt(promise = ifAbrupt(promise))) return promise;
+            return CreatePromiseCapabilityRecord(promise, C);
+        }
+
+        function CreatePromiseCapabilityRecord(promise, constructor) {
+            var promiseCapability = PromiseCapability(promise, undefined, undefined);
+            var executor = GetCapabilitiesExecutor();
+            setInternalSlot(executor, "Capability", promiseCapability);
+            var constructorResult = callInternalSlot("Call", constructor, promise, [executor]);
+            if (isAbrupt(constructorResult = ifAbrupt(constructorResult))) return constructorResult;
+
+            if (!IsCallable(promiseCapability.Resolve)) return withError("Type", "capability.[[Resolve]] is not a function");
+            if (!IsCallable(promiseCapability.Reject)) return withError("Type", "capability.[[Reject]] is not a function");
+            if (Type(constructorResult) === "object" && (SameValue(promise, constructorResult) === false)) return withError("Type","constructorResult is not the same as promise");
+            return promiseCapability;
+
+        }
+
+
+        function GetCapabilitiesExecutor () {
+
+            var F = OrdinaryFunction();
+            var GetCapabilitiesExecutor_Call = function (thisArg, argList) {
+                var resolve = argList[0];
+                var reject = argList[1];
+                var promiseCapability = getInternalSlot(F, "Capability");
+                Assert(promiseCapability !== undefined, "executor has to have a capability slot");
+                if (promiseCapability.Resolve !== undefined) return withError("Type", "promiseCapability has to have some undefined fields");
+                if (promiseCapability.Reject !== undefined) return withError("Type", "promiseCapability has to have some undefined fields");
+                promiseCapability.Resolve = resolve;
+                promiseCapability.Reject = reject;
+                return NormalCompletion(undefined);
+            };
+            setInternalSlot(F, "Call", GetCapabilitiesExecutor_Call);
+            return F;
+        }
+
+        function InitializePromise(promise, executor) {
+            debug2("initializePromise: start");
+            Assert(hasInternalSlot(promise, "PromiseStatus") && (getInternalSlot(promise, "PromiseStatus") === undefined),
+                "InitializePromise: PromiseStatus doesnt exist or isnt undefined");
+            Assert(IsCallable(executor), "executor has to be callable");
+            setInternalSlot(promise, "PromiseStatus", "unresolved");
+            setInternalSlot(promise, "PromiseResolveReactions", []);
+            setInternalSlot(promise, "PromiseRejectReactions", []);
+            var resolve = CreateResolveFunction(promise);
+            var reject = CreateRejectFunction(promise);
+            var completion = callInternalSlot("Call", executor, undefined, [resolve, reject]);
+            if (isAbrupt(completion)) {
+                var status = callInternalSlot("Call", reject, undefined, [completion.value]);
+                if (isAbrupt(status = ifAbrupt(status))) return status;
+            }
+            return NormalCompletion(promise);
+        }
 
         function AllocatePromise(constructor) {
             debug2("allocatePromise")
             var obj = OrdinaryCreateFromConstructor(constructor, "%PromisePrototype%", {
-                "PromiseStatus": undefined, 
-                "PromiseConstructor": constructor,   
-                "PromiseResult": undefined,    
-                "PromiseResolveReactions": undefined, 
-                "PromiseRejectReactions" : undefined, 
+                "PromiseStatus": undefined,
+                "PromiseConstructor": constructor,
+                "PromiseResult": undefined,
+                "PromiseResolveReactions": undefined,
+                "PromiseRejectReactions" : undefined,
                 "toString": function () {
                     return "[object PromiseExoticObject]";
-                } 
+                }
             });
             return obj;
         }
@@ -20988,7 +20620,7 @@ dependencygrouptransitions of kind load1.Kind.
             SetFunctionLength(F, 1);
             return NormalCompletion(F);
         }
-        
+
         function makeRejectFunction () {
             var handler = OrdinaryFunction();
             var handler_Call = function (thisArg, argList) {
@@ -21065,7 +20697,7 @@ dependencygrouptransitions of kind load1.Kind.
         LazyDefineAccessor(RegExpPrototype, "global", RegExpPrototype_get_global, undefined);
         LazyDefineAccessor(RegExpPrototype, "multiline", RegExpPrototype_get_multiline, undefined);
         LazyDefineAccessor(RegExpPrototype, "source", RegExpPrototype_get_source, undefined);
-        
+
         LazyDefineProperty(RegExpPrototype, "lastIndex", 0);
 
         LazyDefineBuiltinFunction(RegExpPrototype, "compile", 1, RegExpPrototype_compile);
@@ -21114,7 +20746,7 @@ dependencygrouptransitions of kind load1.Kind.
             return OrdinaryConstruct(F, argList);
         });
 
-        
+
         setInternalSlot(ArrayBufferConstructor, "Prototype", FunctionPrototype);
         DefineOwnProperty(ArrayBufferConstructor, "prototype", {
             value: ArrayBufferPrototype,
@@ -21182,7 +20814,7 @@ dependencygrouptransitions of kind load1.Kind.
         // DataView
         // ===========================================================================================================
 
-        
+
 
         var DataViewConstructor_Call= function (thisArg, argList) {
             var O = thisArg;
@@ -21198,7 +20830,7 @@ dependencygrouptransitions of kind load1.Kind.
             var arrayBufferData;
             if (!hasInternalSlot(buffer, "ArrayBufferData")) return withError("Type", "In DataView(buffer), buffer has to have ArrayBufferData slot");
             arrayBufferData = getInternalSlot(buffer, "ArrayBufferData");
-            if (arrayBufferData === undefined) return withError("Type", "arrayBufferData of buffer may not be undefined"); 
+            if (arrayBufferData === undefined) return withError("Type", "arrayBufferData of buffer may not be undefined");
             var numberOffset = ToNumber(byteOffset);
             var offset = ToInteger(numberOffset);
             if (isAbrupt(offset=ifAbrupt(offset))) return offset;
@@ -21221,11 +20853,11 @@ dependencygrouptransitions of kind load1.Kind.
             setInternalSlot(O, "ByteOffset", offset);
             return NormalCompletion(O);
         };
-        
+
         var DataViewConstructor_Construct = function (thisArg, argList) {
             return OrdinaryConstruct(this, argList);
         };
-        
+
         var DataViewConstructor_$$create = function (thisArg, argList) {
             var F = thisArg;
             var obj = OrdinaryCreateFromConstructor(F, "%DataViewPrototype%", {
@@ -21266,22 +20898,22 @@ dependencygrouptransitions of kind load1.Kind.
             var offset = getInternalSlot(O, "ByteOffset");
             return NormalCompletion(offset);
         };
-        
-        
+
+
         var DataViewPrototype_getFloat32 = function (thisArg, argList) {
-                var v = thisArg;
-                var byteOffset = argList[0];
-                var littleEndian = argList[1];
-                if (littleEndian == undefined) littleEndian = false;
-                return GetViewValue(v, byteOffset, littleEndian, "Float32");
+            var v = thisArg;
+            var byteOffset = argList[0];
+            var littleEndian = argList[1];
+            if (littleEndian == undefined) littleEndian = false;
+            return GetViewValue(v, byteOffset, littleEndian, "Float32");
         };
-        
+
         var DataViewPrototype_getFloat64 = function (thisArg, argList) {
-                var v = thisArg;
-                var byteOffset = argList[0];
-                var littleEndian = argList[1];
-                if (littleEndian == undefined) littleEndian = false;
-                return GetViewValue(v, byteOffset, littleEndian, "Float64");
+            var v = thisArg;
+            var byteOffset = argList[0];
+            var littleEndian = argList[1];
+            if (littleEndian == undefined) littleEndian = false;
+            return GetViewValue(v, byteOffset, littleEndian, "Float64");
         };
 
         var DataViewPrototype_getInt8 = function (thisArg, argList) {
@@ -21291,20 +20923,20 @@ dependencygrouptransitions of kind load1.Kind.
         };
 
         var DataViewPrototype_getInt16 = function (thisArg, argList) {
-                var v = thisArg;
-                var byteOffset = argList[0];
-                var littleEndian = argList[1];
-                if (littleEndian == undefined) littleEndian = false;
-                return GetViewValue(v, byteOffset, littleEndian, "Int16");
+            var v = thisArg;
+            var byteOffset = argList[0];
+            var littleEndian = argList[1];
+            if (littleEndian == undefined) littleEndian = false;
+            return GetViewValue(v, byteOffset, littleEndian, "Int16");
         };
 
 
         var DataViewPrototype_getInt32 = function (thisArg, argList) {
-                var v = thisArg;
-                var byteOffset = argList[0];
-                var littleEndian = argList[1];
-                if (littleEndian == undefined) littleEndian = false;
-                return GetViewValue(v, byteOffset, littleEndian, "Int32");
+            var v = thisArg;
+            var byteOffset = argList[0];
+            var littleEndian = argList[1];
+            if (littleEndian == undefined) littleEndian = false;
+            return GetViewValue(v, byteOffset, littleEndian, "Int32");
         };
 
 
@@ -21315,86 +20947,86 @@ dependencygrouptransitions of kind load1.Kind.
         };
 
         var DataViewPrototype_getUint16 = function (thisArg, argList) {
-                var v = thisArg;
-                var byteOffset = argList[0];
-                var littleEndian = argList[1];
-                if (littleEndian == undefined) littleEndian = false;
-                return GetViewValue(v, byteOffset, littleEndian, "Uint16");
+            var v = thisArg;
+            var byteOffset = argList[0];
+            var littleEndian = argList[1];
+            if (littleEndian == undefined) littleEndian = false;
+            return GetViewValue(v, byteOffset, littleEndian, "Uint16");
         };
         var DataViewPrototype_getUint32 = function (thisArg, argList) {
-                var v = thisArg;
-                var byteOffset = argList[0];
-                var littleEndian = argList[1];
-                if (littleEndian == undefined) littleEndian = false;
-                return GetViewValue(v, byteOffset, littleEndian, "Uint32");
+            var v = thisArg;
+            var byteOffset = argList[0];
+            var littleEndian = argList[1];
+            if (littleEndian == undefined) littleEndian = false;
+            return GetViewValue(v, byteOffset, littleEndian, "Uint32");
         };
 
         var DataViewPrototype_setFloat32 = function (thisArg, argList) {
-                var v = thisArg;
-                var byteOffset = argList[0];
-                var value = argList[1];
-                var littleEndian = argList[2];
-                if (littleEndian == undefined) littleEndian = false;
-                return SetViewValue(v, byteOffset, littleEndian, "Float32", value);
+            var v = thisArg;
+            var byteOffset = argList[0];
+            var value = argList[1];
+            var littleEndian = argList[2];
+            if (littleEndian == undefined) littleEndian = false;
+            return SetViewValue(v, byteOffset, littleEndian, "Float32", value);
         };
 
         var DataViewPrototype_setFloat64 = function (thisArg, argList) {
-                var v = thisArg;
-                var byteOffset = argList[0];
-                var value = argList[1];
-                var littleEndian = argList[2];
-                if (littleEndian == undefined) littleEndian = false;
-                return SetViewValue(v, byteOffset, littleEndian, "Float64", value);
+            var v = thisArg;
+            var byteOffset = argList[0];
+            var value = argList[1];
+            var littleEndian = argList[2];
+            if (littleEndian == undefined) littleEndian = false;
+            return SetViewValue(v, byteOffset, littleEndian, "Float64", value);
         };
-                
+
         var DataViewPrototype_setInt8 = function (thisArg, argList) {
-                var v = thisArg;
-                var byteOffset = argList[0];
-                var value = argList[1];
-                return SetViewValue(v, byteOffset, undefined, "Int8", value);
+            var v = thisArg;
+            var byteOffset = argList[0];
+            var value = argList[1];
+            return SetViewValue(v, byteOffset, undefined, "Int8", value);
         };
         var DataViewPrototype_setInt16 = function (thisArg, argList) {
-                var v = thisArg;
-                var byteOffset = argList[0];
-                var value = argList[1];
-                var littleEndian = argList[2];
-                if (littleEndian == undefined) littleEndian = false;
-                return SetViewValue(v, byteOffset, littleEndian, "Int16", value);
+            var v = thisArg;
+            var byteOffset = argList[0];
+            var value = argList[1];
+            var littleEndian = argList[2];
+            if (littleEndian == undefined) littleEndian = false;
+            return SetViewValue(v, byteOffset, littleEndian, "Int16", value);
         };
-        
+
         var DataViewPrototype_setInt32 = function (thisArg, argList) {
-                var v = thisArg;
-                var byteOffset = argList[0];
-                var value = argList[1];
-                var littleEndian = argList[2];
-                if (littleEndian == undefined) littleEndian = false;
-                return SetViewValue(v, byteOffset, littleEndian, "Int32", value);
+            var v = thisArg;
+            var byteOffset = argList[0];
+            var value = argList[1];
+            var littleEndian = argList[2];
+            if (littleEndian == undefined) littleEndian = false;
+            return SetViewValue(v, byteOffset, littleEndian, "Int32", value);
         };
 
         var DataViewPrototype_setUint8 = function (thisArg, argList) {
-                var v = thisArg;
-                var byteOffset = argList[0];
-                var value = argList[1];
-                return SetViewValue(v, byteOffset, undefined, "Uint8", value);
+            var v = thisArg;
+            var byteOffset = argList[0];
+            var value = argList[1];
+            return SetViewValue(v, byteOffset, undefined, "Uint8", value);
         };
         var DataViewPrototype_setUint16 = function (thisArg, argList) {
-                var v = thisArg;
-                var byteOffset = argList[0];
-                var value = argList[1];
-                var littleEndian = argList[2];
-                if (littleEndian == undefined) littleEndian = false;
-                return SetViewValue(v, byteOffset, littleEndian, "Uint16", value);
+            var v = thisArg;
+            var byteOffset = argList[0];
+            var value = argList[1];
+            var littleEndian = argList[2];
+            if (littleEndian == undefined) littleEndian = false;
+            return SetViewValue(v, byteOffset, littleEndian, "Uint16", value);
         };
-        
+
         var DataViewPrototype_setUint32 = function (thisArg, argList) {
-                var v = thisArg;
-                var byteOffset = argList[0];
-                var value = argList[1];
-                var littleEndian = argList[2];
-                if (littleEndian == undefined) littleEndian = false;
-                return SetViewValue(v, byteOffset, littleEndian, "Uint32", value);
+            var v = thisArg;
+            var byteOffset = argList[0];
+            var value = argList[1];
+            var littleEndian = argList[2];
+            if (littleEndian == undefined) littleEndian = false;
+            return SetViewValue(v, byteOffset, littleEndian, "Uint32", value);
         };
-        
+
 
 
         MakeConstructor(DataViewConstructor, true, DataViewPrototype);
@@ -21886,7 +21518,7 @@ dependencygrouptransitions of kind load1.Kind.
 
                 if (comparator === undefined) same = SameValueZero;
                 else same = SameValue;
-                
+
                 var internalKey;
 
                 internalKey = __checkInternalUniqueKey(key);
@@ -21912,7 +21544,7 @@ dependencygrouptransitions of kind load1.Kind.
                 var comparator = getInternalSlot(M, "MapComparator");
                 if (comparator === undefined) same = SameValueZero;
                 else same = SameValue;
-                
+
                 var internalKey;
 
                 internalKey = __checkInternalUniqueKey(key);
@@ -21945,7 +21577,7 @@ dependencygrouptransitions of kind load1.Kind.
                 if (comparator === undefined) same = SameValueZero;
                 else same = SameValue;
 
-                
+
                 var internalKey;
 
                 internalKey = __checkInternalUniqueKey(key, true);
@@ -21977,7 +21609,7 @@ dependencygrouptransitions of kind load1.Kind.
                 var comparator = getInternalSlot(M, "MapComparator");
                 if (comparator === undefined) same = SameValueZero;
                 else same = SameValue;
-                
+
                 var internalKey;
 
                 internalKey = __checkInternalUniqueKey(key);
@@ -22256,7 +21888,7 @@ dependencygrouptransitions of kind load1.Kind.
                 if (comparator === undefined) same = SameValueZero;
                 else same = SameValue;
 
-                
+
                 var internalKey;
 
                 internalKey = __checkInternalUniqueKey(value, true);
@@ -22285,7 +21917,7 @@ dependencygrouptransitions of kind load1.Kind.
                 if (comparator === undefined) same = SameValueZero;
                 else same = SameValue;
 
-                
+
                 var internalKey;
 
                 internalKey = __checkInternalUniqueKey(value);
@@ -22313,7 +21945,7 @@ dependencygrouptransitions of kind load1.Kind.
                 if (comparator === undefined) same = SameValueZero;
                 else same = SameValue;
 
-                    
+
                 var internalKey;
 
                 internalKey = __checkInternalUniqueKey(value);
@@ -22614,7 +22246,7 @@ dependencygrouptransitions of kind load1.Kind.
                 if (Type(event) !== "string") return withError("Type", "Your argument 1 is not a event name string.");
                 var list = listeners[event];
                 if (list == undefined) return NormalCompletion(undefined);
-                
+
                 //setTimeout(function () {
                 var result;
                 for (var i = 0, j = list.length; i < j; i++) {
@@ -22624,14 +22256,14 @@ dependencygrouptransitions of kind load1.Kind.
                     }
                 }
                 //},0);
-                
+
                 return NormalCompletion(undefined);
             }),
             writable: false,
             enumerable: false,
             configurable: false
         });
-        
+
         LazyDefineBuiltinConstant(EmitterPrototype, $$toStringTag, "Emitter");
 
 
@@ -22675,11 +22307,11 @@ dependencygrouptransitions of kind load1.Kind.
 
         /* 
 
-                ecmascript simd polyfills. 32x4 will be run sequentially here.
+         ecmascript simd polyfills. 32x4 will be run sequentially here.
 
-        */
+         */
 
-        
+
 
 
         // ===========================================================================================================
@@ -22722,9 +22354,7 @@ dependencygrouptransitions of kind load1.Kind.
             DefineOwnProperty(globalThis, "ReferenceError", GetOwnProperty(intrinsics, "%ReferenceError%"));
             DefineOwnProperty(globalThis, "RegExp", GetOwnProperty(intrinsics, "%RegExp%"));
             DefineOwnProperty(globalThis, "SyntaxError", GetOwnProperty(intrinsics, "%SyntaxError%"));
-
             LazyDefineProperty(globalThis, "System", realm.loader);
-
             DefineOwnProperty(globalThis, "TypeError", GetOwnProperty(intrinsics, "%TypeError%"));
             DefineOwnProperty(globalThis, "URIError", GetOwnProperty(intrinsics, "%URIError%"));
             DefineOwnProperty(globalThis, "Object", GetOwnProperty(intrinsics, "%Object%"));
@@ -22736,9 +22366,9 @@ dependencygrouptransitions of kind load1.Kind.
             DefineOwnProperty(globalThis, "Uint8Array", GetOwnProperty(intrinsics, "%Uint8Array%"));
             DefineOwnProperty(globalThis, "Uint8ClampedArray", GetOwnProperty(intrinsics, "%Uint8ClampedArray%"));
             DefineOwnProperty(globalThis, "Uint16Array", GetOwnProperty(intrinsics, "%Uint16Array%"));
-            DefineOwnProperty(globalThis, "Uint32Array", GetOwnProperty(intrinsics, "%Uint32Array%"));            
+            DefineOwnProperty(globalThis, "Uint32Array", GetOwnProperty(intrinsics, "%Uint32Array%"));
             DefineOwnProperty(globalThis, "WeakMap", GetOwnProperty(intrinsics, "%WeakMap%"));
-            DefineOwnProperty(globalThis, "WeakSet", GetOwnProperty(intrinsics, "%WeakSet%"));            
+            DefineOwnProperty(globalThis, "WeakSet", GetOwnProperty(intrinsics, "%WeakSet%"));
             DefineOwnProperty(globalThis, "console", GetOwnProperty(intrinsics, "%Console%"));
             DefineOwnProperty(globalThis, "decodeURI", GetOwnProperty(intrinsics, "%DecodeURI%"));
             DefineOwnProperty(globalThis, "decodeURIComponent", GetOwnProperty(intrinsics, "%DecodeURIComponent%"));
@@ -22747,8 +22377,8 @@ dependencygrouptransitions of kind load1.Kind.
             DefineOwnProperty(globalThis, "escape", GetOwnProperty(intrinsics, "%Escape%"));
             DefineOwnProperty(globalThis, "eval", GetOwnProperty(intrinsics, "%Eval%"));
             LazyDefineFalseTrueFalse(globalThis, "global", globalThis);
-            DefineOwnProperty(globalThis, "isNaN", GetOwnProperty(intrinsics, "%IsNaN%"));
             DefineOwnProperty(globalThis, "isFinite", GetOwnProperty(intrinsics, "%IsFinite%"));
+            DefineOwnProperty(globalThis, "isNaN", GetOwnProperty(intrinsics, "%IsNaN%"));
             DefineOwnProperty(globalThis, "load", GetOwnProperty(intrinsics, "%Load%"));
             LazyDefineBuiltinConstant(globalThis, "null", null);
             DefineOwnProperty(globalThis, "parseInt", GetOwnProperty(intrinsics, "%ParseInt%"));
@@ -22760,11 +22390,11 @@ dependencygrouptransitions of kind load1.Kind.
             LazyDefineBuiltinConstant(globalThis, $$toStringTag, "syntaxjsGlobal")
 
 
-            
 
-        /*
-               DOM Wrapper, works for node.js process, too. Was usually able to call functions, but seems to have bug today.
-        */
+
+            /*
+             DOM Wrapper, works for node.js process, too. Was usually able to call functions, but seems to have bug today.
+             */
 
             if (typeof importScripts === "function") {
                 DefineOwnProperty(globalThis, "self", GetOwnProperty(intrinsics, "%DOMWrapper%"));
@@ -22785,23 +22415,22 @@ dependencygrouptransitions of kind load1.Kind.
 
 
         LazyDefineProperty(intrinsics, "%DOMWrapper%", ExoticDOMObjectWrapper(
-                typeof importScripts === "function" ? self : typeof window === "object" ? window : process)
+            typeof importScripts === "function" ? self : typeof window === "object" ? window : process)
         );
- 
+
+            /*
+            *
+            *  End of Wrapper
+             */
+
+
+
 
         return intrinsics; // assignIntrinsics(intrinsics);
 
     } // createIntrinsics ()
 
-    // *****************************************************************************************************************************************************************************
-    // code and intrinsics: REALM (contains builtins + eval function)
-    // *****************************************************************************************************************************************************************************   
 
-    //
-    // ---------------- this modul cares for suspending and restoring realms -----
-    //
-
-    
     exports.createIntrinsics = createIntrinsics;
     exports.setCodeRealm = setCodeRealm;
     exports.saveCodeRealm = saveCodeRealm;
@@ -22847,15 +22476,44 @@ define("runtime", ["parser", "api", "slower-static-semantics"], function (parse,
     The interfaces for refactoring the runtime for the Bytecode
 */
 
-    
+    var Push = ecma.Push;
+    var Length = ecma.Length;
+    var getField = ecma.getField;
+    var setField = ecma.setField;
+    var getRec = ecma.getRec;
+    var setRec = ecma.setRec;
+
+
+    var byteCodeMap = {
+        "type": 0,
+        "body": 1,  // body is always field 0 in the array
+        "id": 2,
+        "left": 1,
+        "right": 2
+    };
+    var astCodeMap = {
+        "type":"type",
+        "body":"body",
+        "id":"id",
+        "left":"left",
+        "right":"right",
+        "argument": "argument",
+        "computed": "computed"
+    };
+
+    var codeMap = astCodeMap;
+
+
     function getCode(code, field) {
-        if (code)
-        return code[field];
+        if (code) {
+        return code[codeMap[field]];
+        }
     }
 
     function isCodeType(code, type) {
-	if (code)
-        return code.type === type;
+	    if (code) {
+        return code[codeMap["type"]] === type;
+        }
     }
 
 
@@ -22989,7 +22647,7 @@ define("runtime", ["parser", "api", "slower-static-semantics"], function (parse,
     var Reference = ecma.Reference;
     var GetIdentifierReference = ecma.GetIdentifierReference;
     var GetThisEnvironment = ecma.GetThisEnvironment;
-    var OrdinaryCreateFromConstructor = OrdinaryCreateFromConstructor;
+
     var GetOwnProperty = ecma.GetOwnProperty;
     var GetValue = ecma.GetValue;
     var PutValue = ecma.PutValue;
@@ -23005,7 +22663,7 @@ define("runtime", ["parser", "api", "slower-static-semantics"], function (parse,
     var ifAbrupt = ecma.ifAbrupt;
     var isAbrupt = ecma.isAbrupt;
     var Intrinsics;
-    var globalThis;
+
     var MakeConstructor = ecma.MakeConstructor;
     var ArrayCreate = ecma.ArrayCreate;
     var ArraySetLength = ecma.ArraySetLength;
@@ -23016,9 +22674,6 @@ define("runtime", ["parser", "api", "slower-static-semantics"], function (parse,
     
     var CreateEmptyIterator = CreateEmptyIterator;
     var ToBoolean = ecma.ToBoolean;
-    var ToString = ecma.ToString;
-    var ToNumber = ecma.ToNumber;
-    var ToUint32 = ecma.ToUint32;
 
     
 
@@ -24786,7 +24441,18 @@ define("runtime", ["parser", "api", "slower-static-semantics"], function (parse,
 
             var kind = propertyDefinition.kind;
             var key =  propertyDefinition.key;
-            var node = propertyDefinition.value;
+
+
+
+
+
+
+
+
+
+
+
+        var node = propertyDefinition.value;
             
             var strict = node.strict;
             var isComputed = propertyDefinition.computed;
@@ -26944,11 +26610,13 @@ define("highlight", ["tables", "tokenizer"], function (tables, tokenize) {
         if (typeof text === "string" && typeof importScripts === "function") {
             el = null;
             rec = null;
+
         } else if (text === null && rec instanceof HTMLElement) {
             text = rec.innerText || rec.textContent || text.innerHTML;
             el = rec;
             rec = Object.create(null);
             rec.element = el;
+
         } else if (text === null && typeof rec === "object") {
             el = rec.element;
             text = rec.input || (el.innerText || el.textContent || el.innerHTML);
@@ -27242,6 +26910,14 @@ if (typeof window != "undefined") {
             a["arguments"] = "Das Arguments Objekt enthaelt alle Parameter, die beim Aufruf einer Funktion uebergeben wurden und ist nur innerhalb dieser gerufenen Funktion sichtbar. Ab ES6 gibt es ...rest RestParameter, die das arbeiten leichter machen.",
             a["JSRuntime"] = "JSRuntime ist die SpiderMonkey Laufzeitstruktur. Wird mit JSRuntime *rt = JS_CreateRuntime(bytes); gestartet. Mit der rt kann man dann den JSContext(rt, heapsize) erzeugen.";
 
+
+            function setAnnotation(new_annotation) {
+                Annotations = new_annotation;
+            }
+            function getAnnotation() {
+                return Annotations;
+            }
+
             function make_console_element(rec) {
                 var element = rec.element;
                 var consoleElement = document.createElement("div");
@@ -27293,19 +26969,19 @@ if (typeof window != "undefined") {
             // CreateFeaturing Elements
 
             var registered_annotation = false;
-            var globalControlsAttribute = document.documentElement.getAttribute("data-syntaxjs-controls");
+            var globalControlsAttribute = document.documentElement.getAttribute(DataAttributes["controls"]);
             var globalControls = globalControlsAttribute !== undefined ? Duties[globalControlsAttribute] : false;
 
             function highlightElements(options) {
 
                 var elements;
                 var element, rec, hl, ctrl;
-                var controls, tag, att;
+                var controls, att;
                 var annotate;
                 var delegate;
                 var syntaxerrors;
                 var att1, att2;
-                var opt;
+                var opts;
                 var opt_rec;
                 var name;
 
@@ -27345,8 +27021,8 @@ if (typeof window != "undefined") {
                                     if (element = elements[a]) {
 
                                         name = element.tagName;
-                                        att1 = element.getAttribute("data-syntaxjs-highlight");
-                                        att2 = element.getAttribute("data-syntaxjs-controls");
+                                        att1 = element.getAttribute(DataAttributes["highlight"]);
+                                        att2 = element.getAttribute(DataAttributes["controls"]);
 
                                         hl = true;
 
@@ -27716,6 +27392,7 @@ if (typeof window != "undefined") {
             //
 
             function minify(text) {
+                var tokens;
                 if (typeof text === "string") {
                     tokens = tokenize(text);
                 } else if (Array.isArray(text)) {
@@ -27998,20 +27675,14 @@ if (typeof window != "undefined") {
             }
 
             function startHighlighterOnLoad() {
-                
-                var script = document.querySelector("script[data-syntaxjs-config]");
-                
                 var config;
-                
+                var script = document.querySelector("script[data-syntaxjs-config]");
                 if (script) config = script.getAttribute("data-syntaxjs-config");
-
                 if (config) config = JSON.parse(config);
-                else config = defaultOptions();        
-                
+                else config = defaultOptions();
                 var onload = function (e) {
                     setTimeout(function () { highlightElements(config); }, 0);
                 };
-                
                 addEventListener(window, "DOMContentLoaded", onload, false);
             }
 
@@ -28072,6 +27743,28 @@ define("fswraps", function (require, exports, module) {
     exports.readFileSync = readFileSync;
 });
 
+/*
+ *
+ *  syntax.js web worker module
+ *
+ *  if it´s loaded, it provides a message handler for the worker thread
+ *  the file lib/app.js calls syntaxjs.subscribeWorker which registers a
+ *  predefined message handler.
+ *  You can program your own handlers and call syntax.js in
+ *  But this defines some builtin commands
+ *
+ *  postMessage({ command: "highlight", text: sourceText });
+ *  returns a text replaced with span elements (a highlighted text)
+ *  you can pass [text1,text2,text3] and get each one back highlighted
+ *
+ *  postMessage({ command: "value", text: sourceText });
+ *  returns what the toValue Function would return on evaluating sourceText
+ *  postMessage({ command: "value-keepalive", text: sourceText })
+ *  returns the toValue of sourceText but keeps the Environment alive
+ *
+ *  This "keepalive" will be replaced with the creation of realms.
+ */
+
 
 define("syntaxjs-worker", function (require, exports, module) {
     "use strict";
@@ -28081,24 +27774,37 @@ define("syntaxjs-worker", function (require, exports, module) {
         var messageHandler = function message_handler(e) {
             var html;
             var text = e.data.text;
-            switch (e.data.f) {
-            case "highlight":
-                if (Array.isArray(text)) {
-                    html = [];
-                    for (var i = 0, j = text.length; i < j; i++) {
-                        html.push(highlight(text[i]));
+            var command = e.data.command;
+            var keepalive = false;
+            switch (command) {
+                case "highlight":
+                    if (Array.isArray(text)) {
+                        html = [];
+                        for (var i = 0, j = text.length; i < j; i++) {
+                            html.push(highlight(text[i]));
+                        }
+                    } else {
+                        html = highlight(text);
                     }
-                } else {
-                    html = highlight(text);
-                }
-                self.postMessage(html);
-                break;
-            case "value":
-                var result = interprete(text);
-                self.postMessage(result);
-                break;
-            default:
-                break;
+                    self.postMessage(html);
+                    break;
+
+                case "value-keepalive":
+                    keepalive = true;
+                case "value":
+                    if (Array.isArray(text)) {
+                        result = [];
+                        for (var i = 0, j = text.length; i < j; i++) {
+                            result.push(interprete(text[i], keepalive));
+                        }
+                    } else {
+                        result = interprete(text, keepalive);
+                    }
+                    self.postMessage(result);
+                    break;
+
+                default:
+                    break;
             }
         };
         var subscribeWorker = function subscribeWorker() {
@@ -28106,7 +27812,7 @@ define("syntaxjs-worker", function (require, exports, module) {
             self.addEventListener("message", messageHandler, false);
         };
         exports.messageHandler = messageHandler;
-        exports.start = subscribeWorker;
+        exports.subscribeWorker = subscribeWorker;
     }
     return exports;
 });
@@ -28360,12 +28066,34 @@ define("syntaxjs", function () {
     return syntaxjs;
 });
 
+/*
+*
+* app.js
+* This file starts syntax.js automatically.
+* It can be left out, if you don´t like that it´s starting something.
+* In our case it supports just:
+*
+* a) node.js
+* b) browsers
+* c) web workers of browsers
+*
+* I´ve seen, it doesn´t work for example with "nashorn" in Java.
+* For that we will have to add another curly block, to support.
+*
+*/
 
-var syntaxjs = require("syntaxjs");
-if (syntaxjs.system === "node") {
-    if (!module.parent) syntaxjs.nodeShell();
-} else if (syntaxjs.system === "browser") {
-    syntaxjs.startHighlighterOnLoad();
-} else if (syntaxjs.system === "worker") {
-    syntaxjs.subscribeWorker();
-}
+
+var syntaxjs = (function () {
+
+    var syntaxjs = require("syntaxjs");
+
+    if (syntaxjs.system === "node") {
+        if (!module.parent) syntaxjs.nodeShell();
+    } else if (syntaxjs.system === "browser") {
+        syntaxjs.startHighlighterOnLoad();
+    } else if (syntaxjs.system === "worker") {
+        syntaxjs.subscribeWorker();
+    }
+
+    return syntaxjs;
+}());
