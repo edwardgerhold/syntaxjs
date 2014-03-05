@@ -8602,7 +8602,6 @@ define("arraycompiler", function (require, exports, module) {
     return builder;
 });
 
-
 /*
 ############################################################################################################################################################################################################
 
@@ -29104,7 +29103,7 @@ define("syntaxjs", function () {
 */
 
 
-var syntaxjs = (function () {
+//var syntaxjs = (function () {
 
     var syntaxjs = require("syntaxjs");
 
@@ -29116,5 +29115,5 @@ var syntaxjs = (function () {
         syntaxjs.subscribeWorker();
     }
 
-    return syntaxjs;
-}());
+//    return syntaxjs;
+//}());
