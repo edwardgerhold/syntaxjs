@@ -1,0 +1,89 @@
+<html>
+<head>
+<link rel=stylesheet type=text/css href=css/syntax.css>
+<link rel=stylesheet type=text/css href=css/tester.css>
+<title>ecma script 6 demo</title>
+<style>
+    body {
+	font-family: sans;
+	font-size:10px;
+    }
+    div#output {
+	background:lightgrey;
+	border:1px solid black;
+	padding:5px;
+	overflow:auto;
+	max-height:40%;
+    }
+    textarea#input {
+    	background:lightgrey;
+	border:1px solid black;
+	padding:5px;
+    }
+    menu#buttons {
+	background:white;
+	border:1px solid black;
+    }
+    button {
+	border:1px solid white;
+	background:black;
+	color:white;
+	font-family: luxi sans;
+    }
+</style>
+</head>
+<p>Enter EcmaScript 6 Code</p>
+<textarea id=input rows=10 cols=80>
+</textarea>
+<menu id=buttons>
+<button id=shelleval>evaluate keep env</button>
+<button id=evaluate>evaluate</button>
+<button id=ast>ast</button>
+<button id=tokens>tokenize</button>
+<button id=highlight>highlighter</button>
+</menu>
+<p>Results</p>
+<div id=output>
+
+</div>
+<body>
+<script src=tester0.js></script>
+<script src=syntax0.js></script>
+<script>
+window.addEventListener("load", function (e) {
+    var input = document.querySelector("#input");
+    var highlight = document.querySelector("#highlight");
+    var evaluate = document.querySelector("#evaluate");
+    var shelleval = document.querySelector("#shelleval");
+    var ast = document.querySelector("#ast");
+    var tokens = document.querySelector("#tokens");
+    var output = document.querySelector("#output");    
+    highlight.addEventListener("click", function (e) {
+	var text = input.value;
+	var result = syntaxjs.highlight(text);
+	output.innerHTML = "<pre>"+syntaxjs.highlight(result)+"</pre>";
+    }, false);
+    evaluate.addEventListener("click", function (e) {
+	var text = input.value;
+	var result = syntaxjs.toValue(text);
+	output.innerHTML = "<pre>"+result+"</pre>";
+    }, false);
+    shelleval.addEventListener("click", function (e) {
+	var text = input.value;
+	var result = syntaxjs.toValue(text, true);
+	output.innerHTML = "<pre>"+result+"</pre>";
+    }, false);    
+    ast.addEventListener("click", function (e) {
+    	var text = input.value;
+	var result = syntaxjs.createAst(text);
+	output.innerHTML = "<pre>"+syntaxjs.highlight(JSON.stringify(result, null, 4))+"</pre>";
+    }, false);
+    tokens.addEventListener("click", function (e) {
+	var text = input.value;
+	var result = syntaxjs.tokenize(text);
+	output.innerHTML = "<pre>"+syntaxjs.highlight(JSON.stringify(result, null, 4))+"</pre>";
+    }, false);
+}, false);
+</script>
+</body>
+</html>
