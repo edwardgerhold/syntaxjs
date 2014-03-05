@@ -13,6 +13,7 @@
 //#include "lib/parser.js";
 //#include "lib/heap.js";
 //#include "lib/compiler.js";
+//#include "lib/arraycompiler.js";
 //#include "lib/jscodegen.js";
 //#include "lib/api.js";
 //#include "lib/runtime.js";
