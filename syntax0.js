@@ -3850,9 +3850,6 @@ define("parser", ["tables", "tokenizer"], function (tables, tokenize) {
 
     var parseGoalParameters;
     var withError, ifAbrupt, isAbrupt;
-
-
-
     var FinishStatementList = tables.FinishStatementList;
     var FinishSwitchStatementList = tables.FinishSwitchStatementList;
     var PrimaryValues = tables.PrimaryValues;
@@ -3861,28 +3858,19 @@ define("parser", ["tables", "tokenizer"], function (tables, tokenize) {
     var StatementParsers = tables.StatementParsers;
     var PrimaryExpressionByValue = tables.PrimaryExpressionByValue;
     var PrimaryExpressionByType = tables.PrimaryExpressionByType;
-
     var SkipableWhiteSpace = tables.SkipableWhiteSpace;
     var SkipableWhiteSpaceNoLT = tables.SkipableWhiteSpaceNoLT;
     var InOrOfInsOf = tables.InOrOfInsOf;
     var InOrOf = tables.InOrOf;
-
-
     var propKeys = tables.propKeys;
     var BindingIdentifiers = tables.BindingIdentifiers;
     var ExprNoneOfs = tables.ExprNoneOfs;
     var MethodKeyByType = tables.MethodKeyByType;
     var MethodKeyByValue = tables.MethodKeyByValue;
     var StartBinding = tables.StartBinding;
-
-    // ==========================================================
-    // Imported Tables Re-Usable From the Tables Module
-    // ==========================================================
-
     var LPAREN = tables.LPAREN;
     var RPAREN = tables.RPAREN;
     var LPARENOF = tables.LPARENOF;
-
     var Punctuators = tables.Punctuators;
     var WhiteSpaces = tables.WhiteSpaces;
     var LineTerminators = tables.LineTerminators;
@@ -3936,7 +3924,6 @@ define("parser", ["tables", "tokenizer"], function (tables, tokenize) {
     // VERY IMPORTANT
     //
     var lookahead, lookaheadt; // lookahead
-
     var tokens;
     var T = Object.create(null); // current token
     var t; // current token type
@@ -3965,11 +3952,14 @@ define("parser", ["tables", "tokenizer"], function (tables, tokenize) {
     var inStrictMode = false;
 
 
+    // current node pointers
+    // cur is the actual node, the nesting is on the stack,
     var moduleStack = [];
     var curModule;
     var curFunc;
     var functionStack = [];
-
+    
+    // loc information (not completed yet)
     var operator;
     var bytes = 0;
     var start = 0; // pos?
@@ -3983,19 +3973,19 @@ define("parser", ["tables", "tokenizer"], function (tables, tokenize) {
     var lastcolumn = 0;
     var text;
 
+    // compiler / notifier options
     var compile = false;
     var builder = null;
     var cb;
     var notify = false;
 
+    // 
     var stateStack = [];
     var state = "";
-
     function pushState(newState) {
         stateStack.push(state);
         state = newState;
     }
-
     function popState() {
         state = stateStack.pop();
     }
@@ -4013,7 +4003,7 @@ define("parser", ["tables", "tokenizer"], function (tables, tokenize) {
     // Throw Error in Parser with throwError(exObj)
     // ====================================================
 
-    function makeErrorStack(error) {
+    function makeErrorStackString(error) {
         var stack = error.stack;
         var location = "{syntax.js} A Parser Error occured at line " + line + ", column " + column + "\r\n";
         error.stack = location;
@@ -4022,7 +4012,7 @@ define("parser", ["tables", "tokenizer"], function (tables, tokenize) {
     }
 
     function throwError(obj) {
-        makeErrorStack(obj);
+        makeErrorStackString(obj);
         throw obj;
     }
 
@@ -5484,6 +5474,7 @@ define("parser", ["tables", "tokenizer"], function (tables, tokenize) {
             return node;
         }
 
+
         // Fixing the recursion to lhs upwards again
         if (v === "." || v === "[") leftHand = this.MemberExpression(leftHand);
         else if (v === "(" || v === "`") leftHand = this.CallExpression(leftHand);
@@ -5542,7 +5533,8 @@ define("parser", ["tables", "tokenizer"], function (tables, tokenize) {
             node.loc = makeLoc(l1, l1);
             pass("super");
 
-            if (curFunc) curFunc.needsSuper = true;
+            if (curFunc) curFunc.needsSuper = true; //
+            // wird nicht im classDefaultConstructor erkannt sein.!
 
             if (compile) return builder.superExpression(node.loc);
             return node;
@@ -7520,17 +7512,116 @@ define("parser", ["tables", "tokenizer"], function (tables, tokenize) {
 
 
 /*
-############################################################################################################################################################################################################
-    
-    The Heap Memory (ArrayBuffer plus Load and Store)
-    
-############################################################################################################################################################################################################
-*/
+ ############################################################################################################################################################################################################
+
+ The Heap Memory (ArrayBuffer plus Load and Store)
+
+ ############################################################################################################################################################################################################
+ */
 
 define("heap", function (require, exports, module) {
 
+    var heapMgr = exports;
 
+    // should be merged with "byteCode" in "compiler"
+    var byteCode = {
+    "string": 3,
+    "number": 4,
+    "object": 5,
+    "array": 6,
+    "null": 7,
+    "undefined":
+        8
+    };
+    // byteCode should be loaded by "heap" and by "compiler"
 
+    function createHeap(size) {
+        return new Heap(size);
+    }
+
+    function Heap (size) {
+        var heap = Object.create(Heap.prototype);
+        heap._byteCode = byteCode;
+        heap._buffer = new ArrayBuffer(size);
+        heap._sp = 0;
+        return heap;
+    }
+
+    Heap.prototype.resize = function (newSize) {
+        var oldBuffer = this._buffer;
+        var read = new Int8Array(oldBuffer);
+        this._buffer = new ArrayBuffer(newSize);
+        var write = new Int8Array(buffer);
+        for (var i = 0, j = read.length; i < j; i++) write[i] = read[i];
+    };
+
+    // return some array buffers,
+    Heap.prototype.getInt8 = function (size) {
+        return new Int8Array(this._buffer, size);
+    };
+    Heap.prototype.getInt32 = function (size) {
+        return new Int32Array(this._buffer, size);
+    };
+    Heap.prototype.getFloat32 = function (size) {
+        return new Float32Array(this._buffer, size);
+    };
+    Heap.prototype.getFloat64 = function (size) {
+        return new Float64Array(this._buffer, size);
+    };
+
+    //
+    // should redo it with dataview and take an hour
+    // for specifying some methods to load and store
+    // with them i write down what the compiler returns
+    // and from them i load into the runtime
+    // onto the operand stack.
+
+    Heap.prototype.storeNull = function () {
+        var sp = this,_sp;
+        var numBytes = 1;
+        var array = this.getInt8(numBytes);
+        this._sp += numBytes * Int8Array.BYTES_PER_ELEMENT;
+        array[0] = this._byteCode["null"];
+        return sp;
+    };
+
+    // i this "getInt8" is not as cool as saving sp as old_sp and increasing sp by size
+    // and using a dataview to read and write beetween old_sp and sp - dataview is the most generic helpful tool for
+
+    Heap.prototype.storeUndefined = function () {
+    };
+    Heap.prototype.storeArray = function () {
+    };
+    Heap.prototype.storeObject = function () {
+    };
+    Heap.prototype.storeNumber = function () {
+    };
+    Heap.prototype.storeString = function () {
+    };
+
+    // Generic convenient function
+    Heap.prototype.store = function (data) {
+        if (data === null) {
+            return this.storeNull();
+        } else if (typeof data === "undefined") {
+            return this.storeUndefined();
+        } else if (Array.isArray(data)) {
+            return this.storeArray(data);
+        } else if (typeof data === "object") {
+            return this.storeObject(data);
+        } else if (typeof data === "number") {
+            return this.storeNumber(data);
+        } else if (typeof data === "string") {
+            return this.storeString(data);
+        }
+    };
+
+    Heap.prototype.load = function (data) {
+
+    };
+
+exports.createHeap = createHeap;
+return exports;
 });
 
 
@@ -7538,24 +7629,22 @@ define("heap", function (require, exports, module) {
 /*
 ############################################################################################################################################################################################################
 
-    A codegenerator, which transforms the AST into an Array.
-    This is a version, where the builder has to be called on the complete AST, because it goes down recursivly.
-    A second version, which will be the "update" of this one, will do it only the node passed in at a time,
-    which means, that nodes passed in are already put into byte code format.
-    Probably the second version will do heap writes or return one typed array instead of returning nested arrays,
-    like this one, for making it easy.
+This is the flat compiler using heap allocation to store the allocated bytecode pieces. It returns a large array
+in the program node.
 
-    Almost parallel, the runtime.js will be updated to supported interface-driven access to the ir code. That makes
-    it possible to read an array instead of the parser api ast nodes.
+The function expect offsets of the arrays stores in the previous function to store them together with it´s peace.
 
-    In the other version offsets are passed as parameters instead of objects, then i just store the offsets together
-    with the node (in one large typed array).
+requires heap module
 
 ############################################################################################################################################################################################################
 */
 
-define("builder", function (require, exports, module) {
+define("builder",  function (require, exports, module) {
     var builder = exports;
+
+    var heap = require("heap");
+
+    var currentHeap;
 
     var byteCode = {
         "loc": 999,
@@ -7636,9 +7725,11 @@ define("builder", function (require, exports, module) {
        "operator": 3
     };
 
+
     function locArray(loc) {
         return [byteCode["loc"], loc.start.line,loc.start.column, loc.end.line, loc.end.column];
     }
+
     function byteString(str) {
         //var a = [];
         //for (var i = 0; i < str.length; i++) a.push(str.charCodeAt(i));
@@ -7835,7 +7926,7 @@ define("builder", function (require, exports, module) {
     builder.tryStatement = function (block, handler, guard, finalizer, loc) {
         return [
             byteCode["TryStatement"],
-            callBuilder(block),
+            block,
             callBuilder(handler),
             callBuilder(finalizer),
             locArray(loc)

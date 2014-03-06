@@ -4,6 +4,7 @@ if [ -z "$1" ];
 then
     echo "usage: minifiy [name_no_ext]"
     echo "minifies name_no_ext.js to name_no_ext.min.js with ${tool}"
+    echo "by putting it in over stdin and writing up what´s coming from stdout"
     exit
 fi
 

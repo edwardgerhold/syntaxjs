@@ -1,7 +1,7 @@
 /*
     
     syntax.js
-    built with full_build_from_lib
+    built with ./build_syntax
     
 */
 //#include "lib/amd-prolly.js";
@@ -9,7 +9,7 @@
 //#include "lib/i18n.js";
 //#include "lib/semantics.js";
 //#include "lib/tokenizer.js";
-//#include "lib/crockfords-parser.js";
+//#include "lib/earlyerrors.js";
 //#include "lib/parser.js";
 //#include "lib/heap.js";
 //#include "lib/compiler.js";
