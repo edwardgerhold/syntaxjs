@@ -10150,6 +10150,16 @@ define("api", function (require, exports, module) {
     CodeRealm.prototype.toString = CodeRealm_toString;
     CodeRealm.prototype.constructor = CodeRealm;
 
+    CodeRealm.prototype.evalFile = function (filename) {
+	var rf = require("fswraps").readFileSync;
+	if (typeof rf === "function") {
+	    var code = rf(filename);
+	    return this.eval(code);
+	} else {
+	    throw new TypeError("can not read file "+filename+" with fswraps module");
+	}
+    };
+
     CodeRealm.prototype.eval =
     CodeRealm.prototype.toValue = function (code) {
 
@@ -28411,7 +28421,10 @@ define("fswraps", function (require, exports, module) {
             xhr.send(null);
             return xhr.responseText;
         } else if (syntaxjs.system == "worker") {
-            importScripts(name);
+            var xhr = new XMLHttpRequest();
+            xhr.open("GET", name, true);
+            xhr.send(null);
+            return xhr.responseText;
         }
     }
     exports.readFile = readFile;
