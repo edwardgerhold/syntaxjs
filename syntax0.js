@@ -10136,6 +10136,9 @@ define("api", function (require, exports, module) {
 	    },
 	    evalFile: function fileToValue() {
 		return realm.fileToValue.apply(realm, arguments);
+	    },
+	    evalAsync: function evalAsync() {
+		return realm.evalAsync.apply(realm, arguments);
 	    }
 	};
     }
@@ -10162,6 +10165,7 @@ define("api", function (require, exports, module) {
     CodeRealm.prototype.toString = CodeRealm_toString;
     CodeRealm.prototype.constructor = CodeRealm;
 
+    CodeRealm.prototype.fileToValue =
     CodeRealm.prototype.evalFile = function (filename) {
 	var rf = require("fswraps").readFileSync;
 	if (typeof rf === "function") {
@@ -10174,7 +10178,6 @@ define("api", function (require, exports, module) {
 
     CodeRealm.prototype.eval =
     CodeRealm.prototype.toValue = function (code) {
-
 	// overhead save realm
         saveCodeRealm();
         setCodeRealm(this);
@@ -10196,11 +10199,24 @@ define("api", function (require, exports, module) {
         restoreCodeRealm();
         return result;
     };
+    
+    // change name with eval
 
+    CodeRealm.prototype.evalAsync =
+    CodeRealm.prototype.evalFileAsync = function (file) {
+	var realm = this;
+	return require("fswraps").readFileP(name).then(function (code) {
+	    return realm.toValue(code);
+	}, function (err) { 
+	    throw err; 
+	});
+    };
 
     function CodeRealm_toString() {
         return "[object CodeRealm]";
     }
+
+
 
     // ===========================================================================================================
     // Execution Context
@@ -12408,12 +12424,11 @@ define("api", function (require, exports, module) {
     }
 
     function makeMyExceptionText(name, message, callstack) {
-        var text = "";
-        text += "An exception has been thrown!\r\n";
-        text += "exception.name: "+ name + "\r\n";
-        text += "exception.message: " + message + "\n";
-        text += "exception.stack: " + callstack + "\r\n";
-        text += "\r\n";
+        var text = "\n";
+        text += "An [[exception]] has been thrown!\n";
+        text += "[name]: "+ name + "\n";
+        text += "[message]: " + message + "\n";
+        text += "[stack]: " + callstack + "\n";
         return text;
     }
 
@@ -28397,24 +28412,34 @@ if (typeof window != "undefined") {
 // file imports
 // *******************************************************************************************************************************
 
-define("fswraps", function (require, exports, module) {
+define("fswraps", function (require, exports) {
+
+
+    function readFileP(name) {
+	return makePromise(function (resolve, reject) {
+	    return readFile(name, resolve, reject);
+	});	
+    }
 
     function readFile(name, callback, errback) {
+        
         if (syntaxjs.system == "node") {
-            var fs = syntaxjs._nativeRequire("fs");
+            var fs = module.require("fs");
             return fs.readFile(name, function (err, data) {
                 if (err) errback(err);
                 callback(data);
             }, "utf8");
             return true;
+        
         } else if (syntaxjs.system == "browser") {
+        
             var xhr = new XMLHttpRequest();
             xhr.open("GET", name, false);
             xhr.onload = function (e) {
-                callback(xhr.responseText);
+        	resolve(xhr.responseText);
             };
             xhr.onerror = function (e) {
-                errback(xhr.responseText);
+		reject(xhr.responseText);
             };
             xhr.send(null);
             // missing promise
@@ -28422,11 +28447,12 @@ define("fswraps", function (require, exports, module) {
         } else if (syntaxjs.system == "worker") {
             importScripts(name);
         }
+        
     }
 
     function readFileSync(name) {
         if (syntaxjs.system == "node") {
-            var fs = syntaxjs._nativeRequire("fs");
+            var fs = module.require("fs");
             return fs.readFileSync(name, "utf8");
         } else if (syntaxjs.system == "browser") {
             var xhr = new XMLHttpRequest();
@@ -28440,6 +28466,7 @@ define("fswraps", function (require, exports, module) {
             return xhr.responseText;
         }
     }
+    exports.readFileP = readFileP;
     exports.readFile = readFile;
     exports.readFileSync = readFileSync;
 });
@@ -28518,11 +28545,21 @@ define("syntaxjs-worker", function (require, exports, module) {
     return exports;
 });
 
+/*
+
+    replaced old readline interface with repl
+    
+    still has some bugs until i read documentation for again
+    
+    and clean the other stuff up
+
+*/
+
 
 define("syntaxjs-shell", function (require, exports) {
-    
-
-    var fs, readline, rl, prefix, evaluate, startup, evaluateFile, prompt, haveClosedAllParens, shell;
+        
+    var fs, repl, r, prefix, evaluate, startup, evaluateFile, prompt, haveClosedAllParens, shell;
+    var realm, file; 
     
     var defaultPrefix = "es6> ";
     var multilinePrefix = "...> ";
@@ -28533,51 +28570,108 @@ define("syntaxjs-shell", function (require, exports) {
         prefix = defaultPrefix;
 
         startup = function startup() {
+	    realm = syntaxjs.createRealm();
+	    if (process.argv[2]) file = process.argv[2];
             console.time("Uptime");
             fs = module.require("fs");
-            readline = module.require("readline");
-            rl = readline.createInterface({
+            r = repl =module.require("repl");
+            repl.start({
                 input: process.stdin,
-                output: process.stdout
+                output: process.stdout,
+                prompt: prefix,
+                useColors: true,
+                eval: evaluate,
+                ignoreUndefined: true
             });
+            
+            if (file !== undefined) {
+		process.stdin.emit("data", "\n");
+	    }
         };
 
-        evaluate = function evaluate(code, continuation) {
-                var val;
-                // uncomment to debug; then comment out the try block;
-                /*
-                   val = syntaxjs.toValue(code, true);
-                   console.log(val);
-                    if (continuation) setTimeout(continuation, 0); 
-                */    
-                try {
-                    val = syntaxjs.toValue(code, true);
-                } catch (ex) {
-                    val = ex.message + "\n" + ("" + ex.stack).split("\n").join("\r\n");
-                } finally {
-                    console.log(val);
-                    if (continuation) setTimeout(continuation, 0);
+	evaluate = function(code, context, filename, callback) {
+		if (file !== undefined) {
+		    var f = file;
+		    file = undefined;
+		    try {
+			var r = realm.evalFile(f);
+		    } catch (ex) {
+			callback(ex);
+		    }
+		    callback(null, r);
+		}
+
+                if (code === ".break") {
+                    savedInput = "";
+                    prefix = defaultPrefix;
+                    r.prompt = prefix;
+                    callback(null);
+                    return;
                 }
-                
-                
-        };
 
-        evaluateFile = function evaluateFile(file, continuation) {
-            var code;
-            console.log("-evaluating " + file + "-");
-            try {
-                code = fs.readFileSync(file, "utf8");
-            } catch (err) {
-                code = undefined;
-                console.log(file + " not readable!");
-                console.dir(err);
-            }
-            if (code) evaluate(code, continuation);
-        };
+                if (savedInput === "" && code[0] === ".") {
 
-        //
-        // this is some additional hack to emulate multiline input
-        //
+                    if (/^(\.print)/.test(code)) {
+                        code = code.substr(7);
+                        console.log(JSON.stringify(syntaxjs.createAst(code), null, 4));
+                        callback(null);
+                        return;
+                    } else if (/^(\.tokenize)/.test(code)) {
+                        code = code.substr(8);
+                        console.log(JSON.stringify(syntaxjs.tokenize(code), null, 4));
+                        callback(null);
+                        return;
+                    } else if (code === ".quit") {
+                        console.log("Quitting the shell");
+                        process.exit();
+                        return;
+                    } else if (/^(\.load\s)/.test(code)) {
+                        file = code.substr(6);
+                        try {
+                        var r = realm.evalFile(file);
+                        } catch (ex) {
+                    	    callback(ex, null);
+                    	    return;
+                        }
+                        callback(null, r);
+                        return;
+                    } else if (/.help/.test(code)) {
+                        console.log("shell.js> available commands:");
+                        console.log(".print <expression> (print the abstract syntax tree of expression)");
+                        console.log(".tokens <expression> (print the result of the standalone tokenizer)");
+                        console.log(".load <file> (load and evaluate a .js file)");
+                        console.log(".quit (quit the shell with process.exit instead of ctrl-c)");
+			callback(null);
+                        return;
+                    } 
+
+                } 
+
+                if (savedInput) code = savedInput + code;
+                if (haveClosedAllParens(code)) {        
+                    prefix = defaultPrefix;
+                    repl.prompt = prefix;
+                    savedInput = "";
+		    var val;
+    	    	    try {
+                	val = realm.eval(code, true);
+            	    } catch (ex) {
+	                callback(ex);
+	                return;
+            	    } finally {
+                	callback(null, val);
+            	    }
+            	    return;
+                } else {
+                    console.log("multiline");
+                    prefix = multilinePrefix;
+            	    repl.prompt = prefix;
+                    savedInput = code;  
+		    callback(null);
+                    return;
+                }
+                    
+        };
  
         var savedInput ="";
         var isOpenParen = {
@@ -28620,74 +28714,10 @@ define("syntaxjs-shell", function (require, exports) {
         // prompt is now called again, and the savedInput is prepending the new inputted code.
         //
 
-        prompt = function prompt() {
-            
-            rl.question(prefix, function (code) {
-
-                if (code === ".break") {
-                    savedInput = "";
-                    prefix = defaultPrefix;
-                    setTimeout(prompt);
-                    return;
-                }
-
-                if (savedInput === "" && code[0] === ".") {
-
-                    if (/^(\.print)/.test(code)) {
-                        code = code.substr(7);
-                        console.log(JSON.stringify(syntaxjs.createAst(code), null, 4));
-                        setTimeout(prompt);
-                        return;
-                    } else if (/^(\.tokenize)/.test(code)) {
-                        code = code.substr(8);
-                        console.log(JSON.stringify(syntaxjs.tokenize(code), null, 4));
-                        setTimeout(prompt);
-                        return;
-                    } else if (code === ".quit") {
-                        console.log("Quitting the shell");
-                        process.exit();
-                        return;
-                    } else if (/^(\.load\s)/.test(code)) {
-                        file = code.substr(6);
-                        evaluateFile(file, prompt);
-                        return;
-                    } else if (/.help/.test(code)) {
-                        console.log("shell.js> available commands:");
-                        console.log(".print <expression> (print the abstract syntax tree of expression)");
-                        console.log(".tokens <expression> (print the result of the standalone tokenizer)");
-                        console.log(".load <file> (load and evaluate a .js file)");
-                        console.log(".quit (quit the shell with process.exit instead of ctrl-c)");
-                        setTimeout(prompt);
-                        return;
-                    } 
-
-                } 
-
-                if (savedInput) code = savedInput + code;
-            
-                if (haveClosedAllParens(code)) {        
-                    prefix = defaultPrefix;
-                    savedInput = "";
-                    evaluate(code, prompt);
-                    return;
-                } else {
-                    prefix = multilinePrefix;
-                    savedInput = code;  
-                    setTimeout(prompt);
-                    return;
-                }
-                    
-                
-            });
-        };
-
-        
         shell = function main() {
-            var file;
+        
             startup();
-            if (process.argv[2]) file = process.argv[2];
-            if (!file) setTimeout(prompt);
-            else evaluateFile(file, prompt);
+
             process.on("exit", function () {
                 console.log("\nHave a nice day.");
                 console.timeEnd("Uptime");
@@ -28708,8 +28738,6 @@ define("syntaxjs-shell", function (require, exports) {
 define("syntaxjs", function () {
     "use strict";
     
-    var VERSION = "0.0.1";
-
     function pdmacro(v) {
         return {
             configurable: false,
@@ -28718,56 +28746,69 @@ define("syntaxjs", function () {
             writable: false
         };
     }
-
-    var nativeGlobal = typeof window !== "undefined" ? window : typeof global !== "undefined" ? global : typeof importScripts === "function" ? self : {};
     
     var syntaxjs = Object.create(null);
+    var VERSION = "0.0.1";
+    
+    var nativeGlobalObject = typeof window !== "undefined" ? 
+				    window : typeof global !== "undefined" ?
+				    global : typeof importScripts === "function" ? 
+				    self   : {};
+				    
     var syntaxjs_public_api_readonly = {
+    
     // essential functions
-        version: pdmacro(VERSION),
-        tokenize: pdmacro(require("tokenizer")),
-        createAst: pdmacro(require("parser")),
-        toValue: pdmacro(require("runtime")),
+        version: pdmacro(VERSION),			
+        tokenize: pdmacro(require("tokenizer")),				// <-- needs exports fixed
+        createAst: pdmacro(require("parser")),					// <-- needs exports fixed
+        toValue: pdmacro(require("runtime")),					// <-- needs exports fixed
         createRealm: pdmacro(require("api").createPublicCodeRealm),
-        toJsLang: pdmacro(require("js-codegen")),
-    // experimental functions
+        toJsLang: pdmacro(require("js-codegen")),				// <-- needs exports fixed
+        nodeShell: pdmacro(require("syntaxjs-shell")),				// <-- needs exports fixed
+
+    // experimental functions 
+    
         readFile: pdmacro(require("fswraps").readFile),	
         readFileSync: pdmacro(require("fswraps").readFileSync),
-        nodeShell: pdmacro(require("syntaxjs-shell")),
+
         subscribeWorker: pdmacro(require("syntaxjs-worker").subscribeWorker),
         evalAsync: pdmacro(require("runtime").ExecuteAsync),
-        evalAsyncXfrm: pdmacro(require("runtime").ExecuteAsyncTransform)
-        //    toLLVM: pdmacro(require("llvm-codegen"))
-        ,
+        evalAsyncXfrm: pdmacro(require("runtime").ExecuteAsyncTransform),
         arraycompile: pdmacro(require("arraycompiler").compile)
     };
+    
     var syntaxjs_highlighter_api = {
         highlight: pdmacro(require("highlight"))
     };
     
+    // 1. The following block sets a property on syntaxjs
+    // telling, which "system" has been detected (currently, only poorly "browser, node, worker" are supported, doesn´t work in spidermonkey or nashorn)
+    // 2. the public properties are defined with defineProperties.
+    // in the browser block the highlighter app is added 
+    
     if (typeof window == "undefined" && typeof self !== "undefined" && typeof importScripts !== "undefined") {
+    // worker export
         syntaxjs.system = "worker";
- 
+    
     } else if (typeof window !== "undefined") {
+    // browser export
         syntaxjs.system = "browser";
         syntaxjs_highlighter_api.highlightElements = pdmacro(require("highlight-gui").highlightElements),
         syntaxjs_highlighter_api.startHighlighterOnLoad = pdmacro(require("highlight-gui").startHighlighterOnLoad)
- 
+    
     } else if (typeof process !== "undefined") {    
-        
+    // node js export
         if (typeof exports !== "undefined") exports.syntaxjs = syntaxjs;       
         syntaxjs.system = "node";
-        syntaxjs._nativeRequire = nativeGlobal.require;
-        syntaxjs._nativeModule = module;
-        
+        syntaxjs._require = module.require;
+        syntaxjs._module = module;
         Object.defineProperties(exports, syntaxjs_public_api_readonly);
         Object.defineProperties(exports, syntaxjs_highlighter_api)
     }
-
-    // ASSIGN properties to a SYNTAXJS object
+    
+    // ASSIGN properties to a SYNTAXJS object (all platforms)
     Object.defineProperties(syntaxjs, syntaxjs_public_api_readonly);
     Object.defineProperties(syntaxjs, syntaxjs_highlighter_api);
-    
     return syntaxjs;
 });
 
