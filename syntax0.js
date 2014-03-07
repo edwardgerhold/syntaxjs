@@ -10128,6 +10128,18 @@ define("api", function (require, exports, module) {
     //
     // ===========================================================================================================
 
+    function createPublicCodeRealm () {
+    	var realm = CreateRealm();
+	return { 
+	    eval: function toValue() {
+		return realm.toValue.apply(realm, arguments);
+	    },
+	    evalFile: function fileToValue() {
+		return realm.fileToValue.apply(realm, arguments);
+	    }
+	};
+    }
+
     function CodeRealm(intrinsics, gthis, genv, ldr) {
         "use strict";
         var cr = Object.create(CodeRealm.prototype);
@@ -13746,7 +13758,8 @@ define("api", function (require, exports, module) {
 
     exports.IndirectEval = IndirectEval;
     exports.CreateRealm = CreateRealm;
-
+    exports.createPublicCodeRealm = createPublicCodeRealm;
+    
     function CreateRealm () {
 
         saveCodeRealm();
@@ -28710,13 +28723,15 @@ define("syntaxjs", function () {
     
     var syntaxjs = Object.create(null);
     var syntaxjs_public_api_readonly = {
+    // essential functions
         version: pdmacro(VERSION),
         tokenize: pdmacro(require("tokenizer")),
         createAst: pdmacro(require("parser")),
         toValue: pdmacro(require("runtime")),
-        createRealm: pdmacro(require("api").CreateRealm),
+        createRealm: pdmacro(require("api").createPublicCodeRealm),
         toJsLang: pdmacro(require("js-codegen")),
-        readFile: pdmacro(require("fswraps").readFile),
+    // experimental functions
+        readFile: pdmacro(require("fswraps").readFile),	
         readFileSync: pdmacro(require("fswraps").readFileSync),
         nodeShell: pdmacro(require("syntaxjs-shell")),
         subscribeWorker: pdmacro(require("syntaxjs-worker").subscribeWorker),
