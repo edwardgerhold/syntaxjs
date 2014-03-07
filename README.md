@@ -8,10 +8,55 @@ It´s "feature complete" like ES6 already is, but the features aren´t
 completed yet. Some thing fail, some don´t, some didn´t before, 
 some do now. 
 
-_Usage_
+_New: Multiple Realms_
+
+Creation of an eval realm.
+You can have as many realms as you want.
+Each realm has own environments, and is independent from each other.
+The intrinsic objects (the global builtins) are created once each realm.
+About optimizing that code i know something on my list, but that´s out of scope here.
+Just install syntaxjs for node.js.
+
+```bash
+npm install -g  #to install syntaxjs from it´s directory
+```
+
+Then call it in you javascript to evaluate es6 code.
+
+
+```javascript
+var realm = require("syntaxjs").createRealm();
+realm.eval("let x = 10");
+realm.eval("x"); 
+// 10
+
+var realm2 = require("syntaxjs").createRealm();
+realm2.eval("x");
+// Error: GetValue: 'x' is an unresolvable Reference
+
+realm2.eval("let x = 20");
+realm2.eval("x");
+// 20
+realm.eval("x");
+// 10
+```
+
+Caveat: Objects are coming out as their ES6 internal representation.
+I know about adding adapters and transformers for or to create JSON message passing,
+it´s on the list. But for now, you can use [[.Get]], [[.DefineOwnProperty]], [[.Set]],
+[[.GetOwnProperty]] on the objects returned directly. If you want to know, how they
+work, refer to Ecma-262 Edition 6.
+
+
+
+_Regular Usage_
 It can be tried with simply typing node syntax0.js. 
 
+```bash
 linux-www5:~ # node syntax0.js [exec_me.js]
+````
+
+executes a file or just starts the shell (a readline) when called without arguments
 
 ```javascript
 es6> let f = x => x*x;
@@ -30,9 +75,42 @@ es6> obj[s]()
 Test
 es6>
 undefined
-es6>
+es6> let name = "Edward";
+undefined
+es6> String.raw(`${name} is stupid`);
+Edward is stupid
+es6> String.raw`${name} is stupid`;
+Edward is a stupid
+es6> ObjeOct.create(null)
+{ Bindings: {}, Symbols: {}, Prototype: null, Extensible: true }
+es6> for (let i = 0; 
+...> i < 3; i++) console.log(i);
+0
+1
+2
+undefined
+es6> .print id
+{
+    "type": "Program",
+    "body": [
+	{
+	    "type": "ExpressionStatement",
+	    "expression": {
+		"type": "Identifier",
+		"name": "id",
+		"loc": {}
+	    },
+	    "loc": {}
+	},
+    ],
+    "loc": {}
+}
 ```
+Even with some weeks of nothing happening around the project, this is a living
+creature.
 
+And almost all of the stuff written below will be done in around a year. Some
+thing will be done in a couple of weeks.
 
 _New is /lib_
 New overview: Meanwhile i´ve cut the Megabyte of code into the
@@ -41,11 +119,12 @@ i didn´t develop very far. And what was going on. Softwareengineering
 is right and empiric with the knowledge about codes. The mess i see
 is that what they said.
 But i´m optimistic and like do continue. Pieces like the parser look
-now very small and handy to browse and to edit. Scrolling around doesnt
+now very small and handy to browse and to edit. Scrolling around doesn´t
 let you end up in some other code block. Hey. The API module is around
 500k, and i think first i will cut out the make of the intrinsics and
 then the making of the global object.
 
+Yes, with adding /lib i have seen some desastrous engineering left beetween the main parts.
 
 _Known Bugs, _
 * Generators: The code Evaluation Stack is not fixed. The tool started with Evaluate(node) as indirect recursion function (being called again from a function called by Evaluate), but using a stack instead of real recursion makes resumability available, which is needed for the generator. I had little trouble imagining resuming and suspending a context, coz i forgot to directly use a stack machine. The problem can be fixed locally just for the generator i estimate by thinking it out.
