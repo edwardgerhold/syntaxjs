@@ -28436,10 +28436,10 @@ define("fswraps", function (require, exports) {
             var xhr = new XMLHttpRequest();
             xhr.open("GET", name, false);
             xhr.onload = function (e) {
-        	resolve(xhr.responseText);
+    		callback(xhr.responseText);
             };
             xhr.onerror = function (e) {
-		reject(xhr.responseText);
+		errback(xhr.responseText);
             };
             xhr.send(null);
             // missing promise
@@ -28545,21 +28545,10 @@ define("syntaxjs-worker", function (require, exports, module) {
     return exports;
 });
 
-/*
-
-    replaced old readline interface with repl
-    
-    still has some bugs until i read documentation for again
-    
-    and clean the other stuff up
-
-*/
-
 
 define("syntaxjs-shell", function (require, exports) {
-        
-    var fs, repl, r, prefix, evaluate, startup, evaluateFile, prompt, haveClosedAllParens, shell;
-    var realm, file; 
+    
+    var fs, readline, rl, prefix, evaluate, startup, evaluateFile, prompt, haveClosedAllParens, shell;
     
     var defaultPrefix = "es6> ";
     var multilinePrefix = "...> ";
@@ -28570,108 +28559,43 @@ define("syntaxjs-shell", function (require, exports) {
         prefix = defaultPrefix;
 
         startup = function startup() {
-	    realm = syntaxjs.createRealm();
-	    if (process.argv[2]) file = process.argv[2];
             console.time("Uptime");
             fs = module.require("fs");
-            r = repl =module.require("repl");
-            repl.start({
+            readline = module.require("readline");
+            rl = readline.createInterface({
                 input: process.stdin,
-                output: process.stdout,
-                prompt: prefix,
-                useColors: true,
-                eval: evaluate,
-                ignoreUndefined: true
+                output: process.stdout
             });
-            
-            if (file !== undefined) {
-		process.stdin.emit("data", "\n");
-	    }
         };
 
-	evaluate = function(code, context, filename, callback) {
-		if (file !== undefined) {
-		    var f = file;
-		    file = undefined;
-		    try {
-			var r = realm.evalFile(f);
-		    } catch (ex) {
-			callback(ex);
-		    }
-		    callback(null, r);
-		}
-
-                if (code === ".break") {
-                    savedInput = "";
-                    prefix = defaultPrefix;
-                    r.prompt = prefix;
-                    callback(null);
-                    return;
+        evaluate = function evaluate(code, continuation) {
+                var val;
+                try {
+                    val = syntaxjs.toValue(code, true);
+                } catch (ex) {
+                    val = ex.message + "\n" + ("" + ex.stack).split("\n").join("\r\n");
+                } finally {
+                    console.log(val);
+                    if (continuation) setTimeout(continuation, 0);
                 }
-
-                if (savedInput === "" && code[0] === ".") {
-
-                    if (/^(\.print)/.test(code)) {
-                        code = code.substr(7);
-                        console.log(JSON.stringify(syntaxjs.createAst(code), null, 4));
-                        callback(null);
-                        return;
-                    } else if (/^(\.tokenize)/.test(code)) {
-                        code = code.substr(8);
-                        console.log(JSON.stringify(syntaxjs.tokenize(code), null, 4));
-                        callback(null);
-                        return;
-                    } else if (code === ".quit") {
-                        console.log("Quitting the shell");
-                        process.exit();
-                        return;
-                    } else if (/^(\.load\s)/.test(code)) {
-                        file = code.substr(6);
-                        try {
-                        var r = realm.evalFile(file);
-                        } catch (ex) {
-                    	    callback(ex, null);
-                    	    return;
-                        }
-                        callback(null, r);
-                        return;
-                    } else if (/.help/.test(code)) {
-                        console.log("shell.js> available commands:");
-                        console.log(".print <expression> (print the abstract syntax tree of expression)");
-                        console.log(".tokens <expression> (print the result of the standalone tokenizer)");
-                        console.log(".load <file> (load and evaluate a .js file)");
-                        console.log(".quit (quit the shell with process.exit instead of ctrl-c)");
-			callback(null);
-                        return;
-                    } 
-
-                } 
-
-                if (savedInput) code = savedInput + code;
-                if (haveClosedAllParens(code)) {        
-                    prefix = defaultPrefix;
-                    repl.prompt = prefix;
-                    savedInput = "";
-		    var val;
-    	    	    try {
-                	val = realm.eval(code, true);
-            	    } catch (ex) {
-	                callback(ex);
-	                return;
-            	    } finally {
-                	callback(null, val);
-            	    }
-            	    return;
-                } else {
-                    console.log("multiline");
-                    prefix = multilinePrefix;
-            	    repl.prompt = prefix;
-                    savedInput = code;  
-		    callback(null);
-                    return;
-                }
-                    
         };
+
+        evaluateFile = function evaluateFile(file, continuation) {
+            var code;
+            console.log("-evaluating " + file + "-");
+            try {
+                code = fs.readFileSync(file, "utf8");
+            } catch (err) {
+                code = undefined;
+                console.log(file + " not readable!");
+                console.dir(err);
+            }
+            if (code) evaluate(code, continuation);
+        };
+
+        //
+        // this is some additional hack to emulate multiline input
+        //
  
         var savedInput ="";
         var isOpenParen = {
@@ -28714,10 +28638,74 @@ define("syntaxjs-shell", function (require, exports) {
         // prompt is now called again, and the savedInput is prepending the new inputted code.
         //
 
-        shell = function main() {
-        
-            startup();
+        prompt = function prompt() {
+            
+            rl.question(prefix, function (code) {
 
+                if (code === ".break") {
+                    savedInput = "";
+                    prefix = defaultPrefix;
+                    setTimeout(prompt);
+                    return;
+                }
+
+                if (savedInput === "" && code[0] === ".") {
+
+                    if (/^(\.print)/.test(code)) {
+                        code = code.substr(7);
+                        console.log(JSON.stringify(syntaxjs.createAst(code), null, 4));
+                        setTimeout(prompt);
+                        return;
+                    } else if (/^(\.tokenize)/.test(code)) {
+                        code = code.substr(8);
+                        console.log(JSON.stringify(syntaxjs.tokenize(code), null, 4));
+                        setTimeout(prompt);
+                        return;
+                    } else if (code === ".quit") {
+                        console.log("Quitting the shell");
+                        process.exit();
+                        return;
+                    } else if (/^(\.load\s)/.test(code)) {
+                        file = code.substr(6);
+                        evaluateFile(file, prompt);
+                        return;
+                    } else if (/.help/.test(code)) {
+                        console.log("shell.js> available commands:");
+                        console.log(".print <expression> (print the abstract syntax tree of expression)");
+                        console.log(".tokens <expression> (print the result of the standalone tokenizer)");
+                        console.log(".load <file> (load and evaluate a .js file)");
+                        console.log(".quit (quit the shell with process.exit instead of ctrl-c)");
+                        setTimeout(prompt);
+                        return;
+                    } 
+
+                } 
+
+                if (savedInput) code = savedInput + code;
+            
+                if (haveClosedAllParens(code)) {        
+                    prefix = defaultPrefix;
+                    savedInput = "";
+                    evaluate(code, prompt);
+                    return;
+                } else {
+                    prefix = multilinePrefix;
+                    savedInput = code;  
+                    setTimeout(prompt);
+                    return;
+                }
+                    
+                
+            });
+        };
+
+        
+        shell = function main() {
+            var file;
+            startup();
+            if (process.argv[2]) file = process.argv[2];
+            if (!file) setTimeout(prompt);
+            else evaluateFile(file, prompt);
             process.on("exit", function () {
                 console.log("\nHave a nice day.");
                 console.timeEnd("Uptime");
