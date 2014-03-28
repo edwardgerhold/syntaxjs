@@ -2709,29 +2709,21 @@ define("tokenizer", ["tables"], function (tables) {
     var PunctToExprName = tables.PunctToExprName;
     var TypeOfToken = tables.TypeOfToken;
     var Types = tables.Types;
-
     var createCustomToken = null;
-
     var tokenTable;
-
     var sourceCode;
     var i, j;
     var ch, lookahead;
     var cb;
-
     var result = [];
-
     var token_count;
-
     var line = 1,
         column = 0;
     var lines = [];
     var loc = true;
     var offset = 0;
-
     var pos;
     var filename = null;
-
     var lastTokenType;
     var templateParse = false;
     var inputElementDiv = 1;
@@ -2740,6 +2732,13 @@ define("tokenizer", ["tables"], function (tables) {
     var inputElementGoal = inputElementRegExp;
 
 
+    /*
+	CST trying
+    */
+    var withExtras = true;
+    /*
+    
+    */
 
     function Assert(test, message) {
         if (!test) throwError(new SyntaxError("tokenizer: "+message));
@@ -2830,11 +2829,15 @@ define("tokenizer", ["tables"], function (tables) {
         return false;
     }
 
+    // CST edit 1: gather spaces of same type to one token
+    
     function WhiteSpace() {
         var spaces = "";
+        var spc;
         if (WhiteSpaces[ch]) {
             spaces += ch;
-            while (WhiteSpaces[lookahead]) {
+            spc = ch;
+            while (lookahead === spc) {
                 next();
                 spaces += ch;
             }
@@ -3019,6 +3022,7 @@ define("tokenizer", ["tables"], function (tables) {
             } */
             return pushtoken("Punctuator", ch, undefined, PunctToExprName[ch]);
         }
+                
         var punct = sourceCode[i] + sourceCode[i + 1] + sourceCode[i + 2] + sourceCode[i + 3];
         if (Punctuators[punct]) return (i += 3), pushtoken("Punctuator", punct, undefined, PunctToExprName[punct]);
         punct = punct[0] + punct[1] + punct[2];
@@ -3253,17 +3257,14 @@ define("tokenizer", ["tables"], function (tables) {
     }
 
     function tokenize(jstext, callback) {
-
         resetVariables();
-
         if (jstext) sourceCode = jstext;
         if (callback) cb = callback;
-
+        i = 0;
         ch = sourceCode[i];
         lookahead = sourceCode[i + 1];
-        var token;
-        for (i = i, j = sourceCode.length; i < j; next()) {
-
+        var token;        
+        for (j = sourceCode.length-1; i < j; next()) {
             offset = i;
             token = WhiteSpace() || LineTerminator() || DivPunctuator() || NumericLiteral() || Punctuation() || KeywordOrIdentifier() || StringLiteral() || TemplateLiteral();
             if (!token) {
@@ -3271,7 +3272,6 @@ define("tokenizer", ["tables"], function (tables) {
             }
 
         }
-
         //result.tokenTable = tokenTable;
         return result;
 
@@ -3413,9 +3413,10 @@ define("parser", ["tables", "tokenizer"], function (tables, tokenize) {
 
     "use strict";
 
+
+
     var i18n = require("i18n-messages");
     var EarlyErrors = require("earlyerrors").EarlyErrors;
-
     var parseGoalParameters;
     var withError, ifAbrupt, isAbrupt;
     var FinishStatementList = tables.FinishStatementList;
@@ -3499,13 +3500,32 @@ define("parser", ["tables", "tokenizer"], function (tables, tokenize) {
     var inStrictMode = false;
 
 
-    // current node pointers
-    // cur is the actual node, the nesting is on the stack,
-    var moduleStack = [];
-    var curModule;
-    var curFunc;
-    var functionStack = [];
+    /*
+	for the CST research
+    */
+    
+    var withExtras = true;
+    var extraBuffer = [];
+    function flushBuffer() {
+	var b = extraBuffer;
+	extraBuffer = [];
+	return b;
+    }
+    function intoBuffer(t) { 
+	extraBuffer.push(t); 
+    }
+    
+    /*
+    
+    */
 
+
+    // pointer to current Node defining the Scope
+    var currentNodeScope;
+    var nodeScopeStack = [];
+    // pointer to current Node
+    var currentNode;
+    var currentNodes = [];
 
     // loc information (not completed yet)
     var operator;
@@ -3526,7 +3546,6 @@ define("parser", ["tables", "tokenizer"], function (tables, tokenize) {
     var builder = null;
     var cb;
     var notify = false;
-
     // 
     var stateStack = [];
     var state = "";
@@ -3575,33 +3594,9 @@ define("parser", ["tables", "tokenizer"], function (tables, tokenize) {
         if (!test) throwError(new SyntaxError(message));
     }
 
-
 //
 // Parameter
 //
-
-
-
-    function DefaultDuplicateCheck(/* ...lists */) {
-        // O(n) each list.
-        // They should be checked against a memo[id]
-        // already when being read in
-        // Means: This function here will not survive.
-        var dupes = [];
-        for (var i = 0, j = arguments.length; i < j; i++) {
-            var list = arguments[i];
-            for (var k = 0, l = list.length; k < l; k++) {
-                var id = list[i];
-                SyntaxAssert(!memo[id], "duplicate identifier in list: "+id)
-                memo[id] = true;
-            }
-        }
-        // They should be checked against a memo[id]
-        // already when being read in (!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! do this !!!)
-
-        // reading addLexBinding and addVarBinding in Static Semantics i had already the idea and already wrote SyntaxAssert(!hasLexBinding(name), name + " is a dupe ..") 
-    }
-
 
     var staticSemantics;
 
@@ -3734,7 +3729,7 @@ define("parser", ["tables", "tokenizer"], function (tables, tokenize) {
 
 
         function addVarBinding(name, param) {
-            SyntaxAssert(!hasVarBinding(name) || !curFunc.strict, name + " is a duplicate identifier in variable scope!");
+            SyntaxAssert(!hasVarBinding(name) || !currentNodeScope.strict, name + " is a duplicate identifier in variable scope!");
             VarEnv[name] = param === undefined ? true : param;
         }
 
@@ -3816,7 +3811,7 @@ define("parser", ["tables", "tokenizer"], function (tables, tokenize) {
     // debug the parser
     // ========================================================================================================
     // parserdebug
-    var debugmode = false;
+    var debugmode = true;
 
     function debug() {
         if (debugmode && typeof importScripts !== "function") {
@@ -3836,10 +3831,20 @@ define("parser", ["tables", "tokenizer"], function (tables, tokenize) {
     // ========================================================================================================
 
     var nodeId = 1;
+    
+    
 
     function Node(type /*, linkToken*/ ) {
         var node = Object.create(null);
         node.ID = ++nodeId;
+        /*
+         for CST
+        */
+        currentNodes.push(currentNode);
+        currentNode = node;
+        /*
+        *
+        */
         //staticSemantics.put(type);
         node.type = type;
         return node;
@@ -3868,10 +3873,10 @@ define("parser", ["tables", "tokenizer"], function (tables, tokenize) {
             t = tokens[i + b];
             if (t === undefined) return undefined;
             lookahead = t.value;
-            if (WhiteSpaces[lookahead[0]]) continue;
             lookaheadt = t.type;
-            if (LineTerminators[lookahead]) ltNext = true;
-        } while (WhiteSpaces[lookahead[0]]);
+            if (WhiteSpaces[lookaheadt]) continue;
+            if (LineTerminators[lookaheadt]) ltNext = true;
+        } while (WhiteSpaces[lookaheadt]);
         return lookahead;
     }
 
@@ -3946,7 +3951,6 @@ define("parser", ["tables", "tokenizer"], function (tables, tokenize) {
         if (lookahead === C) next();
         else syntaxError(C);
         next();
-        return C;
     }
 
     function advance(C) {
@@ -3975,56 +3979,60 @@ define("parser", ["tables", "tokenizer"], function (tables, tokenize) {
     function eos() {
         return i >= j;
     }
-
     var lastloc;
-
-
     function hasNext() {
         return lookahead != undefined;
     }
 
+    var captureExtraTypes = {
+        __proto__:null,
+	"WhiteSpace":true,
+	"MultiLineComment":true,
+	"LineComment":true,
+    };
+    var captureExtraValues = {
+	__proto__: null,
+	"(": true,
+	")": true,
+	"[": true,
+	"]": true,
+	"}": true,
+	"{": true,
+	";": true,
+	":": true,	// will capture the colon of the label, but also of the ternary
+	"?": true,	// maybe complete it with "?"
+	",": true
+    };
+    
+    function nextToken () {
+	return tokenizer.next();
+    }
 
-    function next(goal) {
-
+    function next() {
         if (i < j) {
-
             i += 1;
-
             lastloc = loc;
-
-
-            T = tokens[i] || {};
-
+            T = tokens[i];  // this function really works on an array 
             if (T) {
-
                 t = T.type;
-                if (SkipableWhiteSpace[t]) {
-                    return next();
-                }
-
-                v = T.value;
+        	    if (withExtras && captureExtraTypes[t]) intoBuffer(T);
+                if (SkipableWhiteSpace[t]) return next();
+                v = T.value;                
+                if (withExtras && captureExtraValues[v]) intoBuffer(T);
                 loc = T.loc;
-
                 if (loc && loc.start) {
                     line = loc.start.line;
                     column = loc.start.column;
-                } else {
-                    line = -1;
-                    column = -1;
-                }
+                } 
             } else {
                 t = v = undefined;
             }
-
-            lookahead = righthand(tokens, i);
-
-            return T;
-
+            lookahead = righthand(tokens, i);	// i see, i have to update that. it just picks them off the array. 
+            return T;				// origin: first the tokenizer tokenized html for my syntax highlighter
         } else if (i == j) {
             T = v = t = undefined;
             return false;
         }
-
         throw error(new RangeError("parse: next(): Unexpected end. Mean called once to often. Should stop on j = length."));
     }
 
@@ -4142,8 +4150,9 @@ define("parser", ["tables", "tokenizer"], function (tables, tokenize) {
             if (v === ",") {
                 if (lookahead !== ",") pass(",");
                 continue;
-            } /*else if (v !== "]") {
-             throwError(new SyntaxError("buggy element list"));
+            } 
+            /*else if (v !== "]") {
+                    throwError(new SyntaxError("buggy element list"));
              }*/
 
         } while (v && v !== "]");
@@ -4154,6 +4163,7 @@ define("parser", ["tables", "tokenizer"], function (tables, tokenize) {
 
     function ArrayExpression() {
         var node, l1, l2;
+
         if (v === "[") {
             l1 = loc && loc.start;
 
@@ -4682,13 +4692,12 @@ define("parser", ["tables", "tokenizer"], function (tables, tokenize) {
                 break;
             default:
                 node = this.SequenceExpression(list, l1, l2);
-                if (parenthesised) return this.ExpressionStatement(node, l1, l2);
+                if (parenthesised) return this.ParenthesizedExpressionNode(node, l1, l2);
                 else return node;
         }
     }
 
     parser.ExpressionNoIn = ExpressionNoIn;
-
     function ExpressionNoIn() {
         noInStack.push(isNoIn);
         isNoIn = true;
@@ -4698,22 +4707,27 @@ define("parser", ["tables", "tokenizer"], function (tables, tokenize) {
     }
 
     parser.AssignmentExpressionNoIn = AssignmentExpressionNoIn;
-
     function AssignmentExpressionNoIn(parent) {
-
         noInStack.push(isNoIn);
         isNoIn = true;
-
         var node = this.AssignmentExpression(parent);
-
         isNoIn = noInStack.pop();
         return node;
     }
 
     parser.ParenthesizedExpression = ParenthesizedExpression;
-
     function ParenthesizedExpression() {
         return this.Expression(undefined, true);
+    }
+    
+    // temporary until it replaces Expression, ParenthesizedExpression
+    // and has Code in runtime.js for evaluation["ParenthesizedExpression"]
+    function ParenthesizedExpressionNode(exprNode, startLoc, endLoc) {
+	var node = Node("ParenthesizedExpression");
+	node.expression = exprNo
+    de;
+	node.loc = makeLoc(startLoc, endLoc);
+	return node;
     }
 
     parser.CoverParenthesizedExpression = CoverParenthesizedExpression;
@@ -4741,19 +4755,15 @@ define("parser", ["tables", "tokenizer"], function (tables, tokenize) {
         l1 = loc && loc.start;
 
         if (t === "Identifier" && lookahead === "=>") {
-
             expr = this.Identifier();
             cover = true;
-
         } else if (v === "(") {
             if (lookahead === "for") return this.GeneratorComprehension();
 
             cover = true;
-
             parens.push(v);
 
             while (next()) {
-
                 if (v === "(") {
                     parens.push(v);
                 } else if (v === ")") {
@@ -4787,7 +4797,6 @@ define("parser", ["tables", "tokenizer"], function (tables, tokenize) {
                 EarlyErrors(node);
                 if (compile) return builder.arrowExpression(node.params, node.body, node.loc);
                 return node;
-
             } else {
                 return this.CoverParenthesizedExpression(covered);
             }
@@ -4946,7 +4955,7 @@ define("parser", ["tables", "tokenizer"], function (tables, tokenize) {
 
         l1 = loc && loc.start;
         debug("At assignmentexpression with " + t + ", " + v);
-
+        
         if (!yieldIsId && v === "yield") node = this.YieldExpression(parent);
         if (!node) node = this.CoverParenthesisedExpressionAndArrowParameterList();
 
@@ -5021,15 +5030,12 @@ define("parser", ["tables", "tokenizer"], function (tables, tokenize) {
 
     function SuperExpression() {
         if (v === "super") {
-
             var l1 = loc && loc.start;
             var node = Node("SuperExpression");
             node.loc = makeLoc(l1, l1);
             pass("super");
-
-            if (curFunc) curFunc.needsSuper = true; //
+            if (currentNodeScope) currentNodeScope.needsSuper = true; //
             // wird nicht im classDefaultConstructor erkannt sein.!
-
             if (compile) return builder.superExpression(node.loc);
             return node;
         }
@@ -5268,8 +5274,8 @@ define("parser", ["tables", "tokenizer"], function (tables, tokenize) {
 
         node = Node("MethodDefinition");
 
-        functionStack.push(curFunc)
-        curFunc = node;
+        nodeScopeStack.push(currentNodeScope)
+        currentNodeScope = node;
 
         if (v =="[") node.computed = true;
         node.id = this.PropertyKey();
@@ -5291,7 +5297,7 @@ define("parser", ["tables", "tokenizer"], function (tables, tokenize) {
         EarlyErrors(node);
         if (compile) return builder.methodDefinition(node.id, node.params, node.body, node.strict, node.static, node.generator, node.loc);
 
-        curFunc = functionStack.pop();
+        currentNodeScope = nodeScopeStack.pop();
 
         return node;
 
@@ -5388,7 +5394,8 @@ define("parser", ["tables", "tokenizer"], function (tables, tokenize) {
             pass("...");
             var node = Node("SpreadExpression");
             node.argument = this.AssignmentExpression();
-            node.loc = makeLoc(l1, node.argument.loc.end);
+            var l2 = node.argument.loc && node.argument.loc.end; 
+            node.loc = makeLoc(l1, l2);
             if (compile) return builder["spreadExpression"](node.argument, node.loc);
             return node;
         }
@@ -5508,8 +5515,8 @@ define("parser", ["tables", "tokenizer"], function (tables, tokenize) {
                 node.generator = false;
             }
 
-            functionStack.push(curFunc);
-            curFunc = node;
+            nodeScopeStack.push(currentNodeScope);
+            currentNodeScope = node;
 
 
             node.id = null;
@@ -5570,7 +5577,7 @@ define("parser", ["tables", "tokenizer"], function (tables, tokenize) {
             staticSemantics.popContainer();
             staticSemantics.popEnvs();
 
-            curFunc = functionStack.pop();
+            currentNodeScope = nodeScopeStack.pop();
 
             EarlyErrors(node);
             return node;
@@ -5839,8 +5846,8 @@ define("parser", ["tables", "tokenizer"], function (tables, tokenize) {
             node = Node("ModuleDeclaration");
             node.strict = true;
 
-            moduleStack.push(curModule);
-            curModule = node;
+            nodeScopeStack.push(currentNodeScope);
+            currentNodeScope = node;
 
             node.exportEntries = [];
             node.knownExports = [];
@@ -5861,7 +5868,7 @@ define("parser", ["tables", "tokenizer"], function (tables, tokenize) {
             staticSemantics.popContainer();
             staticSemantics.popEnvs();
 
-            curModule = moduleStack.pop();
+            currentNodeScope = nodeScopeStack.pop();
 
             return node;
         }
@@ -6056,7 +6063,7 @@ define("parser", ["tables", "tokenizer"], function (tables, tokenize) {
                 var names = BoundNames(node.exports);
                 for (var i = 0, j = names.length; i < j; i++) {
                     var name = names[i];
-                    curModule.exportEntries.push({ ModuleRequest: null, ImportName: null, LocalName: name, ExportName: name })
+                    currentNodeScope.exportEntries.push({ ModuleRequest: null, ImportName: null, LocalName: name, ExportName: name })
                 }
 
 
@@ -6111,17 +6118,17 @@ define("parser", ["tables", "tokenizer"], function (tables, tokenize) {
 
     function Statement(a, b, c, d) {
         var node;
+        var x = i;
         debug("statement at " + v);
         var fn = this[StatementParsers[v]];
         if (fn) node = fn.call(this, a, b, c, d);
         if (!node) node = (this.LabelledStatement(a, b, c, d) || this.Expression(a, b, c, d));
         skip(";");
+        if (x == i) next();
         return node;
     }
 
     /*
-
-
      Iteration
      */
     parser.IterationStatement = IterationStatement;
@@ -6574,8 +6581,7 @@ define("parser", ["tables", "tokenizer"], function (tables, tokenize) {
 
         next();
 
-        curFunc = node;
-        curModule = node;
+        currentNodeScope = node;
 
         node.body = this.SourceElements(node);
 
@@ -6589,6 +6595,7 @@ define("parser", ["tables", "tokenizer"], function (tables, tokenize) {
          */
 
         staticSemantics.popContainer();
+        
         if (compile) return builder["program"](node.body, loc);
         return node;
     }
@@ -6900,7 +6907,11 @@ define("parser", ["tables", "tokenizer"], function (tables, tokenize) {
     function CreateTheAST(tokens, options, inlineLexBool) {
         resetVariables(tokens, inlineLexBool);
         //try {
+        
+        
         ast = parser.Program();
+
+        
         /*} catch (ex) {
          console.log("[Parser Exception]")
          console.dir(ex);
@@ -6911,6 +6922,9 @@ define("parser", ["tables", "tokenizer"], function (tables, tokenize) {
          ast = ex;
          throw ex;
          }*/
+        
+         
+         
         return ast;
     }
 
@@ -6966,6 +6980,8 @@ define("parser", ["tables", "tokenizer"], function (tables, tokenize) {
     exports.registerObserver = registerObserver;
     exports.unregisterObserver = unregisterObserver;
 
+    exports.enableExtras = enableExtras;
+    exports.disableExtras = disableExtras;
 
     var observers = [];
     function registerObserver(f) {
@@ -7003,6 +7019,42 @@ define("parser", ["tables", "tokenizer"], function (tables, tokenize) {
         if (boolCompile !== undefined) compile = !! boolCompile;
         return true;
     }
+    
+    
+   /*
+    * prototyping CST Extras with a decorator 
+    * fails with endless loop when starting the shell
+    */
+
+    function enableExtras () {
+        console.log("Enabling CST");
+        Object.keys(parser).forEach(function (k) {      
+            if (typeof parser[k] === "function" && !parser[k].wrapped) {       
+                if (k == "next" || k == "scan" || k == "pass" || k.indexOf("JSON")===0) return; // for my hacky wacky system
+                console.log("wrapping "+k)
+                var originalFunction = parser[k];
+                var parseFunction = function () {                
+            	    var b = flushBuffer();
+                    var node = originalFunction.call(this, arguments);
+                    if (extraBuffer.length && typeof node === "object" && node) {
+                        node.extras = b;                                                
+                    }
+                    return node;
+                };
+                parseFunction.wrapped = originalFunction;
+                parser[k] = parseFunction;
+            }
+        });
+    }
+    function disableExtras () {
+        Object.keys(parser).forEach(function (k) {            
+            if (typeof parser[k] === "function" && parser[k].wrapped) 
+            parser[k] = parser[k].wrapped;
+        });    
+    }    
+
+    // enableExtras(); 
+    // uncomment for endless loop
 
     return exports;
 });
@@ -25895,12 +25947,16 @@ define("runtime", ["parser", "api", "slower-static-semantics"], function (parse,
     }
 
     evaluation.ExpressionStatement = ExpressionStatement;
-
     function ExpressionStatement(node) {
         return Evaluate(node.expression);
     }
-    evaluation.SequenceExpression = SequenceExpression;
 
+    evaluation.ParenthesizedExpression = ParenthesizedExpression;
+    function ParenthesizedExpression (node) {
+	return Evaluate(node.expression);
+    }
+
+    evaluation.SequenceExpression = SequenceExpression;
     function SequenceExpression(node) {
         var exprRef, exprValue;
         var list = node.sequence;
