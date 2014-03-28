@@ -190,11 +190,11 @@ function define(id, deps, factory) {
         if (typeof deps === "function") {
             factory = deps;
             deps = null;
-            try {
+//            try {
                 returned = factory(m.require, m.exports, m);
-            } catch (ex) {
-                throw ex;
-            }
+//            } catch (ex) {
+//                throw ex;
+//            }
         } else {
             returned = require.cache[id] = deps;
         }
@@ -203,11 +203,11 @@ function define(id, deps, factory) {
             imports.push((d = require.cache[deps[i]]) ? d.exports : null);
             children.push(d ? d : null);
         }
-        try {
+//        try {
             returned = factory.apply(factory, imports);
-        } catch (ex) {
-            throw ex;
-        }
+//        } catch (ex) {
+//            throw ex;
+//        }
     }
     m.exports = returned !== undefined ? returned : exports;
     require.cache[id] = m;
@@ -2713,9 +2713,10 @@ define("tokenizer", ["tables"], function (tables) {
     var tokenTable;
     var sourceCode;
     var i, j;
-    var ch, lookahead;
+    var token;
+    var ch, lookahead;	// lookahead0 and lookahead1
     var cb;
-    var result = [];
+    var tokens = [];
     var token_count;
     var line = 1,
         column = 0;
@@ -2725,20 +2726,13 @@ define("tokenizer", ["tables"], function (tables) {
     var pos;
     var filename = null;
     var lastTokenType;
-    var templateParse = false;
     var inputElementDiv = 1;
     var inputElementRegExp = 2;
     var inputElementTemplateTail = 3;
     var inputElementGoal = inputElementRegExp;
 
 
-    /*
-	CST trying
-    */
     var withExtras = true;
-    /*
-    
-    */
 
     function Assert(test, message) {
         if (!test) throwError(new SyntaxError("tokenizer: "+message));
@@ -2819,7 +2813,7 @@ define("tokenizer", ["tables"], function (tables) {
             token = createCustomToken(token);
         }
 
-        result.push(token);
+        tokens.push(token);
         if (cb) cb(token);
         return token;
     }
@@ -2829,8 +2823,6 @@ define("tokenizer", ["tables"], function (tables) {
         return false;
     }
 
-    // CST edit 1: gather spaces of same type to one token
-    
     function WhiteSpace() {
         var spaces = "";
         var spc;
@@ -2855,7 +2847,7 @@ define("tokenizer", ["tables"], function (tables) {
             quotecharacter = ch;
             string += ch;
 
-            big: while (next()) {
+            big: while (next() != undefined) {
                 string += ch;
                 if (ch === quotecharacter) {
                     n = string.length - 2;
@@ -2889,7 +2881,31 @@ define("tokenizer", ["tables"], function (tables) {
 
     function TemplateLiteral() {
         var template = "";
+                
         if (ch == '`') {
+    	    if (inputElementGoal !== inputElementTemplateTail) {
+    		// inputElementGoal == inputElementTemplateTail;
+
+    		// collect loop
+    		// pushtoken templatehead
+    		// if ` ..  ${
+
+		// pushtoken nosubstitemplate
+		// if ` .. `
+    	    } else {
+    		
+    		inputElementGoal = inputElementRegExp
+    		// collect loop
+    		
+    		// pushtoken templatemiddle
+    		// if collect } to {
+
+    		// pushtoken templatetail
+    		// if collect } to `
+    	    }
+
+	    // remove and replace in evaluation the code
+	            
             template += ch;
             while (lookahead !== "`") {
                 if (ch === undefined) throw SyntaxError("unexpected end of Token Stream");
@@ -2946,9 +2962,7 @@ define("tokenizer", ["tables"], function (tables) {
                 expr += ch;
                 next();
                 if (i > j) throw new SyntaxError("Unexpected end of line, while parsing RegularExpressionLiteral at line " + line + ", column " + column);
-
-                big: while (i < j) {
-
+                big: while (next()) {
                     if (ch === "/") {
                         n = expr.length - 1;
                         do {
@@ -3225,57 +3239,47 @@ define("tokenizer", ["tables"], function (tables) {
 
     function next() {
         if (i < j) {
-            i += 1;
-            ch = sourceCode[i];
+    	    i += 1;
+            ch = lookahead;
             lookahead = sourceCode[i + 1];
-            return true;
-        } else if (i === j) return false;
+            return ch;
+        } else if (i === j) return;
         else throw new RangeError("UNEXPECTED END OF INPUT STREAM.");
-        return false;
     }
 
     function resetVariables() {
-
         //tokenTable = Object.create(null);
-        sourceCode = "";
-        result = [];
-        cb = undefined;
-        ch = undefined;
-        lookahead = undefined;
-        i = -1;
-        j = 0;
+
+        tokens = [];
         line = 1;
         column = 0;
+        i = 0;
+        j = sourceCode.length;
+        ch = sourceCode[0];
+        lookahead = sourceCode[1];
     }
 
     function Error() {
         if (i >= 0 && i < j - 1) {
             var se = new SyntaxError("Can not parse token.");
-            se.stack = "syntax.js tokenizer,\nfunction tokenize,\n does not recognize actual input. ch=" + ch + ", lookahead=" + lookahead + ", line=" + line + ", col=" + column + ", offset=" + offset + " \n";
+            se.stack = "syntax.js tokenizer,\nfunction tokenize,\n does not recognize actual input. ch=" + ch + ", lookahead=" + lookahead + ", line=" + line + ", col=" + column + ", offset=" + offset + ", i="+i+" " +sourceCode+" \n";
             throw se;
         }
     }
 
     function tokenize(jstext, callback) {
-        resetVariables();
         if (jstext) sourceCode = jstext;
         if (callback) cb = callback;
-        i = 0;
-        ch = sourceCode[i];
-        lookahead = sourceCode[i + 1];
-        var token;        
-        for (j = sourceCode.length; i < j; next()) {
-            offset = i;
+        resetVariables();
+        do { 
+    	    offset = i;
             token = WhiteSpace() || LineTerminator() || DivPunctuator() || NumericLiteral() || Punctuation() || KeywordOrIdentifier() || StringLiteral() || TemplateLiteral();
-            if (!token) {
-                if (i > 0 && i < j - 1) Error();
-            }
-
-        }
-        //result.tokenTable = tokenTable;
-        return result;
-
+            next();
+        } while (lookahead !== undefined);
+        //tokens.tokenTable = tokenTable;
+        return tokens;
     }
+
 
     var exports = {};
     exports.LineTerminator = LineTerminator;
@@ -3292,42 +3296,14 @@ define("tokenizer", ["tables"], function (tables) {
     exports.tokenize = tokenize;
     tokenize.tokenizer = exports;
 
-    function updateOffsetTrackingObject(counter) {
-        counter.position = i;
-        counter.line = line;
-        counter.column = column;
-    }
-
-    function inlineSetup(src, pos) {
-        sourceCode = src;
-        i = pos - 1;
-        j = sourceCode.length;
-    }
-
-    function inlineLex(goal, counter) {
-        if (i < j) {
-            next();
-            offset = i;
-            var token = WhiteSpace() || LineTerminator() || DivPunctuator(goal) || NumericLiteral() || StringLiteral() || TemplateLiteral() || Punctuation() || KeywordOrIdentifier();
-            if (counter) updateOffsetTrackingObject(counter);
-            return token;
-        } else {
-            throw "tokenize: over end";
-        }
-    }
-
     var customTokenMaker = null;
     function setCustomTokenMaker(func) {
-
         if (typeof func === null) {
             customTokenMaker = null;
         } else if (typeof func === "function") {
             customTokenMaker = func;
         } else throw TypeError("tokenmaker must be a function your_token <- maker(my_token) to return a custom token. Please fix that and try again.");
     }
-
-    tokenize.inlineSetup = inlineSetup;
-    tokenize.inlineLex = inlineLex;
     tokenize.setCustomTokenMaker = setCustomTokenMaker;
 
     return tokenize;
@@ -6910,25 +6886,16 @@ define("parser", ["tables", "tokenizer"], function (tables, tokenize) {
 
     function CreateTheAST(tokens, options, inlineLexBool) {
         resetVariables(tokens, inlineLexBool);
-        //try {
-        
-        
-        ast = parser.Program();
-
-        
-        /*} catch (ex) {
-         console.log("[Parser Exception]")
-         console.dir(ex);
-         console.log(ex.name);
-         console.log(ex.message);
-         console.log(ex.stack);
-
-         ast = ex;
-         throw ex;
-         }*/
-        
-         
-         
+        try {
+            ast = parser.Program();
+        } catch (ex) {
+            console.log("[Parser Exception]")
+            console.dir(ex);
+            console.log(ex.name);
+            console.log(ex.message);
+            console.log(ex.stack);
+            ast = ex;
+        }
         return ast;
     }
 
