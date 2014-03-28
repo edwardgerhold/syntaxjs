@@ -3264,7 +3264,7 @@ define("tokenizer", ["tables"], function (tables) {
         ch = sourceCode[i];
         lookahead = sourceCode[i + 1];
         var token;        
-        for (j = sourceCode.length-1; i < j; next()) {
+        for (j = sourceCode.length; i < j; next()) {
             offset = i;
             token = WhiteSpace() || LineTerminator() || DivPunctuator() || NumericLiteral() || Punctuation() || KeywordOrIdentifier() || StringLiteral() || TemplateLiteral();
             if (!token) {
@@ -3811,7 +3811,7 @@ define("parser", ["tables", "tokenizer"], function (tables, tokenize) {
     // debug the parser
     // ========================================================================================================
     // parserdebug
-    var debugmode = true;
+    var debugmode = false;
 
     function debug() {
         if (debugmode && typeof importScripts !== "function") {
@@ -4664,7 +4664,6 @@ define("parser", ["tables", "tokenizer"], function (tables, tokenize) {
         var hasStop = typeof stop === "string";
 
         if (!parenthesised && (ExprNoneOfs[v] || (v === "let" && lookahead === "["))) return null;
-
         do {
             debug("expr at " + v);
 
@@ -4688,6 +4687,7 @@ define("parser", ["tables", "tokenizer"], function (tables, tokenize) {
                 break;
             case 1:
                 node = list[0];
+                if (parenthesised) return this.ParenthesizedExpressionNode(node, l1, l2);
                 return this.ExpressionStatement(node, l1, l2);
                 break;
             default:
@@ -4722,12 +4722,12 @@ define("parser", ["tables", "tokenizer"], function (tables, tokenize) {
     
     // temporary until it replaces Expression, ParenthesizedExpression
     // and has Code in runtime.js for evaluation["ParenthesizedExpression"]
+    parser.ParenthesizedExpressionNode = ParenthesizedExpressionNode;
     function ParenthesizedExpressionNode(exprNode, startLoc, endLoc) {
-	var node = Node("ParenthesizedExpression");
-	node.expression = exprNo
-    de;
-	node.loc = makeLoc(startLoc, endLoc);
-	return node;
+	   var node = Node("ParenthesizedExpression");
+	   node.expression = exprNode;
+	   node.loc = makeLoc(startLoc, endLoc);
+	   return node;
     }
 
     parser.CoverParenthesizedExpression = CoverParenthesizedExpression;
@@ -4757,6 +4757,8 @@ define("parser", ["tables", "tokenizer"], function (tables, tokenize) {
         if (t === "Identifier" && lookahead === "=>") {
             expr = this.Identifier();
             cover = true;
+            
+
         } else if (v === "(") {
             if (lookahead === "for") return this.GeneratorComprehension();
 
@@ -4783,12 +4785,14 @@ define("parser", ["tables", "tokenizer"], function (tables, tokenize) {
         }
 
         if (cover) {
+                
 
             if (v === "=>") {
                 node = Node("ArrowExpression");
                 node.kind = "arrow";
                 node.strict = true;
                 node.expression = true;
+                
                 node.params = (expr ? [expr] : this.ArrowParameterList(covered));
                 pass("=>");
                 node.body = this.ConciseBody(node);
@@ -7053,7 +7057,7 @@ define("parser", ["tables", "tokenizer"], function (tables, tokenize) {
         });    
     }    
 
-    // enableExtras(); 
+     enableExtras(); 
     // uncomment for endless loop
 
     return exports;
