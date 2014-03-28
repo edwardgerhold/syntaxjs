@@ -3275,7 +3275,7 @@ define("tokenizer", ["tables"], function (tables) {
     	    offset = i;
             token = WhiteSpace() || LineTerminator() || DivPunctuator() || NumericLiteral() || Punctuation() || KeywordOrIdentifier() || StringLiteral() || TemplateLiteral();
             next();
-        } while (lookahead !== undefined);
+        } while (ch !== undefined);
         //tokens.tokenTable = tokenTable;
         return tokens;
     }
