@@ -2730,26 +2730,14 @@ define("tokenizer", ["tables"], function (tables) {
     var inputElementRegExp = 2;
     var inputElementTemplateTail = 3;
     var inputElementGoal = inputElementRegExp;
-
-
     var withExtras = true;
-
-    function Assert(test, message) {
-        if (!test) throwError(new SyntaxError("tokenizer: "+message));
-    }
-
-    function nextLine() {
-        lines[line] = column;
-        ++line;
-        column = 0;
-        return line;
-    }
 
     var AllowedLastChars = {
         ")": true,
         "]": true,
         "}": true,
         ";": true,
+        ":": true,
         "--": true,
         "++": true
     };
@@ -2759,48 +2747,55 @@ define("tokenizer", ["tables"], function (tables) {
         "--": true,
         "++": true
     };
+
     var PunctOrLT = {
         "Punctuator": true,
         "LineTerminator": true
     };
 
-    function pushtoken(type, value, computed, details, isLT, isWS) {
-        var token = Object.create(null);
+    function Assert(test, message) {
+        if (!test) throwError(new SyntaxError("tokenizer: "+message));
+    }
+    function nextLine() {
+        lines[line] = column;
+        ++line;
+        column = 0;
+        return line;
+    }
 
-        /*    var oid = token._oid_ = newNodeId();
-         tokenTable[oid] = token;
-         */
+    function pushtoken(type, value, computed, longName) {
+        var isWS = type === "WhiteSpace";
+        var isLT = type === "LineTerminator";
+        /* replace by replacing pushtoken */
 
-        if (!isWS) lastTokenType = type;
+        token = Object.create(null);
+
+        if (isWS === false) lastTokenType = type;
+
         token.type = type;
-        token.goal = details;
+        token.goal = longName;
         token.value = value;
+        token.computed =  computed;
 
-        if (PunctOrLT[type]) {
-            /*
-             if (type === "Punctuator") {
-             if (lookahead === undefined && !AllowedLastChars[value]) throw SyntaxError("Unexpected end of input stream");
-             }
-             */
-            if (!OneOfThesePunctuators[value]) inputElementGoal = inputElementRegExp;
+        if (inputElementGoal != inputElementTemplateTail) {
+            if (PunctOrLT[type]) {
+                /*if (type === "Punctuator") if (lookahead === undefined && !AllowedLastChars[value]) throw SyntaxError("Unexpected end of input stream");*/
+                if (!OneOfThesePunctuators[value]) inputElementGoal = inputElementRegExp;
+            } else inputElementGoal = inputElementDiv;
+        }
 
-        } else inputElementGoal = inputElementDiv;
-
+        // produce loc information
 
         token.offset = offset;
-
         token.loc = {
             __proto__: null,
             source: filename,
             start: {
                 line: line,
                 column: column
-                ,
             }
         };
-
-        if (value) column += value.length;
-
+        if (value != undefined) column += value.length;
         token.loc.end = {
             __proto__: null,
             line: line,
@@ -2808,18 +2803,16 @@ define("tokenizer", ["tables"], function (tables) {
         };
 
         if (isLT && (!(value === "\r" && lookahead === "\n"))) nextLine();
-
-        if (createCustomToken) {
-            token = createCustomToken(token);
-        }
-
+        if (createCustomToken) token = createCustomToken(token);
         tokens.push(token);
         if (cb) cb(token);
+        // emit("token", token);
+        next();
         return token;
     }
 
     function LineTerminator() {
-        if (LineTerminators[ch]) return pushtoken("LineTerminator", ch, undefined, undefined, true);
+        if (LineTerminators[ch]) return pushtoken("LineTerminator", ch);
         return false;
     }
 
@@ -2833,21 +2826,24 @@ define("tokenizer", ["tables"], function (tables) {
                 next();
                 spaces += ch;
             }
-            return pushtoken("WhiteSpace", spaces, undefined, undefined, undefined, true);
+            return pushtoken("WhiteSpace", spaces);
         }
         return false;
     }
 
     function StringLiteral() {
+        // please collect: raw string
+        // and value string
         var quotecharacter;
         var string = "";
+        var raw = "";
         var multiline = false;
         var n;
         if (Quotes[ch]) {
             quotecharacter = ch;
             string += ch;
 
-            big: while (next() != undefined) {
+            big: while (next()) {
                 string += ch;
                 if (ch === quotecharacter) {
                     n = string.length - 2;
@@ -2880,43 +2876,47 @@ define("tokenizer", ["tables"], function (tables) {
     }
 
     function TemplateLiteral() {
-        var template = "";
-                
-        if (ch == '`') {
-    	    if (inputElementGoal !== inputElementTemplateTail) {
-    		// inputElementGoal == inputElementTemplateTail;
+        var template="";
 
-    		// collect loop
-    		// pushtoken templatehead
-    		// if ` ..  ${
+            if (ch == "`" && (inputElementGoal !== inputElementTemplateTail)) {
 
-		// pushtoken nosubstitemplate
-		// if ` .. `
-    	    } else {
-    		
-    		inputElementGoal = inputElementRegExp
-    		// collect loop
-    		
-    		// pushtoken templatemiddle
-    		// if collect } to {
+    		    inputElementGoal = inputElementTemplateTail;
 
-    		// pushtoken templatetail
-    		// if collect } to `
+                next();
+                while ((ch + lookahead) != "${") {  // doubles constant factor of ch each character (tl = 2n)
+                    template += ch;
+                    next();
+                    if (ch == "`") {
+                        template += "`";
+                        inputElementGoal = inputElementDiv;
+                        console.log("NOSUBST "+template);
+                        return pushtoken("NoSubstitutionTemplate", template);
+                    }
+                }
+                template += ch; // $
+                next();
+                template += ch; // {
+                console.log("HEAD "+template);
+                return pushtoken("TemplateHead", template);
+
+    	    } else if (ch == "}") {
+                while ((ch+lookahead) != "${") {
+                    if (ch == "`") {
+                        template += ch;
+                        inputElementGoal = inputElementDiv;
+                        console.log("TAIL "+template);
+                        return pushtoken("TemplateTail", template);
+                    }
+                    template += ch;
+                    next();
+                }
+                template += ch; // $
+                next();
+                template += ch; // {
+                console.log("MIDDLE "+template);
+                return pushtoken("TemplateMiddle", template);
     	    }
 
-	    // remove and replace in evaluation the code
-	            
-            template += ch;
-            while (lookahead !== "`") {
-                if (ch === undefined) throw SyntaxError("unexpected end of Token Stream");
-                next();
-                template += ch;
-                // escape tracken.
-            }
-            next();
-            template += ch;
-            return pushtoken("TemplateLiteral", template, template.substr(1, template.length - 2));
-        }
         return false;
     }
 
@@ -2993,50 +2993,31 @@ define("tokenizer", ["tables"], function (tables) {
     }
 
     function DivPunctuator() {
-        var ok;
+        var tok;
         if (ch === "/") {
-
-            if (ok = Comments()) return ok;
-
+            if (tok = Comments()) return tok;
             if (inputElementGoal === inputElementRegExp) {
-                // saveTheDot();
-
-                if (ok = RegularExpressionLiteral()) {
+                if (tok = RegularExpressionLiteral()) {
                     inputElementGoal = inputElementDiv;
-                    return ok;
+                    return tok;
                 } else inputElementGoal = inputElementDiv;
-                // restoreTheDot();
             }
-
             if (inputElementGoal === inputElementDiv) {
-
                 if (ch + lookahead === "/=") {
                     next();
                     return pushtoken("Punctuator", "/=", undefined, PunctToExprName["/="]);
                 } else {
                     return pushtoken("Punctuator", ch, undefined, PunctToExprName[ch]);
                 }
-
             }
-
         }
         return false;
     }
 
     function Punctuation() {
-        if (ParensSemicolonComma[ch]) {
+        if (inputElementGoal === inputElementTemplateTail && ch == "}") return false;
 
-/*            if (LPAREN[ch]) {
-                parens.push(ch);
-            } else if (RPAREN[ch]) {
-                var p = parens.pop();
-                if (LPARENOF[ch] !== p) {
-
-                }
-            } */
-            return pushtoken("Punctuator", ch, undefined, PunctToExprName[ch]);
-        }
-                
+        if (ParensSemicolonComma[ch]) return pushtoken("Punctuator", ch, undefined, PunctToExprName[ch]);
         var punct = sourceCode[i] + sourceCode[i + 1] + sourceCode[i + 2] + sourceCode[i + 3];
         if (Punctuators[punct]) return (i += 3), pushtoken("Punctuator", punct, undefined, PunctToExprName[punct]);
         punct = punct[0] + punct[1] + punct[2];
@@ -3078,7 +3059,7 @@ define("tokenizer", ["tables"], function (tables) {
 
     function NumericLiteral() {
         var number = "",
-            details, computed = 0;
+            longName, computed = 0;
         if (ch === "0" && NumericLiteralLetters[lookahead]) {
             number += ch;
             next();
@@ -3088,7 +3069,7 @@ define("tokenizer", ["tables"], function (tables) {
                     next();
                     number += ch;
                 }
-                details = "HexLiteral";
+                longName = "HexLiteral";
                 computed = +number;
             } else if ((ch === "b" || ch === "B") && BinaryDigits[lookahead]) {
                 number += ch;
@@ -3096,7 +3077,7 @@ define("tokenizer", ["tables"], function (tables) {
                     next();
                     number += ch;
                 }
-                details = "BinaryLiteral";
+                longName = "BinaryLiteral";
                 computed = 0;
                 for (var a = 2, b = number.length - 1; a <= b; a++)
                     computed += (+(number[a]) << (b - a));
@@ -3106,10 +3087,10 @@ define("tokenizer", ["tables"], function (tables) {
                     next();
                     number += ch;
                 }
-                details = "OctalLiteral";
+                longName = "OctalLiteral";
                 computed = +(parseInt(number.substr(2), 8).toString(10));
             }
-            return pushtoken("NumericLiteral", number, computed, details);
+            return pushtoken("NumericLiteral", number, computed, longName);
         } else if (DecimalDigits[ch] || (ch === "." && DecimalDigits[lookahead])) {
             number = DecimalDigitsHelp(number);
             return pushtoken("NumericLiteral", number, +number, "DecimalLiteral");
@@ -3243,13 +3224,14 @@ define("tokenizer", ["tables"], function (tables) {
             ch = lookahead;
             lookahead = sourceCode[i + 1];
             return ch;
-        } else if (i === j) return;
-        else throw new RangeError("UNEXPECTED END OF INPUT STREAM.");
+        } else if (i >= j) {
+
+            throw new RangeError("UNEXPECTED END OF INPUT STREAM.");
+        }
     }
 
     function resetVariables() {
         //tokenTable = Object.create(null);
-
         tokens = [];
         line = 1;
         column = 0;
@@ -3259,10 +3241,11 @@ define("tokenizer", ["tables"], function (tables) {
         lookahead = sourceCode[1];
     }
 
-    function Error() {
-        if (i >= 0 && i < j - 1) {
-            var se = new SyntaxError("Can not parse token.");
-            se.stack = "syntax.js tokenizer,\nfunction tokenize,\n does not recognize actual input. ch=" + ch + ", lookahead=" + lookahead + ", line=" + line + ", col=" + column + ", offset=" + offset + ", i="+i+" " +sourceCode+" \n";
+    function throwError(se) {
+        if (i > -1 && i < j) {
+            if (se === undefined) se = new SyntaxError("Can not parse token.");
+            var oldstack = se.stack;
+            se.stack = "syntax.js tokenizer,\nfunction tokenize,\n does not recognize actual input. ch=" + ch + ", lookahead=" + lookahead + ", line=" + line + ", col=" + column + ", offset=" + offset + ", i="+i+" " +sourceCode+" \n" + oldstack;
             throw se;
         }
     }
@@ -3273,10 +3256,11 @@ define("tokenizer", ["tables"], function (tables) {
         resetVariables();
         do { 
     	    offset = i;
-            token = WhiteSpace() || LineTerminator() || DivPunctuator() || NumericLiteral() || Punctuation() || KeywordOrIdentifier() || StringLiteral() || TemplateLiteral();
-            next();
+            token = WhiteSpace() || LineTerminator() || DivPunctuator() || NumericLiteral() || TemplateLiteral() || Punctuation() || KeywordOrIdentifier() || StringLiteral();
+            if (i === offset) next();
         } while (ch !== undefined);
         //tokens.tokenTable = tokenTable;
+
         return tokens;
     }
 
@@ -3307,7 +3291,8 @@ define("tokenizer", ["tables"], function (tables) {
     tokenize.setCustomTokenMaker = setCustomTokenMaker;
 
     return tokenize;
-});
+
+    });
 
 /*
  * Created by root on 06.03.14.
@@ -4055,6 +4040,8 @@ define("parser", ["tables", "tokenizer"], function (tables, tokenize) {
     parser.ClassExpression = ClassExpression;
     parser.TemplateLiteral = TemplateLiteral;
 
+
+
     function ClassExpression() {
         if (v === "class") {
             // Einfach gemacht.
@@ -4066,15 +4053,23 @@ define("parser", ["tables", "tokenizer"], function (tables, tokenize) {
     }
 
     function TemplateLiteral() {
-        if (t === "TemplateLiteral") {
+        if (t === "TemplateHead" || t === "NoSubstitutionTemplate") {
             var l1, l2;
             l1 = loc && loc.start;
             var node = Node("TemplateLiteral");
-            node.value = v;
+            node.spans = [T];
+            if (t !== "NoSubstitutionTemplate") {
+                while (t !== "TemplateTail") {
+                    next(/*inputelementtemplatetail*/);
+                    node.spans.push(T);
+                }
+            } else {
+                node.noSubstitutionTemplate = true;
+            }
             l2 = loc && loc.end;
             node.loc = makeLoc(l1, l2);
             pass(v);
-            return compile ? builder["templateLiteral"](node.value, node.loc) : node;
+            return compile ? builder["templateLiteral"](node.spans, node.loc) : node;
         }
         return null;
     }
@@ -26455,6 +26450,7 @@ define("runtime", ["parser", "api", "slower-static-semantics"], function (parse,
         return R;
     }
 
+    /*
     function TemplateStrings(node, raw) {
         var strings = [];
 
@@ -26473,7 +26469,7 @@ define("runtime", ["parser", "api", "slower-static-semantics"], function (parse,
             if (raw) {
                 /*
             strings = TRV(head).concat(TRV(middle)).concat(TRV(tail));
-            */
+            *//*
                 if (sparseVars[i] === undefined) { // auf Span
                     strings.push(sparseSpans[i]);
                 } else { // auf Element
@@ -26482,7 +26478,7 @@ define("runtime", ["parser", "api", "slower-static-semantics"], function (parse,
             } else {
                 /*
             strings = TV(head).concat(TV(middle)).concat(TV(tail));
-            */
+            *//*
                 if (sparseVars[i] === undefined) { // auf Span
                     // strings.push(sparseSpans[i]);
                 } else { // auf Element
@@ -26492,8 +26488,33 @@ define("runtime", ["parser", "api", "slower-static-semantics"], function (parse,
         }
         return strings;
     }
+    */
+    var isTemplateElement = {
+        __proto__:null,
+        "TemplateHead":true,
+        "TemplateMiddle": true,
+        "TemplateTail": true,
+        "NoSubstitutionTemplate": true
+    };
+
+    function TemplateStrings(node, raw) {
+        var list = [];
+        var spans = node.spans;
+        var span, type;
+        for (var i = 0, j = spans.length; i < j; i++) {
+            span = spans[i];
+            type = span.type;
+            if (raw && isTemplateElement[type]) {
+                list.push(span);
+            } else if (!raw && !isTemplateElement[type]) {
+                list.push(span);
+            }
+        }
+        return list;
+    }
 
     function SubstitutionEvaluation(siteObj) {
+
         var len = +Get(siteObj, "length");
         var results = [];
         for (var i = 0; i < len; i++) {
@@ -26510,10 +26531,15 @@ define("runtime", ["parser", "api", "slower-static-semantics"], function (parse,
         return results;
     }
 
+
     function GetTemplateCallSite(templateLiteral) {
+
         if (templateLiteral.siteObj) return templateLiteral.siteObj;
+
         var cookedStrings = TemplateStrings(templateLiteral, false); // die expressions ??? bei mir jedenfalls gerade
-        var rawStrings = TemplateStrings(templateLiteral, true); // strings 
+        var rawStrings = TemplateStrings(templateLiteral, true); // strings
+
+
         var count = Math.max(cookedStrings.length, rawStrings.length);
         var siteObj = ArrayCreate(count);
         var rawObj = ArrayCreate(count);
@@ -28694,6 +28720,7 @@ define("syntaxjs-shell", function (require, exports) {
         prompt = function prompt() {
             
             rl.question(prefix, function (code) {
+                if (code == "") return setTimeout(prompt);
 
                 if (code === ".break") {
                     savedInput = "";
@@ -28701,9 +28728,7 @@ define("syntaxjs-shell", function (require, exports) {
                     setTimeout(prompt);
                     return;
                 }
-
                 if (savedInput === "" && code[0] === ".") {
-
                     if (/^(\.print)/.test(code)) {
                         code = code.substr(7);
                         console.log(JSON.stringify(syntaxjs.createAst(code), null, 4));
@@ -28719,7 +28744,7 @@ define("syntaxjs-shell", function (require, exports) {
                         process.exit();
                         return;
                     } else if (/^(\.load\s)/.test(code)) {
-                        file = code.substr(6);
+                        var file = code.split(/\s/)[1]; // substr(6);
                         evaluateFile(file, prompt);
                         return;
                     } else if (/.help/.test(code)) {
@@ -28732,10 +28757,8 @@ define("syntaxjs-shell", function (require, exports) {
                         return;
                     } 
 
-                } 
-
+                }
                 if (savedInput) code = savedInput + code;
-            
                 if (haveClosedAllParens(code)) {        
                     prefix = defaultPrefix;
                     savedInput = "";
@@ -28747,12 +28770,9 @@ define("syntaxjs-shell", function (require, exports) {
                     setTimeout(prompt);
                     return;
                 }
-                    
-                
             });
         };
 
-        
         shell = function main() {
             var file;
             startup();
