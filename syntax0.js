@@ -7057,7 +7057,7 @@ define("parser", ["tables", "tokenizer"], function (tables, tokenize) {
         });    
     }    
 
-     enableExtras(); 
+    // enableExtras(); 
     // uncomment for endless loop
 
     return exports;
