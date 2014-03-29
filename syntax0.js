@@ -240,6 +240,7 @@ function require(deps, factory) {
 
 
 
+
 define("tables", function (require, exports, module) {
 
     "use strict";
@@ -1097,10 +1098,10 @@ define("tables", function (require, exports, module) {
     /** WARUM habe ich das ding nochmal geschrieben ***/
     var TypeOfToken = {
         __proto__: null,
-        "\"use strict\"": "Directive",
-        "'use strict'": "Directive",
-        "\"use asm\"": "Directive",
-        "'use asm'": "Directive",
+        "\"use strict\"": "StringLiteral",
+        "'use strict'": "StringLiteral",
+        "\"use asm\"": "StringLiteral",
+        "'use asm'": "StringLiteral",
         "{": "Punctuator",
         "(": "Punctuator",
         ")": "Punctuator",
@@ -1580,6 +1581,27 @@ define("tables", function (require, exports, module) {
     };
 
 
+    var isDirective = {
+        __proto__:null,
+        "\"use strict\"":true,
+        "\'use strict\'":true,
+        "\"use asm\"":true,
+        "\'use asm\'":true
+    };
+    var isStrictDirective = {
+        __proto__:null,
+        "\"use strict\"":true,
+        "\'use strict\'":true
+    };
+    var isAsmDirective = {
+        __proto__:null,
+        "\"use asm\"":true,
+        "\'use asm\'":true
+    };
+
+    exports.isDirective = isDirective;
+    exports.isStrictDirective = isStrictDirective;
+    exports.isAsmDirective = isAsmDirective;
 
     exports.FinishStatementList = FinishStatementList;
     exports.FinishSwitchStatementList = FinishSwitchStatementList;
@@ -3334,11 +3356,9 @@ define("tokenizer", function (require, exports) {
         ch = undefined;
         lookahead = sourceCode[0];
         next();
-
         do {
     	    offset = i;
             WhiteSpace() || LineTerminator() || DivPunctuator() || NumericLiteral() ||  Punctuation() || KeywordOrIdentifier() || StringLiteral() || TemplateLiteral();
-            //if (i === offset) next();
         } while (ch !== undefined);
         return tokens;
     }
@@ -3459,11 +3479,7 @@ define("earlyerrors", function () {
  */
 
 define("parser", ["tables", "tokenizer"], function (tables, tokenize) {
-
     "use strict";
-
-
-
     var i18n = require("i18n-messages");
     var EarlyErrors = require("earlyerrors").EarlyErrors;
     var withError, ifAbrupt, isAbrupt;
@@ -3492,11 +3508,14 @@ define("parser", ["tables", "tokenizer"], function (tables, tokenize) {
     var PunctToExprName = tables.PunctToExprName;
     var BinaryOperators = tables.BinaryOperators;
     var AssignmentOperators = tables.AssignmentOperators;
-
     var UnaryOperators = tables.UnaryOperators;
     var UpdateOperators = tables.UpdateOperators;
     var ExprEndOfs = tables.ExprEndOfs;
     var OperatorPrecedence = tables.OperatorPrecedence;
+    var isDirective = tables.isDirective;
+    var isStrictDirective = tables.isStrictDirective;
+    var isAsmDirective = tables.isAsmDirective;
+
 
     // ==========================================================
     // Parser Variables
@@ -3543,6 +3562,7 @@ define("parser", ["tables", "tokenizer"], function (tables, tokenize) {
     */
     
     var withExtras = true;
+
     var extraBuffer = [];
     function flushBuffer() {
 	    var b = extraBuffer;
@@ -3992,32 +4012,33 @@ define("parser", ["tables", "tokenizer"], function (tables, tokenize) {
         return i >= j;
     }
 
-    var lastloc;
     function hasNext() {
         return lookahead != undefined;
     }
 
     var captureExtraTypes = {
         __proto__:null,
-	"WhiteSpace":true,
-	"MultiLineComment":true,
-	"LineComment":true,
+	    "WhiteSpace":true,
+        "LineTerminator": true,
+	    "MultiLineComment":true,
+	    "LineComment":true,
     };
+
     var captureExtraValues = {
-	__proto__: null,
-	"(": true,
-	")": true,
-	"[": true,
-	"]": true,
-	"}": true,
-	"{": true,
-	";": true,
-	":": true,	// will capture the colon of the label, but also of the ternary
-	",": true
+	    __proto__: null,
+	    "(": true,
+	    ")": true,
+	    "[": true,
+	    "]": true,
+	    "}": true,
+	    "{": true,
+	    ";": true,
+	    ":": true,
+	    ",": true
     };
     
     function nextToken () {
-	return tokenizer.next();
+	    return tokenizer.next();
     }
 
     function next() {
@@ -4092,7 +4113,6 @@ define("parser", ["tables", "tokenizer"], function (tables, tokenize) {
 
     function ClassExpression() {
         if (v === "class") {
-            // Einfach gemacht.
             var isExpr = true;
             var node = this.ClassDeclaration(isExpr);
             return node;
@@ -4108,7 +4128,6 @@ define("parser", ["tables", "tokenizer"], function (tables, tokenize) {
             node.spans = [T];
             if (t !== "NoSubstitutionTemplate") {
                 while (t !== "TemplateTail") {
-                    next(/*inputelementtemplatetail*/);
                     node.spans.push(T);
                 }
             } else {
@@ -4169,7 +4188,8 @@ define("parser", ["tables", "tokenizer"], function (tables, tokenize) {
             if (v === ",") {
                 if (lookahead !== ",") pass(",");
                 continue;
-            } 
+            }
+
             /*else if (v !== "]") {
                     throwError(new SyntaxError("buggy element list"));
              }*/
@@ -4185,18 +4205,16 @@ define("parser", ["tables", "tokenizer"], function (tables, tokenize) {
 
         if (v === "[") {
             l1 = loc && loc.start;
-
             if (lookahead === "for") return this.ArrayComprehension();
-
             pass("[");
 
             var node = Node("ArrayExpression");
 
             if (v !== "]") node.elements = this.ElementList(node);
             else node.elements = [];
-
             l2 = loc && loc.end;
             pass("]");
+
             node.loc = makeLoc(l1, l2);
             return compile ? builder["arrayExpression"](node.elements, node.loc) : node;
         }
@@ -4460,29 +4478,29 @@ define("parser", ["tables", "tokenizer"], function (tables, tokenize) {
     }
     parser.Arguments = Arguments;
 
-    function CallExpression(parent) {
+    function CallExpression(callee) {
 
         var node, tmp, l1, l2;
         l1 = l2 = (loc && loc.start);
 
-        if (parent) tmp = parent;
-        else tmp = this.MemberExpression();
+        if (callee == undefined)
+            callee = this.MemberExpression();
 
-        if (tmp) {
-            l1 = tmp.loc && tmp.loc.start;
+        if (callee) {
+            l1 = callee.loc && callee.loc.start;
 
             node = Node("CallExpression");
-            node.callee = tmp;
+            node.callee = callee;
             node.arguments = null;
 
             if (t === "TemplateLiteral") {
-
-                node.arguments = [this.TemplateLiteral()];
+                var template = this.TemplateLiteral();
+                node.arguments = [ template ];
                 l2 = loc && loc.end;
-
                 node.loc = makeLoc(l1, l2);
                 if (compile) return builder.callExpression(node.callee, node.arguments, node.loc);
                 return node;
+
             } else if (v === "(") {
 
                 node.arguments = this.Arguments();
@@ -4774,9 +4792,9 @@ define("parser", ["tables", "tokenizer"], function (tables, tokenize) {
         l1 = loc && loc.start;
 
         if (t === "Identifier" && lookahead === "=>") {
+
             expr = this.Identifier();
             cover = true;
-            
 
         } else if (v === "(") {
             if (lookahead === "for") return this.GeneratorComprehension();
@@ -4822,6 +4840,7 @@ define("parser", ["tables", "tokenizer"], function (tables, tokenize) {
             } else {
                 return this.CoverParenthesizedExpression(covered);
             }
+
         }
         return null;
     }
@@ -5001,6 +5020,7 @@ define("parser", ["tables", "tokenizer"], function (tables, tokenize) {
         if (v === "." || v === "[") leftHand = this.MemberExpression(leftHand);
         else if (v === "(" || v === "`") leftHand = this.CallExpression(leftHand);
         else if (v == "++" || v == "--") leftHand = this.PostfixExpression(leftHand);
+
 
         if (AssignmentOperators[v] && (!isNoIn || (isNoIn && v != "in"))) {
 
@@ -5441,8 +5461,10 @@ define("parser", ["tables", "tokenizer"], function (tables, tokenize) {
         var defaults;
         var id;
         var x;
+
         do {
-            x = i;
+
+
             if (v) {
 
                 debug("formalparameters calling with " + v);
@@ -5470,7 +5492,7 @@ define("parser", ["tables", "tokenizer"], function (tables, tokenize) {
                 }
 
             }
-            if (x == i) break;
+
         } while (v !== undefined && v !== ")" && i < j);
 
         return list;
@@ -6144,7 +6166,6 @@ define("parser", ["tables", "tokenizer"], function (tables, tokenize) {
      Iteration
      */
     parser.IterationStatement = IterationStatement;
-
     function IterationStatement() {
         if (v === "for") return this.ForStatement();
         if (v === "do") return this.DoWhileStatement();
@@ -6154,12 +6175,10 @@ define("parser", ["tables", "tokenizer"], function (tables, tokenize) {
     parser.ForStatement = ForStatement;
 
     var positions = [];
-
     function saveTheDot() {
         var o = {
             loc: loc,
             tokens: tokens,
-
             i: i,
             j: j,
             T: T,
@@ -6253,7 +6272,8 @@ define("parser", ["tables", "tokenizer"], function (tables, tokenize) {
             pass("for");
             pass("(");
 
-            /* lookahead */
+            /* predict */
+
             parens.push("(");
             for (var y = i; y < j; y++) {
                 peek = (peek = tokens[y]) && peek.value;
@@ -6350,8 +6370,8 @@ define("parser", ["tables", "tokenizer"], function (tables, tokenize) {
 
             if (compile) {
                 if (node.type === "ForStatement") return builder["forStatement"](node.init, node.condition, node.update, node.body, loc);
-                else if (node.type === "ForInStatement") return builder["forInStatement"](node.left, node.right, node.body, loc);
-                else if (node.type === "ForOfStatement") return builder["forOfStatement"](node.left, node.right, node.body, loc);
+                if (node.type === "ForInStatement") return builder["forInStatement"](node.left, node.right, node.body, loc);
+                if (node.type === "ForOfStatement") return builder["forOfStatement"](node.left, node.right, node.body, loc);
             }
 
             return node;
@@ -6516,16 +6536,10 @@ define("parser", ["tables", "tokenizer"], function (tables, tokenize) {
     }
 
     parser.DirectivePrologue = DirectivePrologue;
-
     function DirectivePrologue(containingNode, nodes) {
-
-        var node;
-
-        while (t === "StringLiteral") { // this was set to "Directive" and killed strict mode last versions.
-
-            if (v === "\"use strict\"" || v === "\'use strict\'") containingNode.strict = true;
-            else if (v == "\"use asm\"" || v == "\'use asm\'") containingNode.asm = true;
-
+        while (t === "StringLiteral" && isDirective[v]) {
+            if (isStrictDirective[v]) containingNode.strict = true;
+            else if (isAsmDirective[v]) containingNode.asm = true;
             var l1 = loc && loc.start;
             var node = Node("Directive");
             node.value = v;
@@ -6536,25 +6550,18 @@ define("parser", ["tables", "tokenizer"], function (tables, tokenize) {
             if (compile) node = builder.directive(node.value, node.loc);
             nodes.push(node);
         }
-
         return;
     }
 
     parser.SourceElements = SourceElements;
-
     function SourceElements(program) {
         var nodes = [];
         var node, strict;
-
         this.DirectivePrologue(program, nodes);
-
         do {
-
             node = this.FunctionDeclaration() || this.ClassDeclaration() || this.ModuleDeclaration() || this.Statement();
-            if (node) nodes.push(node);
-
-        } while (i < j && T !== undefined);
-
+            nodes.push(node);
+        } while (T != undefined);
         return nodes;
     }
 
@@ -6573,27 +6580,24 @@ define("parser", ["tables", "tokenizer"], function (tables, tokenize) {
         return root;
     }
 
-
     parser.Program = Program;
-
     function Program() {
 
         staticSemantics.newContainer(); // (node) attach contains and order it
-        staticSemantics.newVarEnv(); // newVarEnv(node) directly attach and save time
+        staticSemantics.newVarEnv();    // newVarEnv(node) directly attach and save time
 
         var node = Node("Program");
         node.loc = loc = makeLoc();
         loc.start.line = 1;
         loc.start.column = 0;
         var l1 = loc && loc.start;
-        var l2;
 
         next();
-
         currentScopeNode = node;
+        var body = this.SourceElements(node);
+        node.body = body;
 
-        node.body = this.SourceElements(node);
-
+        var l2;
         l2 = loc && loc.end;
         node.loc = makeLoc(l1, l2);
         EarlyErrors(node);
@@ -6601,9 +6605,10 @@ define("parser", ["tables", "tokenizer"], function (tables, tokenize) {
         /*
          node.lexNames = staticSemantics.lexNames();
          node.varNames = staticSemantics.varNames();
-         */
+        */
 
         staticSemantics.popContainer();
+        staticSemantics.popEnvs();
         
         if (compile) return builder["program"](node.body, loc);
         return node;
@@ -6913,8 +6918,8 @@ define("parser", ["tables", "tokenizer"], function (tables, tokenize) {
 
     /* setze inlinelex per default auf true */
 
-    function CreateTheAST(tokens, options, inlineLexBool) {
-        resetVariables(tokens, inlineLexBool);
+    function parse(sourceCodeOrTokens) {
+        resetVariables(sourceCodeOrTokens);
         try {
             ast = parser.Program();
         } catch (ex) {
@@ -6972,21 +6977,26 @@ define("parser", ["tables", "tokenizer"], function (tables, tokenize) {
 
     }
 
-    var exports = CreateTheAST;
-    exports.parse = CreateTheAST;
+    var exports = parse;
+    exports.parse = parse;
     exports.parseGoal = parseGoal;
     exports.setBuilder = setBuilder;
     exports.unsetBuilder = unsetBuilder;
     exports.registerObserver = registerObserver;
     exports.unregisterObserver = unregisterObserver;
-
     exports.enableExtras = enableExtras;
     exports.disableExtras = disableExtras;
+    exports.setWithExtras = setWithExtras;
+    exports.isWithExtras = isWithExtras;
+
+    /*
+     * Observers. Turning the parser into some observable
+     */
 
     var observers = [];
     function registerObserver(f) {
         if (typeof f === "function")
-            obervers.push(f);
+            observers.push(f);
         else throw new TypeError("registerObserver: argument f is not a function")
     }
     function unregisterObserver(f) {
@@ -6996,7 +7006,9 @@ define("parser", ["tables", "tokenizer"], function (tables, tokenize) {
         observers.forEach(function (observer) { observer(node); });
         return node;
     }
-
+    /*
+     * Builder Object can be compilers, more analyzers, whatever can be done inside of the interface
+     */
     var saveBuilder = [];
     function unsetBuilder(objBuilder) {
         var state;
@@ -7019,24 +7031,26 @@ define("parser", ["tables", "tokenizer"], function (tables, tokenize) {
         if (boolCompile !== undefined) compile = !! boolCompile;
         return true;
     }
-    
+
+
     
    /*
     * prototyping CST Extras with a decorator 
-    * fails with endless loop when starting the shell
+    * --still failing---
     */
 
+
     function enableExtras () {
-        console.log("Enabling CST");
-        Object.keys(parser).forEach(function (k) {      
+        debug("Enabling CST extras")
+        Object.keys(parser).forEach(function (k) {
             if (typeof parser[k] === "function" && !parser[k].wrapped) {       
                 if (k == "next" || k == "scan" || k == "pass" || k.indexOf("JSON")===0) return; // for my hacky wacky system
-                console.log("wrapping "+k)
+                debug("wrapping "+k)
                 var originalFunction = parser[k];
                 var parseFunction = function () {                
             	    var b = flushBuffer();
                     var node = originalFunction.call(this, arguments);
-                    if (extraBuffer.length && typeof node === "object" && node) {
+                    if (node) {
                         node.extras = b;                                                
                     }
                     return node;
@@ -7047,15 +7061,20 @@ define("parser", ["tables", "tokenizer"], function (tables, tokenize) {
         });
     }
     function disableExtras () {
+        debug("Disabling CST extras")
         Object.keys(parser).forEach(function (k) {            
             if (typeof parser[k] === "function" && parser[k].wrapped) 
             parser[k] = parser[k].wrapped;
         });    
-    }    
-
-    // enableExtras(); 
+    }
+    function setWithExtras(value) {
+        withExtras = !!value;
+    }
+    function isWithExtras() {
+        return !!withExtras;
+    }
+    // enableExtras();
     // uncomment for endless loop
-
     return exports;
 });
 
@@ -27005,21 +27024,22 @@ define("runtime", ["parser", "api", "slower-static-semantics"], function (parse,
         return F;
     }
 
-    var isStrictMode = {
+    var isStrictDirective = {
+        __proto__:null,
         "'use strict'": true,
         '"use strict"': true
     };
-    var isUsingAsmJsWhatMeansNuttingButADirectiveHereBUTaValidatorOrGeneratorWouldBeCool = {
+    var isAsmDirective = {
+        __proto__:null,
         "'use asm'": true,
         '"use asm"': true
     };
 
     evaluation.Directive = Directive;
-
     function Directive(node) {
-        if (isStrictMode[node.value]) {
+        if (isStrictDirective[node.value]) {
             getContext().strict = true;
-        } else if (isUsingAsmJsWhatMeansNuttingButADirectiveHereBUTaValidatorOrGeneratorWouldBeCool[node.value]) {
+        } else if (isAsmDirective[node.value]) {
             getContext().asm = true;
         }
         return NormalCompletion(empty);
@@ -27034,9 +27054,9 @@ define("runtime", ["parser", "api", "slower-static-semantics"], function (parse,
         if (state) {
             var stateRec = state[state.length-1];
             if (stateRec) stateRec.instructionIndex = i;
-            // unsure but i have to reenter statementlists at some point,
             cx.state.node = node;
         }
+
         cx.line =   loc.start.line;
         cx.column = loc.start.column;
     }
@@ -27047,9 +27067,9 @@ define("runtime", ["parser", "api", "slower-static-semantics"], function (parse,
     function Program(program) {
 
         "use strict";
+
         var v;
         var cx = getContext();
-        
         if (program.strict) {
             cx.strict = true;
         }
@@ -27152,9 +27172,19 @@ define("runtime", ["parser", "api", "slower-static-semantics"], function (parse,
         "block": "block"
     };
 
+
+    /*
+
+        The Evaluate Function
+        is currently looking very experimental
+        because last time i was looking for a way to fix
+        generator functions without changing away from the visitor pattern
+
+     */
+
     ecma.Evaluate = Evaluate;
 
-    function Evaluate(node, a, b, c, d) {
+    function Evaluate(node, a, b, c) {
 
         if (!node) return NormalCompletion(undefined);
         // record everywhere oder nur bei generator?
@@ -27195,6 +27225,8 @@ define("runtime", ["parser", "api", "slower-static-semantics"], function (parse,
         return result;
     }
 
+
+
     function Evaluate2(node, a, b, c) {
         var E, R;
         var body, i, j;
@@ -27221,6 +27253,8 @@ define("runtime", ["parser", "api", "slower-static-semantics"], function (parse,
 
         return R;
     }
+
+
 
     function HandleEventQueue(shellmode, initialised) {
         var task, val;
