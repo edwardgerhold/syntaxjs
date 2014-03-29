@@ -3337,9 +3337,8 @@ define("tokenizer", function (require, exports) {
 
         do {
     	    offset = i;
-
             WhiteSpace() || LineTerminator() || DivPunctuator() || NumericLiteral() ||  Punctuation() || KeywordOrIdentifier() || StringLiteral() || TemplateLiteral();
-            if (i === offset) next();
+            //if (i === offset) next();
         } while (ch !== undefined);
         return tokens;
     }
