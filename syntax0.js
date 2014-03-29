@@ -2393,9 +2393,9 @@ define("slower-static-semantics", function (require, exports, modules) {
     function IsValidSimpleAssignmentTarget(node) {
         var type = node.type;
         if (type === "Identifier") return true;
-        else if (type === "ArrayPattern") return true;
-        else if (type === "ObjectPattern") return true;
-        else if (type === "BinaryExpression") return false;
+        if (type === "ArrayPattern") return true;
+        if (type === "ObjectPattern") return true;
+        if (type === "BinaryExpression") return false;
         return false;
     }
 
@@ -2674,10 +2674,10 @@ define("slower-static-semantics", function (require, exports, modules) {
 
 });
 
-
-define("tokenizer", ["tables"], function (tables) {
+define("tokenizer", function (require, exports) {
 
     "use strict";
+    var tables = require("tables");
 
     var Punctuators = tables.Punctuators;
     var WhiteSpaces = tables.WhiteSpaces;
@@ -2701,10 +2701,6 @@ define("tokenizer", ["tables"], function (tables) {
     var NotBeforeRegExp = tables.NotBeforeRegExp;
     var UnicodeIDStart = tables.UnicodeIDStart;
     var UnicodeIDContinue = tables.UnicodeIDContinue;
-    var LPAREN = tables.LPAREN;
-    var RPAREN = tables.RPAREN;
-    var LPARENOF = tables.LPARENOF;
-    var parens = [];
     var Quotes = tables.Quotes;
     var PunctToExprName = tables.PunctToExprName;
     var TypeOfToken = tables.TypeOfToken;
@@ -2717,13 +2713,10 @@ define("tokenizer", ["tables"], function (tables) {
     var ch, lookahead;	// lookahead0 and lookahead1
     var cb;
     var tokens = [];
-    var token_count;
     var line = 1,
         column = 0;
     var lines = [];
-    var loc = true;
     var offset = 0;
-    var pos;
     var filename = null;
     var lastTokenType;
     var inputElementDiv = 1;
@@ -2753,63 +2746,34 @@ define("tokenizer", ["tables"], function (tables) {
         "LineTerminator": true
     };
 
+
+
     function Assert(test, message) {
         if (!test) throwError(new SyntaxError("tokenizer: "+message));
     }
-    function nextLine() {
-        lines[line] = column;
-        ++line;
-        column = 0;
-        return line;
-    }
-
-    function pushtoken(type, value, computed, longName) {
-        var isWS = type === "WhiteSpace";
-        var isLT = type === "LineTerminator";
-        /* replace by replacing pushtoken */
-
-        token = Object.create(null);
-
-        if (isWS === false) lastTokenType = type;
-
-        token.type = type;
-        token.goal = longName;
-        token.value = value;
-        token.computed =  computed;
-
-        if (inputElementGoal != inputElementTemplateTail) {
-            if (PunctOrLT[type]) {
-                /*if (type === "Punctuator") if (lookahead === undefined && !AllowedLastChars[value]) throw SyntaxError("Unexpected end of input stream");*/
-                if (!OneOfThesePunctuators[value]) inputElementGoal = inputElementRegExp;
-            } else inputElementGoal = inputElementDiv;
+    function throwError(se) {
+        if (i > -1 && i < j) {
+            if (se === undefined) se = new SyntaxError("Can not parse token.");
+            var oldstack = se.stack;
+            se.stack = "syntax.js tokenizer,\nfunction tokenize,\n does not recognize actual input. ch=" + ch + ", lookahead=" + lookahead + ", line=" + line + ", col=" + column + ", offset=" + offset + ", i="+i+" " +sourceCode+" \n" + oldstack;
+            throw se;
         }
-
-        // produce loc information
-
-        token.offset = offset;
-        token.loc = {
-            __proto__: null,
-            source: filename,
-            start: {
-                line: line,
-                column: column
-            }
-        };
-        if (value != undefined) column += value.length;
-        token.loc.end = {
-            __proto__: null,
-            line: line,
-            column: column - 1
-        };
-
-        if (isLT && (!(value === "\r" && lookahead === "\n"))) nextLine();
-        if (createCustomToken) token = createCustomToken(token);
-        tokens.push(token);
-        if (cb) cb(token);
-        // emit("token", token);
-        next();
-        return token;
     }
+
+    var debugmode = true;
+    function debug() {
+        if (debugmode && typeof importScripts !== "function") {
+            if (typeof arguments[0] == "object") {
+                console.dir(arguments[0]);
+            } else debug.apply(console, arguments);
+        }
+    }
+    function debugdir() {
+        if (debugmode && typeof importScripts !== "function") console.dir.apply(console, arguments);
+    }
+
+
+
 
     function LineTerminator() {
         if (LineTerminators[ch]) return pushtoken("LineTerminator", ch);
@@ -2876,35 +2840,32 @@ define("tokenizer", ["tables"], function (tables) {
     }
 
     function TemplateLiteral() {
-        var template="";
-
+            var template="";
             if (ch == "`" && (inputElementGoal !== inputElementTemplateTail)) {
-
     		    inputElementGoal = inputElementTemplateTail;
-
                 next();
                 while ((ch + lookahead) != "${") {  // doubles constant factor of ch each character (tl = 2n)
                     template += ch;
                     next();
                     if (ch == "`") {
                         template += "`";
-                        inputElementGoal = inputElementDiv;
-                        console.log("NOSUBST "+template);
+                        inputElementGoal = inputElementRegExp;
+                        debug("NOSUBST "+template);
                         return pushtoken("NoSubstitutionTemplate", template);
                     }
                 }
                 template += ch; // $
                 next();
                 template += ch; // {
-                console.log("HEAD "+template);
+                debug("HEAD "+template);
                 return pushtoken("TemplateHead", template);
 
-    	    } else if (ch == "}") {
+    	    } else if ((inputElementGoal == inputElementTemplateTail) && ch == "}") {
                 while ((ch+lookahead) != "${") {
                     if (ch == "`") {
                         template += ch;
-                        inputElementGoal = inputElementDiv;
-                        console.log("TAIL "+template);
+                        inputElementGoal = inputElementRegExp;
+                        debug("TAIL "+template);
                         return pushtoken("TemplateTail", template);
                     }
                     template += ch;
@@ -2913,7 +2874,7 @@ define("tokenizer", ["tables"], function (tables) {
                 template += ch; // $
                 next();
                 template += ch; // {
-                console.log("MIDDLE "+template);
+                debug("MIDDLE "+template);
                 return pushtoken("TemplateMiddle", template);
     	    }
 
@@ -2954,7 +2915,7 @@ define("tokenizer", ["tables"], function (tables) {
      */
 
     function RegularExpressionLiteral() {
-        var expr = "", flags = "";
+        var expr = "";
         var n, l;
         if (ch === "/" && !NotBeforeRegExp[lastTokenType]) { // <--- grammatik
 
@@ -2984,7 +2945,6 @@ define("tokenizer", ["tables"], function (tables) {
                 while (RegExpFlags[lookahead]) { // besorge noch die flags
                     next();
                     expr += ch;
-                    flags += ch;
                 }
                 return pushtoken("RegularExpressionLiteral", expr);
             }
@@ -2995,14 +2955,18 @@ define("tokenizer", ["tables"], function (tables) {
     function DivPunctuator() {
         var tok;
         if (ch === "/") {
+
             if (tok = Comments()) return tok;
+
             if (inputElementGoal === inputElementRegExp) {
                 if (tok = RegularExpressionLiteral()) {
                     inputElementGoal = inputElementDiv;
                     return tok;
-                } else inputElementGoal = inputElementDiv;
+                }
+                inputElementGoal = inputElementDiv;
             }
-            if (inputElementGoal === inputElementDiv) {
+
+            if (inputElementGoal !== inputElementRegExp) {
                 if (ch + lookahead === "/=") {
                     next();
                     return pushtoken("Punctuator", "/=", undefined, PunctToExprName["/="]);
@@ -3015,7 +2979,9 @@ define("tokenizer", ["tables"], function (tables) {
     }
 
     function Punctuation() {
+
         if (inputElementGoal === inputElementTemplateTail && ch == "}") return false;
+
 
         if (ParensSemicolonComma[ch]) return pushtoken("Punctuator", ch, undefined, PunctToExprName[ch]);
         var punct = sourceCode[i] + sourceCode[i + 1] + sourceCode[i + 2] + sourceCode[i + 3];
@@ -3101,6 +3067,7 @@ define("tokenizer", ["tables"], function (tables) {
     function EscapeSequence() {
         var es = "";
         var com = "";
+
         if (ch == "\\") {
             es += ch;
             if (lookahead === "u") {
@@ -3175,7 +3142,7 @@ define("tokenizer", ["tables"], function (tables) {
             }
             unit = 0;
             for (var a = 0, b = es.length - 1; a <= b; a++) {
-                unit += (1 << (b - a) * 4) * +es[a];
+                unit += (1 << (b - a) * 4) * + es[a];
             }
             if (unit > 0x10000) {
                 cp1 = Math.floor((unit - 0x10000) / 0x0400 + 0xD800);
@@ -3195,7 +3162,9 @@ define("tokenizer", ["tables"], function (tables) {
         /* Includes Keywords */
         var token = "",
             e;
+
         if (!IdentifierStart[ch] && !UnicodeIDStart[ch]) return false;
+
         if (ch !== "\\") {
             token += ch;
         } else {
@@ -3206,6 +3175,7 @@ define("tokenizer", ["tables"], function (tables) {
                 return false;
             }
         }
+
         while (IdentifierPart[lookahead] || UnicodeIDContinue[lookahead]) {
             next();
             if (ch === "\\" && lookahead === "u") {
@@ -3218,20 +3188,75 @@ define("tokenizer", ["tables"], function (tables) {
         return pushtoken(TypeOfToken[token] || "Identifier", token, token);
     }
 
+    function nextLine() {
+        lines[line] = column;
+        ++line;
+        column = 0;
+        return line;
+    }
+
     function next() {
         if (i < j) {
     	    i += 1;
             ch = lookahead;
             lookahead = sourceCode[i + 1];
             return ch;
-        } else if (i >= j) {
-
-            throw new RangeError("UNEXPECTED END OF INPUT STREAM.");
         }
     }
 
-    function resetVariables() {
-        //tokenTable = Object.create(null);
+    function pushtoken(type, value, computed, longName) {
+        var isWS = type === "WhiteSpace";
+        var isLT = type === "LineTerminator";
+        /* replace by replacing pushtoken */
+        token = Object.create(null);
+        if (isWS === false) lastTokenType = type;
+        
+        token.type = type;
+        token.longName = longName;
+        token.value = value;
+        token.computed =  computed;
+
+        if (inputElementGoal != inputElementTemplateTail) {
+            if (PunctOrLT[type]) {
+                /*if (type === "Punctuator") if (lookahead === undefined && !AllowedLastChars[value]) throw SyntaxError("Unexpected end of input stream");*/
+                if (!OneOfThesePunctuators[value])
+                    inputElementGoal = inputElementRegExp;
+            } else inputElementGoal = inputElementDiv;
+        }
+
+        // produce loc information
+
+        token.offset = offset;
+        token.loc = {
+            __proto__: null,
+            source: filename,
+            start: {
+                line: line,
+                column: column
+            }
+        };
+        if (value != undefined) column += value.length;
+        token.loc.end = {
+            __proto__: null,
+            line: line,
+            column: column - 1
+        };
+
+        if (isLT && (!(value === "\r" && lookahead === "\n"))) nextLine();
+        if (createCustomToken) token = createCustomToken(token);
+        tokens.push(token);
+        if (cb) cb(token);
+        // emit("token", token);
+
+
+        return token;
+    }
+
+
+    function tokenize(jstext, callback) {
+        if (jstext) sourceCode = jstext;
+        if (callback) cb = callback;
+        inputElementGoal = inputElementRegExp;
         tokens = [];
         line = 1;
         column = 0;
@@ -3239,46 +3264,35 @@ define("tokenizer", ["tables"], function (tables) {
         j = sourceCode.length;
         ch = sourceCode[0];
         lookahead = sourceCode[1];
-    }
-
-    function throwError(se) {
-        if (i > -1 && i < j) {
-            if (se === undefined) se = new SyntaxError("Can not parse token.");
-            var oldstack = se.stack;
-            se.stack = "syntax.js tokenizer,\nfunction tokenize,\n does not recognize actual input. ch=" + ch + ", lookahead=" + lookahead + ", line=" + line + ", col=" + column + ", offset=" + offset + ", i="+i+" " +sourceCode+" \n" + oldstack;
-            throw se;
-        }
-    }
-
-    function tokenize(jstext, callback) {
-        if (jstext) sourceCode = jstext;
-        if (callback) cb = callback;
-        resetVariables();
-        do { 
+        do {
     	    offset = i;
             token = WhiteSpace() || LineTerminator() || DivPunctuator() || NumericLiteral() || TemplateLiteral() || Punctuation() || KeywordOrIdentifier() || StringLiteral();
-            if (i === offset) next();
+            next(); // the lexer functions forgot the next at the end.
+                    // this is very old code and probably the oldest of syntax.js together with the highlighter-app
         } while (ch !== undefined);
-        //tokens.tokenTable = tokenTable;
-
         return tokens;
     }
 
 
-    var exports = {};
-    exports.LineTerminator = LineTerminator;
-    exports.KeywordOrIdentifier = KeywordOrIdentifier;
-    exports.StringLiteral = StringLiteral;
-    exports.Comments = Comments;
-    exports.DivPunctuator = DivPunctuator;
-    exports.RegularExpressionLiteral = RegularExpressionLiteral;
-    exports.UnicodeEscape = UnicodeEscape;
-    exports.EscapeSequence = EscapeSequence;
-    exports.NumericLiteral = NumericLiteral;
-    exports.Punctuation = Punctuation;
-    exports.TemplateLiteral = TemplateLiteral;
-    exports.tokenize = tokenize;
-    tokenize.tokenizer = exports;
+    var tokenizer = {};
+
+    tokenizer.LineTerminator = LineTerminator;
+    tokenizer.KeywordOrIdentifier = KeywordOrIdentifier;
+    tokenizer.StringLiteral = StringLiteral;
+    tokenizer.Comments = Comments;
+    tokenizer.DivPunctuator = DivPunctuator;
+    tokenizer.RegularExpressionLiteral = RegularExpressionLiteral;
+    tokenizer.UnicodeEscape = UnicodeEscape;
+    tokenizer.EscapeSequence = EscapeSequence;
+    tokenizer.NumericLiteral = NumericLiteral;
+    tokenizer.Punctuation = Punctuation;
+    tokenizer.TemplateLiteral = TemplateLiteral;
+    tokenizer.tokenizer = tokenizer;
+    tokenizer.tokenize = tokenize;
+
+    tokenize.tokenizer = tokenizer;
+    tokenize.setCustomTokenMaker = setCustomTokenMaker;
+    tokenize.unsetCustomTokenMaker = unsetCustomTokenMaker;
 
     var customTokenMaker = null;
     function setCustomTokenMaker(func) {
@@ -3286,9 +3300,11 @@ define("tokenizer", ["tables"], function (tables) {
             customTokenMaker = null;
         } else if (typeof func === "function") {
             customTokenMaker = func;
-        } else throw TypeError("tokenmaker must be a function your_token <- maker(my_token) to return a custom token. Please fix that and try again.");
+        } else throw new TypeError("tokenmaker must be a function your_token <- maker(my_token) to return a custom token. Please fix that and try again.");
     }
-    tokenize.setCustomTokenMaker = setCustomTokenMaker;
+    function unsetCustomTokenMaker () {
+        customTokenMaker = null;
+    }
 
     return tokenize;
 
@@ -3378,7 +3394,6 @@ define("parser", ["tables", "tokenizer"], function (tables, tokenize) {
 
     var i18n = require("i18n-messages");
     var EarlyErrors = require("earlyerrors").EarlyErrors;
-    var parseGoalParameters;
     var withError, ifAbrupt, isAbrupt;
     var FinishStatementList = tables.FinishStatementList;
     var FinishSwitchStatementList = tables.FinishSwitchStatementList;
@@ -3417,21 +3432,17 @@ define("parser", ["tables", "tokenizer"], function (tables, tokenize) {
 
     var ltNext; // will be set if a lineterminator is before the next token, unset else
     var a, b;
-    var lparen = false;
-    var rparen = false;
-    var tbl;
 
     var isWorker = typeof importScripts === "function";
     var isNode = typeof process !== "undefined" && typeof global !== "undefined";
     var isBrowser = typeof window !== "undefined";
 
-    var state = 0;          // 0 = SourceElements
-    var goalSymbol = 0;     // (!goalSymbol) === InputElementDiv
     var ast;
 
     //
     // VERY IMPORTANT
     //
+
     var lookahead, lookaheadt; // lookahead
     var tokens;
     var T = Object.create(null); // current token
@@ -3439,14 +3450,8 @@ define("parser", ["tables", "tokenizer"], function (tables, tokenize) {
     var v; // current token value
     var i; // tokens[i] pointer
     var j; // tokens.length;
-    //
-    //
-    var pos; // register for backtracking holding the "i" value (i == the position tokens[i])
-    //
 
     var parser = Object.create(null);
-    var stack = [];
-    var parens = [];
 
     // Production Parameters 
     var noInStack = [];
@@ -3468,12 +3473,12 @@ define("parser", ["tables", "tokenizer"], function (tables, tokenize) {
     var withExtras = true;
     var extraBuffer = [];
     function flushBuffer() {
-	var b = extraBuffer;
-	extraBuffer = [];
-	return b;
+	    var b = extraBuffer;
+	    extraBuffer = [];
+	    return b;
     }
     function intoBuffer(t) { 
-	extraBuffer.push(t); 
+	    extraBuffer.push(t); 
     }
     
     /*
@@ -3482,19 +3487,14 @@ define("parser", ["tables", "tokenizer"], function (tables, tokenize) {
 
 
     // pointer to current Node defining the Scope
-    var currentNodeScope;
-    var nodeScopeStack = [];
-    // pointer to current Node
-    var currentNode;
-    var currentNodes = [];
-
+    var currentScopeNode;
+    var scopeNodeStack = [];
+    
     // loc information (not completed yet)
     var operator;
     var bytes = 0;
     var start = 0; // pos?
     var end = 0; // last ending?
-    var line = 0;
-    var column = 0;
     var byte = 0;
     var lines = []; // lines[0] = 12 (columns)
     var lastloc = makeLoc();
@@ -3508,6 +3508,7 @@ define("parser", ["tables", "tokenizer"], function (tables, tokenize) {
     var cb;
     var notify = false;
     // 
+
     var stateStack = [];
     var state = "";
     function pushState(newState) {
@@ -3518,20 +3519,20 @@ define("parser", ["tables", "tokenizer"], function (tables, tokenize) {
         state = stateStack.pop();
     }
 
+
+
     function pushNoIn(new_state) {
         noInStack.push(isNoIn);
         isNoIn = new_state;
     }
-
-    function popNoIn() {isNoIn = noInStack.pop();
+    function popNoIn() {
+        isNoIn = noInStack.pop();
     }
-
-    // ====================================================
-    // Throw Error in Parser with throwError(exObj)
-    // ====================================================
 
     function makeErrorStackString(error) {
         var stack = error.stack;
+        var line = loc && loc.start.line;
+        var column = loc && loc.start.column;
         var location = "{syntax.js} A Parser Error occured at line " + line + ", column " + column + "\r\n";
         error.stack = location;
         if (stack) error.stack += stack;
@@ -3544,10 +3545,11 @@ define("parser", ["tables", "tokenizer"], function (tables, tokenize) {
     }
 
     function syntaxError(C) {
+        var line = loc && loc.start.line;
+        var column = loc && loc.start.column;
         throwError(new SyntaxError(C + " expected at line " + line + ", column " + column));
     }
 
-    // Issue Tracking: Use Assert for SyntaxErrors in the Parsers. Costs no variables. No if statements
     function Assert(test, message) {
         if (!test) throwError(new Error(message));
     }
@@ -3590,8 +3592,6 @@ define("parser", ["tables", "tokenizer"], function (tables, tokenize) {
         var varEnvs = [VarEnv];
         var lexEnvs = [LexEnv];
 
-        // faster lexNames than the recursive slow-static-semantic i tried to write first (with knowing the cost of its recursion all nodes long but to get it working 
-        //     - didnt know a "symboltable" or to use hashmaps to keep the data on the fly)
         /*
          var lexNames;
          var lexDecls;
@@ -3690,7 +3690,7 @@ define("parser", ["tables", "tokenizer"], function (tables, tokenize) {
 
 
         function addVarBinding(name, param) {
-            SyntaxAssert(!hasVarBinding(name) || !currentNodeScope.strict, name + " is a duplicate identifier in variable scope!");
+            SyntaxAssert(!hasVarBinding(name) || !currentScopeNode.strict, name + " is a duplicate identifier in variable scope!");
             VarEnv[name] = param === undefined ? true : param;
         }
 
@@ -3721,14 +3721,14 @@ define("parser", ["tables", "tokenizer"], function (tables, tokenize) {
         function lexNames() {
             var boundNames = [];
             for (var v in LexEnv) {
-                if (Object.hasOwnProperty.call(LexEnv, v)) boundNames.push(v);
+                if (Object.hasOwnProperty.call(LexEnv, v)) boundNames.push(v); // O(n) time to gather additionally
             }
             return boundNames;
         }
 
         function varNames() {
             var boundNames = [];
-            for (var v in VarEnv) if (Object.hasOwnProperty.call(VarEnv, v)) boundNames.push(v);
+            for (var v in VarEnv) if (Object.hasOwnProperty.call(VarEnv, v)) boundNames.push(v); // lexNames should be a list + an object!! O(1) in both cases but 2*memory;
             return boundNames;
         }
 
@@ -3768,10 +3768,6 @@ define("parser", ["tables", "tokenizer"], function (tables, tokenize) {
 
     }
 
-    // ========================================================================================================
-    // debug the parser
-    // ========================================================================================================
-    // parserdebug
     var debugmode = false;
 
     function debug() {
@@ -3786,26 +3782,11 @@ define("parser", ["tables", "tokenizer"], function (tables, tokenize) {
         if (debugmode && typeof importScripts !== "function") console.dir.apply(console, arguments);
     }
 
-
-    // ========================================================================================================
-    // Node
-    // ========================================================================================================
-
-    var nodeId = 1;
-    
-    
+     var nodeId = 1;
 
     function Node(type /*, linkToken*/ ) {
         var node = Object.create(null);
         node.ID = ++nodeId;
-        /*
-         for CST
-        */
-        currentNodes.push(currentNode);
-        currentNode = node;
-        /*
-        *
-        */
         //staticSemantics.put(type);
         node.type = type;
         return node;
@@ -3885,8 +3866,6 @@ define("parser", ["tables", "tokenizer"], function (tables, tokenize) {
 
     function resetVariables(t) {
         ast = null;
-        line = 1;
-        column = 0;
 
         if (typeof t === "string") t = tokenize(t);
         tokens = t || [];
@@ -3940,6 +3919,7 @@ define("parser", ["tables", "tokenizer"], function (tables, tokenize) {
     function eos() {
         return i >= j;
     }
+
     var lastloc;
     function hasNext() {
         return lookahead != undefined;
@@ -3961,7 +3941,6 @@ define("parser", ["tables", "tokenizer"], function (tables, tokenize) {
 	"{": true,
 	";": true,
 	":": true,	// will capture the colon of the label, but also of the ternary
-	"?": true,	// maybe complete it with "?"
 	",": true
     };
     
@@ -3981,10 +3960,7 @@ define("parser", ["tables", "tokenizer"], function (tables, tokenize) {
                 v = T.value;                
                 if (withExtras && captureExtraValues[v]) intoBuffer(T);
                 loc = T.loc;
-                if (loc && loc.start) {
-                    line = loc.start.line;
-                    column = loc.start.column;
-                } 
+
             } else {
                 t = v = undefined;
             }
@@ -4169,7 +4145,7 @@ define("parser", ["tables", "tokenizer"], function (tables, tokenize) {
         var propertyName;
         if (v === "[") {
             pass("[");
-            propertyName = this.AssignmentExpression("]");
+            propertyName = this.AssignmentExpression();
             pass("]");
             return propertyName;
         }
@@ -4315,11 +4291,11 @@ define("parser", ["tables", "tokenizer"], function (tables, tokenize) {
     }
     parser.MemberExpression = MemberExpression;
 
-    function MemberExpression(parent) {
-        var obj, node, l1, l2;
+    function MemberExpression(obj) {
+        var node, l1, l2;
 
-        if (parent) obj = parent;
-        else obj = this.PrimaryExpression();
+        if (obj === undefined)
+            obj = this.PrimaryExpression();
 
         if (obj) {
             l1 = obj.loc && obj.loc.start;
@@ -4368,7 +4344,7 @@ define("parser", ["tables", "tokenizer"], function (tables, tokenize) {
             else if (v == "(") return this.CallExpression(node);
             else if (t == "TemplateLiteral") return this.CallExpression(node);
             // strawman:concurrency addition 
-            else if (v == "!") return this.MemberExpression(node);
+            // else if (v == "!") return this.MemberExpression(node);
 
             EarlyErrors(node);
             if (compile) return builder["memberExpression"](node.object, node.property, node.computed, node.loc);
@@ -4678,10 +4654,10 @@ define("parser", ["tables", "tokenizer"], function (tables, tokenize) {
     }
 
     parser.AssignmentExpressionNoIn = AssignmentExpressionNoIn;
-    function AssignmentExpressionNoIn(parent) {
+    function AssignmentExpressionNoIn() {
         noInStack.push(isNoIn);
         isNoIn = true;
-        var node = this.AssignmentExpression(parent);
+        var node = this.AssignmentExpression();
         isNoIn = noInStack.pop();
         return node;
     }
@@ -4762,8 +4738,7 @@ define("parser", ["tables", "tokenizer"], function (tables, tokenize) {
                 node = Node("ArrowExpression");
                 node.kind = "arrow";
                 node.strict = true;
-                node.expression = true;
-                
+                node.expression = true;                
                 node.params = (expr ? [expr] : this.ArrowParameterList(covered));
                 pass("=>");
                 node.body = this.ConciseBody(node);
@@ -4840,15 +4815,12 @@ define("parser", ["tables", "tokenizer"], function (tables, tokenize) {
         return null;
     }
 
-    function YieldExpression(parent) {
-        if (v === "yield") {
-            if (!yieldIsId) {
+    function YieldExpression() {
+        if (v === "yield" && !yieldIsId) {
                 pass("yield");
                 var node = Node("YieldExpression");
-                node.parent = parent;
                 node.argument = this.Expression(";");
                 return node;
-            }
         }
         return null;
     }
@@ -4923,7 +4895,7 @@ define("parser", ["tables", "tokenizer"], function (tables, tokenize) {
 
 
 
-    function AssignmentExpression(parent) { // der parent parameter ist völlig dummsinnig. Aber wiederaufnahme der rekursion wäre gut. Für einen anderen Fall.
+    function AssignmentExpression() { // der parent parameter ist völlig dummsinnig. Aber wiederaufnahme der rekursion wäre gut. Für einen anderen Fall.
 
         var node = null,
             leftHand, l1, l2;
@@ -4931,7 +4903,7 @@ define("parser", ["tables", "tokenizer"], function (tables, tokenize) {
         l1 = loc && loc.start;
         debug("At assignmentexpression with " + t + ", " + v);
         
-        if (!yieldIsId && v === "yield") node = this.YieldExpression(parent);
+        if (!yieldIsId && v === "yield") node = this.YieldExpression();
         if (!node) node = this.CoverParenthesisedExpressionAndArrowParameterList();
 
         if (!node) leftHand = this.UnaryExpression();
@@ -4961,7 +4933,7 @@ define("parser", ["tables", "tokenizer"], function (tables, tokenize) {
         if (AssignmentOperators[v] && (!isNoIn || (isNoIn && v != "in"))) {
 
             node = Node("AssignmentExpression");
-            node.goal = PunctToExprName[v];
+            node.longName = PunctToExprName[v];
             node.operator = v;
             node.left = leftHand;
 
@@ -4976,26 +4948,18 @@ define("parser", ["tables", "tokenizer"], function (tables, tokenize) {
             return node;
 
         } else if (BinaryOperators[v] && (!isNoIn || (isNoIn && v != "in"))) {
-
-            // FollowSet fuer den BinaryOperator ?
-
             node = Node("BinaryExpression");
-            node.goal = PunctToExprName[v];
+            node.longName = PunctToExprName[v];
             node.operator = v;
             node.left = leftHand;
-
             debug(v);
             pass(v);
-
-            node.right = this.AssignmentExpression(node);
+            node.right = this.AssignmentExpression();
             if (!node.right) throwError(new SyntaxError("can not parse a valid righthandside for this binary expression"));
-
             l2 = loc && loc.end;
             node.loc = makeLoc(l1, l2);
-
             node = rotate_binexps(node);
             return node;
-
         } else {
             return leftHand;
         }
@@ -5009,7 +4973,7 @@ define("parser", ["tables", "tokenizer"], function (tables, tokenize) {
             var node = Node("SuperExpression");
             node.loc = makeLoc(l1, l1);
             pass("super");
-            if (currentNodeScope) currentNodeScope.needsSuper = true; //
+            if (currentScopeNode) currentScopeNode.needsSuper = true; //
             // wird nicht im classDefaultConstructor erkannt sein.!
             if (compile) return builder.superExpression(node.loc);
             return node;
@@ -5087,6 +5051,7 @@ define("parser", ["tables", "tokenizer"], function (tables, tokenize) {
         } else if (v === "[") {
             pass("[");
             while (v !== "]") {
+
                 if (v === "...") id = this.RestParameter();
                 else if (StartBinding[v]) id = this.BindingPattern();
                 else id = this.Identifier();
@@ -5249,8 +5214,8 @@ define("parser", ["tables", "tokenizer"], function (tables, tokenize) {
 
         node = Node("MethodDefinition");
 
-        nodeScopeStack.push(currentNodeScope)
-        currentNodeScope = node;
+        scopeNodeStack.push(currentScopeNode)
+        currentScopeNode = node;
 
         if (v =="[") node.computed = true;
         node.id = this.PropertyKey();
@@ -5272,7 +5237,7 @@ define("parser", ["tables", "tokenizer"], function (tables, tokenize) {
         EarlyErrors(node);
         if (compile) return builder.methodDefinition(node.id, node.params, node.body, node.strict, node.static, node.generator, node.loc);
 
-        currentNodeScope = nodeScopeStack.pop();
+        currentScopeNode = scopeNodeStack.pop();
 
         return node;
 
@@ -5490,8 +5455,8 @@ define("parser", ["tables", "tokenizer"], function (tables, tokenize) {
                 node.generator = false;
             }
 
-            nodeScopeStack.push(currentNodeScope);
-            currentNodeScope = node;
+            scopeNodeStack.push(currentScopeNode);
+            currentScopeNode = node;
 
 
             node.id = null;
@@ -5552,7 +5517,7 @@ define("parser", ["tables", "tokenizer"], function (tables, tokenize) {
             staticSemantics.popContainer();
             staticSemantics.popEnvs();
 
-            currentNodeScope = nodeScopeStack.pop();
+            currentScopeNode = scopeNodeStack.pop();
 
             EarlyErrors(node);
             return node;
@@ -5821,8 +5786,8 @@ define("parser", ["tables", "tokenizer"], function (tables, tokenize) {
             node = Node("ModuleDeclaration");
             node.strict = true;
 
-            nodeScopeStack.push(currentNodeScope);
-            currentNodeScope = node;
+            scopeNodeStack.push(currentScopeNode);
+            currentScopeNode = node;
 
             node.exportEntries = [];
             node.knownExports = [];
@@ -5843,7 +5808,7 @@ define("parser", ["tables", "tokenizer"], function (tables, tokenize) {
             staticSemantics.popContainer();
             staticSemantics.popEnvs();
 
-            currentNodeScope = nodeScopeStack.pop();
+            currentScopeNode = scopeNodeStack.pop();
 
             return node;
         }
@@ -6038,7 +6003,7 @@ define("parser", ["tables", "tokenizer"], function (tables, tokenize) {
                 var names = BoundNames(node.exports);
                 for (var i = 0, j = names.length; i < j; i++) {
                     var name = names[i];
-                    currentNodeScope.exportEntries.push({ ModuleRequest: null, ImportName: null, LocalName: name, ExportName: name })
+                    currentScopeNode.exportEntries.push({ ModuleRequest: null, ImportName: null, LocalName: name, ExportName: name })
                 }
 
 
@@ -6122,8 +6087,7 @@ define("parser", ["tables", "tokenizer"], function (tables, tokenize) {
         var o = {
             loc: loc,
             tokens: tokens,
-            line: line,
-            column: column,
+
             i: i,
             j: j,
             T: T,
@@ -6146,8 +6110,6 @@ define("parser", ["tables", "tokenizer"], function (tables, tokenize) {
         if (o) {
             loc = o.loc;
             tokens = o.tokens;
-            line = o.line;
-            column = o.colum;
             i = o.i;
             j = o.j;
             T = o.T;
@@ -6556,7 +6518,7 @@ define("parser", ["tables", "tokenizer"], function (tables, tokenize) {
 
         next();
 
-        currentNodeScope = node;
+        currentScopeNode = node;
 
         node.body = this.SourceElements(node);
 
@@ -7198,14 +7160,7 @@ return exports;
 
 /*
 ############################################################################################################################################################################################################
-
-This is the flat compiler using heap allocation to store the allocated bytecode pieces. It returns a large array
-in the program node.
-
-The function expect offsets of the arrays stores in the previous function to store them together with it´s peace.
-
-requires heap module
-
+This is not the flat compiler, this is a copy of the array compiler, which has nothing but changed the tree into a numbered sequence with number instead of strings
 ############################################################################################################################################################################################################
 */
 
@@ -25067,7 +25022,7 @@ define("runtime", ["parser", "api", "slower-static-semantics"], function (parse,
     evaluation.Literal = Literal;
 
     function Literal(node) {
-        //if (node.goal) return evaluation[node.goal](node);
+        //if (node.longName) return evaluation[node.longName](node);
         return node.value;
     }
 
@@ -25226,9 +25181,7 @@ define("runtime", ["parser", "api", "slower-static-semantics"], function (parse,
             var methodName;
             var functionPrototype;
 
-            
             /* I refactored it today, but resetted it tonight, i rewrite it tomorrow */
-            
 
         // TOMORROW ? (FOUR DAYS AGO)
 
@@ -27285,6 +27238,7 @@ define("runtime", ["parser", "api", "slower-static-semantics"], function (parse,
         ecma.setCodeRealm(realm);
         
         initialisedTheRuntime = true;
+
         scriptLocation = "(syntax.js)";
         if (typeof window !== "undefined") {
             scriptLocation = "("+document.location.href + " @syntax.js)";
@@ -27300,8 +27254,6 @@ define("runtime", ["parser", "api", "slower-static-semantics"], function (parse,
 
     ExecuteTheCode.setCodeRealm = setCodeRealm;
     ExecuteTheCode.Evaluate = Evaluate;
-
-
     function ExecuteAsync (source) {
         var p = makePromise(function (resolve, reject) {
             initializeTheRuntime();    
@@ -27324,12 +27276,10 @@ define("runtime", ["parser", "api", "slower-static-semantics"], function (parse,
     ExecuteTheCode.ExecuteAsyncTransform = ExecuteAsyncTransform;
 
     function ExecuteAsyncTransform (source) {
-        
         return makePromise(function (resolve, reject) {
             ;
             initializeTheRuntime();    
             var result = Evaluate(parse(source));
-            
             if (isAbrupt(result)) {
             
                 if (result.type === "return") {
@@ -27340,7 +27290,6 @@ define("runtime", ["parser", "api", "slower-static-semantics"], function (parse,
             } else { 
                 resolve(TransformObjectToJSObject(GetValue(result.value)));
             }
-
             //endRuntime();
         });
     }
@@ -28493,20 +28442,18 @@ if (typeof window != "undefined") {
 
 define("fswraps", function (require, exports) {
 
-
     function readFileP(name) {
-	return makePromise(function (resolve, reject) {
-	    return readFile(name, resolve, reject);
-	});	
+	    return makePromise(function (resolve, reject) {
+	        return readFile(name, resolve, reject);
+	    });
     }
 
     function readFile(name, callback, errback) {
-        
         if (syntaxjs.system == "node") {
             var fs = module.require("fs");
             return fs.readFile(name, function (err, data) {
                 if (err) errback(err);
-                callback(data);
+                else callback(data);
             }, "utf8");
             return true;
         
@@ -28515,10 +28462,10 @@ define("fswraps", function (require, exports) {
             var xhr = new XMLHttpRequest();
             xhr.open("GET", name, false);
             xhr.onload = function (e) {
-    		callback(xhr.responseText);
+    		    callback(xhr.responseText);
             };
             xhr.onerror = function (e) {
-		errback(xhr.responseText);
+		        errback(xhr.responseText);
             };
             xhr.send(null);
             // missing promise
@@ -28526,7 +28473,6 @@ define("fswraps", function (require, exports) {
         } else if (syntaxjs.system == "worker") {
             importScripts(name);
         }
-        
     }
 
     function readFileSync(name) {
