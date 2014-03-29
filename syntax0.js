@@ -2446,12 +2446,10 @@ define("slower-static-semantics", function (require, exports, modules) {
         if (typeof node === "string") return node;
         var type = node.type;
         var id = node.id;
-        if (type === "MethodDefinition") {
-            return id;
-        }
-        if (typeof id === "string") return id;
-        if (typeof id === "object") return PropName(id);
         if (type === "Identifier") return StringValue(node);
+        if (typeof id === "string") return id;
+        if (type === "MethodDefinition") return PropName(id);
+        if (typeof id === "object") return PropName(id);
     }
 
     function PropNameList(node, checkList) {
@@ -5376,7 +5374,7 @@ define("parser", ["tables", "tokenizer"], function (tables, tokenize) {
             var id = this.Identifier();
             node.id = id.name;
 
-            staticSemantics.addLexBinding(id);
+          // staticSemantics.addLexBinding(id);
 
             if (v === "extends") {
                 pass("extends");
@@ -26691,6 +26689,8 @@ define("runtime", ["parser", "api", "slower-static-semantics"], function (parse,
 
         var methodDef = DefineMethod(node, object, fproto);
         if (isAbrupt(methodDef = ifAbrupt(methodDef))) return methodDef;
+
+
         SetFunctionName(methodDef.closure, methodDef.key);
         
         var desc = {
