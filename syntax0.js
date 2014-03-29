@@ -2724,6 +2724,7 @@ define("tokenizer", function (require, exports) {
     var inputElementTemplateTail = 3;
     var inputElementGoal = inputElementRegExp;
     var withExtras = true;
+    var isWS, isLT;
 
     var AllowedLastChars = {
         ")": true,
@@ -2776,7 +2777,13 @@ define("tokenizer", function (require, exports) {
 
 
     function LineTerminator() {
-        if (LineTerminators[ch]) return pushtoken("LineTerminator", ch);
+        if (LineTerminators[ch]) {
+            isLT = true;
+            pushtoken("LineTerminator", ch);
+            isLT = false;
+            next();
+            return token;
+        }
         return false;
     }
 
@@ -2790,7 +2797,11 @@ define("tokenizer", function (require, exports) {
                 next();
                 spaces += ch;
             }
-            return pushtoken("WhiteSpace", spaces);
+            isWS = true;
+            pushtoken("WhiteSpace", spaces);
+            isWS = false;
+            next();
+            return token;
         }
         return false;
     }
@@ -2834,7 +2845,9 @@ define("tokenizer", function (require, exports) {
                     else multiline = false;
                 }
             }
-            return pushtoken("StringLiteral", string, string.substr(1, string.length - 2));
+            pushtoken("StringLiteral", string, string.substr(1, string.length - 2));
+            next();
+            return token;
         }
         return false;
     }
@@ -2851,14 +2864,20 @@ define("tokenizer", function (require, exports) {
                         template += "`";
                         inputElementGoal = inputElementRegExp;
                         debug("NOSUBST "+template);
-                        return pushtoken("NoSubstitutionTemplate", template);
+
+                        pushtoken("NoSubstitutionTemplate", template);
+                        next();
+                        return token;
                     }
                 }
                 template += ch; // $
                 next();
                 template += ch; // {
                 debug("HEAD "+template);
-                return pushtoken("TemplateHead", template);
+
+                pushtoken("TemplateHead", template);
+                next();
+                return token;
 
     	    } else if ((inputElementGoal == inputElementTemplateTail) && ch == "}") {
                 while ((ch+lookahead) != "${") {
@@ -2866,7 +2885,9 @@ define("tokenizer", function (require, exports) {
                         template += ch;
                         inputElementGoal = inputElementRegExp;
                         debug("TAIL "+template);
-                        return pushtoken("TemplateTail", template);
+                        pushtoken("TemplateTail", template);
+                        next();
+                        return token;
                     }
                     template += ch;
                     next();
@@ -2875,7 +2896,9 @@ define("tokenizer", function (require, exports) {
                 next();
                 template += ch; // {
                 debug("MIDDLE "+template);
-                return pushtoken("TemplateMiddle", template);
+                pushtoken("TemplateMiddle", template);
+                next();
+                return token;
     	    }
 
         return false;
@@ -2893,7 +2916,9 @@ define("tokenizer", function (require, exports) {
                 next();
                 comment += ch;
             }
-            return pushtoken(type, comment);
+            pushtoken(type, comment);
+            next();
+            return token;
         } else if (ch + lookahead === "/*") {
             type = "MultiLineComment";
             while (ch + lookahead !== "*/") {
@@ -2905,7 +2930,9 @@ define("tokenizer", function (require, exports) {
             }
             comment += ch + lookahead;
             next();
-            return pushtoken(type, comment);
+            pushtoken(type, comment);
+            next();
+            return token;
         }
         return false;
     }
@@ -2946,7 +2973,12 @@ define("tokenizer", function (require, exports) {
                     next();
                     expr += ch;
                 }
-                return pushtoken("RegularExpressionLiteral", expr);
+
+                pushtoken("RegularExpressionLiteral", expr);
+                next();
+                inputElementGoal = inputElementDiv;
+
+                return token;
             }
         }
         return false;
@@ -2964,14 +2996,19 @@ define("tokenizer", function (require, exports) {
                     return tok;
                 }
                 inputElementGoal = inputElementDiv;
+
             }
 
             if (inputElementGoal !== inputElementRegExp) {
                 if (ch + lookahead === "/=") {
                     next();
-                    return pushtoken("Punctuator", "/=", undefined, PunctToExprName["/="]);
+                    pushtoken("Punctuator", "/=", undefined, PunctToExprName["/="]);
+                    next();
+                    return token;
                 } else {
-                    return pushtoken("Punctuator", ch, undefined, PunctToExprName[ch]);
+                    pushtoken("Punctuator", ch, undefined, PunctToExprName[ch]);
+                    next();
+                    return token;
                 }
             }
         }
@@ -2982,16 +3019,43 @@ define("tokenizer", function (require, exports) {
 
         if (inputElementGoal === inputElementTemplateTail && ch == "}") return false;
 
+        if (ParensSemicolonComma[ch]) {
+            pushtoken("Punctuator", ch, undefined, PunctToExprName[ch]);
+            next();
+            return token;
+        }
 
-        if (ParensSemicolonComma[ch]) return pushtoken("Punctuator", ch, undefined, PunctToExprName[ch]);
         var punct = sourceCode[i] + sourceCode[i + 1] + sourceCode[i + 2] + sourceCode[i + 3];
-        if (Punctuators[punct]) return (i += 3), pushtoken("Punctuator", punct, undefined, PunctToExprName[punct]);
+
+        if (punct === ">>>=") {
+            next();next();next();
+            pushtoken("Punctuator", punct, undefined, PunctToExprName[punct]);
+            next();
+            return token;
+        }
+
         punct = punct[0] + punct[1] + punct[2];
-        if (Punctuators[punct]) return (i += 2), pushtoken("Punctuator", punct, undefined, PunctToExprName[punct]);
+        if (Punctuators[punct]) {
+            next();next();
+            pushtoken("Punctuator", punct, undefined, PunctToExprName[punct]);
+            next();
+            return token;
+        }
         punct = punct[0] + punct[1];
-        if (Punctuators[punct]) return (i += 1), pushtoken("Punctuator", punct, undefined, PunctToExprName[punct]);
+        if (Punctuators[punct]) {
+            next();
+            pushtoken("Punctuator", punct, undefined, PunctToExprName[punct]);
+            next();
+            return token;
+        }
+
         punct = punct[0];
-        if (Punctuators[punct]) return pushtoken("Punctuator", punct, undefined, PunctToExprName[punct]);
+        if (Punctuators[punct]) {
+            pushtoken("Punctuator", punct, undefined, PunctToExprName[punct]);
+            next();
+            return token;
+        }
+
         return false;
     }
 
@@ -3056,10 +3120,14 @@ define("tokenizer", function (require, exports) {
                 longName = "OctalLiteral";
                 computed = +(parseInt(number.substr(2), 8).toString(10));
             }
-            return pushtoken("NumericLiteral", number, computed, longName);
+            pushtoken("NumericLiteral", number, computed, longName);
+            next();
+            return token;
         } else if (DecimalDigits[ch] || (ch === "." && DecimalDigits[lookahead])) {
             number = DecimalDigitsHelp(number);
-            return pushtoken("NumericLiteral", number, +number, "DecimalLiteral");
+            pushtoken("NumericLiteral", number, +number, "DecimalLiteral");
+            next();
+            return token;
         }
         return false;
     }
@@ -3160,8 +3228,7 @@ define("tokenizer", function (require, exports) {
 
     function KeywordOrIdentifier() {
         /* Includes Keywords */
-        var token = "",
-            e;
+        var token = "", e;
 
         if (!IdentifierStart[ch] && !UnicodeIDStart[ch]) return false;
 
@@ -3185,7 +3252,10 @@ define("tokenizer", function (require, exports) {
                 token += ch;
             }
         }
-        return pushtoken(TypeOfToken[token] || "Identifier", token, token);
+
+        pushtoken(TypeOfToken[token] || "Identifier", token, token);
+        next();
+        return token;
     }
 
     function nextLine() {
@@ -3195,22 +3265,25 @@ define("tokenizer", function (require, exports) {
         return line;
     }
 
-    function next() {
+    function next(k) {
         if (i < j) {
     	    i += 1;
             ch = lookahead;
             lookahead = sourceCode[i + 1];
+            if (k) { return next(--k); }
             return ch;
+        } else if (i === j) {
+            ch = undefined;
+            lookahead = undefined;
+            return false;
         }
+        throw new RangeError("next() over last character");
     }
 
     function pushtoken(type, value, computed, longName) {
-        var isWS = type === "WhiteSpace";
-        var isLT = type === "LineTerminator";
-        /* replace by replacing pushtoken */
+        if (!isWS) lastTokenType = type;
+
         token = Object.create(null);
-        if (isWS === false) lastTokenType = type;
-        
         token.type = type;
         token.longName = longName;
         token.value = value;
@@ -3223,9 +3296,7 @@ define("tokenizer", function (require, exports) {
                     inputElementGoal = inputElementRegExp;
             } else inputElementGoal = inputElementDiv;
         }
-
         // produce loc information
-
         token.offset = offset;
         token.loc = {
             __proto__: null,
@@ -3247,8 +3318,6 @@ define("tokenizer", function (require, exports) {
         tokens.push(token);
         if (cb) cb(token);
         // emit("token", token);
-
-
         return token;
     }
 
@@ -3260,22 +3329,22 @@ define("tokenizer", function (require, exports) {
         tokens = [];
         line = 1;
         column = 0;
-        i = 0;
+        i = -1;
         j = sourceCode.length;
-        ch = sourceCode[0];
-        lookahead = sourceCode[1];
+        ch = undefined;
+        lookahead = sourceCode[0];
+        next();
+
         do {
     	    offset = i;
-            token = WhiteSpace() || LineTerminator() || DivPunctuator() || NumericLiteral() || TemplateLiteral() || Punctuation() || KeywordOrIdentifier() || StringLiteral();
-            next(); // the lexer functions forgot the next at the end.
-                    // this is very old code and probably the oldest of syntax.js together with the highlighter-app
+
+            WhiteSpace() || LineTerminator() || DivPunctuator() || NumericLiteral() ||  Punctuation() || KeywordOrIdentifier() || StringLiteral() || TemplateLiteral();
+            if (i === offset) next();
         } while (ch !== undefined);
         return tokens;
     }
 
-
     var tokenizer = {};
-
     tokenizer.LineTerminator = LineTerminator;
     tokenizer.KeywordOrIdentifier = KeywordOrIdentifier;
     tokenizer.StringLiteral = StringLiteral;
@@ -3287,26 +3356,30 @@ define("tokenizer", function (require, exports) {
     tokenizer.NumericLiteral = NumericLiteral;
     tokenizer.Punctuation = Punctuation;
     tokenizer.TemplateLiteral = TemplateLiteral;
-    tokenizer.tokenizer = tokenizer;
-    tokenizer.tokenize = tokenize;
 
+    
     tokenize.tokenizer = tokenizer;
     tokenize.setCustomTokenMaker = setCustomTokenMaker;
     tokenize.unsetCustomTokenMaker = unsetCustomTokenMaker;
 
-    var customTokenMaker = null;
-    function setCustomTokenMaker(func) {
+    
+   
+    function setCustomTokenMaker (func) {
         if (typeof func === null) {
-            customTokenMaker = null;
+            createCustomToken = null;
         } else if (typeof func === "function") {
-            customTokenMaker = func;
+            createCustomToken = func;
         } else throw new TypeError("tokenmaker must be a function your_token <- maker(my_token) to return a custom token. Please fix that and try again.");
     }
+
     function unsetCustomTokenMaker () {
-        customTokenMaker = null;
+        createCustomToken = null;
     }
 
-    return tokenize;
+    //console.dir(tokenize("... args;...args"));
+    //process.exit(0);
+
+        return tokenize;
 
     });
 
@@ -5334,7 +5407,7 @@ define("parser", ["tables", "tokenizer"], function (tables, tokenize) {
             pass("...");
             var node = Node("SpreadExpression");
             node.argument = this.AssignmentExpression();
-            var l2 = node.argument.loc && node.argument.loc.end; 
+            var l2 = node.argument && node.argument.loc && node.argument.loc.end;
             node.loc = makeLoc(l1, l2);
             if (compile) return builder["spreadExpression"](node.argument, node.loc);
             return node;
@@ -14220,7 +14293,7 @@ define("api", function (require, exports, module) {
 // DO NOT REMOVE!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
 /**
- *
+ *  This is included ___inside__ of lib/api.js (!!! inside the function !!!)
  *
  *  The function createIntrinsics is stored in /lib/create_intrinsics
  *
