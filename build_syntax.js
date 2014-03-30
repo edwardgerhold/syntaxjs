@@ -8,6 +8,7 @@
 //#include "lib/tables.js";
 //#include "lib/i18n.js";
 //#include "lib/semantics.js";
+/*#include "lib/unicode/identifier-module.js"; // disabled */
 //#include "lib/tokenizer.js";
 //#include "lib/earlyerrors.js";
 //#include "lib/parser.js";

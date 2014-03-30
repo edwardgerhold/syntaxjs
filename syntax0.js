@@ -2720,11 +2720,13 @@ define("slower-static-semantics", function (require, exports, modules) {
 
 });
 
-define("tokenizer", function (require, exports) {
+/*#include "lib/unicode/identifier-module.js"; // disabled */
+define("tokenizer", function () {
 
     "use strict";
+    var exports = {};
     var tables = require("tables");
-
+    
     var Punctuators = tables.Punctuators;
     var WhiteSpaces = tables.WhiteSpaces;
     var LineTerminators = tables.LineTerminators;
@@ -2747,6 +2749,15 @@ define("tokenizer", function (require, exports) {
     var Quotes = tables.Quotes;
     var PunctToExprName = tables.PunctToExprName;
     var TypeOfToken = tables.TypeOfToken;
+    
+
+    if (require.cache["unicode-support"]) {
+        var unicode = require("unicode-support");
+	var isIdentifierStart = unicode.isIdentifierStart || function () {};
+        var isIdentifierPart = unicode.isIdentifierPart || function () {};
+        var unicodeSupport = true;
+    }
+
 
     var createCustomToken = null;
     var sourceCode;
@@ -3364,7 +3375,9 @@ define("tokenizer", function (require, exports) {
         var token = "", e;
         var raw = "";
 
+	
         if (!IdentifierStart[ch] && !UnicodeIDStart[ch]) return false;
+//    	    !String.isIdentifierStart(ch.codePointAt(0))) return false;
 
         if (ch !== "\\") {
             token += ch;
@@ -3377,8 +3390,14 @@ define("tokenizer", function (require, exports) {
             }
         }
 
-        while (IdentifierPart[lookahead] || UnicodeIDContinue[lookahead]) {
+        while (IdentifierPart[lookahead] || 
+
+            // (lookahead && String.isIdentifierPart(lookahead.codePointAt(0)))
+        	// move table to unicodeIDcontinue
+
+    	    UnicodeIDContinue[lookahead]) {
             next();
+            
             if (ch === "\\" && lookahead === "u") {
                 e = UnicodeEscape();
                 token += e[1];
