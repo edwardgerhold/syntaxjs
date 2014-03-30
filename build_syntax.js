@@ -17,8 +17,8 @@
 //#include "lib/cstcodegen.js"; 
 //#include "lib/api.js";
 //#include "lib/runtime.js";
-//#include "lib/highlighter.js";
-//#include "lib/highlighter-app.js";
+//#include "lib/highlighter/highlighter.js";
+//#include "lib/highlighter/highlighter-app.js";
 //#include "lib/fswraps.js";
 //#include "lib/worker.js";
 //#include "lib/shell.js";

@@ -4233,7 +4233,6 @@ define("parser", ["tables", "tokenizer"], function (tables, tokenize) {
     }
 
     function TemplateLiteral() {
-
         if (t === "TemplateLiteral") {
             var l1, l2;
             l1 = loc && loc.start;
@@ -5419,19 +5418,21 @@ define("parser", ["tables", "tokenizer"], function (tables, tokenize) {
         node.generator = isGenerator;
         if (!isObjectMethod) node.static = isStaticMethod;
 
+
         if (isGetter) {
             node.kind = "get";
             node.specialMethod = true;
         }
 
+
         if (isSetter) {
             node.kind = "set";
             node.specialMethod = true;
         }
-
         pass("(");
         node.params = this.FormalParameterList();
         pass(")");
+
 
         pass("{");
         node.body = this.FunctionBody(node);
@@ -5517,7 +5518,6 @@ define("parser", ["tables", "tokenizer"], function (tables, tokenize) {
             pass("...");
             var node = Node("RestParameter");
             node.id = v;
-
             staticSemantics.addLexBinding(v);
 
             pass(v);
@@ -8438,6 +8438,9 @@ define("arraycompiler", function (require, exports, module) {
     the builder. It can easily examine the whole object, which is better than the 
     fixed parameter builder interface which has to be programmed for each node by
     providing the right arguments than just the node. --- As a second option.
+
+
+    this one takes the extras after the loc to change no signature but extend them by ", extras"
     
 ############################################################################################################################################################################################################
 */
@@ -8447,6 +8450,7 @@ define("js-codegen", function (require, exports, module) {
 
     var builder = {};
     var parser = require("parser");
+
     var parseGoal = parser.parseGoal;
     var setBuilder = parser.setBuilder;
     var unsetBuilder = parser.unsetBuilder;
@@ -8470,13 +8474,21 @@ define("js-codegen", function (require, exports, module) {
 
     var names = {
         __proto__: null,
+
         "VariableStatement": "variableStatement",
         "ExpressionStatement": "expressionStatement",
         "FunctionDeclaration": "functionDeclaration",
         "MethodDefinition": "methodDefinition",
         "PropertyDefinition": "propertyDefinition"
-    };
 
+    };
+    // ok, map names per function
+    /*
+    Object.keys(parser).forEach(function (k) {
+        if (["next","scan","pass","parse"].indexOf(k) > -1) return;
+        names[k] = k[0].toLowerCase() + k.slice(1);
+    });
+    */
     function callBuilder(node) {
         var args;
         var name;
@@ -8502,125 +8514,125 @@ define("js-codegen", function (require, exports, module) {
 
             switch (name) {
             case "BlockStatement":
-                args = [node.body, node.extras, node.loc];
+                args = [node.body, node.loc, node.extras];
                 break;
             case "FunctionDeclaration":
             case "FunctionExpression":
             case "GeneratorDeclaration":
             case "GeneratorExpression":
-                args = [node.id, node.params, node.body, node.strict, node.generator, node.expression, node.extras, node.loc];
+                args = [node.id, node.params, node.body, node.strict, node.generator, node.expression, node.loc, node.extras];
                 break;
             case "MethodDefinition":
-                args = [node.id, node.params, node.body, node.strict, node.static, node.generator, node.extras, node.loc];
+                args = [node.id, node.params, node.body, node.strict, node.static, node.generator, node.loc, node.extras];
                 break;
             case "ArrowExpression":
-                args = [node.id, node.params, node.body, node.extras, node.loc];
+                args = [node.id, node.params, node.body, node.loc, node.extras];
                 break;
             case "ExpressionStatement":
             case "SequenceExpression":
-                args = [node.expression, node.extras, node.loc];
+                args = [node.expression, node.loc, node.extras];
                 break;
             case "VariableDeclarator":
-                args = [node.id, node.init, node.extras, node.loc];
+                args = [node.id, node.init, node.loc, node.extras];
                 break;
             case "VariableDeclaration":
             case "LexicalDeclaration":
-                args = [node.kind, node.declarations, node.extras, node.loc];
+                args = [node.kind, node.declarations, node.loc, node.extras];
                 break;
             case "EmptyStatement":
                 args = [node.extras, node.loc];
                 break;
             case "ForStatement":
-                args = [node.init, node.test, node.update, node.body, node.extras, node.loc];
+                args = [node.init, node.test, node.update, node.body, node.loc, node.extras];
                 break;
             case "ForInStatement":
             case "ForOfStatement":
-                args = [node.left, node.right, node.body, node.extras, node.loc];
+                args = [node.left, node.right, node.body, node.loc, node.extras];
                 break;
             case "DoWhileStatement":
             case "WhileStatement":
-                args = [node.test, node.body, node.extras, node.loc];
+                args = [node.test, node.body, node.loc, node.extras];
                 break;
             case "LabelledStatement":
-                args = [node.label, node.statement, node.extras, node.loc];
+                args = [node.label, node.statement, node.loc, node.extras];
                 break;
             case "IfStatement":
-                args = [node.test, node.consequent, node.alternate, node.extras, node.loc];
+                args = [node.test, node.consequent, node.alternate, node.loc, node.extras];
                 break;
             case "TryStatement":
-                args = [node.block, node.guard, node.finalizer, node.extras, node.loc];
+                args = [node.block, node.guard, node.finalizer, node.loc, node.extras];
                 break;
             case "SwitchStatement":
-                args = [node.discriminant, node.cases, node.extras, node.loc];
+                args = [node.discriminant, node.cases, node.loc, node.extras];
                 break;
             case "WithStatement":
-                args = [node.object, node.body, node.extras, node.loc];
+                args = [node.object, node.body, node.loc, node.extras];
                 break;
             case "ComprehensionExpression":
-                args = [node.blocks, node.filter, node.expression, node.extras, node.loc];
+                args = [node.blocks, node.filter, node.expression, node.loc, node.extras];
                 break;
             case "AssignmentExpression":
             case "BinaryExpression":
             case "LogicalExpression":
-                args = [node.operator, node.left, node.right, node.extras, node.loc];
+                args = [node.operator, node.left, node.right, node.loc, node.extras];
                 break;
             case "UnaryExpression":
-                args = [node.operator, node.argument, node.prefix, node.extras, node.loc];
+                args = [node.operator, node.argument, node.prefix, node.loc, node.extras];
                 break;
             case "MemberExpression":
-                args = [node.object, node.property, node.computed, node.extras, node.loc];
+                args = [node.object, node.property, node.computed, node.loc, node.extras];
                 break;
             case "CallExpression":
             case "NewExpression":
-                args = [node.callee, node.arguments, node.extras, node.loc];
+                args = [node.callee, node.arguments, node.loc, node.extras];
                 break;
             case "ObjectPattern":
             case "ArrayPattern":
-                args = [node.elements, node.extras, node.loc];
+                args = [node.elements, node.loc, node.extras];
                 break;
             case "BindingElement":
-                args = [node.id.name, node.as.name, node.extras, node.loc];
+                args = [node.id.name, node.as.name, node.loc, node.extras];
                 break;
             case "ObjectExpression":
-                args = [node.properties, node.extras, node.loc];
+                args = [node.properties, node.loc, node.extras];
                 break;
             case "ArrayExpression":
-                args = [node.elements, node.extras, node.loc];
+                args = [node.elements, node.loc, node.extras];
                 break;
             case "DefaultParameter":
-                args = [node.id, node.init, node.extras, node.loc];
+                args = [node.id, node.init, node.loc, node.extras];
                 break;
             case "RestParameter":
-                args = [node.id, node.init, node.extras, node.loc];
+                args = [node.id, node.init, node.loc, node.extras];
                 break;
             case "SpreadExpression":
-                args = [node.argument, node.extras, node.loc];
+                args = [node.argument, node.loc, node.extras];
                 break;
             case "ClassDeclaration":
             case "ClassExpression":
-                args = [node.id, node.extends, node.elements, node.expression, node.extras, node.loc];
+                args = [node.id, node.extends, node.elements, node.expression, node.loc, node.extras];
                 break;
             case "ThisExpression":
             case "SuperExpression":
                 args = [node.extras, node.loc];
                 break;
             case "Program":
-                args = [node.body, node.extras, node.loc];
+                args = [node.body, node.loc, node.extras];
                 break;
             case "Identifier":
-                args = [node.name || node.value, node.extras, node.loc];
+                args = [node.name || node.value, node.loc, node.extras];
                 break;
             case "ReturnStatement":
             case "ThrowStatement":
-                args = [node.argument, node.extras, node.loc];
+                args = [node.argument, node.loc, node.extras];
                 break;
 
             case "BreakStatement":
             case "ContinueStatement":
-                args = [node.argument, node.label, node.extras, node.loc];
+                args = [node.argument, node.label, node.loc, node.extras];
                 break;
             case "YieldExpression":
-                args = [node.argument, node.delegator, node.extras, node.loc];
+                args = [node.argument, node.delegator, node.loc, node.extras];
                 break;
             case "Directive":
             case "Literal":
@@ -8629,26 +8641,26 @@ define("js-codegen", function (require, exports, module) {
             case "NullLiteral":
             case "BooleanLiteral":
             case "TemplateLiteral":
-                args = [node.spans, node.extras, node.loc];
+                args = [node.spans, node.loc, node.extras];
                 break;
             }
             name = name[0].toLowerCase() + name.slice(1);
-            return builder[name].apply(builder, args);
+            return builder[/*names[*/name/*]*/].apply(builder, args);
         }
     }
 
-    builder.spreadExpression = function (argument, loc) {
+    builder.spreadExpression = function (argument, loc, extras) {
         var src = "..." + callBuilder(argument);
         return src;
     };
 
-    builder.restParameter = function (id, init, loc) {
+    builder.restParameter = function (id, init, loc, extras) {
         var src = "..." + callBuilder(id);
         if (init) src += " = " + callBuilder(init);
         return src;
     };
 
-    builder.defaultParameter = function (id, init, loc) {
+    builder.defaultParameter = function (id, init, loc, extras) {
         var src = "";
         src += callBuilder(id);
         src += " = ";
@@ -8657,7 +8669,7 @@ define("js-codegen", function (require, exports, module) {
     };
 
     builder.classExpression =
-        builder.classDeclaration = function (id, extend, elements, expression, loc) {
+        builder.classDeclaration = function (id, extend, elements, expression, loc, extras) {
             var src = "class ";
             src += id;
             if (extend) src += " extends " + callBuilder(extend);
@@ -8673,7 +8685,7 @@ define("js-codegen", function (require, exports, module) {
             return src;
     };
 
-    builder.program = function (body, loc) {
+    builder.program = function (body, loc, extras) {
         var src = "";
         var inst;
         for (var i = 0, j = body.length; i < j; i++) {
@@ -8684,7 +8696,7 @@ define("js-codegen", function (require, exports, module) {
         return src;
     };
 
-    builder.bindingElement = function (name, as, initialiser, loc) {
+    builder.bindingElement = function (name, as, initialiser, loc, extras) {
         var src = "";
         src += name;
         src += ":";
@@ -8692,7 +8704,7 @@ define("js-codegen", function (require, exports, module) {
         if (initialiser) src += " = " + callBuilder(initialiser);
         return src;
     };
-    builder.objectPattern = function (elements, loc) {
+    builder.objectPattern = function (elements, loc, extras) {
         var src, e;
         src += "{";
         for (var i = 0, j = elements.length; i < j; i++) {
@@ -8704,7 +8716,7 @@ define("js-codegen", function (require, exports, module) {
         src += "}";
         return src;
     };
-    builder.arrayPattern = function (elements, loc) {
+    builder.arrayPattern = function (elements, loc, extras) {
         var src, e;
         src += "[";
         for (var i = 0, j = elements.length; i < j; i++) {
@@ -8716,7 +8728,7 @@ define("js-codegen", function (require, exports, module) {
         src += "]";
         return src;
     };
-    builder.identifier = function (name, loc) {
+    builder.identifier = function (name, loc, extras) {
         var src = "";
         src += name;
         return src;
@@ -8726,7 +8738,7 @@ define("js-codegen", function (require, exports, module) {
         builder.stringLiteral =
         builder.numericLiteral =
         builder.booleanLiteral =
-        builder.literal = function (literal, loc) {
+        builder.literal = function (literal, loc, extras) {
             var src = "";
             src += literal;
             return src;
@@ -8737,13 +8749,13 @@ define("js-codegen", function (require, exports, module) {
         return src;
     };
 
-    builder.variableDeclarator = function (id, init, loc) {
+    builder.variableDeclarator = function (id, init, loc, extras) {
         var src = "";
         src += id;
         return src;
     };
     builder.lexicalDeclaration =
-        builder.variableDeclaration = function variableStatement(kind, declarations, loc) {
+        builder.variableDeclaration = function variableStatement(kind, declarations, loc, extras) {
             var src = kind + " ";
             var decl;
             for (var i = 0, j = declarations.length; i < j; i++) {
@@ -8780,7 +8792,7 @@ define("js-codegen", function (require, exports, module) {
     };
 
     builder.arrowExpression =
-        function (id, params, body, loc) {
+        function (id, params, body, loc, extras) {
             var src = "";
             src += this.formalParameters(params);
             src += " => ";
@@ -8795,7 +8807,7 @@ define("js-codegen", function (require, exports, module) {
     builder.functionDeclaration =
         builder.functionExpression =
         builder.generatorDeclaration =
-        builder.generatorExpression = function (id, params, body, strict, generator, expression, loc) {
+        builder.generatorExpression = function (id, params, body, strict, generator, expression, loc, extras) {
             var src = "";
             var st;
             src = "function";
@@ -8809,7 +8821,7 @@ define("js-codegen", function (require, exports, module) {
     };
 
     builder.generatorMethod =
-        builder.methodDefinition = function (id, params, body, strict, generator, loc) {
+        builder.methodDefinition = function (id, params, body, strict, generator, loc, extras) {
             ++indent;
             var src = "";
             if (generator) src += "*";
@@ -8844,21 +8856,21 @@ define("js-codegen", function (require, exports, module) {
         return src;
     };
 
-    builder.callExpression = function (callee, args, loc) {
+    builder.callExpression = function (callee, args, loc, extras) {
         var src = "";
         src += callBuilder(callee);
         src += this.formalParameters(args);
         return src;
 
     };
-    builder.newExpression = function (callee, args, loc) {
+    builder.newExpression = function (callee, args, loc, extras) {
         var src = "new ";
         src += callBuilder(callee);
         src += this.formalParameters(args);
         return src;
     };
 
-    builder.objectExpression = function (properties, loc) {
+    builder.objectExpression = function (properties, loc, extras) {
         var p;
         var src = "{";
         for (var i = 0, j = properties.length; i < j; i++) {
@@ -8874,7 +8886,7 @@ define("js-codegen", function (require, exports, module) {
         src += "}";
         return src;
     };
-    builder.arrayExpression = function (elements, loc) {
+    builder.arrayExpression = function (elements, loc, extras) {
         var e;
         var src = "[";
         for (var i = 0, j = elements.length; i < j; i++) {
@@ -8892,7 +8904,7 @@ define("js-codegen", function (require, exports, module) {
 
     };
 
-    builder.blockStatement = function (body, loc) {
+    builder.blockStatement = function (body, loc, extras) {
         var stm;
         var src = "{";
 
@@ -8915,7 +8927,7 @@ define("js-codegen", function (require, exports, module) {
         return src;
     };
 
-    builder.unaryExpression = function (operator, argument, prefix, loc) {
+    builder.unaryExpression = function (operator, argument, prefix, loc, extras) {
         var src = "";
         if (prefix) src += operator;
         src += callBuilder(argument);
@@ -8923,7 +8935,7 @@ define("js-codegen", function (require, exports, module) {
         return src;
     };
 
-    builder.binaryExpression = function (operator, left, right, loc) {
+    builder.binaryExpression = function (operator, left, right, loc, extras) {
         var src = "";
         src += callBuilder(left);
         src += SPC + operator + SPC;
@@ -8931,7 +8943,7 @@ define("js-codegen", function (require, exports, module) {
         return src;
     }
 
-    builder.assignmentExpression = function (operator, left, right, loc) {
+    builder.assignmentExpression = function (operator, left, right, loc, extras) {
         var src = "";
         src += callBuilder(left);
         src += SPC + operator + SPC;
@@ -8940,12 +8952,12 @@ define("js-codegen", function (require, exports, module) {
     }
 
     builder.pattern = function () {};
-    builder.expressionStatement = function expressionStatement(expr, loc) {
+    builder.expressionStatement = function expressionStatement(expr, loc, extras) {
         var src = "";
         src += callBuilder(expr);
         return src;
     };
-    builder.labelledStatement = function labelledStatement(label, body, loc) {
+    builder.labelledStatement = function labelledStatement(label, body, loc, extras) {
         var src;
         src += label + ": ";
         src += nl();
@@ -8953,7 +8965,7 @@ define("js-codegen", function (require, exports, module) {
         src += callBuilder(body);
         return src;
     };
-    builder.sequenceExpression = function (seq, loc) {
+    builder.sequenceExpression = function (seq, loc, extras) {
         var src = "";
         var e;
         for (var i = 0, j = seq.length; i < j; i++) {
@@ -8966,12 +8978,12 @@ define("js-codegen", function (require, exports, module) {
         }
         return src;
     };
-    builder.ifStatement = function ifStatement(test, condition, alternate, loc) {
+    builder.ifStatement = function ifStatement(test, condition, alternate, loc, extras) {
         var src = tabs(indent) + "if (" + callBuilder(test) + ") " + callBuilder(condition);
         if (alternate) src += " else " + callBuilder(alternate);
         return src;
     };
-    builder.switchStatement = function (discriminant, cases, isLexical, loc) {
+    builder.switchStatement = function (discriminant, cases, isLexical, loc, extras) {
         var c;
         var src = "switch (" + callBuilder(discriminant) + ") {";
         for (var i = 0, j = cases.length; i < j; i++) {
@@ -8992,15 +9004,15 @@ define("js-codegen", function (require, exports, module) {
         src += "}";
         return src;
     };
-    builder.whileStatement = function whileStatement(test, body, loc) {
+    builder.whileStatement = function whileStatement(test, body, loc, extras) {
         var src = "while (" + callBuilder(test) + ")" + callBuilder(body);
         return src;
     };
-    builder.doWhileStatement = function doWhileStatement(test, body, loc) {
+    builder.doWhileStatement = function doWhileStatement(test, body, loc, extras) {
         var src = "do " + callBuilder(body) + " while (" + callBuilder(test) + ");";
         return src;
     };
-    builder.withStatement = function withStatement(obj, body, loc) {
+    builder.withStatement = function withStatement(obj, body, loc, extras) {
         var src = "with (" + callBuilder(obj) + ") " + callBuilder(body);
         return src;
     };
@@ -9008,12 +9020,12 @@ define("js-codegen", function (require, exports, module) {
         var src = "debugger;";
         return src;
     };
-    builder.tryStatement = function (block, handler, guard, finalizer, loc) {
+    builder.tryStatement = function (block, handler, guard, finalizer, loc, extras) {
         var src = "try " + callBuilder(block) + " catch (" + callBuilder(guard.params) + ") " + callBuilder(guard.block);
         if (finalizer) src += "finally " + callBuilder(finalizer.block);
         return src;
     };
-    builder.forInStatement = function forInStatement(left, right, body, isForEach, loc) {
+    builder.forInStatement = function forInStatement(left, right, body, isForEach, loc, extras) {
         var src = "for ("
         src += callBuilder(left);
         src += " in ";
@@ -9022,7 +9034,7 @@ define("js-codegen", function (require, exports, module) {
         src += callBuilder(body);
         return src;
     };
-    builder.forOfStatement = function forOfStatement(left, right, body, loc) {
+    builder.forOfStatement = function forOfStatement(left, right, body, loc, extras) {
         var src = "for ("
         src += callBuilder(left);
         src += " of ";
@@ -9031,7 +9043,7 @@ define("js-codegen", function (require, exports, module) {
         src += callBuilder(body);
         return src;
     };
-    builder.forStatement = function forStatement(init, test, update, body, loc) {
+    builder.forStatement = function forStatement(init, test, update, body, loc, extras) {
         var src = "for ("
         if (init) src += callBuilder(init);
         src += ";";
@@ -9043,7 +9055,7 @@ define("js-codegen", function (require, exports, module) {
         return src;
     };
 
-    builder.throwStatement = function (expression, loc) {
+    builder.throwStatement = function (expression, loc, extras) {
         var src = "throw";
         if (expression) {
             src += SPC;
@@ -9051,7 +9063,7 @@ define("js-codegen", function (require, exports, module) {
         }
         return src;
     };
-    builder.breakStatement = function (label, loc) {
+    builder.breakStatement = function (label, loc, extras) {
         var src = "break";
         if (label) {
             src += SPC;
@@ -9059,7 +9071,7 @@ define("js-codegen", function (require, exports, module) {
         }
         return src;
     };
-    builder.continueStatement = function (label, loc) {
+    builder.continueStatement = function (label, loc, extras) {
         var src = "continue";
         if (label) {
             src += SPC;
@@ -9067,7 +9079,7 @@ define("js-codegen", function (require, exports, module) {
         }
         return src;
     };
-    builder.returnStatement = function (expression, loc) {
+    builder.returnStatement = function (expression, loc, extras) {
         var src = "return";
         if (expression) {
             src += " " + callBuilder(expression);
@@ -23283,7 +23295,7 @@ LazyDefineBuiltinConstant(EmitterPrototype, $$toStringTag, "Emitter");
 
 
 //******************************************************************************************************************************************************************************************************
-// Jetzt die AST Runtime, die fuer ByteCode wiederholt werden muss
+// Jetzt die AST Runtime, die fuer ByteCode ueberholt werden muss
 //******************************************************************************************************************************************************************************************************
 
 define("runtime", ["parser", "api", "slower-static-semantics"], function (parse, ecma, statics) {
@@ -23333,7 +23345,6 @@ define("runtime", ["parser", "api", "slower-static-semantics"], function (parse,
         "left": 1,
         "right": 2
     };
-
     var astCodeMap = {
         "type":"type",
         "body":"body",
@@ -23344,9 +23355,7 @@ define("runtime", ["parser", "api", "slower-static-semantics"], function (parse,
         "computed": "computed"
     };
 
-
     var codeMap = astCodeMap;
-
 
     function getCode(code, field) {
         if (code) {
@@ -23365,21 +23374,6 @@ define("runtime", ["parser", "api", "slower-static-semantics"], function (parse,
     
 */
 
-
-    //
-    // Code REALM requiren
-
-
-
-
-    // 
-
-    
-    var writePropertyDescriptor = ecma.writePropertyDescriptor;
-
-    // 
-    // Alte Static Semantics (werden abgeloest)
-    //
 
     var DeclaredNames = statics.DeclaredNames;
     var BoundNames = statics.BoundNames;
@@ -23414,7 +23408,7 @@ define("runtime", ["parser", "api", "slower-static-semantics"], function (parse,
 
 
 
-    var List = ecma.List;
+//    var List = ecma.List;
     var Assert = ecma.Assert;
     var assert = ecma.assert;
     var CreateRealm = ecma.CreateRealm;
@@ -23431,6 +23425,8 @@ define("runtime", ["parser", "api", "slower-static-semantics"], function (parse,
     var CompletePropertyDescriptor = ecma.CompletePropertyDescriptor;
     var ValidateAndApplyPropertyDescriptor = ecma.ValidateAndApplyPropertyDescriptor;
     var ThrowTypeError = ecma.ThrowTypeError;
+
+    var writePropertyDescriptor = ecma.writePropertyDescriptor;
     
     var withError = ecma.withError;
     var printException = ecma.printException;
@@ -24507,7 +24503,7 @@ define("runtime", ["parser", "api", "slower-static-semantics"], function (parse,
 
         // FunctionBody
         for (var i = 0, j = code.length; i < j; i++) {
-            if ((node = code[i]) /*&& !SkipDecl(node)*/) {
+            if ((node = code[i])) {
                 tellExecutionContext(node, i);
                 exprRef = Evaluate(node);
 
@@ -24532,7 +24528,7 @@ define("runtime", ["parser", "api", "slower-static-semantics"], function (parse,
     
     
         for (var i = 0, j = code.length; i < j; i++) {
-            if ((node = code[i]) /*&& !SkipDecl(node)*/) {
+            if ((node = code[i])) {
                 tellExecutionContext(node, i);
                 exprRef = Evaluate(node);
 
@@ -24592,7 +24588,7 @@ define("runtime", ["parser", "api", "slower-static-semantics"], function (parse,
         var params = getCode(node, "params");
         var strict = true;
         F = FunctionCreate("arrow", params, body, scope, strict);
-        F.ThisMode = "lexical";
+        setInternalSlot(F, "ThisMode",  "lexical");
         //MakeConstructor(F);
         return NormalCompletion(F);
     }
@@ -24813,7 +24809,8 @@ define("runtime", ["parser", "api", "slower-static-semantics"], function (parse,
 
     }
 
-    evaluation.BindingElement = function (node) {
+    evaluation.BindingElement = BindingElement
+    function BindingElement (node) {
         if (node.as) {
             return ResolveBinding(node.as);
         } else {
@@ -26602,7 +26599,7 @@ define("runtime", ["parser", "api", "slower-static-semantics"], function (parse,
             if (isAbrupt(expr = ifAbrupt(expr))) return expr;
 
             if ((i % 2) === 0) {
-                expr = parseGoal("Expression", expr); // addiere parseArray(expr, tokens);
+                expr = parseGoal("Expression", expr); 
                 var exprRef = Evaluate(expr);
                 var exprValue = GetValue(exprRef);
                 if (isAbrupt(exprValue = ifAbrupt(exprValue))) return exprValue;
@@ -27253,7 +27250,6 @@ define("runtime", ["parser", "api", "slower-static-semantics"], function (parse,
                 var state = getContext().state;
                 var stateRec = state[state.length-1];
                 var R = Evaluate2.apply(this, stateRec);
-
                 if (isAbrupt(R = ifAbrupt(R))) return R;
                 if (R !== empty) r = R;
                 state.pop();
@@ -27368,11 +27364,9 @@ define("runtime", ["parser", "api", "slower-static-semantics"], function (parse,
 
 
         // now process my eventQueue (which will be replaced by ES6 concurrency and task queues)
+
         if (!shellModeBool && initialisedTheRuntime && !eventQueue.length) endRuntime();
-        else if (eventQueue.length) setTimeout(function () {HandleEventQueue(shellModeBool, initialisedTheRuntime);}, 0);
-        
-
-
+        else if (eventQueue.length) setTimeout(function () {HandleEventQueue(shellModeBool, initialisedTheRuntime);}, 0);        
         return exprValue;
     }
 
@@ -27424,7 +27418,7 @@ define("runtime", ["parser", "api", "slower-static-semantics"], function (parse,
 
     function ExecuteAsyncTransform (source) {
         return makePromise(function (resolve, reject) {
-            ;
+            
             initializeTheRuntime();    
             var result = Evaluate(parse(source));
             if (isAbrupt(result)) {
