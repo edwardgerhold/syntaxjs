@@ -1,10 +1,6 @@
 <h2>Parser-API</h2>
 
 
-<p>These are some additions to the mozilla parser api ast. Which are far away from perfect
-and need to be corrected and well used. But i use them to evaluate es6 code with syntax.js.
-My dream is to get it later compatible with existing and great tools using this parser api.</p>
-
 <h2>For-In/Of Statements</h2>
 
 <pre>
@@ -24,8 +20,6 @@ My dream is to get it later compatible with existing and great tools using this 
 	id: { type: "ArrayPattern", elements: [ { type: "Identifier", name: "k"}, {type:"Identifier", name: "v" } ] }
     }
 </pre>
-
-<p>Ich denke "id" ist vielleicht nicht gut gewaehlt. Aber ich brauchte was, um die Luecke zu fuellen.</p>
 
 
 <h2>Spread Expression</h2>
@@ -68,19 +62,33 @@ My dream is to get it later compatible with existing and great tools using this 
 </pre>
     
     
-<h2>Default Parameters</h2>
+<h2>Default Parameters (*)</h2>
+
+<p>(*) There is a .defaults and .rest property on FunctionDeclaration nodes,
+which is currently not supported by myself, because i do not know how to use 
+the former.</p>
+
+<p>The parameters</p>
 <pre>
     f(a = 3) { }
-    
+</pre>
+
+<p>Be replaced with this node</p>
+
+<pre>    
     { 
 	type: "DefaultParameter", 
 	id: "a", 
 	init: { 
-	    type: "NumericLiteral", value: "3" 
+	    type: "NumericLiteral", 
+	    value: "3" 
 	} 
-    };
-    
-    
+    }
+</pre>
+
+<p>Which can be seen as</p>
+
+<pre>    
     {
 	type: "DefaultParameter"
 	id: string
@@ -90,11 +98,19 @@ My dream is to get it later compatible with existing and great tools using this 
 
 
 <h2>BindingPatterns</h2>
+
 <pre>
 
     let { name: alias } = { name: "Edward" }
     
-    properties: [{ type: "BindingElement", id: "name", as: "alias" }]
+    type: "VariableDeclarator
+    declarations: [
+	{ 
+	    type: "BindingElement", 
+	    id: "name", 
+	    as: "alias" 
+	}
+    ]
         
     {
 	type: "BindingElement"
@@ -107,16 +123,19 @@ My dream is to get it later compatible with existing and great tools using this 
 
 <h2>ObjectExpressions/ Computed Properties</h2>
 
-<p>The nodes added to the properties Array in ObjectExpressions i gave the type "PropertyDefinition".
-The already have the kinds "init", "get"set"</
 <pre>
-    {
+    let symbol = Symbol();
+    let obj = {
 	[symbol]: "computed property"
     }
-    
+</pre>
+
+<p>new in  properties[]</p>
+
+<pre>    
     {
-	type: "PropertyDefinition",
-	kind: "computed",
+	type: "PropertyDefinition",	// new with name
+	kind: "computed",		// new
 	key: AssignmentExpression,
 	value: AssignmentExpression
     }
@@ -125,8 +144,6 @@ The already have the kinds "init", "get"set"</
 
 
 <h2>Method Definitions</h2>
-<p>I could have reused functiondeclarations and added the kind "method" to the "PropertyDefinition"
-but i preferred to define MethodDefinitions.</p>
 
 <pre>
 
@@ -134,8 +151,8 @@ but i preferred to define MethodDefinitions.</p>
 	type: "MethodDefinition",
 	strict: bool
 	generator: bool
-	computed: bool 	// [s] computed property
-	kind: get|set	// 
+	computed: bool 		// [s] computed property
+	kind: get|set		// 
 	params:	FormalParameters
 	body: FunctionBody
 	static: bool
@@ -146,41 +163,77 @@ but i preferred to define MethodDefinitions.</p>
 
 <h2>Template Literals</h2>
 
-<p>The lexer grabs from ` to `. And the evaluation splits it. Ecma 262 Ed. 6 defines a full tokenization.</p>
+<p>New Tokens</p>
+
+<pre>
+    {
+	type: "TemplateHead",
+	value: "`abcd ${`"
+    }
+
+    {
+	type: "TemplateMiddle",
+	value: "} abcd ${`
+    }
+    
+    {
+	type: "TemplateTail",
+	value: "} abcd`"
+    }
+
+
+</pre>
+
+<p>New Node</p>
+
+
 
 <pre>
     { 
 	type: "TemplateLiteral",
-	value: "`ffsdfsdf`"
+	spans: []
     }
 </pre>
 
-<p>This is split by a regex and transformed into a call site object later. The issue with, i have to correct it
-with the real grammar, is, that embedded template strings will break the regular expression :-) This is a temp solution</p>
 
-<h2>This isn´t complete!</h2>
+
+<h2>Modules</h2>
 
 
 
 <pre>
 	{
-	type: "ModuleDeclaration",
-	id: "m",
-	strict: true,
-	body: [] // statementlist
+	    type: "ModuleDeclaration",
+	    id: "m",
+	    strict: true,
+	    body: []
+	    
+	    
+	    knownExports
+	    unknownExports
+	    knownImports
+	    unknownImports
 	}
+</pre>
+
+
+<pre>
 
 	{
 		type: "ImportStatement"
 		exports: []
 	}
+	
+</pre>
+
+
+<pre>
+	
 	{
 		type: "ExportStatement"
 		imports: []
 	}
-}
 
 </pre>
 
 
-<p>Oh, there are nodes missing. I will continue and correct this file soon.</p>

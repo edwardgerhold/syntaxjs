@@ -14,7 +14,7 @@
 //#include "lib/heap.js";
 //#include "lib/compiler.js";
 //#include "lib/arraycompiler.js";
-//#include "lib/jscodegen.js";
+//#include "lib/cstcodegen.js"; 
 //#include "lib/api.js";
 //#include "lib/runtime.js";
 //#include "lib/highlighter.js";
