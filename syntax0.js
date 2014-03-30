@@ -3005,7 +3005,7 @@ define("tokenizer", function (require, exports) {
                     // maybe it ends here
                     if (ch === "`") {
                         //template += "`";
-                        pushtoken("TemplateLiteral", template);
+                        pushtoken("TemplateLiteral", spans);
                         next();
                         return token;
                     }
@@ -3020,8 +3020,21 @@ define("tokenizer", function (require, exports) {
                 // sammle template cooked from ${. to  .}
                 cooked = "";
                 while (ch != "}") {
+                    /* add blocks inside template?
+                    if (ch == "{") {
+                        parens.push("{");
+                    }
+                    */
                     cooked += ch;
                     next();
+                    /*
+                    if (ch == "}" ) {
+                        if (parens.pop()) {
+                            cooked += ch;
+                            next();
+                        }
+                    }
+                    */
                 }
                 spans.push(cooked);
                 next(); // von } nach }.1
@@ -3071,11 +3084,12 @@ define("tokenizer", function (require, exports) {
 
     function RegularExpressionLiteral() {
         var expr = "";
+        var flags = "";
         var n, l;
         if (ch === "/" && !NotBeforeRegExp[lastTokenType]) { // <--- grammatik
 
             if (!RegExpNoneOfs[lookahead] && !LineTerminators[lookahead]) {
-                expr += ch;
+                //expr += ch;
                 next();
                 if (i > j) throw new SyntaxError("Unexpected end of line, while parsing RegularExpressionLiteral at line " + line + ", column " + column);
                 big: while (next()) {
@@ -3096,16 +3110,16 @@ define("tokenizer", function (require, exports) {
             } else return false;
 
             if (ch === "/") {
-                expr += ch;
+                //expr += ch;
                 while (RegExpFlags[lookahead]) { // besorge noch die flags
                     next();
-                    expr += ch;
+                    flags += ch;
                 }
 
-                pushtoken("RegularExpressionLiteral", expr);
+                pushtoken("RegularExpressionLiteral", [expr, flags]);
                 next();
-                inputElementGoal = inputElementDiv;
 
+                inputElementGoal = inputElementDiv;
                 return token;
             }
         }
@@ -3115,11 +3129,11 @@ define("tokenizer", function (require, exports) {
     function DivPunctuator() {
         var tok;
         if (ch === "/") {
-            if (tok = Comments()) return tok;
+            if (tok = Comments()) return token = tok;
             if (inputElementGoal === inputElementRegExp) {
                 if (tok = RegularExpressionLiteral()) {
                     inputElementGoal = inputElementDiv;
-                    return tok;
+                    return token = tok;
                 }
                 inputElementGoal = inputElementDiv;
             }
@@ -3141,7 +3155,7 @@ define("tokenizer", function (require, exports) {
 
     function Punctuation() {
 
-        if (inputElementGoal === inputElementTemplateTail && ch == "}") return false;
+        // if (inputElementGoal === inputElementTemplateTail && ch == "}") return false;
 
         if (ParensSemicolonComma[ch]) {
             pushtoken("Punctuator", ch, undefined, PunctToExprName[ch]);
@@ -4221,13 +4235,10 @@ define("parser", ["tables", "tokenizer"], function (tables, tokenize) {
     function TemplateLiteral() {
 
         if (t === "TemplateLiteral") {
-
             var l1, l2;
             l1 = loc && loc.start;
             var node = Node("TemplateLiteral");
             node.spans = v;
-            node.noSubstutionTemplate = typeof v === "string";
-
             l2 = loc && loc.end;
             node.loc = makeLoc(l1, l2);
             pass(v);
@@ -26564,29 +26575,19 @@ define("runtime", ["parser", "api", "slower-static-semantics"], function (parse,
     }
     */
 
-    var IsTemplateToken = {
-        __proto__:null,
-        "NoSubstitutionTemplate": true,
-        "TemplateHead": true,
-        "TemplateMiddle": true,
-        "TemplateTail": true
-    };
-
     function TemplateStrings(node, raw) {
         var list = [];
         var spans = node.spans;
-
         var span;
         if (raw) {
-            if (node.noSubstitutionTemplate) return [node.spans];
+            if (spans.length === 1) return spans;
             for (var i = 0, j = spans.length; i < j; i+=2) {
                 if (span = spans[i]) list.push(span);
             }
         } else {
-            if (node.noSubstitutionTemplate) return [];
+            if (spans.length === 1) return [];
             for (i = 1, j = spans.length; i < j; i+=2) {
-                if (span = spans[i])
-                list.push(span);
+                if (span = spans[i]) list.push(span);
             }
         }
         return list;
