@@ -113,3 +113,10 @@ node replace_strings.js "old" "new" file1.js file2.js ... filen.js
 should replace all occurences of "old" with "new"
 first used to replace the module names beetween files
 can be used for few refactorings
+
+
+inlinefiles.js
+==============
+Currently the main build tool for syntax.js
+it translates //#include "name.js"; directives back into code with string.replace;
+
