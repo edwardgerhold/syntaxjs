@@ -1,3 +1,35 @@
+Splitting up continues
+======================
+
+(comment in between)
+
+new subdirectories
+* api/ 
+    covers what was in api.js
+    this means the ECMA-262 api functions 
+    plus primitive types and exotic objects
+* intrinsics/ 
+    covers what was in create_intrinsics.js
+    this means the ECMA-262 standard library
+* parsenodes/
+    covers mozilla parser_api related stupp
+* compile/
+    currently the compiler is fiction but some files exist
+    (this will stay no fiction like others did the same before)
+* unicode/ 
+    here i will put some work for unicde support in
+    first is the table from mister bynens i edited for fast xs of code points
+    in the identifier part and start sets.
+* highlighter/ 
+    the syntax highlighter has an app and a separate text-to-span-html function.
+    
+some exchange from intrinsics to api is already seen
+which was on my refactoring list since lazydefineproperty
+and a hint to put the functions where. under the exotic objects
+and in relative files.
+
+
+(old content)
 
 Just split it up
 ================
