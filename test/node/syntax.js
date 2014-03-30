@@ -1,1 +1,1 @@
-/www/syntaxjs/syntax0.js
+../../syntax0.js
