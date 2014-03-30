@@ -2891,7 +2891,7 @@ define("tokenizer", function (require, exports) {
         }
         return false;
     }
-
+    /*
     function TemplateLiteral() {
         var template="";
         var parseRest = false;
@@ -2949,7 +2949,7 @@ define("tokenizer", function (require, exports) {
 
                 inputElementGoal = inputElementRegExp;
                 */
-
+/*
                 return token;
             } else if ((inputElementGoal == inputElementTemplateTail) && ch == "}") {
 
@@ -2978,6 +2978,59 @@ define("tokenizer", function (require, exports) {
 
         return false;
     }
+*/
+
+    function TemplateLiteral () {
+        //
+        // new order
+        // `edward ${ ""+ist+y } toll ${ oder } nicht?`
+        // [ "edward ", " \""+ist+y ", " toll ", " oder ", " nicht" ]
+        // where the first is always the template head, then the span, then the template
+        // the source is deferred for parsing in the runtime.
+        // this is raw and cooked strings.
+
+        var template = "";
+        var cooked = "";
+        var spans = [];
+        if (ch === "`") {
+
+            template = "";
+            // template += ch;
+            next();
+
+            while (ch != undefined) {
+
+                // sammle template raw from }. to .${ and from `
+                while (ch + lookahead != "${") {
+                    // maybe it ends here
+                    if (ch === "`") {
+                        //template += "`";
+                        pushtoken("TemplateLiteral", template);
+                        next();
+                        return token;
+                    }
+                    template += ch;
+                    next();
+                }
+                //template += ch; // $ dont collect dont strip
+                next();
+                //template += ch; // { dont collect dont strip
+                spans.push(template);
+
+                // sammle template cooked from ${. to  .}
+                cooked = "";
+                while (ch != "}") {
+                    cooked += ch;
+                    next();
+                }
+                spans.push(cooked);
+                next(); // von } nach }.1
+
+            }
+        }
+        return false;
+    }
+
 
     function Comments() {
         var comment = "";
@@ -4167,26 +4220,14 @@ define("parser", ["tables", "tokenizer"], function (tables, tokenize) {
 
     function TemplateLiteral() {
 
-        if (t === "TemplateHead" || t === "NoSubstitutionTemplate") {
+        if (t === "TemplateLiteral") {
 
             var l1, l2;
             l1 = loc && loc.start;
-
             var node = Node("TemplateLiteral");
-            node.spans = [T];
+            node.spans = v;
+            node.noSubstutionTemplate = typeof v === "string";
 
-            if (t === "TemplateHead") {
-
-
-                do {
-                    node.spans.push(T);
-                    next();
-
-                } while (t !== "TemplateTail");
-
-            } else if (t == "NoSubstitutionTemplate") {
-                node.noSubstitutionTemplate = true;
-            }
             l2 = loc && loc.end;
             node.loc = makeLoc(l1, l2);
             pass(v);
@@ -7004,8 +7045,8 @@ define("parser", ["tables", "tokenizer"], function (tables, tokenize) {
         }
 
         saveTheDot();
-        resetVariables();
 
+        resetVariables();
         if (Array.isArray(source)) {
             tokens = source;
         } else {
@@ -7017,9 +7058,6 @@ define("parser", ["tables", "tokenizer"], function (tables, tokenize) {
         i = -1;
         j = tokens.length;
         next();
-
-        //tokenize.inlineSetup(0, source);
-        //next = tokenize.inlineLex;
 
         var fn = parser[goal];
         if (!fn) throw "Sorry, got no parser for " + goal;
@@ -26534,29 +26572,21 @@ define("runtime", ["parser", "api", "slower-static-semantics"], function (parse,
         "TemplateTail": true
     };
 
-
-
     function TemplateStrings(node, raw) {
-
         var list = [];
         var spans = node.spans;
-        var span, type, expr;
-        for (var i = 0, j = spans.length; i < j; i++) {
-            span = spans[i];
-            type = span.type;
-            if (IsTemplateToken[type]) {
-                if (raw) {
-                    list.push(span);
-                } else {
-                    if (expr) list.push(expr);
-                    expr = [];
-                }
-            } else if (!IsTemplateToken[type]) {
-                if (raw) {
 
-                } else {
-                    expr.push(span);
-                }
+        var span;
+        if (raw) {
+            if (node.noSubstitutionTemplate) return [node.spans];
+            for (var i = 0, j = spans.length; i < j; i+=2) {
+                if (span = spans[i]) list.push(span);
+            }
+        } else {
+            if (node.noSubstitutionTemplate) return [];
+            for (i = 1, j = spans.length; i < j; i+=2) {
+                if (span = spans[i])
+                list.push(span);
             }
         }
         return list;
@@ -26570,7 +26600,7 @@ define("runtime", ["parser", "api", "slower-static-semantics"], function (parse,
             var expr = Get(siteObj, ToString(i));
             if (isAbrupt(expr = ifAbrupt(expr))) return expr;
 
-            if (typeof expr === "string" || Array.isArray(expr)) {
+            if ((i % 2) === 0) {
                 expr = parseGoal("Expression", expr); // addiere parseArray(expr, tokens);
                 var exprRef = Evaluate(expr);
                 var exprValue = GetValue(exprRef);
@@ -26599,8 +26629,8 @@ define("runtime", ["parser", "api", "slower-static-semantics"], function (parse,
             prop = ToString(index);
 
             cookedValue = cookedStrings[index];
-
             rawValue = rawStrings[index];
+
             if (cookedValue !== undefined) callInternalSlot("DefineOwnProperty", siteObj, prop, {
                 value: cookedValue,
                 enumerable: false,
