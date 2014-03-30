@@ -2750,14 +2750,11 @@ define("tokenizer", function () {
     var PunctToExprName = tables.PunctToExprName;
     var TypeOfToken = tables.TypeOfToken;
     
-
-    if (require.cache["unicode-support"]) {
+    /*
         var unicode = require("unicode-support");
 	var isIdentifierStart = unicode.isIdentifierStart || function () {};
         var isIdentifierPart = unicode.isIdentifierPart || function () {};
-        var unicodeSupport = true;
-    }
-
+    */
 
     var createCustomToken = null;
     var sourceCode;
@@ -3604,9 +3601,12 @@ define("earlyerrors", function () {
  ############################################################################################################################################################################################################
  */
 
-define("parser", ["tables", "tokenizer"], function (tables, tokenize) {
+define("parser", function () {
+
     "use strict";
     var i18n = require("i18n-messages");
+    var tables = require("tables");
+    var tokenize = require("tokenizer");
 
     var EarlyErrors = require("earlyerrors").EarlyErrors;
     var withError, ifAbrupt, isAbrupt;
@@ -9142,7 +9142,7 @@ define("js-codegen", function (require, exports, module) {
 
     return build;
 });
- 
+
 
 define("api", function (require, exports, module) {
 

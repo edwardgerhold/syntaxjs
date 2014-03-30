@@ -5,7 +5,7 @@
     
 */
 //#include "lib/amd-prolly.js";
-//#include "lib/tables.js";
+//#include "lib/parsenodes/tables.js";
 //#include "lib/i18n.js";
 //#include "lib/parsenodes/semantics.js";
 /*#include "lib/unicode/identifier-module.js"; // disabled */
