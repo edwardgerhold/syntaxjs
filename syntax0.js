@@ -3645,6 +3645,8 @@ define("parser", function () {
     var isAsmDirective = tables.isAsmDirective;
 
 
+    //
+
     // ==========================================================
     // Parser Variables
     // ==========================================================
@@ -3655,6 +3657,8 @@ define("parser", function () {
     var isWorker = typeof importScripts === "function";
     var isNode = typeof process !== "undefined" && typeof global !== "undefined";
     var isBrowser = typeof window !== "undefined";
+    var isNashorn;
+    var isSpiderMonkey;
 
     var ast;
 
@@ -9220,6 +9224,8 @@ define("api", function (require, exports, module) {
  */
 
 
+
+
 /*
 
     these interfaces
@@ -10507,7 +10513,7 @@ function createIdentifierBinding(envRec, N, V, D, W) {
 }
 
 function GetIdentifierReference(lex, name, strict) {
-    if (lex == null) {
+    if (lex === null) {
         // unresolvable ref.
         return Reference(name, undefined, strict);
     }
@@ -12651,57 +12657,52 @@ function WeekDay (t) {
 
 
 function printCodeEvaluationState() {
-
     var state = getContext().state;
-    var node;
-    for (var i = state.length-1; i >= 0; i--) {
-        var node = state[i].node;
-        var index = state[i].instructionIndex;
-        console.log(i + ". ("+index+") " + node.type);
-    }
+    var node = state[0];
+    var instructionIndex = state[1];
+    var parent = state[2];
 
+    var str = "["+(node&&node.type)+" === "+instructionIndex+"] of ["+(parent&&parent.type)+"]";
+    console.log(str);
 }
 
-function generatorCallbackWrong(generator, body) {
-
-    printCodeEvaluationState();
-    var result = exports.ResumeEvaluate(body);
-
+function callbackWrong(generator, body) {
+    console.log("##callbackWrong()##");
+    printCodeEvaluationState(); // temp fn
+    var result = exports.Evaluate(body);
     if (isAbrupt(result = ifAbrupt(result))) return result;
-
-    // if (IteratorComplete(result)) {
     if (isAbrupt(result = ifAbrupt(result)) && result.type === "return") {
-        //Assert(isAbrupt(result) && result.type === "return", "expecting abrupt return completion");
+        console.log("##callbackWrong() Condition##");
         setInternalSlot(generator, "GeneratorState", "completed");
         if (isAbrupt(result = ifAbrupt(result))) return result;
-        getContext().generatorCallback = undefined;
+        getContext().callback = undefined;
         return CreateItrResultObject(result, true);
     }
-
-    //}
-
-    //
-    //return result;
+    return result;
 }
 
 function GeneratorStart(generator, body) {
-
+    console.log("##GeneratorStart()##");
     Assert(getInternalSlot(generator, "GeneratorState") === undefined, "GeneratorStart: GeneratorState has to be undefined");
-
     var cx = getContext();
     cx.generator = generator;
-    cx.generatorCallback = function () {
-        // this has to be transferred into a kind of machine.
-        // a little piece, how to obtain the right node from the stack has to be cleared
-        return generatorCallbackWrong(generator, body);
+    cx.callback = function () {
+        //
+        // set the state so, that it can be resumed
+        // with a stack machine no problem
+        // with an ast without parent pointers it is
+        // i will return to parent pointers for the ast
+        //
+        //
+        return callbackWrong(generator, body);
     };
-
     setInternalSlot(generator, "GeneratorContext", cx);
     setInternalSlot(generator, "GeneratorState", "suspendedStart");
     return generator;
 }
 
 function GeneratorResume(generator, value) {
+    console.log("##GeneratorResume()##");
 
     if (Type(generator) !== "object") return withError("Type", "resume: Generator is not an object");
     if (!hasInternalSlot(generator, "GeneratorState")) return withError("Type", "resume: Generator has no GeneratorState property");
@@ -12711,13 +12712,10 @@ function GeneratorResume(generator, value) {
 
     var methodContext = getContext();
     getStack().push(genContext);
-
     setInternalSlot(generator, "GeneratorState", "executing");
-    var generatorCallback = genContext.generatorCallback;
-
-    var result = generatorCallback(NormalCompletion(value));
+    var callback = genContext.callback;
+    var result = callback(NormalCompletion(value));
     setInternalSlot(generator, "GeneratorState", "suspendedYield");
-
 
     var x = getContext();
     if (x !== methodContext) {
@@ -12727,20 +12725,20 @@ function GeneratorResume(generator, value) {
 }
 
 function GeneratorYield(itrNextObj) {
+    console.log("##GeneratorYield()##");
     Assert(HasOwnProperty(itrNextObj, "value") && HasOwnProperty(itrNextObj, "done"), "expecting itrNextObj to have value and done properties");
 
     var genContext = getContext();
     var generator = genContext.generator;
-
     setInternalSlot(generator, "GeneratorState", "suspendedYield");
 
     var x = getStack().pop();
     if (x !== genContext) {
         console.log("GENERATOR ACHTUNG 1: CONTEXT MISMATCH TEST NICHT BESTANDEN - yield");
     };
-
     // compl = yield smth;
-    genContext.generatorCallback = function (compl) {
+    genContext.callback = function (compl) {
+        console.log("##callback() return compl to left of = yield##");
         return compl;
     };
     return NormalCompletion(itrNextObj);
@@ -23500,8 +23498,13 @@ LazyDefineBuiltinFunction(MessagePortPrototype, "postMessage", 0, MessagePortPro
 // Jetzt die AST Runtime, die fuer ByteCode ueberholt werden muss
 //******************************************************************************************************************************************************************************************************
 
-define("runtime", ["parser", "api", "slower-static-semantics"], function (parse, ecma, statics) {
+define("runtime", function () {
     "use strict";
+
+
+    var parse = require("parser");
+    var ecma = require("api");
+    var statics = require("slower-static-semantics");
 
     var i18n = require("i18n-messages");
 
@@ -23528,9 +23531,9 @@ define("runtime", ["parser", "api", "slower-static-semantics"], function (parse,
     }
 
 
-/*
-    The interfaces for refactoring the runtime for the Bytecode
-*/
+    /*
+     The interfaces for refactoring the runtime for the Bytecode
+     */
 
     var Push = ecma.Push;
     var Length = ecma.Length;
@@ -23561,20 +23564,20 @@ define("runtime", ["parser", "api", "slower-static-semantics"], function (parse,
 
     function getCode(code, field) {
         if (code) {
-        return code[field];
+            return code[field];
         }
     }
 
     function isCodeType(code, type) {
-	    if (code) {
-        return code["type"] === type;
+        if (code) {
+            return code["type"] === type;
         }
     }
 
 
-/*
-    
-*/
+    /*
+
+     */
 
 
     var DeclaredNames = statics.DeclaredNames;
@@ -23629,7 +23632,7 @@ define("runtime", ["parser", "api", "slower-static-semantics"], function (parse,
     var ThrowTypeError = ecma.ThrowTypeError;
 
     var writePropertyDescriptor = ecma.writePropertyDescriptor;
-    
+
     var withError = ecma.withError;
     var printException = ecma.printException;
     var makeMyExceptionText = ecma.makeMyExceptionText;
@@ -23713,11 +23716,11 @@ define("runtime", ["parser", "api", "slower-static-semantics"], function (parse,
     var GeneratorStart = ecma.GeneratorStart;
     var GeneratorYield = ecma.GeneratorYield;
     var GeneratorResume = ecma.GeneratorResume;
-    
+
     var CreateEmptyIterator = CreateEmptyIterator;
     var ToBoolean = ecma.ToBoolean;
 
-    
+
 
     var CreateItrResultObject = ecma.CreateItrResultObject;
     var IteratorNext = ecma.IteratorNext;
@@ -23764,7 +23767,7 @@ define("runtime", ["parser", "api", "slower-static-semantics"], function (parse,
     var getIntrinsic = ecma.getIntrinsic;
     var getGlobalThis = ecma.getGlobalThis;
     var getGlobalEnv = ecma.getGlobalEnv;
-    
+
     var getStack = ecma.getStack;
     var getContext = ecma.getContext;
     var getEventQueue = ecma.getEventQueue;
@@ -23775,7 +23778,7 @@ define("runtime", ["parser", "api", "slower-static-semantics"], function (parse,
     var getInternalSlot = ecma.getInternalSlot;
     var hasInternalSlot = ecma.hasInternalSlot;
     var callInternalSlot = ecma.callInternalSlot;
-    
+
     var SetFunctionLength = ecma.SetFunctionLength;
 
     //-----------------------------------------------------------
@@ -23789,8 +23792,8 @@ define("runtime", ["parser", "api", "slower-static-semantics"], function (parse,
     //
 
     function setCodeRealm(r) {  // IN THE RUNTIME, 
-                // before evaluate accepts a realm 
-                // and public evalute is only defined on each realm
+        // before evaluate accepts a realm
+        // and public evalute is only defined on each realm
 
         if (r) {
             realm = r;
@@ -23799,9 +23802,9 @@ define("runtime", ["parser", "api", "slower-static-semantics"], function (parse,
             globalEnv = realm.globalEnv;
             globalThis = realm.globalThis;
             eventQueue = realm.eventQueue;
-        
+
         }
-        
+
 
     }
 
@@ -23819,7 +23822,7 @@ define("runtime", ["parser", "api", "slower-static-semantics"], function (parse,
     var CheckObjectCoercible = ecma.CheckObjectCoercible;
 
     // ---- xs is used for intermodule 
-    
+
     // -----
     var line, column;
 
@@ -23827,7 +23830,7 @@ define("runtime", ["parser", "api", "slower-static-semantics"], function (parse,
     var cx; // der aktive Context; gegen getContext()
     var realm, intrinsics, globalEnv, globalThis;
     var stack, eventQueue;
-    
+
     var scriptLocation;
 
     var initialisedTheRuntime = false;
@@ -23837,7 +23840,7 @@ define("runtime", ["parser", "api", "slower-static-semantics"], function (parse,
     var inStrictMode = false;
     var loc = {};
 
-    
+
     var insideGeneratorState = false;
 
     var IsFunctionDeclaration = statics.IsFunctionDeclaration;
@@ -24091,7 +24094,7 @@ define("runtime", ["parser", "api", "slower-static-semantics"], function (parse,
         var needsSuper = getCode(node, "needsSuper");
         var strict = cx.strict || !!getCode(node,"strict");
         var scope = env;
-        
+
         if (!generator) {
             var name = node.id;
             F = FunctionCreate("normal", params, body, scope, strict);
@@ -24125,7 +24128,7 @@ define("runtime", ["parser", "api", "slower-static-semantics"], function (parse,
         var strict = getInternalSlot(F, "Strict");
         var thisMode = getInternalSlot(F, "ThisMode");
 
-        
+
         var boundNamesInPattern;
         var parameterNames = BoundNames(formals);
         var varDeclarations = VarScopedDeclarations(code);
@@ -24217,7 +24220,7 @@ define("runtime", ["parser", "api", "slower-static-semantics"], function (parse,
         var formalStatus = BindingInitialisation(formals, ao, undefined);
 
         if (argumentsObjectNeeded) {
-            
+
             if (strict) {
                 CompleteStrictArgumentsObject(ao);
             } else {
@@ -24229,7 +24232,7 @@ define("runtime", ["parser", "api", "slower-static-semantics"], function (parse,
     }
 
     function InstantiateArgumentsObject(args) {
-        
+
         var len = args.length;
         var obj = ArgumentsExoticObject();
 
@@ -24242,7 +24245,7 @@ define("runtime", ["parser", "api", "slower-static-semantics"], function (parse,
             configurable: true,
             enumerable: false
         });
-        
+
         var indx = len - 1;
         var val;
 
@@ -24292,22 +24295,22 @@ define("runtime", ["parser", "api", "slower-static-semantics"], function (parse,
                 param = formals[indx];
 
                 if (IsBindingPattern[param.type]) { // extra hack ?
-                    
+
                     var elem;
                     for (var x = 0, y = param.elements.length; x < y; x++) {
                         elem = param.elements[i];
                         name = elem.as ? elem.as.name : (elem.name || elem.value);
-                            if (!mappedNames[name]) {
-                                mappedNames[name] = true;
-                                var g = MakeArgGetter(name, env);
-                                var s = MakeArgSetter(name, env);
-                                callInternalSlot("DefineOwnProperty", map, name, {
-                                    get: g,
-                                    set: s,
-                                    enumerable: true,
-                                    configurable: true
-                                });
-                            }
+                        if (!mappedNames[name]) {
+                            mappedNames[name] = true;
+                            var g = MakeArgGetter(name, env);
+                            var s = MakeArgSetter(name, env);
+                            callInternalSlot("DefineOwnProperty", map, name, {
+                                get: g,
+                                set: s,
+                                enumerable: true,
+                                configurable: true
+                            });
+                        }
                     }
 
                 } else {
@@ -24318,7 +24321,7 @@ define("runtime", ["parser", "api", "slower-static-semantics"], function (parse,
                         name = param.id;
                     } else name = "";
 
-                    
+
                     if (name && !mappedNames[name]) {
                         mappedNames[name] = true;
                         var g = MakeArgGetter(name, env);
@@ -24338,7 +24341,7 @@ define("runtime", ["parser", "api", "slower-static-semantics"], function (parse,
         if (Object.keys(mappedNames).length) {
             setInternalSlot(obj, "ParameterMap", map);
         }
-        
+
         callInternalSlot("DefineOwnProperty", obj, "callee", {
             value: F,
             writable: false,
@@ -24447,7 +24450,7 @@ define("runtime", ["parser", "api", "slower-static-semantics"], function (parse,
         if (isAbrupt(argList = ifAbrupt(argList))) return argList;
         if (Type(func) !== "object") return withError("Type", "EvaluateCall: func is not an object");
         if (!IsCallable(func)) return withError("Type", "EvaluateCall: func is not callable");
-        
+
         if (Type(ref) === "reference") {
             if (IsPropertyReference(ref)) {
                 thisValue = GetThisValue(ref);
@@ -24458,7 +24461,7 @@ define("runtime", ["parser", "api", "slower-static-semantics"], function (parse,
         } else {
             thisValue = undefined;
         }
-        
+
         if (tailPosition) {
             //    PrepareForTailCall();
         }
@@ -24480,18 +24483,18 @@ define("runtime", ["parser", "api", "slower-static-semantics"], function (parse,
         var scope = getInternalSlot(this, "Environment");
         var realm = getRealm();
         debug("thisMode = " + thisMode);
-        
+
         if (!code) return withError("Type", "Call: this value has no [[Code]] slot");
 
         var callerContext = getContext();
         var calleeContext = ExecutionContext(getLexEnv());
-        
+
         calleeContext.realm = realm;
         var calleeName = Get(this, "name");
         var callerName = callerContext.callee;
 
         stack.push(calleeContext)
-        
+
         calleeContext.caller = callerName;
         calleeContext.callee = calleeName;
 
@@ -24500,12 +24503,12 @@ define("runtime", ["parser", "api", "slower-static-semantics"], function (parse,
         } else {
 
             if (thisMode === "strict") {
-                
+
                 this.thisValue = thisArg;
                 calleeContext.strict = true;
 
             } else {
-                
+
                 if (thisArg === null || thisArg === undefined) {
                     this.thisValue = getGlobalThis();
                 } else if (Type(thisArg) !== "object") {
@@ -24528,10 +24531,10 @@ define("runtime", ["parser", "api", "slower-static-semantics"], function (parse,
             return status;
         }
 
-        
+
         result = EvaluateBody(this);
         Assert(stack.pop() === calleeContext, "The right context could not be popped from the stack");
-        
+
         return result;
     }
 
@@ -24561,7 +24564,7 @@ define("runtime", ["parser", "api", "slower-static-semantics"], function (parse,
 
     function ThrowStatement(node) {
         var expr = getCode(node, "argument");
-        
+
         var exprRef = Evaluate(expr);
         if (isAbrupt(exprRef)) return exprRef;
         var exprValue = GetValue(exprRef);
@@ -24629,7 +24632,7 @@ define("runtime", ["parser", "api", "slower-static-semantics"], function (parse,
 
     /****************************************************/
 
-    // put to xs and eval once each realm.
+        // put to xs and eval once each realm.
 
     ecma.EvaluateBody = EvaluateBody;
     ecma.Evaluate = Evaluate;
@@ -24676,7 +24679,7 @@ define("runtime", ["parser", "api", "slower-static-semantics"], function (parse,
 
         for (var i = 0, j = code.length; i < j; i++) {
             if ((node = code[i]) /*&& !SkipDecl(node)*/) {
-                tellExecutionContext(node, i);
+                tellExecutionContext(node, i, code);
                 exprRef = Evaluate(node);
                 if (isAbrupt(exprRef)) {
                     if (exprRef.type === "return") {
@@ -24696,7 +24699,7 @@ define("runtime", ["parser", "api", "slower-static-semantics"], function (parse,
         var code = getInternalSlot(F,"Code");
         var kind = getInternalSlot(F, "FunctionKind");
         var thisMode = getInternalSlot(F, "ThisMode");
-        
+
         if (kind === "generator") {
             return CreateGeneratorInstance(F);
         } else if (thisMode === "lexical") {
@@ -24706,7 +24709,7 @@ define("runtime", ["parser", "api", "slower-static-semantics"], function (parse,
         // FunctionBody
         for (var i = 0, j = code.length; i < j; i++) {
             if ((node = code[i])) {
-                tellExecutionContext(node, i);
+                tellExecutionContext(node, i, code);
                 exprRef = Evaluate(node);
 
                 if (isAbrupt(exprRef)) {
@@ -24727,11 +24730,11 @@ define("runtime", ["parser", "api", "slower-static-semantics"], function (parse,
         var node;
         var code = getCode(M, "body");
 
-    
-    
+
+
         for (var i = 0, j = code.length; i < j; i++) {
             if ((node = code[i])) {
-                tellExecutionContext(node, i);
+                tellExecutionContext(node, i, code);
                 exprRef = Evaluate(node);
 
                 if (isAbrupt(exprRef)) {
@@ -24984,7 +24987,7 @@ define("runtime", ["parser", "api", "slower-static-semantics"], function (parse,
             for (var p = 0, q = decl.elements.length; p < q; p++) {
 
                 if (elem = decl.elements[p]) {
-            
+
                     if (elem.id) {
                         identName = elem.id.name || elem.id.value;
                         newName = elem.as.name || elem.as.value;
@@ -25221,10 +25224,10 @@ define("runtime", ["parser", "api", "slower-static-semantics"], function (parse,
     function printStackEntry(cx, key) {
         log("## stack[" + key + "] => " + cx.toString());
         /*for (var k in cx) {
-            log("# Execution Context: "+cx+", field "+k);
-            if (k >= stack.length-2) log(cx[k]);
-            // else dir(cx[k]);
-        }*/
+         log("# Execution Context: "+cx+", field "+k);
+         if (k >= stack.length-2) log(cx[k]);
+         // else dir(cx[k]);
+         }*/
     }
 
     function printEnvironment(cx) {
@@ -25232,7 +25235,7 @@ define("runtime", ["parser", "api", "slower-static-semantics"], function (parse,
         var v = getVarEnv();
         var l = getLexEnv();
         log("Running Execution Context on Top Of The Stack.");
-        
+
         log("+++ running +++ cx.[[VarEnv]]");
         dir(v);
         log("+++ running +++ cx.[[LexEnv]]");
@@ -25250,7 +25253,7 @@ define("runtime", ["parser", "api", "slower-static-semantics"], function (parse,
             var toString = l.toString();
             log(toString);
 
-                 if (toString  === "[object ObjectEnvironment]")         b = l.BoundObject.Bindings;
+            if (toString  === "[object ObjectEnvironment]")         b = l.BoundObject.Bindings;
             else if (toString  === "[object GlobalVariableEnvironment]") b = l.BoundObject.Bindings;
             else if (toString  === "[object GlobalLexicalEnvironment]")  b = l.Bindings;
             else b = l.Bindings;
@@ -25320,11 +25323,11 @@ define("runtime", ["parser", "api", "slower-static-semantics"], function (parse,
 
     /*
 
-    ValueLiterals
-    - StringLiteral
-    - Numeric
-    - Boolean
-*/
+     ValueLiterals
+     - StringLiteral
+     - Numeric
+     - Boolean
+     */
 
     evaluation.StringLiteral = StringLiteral;
 
@@ -25335,7 +25338,7 @@ define("runtime", ["parser", "api", "slower-static-semantics"], function (parse,
     evaluation.NumericLiteral = NumericLiteral;
 
     function NumericLiteral(node) {
-        return MV(node.value);        
+        return MV(node.value);
         // return +node.value;
     }
 
@@ -25482,8 +25485,8 @@ define("runtime", ["parser", "api", "slower-static-semantics"], function (parse,
     function PropertyDefinition(newObj, propertyDefinition) {
         "use strict";
 
-            var kind = propertyDefinition.kind;
-            var key =  propertyDefinition.key;
+        var kind = propertyDefinition.kind;
+        var key =  propertyDefinition.key;
 
 
 
@@ -25496,166 +25499,166 @@ define("runtime", ["parser", "api", "slower-static-semantics"], function (parse,
 
 
         var node = propertyDefinition.value;
-            
-            var strict = node.strict;
-            var isComputed = propertyDefinition.computed;
 
-            var status;   
-            var exprRef, exprValue;
-            var propRef, propName, propValue;
-            var closure;
-            var formals;
-            var body;
-            var scope;
-            var hasSuperRef;
-            var homeObject;
-            var methodName;
-            var functionPrototype;
+        var strict = node.strict;
+        var isComputed = propertyDefinition.computed;
 
-            /* I refactored it today, but resetted it tonight, i rewrite it tomorrow */
+        var status;
+        var exprRef, exprValue;
+        var propRef, propName, propValue;
+        var closure;
+        var formals;
+        var body;
+        var scope;
+        var hasSuperRef;
+        var homeObject;
+        var methodName;
+        var functionPrototype;
+
+        /* I refactored it today, but resetted it tonight, i rewrite it tomorrow */
 
         // TOMORROW ? (FOUR DAYS AGO)
 
-            if (kind == "init") {
+        if (kind == "init") {
 
-                // prop key
-                if (isComputed) {
-                    var symRef = Evaluate(key);
-                    var symValue = GetValue(symRef);
-                    if (isAbrupt(symValue = ifAbrupt(symValue))) return symValue;
-                    if (!IsSymbol(symValue)) return withError("Type", "A [computed] property inside an object literal has to evaluate to a Symbol primitive");
-                    propName = symValue;
-                } else {
-                    
-                    // init
-                    propName = PropName(key);
+            // prop key
+            if (isComputed) {
+                var symRef = Evaluate(key);
+                var symValue = GetValue(symRef);
+                if (isAbrupt(symValue = ifAbrupt(symValue))) return symValue;
+                if (!IsSymbol(symValue)) return withError("Type", "A [computed] property inside an object literal has to evaluate to a Symbol primitive");
+                propName = symValue;
+            } else {
 
-                }
+                // init
+                propName = PropName(key);
 
-                // value
-                if (isCodeType(node, "FunctionDeclaration")) {
+            }
 
-                    status = defineFunctionOnObject(node, newObj, propName);
-                    if (isAbrupt(status)) return status;
-                
-                } else {
+            // value
+            if (isCodeType(node, "FunctionDeclaration")) {
 
-                    propRef = Evaluate(node, newObj);
-                    if (isAbrupt(propRef = ifAbrupt(propRef))) return propRef;
-                    propValue = GetValue(propRef);
-                    if (isAbrupt(propValue = ifAbrupt(propValue))) return propValue;
-                    
-                    // B 3.
-                // DOESNT WORK
-                    if (!isComputed && propName === "__proto__") {
-                        if (Type(propValue) === "object" || propValue === null) {
-                            return callInternalSlot("SetPrototypeOf", newObj, propValue);
-                        }
-                        return NormalCompletion(empty);
-                    }
-                // FOR NOW
+                status = defineFunctionOnObject(node, newObj, propName);
+                if (isAbrupt(status)) return status;
 
-                    // Der neue IsAnonymousFn fehlt noch.
+            } else {
 
-                    status = CreateDataProperty(newObj, propName, propValue);
-                    if (isAbrupt(status)) return status;
-                }
-            
-            } else if (kind === "method") {
-                propValue = Evaluate(node, newObj);
+                propRef = Evaluate(node, newObj);
+                if (isAbrupt(propRef = ifAbrupt(propRef))) return propRef;
+                propValue = GetValue(propRef);
                 if (isAbrupt(propValue = ifAbrupt(propValue))) return propValue;
 
-            } else if (kind === "get" || kind === "set") {
-                                
-                // get [s] () { return 10 }
-                if (node.computed) {
-                    propName = GetValue(Evaluate(key));
-                    if (isAbrupt(propName = ifAbrupt(propName))) return propName;
-                        if (!IsSymbol(propName)) return withError("Type", "A [computed] property inside an object literal has to evaluate to a Symbol primitive");
-                } else {
-                    propName = typeof key === "string" ? key : key.name || key.value;
+                // B 3.
+                // DOESNT WORK
+                if (!isComputed && propName === "__proto__") {
+                    if (Type(propValue) === "object" || propValue === null) {
+                        return callInternalSlot("SetPrototypeOf", newObj, propValue);
+                    }
+                    return NormalCompletion(empty);
                 }
-                defineGetterOrSetterOnObject(node, newObj, propName, kind);
+                // FOR NOW
+
+                // Der neue IsAnonymousFn fehlt noch.
+
+                status = CreateDataProperty(newObj, propName, propValue);
+                if (isAbrupt(status)) return status;
             }
-        
+
+        } else if (kind === "method") {
+            propValue = Evaluate(node, newObj);
+            if (isAbrupt(propValue = ifAbrupt(propValue))) return propValue;
+
+        } else if (kind === "get" || kind === "set") {
+
+            // get [s] () { return 10 }
+            if (node.computed) {
+                propName = GetValue(Evaluate(key));
+                if (isAbrupt(propName = ifAbrupt(propName))) return propName;
+                if (!IsSymbol(propName)) return withError("Type", "A [computed] property inside an object literal has to evaluate to a Symbol primitive");
+            } else {
+                propName = typeof key === "string" ? key : key.name || key.value;
+            }
+            defineGetterOrSetterOnObject(node, newObj, propName, kind);
+        }
+
     }
 
 // Got to REDO ALL FOUR FUNCTIONS above and below from paper. It´s messed up (a litte, 2 init, 2 method because auf a missing computedpropertyname in propertykey and a missing propertykey() in method definition). thats all.
 
     function defineFunctionOnObject (node, newObj, propName) {
-            var cx = getContext();
-            var scope = getLexEnv();
-            var body = getCode(node, "body");
-            var formals = getCode(node, "params");
-            var strict = cx.strict || node.strict;
-            var fproto = Get(getIntrinsics(), "%FunctionPrototype%");
-            var id = node.id;
-            var generator = node.generator;
-            var propValue;
-           
-            var methodName = propName;
+        var cx = getContext();
+        var scope = getLexEnv();
+        var body = getCode(node, "body");
+        var formals = getCode(node, "params");
+        var strict = cx.strict || node.strict;
+        var fproto = Get(getIntrinsics(), "%FunctionPrototype%");
+        var id = node.id;
+        var generator = node.generator;
+        var propValue;
+
+        var methodName = propName;
 
 
-            if (id) {
-                scope = NewDeclarativeEnvironment(scope);
-                scope.CreateMutableBinding(id);
-            }
+        if (id) {
+            scope = NewDeclarativeEnvironment(scope);
+            scope.CreateMutableBinding(id);
+        }
 
-            if (ReferencesSuper(node)) {
-                var home = getLexEnv().GetSuperBase();
-                //getInternalSlot(object, "HomeObject");
-            } else {
-                methodName = undefined;
-                home = undefined;
-            }
-            
-            if (generator) propValue = GeneratorFunctionCreate("method", formals, body, scope, strict, fproto, home, methodName);
-            else propValue = FunctionCreate("method", formals, body, scope, strict, fproto, home, methodName);
+        if (ReferencesSuper(node)) {
+            var home = getLexEnv().GetSuperBase();
+            //getInternalSlot(object, "HomeObject");
+        } else {
+            methodName = undefined;
+            home = undefined;
+        }
 
-            if (id) scope.InitialiseBinding(id, propValue);
+        if (generator) propValue = GeneratorFunctionCreate("method", formals, body, scope, strict, fproto, home, methodName);
+        else propValue = FunctionCreate("method", formals, body, scope, strict, fproto, home, methodName);
 
-            MakeConstructor(propValue);
-            SetFunctionName(propValue, propName);
-            CreateDataProperty(newObj, propName, propValue);
+        if (id) scope.InitialiseBinding(id, propValue);
+
+        MakeConstructor(propValue);
+        SetFunctionName(propValue, propName);
+        CreateDataProperty(newObj, propName, propValue);
 
     }
 
 
     function defineGetterOrSetterOnObject (node, newObj, propName, kind) {
-                
-            var scope = getLexEnv();
-            var body = getCode(node, "body");
-            var formals = getCode(node, "params");
-            var functionPrototype = getIntrinsic("%FunctionPrototype%");
-            var strict = node.strict;
-            var methodName;
-            var propValue;
-            var status;
+
+        var scope = getLexEnv();
+        var body = getCode(node, "body");
+        var formals = getCode(node, "params");
+        var functionPrototype = getIntrinsic("%FunctionPrototype%");
+        var strict = node.strict;
+        var methodName;
+        var propValue;
+        var status;
 
 
-            if (ReferencesSuper(node)) {
-                var home = getLexEnv().GetSuperBase();
-                methodName = propName;
-            } else {
-                home = undefined;
-                methodName = undefined
-            }
-            //getInternalSlot(object, "HomeObject");
-            propValue = FunctionCreate("method", formals, body, scope, strict, functionPrototype, home, methodName);                
-            
-            var desc = kind == "get" ? {
-                get: propValue,
-                enumerable: true,
-                configurable: true
-            } : {
-                set: propValue,
-                enumerable: true,
-                configurable: true
-            };
+        if (ReferencesSuper(node)) {
+            var home = getLexEnv().GetSuperBase();
+            methodName = propName;
+        } else {
+            home = undefined;
+            methodName = undefined
+        }
+        //getInternalSlot(object, "HomeObject");
+        propValue = FunctionCreate("method", formals, body, scope, strict, functionPrototype, home, methodName);
 
-            SetFunctionName(propValue, propName, kind);                
-            status = DefineOwnPropertyOrThrow(newObj, propName, desc);       
-            if (isAbrupt(status)) return status;
+        var desc = kind == "get" ? {
+            get: propValue,
+            enumerable: true,
+            configurable: true
+        } : {
+            set: propValue,
+            enumerable: true,
+            configurable: true
+        };
+
+        SetFunctionName(propValue, propName, kind);
+        status = DefineOwnPropertyOrThrow(newObj, propName, desc);
+        if (isAbrupt(status)) return status;
 
     }
 
@@ -25663,7 +25666,7 @@ define("runtime", ["parser", "api", "slower-static-semantics"], function (parse,
     function ObjectExpression(node) {
         "use strict";
         var props = getCode(node, "properties");
-        var newObj = ObjectCreate();        
+        var newObj = ObjectCreate();
         var status;
         for (var i = 0, j = props.length; i < j; i++) {
             status = PropertyDefinition(newObj, props[i]);
@@ -25702,7 +25705,7 @@ define("runtime", ["parser", "api", "slower-static-semantics"], function (parse,
         var type = node.left.type;
         var op = node.operator;
         var leftElems = node.left.elements;
-        
+
         var lval, rval;
         var rref, lref;
         var result;
@@ -25746,7 +25749,7 @@ define("runtime", ["parser", "api", "slower-static-semantics"], function (parse,
             if (Type(array) !== "object") return withError("Type", "can not desctructure a non-object into some object");
             var width;
             var index = 0;
-                var len = Get(array, "length");
+            var len = Get(array, "length");
             var status;
 
             for (i = 0, j = leftElems.length; i < j; i++) {
@@ -25820,14 +25823,14 @@ define("runtime", ["parser", "api", "slower-static-semantics"], function (parse,
             result = applyAssignmentOperator(op, lval, rval);
             status = PutValue(lref, result);
             if (isAbrupt(status)) return status;
-        
+
         } else if (ltype === "MemberExpression") {
-        
+
             lref = Evaluate(node.left);
             if (isAbrupt(lref = ifAbrupt(lref))) return lref;
             rref = Evaluate(node.right);
             if (isAbrupt(rref = ifAbrupt(rref))) return rref;
-            
+
             lval = GetValue(lref);
             rval = GetValue(rref);
             if (isAbrupt(lval = ifAbrupt(lval))) return lval;
@@ -25847,66 +25850,66 @@ define("runtime", ["parser", "api", "slower-static-semantics"], function (parse,
     }
     evaluation.ConditionalExpression = ConditionalExpression;
 
-    function add(op, left, right) { 
+    function add(op, left, right) {
         left = GetValue(left);
         right = GetValue(right);
         switch (op) {
-        case "+=":
-            return left += right;
-        case "%=":
-            return left %= right;
-        case "/=":
-            return left /= right;
-        case "*=":
-            return left *= right;
-        case "-=":
-            return left -= right;
-        case "^=":
-            return left ^= right;
-        case "|=":
-            return left |= right;
-        case "&=":
-            return left &= right;
-        case ">>>=":
-            return left >>>= right;
-        case "=":
-            return left = right;
+            case "+=":
+                return left += right;
+            case "%=":
+                return left %= right;
+            case "/=":
+                return left /= right;
+            case "*=":
+                return left *= right;
+            case "-=":
+                return left -= right;
+            case "^=":
+                return left ^= right;
+            case "|=":
+                return left |= right;
+            case "&=":
+                return left &= right;
+            case ">>>=":
+                return left >>>= right;
+            case "=":
+                return left = right;
         }
     }
 
     function applyAssignmentOperator(op, lval, rval) {
         var newValue;
         switch (op) {
-        case "+=":
-            newValue = lval + rval;
-            break;
-        case "%=":
-            newValue = lval % rval;
-            break;
-        case "/=":
-            newValue = lval / rval;
-            break;
-        case "*=":
-            newValue = lval * rval;
-            break;
-        case "-=":
-            newValue = lval - rval;
-            break;
-        case "^=":
-            newValue = lval ^ rval;
-            break;
-        case "|=":
-            newValue = lval | rval;
-            break;
-        case "&=":
-            newValue = lval & rval;
-            break;
-        case ">>>=":
-            newValue = lval >>> rval;
-            break;
-        case "=":
-            newValue = rval;
-            break;
+            case "+=":
+                newValue = lval + rval;
+                break;
+            case "%=":
+                newValue = lval % rval;
+                break;
+            case "/=":
+                newValue = lval / rval;
+                break;
+            case "*=":
+                newValue = lval * rval;
+                break;
+            case "-=":
+                newValue = lval - rval;
+                break;
+            case "^=":
+                newValue = lval ^ rval;
+                break;
+            case "|=":
+                newValue = lval | rval;
+                break;
+            case "&=":
+                newValue = lval & rval;
+                break;
+            case ">>>=":
+                newValue = lval >>> rval;
+                break;
+            case "=":
+                newValue = rval;
+                break;
         }
         return newValue;
     }
@@ -25986,62 +25989,62 @@ define("runtime", ["parser", "api", "slower-static-semantics"], function (parse,
         } else if (isPrefixOperation) {
 
             switch (op) {
-            case "~":
-                oldValue = ToNumber(GetValue(exprRef));
-                newValue = ~oldValue;
-                return NormalCompletion(newValue);
-            case "!":
-                oldValue = ToNumber(GetValue(exprRef));
-                newValue = !oldValue;
-                return NormalCompletion(newValue);
-            case "+":
-                return NormalCompletion(ToNumber(GetValue(exprRef)));
-                break;
-            case "-":
-                oldValue = ToNumber(GetValue(exprRef));
-                if (oldValue != oldValue) return NormalCompletion(oldValue);
-                return NormalCompletion(-oldValue);
-                break;
-            case "++":
-                oldValue = ToNumber(GetValue(exprRef));
-                if (isAbrupt(oldValue)) return oldValue;
-                oldValue = unwrap(oldValue);
-                newValue = oldValue + 1;
-                status = PutValue(exprRef, newValue);
-                if (isAbrupt(status)) return status;
-                return NormalCompletion(newValue);
-                break;
-            case "--":
-                oldValue = ToNumber(GetValue(exprRef));
-                if (isAbrupt(oldValue)) return oldValue;
-                oldValue = unwrap(oldValue);
-                newValue = oldValue - 1;
-                status = PutValue(exprRef, newValue);
-                if (isAbrupt(status)) return status;
-                return NormalCompletion(newValue);
-                break;
+                case "~":
+                    oldValue = ToNumber(GetValue(exprRef));
+                    newValue = ~oldValue;
+                    return NormalCompletion(newValue);
+                case "!":
+                    oldValue = ToNumber(GetValue(exprRef));
+                    newValue = !oldValue;
+                    return NormalCompletion(newValue);
+                case "+":
+                    return NormalCompletion(ToNumber(GetValue(exprRef)));
+                    break;
+                case "-":
+                    oldValue = ToNumber(GetValue(exprRef));
+                    if (oldValue != oldValue) return NormalCompletion(oldValue);
+                    return NormalCompletion(-oldValue);
+                    break;
+                case "++":
+                    oldValue = ToNumber(GetValue(exprRef));
+                    if (isAbrupt(oldValue)) return oldValue;
+                    oldValue = unwrap(oldValue);
+                    newValue = oldValue + 1;
+                    status = PutValue(exprRef, newValue);
+                    if (isAbrupt(status)) return status;
+                    return NormalCompletion(newValue);
+                    break;
+                case "--":
+                    oldValue = ToNumber(GetValue(exprRef));
+                    if (isAbrupt(oldValue)) return oldValue;
+                    oldValue = unwrap(oldValue);
+                    newValue = oldValue - 1;
+                    status = PutValue(exprRef, newValue);
+                    if (isAbrupt(status)) return status;
+                    return NormalCompletion(newValue);
+                    break;
             }
 
         } else {
 
             switch (op) {
-            case "++":
-                oldValue = ToNumber(GetValue(exprRef));
-                if (isAbrupt(oldValue)) return oldValue;
-                oldValue = unwrap(oldValue);
-                newValue = oldValue + 1;
-                status = PutValue(exprRef, newValue);
-                if (isAbrupt(status)) return status;
-                return NormalCompletion(oldValue);
-            case "--":
-                oldValue = ToNumber(GetValue(exprRef));
-                if (isAbrupt(oldValue)) return oldValue;
-                oldValue = unwrap(oldValue);
-                newValue = oldValue - 1;
-                status = PutValue(exprRef, newValue);
-                if (isAbrupt(status)) return status;
-                return NormalCompletion(oldValue);
-                break;
+                case "++":
+                    oldValue = ToNumber(GetValue(exprRef));
+                    if (isAbrupt(oldValue)) return oldValue;
+                    oldValue = unwrap(oldValue);
+                    newValue = oldValue + 1;
+                    status = PutValue(exprRef, newValue);
+                    if (isAbrupt(status)) return status;
+                    return NormalCompletion(oldValue);
+                case "--":
+                    oldValue = ToNumber(GetValue(exprRef));
+                    if (isAbrupt(oldValue)) return oldValue;
+                    oldValue = unwrap(oldValue);
+                    newValue = oldValue - 1;
+                    status = PutValue(exprRef, newValue);
+                    if (isAbrupt(status)) return status;
+                    return NormalCompletion(oldValue);
+                    break;
             }
 
         }
@@ -26114,83 +26117,83 @@ define("runtime", ["parser", "api", "slower-static-semantics"], function (parse,
 
         var result;
         switch (op) {
-        case "of":
-            debug("doing the impossible");
-            var value = Invoke(ToObject(rval), "valueOf");
-            result = SameValue(rval, lval);
-            return result;
-        case "in":
-            result = HasProperty(rval, ToPropertyKey(lval));
-            return result;
-        case "<":
-            result = lval < rval;
-            break;
-        case ">":
-            result = lval > rval;
-            break;
-        case "<=":
-            result = lval <= rval;
-            break;
-        case ">=":
-            result = lval >= rval;
-            break;
-        case "+":
-            result = lval + rval;
-            break;
-        case "-":
-            result = lval - rval;
-            break;
-        case "*":
-            result = lval * rval;
-            break;
-        case "/":
-            result = lval / rval;
-            break;
-        case "^":
-            result = lval ^ rval;
-            break;
-        case "%":
-            result = lval % rval;
-            break;
-        case "===":
-            result = lval === rval;
-            break;
-        case "!==":
-            result = lval !== rval;
-            break;
-        case "==":
-            result = lval == rval;
-            break;
-        case "!=":
-            result = lval != rval;
-            break;
-        case "&&":
-            result = lval && rval;
-            break;
-        case "||":
-            result = lval || rval;
-            break;
-        case "|":
-            result = lval | rval;
-            break;
-        case "&":
-            result = lval & rval;
-            break;
-        case "<<":
-            result = lval << rval;
-            break;
-        case ">>":
-            result = lval >> rval;
-            break;
-        case ">>>":
-            result = lval >>> rval;
-            break;
-        case "instanceof":
-            result = instanceOfOperator(lval, rval);
-            return result;
-            break;
-        default:
-            break;
+            case "of":
+                debug("doing the impossible");
+                var value = Invoke(ToObject(rval), "valueOf");
+                result = SameValue(rval, lval);
+                return result;
+            case "in":
+                result = HasProperty(rval, ToPropertyKey(lval));
+                return result;
+            case "<":
+                result = lval < rval;
+                break;
+            case ">":
+                result = lval > rval;
+                break;
+            case "<=":
+                result = lval <= rval;
+                break;
+            case ">=":
+                result = lval >= rval;
+                break;
+            case "+":
+                result = lval + rval;
+                break;
+            case "-":
+                result = lval - rval;
+                break;
+            case "*":
+                result = lval * rval;
+                break;
+            case "/":
+                result = lval / rval;
+                break;
+            case "^":
+                result = lval ^ rval;
+                break;
+            case "%":
+                result = lval % rval;
+                break;
+            case "===":
+                result = lval === rval;
+                break;
+            case "!==":
+                result = lval !== rval;
+                break;
+            case "==":
+                result = lval == rval;
+                break;
+            case "!=":
+                result = lval != rval;
+                break;
+            case "&&":
+                result = lval && rval;
+                break;
+            case "||":
+                result = lval || rval;
+                break;
+            case "|":
+                result = lval | rval;
+                break;
+            case "&":
+                result = lval & rval;
+                break;
+            case "<<":
+                result = lval << rval;
+                break;
+            case ">>":
+                result = lval >> rval;
+                break;
+            case ">>>":
+                result = lval >>> rval;
+                break;
+            case "instanceof":
+                result = instanceOfOperator(lval, rval);
+                return result;
+                break;
+            default:
+                break;
         }
 
         return NormalCompletion(result); // NormalCompletion(result);
@@ -26203,7 +26206,7 @@ define("runtime", ["parser", "api", "slower-static-semantics"], function (parse,
 
     evaluation.ParenthesizedExpression = ParenthesizedExpression;
     function ParenthesizedExpression (node) {
-	return Evaluate(node.expression);
+        return Evaluate(node.expression);
     }
 
     evaluation.SequenceExpression = SequenceExpression;
@@ -26214,7 +26217,7 @@ define("runtime", ["parser", "api", "slower-static-semantics"], function (parse,
         var item;
         for (var i = 0, j = list.length; i < j; i += 1) {
             if (item = list[i]) {
-                tellExecutionContext(item, i);
+                tellExecutionContext(item, i, list);
                 exprRef = Evaluate(item);
                 if (isAbrupt(exprRef)) return exprRef;
                 exprValue = GetValue(exprRef);
@@ -26234,18 +26237,15 @@ define("runtime", ["parser", "api", "slower-static-semantics"], function (parse,
 
         var index = 0;
 
-        // try for some resume. Hope to have not so many loops to update.
-        
         if (getContext().generator) {
-            var state = getContext().state;
-            var instructionIndex = state[state.length-1].instructionIndex;
-            if (instructionIndex > 0) index = instructionIndex;
+            console.log("## generator function executing ##");
+            // set Instruction Index to saved Index + 1
         }
 
         var V = undefined;
         for (var i = index, j = stmtList.length; i < j; i++) {
             if (stmt = stmtList[i]) {
-                tellExecutionContext(stmt, i);
+                tellExecutionContext(stmt, i, stmtList);
                 stmtRef = Evaluate(stmt);
                 stmtValue = GetValue(stmtRef);
                 if (isAbrupt(stmtValue)) return stmtValue;
@@ -26474,7 +26474,7 @@ define("runtime", ["parser", "api", "slower-static-semantics"], function (parse,
         var tleft = left.type;
         var tright = right.type;
 
-        
+
         var labelSet = labelSet || Object.create(null);
         var lhsKind = "assignment";
         var iterationKind = "enumerate";
@@ -26497,7 +26497,7 @@ define("runtime", ["parser", "api", "slower-static-semantics"], function (parse,
         var body = getCode(node, "body");
         var tleft = left.type;
         var tright = right.type;
-        
+
         var labelSet = labelSet || Object.create(null);
         var lhsKind;
         var iterationKind = "iterate";
@@ -26531,11 +26531,11 @@ define("runtime", ["parser", "api", "slower-static-semantics"], function (parse,
         var label = node.label.name || node.label.value;
         var statement = node.statement;
         var labelSet = labelSet || Object.create(null);
-        
+
         if (!labelSet) {
             exists = false;
             labelSet = Object.create(null);
-            
+
         } else exists = true;
 
         labelSet[label] = node;
@@ -26568,7 +26568,7 @@ define("runtime", ["parser", "api", "slower-static-semantics"], function (parse,
         var varDcl, isConst, dn, forDcl;
         var oldEnv, loopEnv, bodyResult;
         var cx = getContext();
-        
+
         if (!labelSet) {
             labelSet = Object.create(null);
             //cx.labelSet = labelSet;
@@ -26734,46 +26734,6 @@ define("runtime", ["parser", "api", "slower-static-semantics"], function (parse,
         return R;
     }
 
-    /*
-    function TemplateStrings(node, raw) {
-        var strings = [];
-
-        var rawString = node.value.slice(1, node.value.length - 1);
-
-        var intoPieces = /(\$\{[^}]+})/g;
-        var sparseSpans = rawString.split(intoPieces);
-
-        var getVarName = /\$\{([^\}]+)\}/;
-        var sparseVars = sparseSpans.map(function (x) {
-            if (x) return x.split(getVarName)[1];
-        });
-
-        for (var i = 0, j = sparseVars.length; i < j; i++) {
-
-            if (raw) {
-                /*
-            strings = TRV(head).concat(TRV(middle)).concat(TRV(tail));
-            *//*
-                if (sparseVars[i] === undefined) { // auf Span
-                    strings.push(sparseSpans[i]);
-                } else { // auf Element
-                    //    strings.push(sparseVars[i]);
-                }
-            } else {
-                /*
-            strings = TV(head).concat(TV(middle)).concat(TV(tail));
-            *//*
-                if (sparseVars[i] === undefined) { // auf Span
-                    // strings.push(sparseSpans[i]);
-                } else { // auf Element
-                    strings.push(sparseVars[i]);
-                }
-            }
-        }
-        return strings;
-    }
-    */
-
     function TemplateStrings(node, raw) {
         var list = [];
         var spans = node.spans;
@@ -26801,7 +26761,7 @@ define("runtime", ["parser", "api", "slower-static-semantics"], function (parse,
             if (isAbrupt(expr = ifAbrupt(expr))) return expr;
 
             if ((i % 2) === 0) {
-                expr = parseGoal("Expression", expr); 
+                expr = parseGoal("Expression", expr);
                 var exprRef = Evaluate(expr);
                 var exprValue = GetValue(exprRef);
                 if (isAbrupt(exprValue = ifAbrupt(exprValue))) return exprValue;
@@ -26873,7 +26833,7 @@ define("runtime", ["parser", "api", "slower-static-semantics"], function (parse,
         var body = getCode(node, "body");
         var formals = getCode(node, "params");
         var key = node.id;
-        
+
 
         var computed = node.computed;
 
@@ -26884,7 +26844,7 @@ define("runtime", ["parser", "api", "slower-static-semantics"], function (parse,
         var generator = node.generator;
 
         var propKey;
-        
+
         if (computed) {
             propKey = GetValue(Evaluate(key));
             if (isAbrupt(propKey = ifAbrupt(propKey))) return propKey;
@@ -26896,7 +26856,7 @@ define("runtime", ["parser", "api", "slower-static-semantics"], function (parse,
         var methodName = propKey;
         if (isAbrupt(propKey = ifAbrupt(propKey))) return propKey;
 
-        
+
         if (ReferencesSuper(node)) {
             var home = getInternalSlot(object, "HomeObject");
         } else {
@@ -26907,7 +26867,7 @@ define("runtime", ["parser", "api", "slower-static-semantics"], function (parse,
         if (generator) closure = GeneratorFunctionCreate("method", formals, body, scope, strict, functionPrototype, home, methodName);
         else closure = FunctionCreate("method", formals, body, scope, strict, functionPrototype, home, methodName);
         if (isAbrupt(closure = ifAbrupt(closure))) return closure;
-        
+
         var rec = {
             key: propKey,
             closure: closure
@@ -26925,14 +26885,14 @@ define("runtime", ["parser", "api", "slower-static-semantics"], function (parse,
         if (node.generator) {
             var intrinsics = getIntrinsics();
             fproto = Get(intrinsics, "%GeneratorFunction%");
-        } 
+        }
 
         var methodDef = DefineMethod(node, object, fproto);
         if (isAbrupt(methodDef = ifAbrupt(methodDef))) return methodDef;
 
 
         SetFunctionName(methodDef.closure, methodDef.key);
-        
+
         var desc = {
             value: methodDef.closure,
             writable: true,
@@ -27286,19 +27246,10 @@ define("runtime", ["parser", "api", "slower-static-semantics"], function (parse,
     }
 
 
-    function tellExecutionContext(node, i, parent) {
+    function tellExecutionContext(node, instructionIndex, parent) {
         loc = node.loc || loc;
         var cx = getContext(); // expensive putting such here
-        var state = cx.state;
-        
-        if (state) {
-            var stateRec = state[state.length-1];
-            if (stateRec) stateRec.instructionIndex = i;
-            cx.state.node = node;
-        }
-
-        cx.line =   loc.start.line;
-        cx.column = loc.start.column;
+        cx.state = [node, instructionIndex, parent];
     }
 
     evaluation.ScriptBody =
@@ -27317,7 +27268,7 @@ define("runtime", ["parser", "api", "slower-static-semantics"], function (parse,
         var status = InstantiateGlobalDeclaration(program, getGlobalEnv(), []);
         if (isAbrupt(status)) return status;
 
-        tellExecutionContext(program, 0);
+        tellExecutionContext(program, 0, null);
         cx.callee = "ScriptItemList";
         cx.caller = "Script";
 
@@ -27326,7 +27277,7 @@ define("runtime", ["parser", "api", "slower-static-semantics"], function (parse,
         var body = program.body;
         for (var i = 0, j = program.body.length; i < j; i += 1) {
             if (node = body[i]) {
-                tellExecutionContext(node, i);
+                tellExecutionContext(node, i, program);
                 v = GetValue(Evaluate(node));
                 if (isAbrupt(v)) {
                     return v;
@@ -27338,7 +27289,179 @@ define("runtime", ["parser", "api", "slower-static-semantics"], function (parse,
         return NormalCompletion(V);
     }
 
+
+    ecma.Evaluate = Evaluate;
+    var isUndefined = {__proto__:null, "undefined":true, "null":true};
+    function Evaluate(node, a, b, c) {
+        var E, R;
+        var body, i, j;
+
+        if (!node) return;
+
+        if (typeof node === "string") {
+            debug("Evaluate(resolvebinding " + node + ")");
+            R = ResolveBinding(node);
+            return R;
+        }
+
+        if (Array.isArray(node)) {
+
+            debug("Evaluate(StatementList)");
+            if (node.type) R = evaluation[node.type](node, a, b, c);
+            else R = evaluation.StatementList(node, a, b, c);
+            return R;
+
+        }
+
+        debug("Evaluate(" + node.type + ")");
+        if (E = evaluation[node.type]) {
+            tellExecutionContext(node, 0);
+            R = E(node, a, b, c);
+        }
+
+        return R;
+    }
+
+
+
+    /************************************************************ end of ast evaluation section ***************************************************************/
+
+    function HandleEventQueue(shellmode, initialised) {
+        var task, val;
+        var func, timeout, time, result;
+
+        function handler() {
+            if (task = eventQueue.shift()) {
+                func = task.func;
+                time = Date.now();
+                if (time >= (task.time + task.timeout)) {
+                    if (IsCallable(func)) result = func.Call(ThisResolution());
+                    if (isAbrupt(result)) result = result; // ThrowAbruptThrowCompletion(result);
+                } else eventQueue.push(task);
+            }
+            if (eventQueue.length) setTimeout(handler, 0);
+            else if (!shellmode && initialised) endRuntime();
+        }
+        setTimeout(handler, 0);
+    }
+
+
+    function makeNativeException (error) {
+        var name = unwrap(Get(error, "name"));
+        var message = unwrap(Get(error, "message"));
+        var callstack = unwrap(Get(error, "stack"));
+        var text = makeMyExceptionText(name, message, callstack);
+
+        var nativeError = new Error(name);
+        nativeError.name = name;
+        nativeError.message = message;
+        nativeError.stack = text;
+        return nativeError;
+    }
+
+    function setScriptLocation (loc) {
+        scriptLocation = "(syntax.js)";
+        if (typeof window !== "undefined") {
+            loc = loc || document.location.href;
+            scriptLocation = "("+document.location.href + " @syntax.js)";
+        } else if (typeof process !== "undefined") {
+            loc = loc || __dirname;
+            scriptLocation = "(node.js interpreter)";
+        } else {
+            scriptLocation = "(worker)";
+        }
+        realm.xs.scriptLocation = scriptLocation;
+    }
+
+    function initializeTheRuntime() {
+        initialisedTheRuntime = true;
+    }
+    function endTheRuntime() {
+        initialisedTheRuntime = false;
+    }
+
+    function ExecuteTheCode(source, shellModeBool, resetEnvNowBool) {
+        var exprRef, exprValue, text, type, message, stack, error, name, callstack;
+
+        var node = typeof source === "string" ? parse(source) : source;
+        if (!node) throw "example: Call Evaluate(parse(source)) or Evaluate(source)";
+
+        if (!initialisedTheRuntime || !shellModeBool || resetEnvNowBool) {
+            var realm = CreateRealm();
+            ecma.setCodeRealm(realm);
+            initializeTheRuntime();
+            setScriptLocation();
+            NormalCompletion(undefined);
+        }
+
+        // convert references into values to return values to the user (toValue())
+        exprRef = Evaluate(node);
+        if (Type(exprRef) === "reference") exprValue = GetValue(exprRef);
+        else exprValue = exprRef;
+
+
+        // exception handling. really temporarily in this place like this
+        if (isAbrupt(exprValue = ifAbrupt(exprValue))) {
+            if (exprValue.type === "throw") {
+
+                error = exprValue.value;
+
+                if (Type(error) === "object") {
+                    throw makeNativeException(error);
+                } else {
+                    error = new Error(error);
+                    error.stack = "{eddies placeholder for stackframe of non object throwers}";
+                }
+                if (error) throw error;
+
+            }
+        }
+        // now process my eventQueue (which will be replaced by ES6 concurrency and task queues)
+        // the conditions are not chosen by experience, just added quickly to tackle the thing
+        if (!shellModeBool && initialisedTheRuntime && !eventQueue.length) endRuntime();
+        else if (eventQueue.length) setTimeout(function () {HandleEventQueue(shellModeBool, initialisedTheRuntime);}, 0);
+        return exprValue;
+    }
+
+    function ExecuteAsync (source) {
+        var p = makePromise(function (resolve, reject) {
+            initializeTheRuntime();
+            var result = Evaluate(parse(source));
+            if (isAbrupt(result)) {
+                if (result.type === "return") {
+                    resolve(result.value);
+                } else {
+                    reject(result.value);
+                }
+            } else {
+                resolve(result.value);
+            }
+            endRuntime();
+        });
+        return p;
+    }
+
+    function ExecuteAsyncTransform (source) {
+        return makePromise(function (resolve, reject) {
+            initializeTheRuntime();
+            var result = Evaluate(parse(source));
+            if (isAbrupt(result)) {
+                if (result.type === "return") {
+                    resolve(TransformObjectToJSObject(GetValue(result.value)));
+                } else {
+                    reject(TransformObjectToJSObject(GetValue(result.value)));
+                }
+            } else {
+                resolve(TransformObjectToJSObject(GetValue(result.value)));
+            }
+            endRuntime();
+        });
+    }
+
     function TransformObjectToJSObject(O) {
+        /*
+         incomplete transformer/static proxy
+         */
 
         var o = {};
         var keys = OwnPropertyKeysAsList(O);
@@ -27366,7 +27489,7 @@ define("runtime", ["parser", "api", "slower-static-semantics"], function (parse,
                     set: newSetter,
                     enumerable: desc.enumerable,
                     configurable: desc.configurable
-                }); 
+                });
             } else {
                 var value = desc.value;
                 var newValue;
@@ -27394,249 +27517,18 @@ define("runtime", ["parser", "api", "slower-static-semantics"], function (parse,
                     writable: desc.writable,
                     enumerable: desc.enumerable,
                     configurable: desc.configurable
-                }); 
+                });
             }
         });
 
         return o;
     }
 
-    /************************************************************ end of ast evaluation section ***************************************************************/
-
-    var DiverseSubProductions = {
-        "alternate": "alternate",
-        "consequent": "consequent",
-        "left": "left",
-        "right": "right",
-        "body": "body",
-        "block": "block"
-    };
-
-
-    /*
-
-        The Evaluate Function
-        is currently looking very experimental
-        because last time i was looking for a way to fix
-        generator functions without changing away from the visitor pattern
-
-     */
-
-    ecma.Evaluate = Evaluate;
-
-    function Evaluate(node, a, b, c) {
-
-        if (!node) return NormalCompletion(undefined);
-        // record everywhere oder nur bei generator?
-        // cheaper is if (cx.generator)
-        var cx = getContext();
-
-        var state = cx.state;
-        state.push([node,a,b,c]);
-
-        var result = Evaluate2(node, a,b,c);
-
-        state.pop();
-        return result;
-    }
-
-    ecma.ResumeEvaluate = ResumeEvaluate;
-
-
-// Da ist noch eine Bottom Up Methode
-
-    function GoDownEvaluate(a,b,c) {
-            var r;
-            var state = getContext().state;
-            while (state.length) {
-                var state = getContext().state;
-                var stateRec = state[state.length-1];
-                var R = Evaluate2.apply(this, stateRec);
-                if (isAbrupt(R = ifAbrupt(R))) return R;
-                if (R !== empty) r = R;
-                state.pop();
-        }
-        return NormalCompletion(r);
-    }
-
-    function ResumeEvaluate(a,b,c) {
-        var result = GoDownEvaluate(a, b, c);    
-        return result;
-    }
-
-
-
-    function Evaluate2(node, a, b, c) {
-        var E, R;
-        var body, i, j;
- 
-        if (typeof node === "string") {
-            debug("Evaluate(resolvebinding " + node + ")");
-            R = ResolveBinding(node);
-
-        } else if (Array.isArray(node)) {
-
-            debug("Evaluate(StatementList)");
-            if (node.type) R = evaluation[node.type](node, a, b, c);
-            else R = evaluation.StatementList(node, a, b, c);
-
-        } else {
-            
-            debug("Evaluate(" + node.type + ")");
-            if (E = evaluation[node.type]) {
-                tellExecutionContext(node, 0);
-                R = E(node, a, b, c);
-            }
-            
-        }
-
-        return R;
-    }
-
-
-
-    function HandleEventQueue(shellmode, initialised) {
-        var task, val;
-        var func, timeout, time, result;
-
-        function handler() {
-            if (task = eventQueue.shift()) {
-                func = task.func;
-                time = Date.now();
-                if (time >= (task.time + task.timeout)) {
-                    if (IsCallable(func)) result = func.Call(ThisResolution());
-                    if (isAbrupt(result)) result = result; // ThrowAbruptThrowCompletion(result);
-                } else eventQueue.push(task);
-            }
-            if (eventQueue.length) setTimeout(handler, 0);
-            else if (!shellmode && initialised) endRuntime();
-        }
-        setTimeout(handler, 0);
-    }
-
-    function makeNativeException (error) {
-        var name = unwrap(Get(error, "name"));
-        var message = unwrap(Get(error, "message"));
-        var callstack = unwrap(Get(error, "stack"));
-        var text = makeMyExceptionText(name, message, callstack);
-        
-        var nativeError = new Error(name);
-        nativeError.name = name;
-        nativeError.message = message;
-        nativeError.stack = text;
-        return nativeError;
-    }
-
-
-    function ExecuteTheCode(source, shellModeBool, resetEnvNowBool) {
-        var exprRef, exprValue, text, type, message, stack, error, name, callstack;
-
-        var node = typeof source === "string" ? parse(source) : source;
-        if (!node) throw "example: Call Evaluate(parse(source)) or Evaluate(source)";
-
-        if (!initialisedTheRuntime || !shellModeBool || resetEnvNowBool) {
-            
-            initializeTheRuntime();
-            NormalCompletion(undefined);
-        }
-
-        // convert references into values to return values to the user (toValue())
-        exprRef = Evaluate(node);
-        if (Type(exprRef) === "reference") exprValue = GetValue(exprRef);
-        else exprValue = exprRef;
-
-
-        // exception handling.
-        if (isAbrupt(exprValue = ifAbrupt(exprValue))) {
-            if (exprValue.type === "throw") {
-                
-                error = exprValue.value;
-
-                if (Type(error) === "object") {
-                    throw makeNativeException(error);
-                } else {
-                    error = new Error(error);
-                    error.stack = "{eddies placeholder for stackframe of non object throwers}";
-                }
-                if (error) throw error;
-
-            }
-        }
-
-
-
-        // now process my eventQueue (which will be replaced by ES6 concurrency and task queues)
-
-        if (!shellModeBool && initialisedTheRuntime && !eventQueue.length) endRuntime();
-        else if (eventQueue.length) setTimeout(function () {HandleEventQueue(shellModeBool, initialisedTheRuntime);}, 0);        
-        return exprValue;
-    }
-
-
-    function endRuntime() {
-        initialisedTheRuntime = false;
-    }
-    function initializeTheRuntime() {
-        var realm = CreateRealm(); 
-        ecma.setCodeRealm(realm);
-        
-        initialisedTheRuntime = true;
-
-        scriptLocation = "(syntax.js)";
-        if (typeof window !== "undefined") {
-            scriptLocation = "("+document.location.href + " @syntax.js)";
-        } else if (typeof process !== "undefined") {
-            scriptLocation = "(node.js interpreter)";
-        } else {
-            scriptLocation = "(worker)";
-        }
-        realm.xs.scriptLocation = scriptLocation;
-    }
-
-
-
     ExecuteTheCode.setCodeRealm = setCodeRealm;
     ExecuteTheCode.Evaluate = Evaluate;
-    function ExecuteAsync (source) {
-        var p = makePromise(function (resolve, reject) {
-            initializeTheRuntime();    
-            var result = Evaluate(parse(source));
-            if (isAbrupt(result)) {
-                if (result.type === "return") {
-                    resolve(result.value);
-                } else {
-                    reject(result.value);
-                }
-            } else { 
-                resolve(result.value);
-            }
-            endRuntime();
-        });
-        return p;
-    }
-    
     ExecuteTheCode.ExecuteAsync = ExecuteAsync;
     ExecuteTheCode.ExecuteAsyncTransform = ExecuteAsyncTransform;
-
-    function ExecuteAsyncTransform (source) {
-        return makePromise(function (resolve, reject) {
-            
-            initializeTheRuntime();    
-            var result = Evaluate(parse(source));
-            if (isAbrupt(result)) {
-            
-                if (result.type === "return") {
-                    resolve(TransformObjectToJSObject(GetValue(result.value)));
-                } else {
-                    reject(TransformObjectToJSObject(GetValue(result.value)));
-                }
-            } else { 
-                resolve(TransformObjectToJSObject(GetValue(result.value)));
-            }
-            //endRuntime();
-        });
-    }
-
+    ExecuteTheCode.TransformObjectToJSObject = TransformObjectToJSObject;
 
     return ExecuteTheCode;
 });

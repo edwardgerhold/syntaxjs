@@ -8,6 +8,25 @@ It´s "feature complete" like ES6 already is, but the features aren´t
 completed yet. Some thing fail, some don´t, some didn´t before, 
 some do now. 
 
+Next fixing generator:
+Today i just removed the bullshit i tried out some weeks ago, when figuring
+out how to do stack machines for bytecode interpreters and imagining how to
+change a tree walk for an ast interpreter to support a stack under it.
+That´s half-half so it´s removed and i look forward to add a parent-pointer
+to walker (i had that half implemented earlier, but didn´t finish it being
+busy with everything else (it was much earlier)). However, gonna upgrade 
+soon. 
+
+```
+es6> function *gen() { yield 10; }
+undefined
+es6> let it = gen();
+undefined
+es6> it.next();
+10
+```
+
+
 _New: Multiple Realms_
 
 Creation of an eval realm.
@@ -126,10 +145,9 @@ then the making of the global object.
 
 Yes, with adding /lib i have seen some desastrous engineering left beetween the main parts.
 
-_Known Bugs, _
+_Known Bugs, a lot, but known and not difficult, just mistakes_
 * Generators: The code Evaluation Stack is not fixed. The tool started with Evaluate(node) as indirect recursion function (being called again from a function called by Evaluate), but using a stack instead of real recursion makes resumability available, which is needed for the generator. I had little trouble imagining resuming and suspending a context, coz i forgot to directly use a stack machine. The problem can be fixed locally just for the generator i estimate by thinking it out.
 * I found already various possibilities by thinking through, the latest is putting the last child of a list first onto the stack (much work) or just reading the doubly linked list forward with a pop_front. just fifo. but the stack storage is needed for suspending and resuming of the context, which indirect recursion by calls has not.
-* Classes. I just have a bug in the code, they are easy. Super References. I just have a bug in the code, they are easy.
 * Have to rewrite in parser.PropertyDefinitionList and MethodDefinition the part for the computedPropertyName [sym](). It´s working, but not DRY but DUPING the Code extra for the computed key.
 * Lock-Ups, Hanging Terminals: After releasing it and writing wrong inputs, i got it. I have one of the loops not breaking.
 * Source Characters: The character set is incomplete and unicode is disabled.

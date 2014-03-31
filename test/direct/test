@@ -1,2 +1,6 @@
 #!/bin/bash
-node /l/shell.js $1
+if [ -z "$1"]; then 
+    echo "usage: ./test file.js"
+    exit
+fi
+node ../../syntax0.js $1
