@@ -318,8 +318,6 @@ and be not slower then accessing the scope anyways for the function.
 I will change the fswraps into an adapter. And will use an adapterMaker which returns a browser/worker/node
 adapter by passing in an object with three functions.
 
-
-
 - Heap
 
 Is for storing all objects and data
@@ -337,11 +335,6 @@ Was deferred for completion of the AST runtime
 Was also already recognized. But i hadn´t read about compilers before and had to fetch informations and
 lectures from american and german universities to catch the right class. Then i´ve read some books and
 meanwhile i´m behind myself with the code which seems to be promising to get it.
-
-Yes, and i´ve already checked out LLVM and the Docs and know what kind of compiler i could write with.
-Inspired by the famous emscripten and being far away from C++ and Linux i got behind what LLVM really is.
-Already in November, December. When i printed the manual and got to read it. In Feb. i started Java so in
-the typed version i´m a bit behind, but till ES7 we should come together :-)
 
 - Syntax Highlighter
 
