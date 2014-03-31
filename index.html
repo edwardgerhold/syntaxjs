@@ -67,13 +67,21 @@ window.addEventListener("load", function (e) {
     }, false);
     evaluate.addEventListener("click", function (e) {
 	var text = input.value;
-	var result = syntaxjs.toValue(text);
-	output.innerHTML = "<pre>"+result+"</pre>";
+	try {
+	    var result = syntaxjs.toValue(text);
+	    output.innerHTML = "<pre>"+result+"</pre>";
+	} catch (ex) {
+    	    output.innerHTML = "<pre>"+ex.message+ex.stack+"</pre>;
+	}
     }, false);
     shelleval.addEventListener("click", function (e) {
 	var text = input.value;
-	var result = syntaxjs.toValue(text, true);
-	output.innerHTML = "<pre>"+result+"</pre>";
+	try {
+	    var result = syntaxjs.toValue(text);
+	    output.innerHTML += "<pre class='normal-result'>"+result+"</pre>";
+	} catch (ex) {
+    	    output.innerHTML += "<pre class='abrupt-result'>"+ex.message+ex.stack+"</pre>;
+	}
     }, false);    
     ast.addEventListener("click", function (e) {
     	var text = input.value;
