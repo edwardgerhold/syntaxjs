@@ -6,7 +6,7 @@
 */
 "use strict"
 
-Error.stackTraceLimit = 100;
+Error.stackTraceLimit = 5;
 
 function makePromise (resolver) {
 
@@ -9143,6 +9143,14 @@ define("js-codegen", function (require, exports, module) {
     return build;
 });
 
+/*
+    API contains ecma-262 specification devices
+
+    it includes the complete /lib/api/ and /lib/intrinsics/ subdirecories
+    with /tools/includefiles.js
+
+ */
+
 
 define("api", function (require, exports, module) {
 
@@ -9151,9 +9159,14 @@ define("api", function (require, exports, module) {
     var heap = require("heap");
     var i18n = require("i18n-messages");
 
-    // I had these variables at the beginning, i return to;
-    var realm, intrinsics, globalEnv, globalThis;
-    var stack, eventQueue, cx;
+
+    var realm;
+    var intrinsics;
+    var globalEnv;
+    var globalThis;
+    var stack;
+    var eventQueue;
+    var cx;
 
 
     // ===========================================================================================================
@@ -9165,6 +9178,7 @@ define("api", function (require, exports, module) {
             return "[all imports/exports value]";
         }
     };
+
     var empty = {
         toString: function () {
             return "[empty completion value]";
@@ -9183,11 +9197,10 @@ define("api", function (require, exports, module) {
     var dupesInTheTwoLists = statics.dupesInTheTwoLists
     var ExpectedArgumentCount = statics.ExpectedArgumentCount;
     var ModuleRequests = statics.ModuleRequests;
-
     var parse = require("parser");
     var parseGoal = parse.parseGoal;
-    var debugmode = false;
 
+    var debugmode = false;
     function debug() {
         if (debugmode && typeof importScripts !== "function") console.log.apply(console, arguments);
     }
@@ -9201,378 +9214,527 @@ define("api", function (require, exports, module) {
         if (debugmode && typeof importScripts !== "function") console.dir.apply(console, arguments);
     }
 
-    // ===========================================================================================================
-    // quick getters for realm, env, intrnscs
-    // ===========================================================================================================
+
+/**
+ * Created by root on 31.03.14.
+ */
 
 
-    exports.getEventQueue = getEventQueue;
-
-    function getContext() {
-        var stack = realm.stack;
-        return stack[stack.length-1];
-    }
-    function getEventQueue() {
-        return realm.eventQueue;
-    }
-
-    function getGlobalThis() {
-        //return globalThis;
-        return realm.globalThis;
-    }
-
-    function getGlobalEnv() {
-        //return globalEnv;
-        return realm.globalEnv;
-    }
-
-    function getIntrinsics() {
-        //return intrinsics;
-        return realm.intrinsics;
-    }
-
-    function getIntrinsic(name) {
-        var desc = realm.intrinsics.Bindings[name];
-        return desc && desc.value;
-    }
-
-    function getIntrinsicFromRealm(name, otherRealm) {
-        var desc = otherRealm.intrinsics.Bindings[name];
-        return desc && desc.value;
-    }
-
-    function getRealm() {
-        return realm;
-    }
-
-    function getLexEnv() {
-        var cx = getContext();
-        return cx && cx.LexEnv;
-        //    return getGlobalEnv().LexEnv;
-    }
-
-    function getVarEnv() {
-        var cx = getContext();
-        return cx && cx.VarEnv;
-        //    return getGlobalEnv().objEnv;
-    }
-
-
-    function getStack() {
-        return realm.stack;
-    }
-
-    // ===========================================================================================================
-    // notes for the encoder 
-    // ===========================================================================================================
 /*
-    var object_types = {
-        "1": "[object OrdinaryObject]",
-        "2": "[object ArrayExoticObject]",
-        "3": "[object OrdinaryFunction]",
-        "4": "[object ArgumentsExoticObject]",
-        "5": "[object StringExoticObject]",
-        "6": "[object ProxyExoticObject]",
-        "7": "[object SymbolPrimitiveType]",
-        "8": "[object IndegerIndexedExoticObject]"
-    };
 
-    function getType(object) {
-        return object_types[object[0]] || "[object OrdinaryObject]";
+    these interfaces
+    replace member and arrays
+    for replacement with typed array memory
+
+
+
+ */
+
+
+function Push(array, data) {
+    return array.push(data);
+}
+function Length(array) {
+    return array.length;
+}
+function getField(array, index) {
+    return array[index];
+}
+function setField(array, index, value) {
+    return array[index] = value;
+}
+function getRec(obj, key) {
+    return obj[key];
+}
+function setRec(obj, key, value) {
+    return obj[key] = value;
+}
+
+function genericArray(arr) {
+    return arr;
+}
+
+function genericRecord(obj) {
+    return obj;
+}
+
+
+function compareInternalSlot(O, N, V) {
+    var value = getInternalSlot(O, N);
+    return value === V;
+}
+
+function getInternalSlot(O, N) {
+    return O[N];
+}
+
+function setInternalSlot(O, N, V) {
+    return O[N] = V;
+}
+
+function hasInternalSlot(O, N) {
+    return N in O;
+}
+
+function callInternalSlot(name, object, a, b, c, d) {
+    return object[name](a,b,c,d);
+}
+
+//
+// choose right internal function of object (got no polymorphism and auto type detection)
+//
+
+var function_table = {
+    "[object OrdinaryObject]": OrdinaryObject.prototype, // rename to ordinaryobjectfunctions and fix (this) parameter and call in callInternalSlot
+    "[object ArrayExoticObject]": ArrayExoticObject.prototype,
+    "[object OrdinaryFunction]": OrdinaryFunction.prototype,
+    "[object ArgumentsExoticObject]": ArgumentsExoticObject.prototype,
+    "[object StringExoticObject]": StringExoticObject.prototype,
+    "[object ProxyExoticObject]": ProxyExoticObject.prototype,
+    "[object PromiseExoticObject]": OrdinaryObject.prototype,
+    "[object SymbolPrimitiveType]": SymbolPrimitiveType.prototype,
+    "[object EddiesDOMObjectWrapper]": ExoticDOMObjectWrapper.prototype,
+    "[object EddiesDOMFunctionWrapper]": ExoticDOMFunctionWrapper.prototype,
+    "[object IntegerIndexedExoticObject]": IntegerIndexedExoticObject.prototype
+};
+
+function getFunction(obj, name) {
+    var func;
+    var proto = function_table[obj.toString()];
+    if (proto && (func = proto[name])) return func;
+    proto = OrdinaryObject.prototype;
+    func = proto[name];
+    return func;
+}
+
+// ===========================================================================================================
+// raw read and write property descriptor (string and symbol assign to bindings/symbol)
+// ===========================================================================================================
+
+function readPropertyDescriptor(object, name) {
+    if (IsSymbol(name)) {
+        return object["Symbols"][name.es5id];
+    } else {
+        return object["Bindings"][name];
     }
-    var type_table = {
-        "1": "object",
-        "2": "object",
-        "3": "object",
-        "4": "object",
-        "5": "object",
-        "6": "object",
-        "7": "symbol"
-    };
-    var internals_encode = {
-        // Objects
-        "Type": 0,
-        "Extensible": 1,
-        "Bindings": 2,
-        "Symbols": 3,
-        "es5id": 4,
-        // Functions
-        "FunctionKind": 5,
-        "Environment": 6,
-        "FormalParameters": 7,
-        "Code": 8,
-        "HomeObject": 9,
-        "MethodName": 10,
-        // Bound Functions
-        "BoundTargetFunction": 11,
-        "BoundThis": 12,
-        "BoundParameters": 13,
-        // Object Wrappers
-        "StringData": 14,
-        "NumberData": 14,
-        "DateValue": 14,
-        "JSONTag": 14,
-        "MathTag": 14,
-        // Generator
-        "GeneratorState": 14,
-        "GeneratorContext": 15,
-        // Maps
-        "MapData": 16,
-        "MapComparator": 17,
-        "__mapSetInternalUniqueKey__": 18,
-        // Promises
-        "IsPromise": 19,
-        // Observe
-        "Notifier": 20
-    };
+    /*if (IsSymbol(name)) {
+     return getInternalSlot(getInternalSlot(object, "Symbols"), getInternalSlot(name,"es5id"));
+     } else {
+     return getInternalSlot(getInternalSlot(object,"Bindings"),name);
+     }*/
+}
 
-    var internals_decode = Object.create(null);
-    for (var k in internals_encode) {
-        internals_decode[internals_encode[k]] = k;
+exports.writePropertyDescriptor = writePropertyDescriptor;
 
+function writePropertyDescriptor(object, name, value) {
+    if (IsSymbol(name)) {
+        return object["Symbols"][name.es5id] = value;
+    } else {
+        return object["Bindings"][name] = value;
     }
-*/
-    exports.Push = Push;
-    exports.Length = Length;
-    exports.getField = getField;
-    exports.setField = setField;
-    exports.setRec = setRec;
-    exports.getRec = getRec;
-    exports.genericArray = genericArray;
-    exports.genericRecord = genericRecord;
-
-    function Push(array, data) {
-        return array.push(data);
-    }
-    function Length(array) {
-        return array.length;
-    }
-    function getField(array, index) {
-        return array[index];
-    }
-    function setField(array, index, value) {
-        return array[index] = value;
-    }
-    function getRec(obj, key) {
-        return obj[key];
-    }
-    function setRec(obj, key, value) {
-        return obj[key] = value;
-    }
-
-    function genericArray(arr) {
-        return arr;
-    }
-
-    function genericRecord(obj) {
-        return obj;
-    }
-
-
-    function compareInternalSlot(O, N, V) {
-        var value = getInternalSlot(O, N);
-        return value === V;
-    }
-
-    function getInternalSlot(O, N) {
-        return O[N];
-    }
-
-    function setInternalSlot(O, N, V) {
-        return O[N] = V;
-    }
-
-    function hasInternalSlot(O, N) {
-        return N in O;
-    }
-
-    function callInternalSlot(name, object, a, b, c, d) {
-        return object[name](a,b,c,d);
-    }
-
-    //
-    // choose right internal function of object (got no polymorphism and auto type detection)
-    //
-
-    var function_table = {
-        "[object OrdinaryObject]": OrdinaryObject.prototype, // rename to ordinaryobjectfunctions and fix (this) parameter and call in callInternalSlot 
-        "[object ArrayExoticObject]": ArrayExoticObject.prototype,
-        "[object OrdinaryFunction]": OrdinaryFunction.prototype,
-        "[object ArgumentsExoticObject]": ArgumentsExoticObject.prototype,
-        "[object StringExoticObject]": StringExoticObject.prototype,
-        "[object ProxyExoticObject]": ProxyExoticObject.prototype,
-        "[object PromiseExoticObject]": OrdinaryObject.prototype,
-        "[object SymbolPrimitiveType]": SymbolPrimitiveType.prototype,
-        "[object EddiesDOMObjectWrapper]": ExoticDOMObjectWrapper.prototype,
-        "[object EddiesDOMFunctionWrapper]": ExoticDOMFunctionWrapper.prototype,
-        "[object IntegerIndexedExoticObject]": IntegerIndexedExoticObject.prototype
-    };
-
-    function getFunction(obj, name) {
-        var func;
-        var proto = function_table[obj.toString()];
-        if (proto && (func = proto[name])) return func;
-        proto = OrdinaryObject.prototype;
-        func = proto[name];
-        return func;
-    }
-
-    // ===========================================================================================================
-    // raw read and write property descriptor (string and symbol assign to bindings/symbol)
-    // ===========================================================================================================
-
-    function readPropertyDescriptor(object, name) {
-        if (IsSymbol(name)) {
-            return object["Symbols"][name.es5id];
-        } else {
-            return object["Bindings"][name];
-        }
-        /*if (IsSymbol(name)) {
-         return getInternalSlot(getInternalSlot(object, "Symbols"), getInternalSlot(name,"es5id"));
-         } else {
-         return getInternalSlot(getInternalSlot(object,"Bindings"),name);
-         }*/
-    }
-
-    exports.writePropertyDescriptor = writePropertyDescriptor;
-
-    function writePropertyDescriptor(object, name, value) {
-        if (IsSymbol(name)) {
-            return object["Symbols"][name.es5id] = value;
-        } else {
-            return object["Bindings"][name] = value;
-        }
-        /*if (IsSymbol(name)) {
-         return setInternalSlot(getInternalSlot(object, "Symbols"), getInternalSlot(name,"es5id"),  value);
-         } else {
-         return setInternalSlot(getInternalSlot(object,"Bindings"), name, value);
-         }*/
-    }
+    /*if (IsSymbol(name)) {
+     return setInternalSlot(getInternalSlot(object, "Symbols"), getInternalSlot(name,"es5id"),  value);
+     } else {
+     return setInternalSlot(getInternalSlot(object,"Bindings"), name, value);
+     }*/
+}
 
 
 
-    // ===========================================================================================================
-    // Assert
-    // ===========================================================================================================
 
-    function Assert(act, message) {
-        var cx, node;
-        if (!act) {
-            if (cx = getContext()) {
-                node = cx.state.node;
-            }
-            if (node) {
-                var loc = node.loc;
-                if (loc) {
-                    var line = loc.start.line;
-                    var col = loc.start.column;
-                }
-            }
-            throw new Error("Assertion failed: " + message + " (at: line " + line + ", column " + col + ")");
+// ===========================================================================================================
+//
+// Some MakeConstructor like (delete)
+
+function assignConstructorAndPrototype(Function, Prototype) {
+    setInternalSlot(Function, "Prototype", Prototype);
+    DefineOwnProperty(Function, "prototype", {
+        value: Prototype,
+        enumerable: false,
+        writable: true,
+        configurable: true
+    });
+    DefineOwnProperty(Prototype, "constructor", {
+        value: Function,
+        enumerable: false,
+        writable: true,
+        configurable: true
+    });
+}
+
+// ===========================================================================================================
+// assign (copies properties)
+// ===========================================================================================================
+
+function addMissingProperties(target, mixin) {
+    for (var k in mixin) {
+        if (Object.hasOwnProperty.call(mixin, k)) {
+            if (!Object.hasOwnProperty.call(target, k)) Object.defineProperty(target, k, Object.getOwnPropertyDescriptor(mixin, k));
         }
     }
+    return target;
+}
 
-    // ===========================================================================================================
-    // A List? Unused
-    // ===========================================================================================================
-
-    function List() {
-        var list = Object.create(List.prototype);
-        var sentinel = {};
-        sentinel.next = sentinel;
-        sentinel.prev = sentinel;
-        list.sentinel = sentinel;
-        list.size = 0;
-        return list;
+function assign(obj, obj2) {
+    for (var k in obj2) {
+        obj[k] = obj2[k];
     }
-    List.prototype.insertFirst = function (item) {
-        var rec = {
-            value: item
+    return obj;
+}
+
+
+// ===========================================================================================================
+// LazyDefineProperty (used intermediary)
+// ===========================================================================================================
+
+function LazyDefineFalseTrueFalse(O, name, value) {
+    return callInternalSlot("DefineOwnProperty", O, name, {
+        configurable: false,
+        enumerable: true,
+        value: value,
+        writable: false
+    });
+}
+
+function LazyDefineBuiltinConstant(O, name, value) {
+    return callInternalSlot("DefineOwnProperty", O, name, {
+        configurable: false,
+        enumerable: false,
+        value: value,
+        writable: false
+    });
+}
+
+// noch was vereinfacht
+function LazyDefineBuiltinFunction(O, name, arity, fproto, e, w, c) {
+    if (e === undefined) e = false;
+    if (w === undefined) w = true;
+    if (c === undefined) c = true;
+    return callInternalSlot("DefineOwnProperty", O, name, {
+        configurable: c,
+        enumerable: e,
+        value: CreateBuiltinFunction(getRealm(),fproto, arity, name),
+        writable: w
+    });
+}
+
+function LazyDefineAccessor(obj, name, g, s, e, c) {
+    if (e === undefined) e = false;
+    if (c === undefined) c = true;
+    return callInternalSlot("DefineOwnProperty", obj, name, {
+        configurable: c,
+        enumerable: e,
+        get: g,
+        set: s
+    });
+}
+
+function LazyDefineProperty(O, P, V, w, e, c) {
+    var desc;
+    if (w === undefined) w = true;
+    if (e === undefined) e = false;
+    if (c === undefined) c = true;
+    if (IsDataDescriptor(V) || IsAccessorDescriptor(V)) {
+        desc = V;
+    } else {
+        desc = {
+            configurable: c,
+            enumerable: e,
+            value: V,
+            writable: w
         };
-        rec.next = this.sentinel;
-        rec.prev = this.sentinel.prev;
-        this.sentinel.prev.next = rec;
-        this.sentinel.prev = rec;
-        this.size += 1;
-        return this;
-    };
-    List.prototype.insertLast = function (item) {
-        var rec = {
-            value: item
-        };
-        rec.prev = this.sentinel;
-        rec.next = this.sentinel.next;
-        this.sentinel.next.prev = rec;
-        this.sentinel.next = rec;
-        this.size += 1;
-        return this;
-    };
-    List.prototype.iterate = function (f) {
-        var rec = this.sentinel.next;
-        while (rec !== this.sentinel) {
-            f(rec.value);
-            rec = rec.next;
-        }
-        return this;
-    };
-    List.prototype.reverse = function (f) {
-        var rec = this.sentinel.prev;
-        while (rec !== this.sentinel) {
-            f(rec.value);
-            rec = rec.prev;
-        }
-    };
-    List.prototype.nth = function (n) {
-        var rec, i;
-        if (n > this.size - 1 || n < 0) return null;
-        if (n < this.size / 2) {
-            i = 0;
-            rec = this.sentinel;
-            do {
-                rec = rec.next;
-                if (i === n) return rec.value;
-                i += 1;
-            } while (i <= n);
-        } else {
-            i = this.size - 1;
-            rec = this.sentinel;
-            do {
-                rec = rec.prev;
-                if (i === n) return rec.value;
-                i -= 1;
-            } while (i >= n);
-        }
-        return null;
-    };
-    List.prototype.removeFirst = function () {
-        var rec = this.sentinel.next;
-        if (rec != this.sentinel) {
-            this.sentinel.next = rec.next;
-            this.sentinel.next.prev = this.sentinel;
-            rec.next = null;
-            rec.prev = null;
-            this.size -= 1;
-            return rec.value;
-        }
-        return null;
-    };
-    List.prototype.removeLast = function () {
-        var rec = this.sentinel.prev;
-        if (rec != this.sentinel) {
-            this.sentinel.prev = rec.prev;
-            this.sentinel.prev.next = this.sentinel;
-            rec.next = null;
-            rec.prev = null;
-            this.size -= 1;
-            return rec.value;
-        }
-        return null;
-    };
-    List.prototype.push = List.prototype.insertLast;
-    List.prototype.pop = List.prototype.removeLast;
-    List.prototype.shift = List.prototype.removeFirst;
+    }
+    //return callInternalSlot("DefineOwnProperty", O, P, desc);
+    return OrdinaryDefineOwnProperty(O, P, desc);
+}
+
+/*
+
+ getting context. stack, realm
+ */
 
 
+
+
+function getContext() {
+    var stack = realm.stack;
+    return stack[stack.length-1];
+}
+function getEventQueue() {
+    return realm.eventQueue;
+}
+
+function getGlobalThis() {
+    //return globalThis;
+    return realm.globalThis;
+}
+
+function getGlobalEnv() {
+    //return globalEnv;
+    return realm.globalEnv;
+}
+
+function getIntrinsics() {
+    //return intrinsics;
+    return realm.intrinsics;
+}
+
+function getIntrinsic(name) {
+    var desc = realm.intrinsics.Bindings[name];
+    return desc && desc.value;
+}
+
+function getIntrinsicFromRealm(name, otherRealm) {
+    var desc = otherRealm.intrinsics.Bindings[name];
+    return desc && desc.value;
+}
+
+function getRealm() {
+    return realm;
+}
+
+function getLexEnv() {
+    var cx = getContext();
+    return cx && cx.LexEnv;
+    //    return getGlobalEnv().LexEnv;
+}
+
+function getVarEnv() {
+    var cx = getContext();
+    return cx && cx.VarEnv;
+    //    return getGlobalEnv().objEnv;
+}
+
+
+function getStack() {
+    return realm.stack;
+}
+
+
+
+
+
+
+// ===========================================================================================================
+// Error Stack
+// ===========================================================================================================
+
+
+function printException (error) {
+    var name = Get(error, "name");
+    var message = Get(error, "message");
+    var stack = Get(error, "stack");
+    var text = makeMyExceptionText(name, message, callstack);
+    console.log(text);
+}
+
+function makeMyExceptionText(name, message, callstack) {
+    var text = "\n";
+    text += "An [[exception]] has been thrown!\n";
+    text += "[name]: "+ name + "\n";
+    text += "[message]: " + message + "\n";
+    text += "[stack]: " + callstack + "\n";
+    return text;
+}
+
+
+
+
+function stringifyErrorStack(type, message) {
+    var callStack = getStack();
+    var len = callStack.length || 0;
+    var frame = getContext();
+    var start = 0;
+    var node, ntype, line ,column, pos, fn, clr;
+    var stackTraceLimit = realm.xs.stackTraceLimit;
+    var url = realm.xs.scriptLocation;
+    var cnt = 1;
+
+    if (type === undefined) type = "", message = "", stack = "";
+    else {
+        if (message === undefined) message = "";
+        stack = type+": ";
+        stack += message;
+        stack += "\r\n";
+    }
+
+    if (len > stackTraceLimit) start = len - stackTraceLimit;
+
+    for (pos = len - 1; pos >= start; pos--) {
+        if (frame = callStack[pos]) {
+            node = frame.state.node;
+            ntype = node && node.type;
+            line = frame.line;
+            column = frame.column;
+            fn = frame.callee;
+            clr = frame.caller;
+            stack += cnt + ". ";
+            stack += fn + " at " + ntype + "  at line " + line + ", column " + column + " ";
+            stack += "[caller " + clr + " @ "+url+"]";
+            stack += "\r\n";
+            cnt = cnt + 1;
+        }
+    }
+    return stack;
+}
+
+function isWindow() {
+    return typeof window !== "undefined";
+}
+
+function isNode() {
+    return typeof process !== "undefined";
+}
+
+function isWorker() {
+    return typeof importScripts === "function" && !isWindow();
+}
+
+
+
+
+/*
+ var object_types = {
+ "1": "[object OrdinaryObject]",
+ "2": "[object ArrayExoticObject]",
+ "3": "[object OrdinaryFunction]",
+ "4": "[object ArgumentsExoticObject]",
+ "5": "[object StringExoticObject]",
+ "6": "[object ProxyExoticObject]",
+ "7": "[object SymbolPrimitiveType]",
+ "8": "[object IndegerIndexedExoticObject]"
+ };
+
+ function getType(object) {
+ return object_types[object[0]] || "[object OrdinaryObject]";
+ }
+ var type_table = {
+ "1": "object",
+ "2": "object",
+ "3": "object",
+ "4": "object",
+ "5": "object",
+ "6": "object",
+ "7": "symbol"
+ };
+ var internals_encode = {
+ // Objects
+ "Type": 0,
+ "Extensible": 1,
+ "Bindings": 2,
+ "Symbols": 3,
+ "es5id": 4,
+ // Functions
+ "FunctionKind": 5,
+ "Environment": 6,
+ "FormalParameters": 7,
+ "Code": 8,
+ "HomeObject": 9,
+ "MethodName": 10,
+ // Bound Functions
+ "BoundTargetFunction": 11,
+ "BoundThis": 12,
+ "BoundParameters": 13,
+ // Object Wrappers
+ "StringData": 14,
+ "NumberData": 14,
+ "DateValue": 14,
+ "JSONTag": 14,
+ "MathTag": 14,
+ // Generator
+ "GeneratorState": 14,
+ "GeneratorContext": 15,
+ // Maps
+ "MapData": 16,
+ "MapComparator": 17,
+ "__mapSetInternalUniqueKey__": 18,
+ // Promises
+ "IsPromise": 19,
+ // Observe
+ "Notifier": 20
+ };
+
+ var internals_decode = Object.create(null);
+ for (var k in internals_encode) {
+ internals_decode[internals_encode[k]] = k;
+
+ }
+ */
+
+/**
+ * Created by root on 31.03.14.
+ */
+
+// ===========================================================================================================
+// floor, ceil, abs, min, max
+// ===========================================================================================================
+
+var floor = Math.floor;
+var ceil = Math.ceil;
+var abs = Math.abs;
+var min = Math.min;
+var max = Math.max;
+
+function _floor(x) {
+    return x - (x % 1);
+}
+
+function _ceil(x) {
+    return x - (x % 1) + 1;
+}
+
+function _abs(x) {
+    return x < 0 ? -x : x;
+}
+
+function sign(x) {
+    return x < 0 ? -1 : 1;
+}
+
+function _min() {
+    var min = Infinity;
+    var n;
+    for (var i = 0, j = arguments.length; i < j; i++)
+        if ((n = arguments[i]) < min) min = n;
+    return min;
+}
+
+function _max() {
+    var max = -Infinity;
+    var n;
+    for (var i = 0, j = arguments.length; i < j; i++)
+        if ((n = arguments[i]) > max) max = n;
+    return max;
+}
+
+
+
+
+
+/**
+ * Created by root on 31.03.14.
+ */
+
+// ===========================================================================================================
+// Assert
+// ===========================================================================================================
+
+function Assert(act, message) {
+    var cx, node;
+    if (!act) {
+        if (cx = getContext()) {
+            node = cx.state.node;
+        }
+        if (node) {
+            var loc = node.loc;
+            if (loc) {
+                var line = loc.start.line;
+                var col = loc.start.column;
+            }
+        }
+        throw new Error("Assertion failed: " + message + " (at: line " + line + ", column " + col + ")");
+    }
+}
 
 
 // ===========================================================================================================
@@ -9678,6 +9840,115 @@ function CodeRealm_toString() {
 /**
  * Created by root on 30.03.14.
  */
+
+
+
+    //
+    // Realm und Loader
+    //
+function IndirectEval(realm, source) {
+    saveCodeRealm();
+    setCodeRealm(realm);
+    if (typeof source === "string") {
+        var code = parse(source);
+    } else code = source;
+    var result = exports.Evaluate(code);
+    restoreCodeRealm();
+    return result;
+    //return realm.toValue(source);
+}
+
+exports.IndirectEval = IndirectEval;
+exports.CreateRealm = CreateRealm;
+exports.createPublicCodeRealm = createPublicCodeRealm;
+
+function CreateRealm () {
+
+    saveCodeRealm();
+
+    var realmRec = CodeRealm();
+    setCodeRealm(realmRec);
+    // i have to have a stack, realm, intriniscs
+    // and to remove the dependency
+    //var context = newContext(null);
+
+    var context = ExecutionContext(null);
+    context.realm = realmRec;
+    realmRec.stack.push(context);
+
+
+    var intrinsics = createIntrinsics(realmRec);
+
+    var loader = OrdinaryConstruct(getIntrinsic("%Loader%"), []);
+    if (isAbrupt(loader = ifAbrupt(loader))) return loader;
+
+    realmRec.loader = loader;
+    var newGlobal = createGlobalThis(realmRec, ObjectCreate(null), intrinsics);
+    var newGlobalEnv = GlobalEnvironment(newGlobal);
+    // i think this is a bug and no execution context should be required
+    context.VarEnv = newGlobalEnv;
+    context.LexEnv = newGlobalEnv;
+
+    realmRec.globalThis = newGlobal;
+    realmRec.globalEnv = newGlobalEnv;
+    realmRec.directEvalTranslate = undefined;
+    realmRec.directEvalFallback = undefined;
+    realmRec.indirectEval = undefined;
+    realmRec.Function = undefined;
+    realmRec.GlobalSymbolRegistry = Object.create(null);
+    makeTaskQueues(realmRec);
+
+    // my programming mistakes fixed.
+    // there are variables realm, intrinsics, stack, ..
+    // in the other module
+    // i think hiding behind ONE function will help
+    // or adding it to it´s modules exports and let
+    // them use exports would be another. I favor
+    // the function. but from my p3/933mhz i know i kill
+    // the program with
+
+    restoreCodeRealm();
+
+    return realmRec;
+}
+
+
+var realms = [];
+function saveCodeRealm() {
+    realms.push(realm);
+}
+function restoreCodeRealm() {
+    setCodeRealm(realms.pop());
+}
+function setCodeRealm(r) {  // CREATE REALM (API)
+
+    if (r) {
+        realm = r;
+        stack = realm.stack;
+        intrinsics = realm.intrinsics;
+        globalEnv = realm.globalEnv;
+        globalThis = realm.globalThis;
+    } else {
+        // solution: REMOVE stack, intr, global*
+        // in favor of realm.*, too. Until it´s
+        // finished and optimize THEN, not now.
+        realm = "check for bugs";
+        stack = "check for bugs";
+        intrinsics = "check for bugs";
+        globalEnv = "check for bugs";
+        globalThis = "check for bugs";
+    }
+    require("runtime").setCodeRealm(r);
+}
+
+
+
+
+function GetGlobalObject() {
+    var realm = getRealm();
+    var globalThis = realm.globalThis;
+    return globalThis;
+}
 
 /**
  * Created by root on 30.03.14.
@@ -9790,6 +10061,42 @@ function isAbrupt(completion) {
 // return (completion && typeof completion === "object" && (""+completion === "[object CompletionRecord]") && completion.type !== "normal");
 //if (completion && typeof completion === "object" && completion.toString() === "[object CompletionRecord]" && completion.type !== "normal") return true;
 //if (completion instanceof CompletionRecord && completion.type !== "normal") return true;
+
+
+
+// ===========================================================================================================
+// return withError
+// ===========================================================================================================
+
+// This Function returns the Errors, say the spec says "Throw a TypeError", then return withError("Type", message);
+
+function withReferenceError(message) {
+    return Completion("throw", OrdinaryConstruct(getIntrinsic("%ReferenceError%"), [message]));
+}
+
+function withRangeError(message) {
+    return Completion("throw", OrdinaryConstruct(getIntrinsic("%RangeError%"), [message]));
+}
+
+function withSyntaxError(message) {
+    return Completion("throw", OrdinaryConstruct(getIntrinsic("%SyntaxError%"), [message]));
+}
+
+function withTypeError(message) {
+    return Completion("throw", OrdinaryConstruct(getIntrinsic("%TypeError%"), [message]));
+}
+
+function withURIError(message) {
+    return Completion("throw", OrdinaryConstruct(getIntrinsic("%URIError%"), [message]));
+}
+
+function withEvalError(message) {
+    return Completion("throw", OrdinaryConstruct(getIntrinsic("%EvalError%"), [message]));
+}
+
+function withError(type, message) {
+    return Completion("throw", OrdinaryConstruct(getIntrinsic("%" + type + "Error%"), [message]), "");
+}
 
 
 
@@ -10027,6 +10334,60 @@ OrdinaryObject.prototype = {
 };
 
 
+function ObjectCreate(proto, internalDataList) {
+    if (proto === undefined) proto = Get(getIntrinsics(), "%ObjectPrototype%");
+    var O = OrdinaryObject(proto);
+    if (internalDataList && typeof internalDataList === "object") {
+        for (var k in internalDataList) {
+            if (Object.hasOwnProperty.call(internalDataList, k)) {
+                O[k] = internalDataList[k];
+            }
+        }
+    }
+    return O;
+}
+
+
+function ObjectDefineProperty(O, P, Desc) {
+    if (IsDataDescriptor(Desc)) {
+        callInternalSlot("DefineOwnProperty", O,P, Desc);
+    } else if (IsAccessorDescriptor(Desc)) {
+        callInternalSlot("DefineOwnProperty", O,P, Desc);
+    }
+    return O;
+}
+
+function ObjectDefineProperties(O, Properties) {
+    var pendingException;
+    if (Type(O) !== "object") return withError("Type", "first argument is not an object");
+    var props = ToObject(Properties);
+    var names = OwnPropertyKeysAsList(props);
+    var P, descriptors = [];
+    var descObj, desc;
+    for (P in names) {
+        descObj = Get(props, names[P]);
+        if (isAbrupt(descObj = ifAbrupt(descObj))) return descObj;
+        desc = ToPropertyDescriptor(descObj);
+        if (isAbrupt(desc = ifAbrupt(desc))) return desc;
+        descriptors.push({
+            P: names[P],
+            desc: desc
+        });
+    }
+    var pair, status;
+    for (var i in descriptors) {
+        pair = descriptors[i];
+        P = pair.P;
+        desc = pair.desc;
+        status = DefineOwnPropertyOrThrow(O, P, desc);
+        if (isAbrupt(status)) pendingException = status;
+    }
+    if (isAbrupt(pendingException = ifAbrupt(pendingException))) return pendingException;
+    return O;
+}
+
+
+
 /**
  * Created by root on 30.03.14.
  */
@@ -10123,6 +10484,61 @@ DeclarativeEnvironment.prototype = {
     }
 };
 
+function NewDeclarativeEnvironment(E) {
+    return DeclarativeEnvironment(E);
+}
+
+/**
+ * Created by root on 31.03.14.
+ */
+
+function IdentifierBinding(N, V, D, W) {
+    var ib = Object.create(null);
+    ib.name = N;
+    ib.value = V;
+    ib.writable = W === undefined ? true : W;
+    ib.initialised = false;
+    ib.configurable = !!D;
+    return ib;
+}
+
+function createIdentifierBinding(envRec, N, V, D, W) {
+    return (envRec[N] = IdentifierBinding(N, V, D, W));
+}
+
+function GetIdentifierReference(lex, name, strict) {
+    if (lex == null) {
+        // unresolvable ref.
+        return Reference(name, undefined, strict);
+    }
+    var exists = lex.HasBinding(name);
+    var outer;
+    if (exists) {
+        return Reference(name, lex, strict);
+    } else {
+        outer = lex.outer;
+        return GetIdentifierReference(outer, name, strict);
+    }
+
+}
+
+
+function GetThisEnvironment () {
+    var env = getLexEnv();
+    do {
+        if (env.HasThisBinding()) return env;
+    } while (env = env.outer);
+}
+
+function ThisResolution () {
+    var env = GetThisEnvironment();
+    return env.GetThisBinding();
+}
+
+function GetGlobalObject () {
+    var realm = getRealm();
+    return realm.globalThis;
+}
 /**
  * Created by root on 30.03.14.
  */
@@ -10166,6 +10582,22 @@ FunctionEnvironment.prototype = assign(FunctionEnvironment.prototype, {
 });
 addMissingProperties(FunctionEnvironment.prototype, DeclarativeEnvironment.prototype);
 
+
+function NewFunctionEnvironment(F, T) {
+    Assert(getInternalSlot(F, "ThisMode") !== "lexical", "NewFunctionEnvironment: ThisMode is lexical");
+    var env = FunctionEnvironment(F, T); // ist Lexical Environment and environment record in eins
+    env.thisValue = T;
+    if (getInternalSlot(F, "NeedsSuper") === true) {
+        var home = getInternalSlot(F, "HomeObject");
+        if (home === undefined) return withError("Reference", "NewFunctionEnvironment: HomeObject is undefined");
+        env.HomeObject = home;
+        env.MethodName = getInternalSlot(F, "MethodName");
+    } else {
+        env.HomeObject = undefined;
+    }
+    env.outer = getInternalSlot(F, "Environment"); // noch in [[Environment]] umbenennen
+    return env;
+}
 
 /**
  * Created by root on 30.03.14.
@@ -10261,6 +10693,13 @@ ObjectEnvironment.prototype = {
         return O;
     }
 };
+
+
+
+function NewObjectEnvironment(O, E) {
+    return ObjectEnvironment(O, E);
+}
+
 
 
 /**
@@ -10390,6 +10829,9 @@ GlobalEnvironment.prototype = {
     }
 };
 
+function NewGlobalEnvironment(global) {
+    return GlobalEnvironment(global);
+}
 
 
 var object_tostring_to_type_table = {
@@ -10709,6 +11151,95 @@ function ToObject(V) {
 
     // return V;
 }
+
+
+
+function CheckObjectCoercible(argument) {
+
+    if (argument instanceof CompletionRecord) return CheckObjectCoercible(argument.value);
+    else if (argument === undefined) return withError("Type", "CheckObjectCoercible: undefined is not coercible");
+    else if (argument === null) return withError("Type", "CheckObjectCoercible: null is not coercible");
+
+    var type = Type(argument);
+    switch (type) {
+        case "boolean":
+        case "number":
+        case "string":
+        case "symbol":
+        case "object":
+            return argument;
+            break;
+        default:
+            break;
+    }
+    return argument;
+}
+
+
+/**
+ * Created by root on 31.03.14.
+ */
+
+
+function SameValue(x, y) {
+    if (isAbrupt(x = ifAbrupt(x))) return x;
+    if (isAbrupt(y = ifAbrupt(y))) return y;
+    if (Type(x) !== Type(y)) return false;
+    if (Type(x) === "null") return true;
+    if (Type(x) === "undefined") return true;
+    if (Type(x) === "number") {
+        if (x === y) return true;
+        if (x === "NaN" && y === "NaN") return true;
+        if (x === +0 && y === -0) return false;
+        if (x === -0 && y === +0) return false;
+        return false;
+    }
+    if (Type(x) === "string") {
+        if ((x.length === y.length) && x === y) return true;
+        return false;
+    }
+    if (Type(x) === "boolean") {
+        if ((x && y) || (!x && !y)) return true;
+        return false;
+    }
+
+    if (Type(x) === "symbol") {
+        return x === y;
+    }
+
+    if (x === y) return true;
+    return false;
+}
+
+function SameValueZero(x, y) {
+    if (isAbrupt(x = ifAbrupt(x))) return x;
+    if (isAbrupt(y = ifAbrupt(y))) return y;
+    if (Type(x) !== Type(y)) return false;
+    if (Type(x) === "null") return true;
+    if (Type(x) === "undefined") return true;
+    if (Type(x) === "number") {
+        if (x === y) return true;
+        if (x === "NaN" && y === "NaN") return true;
+        if (x === +0 && y === -0) return true;
+        if (x === -0 && y === +0) return true;
+        return false;
+    }
+    if (Type(x) === "string") {
+        if ((x.length === y.length) && x === y) return true;
+        return false;
+    }
+    if (Type(x) === "boolean") {
+        if ((x && y) || (!x && !y)) return true;
+        return false;
+    }
+
+    if (Type(x) === "symbol") {
+        return x === y;
+    }
+    if (x === y) return true;
+    return false;
+}
+
 
 /**
  * Created by root on 30.03.14.
@@ -11688,6 +12219,98 @@ function MakeConstructor(F, writablePrototype, prototype) {
 }
 
 
+function OrdinaryHasInstance(C, O) {
+    var BC, P;
+
+    if (!IsCallable(C)) return false;
+
+    if (BC = getInternalSlot(C, "BoundTargetFunction")) {
+        return OrdinaryHasInstance(BC, O);
+    }
+
+    if (Type(O) !== "object") return false;
+
+    P = Get(C, "prototype");
+    if (isAbrupt(P = ifAbrupt(P))) return P;
+
+    if (Type(P) !== "object") return withError("Type", "OrdinaryHasInstance: P not object");
+
+    while (O = GetPrototypeOf(O)) {
+        if (isAbrupt(O = ifAbrupt(O))) return O;
+        if (O === null) return false;
+        if (SameValue(P, O) === true) return true;
+    }
+    return false;
+}
+
+
+// ===========================================================================================================
+// AddRestricted FPs
+// ===========================================================================================================
+
+function AddRestrictedFunctionProperties(F) {
+    var thrower = getIntrinsic("%ThrowTypeError%");
+    var status = DefineOwnPropertyOrThrow(F, "caller", {
+        get: thrower,
+        set: thrower,
+        enumerable: false,
+        configurable: false
+    });
+    if (isAbrupt(status)) return status;
+    return DefineOwnPropertyOrThrow(F, "arguments", {
+        get: thrower,
+        set: thrower,
+        enumerable: false,
+        configurable: false
+    });
+}
+
+// ===========================================================================================================
+// Create Builtin (Intrinsic Module)
+// ===========================================================================================================
+
+function CreateBuiltinFunction(realm, steps, len, name) {
+
+    var tmp;
+    var realm = getRealm();
+    var F = OrdinaryFunction();
+
+    // this is probably/oc unneccessary, coz all builtins have make no use of the environments anyways
+    // because they are plain javascript functions
+    function Call() {
+        var result;
+        var oldContext = getContext();
+        var callContext = ExecutionContext(getLexEnv(), realm);
+        var stack = getStack();
+        stack.push(callContext);
+        result = steps.apply(this, arguments);
+        Assert(callContext === stack.pop(), "CreateBuiltinFunction: Wrong Context popped from the Stack.");
+        return result;
+    }
+    // the .steps reference is needed by function.prototype.toString to put out the right function
+    Call.steps = steps;
+
+    setInternalSlot(F, "Call", Call);
+    setInternalSlot(F, "Code", undefined);
+    setInternalSlot(F, "Construct", undefined);
+    setInternalSlot(F, "FormalParameters", undefined);
+    setInternalSlot(F, "Prototype", getIntrinsic("%FunctionPrototype%"));
+    setInternalSlot(F, "Environment", undefined);
+    setInternalSlot(F, "Strict", true);
+    setInternalSlot(F, "Realm", realm);
+    AddRestrictedFunctionProperties(F);
+    if (typeof len === "string") {
+        tmp = name;
+        name = len;
+        len = tmp;
+    }
+    if (typeof name !== "string") name = steps.name;
+    if (name) SetFunctionName(F, name);
+    if (typeof len !== "number") len = 0;
+    SetFunctionLength(F, len);
+    return F;
+}
+
 
 /**
  * Created by root on 30.03.14.
@@ -11763,499 +12386,41 @@ function RebindSuper(func, newHome) {
 }
 
 
+/**
+ * Created by root on 31.03.14.
+ */
 
 
 
 
-    function SameValue(x, y) {
-        if (isAbrupt(x = ifAbrupt(x))) return x;
-        if (isAbrupt(y = ifAbrupt(y))) return y;
-        if (Type(x) !== Type(y)) return false;
-        if (Type(x) === "null") return true;
-        if (Type(x) === "undefined") return true;
-        if (Type(x) === "number") {
-            if (x === y) return true;
-            if (x === "NaN" && y === "NaN") return true;
-            if (x === +0 && y === -0) return false;
-            if (x === -0 && y === +0) return false;
-            return false;
-        }
-        if (Type(x) === "string") {
-            if ((x.length === y.length) && x === y) return true;
-            return false;
-        }
-        if (Type(x) === "boolean") {
-            if ((x && y) || (!x && !y)) return true;
-            return false;
-        }
-
-        if (Type(x) === "symbol") {
-            return x === y;
-        }
-
-        if (x === y) return true;
-        return false;
+function CreateArrayFromList(list) {
+    var array = ArrayCreate(list.length);
+    for (var i = 0, j = list.length; i < j; i++) {
+        array.Set(ToString(i), list[i], array);
     }
+    return array;
+}
 
-    function SameValueZero(x, y) {
-        if (isAbrupt(x = ifAbrupt(x))) return x;
-        if (isAbrupt(y = ifAbrupt(y))) return y;
-        if (Type(x) !== Type(y)) return false;
-        if (Type(x) === "null") return true;
-        if (Type(x) === "undefined") return true;
-        if (Type(x) === "number") {
-            if (x === y) return true;
-            if (x === "NaN" && y === "NaN") return true;
-            if (x === +0 && y === -0) return true;
-            if (x === -0 && y === +0) return true;
-            return false;
-        }
-        if (Type(x) === "string") {
-            if ((x.length === y.length) && x === y) return true;
-            return false;
-        }
-        if (Type(x) === "boolean") {
-            if ((x && y) || (!x && !y)) return true;
-            return false;
-        }
-
-        if (Type(x) === "symbol") {
-            return x === y;
-        }
-        if (x === y) return true;
-        return false;
+function CreateListFromArrayLike(arrayLike) {
+    var list = [];
+    for (var i = 0, j = arrayLike.length; i < j; i++) {
+        list.push(arrayLike.Get(ToString(i), arrayLike))
     }
+    return list;
+}
 
 
 
-    function CreateArrayFromList(list) {
-        var array = ArrayCreate(list.length);
-        for (var i = 0, j = list.length; i < j; i++) {
-            array.Set(ToString(i), list[i], array);
-        }
-        return array;
-    }
 
-    function CreateListFromArrayLike(arrayLike) {
-        var list = [];
-        for (var i = 0, j = arrayLike.length; i < j; i++) {
-            list.push(arrayLike.Get(ToString(i), arrayLike))
-        }
-        return list;
-    }
-
-    function GetThisEnvironment() {
-        var env = getLexEnv();
-        do {
-            if (env.HasThisBinding()) return env;
-        } while (env = env.outer);
-    }
-
-    function ThisResolution() {
-        var env = GetThisEnvironment();
-        return env.GetThisBinding();
-    }
-
-    function GetGlobalObject() {
-        var realm = getRealm();
-        var globalThis = realm.globalThis;
-        return globalThis;
-    }
-
-    function CreateByteDataBlock(bytes) {
-        var dataBlock = new ArrayBuffer(bytes);
-        return dataBlock;
-    }
-
-    function CopyDataBlockBytes(toBlock, toIndex, fromBlock, fromIndex, count) {
-        for (var i = fromIndex, j = fromIndex + count, k = toIndex; i < j; i++, k++) {
-            var value = fromBlock[i];
-            toBlock[k] = value;
-        }
-    }
-
-
-    function CreateListIterator(list) {
-
-    }
-
-    function MakeListIterator(list) {
-        var nextPos = 0;
-        var len = list.length;
-
-        var listIteratorNext = CreateBuiltinFunction(getRealm(),function (thisArg, argList) {
-            var value, done;
-            if (nextPos < len) {
-                value = list[nextPos];
-                nextPos = nextPos + 1;
-                done = (nextPos === len);
-                return CreateItrResultObject(value, done);
-            }
-            return CreateItrResultObject(undefined, true);
-        });
-
-        var obj = ObjectCreate();
-        if (isAbrupt(obj = ifAbrupt(obj))) return obj;
-        CreateDataProperty(obj, "next", listIteratorNext);
-        return obj;
-    }
-
-
-    // 
-    // Boolean, String, NumberValue
-    //    
-
-    function thisBooleanValue(value) {
-        if (value instanceof CompletionRecord) return thisBooleanValue(value.value);
-        if (typeof value === "boolean") return value;
-        if (Type(value) === "boolean") return value;
-        if (Type(value) === "object" && hasInternalSlot(value, "BooleanData")) {
-            var b = getInternalSlot(value, "BooleanData");
-            if (typeof b === "boolean") return b;
-        }
-        return withError("Type", "thisBooleanValue: value is not a Boolean");
-    }
-
-    function thisStringValue(value) {
-
-        if (value instanceof CompletionRecord) return thisStringValue(value.value);
-        if (typeof value === "string") return value;
-        if (Type(value) === "string") return value;
-        if (Type(value) === "object" && hasInternalSlot(value, "StringData")) {
-            var b = getInternalSlot(value, "StringData");
-            if (typeof b === "string") return b;
-        }
-        return withError("Type", "thisStringValue: value is not a String");
-    }
-
-    function thisNumberValue(value) {
-        if (value instanceof CompletionRecord) return thisNumberValue(value.value);
-        if (typeof value === "number") return value;
-        if (Type(value) === "number") return value;
-        if (Type(value) === "object" && hasInternalSlot(value, "NumberData")) {
-            var b = getInternalSlot(value, "NumberData");
-            if (typeof b === "number") return b;
-        }
-        return withError("Type", "thisNumberValue: value is not a Number");
-    }
-
-    //
-    // **Create Functions (ObjectCreate, ProxyCreate, PromiseCreate)
-    //
-
-
-    function ObjectCreate(proto, internalDataList) {
-        if (proto === undefined) proto = Get(getIntrinsics(), "%ObjectPrototype%");
-        var O = OrdinaryObject(proto);
-        if (internalDataList && typeof internalDataList === "object") {
-            for (var k in internalDataList) {
-                if (Object.hasOwnProperty.call(internalDataList, k)) {
-                    O[k] = internalDataList[k];
-                }
-            }
-        }
-        return O;
-    }
-
-    function StringCreate(StringData) {
-        return OrdinaryConstruct(StringConstructor, [StringData]);
-    }
-
-    function IntegerIndexedObjectCreate(prototype) {
-        var O = IntegerIndexedExoticObject();
-        setInternalSlot(O, "Extensible", true);
-        setInternalSlot(O, "Prototype", prototype);
-        setInternalSlot(O, "hiddenBuffer", undefined);
-        return O;
-    }
-
-    function CreateArrayIterator(array, kind) {
-        var O = ToObject(array);
-        var proto = getIntrinsic("%ArrayIteratorPrototype%");
-        var iterator = ObjectCreate(proto);
-        setInternalSlot(iterator, "IteratedObject", O);
-        setInternalSlot(iterator, "ArrayIterationNextIndex", 0);
-        setInternalSlot(iterator, "ArrayIterationKind", kind);
-        return iterator;
-    }
-
-    // ===========================================================================================================
-    // More essential methods
-    // ===========================================================================================================
-
-
-    function OrdinaryHasInstance(C, O) {
-        var BC, P;
-
-        if (!IsCallable(C)) return false;
-
-        if (BC = getInternalSlot(C, "BoundTargetFunction")) {
-            return OrdinaryHasInstance(BC, O);
-        }
-
-        if (Type(O) !== "object") return false;
-
-        P = Get(C, "prototype");
-        if (isAbrupt(P = ifAbrupt(P))) return P;
-
-        if (Type(P) !== "object") return withError("Type", "OrdinaryHasInstance: P not object");
-
-        while (O = GetPrototypeOf(O)) {
-            if (isAbrupt(O = ifAbrupt(O))) return O;
-            if (O === null) return false;
-            if (SameValue(P, O) === true) return true;
-        }
-        return false;
-    }
-
-
-    function CheckObjectCoercible(argument) {
-
-        if (argument instanceof CompletionRecord) return CheckObjectCoercible(argument.value);
-        else if (argument === undefined) return withError("Type", "CheckObjectCoercible: undefined is not coercible");
-        else if (argument === null) return withError("Type", "CheckObjectCoercible: null is not coercible");
-
-        var type = Type(argument);
-        switch (type) {
-            case "boolean":
-            case "number":
-            case "string":
-            case "symbol":
-            case "object":
-                return argument;
-                break;
-            default:
-                break;
-        }
-        return argument;
-    }
-
-
-    function NewDeclarativeEnvironment(E) {
-        return DeclarativeEnvironment(E);
-    }
-
-    function NewObjectEnvironment(O, E) {
-        return ObjectEnvironment(O, E);
-    }
-
-    function NewGlobalEnvironment(global) {
-        return GlobalEnvironment(global);
-    }
-
-    function NewModuleEnvironment(global) {
-        return DeclarativeEnvironment(global);
-    }
-
-
-    function NewFunctionEnvironment(F, T) {
-        Assert(getInternalSlot(F, "ThisMode") !== "lexical", "NewFunctionEnvironment: ThisMode is lexical");
-        var env = FunctionEnvironment(F, T); // ist Lexical Environment and environment record in eins
-        env.thisValue = T;
-        if (getInternalSlot(F, "NeedsSuper") === true) {
-            var home = getInternalSlot(F, "HomeObject");
-            if (home === undefined) return withError("Reference", "NewFunctionEnvironment: HomeObject is undefined");
-            env.HomeObject = home;
-            env.MethodName = getInternalSlot(F, "MethodName");
-        } else {
-            env.HomeObject = undefined;
-        }
-        env.outer = getInternalSlot(F, "Environment"); // noch in [[Environment]] umbenennen
-        return env;
-    }
-
-    function createIdentifierBinding(envRec, N, V, D, W) {
-        return (envRec[N] = IdentifierBinding(N, V, D, W));
-    }
-
-    function IdentifierBinding(N, V, D, W) {
-        var ib = Object.create(null);
-        ib.name = N;
-        ib.value = V;
-        ib.writable = W === undefined ? true : W;
-        ib.initialised = false;
-        ib.configurable = !!D;
-        return ib;
-    }
-
-    function GetIdentifierReference(lex, name, strict) {
-        if (lex == null) {
-            // unresolvable ref.
-            return Reference(name, undefined, strict);
-        }
-        var exists = lex.HasBinding(name);
-        var outer;
-        if (exists) {
-            return Reference(name, lex, strict);
-        } else {
-            outer = lex.outer;
-            return GetIdentifierReference(outer, name, strict);
-        }
-    }
-
-
-
-
-
-    // ===========================================================================================================
-    // floor, ceil, abs, min, max
-    // ===========================================================================================================
-
-    var floor = Math.floor;
-    var ceil = Math.ceil;
-    var abs = Math.abs;
-    var min = Math.min;
-    var max = Math.max;
-
-    function _floor(x) {
-        return x - (x % 1);
-    }
-
-    function _ceil(x) {
-        return x - (x % 1) + 1;
-    }
-
-    function _abs(x) {
-        return x < 0 ? -x : x;
-    }
-
-    function sign(x) {
-        return x < 0 ? -1 : 1;
-    }
-
-    function _min() {
-        var min = Infinity;
-        var n;
-        for (var i = 0, j = arguments.length; i < j; i++)
-            if ((n = arguments[i]) < min) min = n;
-        return min;
-    }
-
-    function _max() {
-        var max = -Infinity;
-        var n;
-        for (var i = 0, j = arguments.length; i < j; i++)
-            if ((n = arguments[i]) > max) max = n;
-        return max;
-    }
-
-    // ===========================================================================================================
-    // assign (copies properties)
-    // ===========================================================================================================
-
-    function addMissingProperties(target, mixin) {
-        for (var k in mixin) {
-            if (Object.hasOwnProperty.call(mixin, k)) {
-                if (!Object.hasOwnProperty.call(target, k)) Object.defineProperty(target, k, Object.getOwnPropertyDescriptor(mixin, k));
-            }
-        }
-        return target;
-    }
-
-    function assign(obj, obj2) {
-        for (var k in obj2) {
-            obj[k] = obj2[k];
-        }
-        return obj;
-    }
-
-    // ===========================================================================================================
-    // Error Stack
-    // ===========================================================================================================
-
-
-    function printException (error) {
-        var name = Get(error, "name");
-        var message = Get(error, "message");
-        var stack = Get(error, "stack");
-        var text = makeMyExceptionText(name, message, callstack);
-        console.log(text);
-    }
-
-    function makeMyExceptionText(name, message, callstack) {
-        var text = "\n";
-        text += "An [[exception]] has been thrown!\n";
-        text += "[name]: "+ name + "\n";
-        text += "[message]: " + message + "\n";
-        text += "[stack]: " + callstack + "\n";
-        return text;
-    }
-
-
-
-
-    function stringifyErrorStack(type, message) {
-        var callStack = getStack();
-        var len = callStack.length || 0;
-        var frame = getContext();
-        var start = 0;
-        var node, ntype, line ,column, pos, fn, clr;
-        var stackTraceLimit = realm.xs.stackTraceLimit;
-        var url = realm.xs.scriptLocation;
-        var cnt = 1;
-
-        if (type === undefined) type = "", message = "", stack = "";
-        else {
-            if (message === undefined) message = "";
-            stack = type+": ";
-            stack += message;
-            stack += "\r\n";
-        }
-
-        if (len > stackTraceLimit) start = len - stackTraceLimit;
-
-        for (pos = len - 1; pos >= start; pos--) {
-            if (frame = callStack[pos]) {
-                node = frame.state.node;
-                ntype = node && node.type;
-                line = frame.line;
-                column = frame.column;
-                fn = frame.callee;
-                clr = frame.caller;
-                stack += cnt + ". ";
-                stack += fn + " at " + ntype + "  at line " + line + ", column " + column + " ";
-                stack += "[caller " + clr + " @ "+url+"]";
-                stack += "\r\n";
-                cnt = cnt + 1;
-            }
-        }
-        return stack;
-    }
-
-    // ===========================================================================================================
-    // return withError
-    // ===========================================================================================================
-
-    // This Function returns the Errors, say the spec says "Throw a TypeError", then return withError("Type", message);
-
-    function withReferenceError(message) {
-        return Completion("throw", OrdinaryConstruct(getIntrinsic("%ReferenceError%"), [message]));
-    }
-
-    function withRangeError(message) {
-        return Completion("throw", OrdinaryConstruct(getIntrinsic("%RangeError%"), [message]));
-    }
-
-    function withSyntaxError(message) {
-        return Completion("throw", OrdinaryConstruct(getIntrinsic("%SyntaxError%"), [message]));
-    }
-
-    function withTypeError(message) {
-        return Completion("throw", OrdinaryConstruct(getIntrinsic("%TypeError%"), [message]));
-    }
-
-    function withURIError(message) {
-        return Completion("throw", OrdinaryConstruct(getIntrinsic("%URIError%"), [message]));
-    }
-
-    function withEvalError(message) {
-        return Completion("throw", OrdinaryConstruct(getIntrinsic("%EvalError%"), [message]));
-    }
-
-    function withError(type, message) {
-        return Completion("throw", OrdinaryConstruct(getIntrinsic("%" + type + "Error%"), [message]), "");
-    }
-
+function CreateArrayIterator(array, kind) {
+    var O = ToObject(array);
+    var proto = getIntrinsic("%ArrayIteratorPrototype%");
+    var iterator = ObjectCreate(proto);
+    setInternalSlot(iterator, "IteratedObject", O);
+    setInternalSlot(iterator, "ArrayIterationNextIndex", 0);
+    setInternalSlot(iterator, "ArrayIterationKind", kind);
+    return iterator;
+}
 
 
 // ===========================================================================================================
@@ -12643,7 +12808,50 @@ function IteratorStep(iterator, value) {
     return result;
 }
 
-    
+
+
+
+function CreateListIterator(list) {
+    return MakeListIterator(list);
+}
+
+function MakeListIterator(list) {
+    var nextPos = 0;
+    var len = list.length;
+
+    var listIteratorNext = CreateBuiltinFunction(getRealm(),function (thisArg, argList) {
+        var value, done;
+        if (nextPos < len) {
+            value = list[nextPos];
+            nextPos = nextPos + 1;
+            done = (nextPos === len);
+            return CreateItrResultObject(value, done);
+        }
+        return CreateItrResultObject(undefined, true);
+    });
+
+    var obj = ObjectCreate();
+    if (isAbrupt(obj = ifAbrupt(obj))) return obj;
+    CreateDataProperty(obj, "next", listIteratorNext);
+    return obj;
+}
+
+
+
+
+
+function CreateByteDataBlock(bytes) {
+    var dataBlock = new ArrayBuffer(bytes);
+    return dataBlock;
+}
+
+function CopyDataBlockBytes(toBlock, toIndex, fromBlock, fromIndex, count) {
+    for (var i = fromIndex, j = fromIndex + count, k = toIndex; i < j; i++, k++) {
+        var value = fromBlock[i];
+        toBlock[k] = value;
+    }
+}
+
 // ===========================================================================================================
 // ArrayBuffer
 // ===========================================================================================================
@@ -12968,6 +13176,13 @@ var TypedArrayElementType = {
 
 
 
+function IntegerIndexedObjectCreate(prototype) {
+    var O = IntegerIndexedExoticObject();
+    setInternalSlot(O, "Extensible", true);
+    setInternalSlot(O, "Prototype", prototype);
+    setInternalSlot(O, "hiddenBuffer", undefined);
+    return O;
+}
 
 /**
  * Created by root on 30.03.14.
@@ -13080,6 +13295,7 @@ ExoticDOMFunctionWrapper.prototype = {
     }
 };
 
+
 /**
  * Created by root on 30.03.14.
  */
@@ -13150,6 +13366,18 @@ SymbolPrimitiveType.prototype = {
 };
 
 
+// ===========================================================================================================
+// exports
+// ===========================================================================================================
+
+var $$unscopables        = SymbolPrimitiveType("@@unscopables",         "Symbol.unscopables");
+var $$create             = SymbolPrimitiveType("@@create",              "Symbol.create");
+var $$toPrimitive        = SymbolPrimitiveType("@@toPrimitive",         "Symbol.toPrimitive");
+var $$toStringTag        = SymbolPrimitiveType("@@toStringTag",         "Symbol.toStringTag");
+var $$hasInstance        = SymbolPrimitiveType("@@hasInstance",         "Symbol.hasInstance");
+var $$iterator           = SymbolPrimitiveType("@@iterator",            "Symbol.iterator");
+var $$isRegExp           = SymbolPrimitiveType("@@isRegExp",            "Symbol.isRegExp");
+var $$isConcatSpreadable = SymbolPrimitiveType("@@isConcatSpreadable",  "Symbol.isConcatSpreadable");
 
 // ===========================================================================================================
 // String Exotic Object
@@ -13218,6 +13446,60 @@ StringExoticObject.prototype = assign(StringExoticObject.prototype, {
     type: "object"
 });
 addMissingProperties(StringExoticObject.prototype, OrdinaryObject.prototype);
+
+
+function StringCreate(StringData) {
+    return OrdinaryConstruct(StringConstructor, [StringData]);
+}
+
+
+function thisStringValue(value) {
+    if (value instanceof CompletionRecord) return thisStringValue(value.value);
+    if (typeof value === "string") return value;
+    if (Type(value) === "string") return value;
+    if (Type(value) === "object" && hasInternalSlot(value, "StringData")) {
+        var b = getInternalSlot(value, "StringData");
+        if (typeof b === "string") return b;
+    }
+    return withError("Type", "thisStringValue: value is not a String");
+}
+
+/**
+ * Created by root on 31.03.14.
+ */
+function thisNumberValue(value) {
+    if (value instanceof CompletionRecord) return thisNumberValue(value.value);
+    if (typeof value === "number") return value;
+    if (Type(value) === "number") return value;
+    if (Type(value) === "object" && hasInternalSlot(value, "NumberData")) {
+        var b = getInternalSlot(value, "NumberData");
+        if (typeof b === "number") return b;
+    }
+    return withError("Type", "thisNumberValue: value is not a Number");
+}
+
+
+
+/**
+ * Created by root on 31.03.14.
+ */
+
+    //
+    // Boolean, String, NumberValue
+    //
+
+function thisBooleanValue(value) {
+    if (value instanceof CompletionRecord) return thisBooleanValue(value.value);
+    if (typeof value === "boolean") return value;
+    if (Type(value) === "boolean") return value;
+    if (Type(value) === "object" && hasInternalSlot(value, "BooleanData")) {
+        var b = getInternalSlot(value, "BooleanData");
+        if (typeof b === "boolean") return b;
+    }
+    return withError("Type", "thisBooleanValue: value is not a Boolean");
+}
+
+
 
 function ArrayExoticObject(proto) {
     var A = Object.create(ArrayExoticObject.prototype);
@@ -13751,433 +14033,256 @@ ProxyExoticObject.prototype = {
         return newObj;
     }
 };
-
-
-    // ===========================================================================================================
-    //
-    // some functions...
-
-    function assignConstructorAndPrototype(Function, Prototype) {
-        setInternalSlot(Function, "Prototype", Prototype);
-        DefineOwnProperty(Function, "prototype", {
-            value: Prototype,
-            enumerable: false,
-            writable: true,
-            configurable: true
-        });
-        DefineOwnProperty(Prototype, "constructor", {
-            value: Function,
-            enumerable: false,
-            writable: true,
-            configurable: true
-        });
-    }
-
-    function ObjectDefineProperty(O, P, Desc) {
-        if (IsDataDescriptor(Desc)) {
-            callInternalSlot("DefineOwnProperty", O,P, Desc);
-        } else if (IsAccessorDescriptor(Desc)) {
-            callInternalSlot("DefineOwnProperty", O,P, Desc);
-        }
-        return O;
-    }
-
-    function ObjectDefineProperties(O, Properties) {
-        var pendingException;
-        if (Type(O) !== "object") return withError("Type", "first argument is not an object");
-        var props = ToObject(Properties);
-        var names = OwnPropertyKeysAsList(props);
-        var P, descriptors = [];
-        var descObj, desc;
-        for (P in names) {
-            descObj = Get(props, names[P]);
-            if (isAbrupt(descObj = ifAbrupt(descObj))) return descObj;
-            desc = ToPropertyDescriptor(descObj);
-            if (isAbrupt(desc = ifAbrupt(desc))) return desc;
-            descriptors.push({
-                P: names[P],
-                desc: desc
-            });
-        }
-        var pair, status;
-        for (var i in descriptors) {
-            pair = descriptors[i];
-            P = pair.P;
-            desc = pair.desc;
-            status = DefineOwnPropertyOrThrow(O, P, desc);
-            if (isAbrupt(status)) pendingException = status;
-        }
-        if (isAbrupt(pendingException = ifAbrupt(pendingException))) return pendingException;
-        return O;
-    }
-
-    // ===========================================================================================================
-    // add missing properties (used often)
-    // ===========================================================================================================
-
-    function addMissingProperties(target, mixin) {
-        for (var k in mixin) {
-            if (Object.hasOwnProperty.call(mixin, k)) {
-                if (!Object.hasOwnProperty.call(target, k)) Object.defineProperty(target, k, Object.getOwnPropertyDescriptor(mixin, k));
-            }
-        }
-        return target;
-    }
-
-    // ===========================================================================================================
-    // assign (copies properties)
-    // ===========================================================================================================
-
-    function assign(obj, obj2) {
-        for (var k in obj2) {
-            obj[k] = obj2[k];
-        }
-        return obj;
-    }
-
-    // ===========================================================================================================
-    // LazyDefineProperty (used intermediary)
-    // ===========================================================================================================
-
-    function LazyDefineFalseTrueFalse(O, name, value) {
-        return callInternalSlot("DefineOwnProperty", O, name, {
-            configurable: false,
-            enumerable: true,
-            value: value,
-            writable: false
-        });
-    }
-
-    function LazyDefineBuiltinConstant(O, name, value) {
-        return callInternalSlot("DefineOwnProperty", O, name, {
-            configurable: false,
-            enumerable: false,
-            value: value,
-            writable: false
-        });
-    }
-
-    // noch was vereinfacht
-    function LazyDefineBuiltinFunction(O, name, arity, fproto, e, w, c) {
-        if (e === undefined) e = false;
-        if (w === undefined) w = true;
-        if (c === undefined) c = true;
-        return callInternalSlot("DefineOwnProperty", O, name, {
-            configurable: c,
-            enumerable: e,
-            value: CreateBuiltinFunction(getRealm(),fproto, arity, name),
-            writable: w
-        });
-    }
-
-    function LazyDefineAccessor(obj, name, g, s, e, c) {
-        if (e === undefined) e = false;
-        if (c === undefined) c = true;
-        return callInternalSlot("DefineOwnProperty", obj, name, {
-            configurable: c,
-            enumerable: e,
-            get: g,
-            set: s
-        });
-    }
-
-    function LazyDefineProperty(O, P, V, w, e, c) {
-        var desc;
-        if (w === undefined) w = true;
-        if (e === undefined) e = false;
-        if (c === undefined) c = true;
-        if (IsDataDescriptor(V) || IsAccessorDescriptor(V)) {
-            desc = V;
-        } else {
-            desc = {
-                configurable: c,
-                enumerable: e,
-                value: V,
-                writable: w
-            };
-        }
-        //return callInternalSlot("DefineOwnProperty", O, P, desc);
-        return OrdinaryDefineOwnProperty(O, P, desc);
-    }
-
-    // ===========================================================================================================
-    // AddRestricted FPs
-    // ===========================================================================================================
-
-    function AddRestrictedFunctionProperties(F) {
-        var thrower = getIntrinsic("%ThrowTypeError%");
-        var status = DefineOwnPropertyOrThrow(F, "caller", {
-            get: thrower,
-            set: thrower,
-            enumerable: false,
-            configurable: false
-        });
-        if (isAbrupt(status)) return status;
-        return DefineOwnPropertyOrThrow(F, "arguments", {
-            get: thrower,
-            set: thrower,
-            enumerable: false,
-            configurable: false
-        });
-    }
-
-    // ===========================================================================================================
-    // Create Builtin (Intrinsic Module)
-    // ===========================================================================================================
-
-    function CreateBuiltinFunction(realm, steps, len, name) {
-
-        var tmp;
-        var realm = getRealm();
-        var F = OrdinaryFunction();
-
-        // this is probably unneccessary, coz all builtins have no access to the environments anyways
-        // because they are plain javascript functions
-        function Call() {
-            var result;
-            var oldContext = getContext();
-            var callContext = ExecutionContext(getLexEnv(), realm);
-            var stack = getStack();
-            stack.push(callContext);
-            result = steps.apply(this, arguments);
-            Assert(callContext === stack.pop(), "CreateBuiltinFunction: Wrong Context popped from the Stack.");
-            return result;
-        }
-        // the .steps reference is needed by function.prototype.toString to put out the right function
-        Call.steps = steps;
-
-        setInternalSlot(F, "Call", Call);
-        setInternalSlot(F, "Code", undefined);
-        setInternalSlot(F, "Construct", undefined);
-        setInternalSlot(F, "FormalParameters", undefined);
-        setInternalSlot(F, "Prototype", getIntrinsic("%FunctionPrototype%"));
-        setInternalSlot(F, "Environment", undefined);
-        setInternalSlot(F, "Strict", true);
-        setInternalSlot(F, "Realm", realm);
-        AddRestrictedFunctionProperties(F);
-        if (typeof len === "string") {
-            tmp = name;
-            name = len;
-            len = tmp;
-        }
-        if (typeof name !== "string") name = steps.name;
-        if (name) SetFunctionName(F, name);
-        if (typeof len !== "number") len = 0;
-        SetFunctionLength(F, len);
-        return F;
-    }
-
-
-
-
-    //
-    //
-    //
-    exports.printException = printException;
-    exports.makeMyExceptionText = makeMyExceptionText;
-
-
+/**
+ * Created by root on 31.03.14.
+ */
 
     // ===========================================================================================================
     // 8.4 Tasks and Task Queues
     // ===========================================================================================================
 
-    function PendingTaskRecord_toString () {
-        return "[object PendingTaskRecord]";
+function PendingTaskRecord_toString () {
+    return "[object PendingTaskRecord]";
+}
+
+function PendingTaskRecord (task, args, realm) {
+    var pendingTaskRecord = Object.create(PendingTaskRecord.prototype);
+    pendingTaskRecord.Task = task;
+    pendingTaskRecord.Arguments = args;
+    pendingTaskRecord.Realm = realm;
+    return pendingTaskRecord;
+}
+PendingTaskRecord.prototype = Object.create(null);
+PendingTaskRecord.prototype.constructor = PendingTaskRecord;
+PendingTaskRecord.prototype.toString = PendingTaskRecord_toString;
+
+function TaskQueue() {
+    // use it like an array
+    // and use .nextIndex and .nextOne for iteration
+    // without the need for a shift() to go forward
+    // or to write the code down manually
+    var queue = Object.create(Array.prototype);
+    Object.defineProperty(queue, "length", {
+        value: 0,
+        enumerable: false
+    });
+    // set queue.nextIndex = 0 to start Iteration
+    Object.defineProperty(queue, "nextIndex", {
+        value: 0,
+        enumerable: false
+    });
+    // test queue.done convenient, wether it´s over
+    Object.defineProperty(queue, "done", {
+        get: function () {
+            return queue.nextIndex >= queue.length;
+        },
+        enumerable: false
+    });
+    // use nextOne to get the value at nextIndex and increase
+    Object.defineProperty(queue, "nextOne", {
+        value: function () {
+            if (!queue.done) {
+                var value = queue[queue.nextIndex];
+                queue.nextIndex += 1;
+                return value;
+            }
+            return undefined;
+        },
+        enumerable: false
+    })
+    return queue;
+}
+
+
+function makeTaskQueues(realm) {
+    realm.LoadingTasks = TaskQueue();
+    realm.PromiseTasks = TaskQueue();
+}
+function getTasks(realm, name) {
+    return realm[name];
+}
+
+var queueNames = {
+    __proto__:null,
+    "LoadingTasks": true,
+    "PromiseTasks": true
+};
+
+function EnqueueTask(queueName, task, args) {
+    Assert(Type(queueName) === "string" && queueNames[queueName], "EnqueueTask: queueName has to be valid");
+    // Assert(isTaskName[task])
+    Assert(Array.isArray(args), "arguments have to be a list and to be equal in the number of arguments of task");
+    var callerContext = getContext();
+    var callerRealm = callerContext.realm;
+    var pending = PendingTaskRecord(task, arguments, callerRealm);
+    switch(queueName) {
+        case "PromiseTasks": realm.PromiseTasks.push(pending);
+            break;
+        case "LoadingTasks": realm.LoadingTasks.push(pending);
+            break;
+    }
+    return NormalCompletion(empty);
+}
+
+function NextTask (result, nextQueue) {
+
+    if (isAbrupt(result = ifAbrupt(result))) {
+        // performing implementation defined unhandled exception processing
+        console.log("NextTask: Got exception - which will remain unhandled - for debugging, i print them out." )
+        printException(result);
     }
 
-    function PendingTaskRecord (task, args, realm) {
-        var pendingTaskRecord = Object.create(PendingTaskRecord.prototype);
-        pendingTaskRecord.Task = task;
-        pendingTaskRecord.Arguments = args;
-        pendingTaskRecord.Realm = realm;
-        return pendingTaskRecord;
-    }
-    PendingTaskRecord.prototype = Object.create(null);
-    PendingTaskRecord.prototype.constructor = PendingTaskRecord;
-    PendingTaskRecord.prototype.toString = PendingTaskRecord_toString;
-
-    function TaskQueue() {
-        // use it like an array
-        // and use .nextIndex and .nextOne for iteration
-        // without the need for a shift() to go forward
-        // or to write the code down manually
-        var queue = Object.create(Array.prototype);
-        Object.defineProperty(queue, "length", {
-            value: 0,
-            enumerable: false
-        });
-        // set queue.nextIndex = 0 to start Iteration
-        Object.defineProperty(queue, "nextIndex", {
-            value: 0,
-            enumerable: false
-        });
-        // test queue.done convenient, wether it´s over
-        Object.defineProperty(queue, "done", {
-            get: function () {
-                return queue.nextIndex >= queue.length;
-            },
-            enumerable: false
-        });
-        // use nextOne to get the value at nextIndex and increase
-        Object.defineProperty(queue, "nextOne", {
-            value: function () {
-                if (!queue.done) {
-                    var value = queue[queue.nextIndex];
-                    queue.nextIndex += 1;
-                    return value;
-                }
-                return undefined;
-            },
-            enumerable: false
-        })
-        return queue;
-    }
+    Assert(getStack().length === 0, "NextTask: The execution context stack has to be empty");
+    var nextPending = nextQueue.shift();
+    var newContext = ExecutionContext(null, getRealm());
+    newContext.realm = nextPending.realm;
+    getStack().push(newContext);
+    callInternalSlot("Call", nextPending.Task, undefined, nextPending.Arguments);
+}
 
 
-    function makeTaskQueues(realm) {
-        realm.LoadingTasks = TaskQueue();
-        realm.PromiseTasks = TaskQueue();
-    }
-    function getTasks(realm, name) {
-        return realm[name];
-    }
+/**
+ * Created by root on 31.03.14.
+ */
 
-    var queueNames = {
-        __proto__:null,
-        "LoadingTasks": true,
-        "PromiseTasks": true
+var standard_properties = {
+    __proto__: null,
+    "Array": true,
+    "Error": true,
+    "Function": true,
+    "Object": true,
+    "Symbol": true
+};
+
+function DefineBuiltinProperties(O) {
+    var globalThis = getGlobalThis();
+    for (var name in standard_properties) {
+        if (standard_properties[name] === true) {
+            var desc = callInternalSlot("GetOwnProperty", globalThis, name);
+            var status = callInternalSlot("DefineOwnProperty", O, name, desc);
+            if (isAbrupt(status)) return status;
+        }
+    }
+    return O;
+}
+
+
+/**
+ * Created by root on 31.03.14.
+ */
+
+
+function NewModuleEnvironment(global) {
+    return DeclarativeEnvironment(global);
+}
+
+
+
+
+/**
+ * Created by root on 31.03.14.
+ */
+
+    // ===========================================================================================================
+    // A List? Unused
+    // ===========================================================================================================
+
+function List() {
+    var list = Object.create(List.prototype);
+    var sentinel = {};
+    sentinel.next = sentinel;
+    sentinel.prev = sentinel;
+    list.sentinel = sentinel;
+    list.size = 0;
+    return list;
+}
+List.prototype.insertFirst = function (item) {
+    var rec = {
+        value: item
     };
-
-    function EnqueueTask(queueName, task, args) {
-        Assert(Type(queueName) === "string" && queueNames[queueName], "EnqueueTask: queueName has to be valid");
-        // Assert(isTaskName[task])
-        Assert(Array.isArray(args), "arguments have to be a list and to be equal in the number of arguments of task");
-        var callerContext = getContext();
-        var callerRealm = callerContext.realm;
-        var pending = PendingTaskRecord(task, arguments, callerRealm);
-        switch(queueName) {
-            case "PromiseTasks": realm.PromiseTasks.push(pending);
-                break;
-            case "LoadingTasks": realm.LoadingTasks.push(pending);
-                break;
-        }
-        return NormalCompletion(empty);
+    rec.next = this.sentinel;
+    rec.prev = this.sentinel.prev;
+    this.sentinel.prev.next = rec;
+    this.sentinel.prev = rec;
+    this.size += 1;
+    return this;
+};
+List.prototype.insertLast = function (item) {
+    var rec = {
+        value: item
+    };
+    rec.prev = this.sentinel;
+    rec.next = this.sentinel.next;
+    this.sentinel.next.prev = rec;
+    this.sentinel.next = rec;
+    this.size += 1;
+    return this;
+};
+List.prototype.iterate = function (f) {
+    var rec = this.sentinel.next;
+    while (rec !== this.sentinel) {
+        f(rec.value);
+        rec = rec.next;
     }
-
-    function NextTask (result, nextQueue) {
-
-        if (isAbrupt(result = ifAbrupt(result))) {
-            // performing implementation defined unhandled exception processing
-            console.log("NextTask: Got exception - which will remain unhandled - for debugging, i print them out." )
-            printException(result);
-        }
-
-        Assert(getStack().length === 0, "NextTask: The execution context stack has to be empty");
-        var nextPending = nextQueue.shift();
-        var newContext = ExecutionContext(null, getRealm());
-        newContext.realm = nextPending.realm;
-        getStack().push(newContext);
-        callInternalSlot("Call", nextPending.Task, undefined, nextPending.Arguments);
+    return this;
+};
+List.prototype.reverse = function (f) {
+    var rec = this.sentinel.prev;
+    while (rec !== this.sentinel) {
+        f(rec.value);
+        rec = rec.prev;
     }
-
-    //
-    // Realm und Loader
-    //
-    function IndirectEval(realm, source) {
-        saveCodeRealm();
-        setCodeRealm(realm);
-        if (typeof source === "string") {
-            var code = parse(source);
-        } else code = source;
-        var result = exports.Evaluate(code);
-        restoreCodeRealm();
-        return result;
-        //return realm.toValue(source);
+};
+List.prototype.nth = function (n) {
+    var rec, i;
+    if (n > this.size - 1 || n < 0) return null;
+    if (n < this.size / 2) {
+        i = 0;
+        rec = this.sentinel;
+        do {
+            rec = rec.next;
+            if (i === n) return rec.value;
+            i += 1;
+        } while (i <= n);
+    } else {
+        i = this.size - 1;
+        rec = this.sentinel;
+        do {
+            rec = rec.prev;
+            if (i === n) return rec.value;
+            i -= 1;
+        } while (i >= n);
     }
-
-    exports.IndirectEval = IndirectEval;
-    exports.CreateRealm = CreateRealm;
-    exports.createPublicCodeRealm = createPublicCodeRealm;
-    
-    function CreateRealm () {
-
-        saveCodeRealm();
-
-        var realmRec = CodeRealm();
-        setCodeRealm(realmRec);
-        // i have to have a stack, realm, intriniscs
-        // and to remove the dependency
-        //var context = newContext(null);
-
-        var context = ExecutionContext(null);
-        context.realm = realmRec;
-        realmRec.stack.push(context);
-
-
-        var intrinsics = createIntrinsics(realmRec);
-
-        var loader = OrdinaryConstruct(getIntrinsic("%Loader%"), []);
-        if (isAbrupt(loader = ifAbrupt(loader))) return loader;
-
-        realmRec.loader = loader;
-        var newGlobal = createGlobalThis(realmRec, ObjectCreate(null), intrinsics);
-        var newGlobalEnv = GlobalEnvironment(newGlobal);
-        // i think this is a bug and no execution context should be required
-        context.VarEnv = newGlobalEnv;
-        context.LexEnv = newGlobalEnv;
-
-        realmRec.globalThis = newGlobal;
-        realmRec.globalEnv = newGlobalEnv;
-        realmRec.directEvalTranslate = undefined;
-        realmRec.directEvalFallback = undefined;
-        realmRec.indirectEval = undefined;
-        realmRec.Function = undefined;
-        realmRec.GlobalSymbolRegistry = Object.create(null);
-        makeTaskQueues(realmRec);
-
-        // my programming mistakes fixed.
-        // there are variables realm, intrinsics, stack, ..
-        // in the other module
-        // i think hiding behind ONE function will help
-        // or adding it to it´s modules exports and let
-        // them use exports would be another. I favor
-        // the function. but from my p3/933mhz i know i kill
-        // the program with
-
-        restoreCodeRealm();
-
-        return realmRec;
+    return null;
+};
+List.prototype.removeFirst = function () {
+    var rec = this.sentinel.next;
+    if (rec != this.sentinel) {
+        this.sentinel.next = rec.next;
+        this.sentinel.next.prev = this.sentinel;
+        rec.next = null;
+        rec.prev = null;
+        this.size -= 1;
+        return rec.value;
     }
-
-
-    var realms = [];
-    function saveCodeRealm() {
-        realms.push(realm);
+    return null;
+};
+List.prototype.removeLast = function () {
+    var rec = this.sentinel.prev;
+    if (rec != this.sentinel) {
+        this.sentinel.prev = rec.prev;
+        this.sentinel.prev.next = this.sentinel;
+        rec.next = null;
+        rec.prev = null;
+        this.size -= 1;
+        return rec.value;
     }
-    function restoreCodeRealm() {
-        setCodeRealm(realms.pop());
-    }
-    function setCodeRealm(r) {  // CREATE REALM (API)
+    return null;
+};
+List.prototype.push = List.prototype.insertLast;
+List.prototype.pop = List.prototype.removeLast;
+List.prototype.shift = List.prototype.removeFirst;
 
-        if (r) {
-            realm = r;
-            stack = realm.stack;
-            intrinsics = realm.intrinsics;
-            globalEnv = realm.globalEnv;
-            globalThis = realm.globalThis;
-        } else {
-            // solution: REMOVE stack, intr, global*
-            // in favor of realm.*, too. Until it´s
-            // finished and optimize THEN, not now.
-            realm = "check for bugs";
-            stack = "check for bugs";
-            intrinsics = "check for bugs";
-            globalEnv = "check for bugs";
-            globalThis = "check for bugs";
-        }
-        require("runtime").setCodeRealm(r);
-    }
 
 
     // Structured Clone Algorithms
@@ -14330,481 +14435,246 @@ var OnSuccessfulTransfer_Call = function (thisArg, argList) {
  */
 
 
+    var createGlobalThis, createIntrinsics;
 
-    // ##################################################################
-    // DefineBuiltinProperties::: Modules and Loaders (linking.docx)
-    // ##################################################################
-
-    var standard_properties = {
-        __proto__: null,
-        "Array": true,
-        "Error": true,
-        "Function": true,
-        "Object": true,
-        "Symbol": true
-    };
-
-    function DefineBuiltinProperties(O) {
-        var globalThis = getGlobalThis();
-        for (var name in standard_properties) {
-            if (standard_properties[name] === true) {
-                var desc = callInternalSlot("GetOwnProperty", globalThis, name);
-                var status = callInternalSlot("DefineOwnProperty", O, name, desc);
-                if (isAbrupt(status)) return status;
-            }
-        }
-        return O;
+    function define_intrinsic(intrinsics, intrinsicName, value) {
+        var descriptor = Object.create(null);
+        descriptor.configurable = true;
+        descriptor.enumerable = true;
+        descriptor.value = value;
+        descriptor.writable = true;
+        callInternalSlot("DefineOwnProperty", intrinsics, intrinsicName, descriptor);
+    }
+    function createIntrinsicConstructor (intrinsics, name, len, intrinsicName) {
+        var constructor = OrdinaryFunction();
+        define_intrinsic(intrinsics, intrinsicName, constructor);
+        SetFunctionName(constructor, name);
+        SetFunctionLength(constructor, len);
+        return constructor;
+    }
+    function createIntrinsicFunction (intrinsics, name, len, intrinsicName) {
+        var func = OrdinaryFunction();
+        define_intrinsic(intrinsics, intrinsicName, func);
+        SetFunctionName(func, name);
+        SetFunctionLength(func, len);
+        setInternalSlot(func, "Construct", undefined)
+        return func;
+    }
+    function createIntrinsicPrototype (intrinsics, intrinsicName) {
+        var prototype = OrdinaryObject();
+        define_intrinsic(intrinsics, intrinsicName, prototype);
+        return prototype;
     }
 
-
-    // ===========================================================================================================
-    // exports
-    // ===========================================================================================================
-
-    var $$unscopables        = SymbolPrimitiveType("@@unscopables",         "Symbol.unscopables");
-    var $$create             = SymbolPrimitiveType("@@create",              "Symbol.create");
-    var $$toPrimitive        = SymbolPrimitiveType("@@toPrimitive",         "Symbol.toPrimitive");
-    var $$toStringTag        = SymbolPrimitiveType("@@toStringTag",         "Symbol.toStringTag");
-    var $$hasInstance        = SymbolPrimitiveType("@@hasInstance",         "Symbol.hasInstance");
-    var $$iterator           = SymbolPrimitiveType("@@iterator",            "Symbol.iterator");
-    var $$isRegExp           = SymbolPrimitiveType("@@isRegExp",            "Symbol.isRegExp");
-    var $$isConcatSpreadable = SymbolPrimitiveType("@@isConcatSpreadable",  "Symbol.isConcatSpreadable");
-
-    exports.$$unscopables        = $$unscopables;
-    exports.$$create             = $$create;
-    exports.$$toPrimitive        = $$toPrimitive;
-    exports.$$hasInstance        = $$hasInstance;
-    exports.$$toStringTag        = $$toStringTag;
-    exports.$$iterator           = $$iterator;
-    exports.$$isRegExp           = $$isRegExp;
-    exports.$$isConcatSpreadable = $$isConcatSpreadable;
-    exports.IndirectEval = IndirectEval;
-
-    exports.CreateBuiltinFunction = CreateBuiltinFunction;
-    exports.AddRestrictedFunctionProperties = AddRestrictedFunctionProperties;
-    exports.LazyDefineProperty = LazyDefineProperty;
-    exports.uriReserved = uriReserved;
-    exports.uriUnescaped = uriUnescaped;
-    exports.Encode = Encode;
-    exports.Decode = Decode;
-    exports.UTF8Encode = UTF8Encode;
-    exports.SetFunctionName = SetFunctionName;
-    exports.List = List;
-    exports.SetFunctionLength = SetFunctionLength;
-    exports.HasOwnProperty = HasOwnProperty;
-    exports.Put = Put;
-    exports.Invoke = Invoke;
-
-    exports.withError = withError; // This Function returns the Errors, say the spec says "Throw a TypeError", then return withError("Type", message);
-    exports.getContext = getContext;
-    exports.getRealm = getRealm;
-    exports.getLexEnv = getLexEnv;
-    exports.getVarEnv = getVarEnv;
-    exports.getIntrinsic = getIntrinsic;
-    exports.getIntrinsics = getIntrinsics;
-    exports.getGlobalEnv = getGlobalEnv;
-    exports.getGlobalThis = getGlobalThis;
-    exports.getStack = getStack;
-
-    exports.getInternalSlot = getInternalSlot;
-    exports.setInternalSlot = setInternalSlot;
-    exports.hasInternalSlot = hasInternalSlot;
-    exports.callInternalSlot = callInternalSlot;
-
-    exports.CreateArrayIterator = CreateArrayIterator;
-    exports.CreateByteDataBlock = CreateByteDataBlock;
-    exports.CopyDataBlockBytes = CopyDataBlockBytes;
-    exports.GetThisEnvironment = GetThisEnvironment;
-    exports.GeneratorStart = GeneratorStart;
-    exports.GeneratorYield = GeneratorYield;
-    exports.GeneratorResume = GeneratorResume;
-    exports.CreateItrResultObject = CreateItrResultObject;
-    exports.IteratorNext = IteratorNext;
-    exports.IteratorComplete = IteratorComplete;
-    exports.IteratorValue = IteratorValue;
-    exports.GetIterator = GetIterator;
-    exports.CreateDataProperty = CreateDataProperty;
-    exports.CreateOwnAccessorProperty = CreateOwnAccessorProperty;
-    exports.stringifyErrorStack = stringifyErrorStack;
-    exports.addMissingProperties = addMissingProperties;
-    exports.NormalCompletion = NormalCompletion;
-
-    exports.Completion = Completion;
-    exports.NewDeclarativeEnvironment = NewDeclarativeEnvironment;
-    exports.NewObjectEnvironment = NewObjectEnvironment;
-    exports.NewFunctionEnvironment = NewFunctionEnvironment;
-    exports.createIdentifierBinding = createIdentifierBinding;
-    exports.GetIdentifierReference = GetIdentifierReference;
-    exports.FunctionCreate = FunctionCreate;
-    exports.FunctionAllocate = FunctionAllocate;
-    exports.FunctionInitialise = FunctionInitialise;
-    exports.GeneratorFunctionCreate = GeneratorFunctionCreate;
-    exports.OrdinaryHasInstance = OrdinaryHasInstance;
-    exports.GetPrototypeFromConstructor = GetPrototypeFromConstructor;
-    exports.OrdinaryCreateFromConstructor = OrdinaryCreateFromConstructor;
-    exports.OrdinaryConstruct = OrdinaryConstruct;
-    exports.Construct = Construct;
-    exports.CreateFromConstructor = CreateFromConstructor;
-    exports.MakeConstructor = MakeConstructor;
-    exports.CreateEmptyIterator = CreateEmptyIterator;
-    exports.ArgumentsExoticObject = ArgumentsExoticObject;
-    exports.ArrayCreate = ArrayCreate;
-    exports.ArraySetLength = ArraySetLength;
-    exports.ExoticDOMObjectWrapper = ExoticDOMObjectWrapper;
-    exports.ExoticDOMFunctionWrapper = ExoticDOMFunctionWrapper;
-    exports.BoundFunctionCreate = BoundFunctionCreate;
-    exports.GeneratorFunctionCreate = GeneratorFunctionCreate;
-    exports.ObjectDefineProperties = ObjectDefineProperties;
-    exports.DeclarativeEnvironment = DeclarativeEnvironment;
-    exports.ObjectEnvironment = ObjectEnvironment;
-    exports.GlobalEnvironment = GlobalEnvironment;
-    exports.ToPropertyKey = ToPropertyKey;
-    exports.IsPropertyKey = IsPropertyKey;
-    exports.IsSymbol = IsSymbol;
-    exports.CreateDataProperty = CreateDataProperty;
-    exports.PropertyDescriptor = PropertyDescriptor;
-    exports.IsAccessorDescriptor = IsAccessorDescriptor;
-    exports.IsDataDescriptor = IsDataDescriptor;
-    exports.IsGenericDescriptor = IsGenericDescriptor;
-    exports.FromPropertyDescriptor = FromPropertyDescriptor;
-    exports.ToPropertyDescriptor = ToPropertyDescriptor;
-    exports.CompletePropertyDescriptor = CompletePropertyDescriptor;
-    exports.ValidateAndApplyPropertyDescriptor = ValidateAndApplyPropertyDescriptor;
-    exports.OrdinaryObject = OrdinaryObject;
-    exports.ObjectCreate = ObjectCreate;
-    exports.IsCallable = IsCallable;
-    exports.IsConstructor = IsConstructor;
-    exports.OrdinaryFunction = OrdinaryFunction;
-    exports.FunctionEnvironment = FunctionEnvironment;
-    exports.DeclarativeEnvironment = DeclarativeEnvironment;
-    exports.GlobalEnvironment = GlobalEnvironment;
-    exports.ObjectEnvironment = ObjectEnvironment;
-    exports.SymbolPrimitiveType = SymbolPrimitiveType;
-    exports.CodeRealm = CodeRealm;
-    exports.ExecutionContext = ExecutionContext;
-    exports.CompletionRecord = CompletionRecord;
-    exports.NormalCompletion = NormalCompletion;
-    exports.IdentifierBinding = IdentifierBinding;
-    exports.floor = floor;
-    exports.ceil = ceil;
-    exports.sign = sign;
-    exports.abs = abs;
-    exports.min = min;
-    exports.max = max;
-    exports.Type = Type;
-    exports.ToPrimitive = ToPrimitive;
-    exports.ToString = ToString;
-    exports.ToBoolean = ToBoolean;
-    exports.ToUint32 = ToUint32;
-    exports.ToNumber = ToNumber;
-    exports.ToObject = ToObject;
-    exports.GetValue = GetValue;
-    exports.PutValue = PutValue;
-    exports.GetBase = GetBase;
-    exports.MakeSuperReference = MakeSuperReference;
-    exports.IsSuperReference = IsSuperReference;
-    exports.IsUnresolvableReference = IsUnresolvableReference;
-    exports.IsPropertyReference = IsPropertyReference;
-    exports.IsStrictReference = IsStrictReference;
-    exports.GetReferencedName = GetReferencedName;
-    exports.GetThisValue = GetThisValue;
-    exports.HasPrimitiveBase = HasPrimitiveBase;
-    exports.ifAbrupt = ifAbrupt;
-    exports.isAbrupt = isAbrupt;
-    exports.Assert = Assert;
-    exports.unwrap = unwrap;
-    exports.SameValue = SameValue;
-    exports.SameValueZero = SameValueZero;
-    exports.Type = Type;
-    exports.Reference = Reference;
-    exports.ToPrimitive = ToPrimitive;
-    exports.ToInteger = ToInteger;
-    exports.ToNumber = ToNumber;
-    exports.ToUint16 = ToUint16;
-    exports.ToInt32 = ToInt32;
-    exports.ToUint32 = ToUint32;
-    exports.OrdinaryHasInstance = OrdinaryHasInstance;
-    exports.GetGlobalObject = GetGlobalObject;
-    exports.ThisResolution = ThisResolution;
-    exports.CreateArrayFromList = CreateArrayFromList;
-    exports.CreateListFromArrayLike = CreateListFromArrayLike;
-    exports.TestIntegrityLevel = TestIntegrityLevel;
-    exports.SetIntegrityLevel = SetIntegrityLevel;
-    exports.CheckObjectCoercible = CheckObjectCoercible;
-    exports.HasProperty = HasProperty;
-    exports.GetMethod = GetMethod;
-    exports.Get = Get;
-    exports.Set = Set;
-    exports.DefineOwnProperty = DefineOwnProperty;
-    exports.GetOwnProperty = GetOwnProperty;
-    exports.OwnPropertyKeys = OwnPropertyKeys;
-    exports.OwnPropertyKeysAsList = OwnPropertyKeysAsList;
-    exports.GetOwnPropertyKeys = GetOwnPropertyKeys;
-    exports.MakeListIterator = MakeListIterator;
-    exports.DefineOwnPropertyOrThrow = DefineOwnPropertyOrThrow;
-    exports.Delete = Delete;
-    exports.Enumerate = Enumerate;
-    exports.OwnPropertyKeys = OwnPropertyKeys;
-    exports.SetPrototypeOf = SetPrototypeOf;
-    exports.GetPrototypeOf = GetPrototypeOf;
-    exports.PreventExtensions = PreventExtensions;
-    exports.IsExtensible = IsExtensible;
-    exports.CreateByteArrayBlock = CreateByteArrayBlock;
-    exports.SetArrayBufferData = SetArrayBufferData;
-    exports.AllocateArrayBuffer = AllocateArrayBuffer;
-    exports.IntegerIndexedObjectCreate = IntegerIndexedObjectCreate;
-    exports.StringExoticObject = StringExoticObject;
-    exports.thisTimeValue = thisTimeValue;
-    exports.thisNumberValue = thisNumberValue;
-    exports.thisBooleanValue = thisBooleanValue;
-    exports.thisStringValue = thisStringValue;
-    exports.MakeMethod = MakeMethod;
-    exports.CloneMethod = CloneMethod;
-
-    // #################################################################################################################################################################################################
-    // #################################################################################################################################################################################################
-
-/**
- * lib/intrinsics/create_intrinsics.js
- *
- *
- *  This is included ___inside__ of lib/api.js (!!! inside the function !!!)
- *
- *  And this file includes the whole standard library (later it will include
- *  the definitions, while the _call functions are collected outside of the
- *  create intrinsics closure.
- *
- *  The function createIntrinsics is stored in /lib/create_intrinsics
- *
- *  It contains still functions which belong into the "api.js" part.
- *
- *  There is a lot to do.
- *
- */
-var createGlobalThis;
-
-function define_intrinsic(intrinsics, intrinsicName, value) {
-    var descriptor = Object.create(null);
-    descriptor.configurable = true;
-    descriptor.enumerable = true;
-    descriptor.value = value;
-    descriptor.writable = true;
-    callInternalSlot("DefineOwnProperty", intrinsics, intrinsicName, descriptor);
-}
-function createIntrinsicConstructor (intrinsics, name, len, intrinsicName) {
-    var constructor = OrdinaryFunction();
-    define_intrinsic(intrinsics, intrinsicName, constructor);
-    SetFunctionName(constructor, name);
-    SetFunctionLength(constructor, len);
-    return constructor;
-}
-function createIntrinsicFunction (intrinsics, name, len, intrinsicName) {
-    var constructor = OrdinaryFunction();
-    define_intrinsic(intrinsics, intrinsicName, constructor);
-    SetFunctionName(constructor, name);
-    SetFunctionLength(constructor, len);
-    return constructor;
-}
-function createIntrinsicPrototype (intrinsics, intrinsicName) {
-    var prototype = OrdinaryObject();
-    define_intrinsic(intrinsics, intrinsicName, prototype);
-    return prototype;
-}
-
-function createIntrinsicObject (intrinsics, intrinsicName) {
-    var object = OrdinaryObject();
-    define_intrinsic(intrinsics, intrinsicName, object);
-    return object;
-}
-
-
-/*
-  Here goes the big wrapping closure for createIntrinsics();
-
-  Refactoring: The _call functions have to be moved out of
-   their construction files again into a primary library and
-   the remaining defineOwnProperties have to stay within
-   createIntrinsics
-
-   It´s easily overseeable after splitting the files, but
-   i know this already and won´t forget to do sooner or later
-   but will.
-
- */
-
-function createIntrinsics(realm) {
-
-    var intrinsics = OrdinaryObject(null);
-    realm.intrinsics = intrinsics;
-
-    var ObjectPrototype = createIntrinsicPrototype(intrinsics, "%ObjectPrototype%");
-    setInternalSlot(ObjectPrototype, "Prototype", null);
-
-    var FunctionPrototype = createIntrinsicPrototype(intrinsics, "%FunctionPrototype%");
-    setInternalSlot(FunctionPrototype, "Prototype", ObjectPrototype);
-
-    var FunctionConstructor = createIntrinsicConstructor(intrinsics, "Function", 0, "%Function%");
-    setInternalSlot(FunctionConstructor, "Prototype", FunctionPrototype);
-
-    var ObjectConstructor = createIntrinsicConstructor(intrinsics, "Object", 0, "%Object%");
-
-    Assert(getInternalSlot(ObjectConstructor, "Prototype") === FunctionPrototype, "ObjectConstructor and FunctionPrototype have to have a link");
-
-    var EncodeURIFunction = createIntrinsicFunction(intrinsics, "encodeURI", 0, "%EncodeURI%");
-    var DecodeURIFunction = createIntrinsicFunction(intrinsics, "ecodeURI", 0, "%DecodeURI%");
-    var EncodeURIComponentFunction = createIntrinsicFunction(intrinsics, "EncodeURIComponent", 0, "%EncodeURIComponent%");
-    var DecodeURIComponentFunction = createIntrinsicFunction(intrinsics, "DecodeURIComponent", 0, "%DecodeURIComponent%");
-    var SetTimeoutFunction = createIntrinsicFunction(intrinsics, "SetTimeout", 0, "%SetTimeout%");
-    var SetImmediateFunction = createIntrinsicFunction(intrinsics, "SetImmediate", 0, "%SetImmediate%");
-    var IsNaNFunction = createIntrinsicFunction(intrinsics, "isNaN", 0, "%IsNaN%");
-    var IsFiniteFunction = createIntrinsicFunction(intrinsics, "isFinite", 0, "%IsFinite%");
-    var ParseFloatFunction = createIntrinsicFunction(intrinsics, "parseFloat", 0, "%ParseFloat%");
-    var ParseIntFunction = createIntrinsicFunction(intrinsics, "parseInt", 0, "%ParseInt%");
-    var EscapeFunction = createIntrinsicFunction(intrinsics, "escape", 0, "%Escape%");
-    var UnescapeFunction = createIntrinsicFunction(intrinsics, "unescape", 0, "%Unescape%");
-    var EvalFunction = createIntrinsicFunction(intrinsics, "eval", 0, "%Eval%");
-    var GeneratorFunction = createIntrinsicFunction(intrinsics, "Generator", 0, "%GeneratorFunction%");
-    var LoadFunction = createIntrinsicFunction(intrinsics, "load", 0, "%Load%");
-    var RequestFunction = createIntrinsicFunction(intrinsics, "Request", 0, "%Request%");
-    var ModuleFunction = createIntrinsicFunction(intrinsics, "Module", 0, "%Module%");
-    var SymbolFunction = createIntrinsicFunction(intrinsics, "Symbol", 0, "%Symbol%");
-
-    var RegExpConstructor = createIntrinsicConstructor(intrinsics, "RegExp", 0, "%RegExp%");
-    var RegExpPrototype = createIntrinsicPrototype(intrinsics, "%RegExpPrototype%");
-    var ProxyConstructor = createIntrinsicConstructor(intrinsics, "Proxy", 0, "%Proxy%");
-    var ProxyPrototype = createIntrinsicPrototype(intrinsics, "%ProxyPrototype%");
-    var BooleanConstructor = createIntrinsicConstructor(intrinsics, "Boolean", 0, "%Boolean%");
-    var BooleanPrototype = createIntrinsicPrototype(intrinsics, "%BooleanPrototype%");
-    var NumberConstructor = createIntrinsicConstructor(intrinsics, "Number", 0, "%Number%");
-    var NumberPrototype = createIntrinsicPrototype(intrinsics, "%NumberPrototype%");
-    var StringConstructor = createIntrinsicConstructor(intrinsics, "String", 0, "%String%");
-
-    var StringPrototype = createIntrinsicPrototype(intrinsics, "%StringPrototype%");
-    var StringIteratorPrototype = createIntrinsicPrototype(intrinsics, "%StringIteratorPrototype%");
-    var DateConstructor = createIntrinsicConstructor(intrinsics, "Date", 0, "%Date%");
-    var DatePrototype = createIntrinsicPrototype(intrinsics, "%DatePrototype%");
-    var ErrorConstructor = createIntrinsicConstructor(intrinsics, "Error", 0, "%Error%");
-    var ErrorPrototype = createIntrinsicPrototype(intrinsics, "%ErrorPrototype%");
-    var ArrayConstructor = createIntrinsicConstructor(intrinsics, "Array", 0, "%Array%");
-    var ArrayPrototype = createIntrinsicPrototype(intrinsics, "%ArrayPrototype%");
-    var ArrayIteratorPrototype = createIntrinsicPrototype(intrinsics, "%ArrayIteratorPrototype%");
-
-    var GeneratorPrototype = createIntrinsicPrototype(intrinsics, "%GeneratorPrototype%");
-    var GeneratorObject = createIntrinsicObject(intrinsics, "%Generator%");
-    var ReflectObject = createIntrinsicObject(intrinsics, "%Reflect%");
-    var SymbolPrototype = createIntrinsicPrototype(intrinsics, "%SymbolPrototype%");
-    var TypeErrorConstructor = createIntrinsicConstructor(intrinsics, "TypeError", 0, "%TypeError%");
-    var TypeErrorPrototype = createIntrinsicPrototype(intrinsics, "%TypeErrorPrototype%");
-    var ReferenceErrorConstructor = createIntrinsicConstructor(intrinsics, "ReferenceError", 0, "%ReferenceError%");
-    var ReferenceErrorPrototype = createIntrinsicPrototype(intrinsics, "%ReferenceErrorPrototype%");
-    var SyntaxErrorConstructor = createIntrinsicConstructor(intrinsics, "SyntaxError", 0, "%SyntaxError%");
-    var SyntaxErrorPrototype = createIntrinsicPrototype(intrinsics, "%SyntaxErrorPrototype%");
-    var RangeErrorConstructor = createIntrinsicConstructor(intrinsics, "RangeError", 0, "%RangeError%");
-    var RangeErrorPrototype = createIntrinsicPrototype(intrinsics, "%RangeErrorPrototype%");
-    var EvalErrorConstructor = createIntrinsicConstructor(intrinsics, "EvalError", 0, "%EvalError%");
-    var EvalErrorPrototype = createIntrinsicPrototype(intrinsics, "%EvalErrorPrototype%");
-    var URIErrorConstructor = createIntrinsicConstructor(intrinsics, "URIError", 0, "%URIError%");
-    var URIErrorPrototype = createIntrinsicPrototype(intrinsics, "%URIErrorPrototype%");
-    var PromiseConstructor = createIntrinsicConstructor(intrinsics, "Promise", 0, "%Promise%");
-    var PromisePrototype = createIntrinsicPrototype(intrinsics, "%PromisePrototype%");
-    var WeakMapConstructor = createIntrinsicConstructor(intrinsics, "WeakMap", 0, "%WeakMap%");
-    var WeakMapPrototype = createIntrinsicPrototype(intrinsics, "%WeakMapPrototype%");
-    var WeakSetConstructor = createIntrinsicConstructor(intrinsics, "WeakSet", 0, "%WeakSet%");
-    var WeakSetPrototype = createIntrinsicPrototype(intrinsics, "%WeakSetPrototype%");
-    var MapConstructor = createIntrinsicConstructor(intrinsics, "Map", 0, "%Map%");
-    var MapPrototype = createIntrinsicPrototype(intrinsics, "%MapPrototype%");
-    var MapIteratorPrototype = createIntrinsicPrototype(intrinsics, "%MapIteratorPrototype%");
-    var SetConstructor = createIntrinsicConstructor(intrinsics, "Set", 0, "%Set%");
-    var SetPrototype = createIntrinsicPrototype(intrinsics, "%SetPrototype%");
-    var SetIteratorPrototype = createIntrinsicPrototype(intrinsics, "%SetIteratorPrototype%");
-    var __mapSetUniqueInternalUniqueKeyCounter__ = 0;
-    var TypedArrayConstructor = createIntrinsicConstructor(intrinsics, "TypedArray", 0, "%TypedArray%");
-    var TypedArrayPrototype = createIntrinsicPrototype(intrinsics, "%TypedArrayPrototype%");
-    var Uint8ArrayConstructor = createIntrinsicConstructor(intrinsics, "Uint8Array", 0, "%Uint8Array%");
-    var Int8ArrayConstructor = createIntrinsicConstructor(intrinsics, "Int8Array", 0, "%Int8Array%");
-    var Uint8ClampedArrayConstructor = createIntrinsicConstructor(intrinsics, "Uint8ClampedArray", 0, "%Uint8ClampedArray%");
-    var Int16ArrayConstructor = createIntrinsicConstructor(intrinsics, "Int16Array", 0, "%Int16Array%");
-    var Uint16ArrayConstructor = createIntrinsicConstructor(intrinsics, "Uint16Array", 0, "%Uint16Array%");
-    var Int32ArrayConstructor = createIntrinsicConstructor(intrinsics, "Int32Array", 0, "%Int32Array%");
-    var Uint32ArrayConstructor = createIntrinsicConstructor(intrinsics, "Uint32Array", 0, "%Uint32Array%");
-    var Float32ArrayConstructor = createIntrinsicConstructor(intrinsics, "Float32Array", 0, "%Float32Array%");
-    var Float64ArrayConstructor = createIntrinsicConstructor(intrinsics, "Float64Array", 0, "%Float64Array%");
-    var Uint8ArrayPrototype = createIntrinsicPrototype(intrinsics, "%Uint8ArrayPrototype%");
-    var Int8ArrayPrototype = createIntrinsicPrototype(intrinsics, "%Int8ArrayPrototype%");
-    var Uint8ClampedArrayPrototype = createIntrinsicPrototype(intrinsics, "%Uint8ClampedArrayPrototype%");
-    var Int16ArrayPrototype = createIntrinsicPrototype(intrinsics, "%Int16ArrayPrototype%");
-    var Uint16ArrayPrototype = createIntrinsicPrototype(intrinsics, "%Uint16ArrayPrototype%");
-    var Int32ArrayPrototype = createIntrinsicPrototype(intrinsics, "%Int32ArrayPrototype%");
-    var Uint32ArrayPrototype = createIntrinsicPrototype(intrinsics, "%Uint32ArrayPrototype%");
-    var Float32ArrayPrototype = createIntrinsicPrototype(intrinsics, "%Float32ArrayPrototype%");
-    var Float64ArrayPrototype = createIntrinsicPrototype(intrinsics, "%Float64ArrayPrototype%");
-    var ArrayBufferConstructor = createIntrinsicConstructor(intrinsics, "ArrayBuffer", 0, "%ArrayBuffer%");
-    var ArrayBufferPrototype = createIntrinsicPrototype(intrinsics, "%ArrayBufferPrototype%");
-    var DataViewConstructor = createIntrinsicConstructor(intrinsics, "DataView", 0, "%DataView%");
-    var DataViewPrototype = createIntrinsicPrototype(intrinsics, "%DataViewPrototype%");
-    var JSONObject = createIntrinsicObject(intrinsics, "%JSON%");
-    var MathObject = createIntrinsicObject(intrinsics, "%Math%");
-    var ConsoleObject = createIntrinsicObject(intrinsics, "%Console%");
-
-    var EmitterConstructor = createIntrinsicConstructor(intrinsics, "Emitter", 0, "%Emitter%");
-    var EmitterPrototype = createIntrinsicPrototype(intrinsics, "%EmitterPrototype%");
-    // Object.observe
-    var NotifierPrototype = createIntrinsicPrototype(intrinsics, "%NotifierPrototype%");
-    var ObserverCallbacks = [];
-    var LoaderConstructor = createIntrinsicConstructor(intrinsics, "Loader", 0, "%Loader%");
-    var LoaderPrototype = createIntrinsicPrototype(intrinsics, "%LoaderPrototype%");
-    var LoaderIteratorPrototype = createIntrinsicPrototype(intrinsics, "%LoaderIteratorPrototype%");
-    var RealmConstructor = createIntrinsicConstructor(intrinsics, "Realm", 0, "%Realm%");
-    var RealmPrototype = createIntrinsicPrototype(intrinsics, "%RealmPrototype%");
-
-    var ModulePrototype = null;
-
-    // that is something from the dom, which is useful for communication and its messaging needs structured cloning so i can check out both
-    var EventConstructor = createIntrinsicConstructor(intrinsics, "Event", 0, "%Event%");
-    var EventPrototype = createIntrinsicPrototype(intrinsics, "%EventPrototype%");
-    var EventTargetConstructor = createIntrinsicConstructor(intrinsics, "EventTarget", 0, "%EventTarget%");
-    var EventTargetPrototype = createIntrinsicPrototype(intrinsics, "%EventTargetPrototype%");
-    var MessagePortConstructor = createIntrinsicConstructor(intrinsics, "MessagePort", 0, "%MessagePort%");
-    var MessagePortPrototype = createIntrinsicPrototype(intrinsics, "%MessagePortPrototype%");
-
-
-    // ===========================================================================================================
-    // %ThrowTypeError%
-    // ===========================================================================================================
-
-    var ThrowTypeError = FunctionAllocate(FunctionPrototype);
-    setInternalSlot(ThrowTypeError, "Call", function (thisArg, argList) {
-        return withError("Type", "The system is supposed to throw a Type Error with %ThrowTypeError% here.");
-    });
-    setInternalSlot(ThrowTypeError, "Construct", undefined);
-
-
-    // ===========================================================================================================
-    // load and request function (load loads file into string and request fetches from network)
-    // ===========================================================================================================
-
-    function isWindow() {
-        return typeof window !== "undefined";
-    }
-
-    function isNode() {
-        return typeof process !== "undefined";
-    }
-
-    function isWorker() {
-        return typeof importScripts === "function" && !isWindow();
+    function createIntrinsicObject (intrinsics, intrinsicName) {
+        var object = OrdinaryObject();
+        define_intrinsic(intrinsics, intrinsicName, object);
+        return object;
     }
 
     /*
-        all these files should be split into 2 files
-        one which defines them,
-        and one which just saves the _call functions
-        which are inserted in the definition, which
-        won´t be recreated on a new call to createIntrinsics then.
-        don´t forget.
-
+     Here goes the big wrapping closure for createIntrinsics();    (tmp)
      */
 
+    createIntrinsics = function createIntrinsics(realm) {
+        var intrinsics = OrdinaryObject(null);
+        realm.intrinsics = intrinsics;
+
+        var ObjectPrototype = createIntrinsicPrototype(intrinsics, "%ObjectPrototype%");
+        setInternalSlot(ObjectPrototype, "Prototype", null);
+        var FunctionPrototype = createIntrinsicPrototype(intrinsics, "%FunctionPrototype%");
+        setInternalSlot(FunctionPrototype, "Prototype", ObjectPrototype);
+        var FunctionConstructor = createIntrinsicConstructor(intrinsics, "Function", 0, "%Function%");
+        setInternalSlot(FunctionConstructor, "Prototype", FunctionPrototype);
+        var ObjectConstructor = createIntrinsicConstructor(intrinsics, "Object", 0, "%Object%");
+        Assert(getInternalSlot(ObjectConstructor, "Prototype") === FunctionPrototype, "ObjectConstructor and FunctionPrototype have to have a link");
+
+        var EncodeURIFunction = createIntrinsicFunction(intrinsics, "encodeURI", 0, "%EncodeURI%");
+        var DecodeURIFunction = createIntrinsicFunction(intrinsics, "ecodeURI", 0, "%DecodeURI%");
+        var EncodeURIComponentFunction = createIntrinsicFunction(intrinsics, "EncodeURIComponent", 0, "%EncodeURIComponent%");
+        var DecodeURIComponentFunction = createIntrinsicFunction(intrinsics, "DecodeURIComponent", 0, "%DecodeURIComponent%");
+        var SetTimeoutFunction = createIntrinsicFunction(intrinsics, "SetTimeout", 0, "%SetTimeout%");
+        var SetImmediateFunction = createIntrinsicFunction(intrinsics, "SetImmediate", 0, "%SetImmediate%");
+        var IsNaNFunction = createIntrinsicFunction(intrinsics, "isNaN", 0, "%IsNaN%");
+        var IsFiniteFunction = createIntrinsicFunction(intrinsics, "isFinite", 0, "%IsFinite%");
+        var ParseFloatFunction = createIntrinsicFunction(intrinsics, "parseFloat", 0, "%ParseFloat%");
+        var ParseIntFunction = createIntrinsicFunction(intrinsics, "parseInt", 0, "%ParseInt%");
+        var EscapeFunction = createIntrinsicFunction(intrinsics, "escape", 0, "%Escape%");
+        var UnescapeFunction = createIntrinsicFunction(intrinsics, "unescape", 0, "%Unescape%");
+        var EvalFunction = createIntrinsicFunction(intrinsics, "eval", 0, "%Eval%");
+        var GeneratorFunction = createIntrinsicFunction(intrinsics, "Generator", 0, "%GeneratorFunction%");
+        var LoadFunction = createIntrinsicFunction(intrinsics, "load", 0, "%Load%");
+        var RequestFunction = createIntrinsicFunction(intrinsics, "Request", 0, "%Request%");
+        var ModuleFunction = createIntrinsicFunction(intrinsics, "Module", 0, "%Module%");
+        var SymbolFunction = createIntrinsicFunction(intrinsics, "Symbol", 0, "%Symbol%");
+
+        var RegExpConstructor = createIntrinsicConstructor(intrinsics, "RegExp", 0, "%RegExp%");
+        var RegExpPrototype = createIntrinsicPrototype(intrinsics, "%RegExpPrototype%");
+        var ProxyConstructor = createIntrinsicConstructor(intrinsics, "Proxy", 0, "%Proxy%");
+        var ProxyPrototype = createIntrinsicPrototype(intrinsics, "%ProxyPrototype%");
+        var BooleanConstructor = createIntrinsicConstructor(intrinsics, "Boolean", 0, "%Boolean%");
+        var BooleanPrototype = createIntrinsicPrototype(intrinsics, "%BooleanPrototype%");
+        var NumberConstructor = createIntrinsicConstructor(intrinsics, "Number", 0, "%Number%");
+        var NumberPrototype = createIntrinsicPrototype(intrinsics, "%NumberPrototype%");
+        var StringConstructor = createIntrinsicConstructor(intrinsics, "String", 0, "%String%");
+
+        var StringPrototype = createIntrinsicPrototype(intrinsics, "%StringPrototype%");
+        var StringIteratorPrototype = createIntrinsicPrototype(intrinsics, "%StringIteratorPrototype%");
+        var DateConstructor = createIntrinsicConstructor(intrinsics, "Date", 0, "%Date%");
+        var DatePrototype = createIntrinsicPrototype(intrinsics, "%DatePrototype%");
+        var ErrorConstructor = createIntrinsicConstructor(intrinsics, "Error", 0, "%Error%");
+        var ErrorPrototype = createIntrinsicPrototype(intrinsics, "%ErrorPrototype%");
+        var ArrayConstructor = createIntrinsicConstructor(intrinsics, "Array", 0, "%Array%");
+        var ArrayPrototype = createIntrinsicPrototype(intrinsics, "%ArrayPrototype%");
+        var ArrayIteratorPrototype = createIntrinsicPrototype(intrinsics, "%ArrayIteratorPrototype%");
+
+        var GeneratorPrototype = createIntrinsicPrototype(intrinsics, "%GeneratorPrototype%");
+        var GeneratorObject = createIntrinsicObject(intrinsics, "%Generator%");
+        var ReflectObject = createIntrinsicObject(intrinsics, "%Reflect%");
+        var SymbolPrototype = createIntrinsicPrototype(intrinsics, "%SymbolPrototype%");
+        var TypeErrorConstructor = createIntrinsicConstructor(intrinsics, "TypeError", 0, "%TypeError%");
+        var TypeErrorPrototype = createIntrinsicPrototype(intrinsics, "%TypeErrorPrototype%");
+        var ReferenceErrorConstructor = createIntrinsicConstructor(intrinsics, "ReferenceError", 0, "%ReferenceError%");
+        var ReferenceErrorPrototype = createIntrinsicPrototype(intrinsics, "%ReferenceErrorPrototype%");
+        var SyntaxErrorConstructor = createIntrinsicConstructor(intrinsics, "SyntaxError", 0, "%SyntaxError%");
+        var SyntaxErrorPrototype = createIntrinsicPrototype(intrinsics, "%SyntaxErrorPrototype%");
+        var RangeErrorConstructor = createIntrinsicConstructor(intrinsics, "RangeError", 0, "%RangeError%");
+        var RangeErrorPrototype = createIntrinsicPrototype(intrinsics, "%RangeErrorPrototype%");
+        var EvalErrorConstructor = createIntrinsicConstructor(intrinsics, "EvalError", 0, "%EvalError%");
+        var EvalErrorPrototype = createIntrinsicPrototype(intrinsics, "%EvalErrorPrototype%");
+        var URIErrorConstructor = createIntrinsicConstructor(intrinsics, "URIError", 0, "%URIError%");
+        var URIErrorPrototype = createIntrinsicPrototype(intrinsics, "%URIErrorPrototype%");
+        var PromiseConstructor = createIntrinsicConstructor(intrinsics, "Promise", 0, "%Promise%");
+        var PromisePrototype = createIntrinsicPrototype(intrinsics, "%PromisePrototype%");
+        var WeakMapConstructor = createIntrinsicConstructor(intrinsics, "WeakMap", 0, "%WeakMap%");
+        var WeakMapPrototype = createIntrinsicPrototype(intrinsics, "%WeakMapPrototype%");
+        var WeakSetConstructor = createIntrinsicConstructor(intrinsics, "WeakSet", 0, "%WeakSet%");
+        var WeakSetPrototype = createIntrinsicPrototype(intrinsics, "%WeakSetPrototype%");
+        var MapConstructor = createIntrinsicConstructor(intrinsics, "Map", 0, "%Map%");
+        var MapPrototype = createIntrinsicPrototype(intrinsics, "%MapPrototype%");
+        var MapIteratorPrototype = createIntrinsicPrototype(intrinsics, "%MapIteratorPrototype%");
+        var SetConstructor = createIntrinsicConstructor(intrinsics, "Set", 0, "%Set%");
+        var SetPrototype = createIntrinsicPrototype(intrinsics, "%SetPrototype%");
+        var SetIteratorPrototype = createIntrinsicPrototype(intrinsics, "%SetIteratorPrototype%");
+        var __mapSetUniqueInternalUniqueKeyCounter__ = 0;
+        var TypedArrayConstructor = createIntrinsicConstructor(intrinsics, "TypedArray", 0, "%TypedArray%");
+        var TypedArrayPrototype = createIntrinsicPrototype(intrinsics, "%TypedArrayPrototype%");
+        var Uint8ArrayConstructor = createIntrinsicConstructor(intrinsics, "Uint8Array", 0, "%Uint8Array%");
+        var Int8ArrayConstructor = createIntrinsicConstructor(intrinsics, "Int8Array", 0, "%Int8Array%");
+        var Uint8ClampedArrayConstructor = createIntrinsicConstructor(intrinsics, "Uint8ClampedArray", 0, "%Uint8ClampedArray%");
+        var Int16ArrayConstructor = createIntrinsicConstructor(intrinsics, "Int16Array", 0, "%Int16Array%");
+        var Uint16ArrayConstructor = createIntrinsicConstructor(intrinsics, "Uint16Array", 0, "%Uint16Array%");
+        var Int32ArrayConstructor = createIntrinsicConstructor(intrinsics, "Int32Array", 0, "%Int32Array%");
+        var Uint32ArrayConstructor = createIntrinsicConstructor(intrinsics, "Uint32Array", 0, "%Uint32Array%");
+        var Float32ArrayConstructor = createIntrinsicConstructor(intrinsics, "Float32Array", 0, "%Float32Array%");
+        var Float64ArrayConstructor = createIntrinsicConstructor(intrinsics, "Float64Array", 0, "%Float64Array%");
+        var Uint8ArrayPrototype = createIntrinsicPrototype(intrinsics, "%Uint8ArrayPrototype%");
+        var Int8ArrayPrototype = createIntrinsicPrototype(intrinsics, "%Int8ArrayPrototype%");
+        var Uint8ClampedArrayPrototype = createIntrinsicPrototype(intrinsics, "%Uint8ClampedArrayPrototype%");
+        var Int16ArrayPrototype = createIntrinsicPrototype(intrinsics, "%Int16ArrayPrototype%");
+        var Uint16ArrayPrototype = createIntrinsicPrototype(intrinsics, "%Uint16ArrayPrototype%");
+        var Int32ArrayPrototype = createIntrinsicPrototype(intrinsics, "%Int32ArrayPrototype%");
+        var Uint32ArrayPrototype = createIntrinsicPrototype(intrinsics, "%Uint32ArrayPrototype%");
+        var Float32ArrayPrototype = createIntrinsicPrototype(intrinsics, "%Float32ArrayPrototype%");
+        var Float64ArrayPrototype = createIntrinsicPrototype(intrinsics, "%Float64ArrayPrototype%");
+        var ArrayBufferConstructor = createIntrinsicConstructor(intrinsics, "ArrayBuffer", 0, "%ArrayBuffer%");
+        var ArrayBufferPrototype = createIntrinsicPrototype(intrinsics, "%ArrayBufferPrototype%");
+        var DataViewConstructor = createIntrinsicConstructor(intrinsics, "DataView", 0, "%DataView%");
+        var DataViewPrototype = createIntrinsicPrototype(intrinsics, "%DataViewPrototype%");
+        var JSONObject = createIntrinsicObject(intrinsics, "%JSON%");
+        var MathObject = createIntrinsicObject(intrinsics, "%Math%");
+        var ConsoleObject = createIntrinsicObject(intrinsics, "%Console%");
+
+        var EmitterConstructor = createIntrinsicConstructor(intrinsics, "Emitter", 0, "%Emitter%");
+        var EmitterPrototype = createIntrinsicPrototype(intrinsics, "%EmitterPrototype%");
+        // Object.observe
+        var NotifierPrototype = createIntrinsicPrototype(intrinsics, "%NotifierPrototype%");
+        var ObserverCallbacks = [];
+        var LoaderConstructor = createIntrinsicConstructor(intrinsics, "Loader", 0, "%Loader%");
+        var LoaderPrototype = createIntrinsicPrototype(intrinsics, "%LoaderPrototype%");
+        var LoaderIteratorPrototype = createIntrinsicPrototype(intrinsics, "%LoaderIteratorPrototype%");
+        var RealmConstructor = createIntrinsicConstructor(intrinsics, "Realm", 0, "%Realm%");
+        var RealmPrototype = createIntrinsicPrototype(intrinsics, "%RealmPrototype%");
+        var ModulePrototype = null;
+        // that is something from the dom, which is useful for communication and its messaging needs structured cloning so i can check out both
+        var EventConstructor = createIntrinsicConstructor(intrinsics, "Event", 0, "%Event%");
+        var EventPrototype = createIntrinsicPrototype(intrinsics, "%EventPrototype%");
+        var EventTargetConstructor = createIntrinsicConstructor(intrinsics, "EventTarget", 0, "%EventTarget%");
+        var EventTargetPrototype = createIntrinsicPrototype(intrinsics, "%EventTargetPrototype%");
+        var MessagePortConstructor = createIntrinsicConstructor(intrinsics, "MessagePort", 0, "%MessagePort%");
+        var MessagePortPrototype = createIntrinsicPrototype(intrinsics, "%MessagePortPrototype%");
+
+        var DebugFunction = createIntrinsicFunction(intrinsics, "debug", 1, "%DebugFunction%");
+
+        // ===========================================================================================================
+        // %ThrowTypeError%
+        // ===========================================================================================================
+
+        var ThrowTypeError = FunctionAllocate(FunctionPrototype);
+        setInternalSlot(ThrowTypeError, "Call", function (thisArg, argList) {
+            return withError("Type", "The system is supposed to throw a Type Error with %ThrowTypeError% here.");
+        });
+        setInternalSlot(ThrowTypeError, "Construct", undefined);
+
+
+
+setInternalSlot(DebugFunction, "Call", function debugfunc (thisArg, argList)  {
+
+    var O = argList[0];
+    var type = Type(O);
+
+    function printProps(name) {
+        var desc = this[name];
+        console.log(name+": ("+Type(desc.value)+") "+(desc.enumerable?"e":"-")+""+(desc.configurable?"c":"-")+""+(desc.writable?"w":"-"));
+    }
+
+    var TAB = "\t\t";
+
+    if (Type(O) == "object") {
+        var toString = Invoke(O, "toString", []);
+        if (isAbrupt(toString=ifAbrupt(toString))) return toString;
+
+        console.log(toString);
+        console.log("{")
+
+        var bindings = getInternalSlot(O, "Bindings");
+        var symbols = getInternalSlot(O, "Symbols");
+        var isExtensible = getInternalSlot(O, "Extensible");
+        var proto = GetPrototypeOf(O);
+        var prototypeInfo;
+
+        if (proto == null) prototypeInfo = "null";
+        else prototypeInfo = Invoke(proto, "toString", []);
+        if (isAbrupt(prototypeInfo=ifAbrupt(prototypeInfo))) return prototypeInfo;
+
+        console.log(TAB+"[[Prototype]]: " + prototypeInfo);
+        console.log(TAB+"[[Extensible]]: " +isExtensible);
+
+        console.log(TAB+"[[Bindings]]:");
+        Object.keys(bindings).forEach(printProps.bind(bindings));
+
+        console.log(TAB+"[[Symbols]]");
+        Object.keys(symbols).forEach(printProps.bind(symbols));
+
+        if (IsCallable(O)) {
+            var strict = getInternalSlot(O, "Strict");
+            console.log(TAB+"[[Strict]]:" + strict);
+
+            var thisMode = getInternalSlot(O, "ThisMode");
+            console.log(TAB+"[[ThisMode]]: "+thisMode);
+
+            var formals = getInternalSlot(O, "FormalParameters");
+            console.log(TAB+"[[FormalParameters]]:")
+            console.log(formals.join(","));
+
+            console.log(TAB+"[[Code]]:")
+
+            var code = getInternalSlot(O, "Code");
+            console.log(JSON.stringify(code, null, 4));
+        }
+    }
+
+});
 
 setInternalSlot(LoadFunction, "Call", function load(thisArg, argList) {
     var file = argList[0];
@@ -14870,7 +14740,6 @@ setInternalSlot(RequestFunction, "Call", function request(thisArg, argList) {
         return withError("Type", "Unknown architecture. Request function not available.");
     }
 });
-
 
 // ##################################################################
 // Das Code Realm als %Realm%
@@ -19013,7 +18882,6 @@ setInternalSlot(ParseFloatFunction, "Call", function (thisArg, argList) {
 });
 
 
-
 //===========================================================================================================
 // Math
 //============================================================================================================
@@ -19656,7 +19524,6 @@ LazyDefineBuiltinFunction(ReflectObject, "setPrototypeOf", 2, ReflectObject_setP
 LazyDefineBuiltinConstant(ReflectObject, $$toStringTag, "Reflect");
 
 
-
 // ===========================================================================================================
 // IsNaN
 // ===========================================================================================================
@@ -19675,7 +19542,6 @@ IsFiniteFunction = CreateBuiltinFunction(realm, function isFinite(thisArg, argLi
     if (number == Infinity || number == -Infinity || number != number) return false;
     return true
 }, 1, "isFinite");
-
 
 // ===========================================================================================================
 // Object
@@ -20477,7 +20343,6 @@ DefineOwnProperty(ObjectConstructor, "getNotifier", {
 });
 
 
-
 // ==========================rc=================================================================================
 // Function
 // ===========================================================================================================
@@ -20821,7 +20686,6 @@ LazyDefineProperty(GeneratorPrototype, $$create, CreateBuiltinFunction(realm, fu
     });
     return obj;
 }));
-
 
 // ===========================================================================================================
 // JSON
@@ -21643,7 +21507,6 @@ function makeResolveFunction () {
 }
 
 
-
 // ===========================================================================================================
 // Regular Expression
 // ===========================================================================================================
@@ -21686,6 +21549,7 @@ LazyDefineProperty(RegExpPrototype, "lastIndex", 0);
 LazyDefineBuiltinFunction(RegExpPrototype, "compile", 1, RegExpPrototype_compile);
 LazyDefineBuiltinFunction(RegExpPrototype, "exec", 1, RegExpPrototype_exec);
 LazyDefineBuiltinFunction(RegExpPrototype, "test", 1, RegExpPrototype_test);
+
 
 
 
@@ -22372,29 +22236,23 @@ createTypedArrayVariant("Uint32", 4, Uint32ArrayConstructor, Uint32ArrayPrototyp
 createTypedArrayVariant("Float32", 8, Float32ArrayConstructor, Float32ArrayPrototype);
 createTypedArrayVariant("Float64", 8, Float64ArrayConstructor, Float64ArrayPrototype);
 
+// ===========================================================================================================
+// set Timeout
+// ===========================================================================================================
 
-    // ===========================================================================================================
-    // set Timeout
-    // ===========================================================================================================
-
-    setInternalSlot(SetTimeoutFunction, "Call", function (thisArg, argList) {
-
-        var func = argList[0];
-        var timeout = argList[1] || 0;
-        var task;
-        if (!IsCallable(func)) return withError("Type", "setTimeout: function argument expected");
-        task = {
-            time: Date.now(),
-            timeout: timeout,
-            func: func
-        };
-        eventQueue.push(task);
-        return task;
-    });
-
-    // ===========================================================================================================
-    // DataView
-    // ===========================================================================================================
+setInternalSlot(SetTimeoutFunction, "Call", function (thisArg, argList) {
+    var func = argList[0];
+    var timeout = argList[1] || 0;
+    var task;
+    if (!IsCallable(func)) return withError("Type", "setTimeout: function argument expected");
+    task = {
+        time: Date.now(),
+        timeout: timeout,
+        func: func
+    };
+    eventQueue.push(task);
+    return task;
+});
 
 
 // ===========================================================================================================
@@ -23024,7 +22882,6 @@ DefineOwnProperty(SetIteratorPrototype, "next", {
 });
 
 
-
 // ===========================================================================================================
 // Event Emitter (nodejs emitter like with equal interfaces)
 // ===========================================================================================================
@@ -23248,170 +23105,357 @@ DefineOwnProperty(EmitterPrototype, "emit", {
 LazyDefineBuiltinConstant(EmitterPrototype, $$toStringTag, "Emitter");
 
 
-
-    MakeConstructor(EventConstructor, true, EventPrototype);
-    MakeConstructor(EventTargetConstructor, true, EventTargetPrototype);
-    MakeConstructor(MessagePortConstructor, true, MessagePortPrototype);
-
-    var EventConstructor_Call = function (thisArg, argList) {
-    };
-
-
-    var EventTargetConstructor_Call = function (thisArg, argList) {
-    };
-    var EventTargetPrototype_addEventListener = function (thisArg, argList) {
-    };
-    var EventTargetPrototype_dispatchEvent = function (thisArg, argList) {
-    };
-    var EventTargetPrototype_removeEventListener = function (thisArg, argList) {
-    };
-
-    LazyDefineBuiltinFunction(EventTargetPrototype, "addEventListener", 3, EventTargetPrototype_addEventListener);
-    LazyDefineBuiltinFunction(EventTargetPrototype, "dispatchEvent", 1, EventTargetPrototype_dispatchEvent);
-    LazyDefineBuiltinFunction(EventTargetPrototype, "removeEventListener", 2, EventTargetPrototype_removeEventListener);
-
-    var MessagePortPrototype_close = function (thisArg, argList) {
-    };
-    var MessagePortPrototype_open = function (thisArg, argList) {
-    };
-    var MessagePortPrototype_postMessage = function (thisArg, argList) {
-    };
-
-    LazyDefineBuiltinFunction(MessagePortPrototype, "close", 0, MessagePortPrototype_close);
-    LazyDefineBuiltinFunction(MessagePortPrototype, "open", 0, MessagePortPrototype_open);
-    LazyDefineBuiltinFunction(MessagePortPrototype, "postMessage", 0, MessagePortPrototype_postMessage);
-
-
-    /* 
-
-     ecmascript simd polyfills. 32x4 will be run sequentially here.
-
-     */
-
-
-
-
-    // ===========================================================================================================
-    // Globales This erzeugen (sollte mit dem realm und den builtins 1x pro neustart erzeugt werden)
-    // ===========================================================================================================
-
-    createGlobalThis = function createGlobalThis(realm, globalThis, intrinsics) {
-
-        SetPrototypeOf(globalThis, ObjectPrototype);
-        setInternalSlot(globalThis, "Extensible", true);
-
-        DefineOwnProperty(globalThis, "Array", GetOwnProperty(intrinsics, "%Array%"));
-        DefineOwnProperty(globalThis, "ArrayBuffer", GetOwnProperty(intrinsics, "%ArrayBuffer%"));
-        DefineOwnProperty(globalThis, "Boolean", GetOwnProperty(intrinsics, "%Boolean%"));
-        DefineOwnProperty(globalThis, "DataView", GetOwnProperty(intrinsics, "%DataView%"));
-        DefineOwnProperty(globalThis, "Date", GetOwnProperty(intrinsics, "%Date%"));
-        DefineOwnProperty(globalThis, "Emitter", GetOwnProperty(intrinsics, "%Emitter%"));
-        DefineOwnProperty(globalThis, "Event", GetOwnProperty(intrinsics, "%Event%"));
-        DefineOwnProperty(globalThis, "EventTarget", GetOwnProperty(intrinsics, "%EventTarget%"));
-        DefineOwnProperty(globalThis, "Error", GetOwnProperty(intrinsics, "%Error%"));
-        DefineOwnProperty(globalThis, "EvalError", GetOwnProperty(intrinsics, "%EvalError%"));
-        DefineOwnProperty(globalThis, "Function", GetOwnProperty(intrinsics, "%Function%"));
-        DefineOwnProperty(globalThis, "Float32Array", GetOwnProperty(intrinsics, "%Float32Array%"));
-        DefineOwnProperty(globalThis, "Float64Array", GetOwnProperty(intrinsics, "%Float64Array%"));
-        DefineOwnProperty(globalThis, "GeneratorFunction", GetOwnProperty(intrinsics, "%GeneratorFunction%"));
-        LazyDefineBuiltinConstant(globalThis, "Infinity", Infinity);
-        DefineOwnProperty(globalThis, "Int8Array", GetOwnProperty(intrinsics, "%Int8Array%"));
-        DefineOwnProperty(globalThis, "Int16Array", GetOwnProperty(intrinsics, "%Int16Array%"));
-        DefineOwnProperty(globalThis, "Int32Array", GetOwnProperty(intrinsics, "%Int32Array%"));
-        DefineOwnProperty(globalThis, "JSON", GetOwnProperty(intrinsics, "%JSON%"));
-        DefineOwnProperty(globalThis, "Loader", GetOwnProperty(intrinsics, "%Loader%"));
-        DefineOwnProperty(globalThis, "Math", GetOwnProperty(intrinsics, "%Math%"));
-        DefineOwnProperty(globalThis, "Map", GetOwnProperty(intrinsics, "%Map%"));
-        DefineOwnProperty(globalThis, "MessagePort", GetOwnProperty(intrinsics, "%MessagePort%"));
-        DefineOwnProperty(globalThis, "Module", GetOwnProperty(intrinsics, "%Module%"));
-        LazyDefineBuiltinConstant(globalThis, "NaN", NaN);
-        DefineOwnProperty(globalThis, "Number", GetOwnProperty(intrinsics, "%Number%"));
-        DefineOwnProperty(globalThis, "Proxy", GetOwnProperty(intrinsics, "%Proxy%"));
-        DefineOwnProperty(globalThis, "RangeError", GetOwnProperty(intrinsics, "%RangeError%"));
-        DefineOwnProperty(globalThis, "Realm", GetOwnProperty(intrinsics, "%Realm%"));
-        DefineOwnProperty(globalThis, "ReferenceError", GetOwnProperty(intrinsics, "%ReferenceError%"));
-        DefineOwnProperty(globalThis, "RegExp", GetOwnProperty(intrinsics, "%RegExp%"));
-        DefineOwnProperty(globalThis, "SyntaxError", GetOwnProperty(intrinsics, "%SyntaxError%"));
-        LazyDefineProperty(globalThis, "System", realm.loader);
-        DefineOwnProperty(globalThis, "TypeError", GetOwnProperty(intrinsics, "%TypeError%"));
-        DefineOwnProperty(globalThis, "URIError", GetOwnProperty(intrinsics, "%URIError%"));
-        DefineOwnProperty(globalThis, "Object", GetOwnProperty(intrinsics, "%Object%"));
-        DefineOwnProperty(globalThis, "Promise", GetOwnProperty(intrinsics, "%Promise%"));
-        DefineOwnProperty(globalThis, "Reflect", GetOwnProperty(intrinsics, "%Reflect%"));
-        DefineOwnProperty(globalThis, "Set", GetOwnProperty(intrinsics, "%Set%"));
-        DefineOwnProperty(globalThis, "String", GetOwnProperty(intrinsics, "%String%"));
-        DefineOwnProperty(globalThis, "Symbol", GetOwnProperty(intrinsics, "%Symbol%"));
-        DefineOwnProperty(globalThis, "Uint8Array", GetOwnProperty(intrinsics, "%Uint8Array%"));
-        DefineOwnProperty(globalThis, "Uint8ClampedArray", GetOwnProperty(intrinsics, "%Uint8ClampedArray%"));
-        DefineOwnProperty(globalThis, "Uint16Array", GetOwnProperty(intrinsics, "%Uint16Array%"));
-        DefineOwnProperty(globalThis, "Uint32Array", GetOwnProperty(intrinsics, "%Uint32Array%"));
-        DefineOwnProperty(globalThis, "WeakMap", GetOwnProperty(intrinsics, "%WeakMap%"));
-        DefineOwnProperty(globalThis, "WeakSet", GetOwnProperty(intrinsics, "%WeakSet%"));
-        DefineOwnProperty(globalThis, "console", GetOwnProperty(intrinsics, "%Console%"));
-        DefineOwnProperty(globalThis, "decodeURI", GetOwnProperty(intrinsics, "%DecodeURI%"));
-        DefineOwnProperty(globalThis, "decodeURIComponent", GetOwnProperty(intrinsics, "%DecodeURIComponent%"));
-        DefineOwnProperty(globalThis, "encodeURI", GetOwnProperty(intrinsics, "%EncodeURI%"));
-        DefineOwnProperty(globalThis, "encodeURIComponent", GetOwnProperty(intrinsics, "%EncodeURIComponent%"));
-        DefineOwnProperty(globalThis, "escape", GetOwnProperty(intrinsics, "%Escape%"));
-        DefineOwnProperty(globalThis, "eval", GetOwnProperty(intrinsics, "%Eval%"));
-        LazyDefineFalseTrueFalse(globalThis, "global", globalThis);
-        DefineOwnProperty(globalThis, "isFinite", GetOwnProperty(intrinsics, "%IsFinite%"));
-        DefineOwnProperty(globalThis, "isNaN", GetOwnProperty(intrinsics, "%IsNaN%"));
-        DefineOwnProperty(globalThis, "load", GetOwnProperty(intrinsics, "%Load%"));
-        LazyDefineBuiltinConstant(globalThis, "null", null);
-        DefineOwnProperty(globalThis, "parseInt", GetOwnProperty(intrinsics, "%ParseInt%"));
-        DefineOwnProperty(globalThis, "parseFloat", GetOwnProperty(intrinsics, "%ParseFloat%"));
-        DefineOwnProperty(globalThis, "request", GetOwnProperty(intrinsics, "%Request%"));
-        DefineOwnProperty(globalThis, "setTimeout", GetOwnProperty(intrinsics, "%SetTimeout%"));
-        LazyDefineBuiltinConstant(globalThis, "undefined", undefined);
-        DefineOwnProperty(globalThis, "unescape", GetOwnProperty(intrinsics, "%Unescape%"));
-        LazyDefineBuiltinConstant(globalThis, $$toStringTag, "syntaxjs")
-
-
-
-
-    /*
-         DOM Wrapper, works for node.js process, too. Was usually able to call functions,
-         but seems to have bug today.                                           ----------------------
-    */
-        if (typeof importScripts === "function") {
-            DefineOwnProperty(globalThis, "self", GetOwnProperty(intrinsics, "%DOMWrapper%"));
-        } else if (typeof window === "object") {
-            DefineOwnProperty(globalThis, "window", GetOwnProperty(intrinsics, "%DOMWrapper%"));
-            DefineOwnProperty(globalThis, "document", {
-                configurable: true,
-                enumerable: true,
-                value: globalThis.Get("window").Get("document"),
-                writable: true
-
-            });
-        } else if (typeof process === "object") {
-            DefineOwnProperty(globalThis, "process", GetOwnProperty(intrinsics, "%DOMWrapper%"));
-        }
-        return globalThis;
-    }
-    LazyDefineProperty(intrinsics, "%DOMWrapper%", ExoticDOMObjectWrapper(
-        typeof importScripts === "function" ? self : typeof window === "object" ? window : process)
-    );
-    /*
-     *  End of DOM Wrapper --------------------------------------------------------------------
-     */
-
-    return intrinsics; // assignIntrinsics(intrinsics);
-
-} // createIntrinsics ()
-
 /*
-*  End of "lib/create_intrinsics.js"
+  Emitter,
+  Event
+  EventTarget
+  MessagePort
  */
 
-    // #################################################################################################################################################################################################
-    // #################################################################################################################################################################################################
 
+MakeConstructor(EventConstructor, true, EventPrototype);
+MakeConstructor(EventTargetConstructor, true, EventTargetPrototype);
+MakeConstructor(MessagePortConstructor, true, MessagePortPrototype);
+
+var EventConstructor_Call = function (thisArg, argList) {
+};
+
+
+var EventTargetConstructor_Call = function (thisArg, argList) {
+};
+var EventTargetPrototype_addEventListener = function (thisArg, argList) {
+};
+var EventTargetPrototype_dispatchEvent = function (thisArg, argList) {
+};
+var EventTargetPrototype_removeEventListener = function (thisArg, argList) {
+};
+LazyDefineBuiltinFunction(EventTargetPrototype, "addEventListener", 3, EventTargetPrototype_addEventListener);
+LazyDefineBuiltinFunction(EventTargetPrototype, "dispatchEvent", 1, EventTargetPrototype_dispatchEvent);
+LazyDefineBuiltinFunction(EventTargetPrototype, "removeEventListener", 2, EventTargetPrototype_removeEventListener);
+
+var MessagePortPrototype_close = function (thisArg, argList) {
+};
+var MessagePortPrototype_open = function (thisArg, argList) {
+};
+var MessagePortPrototype_postMessage = function (thisArg, argList) {
+};
+LazyDefineBuiltinFunction(MessagePortPrototype, "close", 0, MessagePortPrototype_close);
+LazyDefineBuiltinFunction(MessagePortPrototype, "open", 0, MessagePortPrototype_open);
+LazyDefineBuiltinFunction(MessagePortPrototype, "postMessage", 0, MessagePortPrototype_postMessage);
+
+
+
+
+        createGlobalThis = function createGlobalThis(realm, globalThis, intrinsics) {
+
+            SetPrototypeOf(globalThis, ObjectPrototype);
+            setInternalSlot(globalThis, "Extensible", true);
+
+            DefineOwnProperty(globalThis, "Array", GetOwnProperty(intrinsics, "%Array%"));
+            DefineOwnProperty(globalThis, "ArrayBuffer", GetOwnProperty(intrinsics, "%ArrayBuffer%"));
+            DefineOwnProperty(globalThis, "Boolean", GetOwnProperty(intrinsics, "%Boolean%"));
+            DefineOwnProperty(globalThis, "DataView", GetOwnProperty(intrinsics, "%DataView%"));
+            DefineOwnProperty(globalThis, "Date", GetOwnProperty(intrinsics, "%Date%"));
+            DefineOwnProperty(globalThis, "Emitter", GetOwnProperty(intrinsics, "%Emitter%"));
+            DefineOwnProperty(globalThis, "Event", GetOwnProperty(intrinsics, "%Event%"));
+            DefineOwnProperty(globalThis, "EventTarget", GetOwnProperty(intrinsics, "%EventTarget%"));
+            DefineOwnProperty(globalThis, "Error", GetOwnProperty(intrinsics, "%Error%"));
+            DefineOwnProperty(globalThis, "EvalError", GetOwnProperty(intrinsics, "%EvalError%"));
+            DefineOwnProperty(globalThis, "Function", GetOwnProperty(intrinsics, "%Function%"));
+            DefineOwnProperty(globalThis, "Float32Array", GetOwnProperty(intrinsics, "%Float32Array%"));
+            DefineOwnProperty(globalThis, "Float64Array", GetOwnProperty(intrinsics, "%Float64Array%"));
+            DefineOwnProperty(globalThis, "GeneratorFunction", GetOwnProperty(intrinsics, "%GeneratorFunction%"));
+            LazyDefineBuiltinConstant(globalThis, "Infinity", Infinity);
+            DefineOwnProperty(globalThis, "Int8Array", GetOwnProperty(intrinsics, "%Int8Array%"));
+            DefineOwnProperty(globalThis, "Int16Array", GetOwnProperty(intrinsics, "%Int16Array%"));
+            DefineOwnProperty(globalThis, "Int32Array", GetOwnProperty(intrinsics, "%Int32Array%"));
+            DefineOwnProperty(globalThis, "JSON", GetOwnProperty(intrinsics, "%JSON%"));
+            DefineOwnProperty(globalThis, "Loader", GetOwnProperty(intrinsics, "%Loader%"));
+            DefineOwnProperty(globalThis, "Math", GetOwnProperty(intrinsics, "%Math%"));
+            DefineOwnProperty(globalThis, "Map", GetOwnProperty(intrinsics, "%Map%"));
+            DefineOwnProperty(globalThis, "MessagePort", GetOwnProperty(intrinsics, "%MessagePort%"));
+            DefineOwnProperty(globalThis, "Module", GetOwnProperty(intrinsics, "%Module%"));
+            LazyDefineBuiltinConstant(globalThis, "NaN", NaN);
+            DefineOwnProperty(globalThis, "Number", GetOwnProperty(intrinsics, "%Number%"));
+            DefineOwnProperty(globalThis, "Proxy", GetOwnProperty(intrinsics, "%Proxy%"));
+            DefineOwnProperty(globalThis, "RangeError", GetOwnProperty(intrinsics, "%RangeError%"));
+            DefineOwnProperty(globalThis, "Realm", GetOwnProperty(intrinsics, "%Realm%"));
+            DefineOwnProperty(globalThis, "ReferenceError", GetOwnProperty(intrinsics, "%ReferenceError%"));
+            DefineOwnProperty(globalThis, "RegExp", GetOwnProperty(intrinsics, "%RegExp%"));
+            DefineOwnProperty(globalThis, "SyntaxError", GetOwnProperty(intrinsics, "%SyntaxError%"));
+            LazyDefineProperty(globalThis, "System", realm.loader);
+            DefineOwnProperty(globalThis, "TypeError", GetOwnProperty(intrinsics, "%TypeError%"));
+            DefineOwnProperty(globalThis, "URIError", GetOwnProperty(intrinsics, "%URIError%"));
+            DefineOwnProperty(globalThis, "Object", GetOwnProperty(intrinsics, "%Object%"));
+            DefineOwnProperty(globalThis, "Promise", GetOwnProperty(intrinsics, "%Promise%"));
+            DefineOwnProperty(globalThis, "Reflect", GetOwnProperty(intrinsics, "%Reflect%"));
+            DefineOwnProperty(globalThis, "Set", GetOwnProperty(intrinsics, "%Set%"));
+            DefineOwnProperty(globalThis, "String", GetOwnProperty(intrinsics, "%String%"));
+            DefineOwnProperty(globalThis, "Symbol", GetOwnProperty(intrinsics, "%Symbol%"));
+            DefineOwnProperty(globalThis, "Uint8Array", GetOwnProperty(intrinsics, "%Uint8Array%"));
+            DefineOwnProperty(globalThis, "Uint8ClampedArray", GetOwnProperty(intrinsics, "%Uint8ClampedArray%"));
+            DefineOwnProperty(globalThis, "Uint16Array", GetOwnProperty(intrinsics, "%Uint16Array%"));
+            DefineOwnProperty(globalThis, "Uint32Array", GetOwnProperty(intrinsics, "%Uint32Array%"));
+            DefineOwnProperty(globalThis, "WeakMap", GetOwnProperty(intrinsics, "%WeakMap%"));
+            DefineOwnProperty(globalThis, "WeakSet", GetOwnProperty(intrinsics, "%WeakSet%"));
+            DefineOwnProperty(globalThis, "console", GetOwnProperty(intrinsics, "%Console%"));
+            DefineOwnProperty(globalThis, "debug", GetOwnProperty(intrinsics, "%DebugFunction%"));
+            DefineOwnProperty(globalThis, "decodeURI", GetOwnProperty(intrinsics, "%DecodeURI%"));
+            DefineOwnProperty(globalThis, "decodeURIComponent", GetOwnProperty(intrinsics, "%DecodeURIComponent%"));
+            DefineOwnProperty(globalThis, "encodeURI", GetOwnProperty(intrinsics, "%EncodeURI%"));
+            DefineOwnProperty(globalThis, "encodeURIComponent", GetOwnProperty(intrinsics, "%EncodeURIComponent%"));
+            DefineOwnProperty(globalThis, "escape", GetOwnProperty(intrinsics, "%Escape%"));
+            DefineOwnProperty(globalThis, "eval", GetOwnProperty(intrinsics, "%Eval%"));
+            LazyDefineFalseTrueFalse(globalThis, "global", globalThis);
+            DefineOwnProperty(globalThis, "isFinite", GetOwnProperty(intrinsics, "%IsFinite%"));
+            DefineOwnProperty(globalThis, "isNaN", GetOwnProperty(intrinsics, "%IsNaN%"));
+            DefineOwnProperty(globalThis, "load", GetOwnProperty(intrinsics, "%Load%"));
+            LazyDefineBuiltinConstant(globalThis, "null", null);
+            DefineOwnProperty(globalThis, "parseInt", GetOwnProperty(intrinsics, "%ParseInt%"));
+            DefineOwnProperty(globalThis, "parseFloat", GetOwnProperty(intrinsics, "%ParseFloat%"));
+            DefineOwnProperty(globalThis, "request", GetOwnProperty(intrinsics, "%Request%"));
+            DefineOwnProperty(globalThis, "setTimeout", GetOwnProperty(intrinsics, "%SetTimeout%"));
+            LazyDefineBuiltinConstant(globalThis, "undefined", undefined);
+            DefineOwnProperty(globalThis, "unescape", GetOwnProperty(intrinsics, "%Unescape%"));
+            LazyDefineBuiltinConstant(globalThis, $$toStringTag, "syntaxjs")
+
+            /* This is wrapping the native global object and performs automatic recursive wrapping
+            and unwrapping of objects.
+             */
+            if (typeof importScripts === "function") {
+                DefineOwnProperty(globalThis, "self", GetOwnProperty(intrinsics, "%DOMWrapper%"));
+            } else if (typeof window === "object") {
+                DefineOwnProperty(globalThis, "window", GetOwnProperty(intrinsics, "%DOMWrapper%"));
+                DefineOwnProperty(globalThis, "document", {
+                    configurable: true,
+                    enumerable: true,
+                    value: globalThis.Get("window").Get("document"),
+                    writable: true
+
+                });
+            } else if (typeof process === "object") {
+                DefineOwnProperty(globalThis, "process", GetOwnProperty(intrinsics, "%DOMWrapper%"));
+            }
+            return globalThis;
+        }
+        LazyDefineProperty(intrinsics, "%DOMWrapper%", ExoticDOMObjectWrapper(
+            typeof importScripts === "function" ? self : typeof window === "object" ? window : process)
+        );
+        return intrinsics;
+    }
+
+
+
+    exports.$$unscopables        = $$unscopables;
+    exports.$$create             = $$create;
+    exports.$$toPrimitive        = $$toPrimitive;
+    exports.$$hasInstance        = $$hasInstance;
+    exports.$$toStringTag        = $$toStringTag;
+    exports.$$iterator           = $$iterator;
+    exports.$$isRegExp           = $$isRegExp;
+    exports.$$isConcatSpreadable = $$isConcatSpreadable;
+
+    exports.IndirectEval = IndirectEval;
+
+    exports.printException = printException;
+    exports.makeMyExceptionText = makeMyExceptionText;
+
+
+    exports.CreateBuiltinFunction = CreateBuiltinFunction;
+    exports.AddRestrictedFunctionProperties = AddRestrictedFunctionProperties;
+    exports.LazyDefineProperty = LazyDefineProperty;
+    exports.uriReserved = uriReserved;
+    exports.uriUnescaped = uriUnescaped;
+    exports.Encode = Encode;
+    exports.Decode = Decode;
+    exports.UTF8Encode = UTF8Encode;
+    exports.SetFunctionName = SetFunctionName;
+    exports.List = List;
+    exports.SetFunctionLength = SetFunctionLength;
+    exports.HasOwnProperty = HasOwnProperty;
+    exports.Put = Put;
+    exports.Invoke = Invoke;
+
+    exports.withError = withError; // This Function returns the Errors, say the spec says "Throw a TypeError", then return withError("Type", message);
+    exports.getContext = getContext;
+    exports.getRealm = getRealm;
+    exports.getLexEnv = getLexEnv;
+    exports.getVarEnv = getVarEnv;
+    exports.getIntrinsic = getIntrinsic;
+    exports.getIntrinsics = getIntrinsics;
+    exports.getGlobalEnv = getGlobalEnv;
+    exports.getGlobalThis = getGlobalThis;
+    exports.getStack = getStack;
+
+    exports.getInternalSlot = getInternalSlot;
+    exports.setInternalSlot = setInternalSlot;
+    exports.hasInternalSlot = hasInternalSlot;
+    exports.callInternalSlot = callInternalSlot;
+
+    exports.CreateArrayIterator = CreateArrayIterator;
+    exports.CreateByteDataBlock = CreateByteDataBlock;
+    exports.CopyDataBlockBytes = CopyDataBlockBytes;
+    exports.GetThisEnvironment = GetThisEnvironment;
+    exports.GeneratorStart = GeneratorStart;
+    exports.GeneratorYield = GeneratorYield;
+    exports.GeneratorResume = GeneratorResume;
+    exports.CreateItrResultObject = CreateItrResultObject;
+    exports.IteratorNext = IteratorNext;
+    exports.IteratorComplete = IteratorComplete;
+    exports.IteratorValue = IteratorValue;
+    exports.GetIterator = GetIterator;
+    exports.CreateDataProperty = CreateDataProperty;
+    exports.CreateOwnAccessorProperty = CreateOwnAccessorProperty;
+    exports.stringifyErrorStack = stringifyErrorStack;
+    exports.addMissingProperties = addMissingProperties;
+    exports.NormalCompletion = NormalCompletion;
+
+    exports.Completion = Completion;
+    exports.NewDeclarativeEnvironment = NewDeclarativeEnvironment;
+    exports.NewObjectEnvironment = NewObjectEnvironment;
+    exports.NewFunctionEnvironment = NewFunctionEnvironment;
+    exports.createIdentifierBinding = createIdentifierBinding;
+    exports.GetIdentifierReference = GetIdentifierReference;
+    exports.FunctionCreate = FunctionCreate;
+    exports.FunctionAllocate = FunctionAllocate;
+    exports.FunctionInitialise = FunctionInitialise;
+    exports.GeneratorFunctionCreate = GeneratorFunctionCreate;
+    exports.OrdinaryHasInstance = OrdinaryHasInstance;
+    exports.GetPrototypeFromConstructor = GetPrototypeFromConstructor;
+    exports.OrdinaryCreateFromConstructor = OrdinaryCreateFromConstructor;
+    exports.OrdinaryConstruct = OrdinaryConstruct;
+    exports.Construct = Construct;
+    exports.CreateFromConstructor = CreateFromConstructor;
+    exports.MakeConstructor = MakeConstructor;
+    exports.CreateEmptyIterator = CreateEmptyIterator;
+    exports.ArgumentsExoticObject = ArgumentsExoticObject;
+    exports.ArrayCreate = ArrayCreate;
+    exports.ArraySetLength = ArraySetLength;
+    exports.ExoticDOMObjectWrapper = ExoticDOMObjectWrapper;
+    exports.ExoticDOMFunctionWrapper = ExoticDOMFunctionWrapper;
+    exports.BoundFunctionCreate = BoundFunctionCreate;
+    exports.GeneratorFunctionCreate = GeneratorFunctionCreate;
+    exports.ObjectDefineProperties = ObjectDefineProperties;
+    exports.DeclarativeEnvironment = DeclarativeEnvironment;
+    exports.ObjectEnvironment = ObjectEnvironment;
+    exports.GlobalEnvironment = GlobalEnvironment;
+    exports.ToPropertyKey = ToPropertyKey;
+    exports.IsPropertyKey = IsPropertyKey;
+    exports.IsSymbol = IsSymbol;
+    exports.CreateDataProperty = CreateDataProperty;
+    exports.PropertyDescriptor = PropertyDescriptor;
+    exports.IsAccessorDescriptor = IsAccessorDescriptor;
+    exports.IsDataDescriptor = IsDataDescriptor;
+    exports.IsGenericDescriptor = IsGenericDescriptor;
+    exports.FromPropertyDescriptor = FromPropertyDescriptor;
+    exports.ToPropertyDescriptor = ToPropertyDescriptor;
+    exports.CompletePropertyDescriptor = CompletePropertyDescriptor;
+    exports.ValidateAndApplyPropertyDescriptor = ValidateAndApplyPropertyDescriptor;
+    exports.OrdinaryObject = OrdinaryObject;
+    exports.ObjectCreate = ObjectCreate;
+    exports.IsCallable = IsCallable;
+    exports.IsConstructor = IsConstructor;
+    exports.OrdinaryFunction = OrdinaryFunction;
+    exports.FunctionEnvironment = FunctionEnvironment;
+    exports.DeclarativeEnvironment = DeclarativeEnvironment;
+    exports.GlobalEnvironment = GlobalEnvironment;
+    exports.ObjectEnvironment = ObjectEnvironment;
+    exports.SymbolPrimitiveType = SymbolPrimitiveType;
+    exports.CodeRealm = CodeRealm;
+    exports.ExecutionContext = ExecutionContext;
+    exports.CompletionRecord = CompletionRecord;
+    exports.NormalCompletion = NormalCompletion;
+    exports.IdentifierBinding = IdentifierBinding;
+    exports.floor = floor;
+    exports.ceil = ceil;
+    exports.sign = sign;
+    exports.abs = abs;
+    exports.min = min;
+    exports.max = max;
+    exports.Type = Type;
+    exports.ToPrimitive = ToPrimitive;
+    exports.ToString = ToString;
+    exports.ToBoolean = ToBoolean;
+    exports.ToUint32 = ToUint32;
+    exports.ToNumber = ToNumber;
+    exports.ToObject = ToObject;
+    exports.GetValue = GetValue;
+    exports.PutValue = PutValue;
+    exports.GetBase = GetBase;
+    exports.MakeSuperReference = MakeSuperReference;
+    exports.IsSuperReference = IsSuperReference;
+    exports.IsUnresolvableReference = IsUnresolvableReference;
+    exports.IsPropertyReference = IsPropertyReference;
+    exports.IsStrictReference = IsStrictReference;
+    exports.GetReferencedName = GetReferencedName;
+    exports.GetThisValue = GetThisValue;
+    exports.HasPrimitiveBase = HasPrimitiveBase;
+    exports.ifAbrupt = ifAbrupt;
+    exports.isAbrupt = isAbrupt;
+    exports.Assert = Assert;
+    exports.unwrap = unwrap;
+    exports.SameValue = SameValue;
+    exports.SameValueZero = SameValueZero;
+    exports.Type = Type;
+    exports.Reference = Reference;
+    exports.ToPrimitive = ToPrimitive;
+    exports.ToInteger = ToInteger;
+    exports.ToNumber = ToNumber;
+    exports.ToUint16 = ToUint16;
+    exports.ToInt32 = ToInt32;
+    exports.ToUint32 = ToUint32;
+    exports.OrdinaryHasInstance = OrdinaryHasInstance;
+    exports.GetGlobalObject = GetGlobalObject;
+    exports.ThisResolution = ThisResolution;
+    exports.CreateArrayFromList = CreateArrayFromList;
+    exports.CreateListFromArrayLike = CreateListFromArrayLike;
+    exports.TestIntegrityLevel = TestIntegrityLevel;
+    exports.SetIntegrityLevel = SetIntegrityLevel;
+    exports.CheckObjectCoercible = CheckObjectCoercible;
+    exports.HasProperty = HasProperty;
+    exports.GetMethod = GetMethod;
+    exports.Get = Get;
+    exports.Set = Set;
+    exports.DefineOwnProperty = DefineOwnProperty;
+    exports.GetOwnProperty = GetOwnProperty;
+    exports.OwnPropertyKeys = OwnPropertyKeys;
+    exports.OwnPropertyKeysAsList = OwnPropertyKeysAsList;
+    exports.GetOwnPropertyKeys = GetOwnPropertyKeys;
+    exports.MakeListIterator = MakeListIterator;
+    exports.DefineOwnPropertyOrThrow = DefineOwnPropertyOrThrow;
+    exports.Delete = Delete;
+    exports.Enumerate = Enumerate;
+    exports.OwnPropertyKeys = OwnPropertyKeys;
+    exports.SetPrototypeOf = SetPrototypeOf;
+    exports.GetPrototypeOf = GetPrototypeOf;
+    exports.PreventExtensions = PreventExtensions;
+    exports.IsExtensible = IsExtensible;
+    exports.CreateByteArrayBlock = CreateByteArrayBlock;
+    exports.SetArrayBufferData = SetArrayBufferData;
+    exports.AllocateArrayBuffer = AllocateArrayBuffer;
+    exports.IntegerIndexedObjectCreate = IntegerIndexedObjectCreate;
+    exports.StringExoticObject = StringExoticObject;
+    exports.thisTimeValue = thisTimeValue;
+    exports.thisNumberValue = thisNumberValue;
+    exports.thisBooleanValue = thisBooleanValue;
+    exports.thisStringValue = thisStringValue;
+    exports.MakeMethod = MakeMethod;
+    exports.CloneMethod = CloneMethod;
     exports.createIntrinsics = createIntrinsics;
     exports.setCodeRealm = setCodeRealm;
     exports.saveCodeRealm = saveCodeRealm;
     exports.restoreCodeRealm = restoreCodeRealm;
+
+    exports.Push = Push;
+    exports.Length = Length;
+    exports.getField = getField;
+    exports.setField = setField;
+    exports.setRec = setRec;
+    exports.getRec = getRec;
+    exports.genericArray = genericArray;
+    exports.genericRecord = genericRecord;
+
+    exports.getEventQueue = getEventQueue;
 
     return exports;
 });
@@ -28725,7 +28769,7 @@ define("fswraps", function (require, exports) {
         
             var xhr = new XMLHttpRequest();
             xhr.open("GET", name, false);
-            xhr.onload = function (e) {
+            xhr.onloadend = function (e) {
     		    callback(xhr.responseText);
             };
             xhr.onerror = function (e) {
@@ -28735,7 +28779,17 @@ define("fswraps", function (require, exports) {
             // missing promise
             return true;
         } else if (syntaxjs.system == "worker") {
-            importScripts(name);
+            var xhr = new XMLHttpRequest();
+            xhr.open("GET", name, false);
+            xhr.onloadend = function (e) {
+                callback(xhr.responseText);
+            };
+            xhr.onerror = function (e) {
+                errback(xhr.responseText);
+            };
+            xhr.send(null);
+            // missing promise
+            return true;
         }
     }
 
@@ -28785,6 +28839,12 @@ define("fswraps", function (require, exports) {
 
 define("syntaxjs-worker", function (require, exports, module) {
     "use strict";
+
+    /*
+
+    issue: doesnt use createrealm() right now but the old interface
+     */
+
     if (typeof importScripts === "function") {
         var highlight = require("highlight");
         var interprete = require("runtime");
@@ -28819,7 +28879,6 @@ define("syntaxjs-worker", function (require, exports, module) {
                     }
                     self.postMessage(result);
                     break;
-
                 default:
                     break;
             }
