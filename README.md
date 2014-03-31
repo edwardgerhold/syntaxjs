@@ -267,9 +267,9 @@ Wrong Implementation?
 
 A little difference from the Parser_API by mistake is that i haven´t used "default" and "rest" in
 the function nodes because of the "RestParameter" and "DefaultArgument" nodes i introduced already.
-I wasn´t shure how to fill the default´s array. With the number of argument nodes and a null everywhere,
+I wasn´t sure how to fill the default´s array. With the number of argument nodes and a null everywhere,
 where no default is?
-It will be added within minutes for compatibility with the other (more reliable professional) EcmaScript Parsers.
+(Oh my god)
 
 Additional Builder
 Will be used for the compiler later, for sure, because i´ve interfaced with already.
