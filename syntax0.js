@@ -1,9 +1,25 @@
 /*
     
     syntax.js
+    Public Domain written by Edward Gerhold
     built with ./build_syntax
-    
+
+    tools/inlinefiles.js
+    reads these include directives in
+    and processes each recursivly for more inclusions,
+
+    - each file is an amd-like module except for amd-prolly.js
+
+    - anything included inside these files is not runnable alone and
+      only modularised for better maintainability
+
+    - lib/api.js includes lib/api/*.js and lib/intrinsics/*.js
+      which are sub-packages separated by ECMA-262 definitions
+      in a just-cut-out format
+
 */
+
+
 "use strict"
 
 Error.stackTraceLimit = 5;
@@ -237,6 +253,79 @@ function require(deps, factory) {
             return factory.apply(null, mods);
     }
 }
+
+
+
+
+// *******************************************************************************************************************************
+// file imports
+// *******************************************************************************************************************************
+
+define("fswraps", function (require, exports) {
+
+    function readFileP(name) {
+	    return makePromise(function (resolve, reject) {
+	        return readFile(name, resolve, reject);
+	    });
+    }
+
+    function readFile(name, callback, errback) {
+        if (syntaxjs.system == "node") {
+            var fs = module.require("fs");
+            return fs.readFile(name, function (err, data) {
+                if (err) errback(err);
+                else callback(data);
+            }, "utf8");
+            return true;
+        
+        } else if (syntaxjs.system == "browser") {
+        
+            var xhr = new XMLHttpRequest();
+            xhr.open("GET", name, false);
+            xhr.onloadend = function (e) {
+    		    callback(xhr.responseText);
+            };
+            xhr.onerror = function (e) {
+		        errback(xhr.responseText);
+            };
+            xhr.send(null);
+            // missing promise
+            return true;
+        } else if (syntaxjs.system == "worker") {
+            var xhr = new XMLHttpRequest();
+            xhr.open("GET", name, false);
+            xhr.onloadend = function (e) {
+                callback(xhr.responseText);
+            };
+            xhr.onerror = function (e) {
+                errback(xhr.responseText);
+            };
+            xhr.send(null);
+            // missing promise
+            return true;
+        }
+    }
+
+    function readFileSync(name) {
+        if (syntaxjs.system == "node") {
+            var fs = module.require("fs");
+            return fs.readFileSync(name, "utf8");
+        } else if (syntaxjs.system == "browser") {
+            var xhr = new XMLHttpRequest();
+            xhr.open("GET", name, true);
+            xhr.send(null);
+            return xhr.responseText;
+        } else if (syntaxjs.system == "worker") {
+            var xhr = new XMLHttpRequest();
+            xhr.open("GET", name, true);
+            xhr.send(null);
+            return xhr.responseText;
+        }
+    }
+    exports.readFileP = readFileP;
+    exports.readFile = readFile;
+    exports.readFileSync = readFileSync;
+});
 
 
 
@@ -1718,6 +1807,9 @@ define("tables", function (require, exports, module) {
 });
 
 
+/*// #include "lib/intl/identifier-module.js"; // disabled */
+
+
 /*
  ******
  define: tables
@@ -1772,6 +1864,7 @@ define("i18n-messages", function (require, exports, module) {
     return i18n;
 
 });
+
 
 
 /*
@@ -2720,7 +2813,7 @@ define("slower-static-semantics", function (require, exports, modules) {
 
 });
 
-/*#include "lib/unicode/identifier-module.js"; // disabled */
+
 define("tokenizer", function () {
 
     "use strict";
@@ -3525,6 +3618,7 @@ define("tokenizer", function () {
 
     });
 
+
 /*
  * Created by root on 06.03.14.
  *
@@ -3591,6 +3685,7 @@ define("earlyerrors", function () {
         EarlyErrors: EarlyErrors
     };
 });
+
 
 
 /*
@@ -3690,35 +3785,35 @@ define("parser", function () {
 
 
     /*
-	for the CST research
-    */
-    
+     for the CST research
+     */
+
     var withExtras = true;
 
     var extraBuffer = [];
     function flushBuffer() {
-	    var b = extraBuffer;
-	    extraBuffer = [];
-	    return b;
+        var b = extraBuffer;
+        extraBuffer = [];
+        return b;
     }
-    function intoBuffer(t) { 
-	    extraBuffer.push(t); 
+    function intoBuffer(t) {
+        extraBuffer.push(t);
     }
     function newExtrasNode() {
         var node = Node("Extras");
         node.extras = [];
         return node;
     }
-    
+
     /*
-    
-    */
+
+     */
 
 
     // pointer to current Node defining the Scope
     var currentScopeNode;
     var scopeNodeStack = [];
-    
+
     // loc information (not completed yet)
     var operator;
     var bytes = 0;
@@ -4011,7 +4106,7 @@ define("parser", function () {
         if (debugmode && typeof importScripts !== "function") console.dir.apply(console, arguments);
     }
 
-     var nodeId = 1;
+    var nodeId = 1;
 
     function Node(type /*, linkToken*/ ) {
         var node = Object.create(null);
@@ -4155,27 +4250,27 @@ define("parser", function () {
 
     var captureExtraTypes = {
         __proto__:null,
-	    "WhiteSpace":true,
+        "WhiteSpace":true,
         "LineTerminator": true,
-	    "MultiLineComment":true,
-	    "LineComment":true,
+        "MultiLineComment":true,
+        "LineComment":true,
     };
 
     var captureExtraValues = {
-	    __proto__: null,
-	    "(": true,
-	    ")": true,
-	    "[": true,
-	    "]": true,
-	    "}": true,
-	    "{": true,
-	    ";": true,
-	    ":": true,
-	    ",": true
+        __proto__: null,
+        "(": true,
+        ")": true,
+        "[": true,
+        "]": true,
+        "}": true,
+        "{": true,
+        ";": true,
+        ":": true,
+        ",": true
     };
-    
+
     function nextToken () {
-	    return tokenizer.next();
+        return tokenizer.next();
     }
 
     function next() {
@@ -4185,9 +4280,9 @@ define("parser", function () {
             T = tokens[i];  // this function really works on an array 
             if (T) {
                 t = T.type;
-        	    if (withExtras && captureExtraTypes[t]) intoBuffer(T);
+                if (withExtras && captureExtraTypes[t]) intoBuffer(T);
                 if (SkipableWhiteSpace[t]) return next();
-                v = T.value;                
+                v = T.value;
                 if (withExtras && captureExtraValues[v]) intoBuffer(T);
                 loc = T.loc;
 
@@ -4321,7 +4416,7 @@ define("parser", function () {
             }
 
             /*else if (v !== "]") {
-                    throwError(new SyntaxError("buggy element list"));
+             throwError(new SyntaxError("buggy element list"));
              }*/
 
         } while (v && v !== "]");
@@ -4886,15 +4981,15 @@ define("parser", function () {
     function ParenthesizedExpression() {
         return this.Expression(undefined, true);
     }
-    
+
     // temporary until it replaces Expression, ParenthesizedExpression
     // and has Code in runtime.js for evaluation["ParenthesizedExpression"]
     parser.ParenthesizedExpressionNode = ParenthesizedExpressionNode;
     function ParenthesizedExpressionNode(exprNode, startLoc, endLoc) {
-	   var node = Node("ParenthesizedExpression");
-	   node.expression = exprNode;
-	   node.loc = makeLoc(startLoc, endLoc);
-	   return node;
+        var node = Node("ParenthesizedExpression");
+        node.expression = exprNode;
+        node.loc = makeLoc(startLoc, endLoc);
+        return node;
     }
 
     parser.CoverParenthesizedExpression = CoverParenthesizedExpression;
@@ -4952,13 +5047,13 @@ define("parser", function () {
         }
 
         if (cover) {
-                
+
 
             if (v === "=>") {
                 node = Node("ArrowExpression");
                 node.kind = "arrow";
                 node.strict = true;
-                node.expression = true;                
+                node.expression = true;
                 node.params = (expr ? [expr] : this.ArrowParameterList(covered));
                 pass("=>");
                 node.body = this.ConciseBody(node);
@@ -5038,10 +5133,10 @@ define("parser", function () {
 
     function YieldExpression() {
         if (v === "yield" && !yieldIsId) {
-                pass("yield");
-                var node = Node("YieldExpression");
-                node.argument = this.Expression(";");
-                return node;
+            pass("yield");
+            var node = Node("YieldExpression");
+            node.argument = this.Expression(";");
+            return node;
         }
         return null;
     }
@@ -5123,7 +5218,7 @@ define("parser", function () {
 
         l1 = loc && loc.start;
         debug("At assignmentexpression with " + t + ", " + v);
-        
+
         if (!yieldIsId && v === "yield") node = this.YieldExpression();
         if (!node) node = this.CoverParenthesisedExpressionAndArrowParameterList();
 
@@ -5514,7 +5609,7 @@ define("parser", function () {
             var id = this.Identifier();
             node.id = id.name;
 
-          // staticSemantics.addLexBinding(id);
+            // staticSemantics.addLexBinding(id);
 
             if (v === "extends") {
                 pass("extends");
@@ -5662,6 +5757,36 @@ define("parser", function () {
         return body;
     }
 
+    function AddGeneratorParentPointers (node, parent) {
+        /*
+         on yield: set suspend flag
+         that exit´s any nested evaluation loop and returns without mourning
+         just with the result value (that´s what´s yielded)
+
+         on resume:
+         just take the recorded instruction
+         go to parent, if parent is a list, advance.
+         if parent is not a list, do the assignment
+         and then continue one right
+
+         */
+        if (Array.isArray(node)) {
+            for (var i = 0, j = node.length; i < j; i++) {
+                AddGeneratorParentPointers(node[i], node);
+            }
+            return;
+        }
+        if (typeof node === "object" && node != null
+            && node.loc) {
+            node.parent = parent;
+            Object.keys(node).forEach(function (key) {
+                if (typeof node[key] != "object" || !node || key === "parent" || key === "loc" || key == "extras") return;
+                AddGeneratorParentPointers(node[key], node);
+            });
+        }
+        return;
+    }
+
     parser.FunctionDeclaration = FunctionDeclaration;
 
     function FunctionDeclaration(isExpr) {
@@ -5733,9 +5858,11 @@ define("parser", function () {
             end = loc && loc.end;
             node.loc = makeLoc(start, end);
 
-            /*if (node.generator) {
-             AddParentPointers(node);
-             }*/
+            if (node.generator) {
+
+                AddGeneratorParentPointers(node);
+
+            }
 
             defaultIsId = defaultStack.pop();
 
@@ -5748,6 +5875,9 @@ define("parser", function () {
             staticSemantics.popEnvs();
 
             currentScopeNode = scopeNodeStack.pop();
+
+
+
 
             EarlyErrors(node);
             return node;
@@ -6743,11 +6873,11 @@ define("parser", function () {
         /*
          node.lexNames = staticSemantics.lexNames();
          node.varNames = staticSemantics.varNames();
-        */
+         */
 
         staticSemantics.popContainer();
         staticSemantics.popEnvs();
-        
+
         if (compile) return builder["program"](node.body, loc);
         return node;
     }
@@ -6901,6 +7031,8 @@ define("parser", function () {
 
     // ===========================================================================================================
     // JSON Parser is invoked via parseGoal from the Runtime of the Interpreter and is incompatible
+    // should be moved into a separate piece of scope, because of "withError". Or "withError" should
+    // become a convention for the whole parser to return an error (which makes isAbrupt() tests necessary)
     // ===========================================================================================================
 
     parser.JSONText = JSONText;
@@ -7168,25 +7300,25 @@ define("parser", function () {
     }
 
 
-    
-   /*
-    * prototyping CST Extras with a decorator 
-    * --still failing---
-    */
+
+    /*
+     * prototyping CST Extras with a decorator
+     * --still failing---
+     */
 
 
     function enableExtras () {
         debug("Enabling CST extras")
         Object.keys(parser).forEach(function (k) {
-            if (typeof parser[k] === "function" && !parser[k].wrapped) {       
+            if (typeof parser[k] === "function" && !parser[k].wrapped) {
                 if (k == "next" || k == "scan" || k == "pass" || k.indexOf("JSON")===0) return; // for my hacky wacky system
                 debug("wrapping "+k)
                 var originalFunction = parser[k];
-                var parseFunction = function () {                
-            	    var b = flushBuffer();
+                var parseFunction = function () {
+                    var b = flushBuffer();
                     var node = originalFunction.call(this, arguments);
                     if (node) {
-                        node.extras = b;                                                
+                        node.extras = b;
                     }
                     return node;
                 };
@@ -7197,10 +7329,10 @@ define("parser", function () {
     }
     function disableExtras () {
         debug("Disabling CST extras")
-        Object.keys(parser).forEach(function (k) {            
-            if (typeof parser[k] === "function" && parser[k].wrapped) 
-            parser[k] = parser[k].wrapped;
-        });    
+        Object.keys(parser).forEach(function (k) {
+            if (typeof parser[k] === "function" && parser[k].wrapped)
+                parser[k] = parser[k].wrapped;
+        });
     }
     function setWithExtras(value) {
         withExtras = !!value;
@@ -7212,6 +7344,7 @@ define("parser", function () {
     // uncomment for endless loop
     return exports;
 });
+
 
 
 /*
@@ -7382,6 +7515,7 @@ define("heap", function (require, exports, module) {
 exports.createHeap = createHeap;
 return exports;
 });
+
 
 
 /*
@@ -7902,6 +8036,7 @@ define("builder",  function (require, exports, module) {
     builder.callBuilder = callBuilder;
     return builder;
 });
+
 
 
 /*
@@ -8443,6 +8578,7 @@ define("arraycompiler", function (require, exports, module) {
     };
     return builder;
 });
+
 
 /*
 ############################################################################################################################################################################################################
@@ -9146,6 +9282,7 @@ define("js-codegen", function (require, exports, module) {
 
     return build;
 });
+
 
 /*
     API contains ecma-262 specification devices
@@ -23494,6 +23631,7 @@ LazyDefineBuiltinFunction(MessagePortPrototype, "postMessage", 0, MessagePortPro
 });
 
 
+
 //******************************************************************************************************************************************************************************************************
 // Jetzt die AST Runtime, die fuer ByteCode ueberholt werden muss
 //******************************************************************************************************************************************************************************************************
@@ -23781,11 +23919,17 @@ define("runtime", function () {
 
     var SetFunctionLength = ecma.SetFunctionLength;
 
+
+
     //-----------------------------------------------------------
     // setze Call Funktion im anderen Modul zu Call fuer ASTNode:
     // ----------------------------------------------------------
 
+
+
+
     ecma.OrdinaryFunction.prototype.Call = Call;
+    // Hey this is not once per realm.
 
     //
     // ----------------------------------------------------------
@@ -23841,7 +23985,16 @@ define("runtime", function () {
     var loc = {};
 
 
-    var insideGeneratorState = false;
+    var generatorState; // soon
+    function setGeneratorState(state) {
+        generatorState = state;
+        // needs to be check by
+        // statementlist to stop evaluating
+        // the list when in suspended mode
+        // blocking the whole remaining
+        // iterations off
+    }
+
 
     var IsFunctionDeclaration = statics.IsFunctionDeclaration;
     var IsFunctionExpression = statics.IsFunctionExpression;
@@ -24593,7 +24746,9 @@ define("runtime", function () {
         var delegator = node.delegator;
 
         if (!expression) {
+
             return GeneratorYield(CreateItrResultObject(undefined, false));
+
         }
 
         var exprRef = Evaluate(expression);
@@ -26237,7 +26392,8 @@ define("runtime", function () {
 
         var index = 0;
 
-        if (getContext().generator) {
+        var gen = getContext().generator;
+        if (gen) {
             console.log("## generator function executing ##");
             // set Instruction Index to saved Index + 1
         }
@@ -26245,9 +26401,25 @@ define("runtime", function () {
         var V = undefined;
         for (var i = index, j = stmtList.length; i < j; i++) {
             if (stmt = stmtList[i]) {
+
+                /*
+                // break out of all iterations like this
+                // that´s all and it will work
+
+                if (gen && suspendedGenerator) {
+                    return stmtValue;
+
+                }
+
+                // same for going back in and resuming
+                */
+
+
                 tellExecutionContext(stmt, i, stmtList);
                 stmtRef = Evaluate(stmt);
                 stmtValue = GetValue(stmtRef);
+
+
                 if (isAbrupt(stmtValue)) return stmtValue;
                 if (stmtValue !== empty) V = stmtValue;
             }
@@ -27534,6 +27706,7 @@ define("runtime", function () {
 });
 
 
+
 // *******************************************************************************************************************************
 // Highlight (UI Independent Function translating JS into a string of spans)
 // *******************************************************************************************************************************
@@ -27651,6 +27824,7 @@ define("highlight", ["tables", "tokenizer"], function (tables, tokenize) {
     return highlight;
 
 });
+
 
 
 if (typeof window != "undefined") {
@@ -28671,76 +28845,6 @@ if (typeof window != "undefined") {
 
 }
 
-// *******************************************************************************************************************************
-// file imports
-// *******************************************************************************************************************************
-
-define("fswraps", function (require, exports) {
-
-    function readFileP(name) {
-	    return makePromise(function (resolve, reject) {
-	        return readFile(name, resolve, reject);
-	    });
-    }
-
-    function readFile(name, callback, errback) {
-        if (syntaxjs.system == "node") {
-            var fs = module.require("fs");
-            return fs.readFile(name, function (err, data) {
-                if (err) errback(err);
-                else callback(data);
-            }, "utf8");
-            return true;
-        
-        } else if (syntaxjs.system == "browser") {
-        
-            var xhr = new XMLHttpRequest();
-            xhr.open("GET", name, false);
-            xhr.onloadend = function (e) {
-    		    callback(xhr.responseText);
-            };
-            xhr.onerror = function (e) {
-		        errback(xhr.responseText);
-            };
-            xhr.send(null);
-            // missing promise
-            return true;
-        } else if (syntaxjs.system == "worker") {
-            var xhr = new XMLHttpRequest();
-            xhr.open("GET", name, false);
-            xhr.onloadend = function (e) {
-                callback(xhr.responseText);
-            };
-            xhr.onerror = function (e) {
-                errback(xhr.responseText);
-            };
-            xhr.send(null);
-            // missing promise
-            return true;
-        }
-    }
-
-    function readFileSync(name) {
-        if (syntaxjs.system == "node") {
-            var fs = module.require("fs");
-            return fs.readFileSync(name, "utf8");
-        } else if (syntaxjs.system == "browser") {
-            var xhr = new XMLHttpRequest();
-            xhr.open("GET", name, true);
-            xhr.send(null);
-            return xhr.responseText;
-        } else if (syntaxjs.system == "worker") {
-            var xhr = new XMLHttpRequest();
-            xhr.open("GET", name, true);
-            xhr.send(null);
-            return xhr.responseText;
-        }
-    }
-    exports.readFileP = readFileP;
-    exports.readFile = readFile;
-    exports.readFileSync = readFileSync;
-});
-
 /*
  *
  *  syntax.js web worker module
@@ -28819,6 +28923,7 @@ define("syntaxjs-worker", function (require, exports, module) {
     }
     return exports;
 });
+
 
 
 define("syntaxjs-shell", function (require, exports) {
@@ -28927,7 +29032,12 @@ define("syntaxjs-shell", function (require, exports) {
                 if (savedInput === "" && code[0] === ".") {
                     if (/^(\.print)/.test(code)) {
                         code = code.substr(7);
-                        console.log(JSON.stringify(syntaxjs.createAst(code), null, 4));
+                        try {
+                    	    console.log(JSON.stringify(syntaxjs.createAst(code), null, 4));
+                        } catch (ex) {
+                    	    console.log(ex.message);
+                    	    console.log(ex.stack);
+                        }
                         setTimeout(prompt);
                         return;
                     } else if (/^(\.tokenize)/.test(code)) {
@@ -28993,6 +29103,7 @@ define("syntaxjs-shell", function (require, exports) {
     } else shell = function () {}
     return shell;
 });
+
 
 
 
@@ -29077,6 +29188,7 @@ define("syntaxjs", function () {
     Object.defineProperties(syntaxjs, syntaxjs_highlighter_api);
     return syntaxjs;
 });
+
 
 /*
 *

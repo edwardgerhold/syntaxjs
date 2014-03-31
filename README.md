@@ -5,17 +5,16 @@ Not bugfree EcmaScript 6 Interpreter written in EcmaScript 5
 
 This is a true ECMA-262 implementation. But it isn´t completed yet. 
 It´s "feature complete" like ES6 already is, but the features aren´t 
-completed yet. Some thing fail, some don´t, some didn´t before, 
-some do now. 
+completed yet. Some things fail, some don´t, some didn´t before,
+some do now. It´s a chaotic mess from someone who learns coding in
+his first project. I have to learn how to use better build tools,
+and how to write tests.
 
-Next fixing generator:
-Today i just removed the bullshit i tried out some weeks ago, when figuring
-out how to do stack machines for bytecode interpreters and imagining how to
-change a tree walk for an ast interpreter to support a stack under it.
-That´s half-half so it´s removed and i look forward to add a parent-pointer
-to walker (i had that half implemented earlier, but didn´t finish it being
-busy with everything else (it was much earlier)). However, gonna upgrade 
-soon. 
+Yes, and i read es-discuss but have never written a line. I came to the point where
+i wanted to start, then i deferred again, then nothing was going on and i was doing
+something else, however. es-discuss helped me a lot in understand what is inside of
+the ECMA-262 standard but the real thing is reading the spec. I´ve read it since over
+half a year now. Two months daily. Last time an hour ago in the bus.
 
 ```
 es6> function *gen() { yield 10; }
@@ -26,8 +25,7 @@ es6> it.next();
 10
 ```
 
-
-_New: Multiple Realms_
+= New: Multiple Realms
 
 Creation of an eval realm.
 You can have as many realms as you want.
@@ -60,25 +58,61 @@ realm.eval("x");
 // 10
 ```
 
+Here i find myself missing a state snapshot of the object for the outside world
+
+
+Previously:
+
 Caveat: Objects are coming out as their ES6 internal representation.
-I know about adding adapters and transformers for or to create JSON message passing,
-it´s on the list. But for now, you can use [[.Get]], [[.DefineOwnProperty]], [[.Set]],
-[[.GetOwnProperty]] on the objects returned directly. If you want to know, how they
-work, refer to Ecma-262 Edition 6.
+I know about adding adapters and transformers, for or to create JSON message passing,
+it´s on the list. But for now, you can use [[Get]], [[DefineOwnProperty]], [[Set]],
+[[GetOwnProperty]] on the objects returned directly. If you want to know, how they
+work, refer to Ecma-262 Edition 6. I did it relative wordwise
+(with foreign misinterpretations).
 
+Comment:
+The method TransformObjectToJSObject(obj) is already existing and used in the
+functions ending with Xform but i didn´t code it out yet and it isn´t completed.
 
+Examples:
 
-_Regular Usage_
+```
+// get an object by calling eval
+es5> var obj1 = syntaxjs.eval("{ a: 1, b: 2 }"); // .toValue if i didn´t rename for now.
+{
+    /* large internal object representation made of three objects and properties with one more each descriptor */
+}
+es5> var a = obj1["Get"]("a", obj1); // probably a completion record is returned as i don´t filter it on this access
+
+// i think the actual function is doing it wrong (why it´s not completed)
+
+es5> var obj2 = realm.evalXform("{ a:1, b:2 }");
+{ a:getter/setter, b:getter/setter }
+
+// the better xformer captures a snapshot of the state which can be deeply converted into a static snapshot
+es5> var obj2 = realm.evalXform("{ a:1, b:2 }");
+{ a:1, b:2 }
+es5> obj2.a;
+
+```
+
+Solution:
+The solution will be not to create a living model of the object, which i suspect my transform function
+to create, but to create a snapshot of the current state of the object. That needs no getters and setters
+and returns recursivly objects and arrays with object and array prototypes.
+
+= Regular Usage
 It can be tried with simply typing node syntax0.js. 
 
-```bash
+```
 linux-www5:~ # node syntax0.js [exec_me.js]
 ````
 
-executes a file or just starts the shell (a readline) when called without arguments
+node syntax0.js [filename.js] executes a file
+or just starts a readline shell when called without arguments
 
 ```javascript
-es6> let f = x => x*x;
+es6> let f = x => x*x; // can be that the actual version is hanging if no parens are used and whitespaces around the arrow for whatever reasons i haven´t noticed now. It was error free soon ago.
 undefined
 es6> f(100);
 10000
@@ -117,159 +151,248 @@ es6> .print id
 	    "expression": {
 		"type": "Identifier",
 		"name": "id",
-		"loc": {}
+		"loc": { "start": { "line": 1, "column": 1 }, "end":{ "line": 1, "column": 2 } }
 	    },
-	    "loc": {}
+	    "loc": { "start": { "line": 1, "column": 1 }, "end":{ "line": 1, "column": 2 } }
 	},
     ],
-    "loc": {}
+    "loc": { "start": { "line": 1, "column": 1 }, "end":{ "line": 1, "column": 2 } }
 }
 ```
-Even with some weeks of nothing happening around the project, this is a living
-creature.
 
-And almost all of the stuff written below will be done in around a year. Some
-thing will be done in a couple of weeks.
+= Standard Steps
 
-_New is /lib_
-New overview: Meanwhile i´ve cut the Megabyte of code into the
-big modules and can already see the mess i left in some modules,
-i didn´t develop very far. And what was going on. Softwareengineering
-is right and empiric with the knowledge about codes. The mess i see
-is that what they said.
-But i´m optimistic and like do continue. Pieces like the parser look
-now very small and handy to browse and to edit. Scrolling around doesn´t
-let you end up in some other code block. Hey. The API module is around
-500k, and i think first i will cut out the make of the intrinsics and
-then the making of the global object.
+It´s really an interpreter
 
-Yes, with adding /lib i have seen some desastrous engineering left beetween the main parts.
+Source Code is entered
+It´s tokenized
+It´s parsed in Parser_API format + glue code
+It´s executed by visiting the nodes and returning the results in Completion Records
+If exceptions are thrown they are converted into real exceptions at the end of the eval call.
+Execution possibly calls JSON Parser
+or calls CodeGenerator (installed for checking out an own codegen in Function.prototype.toString())
+The value is returned
 
-_Known Bugs, a lot, but known and not difficult, just mistakes_
-* Generators: The code Evaluation Stack is not fixed. The tool started with Evaluate(node) as indirect recursion function (being called again from a function called by Evaluate), but using a stack instead of real recursion makes resumability available, which is needed for the generator. I had little trouble imagining resuming and suspending a context, coz i forgot to directly use a stack machine. The problem can be fixed locally just for the generator i estimate by thinking it out.
-* I found already various possibilities by thinking through, the latest is putting the last child of a list first onto the stack (much work) or just reading the doubly linked list forward with a pop_front. just fifo. but the stack storage is needed for suspending and resuming of the context, which indirect recursion by calls has not.
-* Have to rewrite in parser.PropertyDefinitionList and MethodDefinition the part for the computedPropertyName [sym](). It´s working, but not DRY but DUPING the Code extra for the computed key.
-* Lock-Ups, Hanging Terminals: After releasing it and writing wrong inputs, i got it. I have one of the loops not breaking.
-* Source Characters: The character set is incomplete and unicode is disabled.
-* TypedArrays: Incomplete Implementation (used TypedArrays in the background then) am not finished writing it down from the spec. 
-* Date: Incomplete but already installed with a lot of functions.
-* String Functions: Incomplete but already a lot of functions
-* Number Functions: Incomplete .toFixed, .toPrecision, but i have managed converting numbers meanwhile (four weeks ago i hadn´t practiced much, but meanwhile i did for a lot of numbers)
-* More? Probably. But the list of done things is longer. :-)
+The async versions
+```
+realm.evalAsync("let x = 10; x").then(function (value) { console.log(value); }, function (err) { throw err; });
 
-Uh, oh? Not really. Had a lot of fun with until today.
+```
+are existing and of course already imagined with message passing and json transmissions over rest but not coded out yet.
+The -Xform ending means, that this function like evalAsyncXform also tries to translate properties behind getters
+and setters in EcmaScript 5. The right stuff. But i didn´t code it out yet.
 
-_Long Term Goal_
-Long Term Goal: Completing it. Keeping it up-to-date with ES7 and
-adding a a) Compiler and b) TypedArray Heap, which could have been
-there from the beginning on, but i decided to stick with the begun
-code and to refactor it with Search & Replace. 
+= Parser_API
 
-Compatibility with Esprima is not achieved now, but a long term goal
-and a must, too.
+It´s using Mozilla Parser_API for AST representation.
+
+Currently the interpreter bases on a simple indirect recursive visitor algorithm.
+Equal to the visitor pattern by calling visitor[node.type](node) to get the right
+function, because arguments can´t be overloaded and i wanted no big switch statement
+but a function each node.type.
+
+The visitor pattern is used for evaluation[node.type](node);
+
+The parser is written with this.* on each call to a subroutine of the parser object.
+So the parser[key] could be decorated by using the this and calling with the this value.
+
+New Token
+I think this token will make it, it´s almost the same as the node
 
 
-_Design Mistakes_
-Issue to do for b): Replacing all {} with createGenericRecord({}), all
-regular rec[val] with getRec(rec, val) and rec[val] = value with 
-setRec(rec, val, value) as well as [] with createGenericList([])
-and a.push(x) with push(a, x) and a.length with length(a) and 
-a[x] with getRec(a, x) and a[x] = v with setRec(a,x,v);
-Reason: The internal slots set with such records want to be put into
-the TypedArray, but for that, also generic maps and arrays have to be
-serialised.
+```
+> syntaxjs.tokenize("`ich ${bin} ein ${  template()  }`")
+[{
+    type: "TemplateLiteral",
+    value: ["ich ", "bin", " ein ", "  template()  ",""]
+}]
 
-Issue for a): Have to write an independent heap, with operations to
-read and write exactly EcmaScript values with a[0] = type and a[1..] = value;
-And maps as HashTable of Pointers to Name/Value Pairs (type, length, data/
-type, length, data). Array are arrays with Pointers to some values. This
-is all not to difficult, but the whole code has to be searched and replaced,
-partly manually, of course. (Sorry, my mistake).
+```
 
-Other stuff. A lot of DefineOwnProperty calls with an explicit Descriptor,
-which has to be replaced by a generic function, which came from copying and
-pasting a function body for the next function and for the next and so on, 
-thinking i could replace it later. Now i have the mess there for doing so. :-)
+New Nodes
 
-_ByteCode_
-The worst thing was, that i couldnt decide to which numbers i want to map
-the AST node contents. The other thing was, that Mozilla AST doesnt meet
-the ES6 AST 101. The next was, that i never wrote a compiler, and just watched
-Aiken and Ullman for Compilers and Automata and Berkeley for Languages and
-MIT for Algorithms and such.
+For ES6 i had to add a couple of nodes
+There is a file docs/parserapi.html where i try to describe.
+TemplateLiteral (contains an Array of Spans from TemplateHead to TemplateTail with the unparsed Expressions
+between)
 
-_AST_
-I found out, that the AST Evaluation is reusable for ByteCode if i fetch
-the nodes contents by an interface function, which could in effect return
-bytecode. For that, all the accesses have to be searched and replaced, too,
-i just added into a handful of accesses to begin.
-After replacing this, and the Array Accesses (StatementLists, FunctionBodies)
-with a getIndex(list, x), the SAME Function can be used with a ByteCode.
-Coz the Evaluate() returns the result in a completion, which can be explored
-and returned if abrupt or replaced by getvalue. (In JavaScript the extra 
-Variable and Type Casting is missing).
+The answer for new static properties on the AST supporting the old Parser_API AST is the "Static Semantics"
+of the ECMA-262 Specification. They form (long named) the complete required AST properties (say static
+variables as lists or single values each node, which will be collected when parsing, say ast properties).
+One should update parser api for.
+Example: MethodDefinitions should have .static (static class property) and .special (getter, setter)
+properties,
+ExpressionStatements containing a function or not should have "isAnonymousFunctionDefinition" and
+"isValidAssignmentTarget" to reveal what they possess in constant time to the compiler. Waiting for
+the next node and checking it´s field is way to much if such properties can help you go constant.
 
-_Exception Handling_
-The worst is, that the Parser and Tokenizer throw REAL Exceptions and the
-Evaluation uses ReturnIfAbrupt(x) unless i hit the outer eval function, where
-i change the internal exception into a real one. The JSON Parser is called
-from within the Evaluation and works different that the parser, because it
-loads ReturnIfAbrupt and uses the "return withError(type, msg);" function.
-While developing i had to give up my simple "module structure", just separating
-the big parts from each other. The most important part was, coz i kept a 
-single file, that i wanted to separate the AST Node using functions from all
-other, to have it easier to change them for bytecode. Well, currently i have
-the feeling, that some exception stack is lost in my last edits. Mainly i miss
-my regular exceptions, but am not to stupid not to know what i am doing or did,
-so i wonder a little.
+```
+    // now (it´s not an effort to rename value to spans. It´s a new node which will carry .raw and .cooked)
+    {
+        type: "TemplateLiteral",
+        spans: ["ich ", "bin", " ein ", "  template()  ",""]
+    }
 
-_Object Refactoring_
-For the ByteCode + Heap (ByteCode can be run without putting them all into
-an Array, ByteCode ist not depending on Heap, while Heap can only store Bytecode)
-all OrdinaryObject.prototype (Essential Methods) have to be replaced by a function
-taking the object (ptr) as argument.
-The GOOD. They are already called by callInternalSlot("DefineOwnProperty", obj, ...)
+    // later better (compiler has raw and cooked, which are anyways _static_ semantics, ready)
 
-_Design Patterns_
-Doing something else than JavaScript. I wanted i typed version of Ecma-262 and started
-with Java this february. 
-Today i am trying Java the first time and try JSR000223 together with ES6 while
-trying out the language and trying books about design patterns. Together with my
-little new knowledge i find it´s possible and relevant, that i keep both functions
-for bytecode and AST and add a stage setting the right one up before them. The Books
-teach me loose coupling and patterns currently not being in the syntax.js tool.
-But like i already stated, this is a long term project, not a short living buggy toy
-to drop. Future compatibility with Esprima is easily achieved by editing the ES6 AST
-evaluation a little. Developers helping me with are always welcome.
+    {
+        type: "TemplateLiteral",
+        raw: ["ich "," ein ",""]
+        cooked: ["bin", "  template()  "]
+        noSubstitution: false               // true if raw.length == 1 && cooked.length == 0
+     }
+```
+Seems obvious that i´ll change it to use raw and cooked when creating the template literal node. Which is
+better for the compiler. This is from March 2014. Before the TemplateLiteral was a string, split later with
+a RegExp for Evaluation. It worked, but wasn´t good and far away from the specification which lexed it already
+into parts.
 
-_Optimizing_
-For Proof of Concept i really wrote down the whole type checks. This can be
-replaced with some easier JavaScript which will speed up the thing a lot. 
-As this was my first code and first attempt i wanted to try out what´s really
-in the spec. Now, where i understand, what is going on, a lot of functions
-could be made easier.
+```{ type: "LexicalDeclaration", declarations, kind }``` (should be spread into LetDeclaration and ConstDeclaration for making the best possible)
+```{ type: "ForDeclaration", kind }``` (for-of has a ForDeclaration rule, ArrayComprehension and GeneratorComprehension have a ForBinding,
+possibly this could be refactored, but currently it is supporting the system to work)
 
-_Offline Times_
-The whole project is living and i am activly working on, but somedays 
-i do other things. Like this February 2014, where i start the same 
-project (implementing EcmaScript Edition 6 from the draft) in Java, to 
-learn how to code a real engine, but with the easier language first.
-We´ll see what happens with my JavaScript Version, when the next draft
-arrives.
-Since a few Files i am learning "design patterns" together with the 
-Java language after times of letting them pass me by. This will influence
-the syntax.js JavaScript Version soon, coz i am sometimes hot to refactor.
+```{ type: "Module", body }``` (new top level production, has other rules than "Program")
+```{ type: "ModuleDeclaration", id, strict, body }```
+```{ type: "ImportStatement", imports }```
+```{ type: "ExportStatement", exports }```
+
+```{ type: "RestParameter", argument: id }``` latest parserapi draft covers .rest at functions, but not in patterns, etc.
+```{ type: "SpreadExpression", argument: id }``` spread expressions are the ...spread for any array or arguments list.
+```{ type: "DefaultArgument", id: name, init: expression }```
+```{ type: "MethodDefinition", id, generator, formals, body }``` This makes it convenient to parse methods with concise syntax
+```{ type: "BindingElement", id: identifier[, as: identifier] }``` in ObjectPattern["properties"]
+
+
+Wrong Implementation?
+
+A little difference from the Parser_API by mistake is that i haven´t used "default" and "rest" in
+the function nodes because of the "RestParameter" and "DefaultArgument" nodes i introduced already.
+I wasn´t shure how to fill the default´s array. With the number of argument nodes and a null everywhere,
+where no default is?
+It will be added within minutes for compatibility with the other (more reliable professional) EcmaScript Parsers.
+
+Additional Builder
+Will be used for the compiler later, for sure, because i´ve interfaced with already.
+
+But i have another interface to propose ```function [node.type](node) { ...process node here.. }```
+which is used for the visitor, the interpreter and could be used by any kind of builder
+
+Additional Decorators
+With the requirement for this.* calls for function [node.type] being on a object[node.type] these
+functions can be decorated for any kind of additional or changing behaviour with the cost of decorators.
 
 
 
-Missing
+= Missing
 
 * Developer Documentation
 
-Tests 
+After splitting up the files i see more room for good comments and putting relevant information into
+the files. This will happen over the time.
+
+I think the best is to annotate the code now, because i´ve split the code up.
+
+= Bugs
+
+I have a few big things on my list
+And know the hundred and fifty open bugs
+
+I know what´s going wrong
+But it takes time until i repair them
+
+= Design Issues
+
+- Design Patterns
+
+They are coming into this. I have read the Head First book in March. And i know they are communicatable,
+means, you understand at once what i´ve written, or what that skeleton is for.
+
+There are factory methods for the tokens and nodes planned as well as a refactoring of the
+highlighter app for the builder.
+
+The visitor/interpreter is doing it´s job very well in his variation.
+Decorators are coming to all the parser/lexer/evaluation functions. I´ll fix the latter with this, too.
+This makes analysis possible and hurts with a thisexpression, which should be constant in modern engines
+and be not slower then accessing the scope anyways for the function.
+
+I will change the fswraps into an adapter. And will use an adapterMaker which returns a browser/worker/node
+adapter by passing in an object with three functions.
+
+
+
+- Heap
+
+Is for storing all objects and data
+Will be used by the final compiler for storing the compiled code.
+Was deferred while coding the interpreter.
+
+But was already recognized - that´s why there are callInternalSlot and other Interfaces for handling
+the code later.
+
+- Compiler
+
+Stores all the AST refactored for the operand stack and the fetch-decode-exec cycles in a typed array.
+Was deferred for completion of the AST runtime
+
+Was also already recognized. But i hadn´t read about compilers before and had to fetch informations and
+lectures from american and german universities to catch the right class. Then i´ve read some books and
+meanwhile i´m behind myself with the code which seems to be promising to get it.
+
+Yes, and i´ve already checked out LLVM and the Docs and know what kind of compiler i could write with.
+Inspired by the famous emscripten and being far away from C++ and Linux i got behind what LLVM really is.
+Already in November, December. When i printed the manual and got to read it. In Feb. i started Java so in
+the typed version i´m a bit behind, but till ES7 we should come together :-)
+
+- Syntax Highlighter
+
+Is the OLDEST part in the System and keeping me away from letting the tokenizers stand alone mode
+die in favor for real input element goals on next calls everywhere the grammar says.
+
+Bases on the tokenizer and blocked my development for a while or a few times, because i won´t take
+my time to change break the program (last year it served my homepage with the tests and i had no
+experience how to treat software or my efforts with value).
+
+Should be refactored to use the AST instead of the tokens, well, the tokens AND the AST for highlighting
+is more than only the tokens, coz scope and eval results are inclusive.
+requires data-astnodeid for mouseover/touch annotation of expression types
+
+= Tests
 
 * There are some handwritten files, and some handwritten tests existing, but
 the final testsuite shall be test262, the official testsuite for ecmascript,
 which can already be run from the commandline.
 
 
+
+News: I have cleared myself up to write tests manually again with tester.js
+but to collect them, because i have to test the system to repair the latest bugs again.
+I didn´t test with new tests since december after i broke the whole thing through once
+(with thousands of new lines and even thousands of otherwhere deleted lines) and managed
+it to repair it except for the highlighter startup,.
+
+ Means - new tests are coming. I will write them in single files, which will be run from
+ the console OR and that will be improved if i can´t do it via syntaxjs and testerjs now
+ the browser without change. Previously i manually implemented the tests inside the HTML
+ page and ran test against code in some elements. I will do both and try to cover the whole
+ thing so far that it proves that test262 should be run against.
+
+
+= syntaxjs.* properties
+
+I will rename createAst to parse()
+and toValue to eval()
+and tokenize to lex if tokenize isnt kept
+and rename the other to the equivalent.
+Didn´t do till today coz i didnt publish it
+Then thinking about makes it clear.
+.eval()
+.parse()
+and not
+.toValue()
+.createAst()
+i think people will like the former and
+maybe use but not be satisfied with  the latter
+But i can be wrong.
+
+The list of syntax.js properties will be for a future README
+i will fix them as soon as i have renamed them altogether for a commit.
