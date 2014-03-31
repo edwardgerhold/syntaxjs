@@ -14,7 +14,7 @@ Yes, and i read es-discuss but have never written a line. I came to the point wh
 i wanted to start, then i deferred again, then nothing was going on and i was doing
 something else, however. es-discuss helped me a lot in understanding what is inside of
 the ECMA-262 standard but the real thing is reading the spec. I´ve read it since over
-half a year now. Two months daily. Last time an hour ago in the bus.
+half a year now. Three months daily. Last time an hour ago in the bus.
 
 ```
 es6> function *gen() { yield 10; }
