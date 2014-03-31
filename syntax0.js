@@ -206,11 +206,11 @@ function define(id, deps, factory) {
         if (typeof deps === "function") {
             factory = deps;
             deps = null;
-//            try {
+            try {
                 returned = factory(m.require, m.exports, m);
-//            } catch (ex) {
-//                throw ex;
-//            }
+            } catch (ex) {
+                throw ex;
+            }
         } else {
             returned = require.cache[id] = deps;
         }
@@ -219,11 +219,11 @@ function define(id, deps, factory) {
             imports.push((d = require.cache[deps[i]]) ? d.exports : null);
             children.push(d ? d : null);
         }
-//        try {
+        try {
             returned = factory.apply(factory, imports);
-//        } catch (ex) {
-//            throw ex;
-//        }
+        } catch (ex) {
+            throw ex;
+        }
     }
     m.exports = returned !== undefined ? returned : exports;
     require.cache[id] = m;
@@ -23408,9 +23408,12 @@ LazyDefineBuiltinFunction(MessagePortPrototype, "postMessage", 0, MessagePortPro
             }
             return globalThis;
         }
+
+        if (typeof Java !== "function" && typeof load != "function" && typeof print != "function") {
         LazyDefineProperty(intrinsics, "%DOMWrapper%", ExoticDOMObjectWrapper(
             typeof importScripts === "function" ? self : typeof window === "object" ? window : process)
         );
+        }
         return intrinsics;
     }
 
@@ -27548,7 +27551,7 @@ define("runtime", function () {
     function initializeTheRuntime() {
         initialisedTheRuntime = true;
     }
-    function endTheRuntime() {
+    function endRuntime() {
         initialisedTheRuntime = false;
     }
 
@@ -29138,7 +29141,9 @@ define("syntaxjs", function () {
         version: pdmacro(VERSION),			
         tokenize: pdmacro(require("tokenizer")),				// <-- needs exports fixed
         createAst: pdmacro(require("parser")),					// <-- needs exports fixed
+        parse: pdmacro(require("parser")),
         toValue: pdmacro(require("runtime")),					// <-- needs exports fixed
+        eval: pdmacro(require("runtime")),
         createRealm: pdmacro(require("api").createPublicCodeRealm),
         toJsLang: pdmacro(require("js-codegen")),				// <-- needs exports fixed
         nodeShell: pdmacro(require("syntaxjs-shell")),				// <-- needs exports fixed
@@ -29147,10 +29152,22 @@ define("syntaxjs", function () {
     
         readFile: pdmacro(require("fswraps").readFile),	
         readFileSync: pdmacro(require("fswraps").readFileSync),
+        evalFile: pdmacro(function (name, callback, errback) {
+            var syntaxjs = this;
+            return this.readFile(name, function (code) {
+                return syntaxjs.eval(code);
+            }, function (err) {
+                console.dir(err);
+            })
 
+        }),
+        evalFileSync: pdmacro(function (name) {
+            return this.eval(this.readFile(name));
+        }),
         subscribeWorker: pdmacro(require("syntaxjs-worker").subscribeWorker),
+        evalStaticXform: pdmacro(require("runtime").ExecuteAsyncStaticXform),
         evalAsync: pdmacro(require("runtime").ExecuteAsync),
-        evalAsyncXfrm: pdmacro(require("runtime").ExecuteAsyncTransform),
+        evalAsyncXform: pdmacro(require("runtime").ExecuteAsyncTransform),
         arraycompile: pdmacro(require("arraycompiler").compile)
     };
     
@@ -29166,13 +29183,11 @@ define("syntaxjs", function () {
     if (typeof window == "undefined" && typeof self !== "undefined" && typeof importScripts !== "undefined") {
     // worker export
         syntaxjs.system = "worker";
-    
     } else if (typeof window !== "undefined") {
     // browser export
         syntaxjs.system = "browser";
         syntaxjs_highlighter_api.highlightElements = pdmacro(require("highlight-gui").highlightElements),
         syntaxjs_highlighter_api.startHighlighterOnLoad = pdmacro(require("highlight-gui").startHighlighterOnLoad)
-    
     } else if (typeof process !== "undefined") {    
     // node js export
         if (typeof exports !== "undefined") exports.syntaxjs = syntaxjs;       
@@ -29180,9 +29195,12 @@ define("syntaxjs", function () {
         syntaxjs._require = module.require;
         syntaxjs._module = module;
         Object.defineProperties(exports, syntaxjs_public_api_readonly);
-        Object.defineProperties(exports, syntaxjs_highlighter_api)
+        Object.defineProperties(exports, syntaxjs_highlighter_api);
+    } else if (typeof load == "function" && typeof print == "function") {
+        if (typeof version === "function") syntaxjs.system = "spidermonkey";
+        if (typeof Java === "object") syntaxjs.system = "nashorn";
+        if (typeof exports !== "undefined") exports.syntaxjs = syntaxjs;
     }
-    
     // ASSIGN properties to a SYNTAXJS object (all platforms)
     Object.defineProperties(syntaxjs, syntaxjs_public_api_readonly);
     Object.defineProperties(syntaxjs, syntaxjs_highlighter_api);
@@ -29217,6 +29235,8 @@ define("syntaxjs", function () {
         syntaxjs.startHighlighterOnLoad();
     } else if (syntaxjs.system === "worker") {
         syntaxjs.subscribeWorker();
+    } else if (syntaxjs.system === "spidermonkey") {
+        print("syntax.js was successfully loaded");
     }
 
 //    return syntaxjs;

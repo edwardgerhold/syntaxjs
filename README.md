@@ -12,7 +12,7 @@ and how to write tests.
 
 Yes, and i read es-discuss but have never written a line. I came to the point where
 i wanted to start, then i deferred again, then nothing was going on and i was doing
-something else, however. es-discuss helped me a lot in understand what is inside of
+something else, however. es-discuss helped me a lot in understanding what is inside of
 the ECMA-262 standard but the real thing is reading the spec. I´ve read it since over
 half a year now. Two months daily. Last time an hour ago in the bus.
 
@@ -32,14 +32,14 @@ You can have as many realms as you want.
 Each realm has own environments, and is independent from each other.
 The intrinsic objects (the global builtins) are created once each realm.
 About optimizing that code i know something on my list, but that´s out of scope here.
+It´s about moving all call_function out of create intrinsics for only being created once.
+Fine optimization portion for creating few intrinsics with a few realms, or?
 Just install syntaxjs for node.js.
 
 ```bash
 npm install -g  #to install syntaxjs from it´s directory
 ```
-
-Then call it in you javascript to evaluate es6 code.
-
+Then call it in your javascript to evaluate es6 code.
 
 ```javascript
 var realm = require("syntaxjs").createRealm();
@@ -60,9 +60,7 @@ realm.eval("x");
 
 Here i find myself missing a state snapshot of the object for the outside world
 
-
 Previously:
-
 Caveat: Objects are coming out as their ES6 internal representation.
 I know about adding adapters and transformers, for or to create JSON message passing,
 it´s on the list. But for now, you can use [[Get]], [[DefineOwnProperty]], [[Set]],
@@ -75,7 +73,6 @@ The method TransformObjectToJSObject(obj) is already existing and used in the
 functions ending with Xform but i didn´t code it out yet and it isn´t completed.
 
 Examples:
-
 ```
 // get an object by calling eval
 es5> var obj1 = syntaxjs.eval("{ a: 1, b: 2 }"); // .toValue if i didn´t rename for now.
@@ -133,8 +130,8 @@ undefined
 es6> String.raw(`${name} is stupid`);
 Edward is stupid
 es6> String.raw`${name} is stupid`;
-Edward is a stupid
-es6> ObjeOct.create(null)
+Edward is stupid
+es6> Object.create(null)
 { Bindings: {}, Symbols: {}, Prototype: null, Extensible: true }
 es6> for (let i = 0; 
 ...> i < 3; i++) console.log(i);
@@ -187,7 +184,7 @@ and setters in EcmaScript 5. The right stuff. But i didn´t code it out yet.
 It´s using Mozilla Parser_API for AST representation.
 
 Currently the interpreter bases on a simple indirect recursive visitor algorithm.
-Equal to the visitor pattern by calling visitor[node.type](node) to get the right
+Equal to the visitor/interpreter pattern by calling visitor[node.type](node) to get the right
 function, because arguments can´t be overloaded and i wanted no big switch statement
 but a function each node.type.
 
@@ -198,7 +195,6 @@ So the parser[key] could be decorated by using the this and calling with the thi
 
 New Token
 I think this token will make it, it´s almost the same as the node
-
 
 ```
 > syntaxjs.tokenize("`ich ${bin} ein ${  template()  }`")
@@ -220,11 +216,14 @@ The answer for new static properties on the AST supporting the old Parser_API AS
 of the ECMA-262 Specification. They form (long named) the complete required AST properties (say static
 variables as lists or single values each node, which will be collected when parsing, say ast properties).
 One should update parser api for.
+
 Example: MethodDefinitions should have .static (static class property) and .special (getter, setter)
-properties,
-ExpressionStatements containing a function or not should have "isAnonymousFunctionDefinition" and
-"isValidAssignmentTarget" to reveal what they possess in constant time to the compiler. Waiting for
+properties, it´s ugly to test oneself wether it´s a get or a set after the parser had that already.
+
+ExpressionStatements and Expressions (Assignment, Binary) containing a function or should have "isAnonymousFunctionDefinition" (righthandside or syntax error, eh, function () is not allowed ;-)) and
+"isValidAssignmentTarget" (lefthandside) to reveal what they possess in constant time to the compiler. Waiting for
 the next node and checking it´s field is way to much if such properties can help you go constant.
+Hmm. I should elaborate the list here. That you can read it.
 
 ```
     // now (it´s not an effort to rename value to spans. It´s a new node which will carry .raw and .cooked)
@@ -258,30 +257,53 @@ possibly this could be refactored, but currently it is supporting the system to 
 
 ```{ type: "RestParameter", argument: id }``` latest parserapi draft covers .rest at functions, but not in patterns, etc.
 ```{ type: "SpreadExpression", argument: id }``` spread expressions are the ...spread for any array or arguments list.
-```{ type: "DefaultArgument", id: name, init: expression }```
-```{ type: "MethodDefinition", id, generator, formals, body }``` This makes it convenient to parse methods with concise syntax
+```{ type: "DefaultArgument", id: name/pattern, init: expression }``` id can be
+```{ type: "MethodDefinition", id, generator, computed, formals, body }``` This makes it convenient to parse methods with concise syntax,
+.computed is for get [s]() computed property names (needed)
 ```{ type: "BindingElement", id: identifier[, as: identifier] }``` in ObjectPattern["properties"]
+
+.computed is IsComputedPropertyName
+
+together with of .const for IsConstantDeclaration
+a LetDeclarations and ConstDeclarations should be
+ made with the "LexicalDeclaration" to cover each
+ case uniquely.
+ I changed VariableDeclaration to Variable- and Lexical- for alignment with the spec grammar, but LetDeclaration
+ and ConstDeclaration would be the nicest readable making no trouble collecting them, like looking and kind="let"
+
+ ```
+    isConstantDeclaration = { "const" : true };
+    if (isConstantDeclaration[node.kind]) used in instantiation
+
+    if (node.const) used in instantiation
+
+    if (varDecl.kind === "const") the only possibility today, but assume you have a varDecl.declarations[i] in the hand. There is no .kind.
+
+ ```
 
 
 Wrong Implementation?
 
+.kind should be on all declarations, that´s why i added it on the fly for letting the latter example run easy
+without reconsidering a declarations node which is not in the LexicallyDeclaredNames list. (One should elaborate
+wether a Let and Const List is easier to use in InstantiateXxxDeclaration or not)
+
 A little difference from the Parser_API by mistake is that i haven´t used "default" and "rest" in
 the function nodes because of the "RestParameter" and "DefaultArgument" nodes i introduced already.
 I wasn´t sure how to fill the default´s array. With the number of argument nodes and a null everywhere,
-where no default is?
-(Oh my god)
+where no default is? (Oh my god)
 
-Additional Builder
+Additional Builder (Parser_API Builder, not Builder Pattern self)
+The codegen module is using the builder Pattern in combination with callBuilder(node) for perfection (is clean, read).
 Will be used for the compiler later, for sure, because i´ve interfaced with already.
 
-But i have another interface to propose ```function [node.type](node) { ...process node here.. }```
-which is used for the visitor, the interpreter and could be used by any kind of builder
+Here i have another interface to propose ```function [node.type](node) { ...process node here.. }```
+which is used for the visitor, the interpreter and could be used for any kind of Parser_API Visitor
+and Builder.
 
 Additional Decorators
 With the requirement for this.* calls for function [node.type] being on a object[node.type] these
 functions can be decorated for any kind of additional or changing behaviour with the cost of decorators.
-
-
 
 = Missing
 
@@ -311,12 +333,63 @@ There are factory methods for the tokens and nodes planned as well as a refactor
 highlighter app for the builder.
 
 The visitor/interpreter is doing it´s job very well in his variation.
+
 Decorators are coming to all the parser/lexer/evaluation functions. I´ll fix the latter with this, too.
+I think evaluation[node.type](node) is already decoratable.
 This makes analysis possible and hurts with a thisexpression, which should be constant in modern engines
 and be not slower then accessing the scope anyways for the function.
 
 I will change the fswraps into an adapter. And will use an adapterMaker which returns a browser/worker/node
 adapter by passing in an object with three functions.
+
+- Other JS Engines
+
+I noticed it is not running in nashorn.
+That´s a real problem.
+It should
+```
+function load() { [native code] }
+jjs> load("/s/syntax0.js");
+
+syntax.js was successfully loaded
+jjs> jjs> syntaxjs
+Exception in thread "main" ECMAScript Exception: TypeError: Cannot get default string value
+        at jdk.nashorn.internal.runtime.ECMAErrors.error(ECMAErrors.java:56)
+        at jdk.nashorn.internal.runtime.ECMAErrors.typeError(ECMAErrors.java:212)
+        at jdk.nashorn.internal.runtime.ECMAErrors.typeError(ECMAErrors.java:184)
+        at jdk.nashorn.internal.objects.Global.getDefaultValue(Global.java:586)
+        at jdk.nashorn.internal.runtime.ScriptObject.getDefaultValue(ScriptObject.java:1257)
+        at jdk.nashorn.internal.runtime.JSType.toPrimitive(JSType.java:256)
+        at jdk.nashorn.internal.runtime.JSType.toPrimitive(JSType.java:252)
+        at jdk.nashorn.internal.runtime.JSType.toStringImpl(JSType.java:993)
+        at jdk.nashorn.internal.runtime.JSType.toString(JSType.java:326)
+        at jdk.nashorn.tools.Shell.readEvalPrint(Shell.java:449)
+        at jdk.nashorn.tools.Shell.run(Shell.java:155)
+        at jdk.nashorn.tools.Shell.main(Shell.java:130)
+        at jdk.nashorn.tools.Shell.main(Shell.java:109)
+```
+should interface with the java api here and bring it forward (think but have barrier of no experience with)
+
+and it doesn´t in Spidermonkey
+where i will check for load and print and look
+
+ok i have tested it as i´ve written this
+
+```
+js> load("syntax0.js");
+syntaxjs was successfully loaded
+js> syntaxjs
+null
+// es ist bloss ein "Object.create(null)"
+js> syntaxjs.eval("10")
+10
+js> var realm = syntaxjs.createRealm();
+js>
+/s/syntax0.js:23412:57 ReferenceError: process is not defined
+
+```
+
+seems like i have to fix something
 
 - Heap
 
@@ -324,8 +397,10 @@ Is for storing all objects and data
 Will be used by the final compiler for storing the compiled code.
 Was deferred while coding the interpreter.
 
-But was already recognized - that´s why there are callInternalSlot and other Interfaces for handling
-the code later.
+But was already recognized - that´s why there are callInternalSlot, setInternalSlot, getInternalSlot
+and other Interfaces for handling the code later. The theory with the lookup table for functions is
+already made and i can reference native (js is "native" here) and compiled functions with. The secret
+is a special bit on the byte telling me, to read the function outside of the heap is what i add here.
 
 - Compiler
 
@@ -355,37 +430,5 @@ requires data-astnodeid for mouseover/touch annotation of expression types
 the final testsuite shall be test262, the official testsuite for ecmascript,
 which can already be run from the commandline.
 
+* I will write new tests.
 
-
-News: I have cleared myself up to write tests manually again with tester.js
-but to collect them, because i have to test the system to repair the latest bugs again.
-I didn´t test with new tests since december after i broke the whole thing through once
-(with thousands of new lines and even thousands of otherwhere deleted lines) and managed
-it to repair it except for the highlighter startup,.
-
- Means - new tests are coming. I will write them in single files, which will be run from
- the console OR and that will be improved if i can´t do it via syntaxjs and testerjs now
- the browser without change. Previously i manually implemented the tests inside the HTML
- page and ran test against code in some elements. I will do both and try to cover the whole
- thing so far that it proves that test262 should be run against.
-
-
-= syntaxjs.* properties
-
-I will rename createAst to parse()
-and toValue to eval()
-and tokenize to lex if tokenize isnt kept
-and rename the other to the equivalent.
-Didn´t do till today coz i didnt publish it
-Then thinking about makes it clear.
-.eval()
-.parse()
-and not
-.toValue()
-.createAst()
-i think people will like the former and
-maybe use but not be satisfied with  the latter
-But i can be wrong.
-
-The list of syntax.js properties will be for a future README
-i will fix them as soon as i have renamed them altogether for a commit.
