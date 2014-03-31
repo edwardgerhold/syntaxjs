@@ -4,7 +4,7 @@
     "use strict";
     
     function inlineFiles(filename) {	
-	console.log("inlineFiles(\"+filename+\")");
+	console.log("inlineFiles(\""+filename+"\")");
         return makePromise(function (resolve, reject) {
             fs.readFile(filename, "utf8", function (err, data) {
         	if (err) reject(err);
@@ -14,7 +14,7 @@
     }
     
     function transFormSync(input) {
-    	console.log("transFormSync()");
+    	//console.log("transFormSync()");
         return input.replace(include, function (all, filename) {
     	    console.log("inserting "+filename+" sync recursivly");
     	    if (!fs.existsSync(filename)) console.log("error: "+filename+" not found!");
@@ -45,7 +45,9 @@
     }
     
     
-    console.log("inlinefiles.js replaces //#include \"name.js\" with name.js - syntax.js /tools");
+    console.log("inlinefiles.js replaces //#include \"name.js\"; with name.js - [syntax.js/tools]");
+    console.log("two slashes, no space, #include, space, name.js in quotes, semicolon (required) to go");
+    
     var include = /(?:[\/]{2}#include "([^\"]+)";)/g;
     var makePromise = require("./promise.js").makePromise;
     var fs = require("fs");

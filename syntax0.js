@@ -14620,20 +14620,27 @@ var OnSuccessfulTransfer_Call = function (thisArg, argList) {
 
 setInternalSlot(DebugFunction, "Call", function debugfunc (thisArg, argList)  {
 
+    var TAB = "\t";
     var O = argList[0];
     var type = Type(O);
 
+    console.log("Type() results in " + type);
+
     function printProps(name) {
         var desc = this[name];
-        console.log(name+": ("+Type(desc.value)+") "+(desc.enumerable?"e":"-")+""+(desc.configurable?"c":"-")+""+(desc.writable?"w":"-"));
+        console.log(TAB+TAB+name+": ("+Type(desc.value)+") "+(desc.enumerable?"e":"-")+""+(desc.configurable?"c":"-")+""+(desc.writable?"w":"-"));
     }
 
-    var TAB = "\t\t";
-
-    if (Type(O) == "object") {
-        var toString = Invoke(O, "toString", []);
-        if (isAbrupt(toString=ifAbrupt(toString))) return toString;
-
+    if (type == "object") {
+	var isCallable = IsCallable(O);
+	
+	if (!isCallable)  {
+    	    var toString = Invoke(O, "toString", []);
+    	    if (isAbrupt(toString=ifAbrupt(toString))) return toString;
+        } else {
+            var funcName = Get(O, "name");
+    	    console.log("[object Function]: "+funcName);
+        }
         console.log(toString);
         console.log("{")
 
@@ -14672,7 +14679,35 @@ setInternalSlot(DebugFunction, "Call", function debugfunc (thisArg, argList)  {
             var code = getInternalSlot(O, "Code");
             console.log(JSON.stringify(code, null, 4));
         }
+        
+        console.log("}");
+        
+        return NormalCompletion();
     }
+    
+    if (type == "number") {
+	console.log("Number");
+	console.log("binary (base 2): "+O.toString(2));
+	console.log("decimal (base 10): "+O.toString(10));
+	console.log("hex (base 16): "+O.toString(16));
+    
+    } else if (type == "string") {
+	var len = O.length;
+	console.log("String");
+	console.log("value: "+O);
+	console.log("length: "+len);
+    
+    } else if (type == "symbol") {
+	console.log("Symbol");
+	var descr = getInternalSlot(O, "Description");
+	console.log("[[Description]]: " +descr);
+    } else if (type == "boolean") {
+	console.log("Boolean");
+	console.log("value: "+!!O);	
+    } 
+    
+    
+    return NormalCompletion();
 
 });
 
