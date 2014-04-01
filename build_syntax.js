@@ -44,7 +44,7 @@
 
 //#include "lib/compile/arraycompiler.js";
 
-//#include "lib/codegen/cstcodegen.js";
+//#include "lib/parsenodes/cstcodegen.js";
 
 //#include "lib/api.js";
 

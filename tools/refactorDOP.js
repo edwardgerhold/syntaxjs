@@ -29,7 +29,7 @@
 
 var esprima = require("esprima");
 var syntaxjs = require("syntaxjs").syntaxjs;
-var useEsprima = true;
+var withEsprima = true;
 
 var fs = require("fs");
 
@@ -37,9 +37,12 @@ var state = {};
 
 function getAst(file) {
     var code = fs.readFileSync(file, "utf8");
-    if (useEsprima)
+    if (withEsprima) {
+    console.log("parsing "+file+" with esprima");
     return esprima.parse(code);
-    else return syntaxjs.parse(code);
+    }
+    console.log("hanging "+file+" with syntax.js (temp)");
+    return syntaxjs.parse(code);
 }
 
 function error(message) {
@@ -156,7 +159,9 @@ function replace() {
 		    
 		    }	
 		    
-		} /*else 
+		} 
+		
+		/*else 
 		if (value && value.type == "FunctionDeclaration") {
 		    ok = true;
 		    funcExpr = value;
@@ -169,6 +174,7 @@ function replace() {
 	if (!ok) return;
 	
 	var methodVariable = id+"_"+name;
+	
 	
 	console.log("methodVariable = "+methodVariable);
 	
@@ -240,7 +246,10 @@ function replace() {
     
     for (var i = 0, j = args.length; i < j; i++) {
 	var arg = args[i];
-		
+	if (arg === "-s") {
+	    withEsprima = false;
+	    continue;
+	}
 	if (arg === "-o") {
 	    var ofile = state.ofile = args[++i];
 	    if (typeof ofile != "string" || !ofile.length) {

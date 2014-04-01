@@ -7,10 +7,13 @@ var syntaxjs = require("./syntax0.js").syntaxjs;
 var repl = require("repl");
 var net = require("net");
 function evalWithSyntaxJs(cmd, context, filename, callback) {
-    var result = syntaxjs.toValue(cmd, true);
+    var result = syntaxjs.eval(cmd, true);
     callback(null, result);
 }
+
 var port = +process.argv[2];
+console.log("node repl.js [port] wil start a repl on stdin or a server with a repl on [port] (from nodejs docs)")
+
 if (!port) {
 // node repl.js starts the repl
     repl.start({
