@@ -1795,12 +1795,12 @@ define("tables", function (require, exports, module) {
     exports.LPAREN = LPAREN;
     exports.RPAREN = RPAREN;
     exports.LPARENOF = LPARENOF;
-    exports.RPARENOF = RPAREN
+    exports.RPARENOF = RPAREN;
     exports.TypedArrayElementSize = TypedArrayElementSize;
     exports.TypedArrayElementType = TypedArrayElementType;
     exports.BuildingPatterns = BuildingPatterns;
     exports.ForbiddenArgumentsInStrict = ForbiddenArgumentsInStrict;
-    exports.ReservedWordsInStrictMode = ReservedWordsInStrictMode
+    exports.ReservedWordsInStrictMode = ReservedWordsInStrictMode;
     exports.IsTemplateToken = IsTemplateToken;
     return exports;
     // return tables;
@@ -3704,6 +3704,7 @@ define("parser", function () {
     var tokenize = require("tokenizer");
 
     var EarlyErrors = require("earlyerrors").EarlyErrors;
+
     var withError, ifAbrupt, isAbrupt;
     var IsTemplateToken = tables.IsTemplateToken;
     var FinishStatementList = tables.FinishStatementList;
@@ -4163,10 +4164,11 @@ define("parser", function () {
 
     function rotate_binexps(node) {
         var op = node.operator,
-            right = node.right,
-            rightOp = right && right.operator,
+            right = node.right,     // the next node bouncing of
+            rightOp = right && right.operator,  // the node right has it a higher or lower operator?
             tmp;
         if (right.type !== "UnaryExpression" && rightOp) {
+
             if ((OperatorPrecedence[rightOp] || Infinity) < (OperatorPrecedence[op] || Infinity)) {
                 tmp = node;
                 node = node.right;
@@ -13322,9 +13324,6 @@ function IntegerIndexedObjectCreate(prototype) {
 /**
  * Created by root on 30.03.14.
  */
-// ===========================================================================================================
-// Personal DOM Wrapper (wrap native js into this big bullshit)
-// ===========================================================================================================
 
 function ExoticDOMObjectWrapper(object) {
     var O = Object.create(ExoticDOMObjectWrapper.prototype);
@@ -18387,7 +18386,7 @@ DefineOwnProperty(BooleanPrototype, "valueOf", {
 // Symbol Constructor and Prototype
 // ===========================================================================================================
 
-MakeConstructor(SymbolFunction, true, SymbolPrototype);
+
 
 var SymbolFunction_Call = function Call(thisArg, argList) {
     var descString;
@@ -18401,44 +18400,6 @@ var SymbolFunction_Call = function Call(thisArg, argList) {
 var SymbolFunction_Construct = function Construct(argList) {
     return OrdinaryConstruct(this, argList);
 };
-
-setInternalSlot(SymbolFunction, "Call", SymbolFunction_Call);
-setInternalSlot(SymbolFunction, "Construct", SymbolFunction_Construct);
-
-LazyDefineBuiltinConstant(SymbolFunction, "create", $$create);
-LazyDefineBuiltinConstant(SymbolFunction, "toStringTag", $$toStringTag);
-LazyDefineBuiltinConstant(SymbolFunction, "toPrimitive", $$toPrimitive);
-LazyDefineBuiltinConstant(SymbolFunction, "toInstance", $$hasInstance);
-LazyDefineBuiltinConstant(SymbolFunction, "isConcatSpreadable", $$isConcatSpreadable);
-LazyDefineBuiltinConstant(SymbolFunction, "iterator", $$iterator);
-LazyDefineBuiltinConstant(SymbolFunction, "isRegExp", $$isRegExp);
-LazyDefineBuiltinConstant(SymbolFunction, "unscopables", $$unscopables);
-
-var SymbolFunction_$$create = function (thisArg, argList) {
-    return withError("Type", "The Symbol[@@create] method of the Symbol function is supposed to throw a Type Error");
-};
-
-DefineOwnProperty(SymbolFunction, $$create, {
-    value: CreateBuiltinFunction(realm, SymbolFunction_$$create, 0, "[Symbol.create]"),
-    writable: false,
-    enumerable: false,
-    configurable: false
-});
-
-DefineOwnProperty(SymbolFunction, "prototype", {
-    value: SymbolPrototype,
-    writable: false,
-    enumerable: false,
-    configurable: false
-});
-
-setInternalSlot(SymbolPrototype, "Prototype", ObjectPrototype);
-DefineOwnProperty(SymbolPrototype, "constructor", {
-    value: SymbolFunction,
-    writable: false,
-    enumerable: false,
-    configurable: false
-});
 
 var SymbolPrototype_toString = function toString(thisArg, argList) {
     var s = thisArg;
@@ -18462,12 +18423,6 @@ var SymbolPrototype_$$toPrimitive = function (thisArg, argList) {
     return withError("Type", "Symbol.prototype[@@toPrimitive] is supposed to throw a Type Error!");
 };
 
-
-
-// var GlobalSymbolRegistry = Object.create(null);
-// moved up to the realm
-
-
 var SymbolFunction_keyFor = function (thisArg, argList) {
     var sym = argList[0];
     if (Type(sym) !== "symbol") return withError("Type", "keyFor: sym is not a symbol");
@@ -18477,7 +18432,6 @@ var SymbolFunction_keyFor = function (thisArg, argList) {
     Assert(getRealm().GlobalSymbolRegistry[key] === undefined, "GlobalSymbolRegistry must not contain an entry for sym");
     return NormalCompletion(undefined);
 };
-
 
 var SymbolFunction_for = function (thisArg, argList) {
     var key = argList[0];
@@ -18492,15 +18446,34 @@ var SymbolFunction_for = function (thisArg, argList) {
     return NormalCompletion(newSymbol); // There is a Typo newSumbol in the Spec.
 };
 
+var SymbolFunction_$$create = function (thisArg, argList) {
+    return withError("Type", "The Symbol[@@create] method of the Symbol function is supposed to throw a Type Error");
+};
 
+MakeConstructor(SymbolFunction, true, SymbolPrototype);
 
+setInternalSlot(SymbolFunction, "Call", SymbolFunction_Call);
+setInternalSlot(SymbolFunction, "Construct", SymbolFunction_Construct);
+setInternalSlot(SymbolPrototype, "Prototype", ObjectPrototype);
+
+LazyDefineBuiltinConstant(SymbolFunction, $$create, CreateBuiltinFunction(realm, SymbolFunction_$$create, 0, "[Symbol.create]"));
+LazyDefineBuiltinConstant(SymbolFunction, "create", $$create);
 LazyDefineBuiltinFunction(SymbolFunction, "for", 1, SymbolFunction_for);
+LazyDefineBuiltinConstant(SymbolFunction, "isConcatSpreadable", $$isConcatSpreadable);
+LazyDefineBuiltinConstant(SymbolFunction, "isRegExp", $$isRegExp);
+LazyDefineBuiltinConstant(SymbolFunction, "iterator", $$iterator);
 LazyDefineBuiltinFunction(SymbolFunction, "keyFor", 1, SymbolFunction_keyFor /* ,realm */);
+LazyDefineBuiltinConstant(SymbolFunction, "prototype", SymbolPrototype);
+LazyDefineBuiltinConstant(SymbolFunction, "toInstance", $$hasInstance);
+LazyDefineBuiltinConstant(SymbolFunction, "toPrimitive", $$toPrimitive);
+LazyDefineBuiltinConstant(SymbolFunction, "toStringTag", $$toStringTag);
+LazyDefineBuiltinConstant(SymbolFunction, "unscopables", $$unscopables);
+LazyDefineBuiltinConstant(SymbolPrototype, "constructor", SymbolFunction);
+LazyDefineBuiltinConstant(SymbolPrototype, $$toPrimitive, CreateBuiltinFunction(realm, SymbolPrototype_$$toPrimitive, 1, "[Symbol.toPrimitive]"));
 LazyDefineBuiltinFunction(SymbolPrototype, "toString", 0, SymbolPrototype_toString);
-LazyDefineBuiltinFunction(SymbolPrototype, "valueOf", 0, SymbolPrototype_valueOf);
 LazyDefineBuiltinConstant(SymbolPrototype, $$toStringTag, "Symbol");
-LazyDefineBuiltinConstant(SymbolPrototype, $$toPrimitive,
-    CreateBuiltinFunction(realm, SymbolPrototype_$$toPrimitive, 1, "[Symbol.toPrimitive]"));
+LazyDefineBuiltinFunction(SymbolPrototype, "valueOf", 0, SymbolPrototype_valueOf);
+
 
 
 // ===========================================================================================================
@@ -23388,10 +23361,16 @@ LazyDefineBuiltinFunction(MessagePortPrototype, "postMessage", 0, MessagePortPro
             LazyDefineBuiltinConstant(globalThis, "undefined", undefined);
             DefineOwnProperty(globalThis, "unescape", GetOwnProperty(intrinsics, "%Unescape%"));
             LazyDefineBuiltinConstant(globalThis, $$toStringTag, "syntaxjs")
+/*
 
-            /* This is wrapping the native global object and performs automatic recursive wrapping
-            and unwrapping of objects.
-             */
+        if (typeof Java !== "function" && typeof load !== "function" && typeof print !== "function") {
+
+	    LazyDefineProperty(intrinsics, "%DOMWrapper%", ExoticDOMObjectWrapper(
+    		typeof importScripts === "function" ? self : typeof window === "object" ? window : process)
+    	    );
+        }
+        
+        
             if (typeof importScripts === "function") {
                 DefineOwnProperty(globalThis, "self", GetOwnProperty(intrinsics, "%DOMWrapper%"));
             } else if (typeof window === "object") {
@@ -23406,14 +23385,11 @@ LazyDefineBuiltinFunction(MessagePortPrototype, "postMessage", 0, MessagePortPro
             } else if (typeof process === "object") {
                 DefineOwnProperty(globalThis, "process", GetOwnProperty(intrinsics, "%DOMWrapper%"));
             }
+            
+            */
             return globalThis;
         }
 
-        if (typeof Java !== "function" && typeof load != "function" && typeof print != "function") {
-        LazyDefineProperty(intrinsics, "%DOMWrapper%", ExoticDOMObjectWrapper(
-            typeof importScripts === "function" ? self : typeof window === "object" ? window : process)
-        );
-        }
         return intrinsics;
     }
 
