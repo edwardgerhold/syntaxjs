@@ -25,7 +25,8 @@ es6> it.next();
 10
 ```
 
-= New: Multiple Realms
+New: Multiple Realms
+======================
 
 Creation of an eval realm.
 You can have as many realms as you want.
@@ -157,9 +158,12 @@ es6> .print id
 }
 ```
 
-= Standard Steps
+Standard Steps
+==============
 
 It´s really an interpreter
+Written by someone who is not in the business
+by someone who never had the chance to study but last time over video lectures which helped much
 
 Source Code is entered
 It´s tokenized
@@ -179,7 +183,8 @@ are existing and of course already imagined with message passing and json transm
 The -Xform ending means, that this function like evalAsyncXform also tries to translate properties behind getters
 and setters in EcmaScript 5. The right stuff. But i didn´t code it out yet.
 
-= Parser_API
+Parser_API
+==========
 
 It´s using Mozilla Parser_API for AST representation.
 
@@ -349,7 +354,8 @@ Additional Decorators
 With the requirement for this.* calls for function [node.type] being on a object[node.type] these
 functions can be decorated for any kind of additional or changing behaviour with the cost of decorators.
 
-= Missing
+Missing
+=========
 
 * Developer Documentation
 
@@ -366,7 +372,8 @@ And know the hundred and fifty open bugs
 I know what´s going wrong
 But it takes time until i repair them
 
-= Design Issues
+Design Issues
+============
 
 - Design Patterns
 
@@ -480,7 +487,8 @@ requires data-astnodeid for mouseover/touch annotation of expression types
 BEEN SPOTTED YET! IT MUST BE SO STUPID THAT I DIDN`T FIND AT ONCE IN DECEMBER
 OR IN EARLY JANUARY)
 
-= Tests
+Tests
+=====
 
 * There are some handwritten files, and some handwritten tests existing, but
 the final testsuite shall be test262, the official testsuite for ecmascript,
@@ -495,5 +503,56 @@ THEY WILL USE A PRE ELEMENT FOR A CODE SNIPPET AND SYNTAXJS TO EVALUATE IT
 AFTER GRABBING IT WITH QUERYSELECTOR AND TESTER.JS WILL VERIFY THE RESULTS
 WITH THE EXPECTATION PROVIDED. ALL IN COLORS IN HTML WITH THE HIGHLIGHTER.
 
+* Then i suddenly had the idea to make my life easier stripping off the
+boilerplate and adding a json test format.
 
 
+```
+testmaker.js 0.0.0 for tester.js for syntax.js by Edward
+{
+	"test1":	
+	{
+	    "init": 
+		"let x = 10;",
+	    "tests": 
+	    [
+		["x",10],
+		["x+x;", 20]
+	    ]
+	},
+	
+	"test2": 
+	{
+	    "init": 
+		"const x = 20;",
+	    "tests": 
+	    [
+		["x = 30; x;", 20],
+		["x-=10", 10],
+		["x", 20]
+	    ]
+	}
+}
+
+2 tests completed in : 2ms
+Number of Tests: 2
+Executed assertions: 2
+Passed assertions: 2
+Failed assertions: 0
+Unexpected exceptions: 0
+PASS: assert: actual=10, expected=10: message=x
+PASS: assert: actual=20, expected=20: message=x+x;
+3 tests completed in : 1ms
+Number of Tests: 3
+Executed assertions: 3
+Passed assertions: 3
+Failed assertions: 0
+Unexpected exceptions: 0
+PASS: assert: actual=20, expected=20: message=x = 30; x;
+PASS: assert: actual=10, expected=10: message=x-=10
+PASS: assert: actual=20, expected=20: message=x
+# testmaker.js finished work for now
+```
+
+Now it´s easy to write tests for syntax.js when they are easy
+and just test some strings of code. This will save a lot of time.
