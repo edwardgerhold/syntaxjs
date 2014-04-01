@@ -262,7 +262,10 @@ possibly this could be refactored, but currently it is supporting the system to 
 .computed is for get [s]() computed property names (needed)
 ```{ type: "BindingElement", id: identifier[, as: identifier] }``` in ObjectPattern["properties"]
 
-.computed is IsComputedPropertyName
+.computed is IsComputedPropertyName (in objectliterals, resolves to a symbol)
+
+.computed in MemberExpression stands for obj[key] 
+But .computed in PropertyDefinitionLists stands for { [s]: prop } keys.
 
 together with of .const for IsConstantDeclaration
 a LetDeclarations and ConstDeclarations should be
@@ -297,9 +300,50 @@ Additional Builder (Parser_API Builder, not Builder Pattern self)
 The codegen module is using the builder Pattern in combination with callBuilder(node) for perfection (is clean, read).
 Will be used for the compiler later, for sure, because i´ve interfaced with already.
 
+```
+    var builder = {};
+    // The original Parser_API builder has a different signature for each node.type
+    
+    builder.functionDeclaration = function fdecl(id, formals, body, strict, generator, expression, loc) {
+	// much parameters to pass exactly when doing the interfacing
+	// is a little to learn for the beginning and easy after being introduced to
+    };
+
+```
 Here i have another interface to propose ```function [node.type](node) { ...process node here.. }```
 which is used for the visitor, the interpreter and could be used for any kind of Parser_API Visitor
 and Builder.
+```
+    var builder = {};
+    // a codegenerator
+    builder["VariableStatement"] = function (node) {
+	var src= node.kind + " ";
+	foreach(node.declarations, function (decl) {
+	    src += decl.id 
+	    if (decl.init) src += " = "+builder[decl.init.type](decl.init);
+	});
+	src += ";";
+	return src;	
+    };
+    // or a compiler
+    builder["ReturnStatement"] = function (node) {
+	var code = alloc(4); 
+	var ptr = heap.store(node.argument);
+	code[0] = byteCode["return"];
+	ptr = ptr || 0;
+	code[1] = ptr & 0xFFFFFF;
+	code[2] = ptr & 0xFFFF;
+	code[3] = ptr & 0xFF;
+	return code;
+    };
+
+```
+It´s easier, or?
+I use a function callBuilder(node) with a giant switch to map the node and
+it´s arguments (via switch decision i do each manually) to the right interface
+and call apply with the arguments array i created in the switch.
+
+TO DO: the options argument of Reflect.parse is not inclusive in the current version.
 
 Additional Decorators
 With the requirement for this.* calls for function [node.type] being on a object[node.type] these
@@ -330,12 +374,16 @@ They are coming into this. I have read the Head First book in March. And i know 
 means, you understand at once what i´ve written, or what that skeleton is for.
 
 There are factory methods for the tokens and nodes planned as well as a refactoring of the
-highlighter app for the builder.
+highlighter app for the builder. No matter, wether it´s createProgram(body, loc) or
+createGUIButton(),  factories and builders will find it´s way here.
 
-The visitor/interpreter is doing it´s job very well in his variation.
+The Composite/Strategy/ and MVC for the highlighter is not an option right now, but i´ve
+suddenly checked how the good GUI´s are designed today.
+
+The visitor/interpreter is doing it´s job very well in it´s variation.
 
 Decorators are coming to all the parser/lexer/evaluation functions. I´ll fix the latter with this, too.
-I think evaluation[node.type](node) is already decoratable.
+I think evaluation[node.type](node) is already decoratable. The parser definitly is.
 This makes analysis possible and hurts with a thisexpression, which should be constant in modern engines
 and be not slower then accessing the scope anyways for the function.
 
@@ -391,6 +439,10 @@ js>
 
 seems like i have to fix something
 
+(spidermonkey is already working so far. but i have to take a list
+for print/console.log and other functions/properties provided/not provided
+to make some duck typing system complete)
+
 - Heap
 
 Is for storing all objects and data
@@ -413,8 +465,8 @@ meanwhile i´m behind myself with the code which seems to be promising to get it
 
 - Syntax Highlighter
 
-Is the OLDEST part in the System and keeping me away from letting the tokenizers stand alone mode
-die in favor for real input element goals on next calls everywhere the grammar says.
+Is the OLDEST part in the System which kept me away from letting the tokenizers stand alone mode die 
+in favor for real input element goals on next() calls everywhere the grammar says.
 
 Bases on the tokenizer and blocked my development for a while or a few times, because i won´t take
 my time to change break the program (last year it served my homepage with the tests and i had no
@@ -424,6 +476,10 @@ Should be refactored to use the AST instead of the tokens, well, the tokens AND 
 is more than only the tokens, coz scope and eval results are inclusive.
 requires data-astnodeid for mouseover/touch annotation of expression types
 
+(HAS TO BE REPAIRED, GOT BROKEN BY A BYTE OF MISTAKE IN DECEMBER WHICH HASN´T
+BEEN SPOTTED YET! IT MUST BE SO STUPID THAT I DIDN`T FIND AT ONCE IN DECEMBER
+OR IN EARLY JANUARY)
+
 = Tests
 
 * There are some handwritten files, and some handwritten tests existing, but
@@ -431,4 +487,13 @@ the final testsuite shall be test262, the official testsuite for ecmascript,
 which can already be run from the commandline.
 
 * I will write new tests.
+
+FOR APRIL 2014:
+
+* NEW TEST WILL BE IN /TEST/HIGHLIGHTER in HTML FORMAT. I JUST BEGUN WITH.
+THEY WILL USE A PRE ELEMENT FOR A CODE SNIPPET AND SYNTAXJS TO EVALUATE IT
+AFTER GRABBING IT WITH QUERYSELECTOR AND TESTER.JS WILL VERIFY THE RESULTS
+WITH THE EXPECTATION PROVIDED. ALL IN COLORS IN HTML WITH THE HIGHLIGHTER.
+
+
 
