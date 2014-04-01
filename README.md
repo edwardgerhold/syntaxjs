@@ -99,7 +99,8 @@ The solution will be not to create a living model of the object, which i suspect
 to create, but to create a snapshot of the current state of the object. That needs no getters and setters
 and returns recursivly objects and arrays with object and array prototypes.
 
-= Regular Usage
+Regular Usage
+=============
 It can be tried with simply typing node syntax0.js. 
 
 ```

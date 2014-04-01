@@ -272,10 +272,10 @@ define("fswraps", function (require, exports) {
     function readFile(name, callback, errback) {
         if (syntaxjs.system == "node") {
             var fs = module.require("fs");
-            return fs.readFile(name, function (err, data) {
+            return fs.readFile(name, "utf8", function (err, data) {
                 if (err) errback(err);
                 else callback(data);
-            }, "utf8");
+            });
             return true;
         
         } else if (syntaxjs.system == "browser") {
@@ -29131,14 +29131,14 @@ define("syntaxjs", function () {
         evalFile: pdmacro(function (name, callback, errback) {
             var syntaxjs = this;
             return this.readFile(name, function (code) {
-                return syntaxjs.eval(code);
+                return callback(syntaxjs.eval(code));
             }, function (err) {
-                console.dir(err);
+                return errback(err);
             })
 
         }),
         evalFileSync: pdmacro(function (name) {
-            return this.eval(this.readFile(name));
+            return this.eval(this.readFileSync(name));
         }),
         subscribeWorker: pdmacro(require("syntaxjs-worker").subscribeWorker),
         evalStaticXform: pdmacro(require("runtime").ExecuteAsyncStaticXform),

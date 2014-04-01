@@ -20,36 +20,33 @@
 
 <pre data-syntaxjs-controls="true">
     let el = "#console1";
-    var pass = false;
-    if (true) {
-	console.html(el, "TEST BESTANDEN");
-	pass = true;
-    } else {
-	console.html(el, "TEST NICHT BESTANDEN");
-    }
-    pass;
+    for (let i=0; i < 10; i++) console.html(el, i);
 </pre>
+
 <div id="console1">
 </div>
 
 <pre data-syntaxjs-controls="true">
-    let el = "#console2";
-    var pass = false;
-
-    if (false) {
-	console.html(el, "TEST NICHT BESTANDEN");
-    } else {
-	console.html(el, "TEST BESTANDEN");
-	pass = true;
+    for (let x of "abcdefghijk") {
+	console.html("#console2", x);
     }
-
-    pass;
 </pre>
 <div id="console2"></div>
+
+
+<pre data-syntaxjs-controls="true">
+    let obj;
+    for (var k in (obj={ a:1, b:2, c:3, d:4 })) {
+	console.html("#console3", (k + " = "+obj[k]));
+    }
+    // ah, last item in for in is missing
+</pre>
+<div id="console3"></div>
 
 <div id="results"></div>
 <script src="../../tools/tester0.js"></script>
 <script src="../../syntax0.js"></script>
+
 <script>
 window.addEventListener("load", function (e) {
 
@@ -58,16 +55,28 @@ window.addEventListener("load", function (e) {
    test.add(function () {
        var code = elements[0].innerHTML;
        var result = syntaxjs.eval(code, true, true);
-       this.assert(result, true, code);
+       this.assert(result, undefined, code);
    });
    
    test.add(function () {
         var code = elements[1].innerHTML;
         var result = syntaxjs.eval(code, true, true);
-        this.assert(result, true, code);
+        this.throws(function () {
+    	    var code = "x";
+	    result = syntaxjs.eval(code, true);
+        }, "x");
     });
-   test.run();
 
+   test.add(function () {
+        var code = elements[2].innerHTML;
+        var result = syntaxjs.eval(code, true, true);
+
+        var code = "k";
+        result = syntaxjs.eval(code, true);
+        this.assert(result, "c", code);
+    });
+
+   test.run();
    test.html({ el: "#results" });
 });
 </script>

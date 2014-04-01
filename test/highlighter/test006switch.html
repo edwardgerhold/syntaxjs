@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>Syntax.JS Test Files</title>
+    <link href="../../css/syntax.css" rel="stylesheet" type="text/css">
+    <link href="../../css/tester.css" rel="stylesheet" type="text/css">
+    <style>
+        pre {
+            background:lightgrey;
+        }
+        div {
+
+        }
+    </style>
+</head>
+<body>
+<h2>syntax.js Tests</h2>
+<p>If Statements, Conditional Expressions</p>
+
+<pre data-syntaxjs-controls="true">
+    var pass;
+
+    switch (10) {
+    case 1: 
+	pass = "1";
+	break;
+    case 10;
+	pass = "10";
+	break;
+    default:
+	pass= "default";
+	break;
+    }
+</pre>
+<div id="console1">
+</div>
+
+<div id="results"></div>
+<script src="../../tools/tester0.js"></script>
+<script src="../../syntax0.js"></script>
+<script>
+window.addEventListener("load", function (e) {
+
+   var test = Test();
+   var elements = document.querySelectorAll("pre");
+   test.add(function () {
+       
+       var code = elements[0].innerHTML;
+       var result = syntaxjs.eval(code, true, true);
+       
+       var code = "pass;"
+       result = syntaxjs.eval(code, true);
+       this.assert(result, "10", code);
+   });
+
+   test.run();
+
+   test.html({ el: "#results" });
+});
+</script>
+</body>
+</html>
