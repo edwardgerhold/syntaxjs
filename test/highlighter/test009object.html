@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>Syntax.JS Test Files</title>
+    <link href="../../css/syntax.css" rel="stylesheet" type="text/css">
+    <link href="../../css/tester.css" rel="stylesheet" type="text/css">
+    <style>
+        pre {
+            background:lightgrey;
+        }
+        div {
+
+        }
+    </style>
+</head>
+<body>
+<pre data-syntaxjs-controls="true">
+    let f = (a,b) => { return a * b };
+    f(100, 100);
+</pre>
+
+<pre data-syntaxjs-controls="true">
+    let f = (x)=>x*x;
+    f(100);
+</pre>
+
+<pre data-syntaxjs-controls="true">
+    let f = function (a=10, b=20) { return a+b; };
+    f();
+</pre>
+
+<div id="results"></div>
+<script src="../../tools/tester0.js"></script>
+<script src="../../syntax0.js"></script>
+<script>
+
+window.addEventListener("load", function (e) {
+
+   var test = Test();
+   var elements = document.querySelectorAll("pre");
+
+   test.add(function () {
+       var code = elements[0].innerHTML;
+       var result = syntaxjs.eval(code, true, true);
+       this.assert(result, 100*100, code);
+   });
+   
+
+
+   test.add(function () {
+        var code = elements[1].innerHTML;
+        var result = syntaxjs.eval(code, true, true);
+        this.assert(result, 100*100, code);
+    });
+
+   test.add(function () {
+        var code = elements[2].innerHTML;
+        var result = syntaxjs.eval(code, true, true);
+        this.assert(result, 30, code);
+    });
+
+
+   test.run();
+   test.html({ el: "#results" });
+});
+</script>
+</body>
+</html>
