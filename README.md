@@ -3,6 +3,10 @@ syntaxjs
 
 Not bugfree EcmaScript 6 Interpreter written in EcmaScript 5
 
+(i haven´t seen a virtual machine or typed memory before so if you are looking for you´re right but a year too early)
+(i will have to redo this readme over and over until it´s just a documentation)
+(it´s serious, but don´t take it too serious, i have quite problems writing plain english)
+
 This is a true ECMA-262 implementation. But it isn´t completed yet. 
 It´s "feature complete" like ES6 already is, but the features aren´t 
 completed yet. Some things fail, some don´t, some didn´t before,
@@ -88,6 +92,7 @@ es5> var obj2 = realm.evalXform("{ a:1, b:2 }");
 { a:getter/setter, b:getter/setter }
 
 // the better xformer captures a snapshot of the state which can be deeply converted into a static snapshot
+
 es5> var obj2 = realm.evalXform("{ a:1, b:2 }");
 { a:1, b:2 }
 es5> obj2.a;
@@ -223,6 +228,13 @@ of the ECMA-262 Specification. They form (long named) the complete required AST 
 variables as lists or single values each node, which will be collected when parsing, say ast properties).
 One should update parser api for.
 
+Everyone who cares not for and deferring them to semantic analysis should analyse
+the complexity of the semantics.js "slower-static-semantics" module. Doing this on 
+an AST to retrieve the properties in a second step hurts JIT and Interpreter hardly.
+It´s traversing the AST over and over. And even memoizing will only hinder redoing the
+same, but not omit the repeating traversals completly. The best is to do this in one
+wash with the first syntactic parsing.
+
 Example: MethodDefinitions should have .static (static class property) and .special (getter, setter)
 properties, it´s ugly to test oneself wether it´s a get or a set after the parser had that already.
 
@@ -334,10 +346,10 @@ and Builder.
     // or a compiler
     builder["ReturnStatement"] = function (node) {
 	var code = alloc(4); 
-	var ptr = heap.store(node.argument);
+	var ptr = heap.store(builder[node.argument.type](node.argument)));
 	code[0] = byteCode["return"];
 	ptr = ptr || 0;
-	code[1] = ptr & 0xFFFFFF;
+	code[1] = ptr & 0xFFFFFF;  // oh it´s wrong
 	code[2] = ptr & 0xFFFF;
 	code[3] = ptr & 0xFF;
 	return code;
@@ -378,6 +390,23 @@ Design Issues
 
 - Design Patterns
 
+Update: the "nodefactory" an abstract factory with factory methods, in a concrete
+mozilla parser api nodes producing implementation will be in lib/parsenodes/nodefactory.js
+and i would like to go and replace the node production with. Currently they are nested in
+each parse function, which is not too bad, but i could factor the loc creation out
+as well. 
+
+I have to overwork the parser anyways, since i´ve read books about since i´ve written
+that (it´s my first javascript parser) which have these methods cleaned up, and i don´t
+want to continue reinventing the parser-wheel again. I can make it faster and faster, 
+i need a prediction at 'for', four characters lookahead at punctuators if the first one 
+is a `>' else up to three until they are hardcoded gated, but else it is linear.
+Well. Then there is the change to capture whitespaces in the parser by an extras flag
+for the coming processor features (which can come, when the parser is bugfixed, which
+isn´t difficult, but that there was around 750k ecma spec and code and 250k more 
+refactorings and 400k deleted and even worser code between)
+
+Design Patterns,
 They are coming into this. I have read the Head First book in March. And i know they are communicatable,
 means, you understand at once what i´ve written, or what that skeleton is for.
 
@@ -486,7 +515,7 @@ requires data-astnodeid for mouseover/touch annotation of expression types
 
 (HAS TO BE REPAIRED, GOT BROKEN BY A BYTE OF MISTAKE IN DECEMBER WHICH HASN´T
 BEEN SPOTTED YET! IT MUST BE SO STUPID THAT I DIDN`T FIND AT ONCE IN DECEMBER
-OR IN EARLY JANUARY)
+OR IN EARLY JANUARY.)
 
 Tests
 =====
@@ -497,12 +526,13 @@ which can already be run from the commandline.
 
 * I will write new tests.
 
-FOR APRIL 2014:
+* New HTML tests will arrive in test/highlighter. To show the HTML features
+of tester.js and syntax.js as well as the results.
 
-* NEW TEST WILL BE IN /TEST/HIGHLIGHTER in HTML FORMAT. I JUST BEGUN WITH.
-THEY WILL USE A PRE ELEMENT FOR A CODE SNIPPET AND SYNTAXJS TO EVALUATE IT
-AFTER GRABBING IT WITH QUERYSELECTOR AND TESTER.JS WILL VERIFY THE RESULTS
-WITH THE EXPECTATION PROVIDED. ALL IN COLORS IN HTML WITH THE HIGHLIGHTER.
+THE POINT: I was wondering. It´s failing more than my old version but got a lot 
+more features and over 1/3 more code. I broke it in december and haven´t caught
+it yet.
+
 
 * Then i suddenly had the idea to make my life easier stripping off the
 boilerplate and adding a json test format.
@@ -557,3 +587,5 @@ PASS: assert: actual=20, expected=20: message=x
 
 Now it´s easy to write tests for syntax.js when they are easy
 and just test some strings of code. This will save a lot of time.
+
+Oh, the print of "init" is missing for orientation.
