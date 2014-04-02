@@ -296,14 +296,16 @@ define("fswraps", function (require, exports) {
 	return function adapterFunction () {
 	    for (var i = 0, j = keys.length; i < j; i++) {
 		var k = keys[i];
-		var test = methods.test[k];
+
+            var test = methods.test[k];
 		if (typeof test != "function") {
 		    throw new TypeError("adapter: adaptee.test['"+k+"'] is not a function");
 		}
-		if (test[k]()) {
+
+		if (test()) {
 		    var work = methods.work[k];
 		    if (typeof work != "function") {
-			throw new TypeError("adapter: adaptee.work['"+k+"'] is not a function");
+			    throw new TypeError("adapter: adaptee.work['"+k+"'] is not a function");
 		    }
 		    return work.apply(optionalThis || this, arguments);
 		}
@@ -1856,7 +1858,7 @@ define("tables", function (require, exports, module) {
     exports.ReservedWordsInStrictMode = ReservedWordsInStrictMode;
     exports.IsTemplateToken = IsTemplateToken;
     return exports;
-    // return tables;
+
 });
 
 
@@ -14698,6 +14700,7 @@ var OnSuccessfulTransfer_Call = function (thisArg, argList) {
  */
 
 
+
     var createGlobalThis, createIntrinsics;
 
     function define_intrinsic(intrinsics, intrinsicName, value) {
@@ -18447,6 +18450,8 @@ function CreateStringIterator(string, kind) {
     return iterator;
 }
 
+
+LazyDefineBuiltinConstant(StringIteratorPrototype, $$toStringTag, "String Iterator");
 
 
 // ===========================================================================================================
@@ -29251,10 +29256,9 @@ define("syntaxjs", function () {
         eval: pdmacro(require("runtime")),
         createRealm: pdmacro(require("api").createPublicCodeRealm),
         toJsLang: pdmacro(require("js-codegen")),				// <-- needs exports fixed
-        nodeShell: pdmacro(require("syntaxjs-shell")),				// <-- needs exports fixed
 
-    // experimental functions 
-    
+        makeAdapter: pdmacro(require("fswraps").makeAdapter),
+    // experimental functions
         readFile: pdmacro(require("fswraps").readFile),	
         readFileSync: pdmacro(require("fswraps").readFileSync),
         evalFile: pdmacro(function (name, callback, errback) {
@@ -29263,12 +29267,12 @@ define("syntaxjs", function () {
                 return callback(syntaxjs.eval(code));
             }, function (err) {
                 return errback(err);
-            })
-
+            });
         }),
         evalFileSync: pdmacro(function (name) {
             return this.eval(this.readFileSync(name));
         }),
+
         subscribeWorker: pdmacro(require("syntaxjs-worker").subscribeWorker),
         evalStaticXform: pdmacro(require("runtime").ExecuteAsyncStaticXform),
         evalAsync: pdmacro(require("runtime").ExecuteAsync),
@@ -29293,12 +29297,17 @@ define("syntaxjs", function () {
         syntaxjs.system = "browser";
         syntaxjs_highlighter_api.highlightElements = pdmacro(require("highlight-gui").highlightElements),
         syntaxjs_highlighter_api.startHighlighterOnLoad = pdmacro(require("highlight-gui").startHighlighterOnLoad)
-    } else if (typeof process !== "undefined") {    
+
+    } else if (typeof process !== "undefined") {
     // node js export
-        if (typeof exports !== "undefined") exports.syntaxjs = syntaxjs;       
+
+        if (typeof exports !== "undefined") exports.syntaxjs = syntaxjs;
         syntaxjs.system = "node";
         syntaxjs._require = module.require;
         syntaxjs._module = module;
+
+        syntaxjs_public_api_readonly.nodeShell = pdmacro(require("syntaxjs-shell"));// <-- needs exports fixed
+
         Object.defineProperties(exports, syntaxjs_public_api_readonly);
         Object.defineProperties(exports, syntaxjs_highlighter_api);
     } else if (typeof load == "function" && typeof print == "function") {
