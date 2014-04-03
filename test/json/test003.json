@@ -1,0 +1,24 @@
+{
+	"let x with initialisation of x with 10":	
+	{
+	    "init": 
+		"let x = 10;",
+	    "tests": 
+	    [
+		["x",10],
+		["x+x;", 20]
+	    ]
+	},
+	
+	"a const x with a value of twenty and manipulations on": 
+	{
+	    "init": 
+		"const x = 20;",
+	    "tests": 
+	    [
+		["x = 30; x;", 20],
+		["x-=10", 10],
+		["x", 20]
+	    ]
+	}
+}

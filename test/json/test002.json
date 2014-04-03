@@ -1,0 +1,16 @@
+{
+	"an array with five elements":	
+	{
+	    "init": 
+		"let a = [1,2,3,4,5]",
+	    "tests": 
+	    [
+		["a.length", 5],
+		["a[0]", 1],
+		["a[4]", 5],
+		["a[5]"],
+		["a.join()", "1,2,3,4,5"]
+	    ]
+	}
+	
+}

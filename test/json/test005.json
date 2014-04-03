@@ -1,0 +1,13 @@
+{
+	"array comprehension with string iteration":	
+	{
+	    "init": 
+		"let a = [for (x of 'abcdefg') x]",
+	    "tests": 
+	    [
+		["a[0]", "a"],
+		["a.join('')", "abcdefg"]
+	    ]
+	}
+	
+}

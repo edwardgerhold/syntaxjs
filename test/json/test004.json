@@ -1,0 +1,25 @@
+{
+	"object literal with three properties":	
+	{
+	    "init": 
+		"let obj = { a: 1, b: 'Hallo Welt', c: false }",
+	    "tests": 
+	    [
+		["obj.a", 1],
+		["obj.b;", "Hallo Welt"],
+		["!obj.c", true]
+	    ]
+	},
+	
+	"computed property name":	
+	{
+	    "init": 
+		"let s = Symbol(); let obj = { [s]: 'Hallo Welt' }",
+	    "tests": 
+	    [
+		["obj[s]", "Hallo Welt"],
+		["obj.s;" ]
+	    ]
+	}
+	
+}

@@ -1,0 +1,6 @@
+TESTMAKER=../../tools/testmaker.js
+for f in *.json; 
+do
+    node $TESTMAKER $f
+done
+

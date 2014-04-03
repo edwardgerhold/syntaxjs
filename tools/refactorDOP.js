@@ -221,9 +221,6 @@ function replace() {
 	    }
 	};
 
-	console.dir(varDecl);
-	console.dir(varDecl.declarations[0].init);
-	
 	console.log("created varDecl and callExpr from original callexpr");
 		
 	var code1 = syntaxjs.toJsLang({type:"Program", body:[varDecl]});

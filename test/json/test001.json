@@ -1,0 +1,35 @@
+{
+	"a function with no arguments returning ten":	
+	{
+	    "init": 
+		"function f() { return 10; }",
+	    "tests": 
+	    [
+		["f()",10],
+		["f()+f()", 20]
+		
+	    ]
+	},
+	
+	"a function without default arguments": 
+	{
+	    "init": 
+		"function g(a,b) { return a+b; }",
+	    "tests": 
+	    [
+		["g(1,2)", 3]
+	    ]
+	},
+
+	"a function with default arguments": 
+	{
+	    "init": 
+		"function h(a=10,b=20) { return a+b; }",
+	    "tests": 
+	    [
+		["h()", 30],
+		["h(20,50)", 70]
+	    ]
+	}	
+	
+}
