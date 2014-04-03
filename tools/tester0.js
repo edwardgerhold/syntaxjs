@@ -242,11 +242,13 @@ function process_results(f) {
     this.results.forEach(f);
 }
 function print_results() {
-    console.log("Number of Tests: "+this.tests.length);
-    console.log("Executed assertions: "+this.count.assertions);
-    console.log("Passed assertions: "+this.count.passed);
-    console.log("Failed assertions: "+this.count.failed);
-    console.log("Unexpected exceptions: "+this.count.exceptions);
+    var str = "[Tests: "+this.tests.length;
+    str += " Asserts: "+this.count.assertions;
+    str += " Passed: "+this.count.passed;
+    str += " Failed: "+this.count.failed;
+    str += " Exceptions: "+this.count.exceptions;
+    str += "]";
+    console.log(str);
     this.results.forEach(function (rec) {
 	console.log(rec.print);
     });

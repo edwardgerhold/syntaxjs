@@ -1,10 +1,6 @@
 /*
-    testmaker for tester.js
-    
-    
+    testmaker for tester.js    
     idea:
-    
-    
     test.json = {
     
 	"test1":	{
@@ -29,10 +25,21 @@
     // .init is called to initialise the environment
     // .tests will be called with the same environment
     // each top-level test creates with .init a new realm
+    
+    
+    lacks:
+
+    json has no undefined
+    tests agains undefined (omit the expected value should result in an undefined passed)
+    
+    NaN
+    the is no expectation to test against nan.
+    maybe a third argument in the test array could be such a command
+    
 */
 
-var VERSION = "0.0.0";
-var rawjson, json, writetests, testnames;
+var VERSION = "0.0.1";
+var rawjson, json, writetests, testnames, verbose, fn;
 var Test = require("../tools/tester0.js").Test;
 var syntaxjs = require("../syntax0.js").syntaxjs;
 
@@ -45,29 +52,28 @@ function about() {
 function usage() {
     console.log("usage:");
     console.log("testmaker.js tests.json (calls tester.js and syntax.js with the testdata at once)");
-    console.log("testmaker.js tests.json -w (unimplemented, will write code instead of calling tester)");
+    console.log("-v = verbose and prints tests.json out each time");
+    console.log("-w = (unimplemented, will write code instead of calling tester)");
 }
 
 
 function basic_setup () {
     var args = process.argv.slice(2);
+
+    for (var i = 1, j = args.length; i < j; i++) {
+	if (args[i] == "-w") writetests = true;
+	else if (args[i] == "-v") verbose = true;
+	else fn = args[i];
+    }
     rawjson = fs.readFileSync(args[0], "utf8");
-    console.log(rawjson);;
-    if (args[1] == "-w") writetests = true;
     json = JSON.parse(rawjson);
     testnames = Object.keys(json);
 }
 
 function writeTest(current) {
-    //
-    // write the same like in runTest
-    // just as source code
-    // so one can generate code for websites
-    // or for whatever (maybe to be modified)
-    //
 }
 
-function prepareTest(current) {
+function runTest(current) {
     var tester = new Test();
     var code = current.init;
     var result = syntaxjs.eval(code, true, true);
@@ -85,20 +91,26 @@ function prepareTest(current) {
 }
 
 (function main() {
-    about();
+
     if (process.argv.length < 2) {
+        about();
 	usage();
 	process.exit(-1);
     }
 
     basic_setup();
     
+    if (verbose) {
+	about();
+	console.log(rawjson);
+    }
+    
     testnames.forEach(function (testname) {
 	var current = json[testname];
-	if (writetests) writeTest(current);
-	else prepareTest(current);
+	//if (writetests) writeTest(current);
+	//else 
+	runTest(current);
     });
     
-    console.log("# testmaker.js finished work for now");
 }());
 

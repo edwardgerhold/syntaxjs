@@ -10,8 +10,7 @@
     to replace the call with a call to another
     function, which saves some work and LOC,
     but would be too much to be changed manually.
-    
-    
+        
     Here i can learn refactoring code with
     
     Mozilla Parser_API and syntax.js
@@ -29,7 +28,7 @@
 
 var esprima = require("esprima");
 var syntaxjs = require("syntaxjs").syntaxjs;
-var withEsprima = true;
+var withEsprima;
 
 var fs = require("fs");
 
@@ -41,7 +40,8 @@ function getAst(file) {
     console.log("parsing "+file+" with esprima");
     return esprima.parse(code);
     }
-    console.log("hanging "+file+" with syntax.js (temp)");
+    //console.log("hanging "+file+" with syntax.js (temp)");
+    console.log("parsing "+file+" with syntax.js");
     return syntaxjs.parse(code);
 }
 
@@ -62,7 +62,7 @@ function search(node, parent) {
 
     if (Array.isArray(node)) {
 	node.forEach(function (child) {
-	    search(child, node);
+	    search(child, parent);
 	});
 	return;
     }
@@ -122,61 +122,55 @@ function replace() {
     
 	// Die komplette CallExpression.
 	// Auseinandernehmen, ersetzen.
+	
 	var params = node.arguments;
 
-	var id = params[0].name;
-	var name = params[1].value;
-	var desc = params[2];		
-	var props = desc.properties; // desc is ObjectExpression
+	var id = getValue(params[0]);
+	var name = getValue(params[1]);	
+	var desc = params[2];	
+	// desc is ObjectExpression	
+	var props = desc.properties; 
+	    
         var enumer = false, 
 	conf = false, 
 	writ = false;
+	
 	var value, funcExpr;
 	var ok;
 	for (var i = 0, j = props.length; i < j; i++) {
 	    var prop = props[i];
-	    if (prop.key.name == "enumerable") enumer = prop.value.value;
-	    if (prop.key.name == "configurable") conf = prop.value.value;
-	    if (prop.key.name == "writable") writ = prop.value.value;
+	    if (prop.key.name == "enumerable") enumer = getValue(prop.value);
+	    if (prop.key.name == "configurable") conf = getValue(prop.value);
+	    if (prop.key.name == "writable")     writ = getValue(prop.value);
 	    if (prop.key.name == "value") {
-		value = prop.value;
 
+		value = getValue(prop);
 		if (value.type == "CallExpression") {
 		
+		    // suche:
+		    // CallExpression
+		    // callee: Identifier "CreateBuiltinFunction"
+		    // arguments: [realm, funcExpr, flength, name]
 		    if (value.callee.name == "CreateBuiltinFunction") {
-			ok = true;
-			var args = value.arguments;
-			
-			realm = args[0].name;
+			ok = true;			
+						
+			var args = value.arguments;			
+			realm = getValue(args[0]);
 			funcExpr = args[1];
-			flength = args[2].value;
-			fname = args[3];
-			fname = fname && fname.value;
-			
-			for (var y = 0, z = args.length; y < z; y++) {
-			    var arg = args[y];
-			}
-		    
+			flength = getValue(args[2])|0;
+			fname = getValue(args[3]);			
+						
 		    }	
 		    
 		} 
 		
-		/*else 
-		if (value && value.type == "FunctionDeclaration") {
-		    ok = true;
-		    funcExpr = value;
-		    flength = funcExpr.formals.length;
-		    
-		}*/
 	    }
 	}
 	
 	if (!ok) return;
 	
-	var methodVariable = id+"_"+name;
-	
-	
-	console.log("methodVariable = "+methodVariable);
+	var callfn_VarName = id+"_"+name;	
+	console.log("callfn_VarName = "+callfn_VarName);
 	
 	var varDecl = {
 	    type: "VariableDeclaration",
@@ -184,7 +178,7 @@ function replace() {
 	    declarations: [
 		{
 		    type: "VariableDeclarator",
-		    id: methodVariable,
+		    id: callfn_VarName,
 		    init: funcExpr
 		}
 	    ],
@@ -193,7 +187,6 @@ function replace() {
 		end: {}
 	    }
 	};
-	
 	var callExpr = {
 	    type: "CallExpression",
 	    callee: {
@@ -214,12 +207,12 @@ function replace() {
 		    value: name
 		},
 		{
-		    type: "Literal",
+		    type: "NumericLiteral",
 		    value: flength
 		},
 		{
 		    type: "Identifier",
-		    value: methodVariable
+		    value: callfn_VarName
 		}
 	    ],
 	    loc: {
@@ -227,9 +220,14 @@ function replace() {
 		end: {}
 	    }
 	};
+
+	console.dir(varDecl);
+	console.dir(varDecl.declarations[0].init);
 	
-	var code1 = syntaxjs.toJsLang({ type: "Program", body: [ varDecl ] });
-	var code2 = syntaxjs.toJsLang({ type: "Program", body: [ callExpr ] });
+	console.log("created varDecl and callExpr from original callexpr");
+		
+	var code1 = syntaxjs.toJsLang({type:"Program", body:[varDecl]});
+	var code2 = syntaxjs.toJsLang({type:"Program", body:[callExpr]});
 
 	state.decls.push(code1);
 	state.defines.push(code2);
@@ -240,7 +238,42 @@ function replace() {
 
 }
 
+function getValue(node) {
+    if (!node) return node;
+    switch (node.type) {    
+    case "Identifier":
+	return node.name;
+    case "StringLiteral":
+	return node.value.substr(1,node.value.length-2);
+    case "NumericLiteral":
+	return node.value;
+    case "BooleanLiteral":
+	return node.value;
+    case "Literal":
+	return node.value;
+    default:
+	return node.value;
+    }
+}
+
+function about() {
+    console.log("refactorDOP.js");
+    console.log("is a specialised tool for doing a certain task");
+    console.log("this tool replaces some DefineOwnProperty calls with better code.");
+
+
+    console.log("");
+}
+function usage() {
+    console.log("refactorDOP.js [input[, input[, ...]]] -o output.js [-e|-s]");
+    console.log("-e parses with esprima, -s with syntax.js");
+}
+
 (function main (args) {
+    about();
+    if (!args.length) {
+	usage();
+    }
     
     state.inputs = [];
     
@@ -250,6 +283,10 @@ function replace() {
 	    withEsprima = false;
 	    continue;
 	}
+	if (arg === "-e") {
+	    withEsprima = true;
+	    continue;
+	}	
 	if (arg === "-o") {
 	    var ofile = state.ofile = args[++i];
 	    if (typeof ofile != "string" || !ofile.length) {
@@ -266,14 +303,13 @@ function replace() {
     
     state.inputs.forEach(function (input) {
 
-	console.error("processing file: "+input);
-	
+	console.error("processing file: "+input);	
 	console.log("// OMITTING INPUT ");
 		
         var ast = getAst(input);
         
-        do_search(ast);
-        do_replace();
+        do_search(ast); // search is specialised. refactorDOP is hardcoded.
+        do_replace();	// same here
 
 	console.log("// DEFINE CALLS");
 
@@ -288,7 +324,7 @@ function replace() {
         });
         
         var rnum = state.replaced.length;
-        console.error("// DONE after "+rnum+" entries (will be continued for overworking the source)");
+        console.error("// DONE after "+rnum+" entries");
     });
 
 }(process.argv.slice(2)));
