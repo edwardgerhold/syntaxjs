@@ -90,6 +90,7 @@ function runTest(current, testname) {
     });
     console.log(separator);
     console.log(testname);
+    console.log(code);
     tester.run();
     tester.print();
 }
