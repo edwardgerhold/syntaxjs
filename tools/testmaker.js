@@ -39,7 +39,7 @@
 */
 
 var VERSION = "0.0.1";
-var rawjson, json, writetests, testnames, verbose, fn;
+var rawjson, json, writetests, testnames, verbose, fn, separator;
 var Test = require("../tools/tester0.js").Test;
 var syntaxjs = require("../syntax0.js").syntaxjs;
 
@@ -68,12 +68,14 @@ function basic_setup () {
     rawjson = fs.readFileSync(args[0], "utf8");
     json = JSON.parse(rawjson);
     testnames = Object.keys(json);
+    separator = "";
+    for (var i = 0; i < 50; i++) separator += "-";
 }
 
 function writeTest(current) {
 }
 
-function runTest(current) {
+function runTest(current, testname) {
     var tester = new Test();
     var code = current.init;
     var result = syntaxjs.eval(code, true, true);
@@ -87,6 +89,8 @@ function runTest(current) {
 	});
     });
     tester.run();
+    console.log(separator);
+    console.log(testname);
     tester.print();
 }
 
@@ -109,7 +113,7 @@ function runTest(current) {
 	var current = json[testname];
 	//if (writetests) writeTest(current);
 	//else 
-	runTest(current);
+	runTest(current, testname);
     });
     
 }());
