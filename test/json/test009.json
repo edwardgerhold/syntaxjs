@@ -1,0 +1,14 @@
+{
+	"symbol.for and keyfor testing global symbol registry":	
+	{
+	    "init": 
+		
+		"let s = Symbol.for('Edward');",
+
+	    "tests": 
+	    [
+		["Symbol.for('Edward') === s", true ],
+		["Symbol.keyFor(s) === 'Edward'", true]
+	    ]
+	}
+}

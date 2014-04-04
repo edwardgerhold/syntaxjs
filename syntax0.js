@@ -10047,6 +10047,7 @@ function Assert(act, message) {
 
 function createPublicCodeRealm () {
     var realm = CreateRealm();
+
     return {
         eval: function toValue() {
             return realm.toValue.apply(realm, arguments);
@@ -10192,6 +10193,7 @@ function CreateRealm () {
     realmRec.indirectEval = undefined;
     realmRec.Function = undefined;
     realmRec.GlobalSymbolRegistry = Object.create(null);
+
     makeTaskQueues(realmRec);
 
     // my programming mistakes fixed.
@@ -18684,18 +18686,19 @@ var SymbolFunction_keyFor = function (thisArg, argList) {
     var sym = argList[0];
     if (Type(sym) !== "symbol") return withError("Type", "keyFor: sym is not a symbol");
     var key = getInternalSlot(sym, "Description");
-    var e = GlobalSymbolRegistry[key];
-    if (SameValue(e.Symbol, sym)) return NormalCompletion(e.key);
+    var e = getRealm().GlobalSymbolRegistry[key];
+    if (SameValue(e.Symbol, sym)) return NormalCompletion(e.Key);
     Assert(getRealm().GlobalSymbolRegistry[key] === undefined, "GlobalSymbolRegistry must not contain an entry for sym");
     return NormalCompletion(undefined);
 };
+
 
 var SymbolFunction_for = function (thisArg, argList) {
     var key = argList[0];
     var stringKey = ToString(key)
     if (isAbrupt(stringKey = ifAbrupt(stringKey))) return stringKey;
     var e = getRealm().GlobalSymbolRegistry[key];
-    if (e !== undefined && SameValue(e.Key, stringKey)) return NormalCompletion(e.symbol);
+    if (e !== undefined && SameValue(e.Key, stringKey)) return NormalCompletion(e.Symbol);
     Assert(e === undefined, "GlobalSymbolRegistry must currently not contain an entry for stringKey");
     var newSymbol = SymbolPrimitiveType();
     setInternalSlot(newSymbol, "Description", stringKey);

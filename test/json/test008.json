@@ -1,0 +1,14 @@
+{
+	"with statement":	
+	{
+	    "init": 
+		
+		"let obj = { a: 1, b: 2, c() { return 10; } };",
+
+	    "tests": 
+	    [
+		["obj.c()", 10],
+		["obj.d = function(a) { return 20+a; }; obj.d(20)", 40]
+	    ]
+	}
+}
