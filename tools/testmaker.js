@@ -88,9 +88,9 @@ function runTest(current, testname) {
 	    this.assert(result, expected, code);
 	});
     });
-    tester.run();
     console.log(separator);
     console.log(testname);
+    tester.run();
     tester.print();
 }
 
