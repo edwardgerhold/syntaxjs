@@ -1,0 +1,16 @@
+{
+	"array prototype entries, keys, values":	
+	{
+	    "init": 
+		
+		"let a = ['Edward', 'is', 'writing', 'mistakes']",
+
+	    "tests": 
+	    [
+	    	["let str0 = ''; for (x of a.keys()) str0+=x; str0;", "0123" ],
+		["let str1 = ''; for (x of a.values()) str1+=x; str1;", "Edwardiswritingmistakes" ],
+		["let str2 = ''; for (x of a.entries()) str2+=x[1]; str2", "Edwardiswritingmistakes" ],		
+    		["let str3 = ''; for (x of a.entries()) str3+=x[0]; str3", "0123" ]
+	    ]
+	}
+}
