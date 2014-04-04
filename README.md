@@ -589,3 +589,90 @@ Now it´s easy to write tests for syntax.js when they are easy
 and just test some strings of code. This will save a lot of time.
 
 Oh, the print of "init" is missing for orientation.
+
+
+CST 
+===
+
+It found it´s way into the empty statement.
+Like commented in http://github.com/getify/concrete-syntax-tree
+i try to flush the buffer whenever there can be a buffer. When
+it´s empty no buffer will be added, if it is, it will. This adds
+little to the parsers constant factor, but doesnt raise complexity
+as they are stored and passed without extra iterations.
+
+
+```
+es6> function f() { /* 32 */ ; /* 3453 */ ; /* 34534 */ ; /* %$6345 */ }
+undefined
+es6> f.toString()
+function f () {
+    ;undefined;
+    ;undefined;
+}
+es6>```
+
+Ok, that didn´t work. But with some change.
+
+```
+/syntax0.js successfully written.
+# build_syntax: done
+linux-dww5:/s # es6 extras.js 
+-evaluating extras.js-
+function f () {
+       
+    /* 1 */;
+    /* 2 */;
+    /* 3 */
+    ;/*4*/
+    /*5*/;
+    /*6*//*7*//*8*/;/*9*/
+;
+}
+undefined
+es6> 
+```
+
+It´s not perfect. For comparison the original code. This file was evaluated
+via ```es6 extras.js``` and the above was the result. Here is what it typed
+in. It´s not exactly the same. You see the /* 3 */ comment being on the wrong
+line ? And /* 6 */? It´s the lineterminator between the statements that´s
+added automatically
+
+```
+function f() {
+    /* 1 */;
+    /* 2 */;/* 3 */
+    ;/*4*/
+    /*5*/;/*6*//*7*//*8*/;/*9*/
+}
+console.log(f.toString());
+```
+
+I added this to the empty statement
+```
+    builder.emptyStatement = function emptyStatement(loc, extras) {
+        var src = "";
+        if (extras && extras.before) src += callBuilder(extras.before);
+        src += ";";
+        if (extras && extras.after) src += callBuilder(extras.after);
+        return src;
+    };
+```
+
+After i added this to the builder and first got the undefined answer from above 
+    
+```
+    builder.whiteSpace = function (value, loc) {
+        return value;
+    };
+    builder.lineComment = function(value, loc) {
+        return value + "\n";
+    };
+    builder.multiLineComment= function (value, loc) {
+        return value;
+    };
+    builder.lineTerminator= function (value, loc) {
+        return value;
+    };
+```

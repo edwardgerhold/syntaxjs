@@ -3846,45 +3846,47 @@ define("parser", function () {
     var inStrictMode = false;
 
 
-    /*
-     for the CST research
-	i´ll do a proper commentary tostring with
-	.extras buffer used for selective storage
-     */
 
     var withExtras = true;
-
     var extraBuffer = [];
-
-    function newExtrasNode() {
+    function newExtrasNode(data) {
         var node = Node("Extras");
-        node.extras = [];
+        if (data) node.extras = data;
+        else node.extras = [];
         return node;
     }
-    
     function exchangeBuffer() {
         var b = extraBuffer;
         extraBuffer = [];
         return b;
     }
-    
     function intoBuffer(t) {
         extraBuffer.push(t);
     }
     
-    function addExtras(node, prop, dir) {
-	var extras;
-	if (!node.extras) node.extras = {};
-	if (!node.extras[prop]) node.extras[prop] = {};
-	node.extras[prop][dir] = exchangeBuffer();
+    function dumpExtras(node, prop, dir) {   // dumpExtras(id, "id", "before");
+	    var extras;
+        if (!extraBuffer.length) return;
+	    if (!node.extras) node.extras = {};
+	    if (!node.extras[prop]) node.extras[prop] = {};
+	    node.extras[prop][dir] = extraBuffer;
+        extraBuffer = [];
     }
-
+    function dumpExtras2(node, prop) {   // dumpExtras(id, "id", "before");
+        var extras;
+        if (!extraBuffer.length) return;
+        if (!node.extras) node.extras = {};
+        node.extras[prop] = extraBuffer;
+        extraBuffer = [];
+    }
 /*
 
 */
-
-    var currentScopeNode;
+    var currentScopeNode;   // can be class, function, module
     var scopeNodeStack = [];
+    var currentModuleScope; // just be module
+    var currentModuleStack = [];
+    // have to finsish this crap urgently.
 
     // loc information (not completed yet)
     var operator;
@@ -6288,7 +6290,8 @@ define("parser", function () {
             node.strict = true;
 
             scopeNodeStack.push(currentScopeNode);
-            currentScopeNode = node;
+            currentModuleStack.push(currentModuleScope);
+            currentScopeNode = currentModuleScope = node;
 
             node.exportEntries = [];
             node.knownExports = [];
@@ -6310,6 +6313,7 @@ define("parser", function () {
             staticSemantics.popEnvs();
 
             currentScopeNode = scopeNodeStack.pop();
+            currentModuleScope =  currentModuleStack.pop();
 
             return node;
         }
@@ -6500,17 +6504,12 @@ define("parser", function () {
             } else {
                 node.exports = this.ExportsClause();
                 if (node.exports) node.from = this.FromClause();
-
                 else node.exports = this.VariableStatement() || this.DeclarationDefault();
-
-
                 var names = BoundNames(node.exports);
                 for (var i = 0, j = names.length; i < j; i++) {
                     var name = names[i];
-                    currentScopeNode.exportEntries.push({ ModuleRequest: null, ImportName: null, LocalName: name, ExportName: name })
+                    currentModuleScope.exportEntries.push({ ModuleRequest: null, ImportName: null, LocalName: name, ExportName: name });
                 }
-
-
                 skip(";");
                 if (!node.exports) throwError(new SyntaxError("should be an error in the export statement"));
             }
@@ -6936,7 +6935,15 @@ define("parser", function () {
         if (v === ";") {
             node = Node("EmptyStatement");
             node.loc = makeLoc(loc && loc.start, loc && loc.end);
+
+
+                dumpExtras2(node, "before");
+
             pass(";");
+
+                dumpExtras2(node, "after");
+
+
             if (compile) return builder.emptyStatement(loc);
             return node;
         }
@@ -7052,7 +7059,7 @@ define("parser", function () {
     function QuantifierPrefix() {
         var prefix, digits = "";
         if (quantifierPrefixes[v]) {
-            prefix = Node("quantifierprefix");
+            prefix = Node("Quantifierprefix");
             if (v === "{") {
                 next();
                 while (v !== "}") {
@@ -7072,7 +7079,7 @@ define("parser", function () {
 
     function Assertion() {
         var node;
-        var node = Node("assertion");
+        var node = Node("Assertion");
         if (v === "^") {
 
         } else if (v === "$") {
@@ -7096,7 +7103,7 @@ define("parser", function () {
     function AtomQuantifieropt() {
         var atom = Atom();
         if (atom) {
-            var node = Node("term");
+            var node = Node("Term");
             node.atom = atom;
             var qf = Quantifier();
             if (qf) {
@@ -7154,7 +7161,8 @@ define("parser", function () {
         if (disjunction) {
             node.disjunction = disjunction;
             return node;
-        } else return null;
+        }
+        return null;
     }
 
     function PatternCharacter() {
@@ -7404,17 +7412,21 @@ define("parser", function () {
     function registerObserver(f) {
         if (typeof f === "function")
             observers.push(f);
-        else throw new TypeError("registerObserver: argument f is not a function")
+        else
+           throw new TypeError("registerObserver: argument f is not a function")
     }
     function unregisterObserver(f) {
         observers = observers.filter(function (g) { return f !== g; });
     }
+    function notifyObserver(observer) {
+            observer(node);
+    }
     function notifyObservers(node) {
-        observers.forEach(function (observer) { observer(node); });
+        observers.forEach(notifyObserver);
         return node;
     }
     /*
-     * Builder Object can be compilers, more analyzers, whatever can be done inside of the interface
+     * Builder Object can be compilers, more analyzers, whatever can be done behind the interface
      */
     var saveBuilder = [];
     function unsetBuilder(objBuilder) {
@@ -7435,7 +7447,7 @@ define("parser", function () {
             throw "objBuilder ist a Mozilla Parser-API compatible Builder Object for Code Generation from the AST, see http://developers.mozilla.org/en-US/docs/SpiderMonkey/Parser_API for more how to use..";
         }
         builder = objBuilder;
-        if (boolCompile !== undefined) compile = !! boolCompile;
+        if (boolCompile !== undefined) compile = !!boolCompile;
         return true;
     }
 
@@ -7505,6 +7517,27 @@ define("parser", function () {
 
 
     this one takes the extras after the loc to change no signature but extend them by ", extras"
+
+
+    additional builder functions
+    for es6
+
+    directive
+    arrayComprehension
+    objectPattern
+    arrayPattern
+    templateLiteral
+    generatorDeclaration
+    generatorExpression
+    generatorComprehension
+    and more
+
+    for concrete syntax tree
+
+    builder.whiteSpace
+    builder.lineTerminator
+    builder.multiLineComment
+    builder.lineComment
     
 ############################################################################################################################################################################################################
 */
@@ -7550,7 +7583,7 @@ define("js-codegen", function (require, exports, module) {
     /*
     Object.keys(parser).forEach(function (k) {
         if (["next","scan","pass","parse"].indexOf(k) > -1) return;
-        names[k] = k[0].toLowerCase() + k.slice(1);
+        names[k] = (k[0]).toLowerCase() + k.substr(1, k.length-1);
     });
     */
     function callBuilder(node) {
@@ -7604,7 +7637,7 @@ define("js-codegen", function (require, exports, module) {
                 args = [node.kind, node.declarations, node.loc, node.extras];
                 break;
             case "EmptyStatement":
-                args = [node.extras, node.loc];
+                args = [node.loc, node.extras];
                 break;
             case "ForStatement":
                 args = [node.init, node.test, node.update, node.body, node.loc, node.extras];
@@ -7709,7 +7742,14 @@ define("js-codegen", function (require, exports, module) {
             case "TemplateLiteral":
                 args = [node.spans, node.loc, node.extras];
                 break;
+                case "WhiteSpace":
+                case "LineComment":
+                case "MultiLineComment":
+                case "LineTerminator":
+                    args = [node.value, node.loc];
+                    break;
             }
+
             name = name[0].toLowerCase() + name.slice(1);
             return builder[/*names[*/name/*]*/].apply(builder, args);
         }
@@ -7810,8 +7850,11 @@ define("js-codegen", function (require, exports, module) {
             return src;
     };
 
-    builder.emptyStatement = function emptyStatement(loc) {
-        var src = ";";
+    builder.emptyStatement = function emptyStatement(loc, extras) {
+        var src = "";
+        if (extras && extras.before) src += callBuilder(extras.before);
+        src += ";";
+        if (extras && extras.after) src += callBuilder(extras.after);
         return src;
     };
 
@@ -8168,6 +8211,24 @@ define("js-codegen", function (require, exports, module) {
     };
     builder.superExpression = function (loc) {
         return "super";
+    };
+
+    /*
+        the concrete syntax tree needs these
+
+     */
+
+    builder.whiteSpace = function (value, loc) {
+        return value;
+    };
+    builder.lineComment = function(value, loc) {
+        return value + "\n";
+    };
+    builder.multiLineComment= function (value, loc) {
+        return value;
+    };
+    builder.lineTerminator= function (value, loc) {
+        return value;
     };
 
     function buildFromSrc(src) {
@@ -17458,6 +17519,7 @@ var ArrayPrototype_splice = function splice(thisArg, argList) {
 var ArrayPrototype_unshift = function unshift(thisArg, argList) {
 
 };
+
 LazyDefineBuiltinFunction(ArrayPrototype, "splice", 2, ArrayPrototype_splice);
 LazyDefineBuiltinFunction(ArrayPrototype, "unshift", 1, ArrayPrototype_unshift);
 
@@ -17731,7 +17793,6 @@ var ArrayPrototype_findIndex = function (thisArg, argList) {
 
 LazyDefineBuiltinFunction(ArrayPrototype, "predicate", 1, ArrayPrototype_predicate);
 LazyDefineBuiltinFunction(ArrayPrototype, "findIndex", 1, ArrayPrototype_findIndex);
-
 
 DefineOwnProperty(ArrayPrototype, "entries", {
     value: CreateBuiltinFunction(realm, function entries(thisArg, argList) {
@@ -21044,22 +21105,24 @@ setInternalSlot(GeneratorFunction, "Call", function Call(thisArg, argList) {
     var parameters = parseGoal("FormalParameterList", P);
 
     var funcBody = parseGoal("GeneratorBody", bodyText);
-    if (!Contains(funcBody, "YieldExpression")) return withError("Syntax", "GeneratorFunctions require some yield expression");
-    var boundNames = BoundNames(parameters);
 
+    /*  this is very slow, asking for static semantics here with having to analyse the tree
+    * this should be captured by the ecmascript compliant parser */
+
+     if (!Contains(funcBody, "YieldExpression")) return withError("Syntax", "GeneratorFunctions require some yield expression");
+    var boundNames = BoundNames(parameters);
     if (!IsSimpleParameterList(parameters)) {
         if (dupesInTheTwoLists(boundNames, VarDeclaredNames(funcBody))) return withError("Syntax", "Duplicate Identifier in Parameters and VarDeclaredNames of funcBody");
     }
     if (dupesInTheTwoLists(boundNames, LexicallyDeclaredNames(funcBody))) return withError("Syntax", "Duplicate Identifier in Parameters and LexicallyDeclaredNames of funcBody");
 
+
+
     var scope = getRealm().globalEnv;
-
     var F = thisArg;
-
     if (F == undefined || !hasInternalSlot(F, "Code")) {
         F = FunctionAllocate(GeneratorFunction, "generator");
     }
-
     if (getInternalSlot(F, "FunctionKind") !== "generator") return withError("Type", "function object not a generator");
     FunctionInitialise(F, "generator", parameters, funcBody, scope, true);
     var proto = ObjectCreate(GeneratorPrototype);
