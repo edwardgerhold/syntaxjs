@@ -5,7 +5,7 @@
 		"let x; x = 0; for (let y = 0; y< 5; y++) x+=y;",
 	    "tests": 
 	    [
-		["x", 15]
+		["x", 10]
 	    ]
 	},
 	"simple for loop with blockstatement":	
@@ -14,7 +14,7 @@
 		"let x = 0; for (let y = 0; y < 5; y++) { x+=y; }",
 	    "tests": 
 	    [
-		["x", 15]
+		["x", 10]
 	    ]
 	}	
 }
