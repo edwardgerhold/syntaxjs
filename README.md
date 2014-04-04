@@ -637,7 +637,9 @@ It´s not perfect. For comparison the original code. This file was evaluated
 via ```es6 extras.js``` and the above was the result. Here is what it typed
 in. It´s not exactly the same. You see the /* 3 */ comment being on the wrong
 line ? And /* 6 */? It´s the lineterminator between the statements that´s
-added automatically
+added automatically? Is there one added? Or is it, the captured lineTerminator?
+Well, then this codegenerator may no longer use the nl() function if extras
+are turned on.
 
 ```
 function f() {
