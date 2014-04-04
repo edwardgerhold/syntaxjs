@@ -14720,6 +14720,100 @@ var OnSuccessfulTransfer_Call = function (thisArg, argList) {
  */
 
 
+/**
+ * Created by root on 04.04.14.
+ */
+
+/*
+Specification:
+ https://github.com/dslomov-chromium/typed-objects-es7
+
+    still have to read it
+ */
+
+
+
+    function TypeDescriptorExoticObject() {
+        var obj = Object.create(TypeDescriptorExoticObject.prototype);
+        setInternalSlot(obj, "Structure", undefined); // structure value
+        setInternalSlot(obj, "Rank", undefined);    // int
+        setInternalSlot(obj, "Opacity", undefined); // bool
+        setInternalSlot(obj, "ArrayDescriptor", undefined); /// undef or typedesc
+        setInternalSlot(obj, "OpaqueDescriptor", undefined); // undef or typedesc
+        return obj;
+    }
+
+    TypeDescriptorExoticObject.prototype = {
+        constructor: TypeDescriptorExoticObject,
+        toString: function () { return "[object TypeDescriptorExoticObject]" }
+    };
+    addMissingProperties(TypeDescriptorExoticObject.prototype, OrdinaryObject.prototype);
+
+
+    function TypeExoticObject() {
+        var obj = Object.create(TypeExoticObject.prototype);
+        setInternalSlot(obj, "TypeDescriptor", undefined);
+        setInternalSlot(obj, "Dimensions", undefined);
+        // assert len(dim) == rank of typedesc
+        return obj;
+    }
+
+    TypeExoticObject.prototype = {
+        constructor: TypeDescriptorExoticObject,
+        toString: function () { return "[object TypeExoticObject]"; },
+
+        Call: function (thisArg, argList) {
+            if (argList.length === 0) {
+
+                return;
+            }
+            var arg0 = argList[0]
+            if (getInternalSlot(arg0, "ArrayBufferData")) {
+               return;
+            } else if (arg0 != undefined) {
+                return;
+            }
+        },
+
+        GetOwnProperty: function () {
+
+        },
+        GetPrototypeOf: function () {
+
+        },
+        IsExtensible: function () {
+            return false;
+        },
+        Structure: function (O) {
+            var typeDescriptor = getInternalSlot(O, "TypeDescriptor");
+            return getInternalSlot(typeDescriptor, "Structure");
+        }
+
+    };
+    addMissingProperties(TypeExoticObject.prototype, OrdinaryObject.prototype)
+
+    // Ground Structures
+    var int8,uint8,uint16,uint32,int32,float32,float64,any,string,object,int16;
+
+
+    var GroundStructures = {
+        "uint8": { "Structure": uint8, "Opacity": false },
+        "int8": { "Structure": int8, "Opacity": false},
+        "uint16": { "Structure": uint16, "Opacity": false},
+        "int16": { "Structure": int16, "Opacity": false},
+        "uint32": { "Structure": uint32, "Opacity": false},
+        "int32": { "Structure": int32, "Opacity": false},
+        "float32": { "Structure": float32, "Opacity": false},
+        "float64": { "Structure": float64, "Opacity": false},
+
+        "any": { "Structure": any, "Opacity": true},
+        "string": { "Structure": string, "Opacity": true},
+        "object": { "Structure": object, "Opacity": true}
+    };
+
+// but in some hours i will
+
+
 
     var createGlobalThis, createIntrinsics;
 
@@ -14892,6 +14986,14 @@ var OnSuccessfulTransfer_Call = function (thisArg, argList) {
         var MessagePortPrototype = createIntrinsicPrototype(intrinsics, "%MessagePortPrototype%");
 
         var DebugFunction = createIntrinsicFunction(intrinsics, "debug", 1, "%DebugFunction%");
+
+
+
+        var StructTypeConstructor = createIntrinsicConstructor(intrinsics, "StructType", 0, "%StructType%");
+        var StructTypePrototype = createIntrinsicPrototype(intrinsics, "%StructTypePrototype%");
+        var TypeConstructor = createIntrinsicConstructor(intrinsics, "Type", 0, "%Type%");
+        var TypePrototype = createIntrinsicPrototype(intrinsics, "%TypePrototype%");
+
 
         // ===========================================================================================================
         // %ThrowTypeError%
@@ -23443,6 +23545,32 @@ LazyDefineBuiltinFunction(MessagePortPrototype, "postMessage", 0, MessagePortPro
 
 
 
+/**
+ * Created by root on 04.04.14.
+ */
+var TypePrototypePrototype;
+
+var TypePrototype_arrayType = function (thisArg, argList) {
+};
+
+var TypePrototype_opaqueType = function (thisArg, argList) {
+};
+
+var StructType_Call = function (thisArg, argList) {
+};
+
+// The above must be moved out of intrinsics/ into api for more speed creating realms.
+// that all "objects" gonna be refactored for typed memory is some other topic.
+
+// Type.prototype
+LazyDefineBuiltinFunction(TypePrototype, "arrayType", 1, TypePrototype_arrayType);
+LazyDefineBuiltinFunction(TypePrototype, "opaqueType", 1, TypePrototype_opaqueType);
+
+// StructType
+setInternalSlot(StructTypeConstructor, "Call", StructType_Call);
+// StructType.prototype
+
+
 
         createGlobalThis = function createGlobalThis(realm, globalThis, intrinsics) {
 
@@ -23480,8 +23608,14 @@ LazyDefineBuiltinFunction(MessagePortPrototype, "postMessage", 0, MessagePortPro
             DefineOwnProperty(globalThis, "Realm", GetOwnProperty(intrinsics, "%Realm%"));
             DefineOwnProperty(globalThis, "ReferenceError", GetOwnProperty(intrinsics, "%ReferenceError%"));
             DefineOwnProperty(globalThis, "RegExp", GetOwnProperty(intrinsics, "%RegExp%"));
+
+            DefineOwnProperty(globalThis, "StructType", GetOwnProperty(intrinsics, "%StructType%"));
+
+
             DefineOwnProperty(globalThis, "SyntaxError", GetOwnProperty(intrinsics, "%SyntaxError%"));
             LazyDefineProperty(globalThis, "System", realm.loader);
+
+
             DefineOwnProperty(globalThis, "TypeError", GetOwnProperty(intrinsics, "%TypeError%"));
             DefineOwnProperty(globalThis, "URIError", GetOwnProperty(intrinsics, "%URIError%"));
             DefineOwnProperty(globalThis, "Object", GetOwnProperty(intrinsics, "%Object%"));
