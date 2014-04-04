@@ -169,8 +169,8 @@ function replace() {
 	
 	if (!ok) return;
 	
-	var callfn_VarName = id+"_"+name;	
-	console.log("callfn_VarName = "+callfn_VarName);
+	var callFnVarName = id+"_"+name;	
+	console.log("callFnVarName = "+callFnVarName);
 	
 	var varDecl = {
 	    type: "VariableDeclaration",
@@ -178,7 +178,7 @@ function replace() {
 	    declarations: [
 		{
 		    type: "VariableDeclarator",
-		    id: callfn_VarName,
+		    id: callFnVarName,
 		    init: funcExpr
 		}
 	    ],
@@ -187,6 +187,8 @@ function replace() {
 		end: {}
 	    }
 	};
+        
+        // LazyDefineBuiltinFucntion(realm, id, name, flength, callFnVarName)
 	var callExpr = {
 	    type: "CallExpression",
 	    callee: {
@@ -212,7 +214,7 @@ function replace() {
 		},
 		{
 		    type: "Identifier",
-		    value: callfn_VarName
+		    value: callFnVarName
 		}
 	    ],
 	    loc: {

@@ -37,23 +37,19 @@
 //#include "lib/parsenodes/earlyerrors.js";
 
 //#include "lib/parsenodes/parser.js";
+//#include "lib/parsenodes/cstcodegen.js";
 
 //#include "lib/heap/heap.js";
-
 //#include "lib/compile/compiler.js";
-
 //#include "lib/compile/arraycompiler.js";
-
-//#include "lib/parsenodes/cstcodegen.js";
 
 //#include "lib/api.js";
 
 //#include "lib/parsenodes/runtime.js";
 
+
 //#include "lib/highlighter/highlighter.js";
-
 //#include "lib/highlighter/highlighter-app.js";
-
 //#include "lib/worker.js";
 
 //#include "lib/shell.js";

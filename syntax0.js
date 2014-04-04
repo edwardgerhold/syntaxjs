@@ -322,6 +322,8 @@ define("fswraps", function (require, exports) {
         });
     }
 
+        // change to f(err, data)
+
     function readFile(name, callback, errback) {
         if (syntaxjs.system == "node") {
             var fs = module.require("fs");
@@ -332,9 +334,8 @@ define("fswraps", function (require, exports) {
             return true;
 
         } else if (syntaxjs.system == "browser") {
-
             var xhr = new XMLHttpRequest();
-            xhr.open("GET", name, false);
+            xhr.open("GET", name, true);
             xhr.onloadend = function (e) {
                 callback(xhr.responseText);
             };
@@ -346,7 +347,7 @@ define("fswraps", function (require, exports) {
             return true;
         } else if (syntaxjs.system == "worker") {
             var xhr = new XMLHttpRequest();
-            xhr.open("GET", name, false);
+            xhr.open("GET", name, true);
             xhr.onloadend = function (e) {
                 callback(xhr.responseText);
             };
@@ -365,12 +366,12 @@ define("fswraps", function (require, exports) {
             return fs.readFileSync(name, "utf8");
         } else if (syntaxjs.system == "browser") {
             var xhr = new XMLHttpRequest();
-            xhr.open("GET", name, true);
+            xhr.open("GET", name, false);
             xhr.send(null);
             return xhr.responseText;
         } else if (syntaxjs.system == "worker") {
             var xhr = new XMLHttpRequest();
-            xhr.open("GET", name, true);
+            xhr.open("GET", name, false);
             xhr.send(null);
             return xhr.responseText;
         }
@@ -2913,7 +2914,7 @@ define("tokenizer", function () {
     var cb;
     var tokens = [];
     var line = 1,
-        column = 0;
+        column = 1;
     var lines = [];
     var offset = 0;
     var filename = null;
@@ -3559,7 +3560,7 @@ define("tokenizer", function () {
     function nextLine() {
         lines[line] = column;
         ++line;
-        column = 0;
+        column = 1;
         return line;
     }
 
@@ -3873,9 +3874,9 @@ define("parser", function () {
     
     function addExtras(node, prop, dir) {
 	var extras;
-	if (!(extras=node.extras)) extras = node.extras = {};
-	if (!extras[prop]) extras[prop] = {};
-	extras[prop][sub] = exchangeBuffer();
+	if (!node.extras) node.extras = {};
+	if (!node.extras[prop]) node.extras[prop] = {};
+	node.extras[prop][dir] = exchangeBuffer();
     }
 
 /*
@@ -5297,7 +5298,7 @@ define("parser", function () {
     parser.PrimaryExpression = PrimaryExpression;
     parser.PostfixExpression = PostfixExpression;
     parser.UnaryExpression = UnaryExpression;
-var counter = 0;
+
 
     parser.AssignmentExpression = AssignmentExpression;
     function AssignmentExpression() { 
@@ -5311,22 +5312,22 @@ var counter = 0;
         if (!yieldIsId && v === "yield") node = this.YieldExpression();
         if (!node) node = this.CoverParenthesisedExpressionAndArrowParameterList();
 
-    debug("before unary"+ (++counter));
+
 
         if (!node) leftHand = this.UnaryExpression(); // recurses up
         else leftHand = node;
 
-    debug("after unary"+ (--counter));        
+
 
         if (!leftHand) return null;
 
-debug("a");        
+
         if (v === undefined) return leftHand;
-debug("b");        
+
         if ((isNoIn === true && InOrOf[v])) return leftHand; // i am at "in" or "of" in the expr
-debug("c");        
+
         if (v === "," || ExprEndOfs[v] || ltNext) return leftHand;
-debug("d");        
+
         if (t !== "Punctuator" && !InOrOfInsOf[v]) {
             // throwError(new SyntaxError("can not parse expression"));
             var error = new Error();        
@@ -5334,24 +5335,25 @@ debug("d");
             return leftHand;
         
         }
-debug("e");        
+
         if (v === "?") {
             node = this.ConditionalExpressionNoIn(leftHand);
             return node;
         }
-debug("f");        
+
         
     	debug("before recursion fix ("+t+","+v+")");
-debug("g");        
+
         if (v === "." || v === "[") leftHand = this.MemberExpression(leftHand) || leftHand;
         else if (v === "(" || v === "`") leftHand = this.CallExpression(leftHand) || leftHand;
         else if (v == "++" || v == "--") leftHand = this.PostfixExpression(leftHand) || leftHand;
-debug("h");        
+
     	debug("after recursion fix ("+t+","+v+")");            
-debug("i");        
+
         if (AssignmentOperators[v] && (!isNoIn || (isNoIn && v != "in"))) {
-debug("j");        
-            node = Node("AssignmentExpression found (" + t + ", " + v + ")");
+
+            node = Node("AssignmentExpression");
+            debug("AssignmentExpression found (" + t + ", " + v + ")");
             node.longName = PunctToExprName[v];
             node.operator = v;
             node.left = leftHand;
@@ -5393,15 +5395,21 @@ debug("j");
     parser.SuperExpression = SuperExpression;
 
     function SuperExpression() {
+    
         if (v === "super") {
+        
             var l1 = loc && loc.start;
             var node = Node("SuperExpression");
             node.loc = makeLoc(l1, l1);
             pass("super");
-            if (currentScopeNode) currentScopeNode.needsSuper = true; //
+            
+            
+            if (currentScopeNode) currentScopeNode.needsSuper = true; 
             // wird nicht im classDefaultConstructor erkannt sein.!
+            
             if (compile) return builder.superExpression(node.loc);
             return node;
+            
         }
         return null;
     }
@@ -5818,7 +5826,6 @@ debug("j");
 
 	debug("FormalParameterList (" + t + ", " + v + ")");
 
-
         list.type = "FormalParameterList";
 
         var defaults;
@@ -5860,8 +5867,8 @@ debug("j");
 
         return list;
     }
+    
     parser.FunctionExpression = FunctionExpression;
-
     function FunctionExpression() {
         return this.FunctionDeclaration(true);
     }
@@ -7449,9 +7456,12 @@ debug("j");
                 debug("wrapping "+k)
                 var originalFunction = parser[k];
                 var parseFunction = function () {
-                    var b = flushBuffer();
+            	    console.log("parsing "+originalFunction.name+ " at  "+ v + " "+ t + " " + lookahead);
+            	    
+                    var b = exchangeBuffer();
                     var node = originalFunction.call(this, arguments);
                     if (node) {
+                	if (b.length) console.dir(b);
                         node.extras = b;
                     }
                     return node;
@@ -7477,6 +7487,720 @@ debug("j");
     // enableExtras();
     // uncomment for endless loop
     return exports;
+});
+
+
+/*
+############################################################################################################################################################################################################
+    A Simple JavaScript Codegenerator - This module transforms the AST back into ES6 Source Code.
+    This shall become a prototype to support generating Code from a "Concrete Syntax Tree"
+    
+    This means, it regenerates Comments, WhiteSpaces, LineTerminators
+    
+    How it works?
+    The build(node) function calls callBuilder(node) which is a big switch 
+    for all kinds of nodes. Inside that switch the arguments array is defined. 
+    This is passed to the builder interface of the mozilla parser api.
+    The first node calls callBuilder(body) and each body node will be called with
+    it´s appropriate builder, the whole tree down.
+
+
+    this one takes the extras after the loc to change no signature but extend them by ", extras"
+    
+############################################################################################################################################################################################################
+*/
+
+define("js-codegen", function (require, exports, module) {
+    "use strict";
+
+    var builder = {};
+    var parser = require("parser");
+
+    var parseGoal = parser.parseGoal;
+    var setBuilder = parser.setBuilder;
+    var unsetBuilder = parser.unsetBuilder;
+
+    var TAB = "    ";
+    var SPC = " ";
+    var indent = 0;
+    var nesting = [];
+
+    function tabs(indent) {
+        var str = "";
+        for (var i = 1; i <= indent; i++) {
+            str += TAB;
+        }
+        return str;
+    }
+
+    function nl() {
+        return "\r\n";
+    }
+
+    var names = {
+        __proto__: null,
+
+        "VariableStatement": "variableStatement",
+        "ExpressionStatement": "expressionStatement",
+        "FunctionDeclaration": "functionDeclaration",
+        "MethodDefinition": "methodDefinition",
+        "PropertyDefinition": "propertyDefinition"
+
+    };
+    // ok, map names per function
+    /*
+    Object.keys(parser).forEach(function (k) {
+        if (["next","scan","pass","parse"].indexOf(k) > -1) return;
+        names[k] = k[0].toLowerCase() + k.slice(1);
+    });
+    */
+    function callBuilder(node) {
+        var args;
+        var name;
+
+        if (!node) return "";
+
+        if (Array.isArray(node)) {
+
+            var src = "";
+            var stm;
+            for (var i = 0, j = node.length; i < j; i++) {
+                if (stm = node[i]) {
+                    src += callBuilder(stm);
+                }
+            }
+            return src;
+
+        } else if (typeof node === "string") {
+            return node;
+        } else {
+
+            name = node.type;
+
+            switch (name) {
+            case "BlockStatement":
+                args = [node.body, node.loc, node.extras];
+                break;
+            case "FunctionDeclaration":
+            case "FunctionExpression":
+            case "GeneratorDeclaration":
+            case "GeneratorExpression":
+                args = [node.id, node.params, node.body, node.strict, node.generator, node.expression, node.loc, node.extras];
+                break;
+            case "MethodDefinition":
+                args = [node.id, node.params, node.body, node.strict, node.static, node.generator, node.loc, node.extras];
+                break;
+            case "ArrowExpression":
+                args = [node.id, node.params, node.body, node.loc, node.extras];
+                break;
+            case "ExpressionStatement":
+            case "SequenceExpression":
+                args = [node.expression, node.loc, node.extras];
+                break;
+            case "VariableDeclarator":
+                args = [node.id, node.init, node.loc, node.extras];
+                break;
+            case "VariableDeclaration":
+            case "LexicalDeclaration":
+                args = [node.kind, node.declarations, node.loc, node.extras];
+                break;
+            case "EmptyStatement":
+                args = [node.extras, node.loc];
+                break;
+            case "ForStatement":
+                args = [node.init, node.test, node.update, node.body, node.loc, node.extras];
+                break;
+            case "ForInStatement":
+            case "ForOfStatement":
+                args = [node.left, node.right, node.body, node.loc, node.extras];
+                break;
+            case "DoWhileStatement":
+            case "WhileStatement":
+                args = [node.test, node.body, node.loc, node.extras];
+                break;
+            case "LabelledStatement":
+                args = [node.label, node.statement, node.loc, node.extras];
+                break;
+            case "IfStatement":
+                args = [node.test, node.consequent, node.alternate, node.loc, node.extras];
+                break;
+            case "TryStatement":
+                args = [node.block, node.guard, node.finalizer, node.loc, node.extras];
+                break;
+            case "SwitchStatement":
+                args = [node.discriminant, node.cases, node.loc, node.extras];
+                break;
+            case "WithStatement":
+                args = [node.object, node.body, node.loc, node.extras];
+                break;
+            case "ComprehensionExpression":
+                args = [node.blocks, node.filter, node.expression, node.loc, node.extras];
+                break;
+            case "AssignmentExpression":
+            case "BinaryExpression":
+            case "LogicalExpression":
+                args = [node.operator, node.left, node.right, node.loc, node.extras];
+                break;
+            case "UnaryExpression":
+                args = [node.operator, node.argument, node.prefix, node.loc, node.extras];
+                break;
+            case "MemberExpression":
+                args = [node.object, node.property, node.computed, node.loc, node.extras];
+                break;
+            case "CallExpression":
+            case "NewExpression":
+                args = [node.callee, node.arguments, node.loc, node.extras];
+                break;
+            case "ObjectPattern":
+            case "ArrayPattern":
+                args = [node.elements, node.loc, node.extras];
+                break;
+            case "BindingElement":
+                args = [node.id.name, node.as.name, node.loc, node.extras];
+                break;
+            case "ObjectExpression":
+                args = [node.properties, node.loc, node.extras];
+                break;
+            case "ArrayExpression":
+                args = [node.elements, node.loc, node.extras];
+                break;
+            case "DefaultParameter":
+                args = [node.id, node.init, node.loc, node.extras];
+                break;
+            case "RestParameter":
+                args = [node.id, node.init, node.loc, node.extras];
+                break;
+            case "SpreadExpression":
+                args = [node.argument, node.loc, node.extras];
+                break;
+            case "ClassDeclaration":
+            case "ClassExpression":
+                args = [node.id, node.extends, node.elements, node.expression, node.loc, node.extras];
+                break;
+            case "ThisExpression":
+            case "SuperExpression":
+                args = [node.extras, node.loc];
+                break;
+            case "Program":
+                args = [node.body, node.loc, node.extras];
+                break;
+            case "Identifier":
+                args = [node.name || node.value, node.loc, node.extras];
+                break;
+            case "ReturnStatement":
+            case "ThrowStatement":
+                args = [node.argument, node.loc, node.extras];
+                break;
+
+            case "BreakStatement":
+            case "ContinueStatement":
+                args = [node.argument, node.label, node.loc, node.extras];
+                break;
+            case "YieldExpression":
+                args = [node.argument, node.delegator, node.loc, node.extras];
+                break;
+            case "Directive":
+            case "Literal":
+            case "NumericLiteral":
+            case "StringLiteral":
+            case "NullLiteral":
+            case "BooleanLiteral":
+        	args = [node.value, node.loc, node.extras];
+        	break;
+            case "TemplateLiteral":
+                args = [node.spans, node.loc, node.extras];
+                break;
+            }
+            name = name[0].toLowerCase() + name.slice(1);
+            return builder[/*names[*/name/*]*/].apply(builder, args);
+        }
+    }
+
+    builder.spreadExpression = function (argument, loc, extras) {
+        var src = "..." + callBuilder(argument);
+        return src;
+    };
+
+    builder.restParameter = function (id, init, loc, extras) {
+        var src = "..." + callBuilder(id);
+        if (init) src += " = " + callBuilder(init);
+        return src;
+    };
+
+    builder.defaultParameter = function (id, init, loc, extras) {
+        var src = "";
+        src += callBuilder(id);
+        src += " = ";
+        src += callBuilder(init);
+        return src;
+    };
+
+    builder.classExpression =
+        builder.classDeclaration = function (id, extend, elements, expression, loc, extras) {
+            var src = "class ";
+            src += id;
+            if (extend) src += " extends " + callBuilder(extend);
+            src += "{";
+            ++indent;
+            for (var i = 0, j = elements.length; i < j; i++) {
+                if (e = elements[i]) {
+                    src += tabs(indent) + callBuilder(e) + nl();
+                }
+            }
+            --indent;
+            src += "}";
+            return src;
+    };
+
+    builder.program = function (body, loc, extras) {
+        var src = "";
+        var inst;
+        for (var i = 0, j = body.length; i < j; i++) {
+            if (inst = body[i]) {
+                src += tabs(indent) + callBuilder(inst) + ";" + nl();
+            }
+        }
+        return src;
+    };
+
+    builder.bindingElement = function (name, as, initialiser, loc, extras) {
+        var src = "";
+        src += name;
+        src += ":";
+        src += as;
+        if (initialiser) src += " = " + callBuilder(initialiser);
+        return src;
+    };
+    builder.objectPattern = function (elements, loc, extras) {
+        var src, e;
+        src += "{";
+        for (var i = 0, j = elements.length; i < j; i++) {
+            if (e = elements[i]) {
+                src += callBuilder(e);
+                if (i < j - 1) src += ", ";
+            }
+        }
+        src += "}";
+        return src;
+    };
+    builder.arrayPattern = function (elements, loc, extras) {
+        var src, e;
+        src += "[";
+        for (var i = 0, j = elements.length; i < j; i++) {
+            if (e = elements[i]) {
+                src += callBuilder(e);
+                if (i < j - 1) src += ", ";
+            }
+        }
+        src += "]";
+        return src;
+    };
+    builder.identifier = function (name, loc, extras) {
+        var src = "";
+        src += name;
+        return src;
+    };
+
+    builder.directive =
+        builder.stringLiteral =
+        builder.numericLiteral =
+        builder.booleanLiteral =
+        builder.literal = function (literal, loc, extras) {
+            var src = "";
+            src += literal;
+            return src;
+    };
+
+    builder.emptyStatement = function emptyStatement(loc) {
+        var src = ";";
+        return src;
+    };
+
+    builder.variableDeclarator = function (id, init, loc, extras) {
+        var src = "";
+        
+        if (typeof id == "string")	// for identifier strings
+        src += id;			// esprima uses identifier nodes
+        else src += id.name;		// which is fine for me, too.
+    				    // must align (will replace id strings
+    				    // with nodes)
+        return src;
+    };
+    builder.lexicalDeclaration =
+        builder.variableDeclaration = function variableStatement(kind, declarations, loc, extras) {
+            var src = kind + " ";
+            var decl;
+            for (var i = 0, j = declarations.length; i < j; i++) {
+                if (decl = declarations[i]) {
+
+                    src += callBuilder(decl);
+
+                    if (decl.init) {
+                        src += " = " + callBuilder(decl.init);
+                    }
+
+                    if (i < j - 1) {
+                        src += ", ";
+                    }
+                }
+            }
+            return src;
+    };
+
+    builder.functionBody = function (body) {
+		if (body.type === "BlockStatement") return this.blockStatement(body.body, body.loc, body.extras);
+        var src = "";
+        var st;
+        src += "{";
+        src += nl();
+        ++indent;
+        for (var i = 0, j = body.length; i < j; i++) {
+            if (st = body[i]) {
+                src += tabs(indent) + callBuilder(st) + ";" + nl();
+            }
+        }
+        --indent;
+        src += "}";
+        return src;
+    };
+
+    builder.arrowExpression =
+        function (id, params, body, loc, extras) {
+            var src = "";
+            src += this.formalParameters(params);
+            src += " => ";
+            if (Array.isArray(body))
+            src += this.functionBody(body);
+            else
+            src += callBuilder(body);
+            return s
+
+    };
+
+    builder.functionDeclaration =
+        builder.functionExpression =
+        builder.generatorDeclaration =
+        builder.generatorExpression = function (id, params, body, strict, generator, expression, loc, extras) {
+            var src = "";
+            var st;
+            src = "function";
+            if (generator) src += "*";
+            src += " ";
+            
+            
+	    if (typeof id == "string") {		//change id to node.
+		src += id;
+	    } else if (id) src += id.name;
+	    
+            src += this.formalParameters(params);
+            src += " ";
+            src += this.functionBody(body);
+            return src;
+    };
+
+    builder.generatorMethod =
+        builder.methodDefinition = function (id, params, body, strict, generator, loc, extras) {
+            ++indent;
+            var src = "";
+            if (generator) src += "*";
+            src += id;
+            src += this.formalParameters(params);
+            src += " ";
+            src += this.functionBody(body);
+            return src;
+    };
+
+    builder.formalParameters = function (formals) {
+        var a;
+        var src = "";
+        src += "(";
+        if (formals && formals.length) {
+            for (var i = 0, j = formals.length; i < j; i++) {
+                if (a = formals[i]) {
+                    src += callBuilder(a);
+                    if (i < j - 1) src += ", ";
+                }
+            }
+        }
+        src += ")";
+        return src;
+    }
+
+    builder.memberExpression = function (object, property, computed) {
+        var src = "";
+        src += callBuilder(object);
+        if (computed) src += "[" + callBuilder(property) + "]";
+        else src += "." + callBuilder(property);
+        return src;
+    };
+
+    builder.callExpression = function (callee, args, loc, extras) {
+        var src = "";
+        src += callBuilder(callee);
+        src += this.formalParameters(args);
+        return src;
+
+    };
+    builder.newExpression = function (callee, args, loc, extras) {
+        var src = "new ";
+        src += callBuilder(callee);
+        src += this.formalParameters(args);
+        return src;
+    };
+
+    builder.objectExpression = function (properties, loc, extras) {
+        var p;
+        var src = "{";
+        for (var i = 0, j = properties.length; i < j; i++) {
+            if (p = properties[i]) {
+
+                src += callBuilder(e);
+
+                if (i < j - 1) {
+                    src += ", ";
+                }
+            }
+        }
+        src += "}";
+        return src;
+    };
+    builder.arrayExpression = function (elements, loc, extras) {
+        var e;
+        var src = "[";
+        for (var i = 0, j = elements.length; i < j; i++) {
+            if (e = elements[i]) {
+
+                src += callBuilder(e);
+
+                if (i < j - 1) {
+                    src += ", ";
+                }
+            }
+        }
+        src += "]";
+        return src;
+
+    };
+
+    builder.blockStatement = function (body, loc, extras) {
+        var stm;
+        var src = "{";
+
+        if (body) {
+            src += nl();
+            ++indent;
+            for (var i = 0, j = body.length; i < j; i++) {
+                if (stm = body[i]) {
+
+                    src += tabs(indent);
+                    src += callBuilder(stm);
+                    src += ";";
+                    src += nl();
+
+                }
+            }
+            --indent;
+        }
+        src += "}";
+        return src;
+    };
+
+    builder.unaryExpression = function (operator, argument, prefix, loc, extras) {
+        var src = "";
+        if (prefix) src += operator;
+        src += callBuilder(argument);
+        if (!prefix) src += operator;
+        return src;
+    };
+
+    builder.binaryExpression = function (operator, left, right, loc, extras) {
+        var src = "";
+        src += callBuilder(left);
+        src += SPC + operator + SPC;
+        src += callBuilder(right);
+        return src;
+    }
+
+    builder.assignmentExpression = function (operator, left, right, loc, extras) {
+        var src = "";
+        src += callBuilder(left);
+        src += SPC + operator + SPC;
+        src += callBuilder(right);
+        return src;
+    }
+
+    builder.pattern = function () {};
+    builder.expressionStatement = function expressionStatement(expr, loc, extras) {
+        var src = "";
+        src += callBuilder(expr);
+        return src;
+    };
+    builder.labelledStatement = function labelledStatement(label, body, loc, extras) {
+        var src;
+        src += label + ": ";
+        src += nl();
+        src += tabs(indent);
+        src += callBuilder(body);
+        return src;
+    };
+    builder.sequenceExpression = function (seq, loc, extras) {
+        var src = "";
+        var e;
+        for (var i = 0, j = seq.length; i < j; i++) {
+            if (e = seq[i]) {
+                src += callBuilder(e);
+                if (i < j - 1) {
+                    src += ", ";
+                }
+            }
+        }
+        return src;
+    };
+    builder.ifStatement = function ifStatement(test, condition, alternate, loc, extras) {
+        var src = tabs(indent) + "if (" + callBuilder(test) + ") " + callBuilder(condition);
+        if (alternate) src += " else " + callBuilder(alternate);
+        return src;
+    };
+    builder.switchStatement = function (discriminant, cases, isLexical, loc, extras) {
+        var c;
+        var src = "switch (" + callBuilder(discriminant) + ") {";
+        for (var i = 0, j = cases.length; i < j; i++) {
+            if (c = cases[i]) {
+                if (c.type === "DefaultCase") {
+                    src += "default: " + nl();
+                    ++indent;
+                    src += callBuilder(c.consequent);
+                    --indent;
+                } else {
+                    src += "case " + callBuilder(c.test) + ":" + nl();
+                    ++indent;
+                    src += callBuilder(c.consequent);
+                    --indent;
+                }
+            }
+        }
+        src += "}";
+        return src;
+    };
+    builder.whileStatement = function whileStatement(test, body, loc, extras) {
+        var src = "while (" + callBuilder(test) + ")" + callBuilder(body);
+        return src;
+    };
+    builder.doWhileStatement = function doWhileStatement(test, body, loc, extras) {
+        var src = "do " + callBuilder(body) + " while (" + callBuilder(test) + ");";
+        return src;
+    };
+    builder.withStatement = function withStatement(obj, body, loc, extras) {
+        var src = "with (" + callBuilder(obj) + ") " + callBuilder(body);
+        return src;
+    };
+    builder.debuggerStatement = function debuggerStatement(loc) {
+        var src = "debugger;";
+        return src;
+    };
+    builder.tryStatement = function (block, handler, guard, finalizer, loc, extras) {
+        var src = "try " + callBuilder(block) + " catch (" + callBuilder(guard.params) + ") " + callBuilder(guard.block);
+        if (finalizer) src += "finally " + callBuilder(finalizer.block);
+        return src;
+    };
+    builder.forInStatement = function forInStatement(left, right, body, isForEach, loc, extras) {
+        var src = "for ("
+        src += callBuilder(left);
+        src += " in ";
+        src += callBuilder(right);
+        src += ") ";
+        src += callBuilder(body);
+        return src;
+    };
+    builder.forOfStatement = function forOfStatement(left, right, body, loc, extras) {
+        var src = "for ("
+        src += callBuilder(left);
+        src += " of ";
+        src += callBuilder(right);
+        src += ") ";
+        src += callBuilder(body);
+        return src;
+    };
+    builder.forStatement = function forStatement(init, test, update, body, loc, extras) {
+        var src = "for ("
+        if (init) src += callBuilder(init);
+        src += ";";
+        if (test) src += callBuilder(test);
+        src += ";";
+        if (update) src += callBuilder(update);
+        src += ") ";
+        src += callBuilder(body);
+        return src;
+    };
+
+    builder.throwStatement = function (expression, loc, extras) {
+        var src = "throw";
+        if (expression) {
+            src += SPC;
+            src += callBuilder(expression);
+        }
+        return src;
+    };
+    builder.breakStatement = function (label, loc, extras) {
+        var src = "break";
+        if (label) {
+            src += SPC;
+            src += callBuilder(label);
+        }
+        return src;
+    };
+    builder.continueStatement = function (label, loc, extras) {
+        var src = "continue";
+        if (label) {
+            src += SPC;
+            src += callBuilder(label);
+        }
+        return src;
+    };
+    builder.returnStatement = function (expression, loc, extras) {
+        var src = "return";
+        if (expression) {
+            src += " " + callBuilder(expression);
+        }
+        return src;
+    };
+    builder.thisExpression = function (loc) {
+        return "this";
+    };
+    builder.superExpression = function (loc) {
+        return "super";
+    };
+
+    function buildFromSrc(src) {
+        setBuilder(builder, true);
+        try {
+            var result = parser(src);
+        } catch (ex) {
+            result = "[" + ex.name + "]" + ex.message + ";\r\n" + tabs(1) + ex.stack + "\r\n";
+        } finally {
+            return result;
+        }
+        unsetBuilder(builder);
+    }
+
+    function build(ast) {
+        if (typeof ast === "string") {
+            return buildFromSrc(ast);
+        }
+
+        if (ast.type === "Program" || typeof ast.type === "string") {
+            return callBuilder(ast);
+        }
+        if (Array.isArray(ast)) {
+            return callBuilder(ast);
+        }
+    }
+
+    build.callBuilder = callBuilder;
+    build.buildFromSrc = buildFromSrc;
+    build.builder = builder;
+
+    return build;
 });
 
 
@@ -7649,7 +8373,6 @@ define("heap", function (require, exports, module) {
 exports.createHeap = createHeap;
 return exports;
 });
-
 
 
 /*
@@ -8170,7 +8893,6 @@ define("builder",  function (require, exports, module) {
     builder.callBuilder = callBuilder;
     return builder;
 });
-
 
 
 /*
@@ -8713,714 +9435,6 @@ define("arraycompiler", function (require, exports, module) {
     return builder;
 });
 
-
-/*
-############################################################################################################################################################################################################
-    A Simple JavaScript Codegenerator - This module transforms the AST back into ES6 Source Code.
-    This shall become a prototype to support generating Code from a "Concrete Syntax Tree"
-    
-    This means, it regenerates Comments, WhiteSpaces, LineTerminators
-    
-    How it works?
-    The build(node) function calls callBuilder(node) which is a big switch 
-    for all kinds of nodes. Inside that switch the arguments array is defined. 
-    This is passed to the builder interface of the mozilla parser api.
-    The first node calls callBuilder(body) and each body node will be called with
-    it´s appropriate builder, the whole tree down.
-
-    -- Idea to improve Parser_API: Add a second possibility for a valid interface.
-    If argument.length is 1 on all nodes, a function (node) is expected to be
-    the builder. It can easily examine the whole object, which is better than the 
-    fixed parameter builder interface which has to be programmed for each node by
-    providing the right arguments than just the node. --- As a second option.
-
-
-    this one takes the extras after the loc to change no signature but extend them by ", extras"
-    
-############################################################################################################################################################################################################
-*/
-
-define("js-codegen", function (require, exports, module) {
-    "use strict";
-
-    var builder = {};
-    var parser = require("parser");
-
-    var parseGoal = parser.parseGoal;
-    var setBuilder = parser.setBuilder;
-    var unsetBuilder = parser.unsetBuilder;
-
-    var TAB = "    ";
-    var SPC = " ";
-    var indent = 0;
-    var nesting = [];
-
-    function tabs(indent) {
-        var str = "";
-        for (var i = 1; i <= indent; i++) {
-            str += TAB;
-        }
-        return str;
-    }
-
-    function nl() {
-        return "\r\n";
-    }
-
-    var names = {
-        __proto__: null,
-
-        "VariableStatement": "variableStatement",
-        "ExpressionStatement": "expressionStatement",
-        "FunctionDeclaration": "functionDeclaration",
-        "MethodDefinition": "methodDefinition",
-        "PropertyDefinition": "propertyDefinition"
-
-    };
-    // ok, map names per function
-    /*
-    Object.keys(parser).forEach(function (k) {
-        if (["next","scan","pass","parse"].indexOf(k) > -1) return;
-        names[k] = k[0].toLowerCase() + k.slice(1);
-    });
-    */
-    function callBuilder(node) {
-        var args;
-        var name;
-
-        if (!node) return "";
-
-        if (Array.isArray(node)) {
-
-            var src = "";
-            var stm;
-            for (var i = 0, j = node.length; i < j; i++) {
-                if (stm = node[i]) {
-                    src += callBuilder(stm);
-                }
-            }
-            return src;
-
-        } else if (typeof node === "string") {
-            return node;
-        } else {
-
-            name = node.type;
-
-            switch (name) {
-            case "BlockStatement":
-                args = [node.body, node.loc, node.extras];
-                break;
-            case "FunctionDeclaration":
-            case "FunctionExpression":
-            case "GeneratorDeclaration":
-            case "GeneratorExpression":
-                args = [node.id, node.params, node.body, node.strict, node.generator, node.expression, node.loc, node.extras];
-                break;
-            case "MethodDefinition":
-                args = [node.id, node.params, node.body, node.strict, node.static, node.generator, node.loc, node.extras];
-                break;
-            case "ArrowExpression":
-                args = [node.id, node.params, node.body, node.loc, node.extras];
-                break;
-            case "ExpressionStatement":
-            case "SequenceExpression":
-                args = [node.expression, node.loc, node.extras];
-                break;
-            case "VariableDeclarator":
-                args = [node.id, node.init, node.loc, node.extras];
-                break;
-            case "VariableDeclaration":
-            case "LexicalDeclaration":
-                args = [node.kind, node.declarations, node.loc, node.extras];
-                break;
-            case "EmptyStatement":
-                args = [node.extras, node.loc];
-                break;
-            case "ForStatement":
-                args = [node.init, node.test, node.update, node.body, node.loc, node.extras];
-                break;
-            case "ForInStatement":
-            case "ForOfStatement":
-                args = [node.left, node.right, node.body, node.loc, node.extras];
-                break;
-            case "DoWhileStatement":
-            case "WhileStatement":
-                args = [node.test, node.body, node.loc, node.extras];
-                break;
-            case "LabelledStatement":
-                args = [node.label, node.statement, node.loc, node.extras];
-                break;
-            case "IfStatement":
-                args = [node.test, node.consequent, node.alternate, node.loc, node.extras];
-                break;
-            case "TryStatement":
-                args = [node.block, node.guard, node.finalizer, node.loc, node.extras];
-                break;
-            case "SwitchStatement":
-                args = [node.discriminant, node.cases, node.loc, node.extras];
-                break;
-            case "WithStatement":
-                args = [node.object, node.body, node.loc, node.extras];
-                break;
-            case "ComprehensionExpression":
-                args = [node.blocks, node.filter, node.expression, node.loc, node.extras];
-                break;
-            case "AssignmentExpression":
-            case "BinaryExpression":
-            case "LogicalExpression":
-                args = [node.operator, node.left, node.right, node.loc, node.extras];
-                break;
-            case "UnaryExpression":
-                args = [node.operator, node.argument, node.prefix, node.loc, node.extras];
-                break;
-            case "MemberExpression":
-                args = [node.object, node.property, node.computed, node.loc, node.extras];
-                break;
-            case "CallExpression":
-            case "NewExpression":
-                args = [node.callee, node.arguments, node.loc, node.extras];
-                break;
-            case "ObjectPattern":
-            case "ArrayPattern":
-                args = [node.elements, node.loc, node.extras];
-                break;
-            case "BindingElement":
-                args = [node.id.name, node.as.name, node.loc, node.extras];
-                break;
-            case "ObjectExpression":
-                args = [node.properties, node.loc, node.extras];
-                break;
-            case "ArrayExpression":
-                args = [node.elements, node.loc, node.extras];
-                break;
-            case "DefaultParameter":
-                args = [node.id, node.init, node.loc, node.extras];
-                break;
-            case "RestParameter":
-                args = [node.id, node.init, node.loc, node.extras];
-                break;
-            case "SpreadExpression":
-                args = [node.argument, node.loc, node.extras];
-                break;
-            case "ClassDeclaration":
-            case "ClassExpression":
-                args = [node.id, node.extends, node.elements, node.expression, node.loc, node.extras];
-                break;
-            case "ThisExpression":
-            case "SuperExpression":
-                args = [node.extras, node.loc];
-                break;
-            case "Program":
-                args = [node.body, node.loc, node.extras];
-                break;
-            case "Identifier":
-                args = [node.name || node.value, node.loc, node.extras];
-                break;
-            case "ReturnStatement":
-            case "ThrowStatement":
-                args = [node.argument, node.loc, node.extras];
-                break;
-
-            case "BreakStatement":
-            case "ContinueStatement":
-                args = [node.argument, node.label, node.loc, node.extras];
-                break;
-            case "YieldExpression":
-                args = [node.argument, node.delegator, node.loc, node.extras];
-                break;
-            case "Directive":
-            case "Literal":
-            case "NumericLiteral":
-            case "StringLiteral":
-            case "NullLiteral":
-            case "BooleanLiteral":
-            case "TemplateLiteral":
-                args = [node.spans, node.loc, node.extras];
-                break;
-            }
-            name = name[0].toLowerCase() + name.slice(1);
-            return builder[/*names[*/name/*]*/].apply(builder, args);
-        }
-    }
-
-    builder.spreadExpression = function (argument, loc, extras) {
-        var src = "..." + callBuilder(argument);
-        return src;
-    };
-
-    builder.restParameter = function (id, init, loc, extras) {
-        var src = "..." + callBuilder(id);
-        if (init) src += " = " + callBuilder(init);
-        return src;
-    };
-
-    builder.defaultParameter = function (id, init, loc, extras) {
-        var src = "";
-        src += callBuilder(id);
-        src += " = ";
-        src += callBuilder(init);
-        return src;
-    };
-
-    builder.classExpression =
-        builder.classDeclaration = function (id, extend, elements, expression, loc, extras) {
-            var src = "class ";
-            src += id;
-            if (extend) src += " extends " + callBuilder(extend);
-            src += "{";
-            ++indent;
-            for (var i = 0, j = elements.length; i < j; i++) {
-                if (e = elements[i]) {
-                    src += tabs(indent) + callBuilder(e) + nl();
-                }
-            }
-            --indent;
-            src += "}";
-            return src;
-    };
-
-    builder.program = function (body, loc, extras) {
-        var src = "";
-        var inst;
-        for (var i = 0, j = body.length; i < j; i++) {
-            if (inst = body[i]) {
-                src += tabs(indent) + callBuilder(inst) + ";" + nl();
-            }
-        }
-        return src;
-    };
-
-    builder.bindingElement = function (name, as, initialiser, loc, extras) {
-        var src = "";
-        src += name;
-        src += ":";
-        src += as;
-        if (initialiser) src += " = " + callBuilder(initialiser);
-        return src;
-    };
-    builder.objectPattern = function (elements, loc, extras) {
-        var src, e;
-        src += "{";
-        for (var i = 0, j = elements.length; i < j; i++) {
-            if (e = elements[i]) {
-                src += callBuilder(e);
-                if (i < j - 1) src += ", ";
-            }
-        }
-        src += "}";
-        return src;
-    };
-    builder.arrayPattern = function (elements, loc, extras) {
-        var src, e;
-        src += "[";
-        for (var i = 0, j = elements.length; i < j; i++) {
-            if (e = elements[i]) {
-                src += callBuilder(e);
-                if (i < j - 1) src += ", ";
-            }
-        }
-        src += "]";
-        return src;
-    };
-    builder.identifier = function (name, loc, extras) {
-        var src = "";
-        src += name;
-        return src;
-    };
-
-    builder.directive =
-        builder.stringLiteral =
-        builder.numericLiteral =
-        builder.booleanLiteral =
-        builder.literal = function (literal, loc, extras) {
-            var src = "";
-            src += literal;
-            return src;
-    };
-
-    builder.emptyStatement = function emptyStatement(loc) {
-        var src = ";";
-        return src;
-    };
-
-    builder.variableDeclarator = function (id, init, loc, extras) {
-        var src = "";
-        src += id;
-        return src;
-    };
-    builder.lexicalDeclaration =
-        builder.variableDeclaration = function variableStatement(kind, declarations, loc, extras) {
-            var src = kind + " ";
-            var decl;
-            for (var i = 0, j = declarations.length; i < j; i++) {
-                if (decl = declarations[i]) {
-
-                    src += callBuilder(decl);
-
-                    if (decl.init) {
-                        src += " = " + callBuilder(decl.init);
-                    }
-
-                    if (i < j - 1) {
-                        src += ", ";
-                    }
-                }
-            }
-            return src;
-    };
-
-    builder.functionBody = function (body) {
-        var src = "";
-        var st;
-        src += "{";
-        src += nl();
-        ++indent;
-        for (var i = 0, j = body.length; i < j; i++) {
-            if (st = body[i]) {
-                src += tabs(indent) + callBuilder(st) + ";" + nl();
-            }
-        }
-        --indent;
-        src += "}";
-        return src;
-    };
-
-    builder.arrowExpression =
-        function (id, params, body, loc, extras) {
-            var src = "";
-            src += this.formalParameters(params);
-            src += " => ";
-            if (Array.isArray(body))
-            src += this.functionBody(body);
-            else
-            src += callBuilder(body);
-            return s
-
-    };
-
-    builder.functionDeclaration =
-        builder.functionExpression =
-        builder.generatorDeclaration =
-        builder.generatorExpression = function (id, params, body, strict, generator, expression, loc, extras) {
-            var src = "";
-            var st;
-            src = "function";
-            if (generator) src += "*";
-            src += " ";
-            if (id) src += id;
-            src += this.formalParameters(params);
-            src += " ";
-            src += this.functionBody(body);
-            return src;
-    };
-
-    builder.generatorMethod =
-        builder.methodDefinition = function (id, params, body, strict, generator, loc, extras) {
-            ++indent;
-            var src = "";
-            if (generator) src += "*";
-            src += id;
-            src += this.formalParameters(params);
-            src += " ";
-            src += this.functionBody(body);
-            return src;
-    };
-
-    builder.formalParameters = function (formals) {
-        var a;
-        var src = "";
-        src += "(";
-        if (formals && formals.length) {
-            for (var i = 0, j = formals.length; i < j; i++) {
-                if (a = formals[i]) {
-                    src += callBuilder(a);
-                    if (i < j - 1) src += ", ";
-                }
-            }
-        }
-        src += ")";
-        return src;
-    }
-
-    builder.memberExpression = function (object, property, computed) {
-        var src = "";
-        src += callBuilder(object);
-        if (computed) src += "[" + callBuilder(property) + "]";
-        else src += "." + callBuilder(property);
-        return src;
-    };
-
-    builder.callExpression = function (callee, args, loc, extras) {
-        var src = "";
-        src += callBuilder(callee);
-        src += this.formalParameters(args);
-        return src;
-
-    };
-    builder.newExpression = function (callee, args, loc, extras) {
-        var src = "new ";
-        src += callBuilder(callee);
-        src += this.formalParameters(args);
-        return src;
-    };
-
-    builder.objectExpression = function (properties, loc, extras) {
-        var p;
-        var src = "{";
-        for (var i = 0, j = properties.length; i < j; i++) {
-            if (p = properties[i]) {
-
-                src += callBuilder(e);
-
-                if (i < j - 1) {
-                    src += ", ";
-                }
-            }
-        }
-        src += "}";
-        return src;
-    };
-    builder.arrayExpression = function (elements, loc, extras) {
-        var e;
-        var src = "[";
-        for (var i = 0, j = elements.length; i < j; i++) {
-            if (e = elements[i]) {
-
-                src += callBuilder(e);
-
-                if (i < j - 1) {
-                    src += ", ";
-                }
-            }
-        }
-        src += "]";
-        return src;
-
-    };
-
-    builder.blockStatement = function (body, loc, extras) {
-        var stm;
-        var src = "{";
-
-        if (body) {
-            src += nl();
-            ++indent;
-            for (var i = 0, j = body.length; i < j; i++) {
-                if (stm = body[i]) {
-
-                    src += tabs(indent);
-                    src += callBuilder(stm);
-                    src += ";";
-                    src += nl();
-
-                }
-            }
-            --indent;
-        }
-        src += "}";
-        return src;
-    };
-
-    builder.unaryExpression = function (operator, argument, prefix, loc, extras) {
-        var src = "";
-        if (prefix) src += operator;
-        src += callBuilder(argument);
-        if (!prefix) src += operator;
-        return src;
-    };
-
-    builder.binaryExpression = function (operator, left, right, loc, extras) {
-        var src = "";
-        src += callBuilder(left);
-        src += SPC + operator + SPC;
-        src += callBuilder(right);
-        return src;
-    }
-
-    builder.assignmentExpression = function (operator, left, right, loc, extras) {
-        var src = "";
-        src += callBuilder(left);
-        src += SPC + operator + SPC;
-        src += callBuilder(right);
-        return src;
-    }
-
-    builder.pattern = function () {};
-    builder.expressionStatement = function expressionStatement(expr, loc, extras) {
-        var src = "";
-        src += callBuilder(expr);
-        return src;
-    };
-    builder.labelledStatement = function labelledStatement(label, body, loc, extras) {
-        var src;
-        src += label + ": ";
-        src += nl();
-        src += tabs(indent);
-        src += callBuilder(body);
-        return src;
-    };
-    builder.sequenceExpression = function (seq, loc, extras) {
-        var src = "";
-        var e;
-        for (var i = 0, j = seq.length; i < j; i++) {
-            if (e = seq[i]) {
-                src += callBuilder(e);
-                if (i < j - 1) {
-                    src += ", ";
-                }
-            }
-        }
-        return src;
-    };
-    builder.ifStatement = function ifStatement(test, condition, alternate, loc, extras) {
-        var src = tabs(indent) + "if (" + callBuilder(test) + ") " + callBuilder(condition);
-        if (alternate) src += " else " + callBuilder(alternate);
-        return src;
-    };
-    builder.switchStatement = function (discriminant, cases, isLexical, loc, extras) {
-        var c;
-        var src = "switch (" + callBuilder(discriminant) + ") {";
-        for (var i = 0, j = cases.length; i < j; i++) {
-            if (c = cases[i]) {
-                if (c.type === "DefaultCase") {
-                    src += "default: " + nl();
-                    ++indent;
-                    src += callBuilder(c.consequent);
-                    --indent;
-                } else {
-                    src += "case " + callBuilder(c.test) + ":" + nl();
-                    ++indent;
-                    src += callBuilder(c.consequent);
-                    --indent;
-                }
-            }
-        }
-        src += "}";
-        return src;
-    };
-    builder.whileStatement = function whileStatement(test, body, loc, extras) {
-        var src = "while (" + callBuilder(test) + ")" + callBuilder(body);
-        return src;
-    };
-    builder.doWhileStatement = function doWhileStatement(test, body, loc, extras) {
-        var src = "do " + callBuilder(body) + " while (" + callBuilder(test) + ");";
-        return src;
-    };
-    builder.withStatement = function withStatement(obj, body, loc, extras) {
-        var src = "with (" + callBuilder(obj) + ") " + callBuilder(body);
-        return src;
-    };
-    builder.debuggerStatement = function debuggerStatement(loc) {
-        var src = "debugger;";
-        return src;
-    };
-    builder.tryStatement = function (block, handler, guard, finalizer, loc, extras) {
-        var src = "try " + callBuilder(block) + " catch (" + callBuilder(guard.params) + ") " + callBuilder(guard.block);
-        if (finalizer) src += "finally " + callBuilder(finalizer.block);
-        return src;
-    };
-    builder.forInStatement = function forInStatement(left, right, body, isForEach, loc, extras) {
-        var src = "for ("
-        src += callBuilder(left);
-        src += " in ";
-        src += callBuilder(right);
-        src += ") ";
-        src += callBuilder(body);
-        return src;
-    };
-    builder.forOfStatement = function forOfStatement(left, right, body, loc, extras) {
-        var src = "for ("
-        src += callBuilder(left);
-        src += " of ";
-        src += callBuilder(right);
-        src += ") ";
-        src += callBuilder(body);
-        return src;
-    };
-    builder.forStatement = function forStatement(init, test, update, body, loc, extras) {
-        var src = "for ("
-        if (init) src += callBuilder(init);
-        src += ";";
-        if (test) src += callBuilder(test);
-        src += ";";
-        if (update) src += callBuilder(update);
-        src += ") ";
-        src += callBuilder(body);
-        return src;
-    };
-
-    builder.throwStatement = function (expression, loc, extras) {
-        var src = "throw";
-        if (expression) {
-            src += SPC;
-            src += callBuilder(expression);
-        }
-        return src;
-    };
-    builder.breakStatement = function (label, loc, extras) {
-        var src = "break";
-        if (label) {
-            src += SPC;
-            src += callBuilder(label);
-        }
-        return src;
-    };
-    builder.continueStatement = function (label, loc, extras) {
-        var src = "continue";
-        if (label) {
-            src += SPC;
-            src += callBuilder(label);
-        }
-        return src;
-    };
-    builder.returnStatement = function (expression, loc, extras) {
-        var src = "return";
-        if (expression) {
-            src += " " + callBuilder(expression);
-        }
-        return src;
-    };
-    builder.thisExpression = function (loc) {
-        return "this";
-    };
-    builder.superExpression = function (loc) {
-        return "super";
-    };
-
-    function buildFromSrc(src) {
-        setBuilder(builder, true);
-        try {
-            var result = parser(src);
-        } catch (ex) {
-            result = "[" + ex.name + "]" + ex.message + ";\r\n" + tabs(1) + ex.stack + "\r\n";
-        } finally {
-            return result;
-        }
-        unsetBuilder(builder);
-    }
-
-    function build(ast) {
-        if (typeof ast === "string") {
-            return buildFromSrc(ast);
-        }
-
-        if (ast.type === "Program" || typeof ast.type === "string") {
-            return callBuilder(ast);
-        }
-        if (Array.isArray(ast)) {
-            return callBuilder(ast);
-        }
-    }
-
-    build.callBuilder = callBuilder;
-    build.buildFromSrc = buildFromSrc;
-    build.builder = builder;
-
-    return build;
-});
-
-
 /*
     API contains ecma-262 specification devices
 
@@ -9472,9 +9486,12 @@ define("api", function (require, exports, module) {
     var IsSimpleParameterList = statics.IsSimpleParameterList;
     var VarDeclaredNames = statics.VarDeclaredNames;
     var LexicallyDeclaredNames = statics.LexicallyDeclaredNames;
-    var dupesInTheTwoLists = statics.dupesInTheTwoLists
+
     var ExpectedArgumentCount = statics.ExpectedArgumentCount;
     var ModuleRequests = statics.ModuleRequests;
+    
+        var dupesInTheTwoLists = statics.dupesInTheTwoLists; // self defined
+    
     var parse = require("parser");
     var parseGoal = parse.parseGoal;
 
@@ -14757,6 +14774,7 @@ var OnSuccessfulTransfer_Call = function (thisArg, argList) {
         var FunctionConstructor = createIntrinsicConstructor(intrinsics, "Function", 0, "%Function%");
         setInternalSlot(FunctionConstructor, "Prototype", FunctionPrototype);
         var ObjectConstructor = createIntrinsicConstructor(intrinsics, "Object", 0, "%Object%");
+
         Assert(getInternalSlot(ObjectConstructor, "Prototype") === FunctionPrototype, "ObjectConstructor and FunctionPrototype have to have a link");
 
         var EncodeURIFunction = createIntrinsicFunction(intrinsics, "encodeURI", 0, "%EncodeURI%");
@@ -23544,40 +23562,19 @@ LazyDefineBuiltinFunction(MessagePortPrototype, "postMessage", 0, MessagePortPro
 
     exports.IndirectEval = IndirectEval;
 
-    exports.printException = printException;
-    exports.makeMyExceptionText = makeMyExceptionText;
-
-
+    
     exports.CreateBuiltinFunction = CreateBuiltinFunction;
     exports.AddRestrictedFunctionProperties = AddRestrictedFunctionProperties;
-    exports.LazyDefineProperty = LazyDefineProperty;
     exports.uriReserved = uriReserved;
     exports.uriUnescaped = uriUnescaped;
     exports.Encode = Encode;
     exports.Decode = Decode;
     exports.UTF8Encode = UTF8Encode;
     exports.SetFunctionName = SetFunctionName;
-    exports.List = List;
-    exports.SetFunctionLength = SetFunctionLength;
     exports.HasOwnProperty = HasOwnProperty;
     exports.Put = Put;
     exports.Invoke = Invoke;
 
-    exports.withError = withError; // This Function returns the Errors, say the spec says "Throw a TypeError", then return withError("Type", message);
-    exports.getContext = getContext;
-    exports.getRealm = getRealm;
-    exports.getLexEnv = getLexEnv;
-    exports.getVarEnv = getVarEnv;
-    exports.getIntrinsic = getIntrinsic;
-    exports.getIntrinsics = getIntrinsics;
-    exports.getGlobalEnv = getGlobalEnv;
-    exports.getGlobalThis = getGlobalThis;
-    exports.getStack = getStack;
-
-    exports.getInternalSlot = getInternalSlot;
-    exports.setInternalSlot = setInternalSlot;
-    exports.hasInternalSlot = hasInternalSlot;
-    exports.callInternalSlot = callInternalSlot;
 
     exports.CreateArrayIterator = CreateArrayIterator;
     exports.CreateByteDataBlock = CreateByteDataBlock;
@@ -23728,11 +23725,20 @@ LazyDefineBuiltinFunction(MessagePortPrototype, "postMessage", 0, MessagePortPro
     exports.thisStringValue = thisStringValue;
     exports.MakeMethod = MakeMethod;
     exports.CloneMethod = CloneMethod;
+
+
+
+    exports.withError = withError; // This Function returns the Errors, say the spec says "Throw a TypeError", then return withError("Type", message);
+    
+    
+    // my own definitions between the ecma stuff
+    exports.SetFunctionLength = SetFunctionLength;
+    exports.LazyDefineProperty = LazyDefineProperty;
+
     exports.createIntrinsics = createIntrinsics;
     exports.setCodeRealm = setCodeRealm;
     exports.saveCodeRealm = saveCodeRealm;
     exports.restoreCodeRealm = restoreCodeRealm;
-
     exports.Push = Push;
     exports.Length = Length;
     exports.getField = getField;
@@ -23741,8 +23747,28 @@ LazyDefineBuiltinFunction(MessagePortPrototype, "postMessage", 0, MessagePortPro
     exports.getRec = getRec;
     exports.genericArray = genericArray;
     exports.genericRecord = genericRecord;
-
     exports.getEventQueue = getEventQueue;
+
+    exports.getContext = getContext;
+    exports.getRealm = getRealm;
+    exports.getLexEnv = getLexEnv;
+    exports.getVarEnv = getVarEnv;
+    exports.getIntrinsic = getIntrinsic;
+    exports.getIntrinsics = getIntrinsics;
+    exports.getGlobalEnv = getGlobalEnv;
+    exports.getGlobalThis = getGlobalThis;
+    exports.getStack = getStack;
+
+    exports.getInternalSlot = getInternalSlot;
+    exports.setInternalSlot = setInternalSlot;
+    exports.hasInternalSlot = hasInternalSlot;
+    exports.callInternalSlot = callInternalSlot;
+
+    exports.printException = printException;
+    exports.makeMyExceptionText = makeMyExceptionText;
+    exports.List = List;
+
+
 
     return exports;
 });
@@ -23776,12 +23802,12 @@ define("runtime", function () {
     function debugdir() {
         if (debugmode && !isWorker) console.dir.apply(console, arguments);
     }
-
-    function log() {
+    
+    function consoleLog() {
         if (!isWorker) console.log.apply(console, arguments);
     }
 
-    function dir() {
+    function consoleDir() {
         if (!isWorker) console.dir.apply(console, arguments);
     }
 
@@ -24366,7 +24392,7 @@ define("runtime", function () {
         var scope = env;
 
         if (!generator) {
-            var name = node.id;
+            var name = getCode(node,"id");
             F = FunctionCreate("normal", params, body, scope, strict);
             // 14.1.16 4.
             if (needsSuper) MakeMethod(F, name, undefined);
@@ -24374,7 +24400,7 @@ define("runtime", function () {
             if (name) SetFunctionName(F, name);
         } else if (generator) {
             strict = true;
-            var name = node.id;
+            var name = getCode(node,"id");
             F = GeneratorFunctionCreate("generator", params, body, scope, strict);
             var prototype = ObjectCreate(getIntrinsic("%GeneratorPrototype%"));
             if (name) SetFunctionName(F, name);
@@ -24425,6 +24451,7 @@ define("runtime", function () {
                         functionsToInitialise.push(d);
                     }
                 }
+
             }
         }
 
@@ -25225,7 +25252,7 @@ define("runtime", function () {
             // wird von binding intialisation vorher initialisiert,
             // hier wird das initialiser assignment durchgefuehrt, wenn
             // der code evaluiert wird.
-            if (type === "ArrayPattern" || type === "ObjectPattern") {
+            if (BindingPattern[type]) {
                 if (decl.init) initialiser = GetValue(Evaluate(decl.init));
                 else return withError("Type", "Destructuring Patterns must have some = Initialiser.");
                 if (isAbrupt(initialiser)) return initialiser;
@@ -25393,7 +25420,8 @@ define("runtime", function () {
         strict = !! cx.strict;
         if (type === "ForDeclaration") {
             return BindingInitialisation(node.id, value, env);
-        } else if (type === "DefaultParameter") {
+        }
+        if (type === "DefaultParameter") {
             name = node.id;
             if (value === undefined) value = GetValue(Evaluate(node.init));
             if (env !== undefined) env.InitialiseBinding(name, value, strict);
@@ -25404,7 +25432,8 @@ define("runtime", function () {
                 PutValue(lhs, value);
             }
             return NormalCompletion(undefined);
-        } else if (type === "Identifier") {
+        }
+        if (type === "Identifier") {
             name = node.name;
             if (env !== undefined) {
                 ex = env.InitialiseBinding(name, value, strict);
@@ -25428,16 +25457,16 @@ define("runtime", function () {
                         return IndexedBindingInitialisation(decl, p, value, env);
                     } else {
                         if (env) {
-                            if (decl.id) {
+                            if (decl.id) { // is not an identifier, is a "BindingElement"
                                 env.InitialiseBinding(decl.as.name, value.Get(decl.id.name, value));
-                            } else {
+                            } else {    // is not a bindingelement, is an "Identifier"
                                 env.InitialiseBinding(decl.name, value.Get(ToString(p), value));
                             }
                         } else {
-                            if (decl.id) {
+                            if (decl.id) { // BindingElement has el.id and el.as
                                 lhs = Evaluate(decl.id);
                                 PutValue(lhs, Get(value, decl.id.name));
-                            } else {
+                            } else { // Identifier has el.name
                                 lhs = Evaluate(decl.name);
                                 PutValue(lhs, Get(value, ToString(p)));
                             }
@@ -25445,6 +25474,7 @@ define("runtime", function () {
                     }
                 }
             }
+            return NormalCompletion(undefined);
 
         } else if (type === "ObjectPattern" || type === "ObjectExpression") {
 
@@ -25468,6 +25498,7 @@ define("runtime", function () {
                     }
                 }
             }
+            return NormalCompletion(undefined);
 
         } else if (typeof node === "string") {
             // Assume Identifier Name
@@ -25484,92 +25515,36 @@ define("runtime", function () {
     }
 
     function EmptyStatement(node) {
-        //if (completion) return completion;
         return NormalCompletion(empty);
     }
     evaluation.EmptyStatement = EmptyStatement;
 
     /*** debugger, ***************************************************************************************************** */
 
-    evaluation.printStackEntry = printStackEntry;
 
-    function printStackEntry(cx, key) {
-        log("## stack[" + key + "] => " + cx.toString());
-        /*for (var k in cx) {
-         log("# Execution Context: "+cx+", field "+k);
-         if (k >= stack.length-2) log(cx[k]);
-         // else dir(cx[k]);
-         }*/
+
+
+    function repeatch(ch, times) {
+        var str = "";
+        for (var i = 0; i < times; i++) str += ch;
+        return str;
     }
 
-    function printEnvironment(cx) {
-        var i;
-        var v = getVarEnv();
-        var l = getLexEnv();
-        log("Running Execution Context on Top Of The Stack.");
-
-        log("+++ running +++ cx.[[VarEnv]]");
-        dir(v);
-        log("+++ running +++ cx.[[LexEnv]]");
-        dir(l);
-
-        log("## Environments (.outer follows each");
-        l = getLexEnv();
-        i = 0;
-        var b;
-        var bound;
-        var k;
-        do {
-            bound = "";
-            log("context " + i + " (last)");
-            var toString = l.toString();
-            log(toString);
-
-            if (toString  === "[object ObjectEnvironment]")         b = l.BoundObject.Bindings;
-            else if (toString  === "[object GlobalVariableEnvironment]") b = l.BoundObject.Bindings;
-            else if (toString  === "[object GlobalLexicalEnvironment]")  b = l.Bindings;
-            else b = l.Bindings;
-
-            for (k in b) bound += k + ", ";
-            log("Bound Identifiers: " + bound);
-            log("above´s .outer below:");
-            ++i;
-        } while (l = l.outer);
-    }
-
-    evaluation.printStackAtDebuggerStatement = printStackAtDebuggerStatement;
-
-    function printStackAtDebuggerStatement() {
-        var stackTraceLimit = realm.xs.stackTraceLimit || 10;
-        var i = 0;
-
-        var key;
-        var len;
-        var cx;
-        var stack = getStack();
-
-        log("stack.length: " + stack.length);
-        if (len = stack.length) {
-            for (var key in stack) {
-                if (len < stackTraceLimit || (key >= len - stackTraceLimit)) printStackEntry(stack[key], key);
-            }
-        }
-
-        if (cx = getContext()) {
-            printEnvironment(cx);
-        } else log("kein context/keine environment");
+    function banner(str) {
+        consoleLog(repeatch("-", 79));
+        consoleLog(str);
+        consoleLog(repeatch("-", 79));
     }
 
     function DebuggerStatement(node) {
-
         var loc = node.loc;
-
         var line = loc && loc.start ? loc.start.line : "unknown";
         var column = loc && loc.start ? loc.start.column : "unknown";
+        banner("DebuggerStatement at line " + (line) + ", " + (column) + "\n");
 
-        log("DebuggerStatement at line " + (line) + ", " + (column) + "\n");
-        printStackAtDebuggerStatement();
-        log("DebuggerStatement End");
+
+
+        banner("DebuggerStatement end");
         return NormalCompletion(undefined);
     }
     evaluation.DebuggerStatement = DebuggerStatement;
@@ -27824,6 +27799,7 @@ define("runtime", function () {
 
 
 
+
 // *******************************************************************************************************************************
 // Highlight (UI Independent Function translating JS into a string of spans)
 // *******************************************************************************************************************************
@@ -27941,7 +27917,6 @@ define("highlight", ["tables", "tokenizer"], function (tables, tokenize) {
     return highlight;
 
 });
-
 
 
 if (typeof window != "undefined") {
@@ -28961,7 +28936,6 @@ if (typeof window != "undefined") {
         });
 
 }
-
 /*
  *
  *  syntax.js web worker module
@@ -29224,7 +29198,6 @@ define("syntaxjs-shell", function (require, exports) {
 
 
 
-
 // #######################################################################################################################
 //  Exporting the Syntax Object after Importing and Assembling the Components
 // #######################################################################################################################
@@ -29254,17 +29227,22 @@ define("syntaxjs", function () {
     // essential functions
         version: pdmacro(VERSION),			
         tokenize: pdmacro(require("tokenizer")),				// <-- needs exports fixed
-        createAst: pdmacro(require("parser")),					// <-- needs exports fixed
+	    //@Deprecated
+            createAst: pdmacro(require("parser")),					// <-- needs exports fixed
         parse: pdmacro(require("parser")),
-        toValue: pdmacro(require("runtime")),					// <-- needs exports fixed
+            //@Deprecated
+    	    toValue: pdmacro(require("runtime")),					// <-- needs exports fixed
         eval: pdmacro(require("runtime")),
         createRealm: pdmacro(require("api").createPublicCodeRealm),
         toJsLang: pdmacro(require("js-codegen")),				// <-- needs exports fixed
 
         makeAdapter: pdmacro(require("fswraps").makeAdapter),
+
     // experimental functions
+
         readFile: pdmacro(require("fswraps").readFile),	
         readFileSync: pdmacro(require("fswraps").readFileSync),
+
         evalFile: pdmacro(function (name, callback, errback) {
             var syntaxjs = this;
             return this.readFile(name, function (code) {
