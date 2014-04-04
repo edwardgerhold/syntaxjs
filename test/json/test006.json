@@ -1,0 +1,20 @@
+{
+	"simple for loop with statement":	
+	{
+	    "init": 
+		"let x; x = 0; for (let y = 0; y< 5; y++) x+=y;",
+	    "tests": 
+	    [
+		["x", 15]
+	    ]
+	},
+	"simple for loop with blockstatement":	
+	{
+	    "init": 
+		"let x = 0; for (let y = 0; y < 5; y++) { x+=y; }",
+	    "tests": 
+	    [
+		["x", 15]
+	    ]
+	}	
+}

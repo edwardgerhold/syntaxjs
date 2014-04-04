@@ -6158,7 +6158,6 @@ define("parser", function () {
             pass("(");
             node.object = this.Expression();
             pass(")");
-            Assert(v === "{", "expecting BlockStatement after with (EXPR)");
             node.body = this.BlockStatement();
             var l2 = loc && loc.end;
             node.loc = makeLoc(l1, l2);
@@ -25252,7 +25251,7 @@ define("runtime", function () {
             // wird von binding intialisation vorher initialisiert,
             // hier wird das initialiser assignment durchgefuehrt, wenn
             // der code evaluiert wird.
-            if (BindingPattern[type]) {
+            if (IsBindingPattern[type]) {
                 if (decl.init) initialiser = GetValue(Evaluate(decl.init));
                 else return withError("Type", "Destructuring Patterns must have some = Initialiser.");
                 if (isAbrupt(initialiser)) return initialiser;
@@ -27316,11 +27315,16 @@ define("runtime", function () {
     function WithStatement(node) {
         var body = getCode(node, "body");
         var object = GetValue(Evaluate(node.object));
-        var objEnv = ObjectEnvironment(object, cx.LexEnv);
+	if (isAbrupt(object = ifAbrupt(object))) return object;
+        
+        var objEnv = ObjectEnvironment(object, getContext().LexEnv);
         objEnv.withEnvironment = true;
+        
         var oldEnv = getLexEnv();
         getContext().LexEnv = objEnv;
+        
         var result = Evaluate(body);
+        
         getContext().LexEnv = oldEnv;
         if (isAbrupt(result)) return result;
         return NormalCompletion(undefined);

@@ -1,0 +1,14 @@
+{
+	"with statement":	
+	{
+	    "init": 
+		
+		"let obj = { a: 1, b: 2 }; let result;",
+
+	    "tests": 
+	    [
+		["with(obj) { result=a; } result;", 1],
+		["with(obj) { result=b; } result;", 2]
+	    ]
+	}
+}
