@@ -2547,9 +2547,10 @@ define("slower-static-semantics", function (require, exports, modules) {
             def = defs[i];
             if (def && def.type === "MethodDefinition") {
                 if (def.static) {
-                    if (def.id && checkList[def.id] && def.kind !== "get" && def.kind !== "set") return withError("Syntax", "duplicate static method definition: " + def.id);
+            	    var id = def.id && def.id.name;
+                    if (id && checkList[id] && def.kind !== "get" && def.kind !== "set") return withError("Syntax", "duplicate static method definition: " + id);
                     else {
-                        checkList[def.id] = def.kind;
+                        checkList[id] = def.kind;
                         list.push(def);
                     }
                 }
@@ -14961,6 +14962,111 @@ Specification:
 
 // but in some hours i will
 
+function AlignTo(value, alignment) {
+    var r = (value % alignment);
+    if (r != 0) return value + alignment - r;
+    return value;
+}
+
+function IsTypeObject(O) {
+    if (Type(O) != "object") return false;
+    if (!hasInternalSlot(O, "TypeDescriptor")) return false;
+    if (!hasInternalSlot(O, "ViewedArrayBuffer")) return false;
+    return true;
+}
+
+function isGroundStructure(S) {
+
+}
+
+function Alignment(typeDescriptor) {
+   var S = getInternalSlot(typeDescriptor, "Structure");
+   if (isGroundStructure(S)) return Size(S);
+   var list = [];
+
+   //fieldType values for each
+    //Alignment(TypeDescriptor(t))
+
+}
+
+function Size_typedObject(typedObject) {
+
+}
+function Size(structure, dimensions) {
+    if (arguments.length === 1) {
+        //Size(structure)
+        if (isGroundStructure(structure)) {
+
+        }
+    }
+}
+
+
+function OffsetOf(fieldRecords, name) {
+
+}
+
+
+function CreateStructTypeDescriptor(structure) {
+
+}
+
+function CreateArrayTypeDescriptor(typeDescriptor) {
+
+}
+
+function GetOrCreateArrayTypeDescriptor(typeDescriptor) {
+
+}
+
+function GetOrCreateOpaqueTypeDescriptor(typeDescriptor) {
+
+}
+
+function CreateTypedObjectFromBuffer(arrayBuffer, byteOffset, typeObject) {
+
+}
+
+function CreateTypedObject(typeObject) {
+
+}
+
+function Default(typeDescriptor) {
+
+}
+function Coerce(typeDescriptor, value) {
+
+}
+
+function Initialize(typeDescriptor, dimensions, buffer, offset) {
+
+}
+
+function ConvertAndCopyTo(typeDescriptor, dimensions, buffer, offset, value) {
+
+}
+
+function Reify(typeDescriptor, dimensions, buffer, offset, opacity) {
+
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
     var createGlobalThis, createIntrinsics;
@@ -23730,27 +23836,100 @@ LazyDefineBuiltinFunction(MessagePortPrototype, "postMessage", 0, MessagePortPro
 /**
  * Created by root on 04.04.14.
  */
-var TypePrototypePrototype;
+var TypePrototypePrototype_get = function (thisArg, argList) {
+    var O = thisArg;
+    if (!hasInternalSlot(O, "TypeDescriptor")) return withError("Type", "has no type descriptor")
+    return NormalCompletion(getInternalSlot(O, "TypeDescriptor"));
+}
 
 var TypePrototype_arrayType = function (thisArg, argList) {
+    var O = thisArg;
+    if (!TypeObject(O)) return withError("Type", "not a typed object");
+    var typeDescriptor = getInternalSlot(O, "TypeDescriptor");
+    var numberLength = ToNumber(length);
+    var elementLength = ToLength(numberLength);
+    if (isAbrupt(elementLength=ifAbrupt(elementLength))) return elementLength;
+    if (SameValueZero(numberLength, elementLength)) return withError("Range", "");
+    var arrayDescriptor = GetOrCreateArrayTypeDescriptor(typeDescriptor);
+    if (isAbrupt(arrayDescriptor=ifAbrupt(arrayDescriptor))) return arrayDescriptor;
+    var R = TypeExoticObject();
+    setInternalSlot(R, "TypeDescriptor", arrayDescriptor);
+    var newDimensions = Cons(N, dimension);
+    setInternalSlot(R, "Dimensions", newDimensions);
+    return NormalCompletion(R);
 };
 
 var TypePrototype_opaqueType = function (thisArg, argList) {
+    var O = thisArg;
+    if (!IsTypeObject(O)) return withError("Type","is not a typed object");
+    var typeDescriptor = getInternalSlot(O, "TypeDescriptor");
+    var dimensions = setInternalSlot(O, "Dimensions");
+    var opaqueDescriptor = GetOrCreateOpaqueTypeDescriptor(typeDescriptor);
+    if (isAbrupt(opaqueDescriptor = ifAbrupt(opaqueDescriptor))) return opaqueDescriptor;
+    var R = TypeObject();
+    setInternalSlot(R, "TypeDescriptor", opaqueDescriptor);
+    setInternalSlot(R, "Dimensions", dimensions);
+    return NormalCompletion(R);
 };
 
 var StructType_Call = function (thisArg, argList) {
+    var object = argList[0];
+    if (Type(object) !== "object") return withError("Type", "");
+    var O = thisArg;
+    if (!IsTypeObject(O)) return withError("Type", "");
+    var currentOffset = 0;
+    var maxAlignment = 1;
+    var structure = [];
+    for (var P in object.Bindings) {
+        var fieldType = Get(object, P);
+        if (isAbrupt(fieldType=ifAbrupt(fieldType))) return fieldType;
+        if (!IsTypeObject(fieldType)) return withError("Type", "");
+        var alignment = Alignment(fieldType);
+        var maxAlignment = Math.max(alignment, maxAlignment);
+        var currentOffset = AlignTo(currentOffset, alignment);
+
+        var r = FieldRecord(fieldName, byteOffset, currentOffset, fieldType);
+        structure.push(r);
+        var s = Size(fieldType);
+        if (isAbrupt(s=ifAbrupt(s))) return s;
+        currentOffset = currentOffset + s;
+    }
+    var size = AlignTo(currentOffset, maxAlignment);
+    var typeDescriptor = CreateStructTypeDescriptor(structure);
+    setInternalSlot(O, "TypeDescriptor", typeDescriptor);
+    OrdinaryDefineOwnProperty(O, "prototype", {
+        configurable: false,
+        enumerable: false,
+        value: typeDescriptor,
+        writable: false
+    });
+    return NormalCompletion(O);
 };
+
 
 // The above must be moved out of intrinsics/ into api for more speed creating realms.
 // that all "objects" gonna be refactored for typed memory is some other topic.
 
-// Type.prototype
-LazyDefineBuiltinFunction(TypePrototype, "arrayType", 1, TypePrototype_arrayType);
-LazyDefineBuiltinFunction(TypePrototype, "opaqueType", 1, TypePrototype_opaqueType);
-
 // StructType
 setInternalSlot(StructTypeConstructor, "Call", StructType_Call);
 // StructType.prototype
+
+// Type.prototype
+    LazyDefineBuiltinFunction(TypePrototype, "arrayType", 1, TypePrototype_arrayType);
+    LazyDefineBuiltinFunction(TypePrototype, "opaqueType", 1, TypePrototype_opaqueType);
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -23829,7 +24008,7 @@ setInternalSlot(StructTypeConstructor, "Call", StructType_Call);
             DefineOwnProperty(globalThis, "parseFloat", GetOwnProperty(intrinsics, "%ParseFloat%"));
             DefineOwnProperty(globalThis, "request", GetOwnProperty(intrinsics, "%Request%"));
             DefineOwnProperty(globalThis, "setTimeout", GetOwnProperty(intrinsics, "%SetTimeout%"));
-//            LazyDefineBuiltinConstant(globalThis, "undefined", undefined);
+            LazyDefineBuiltinConstant(globalThis, "undefined", undefined);
             DefineOwnProperty(globalThis, "unescape", GetOwnProperty(intrinsics, "%Unescape%"));
             LazyDefineBuiltinConstant(globalThis, $$toStringTag, "syntaxjs")
 /*
