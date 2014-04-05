@@ -595,6 +595,13 @@ CST
 ===
 
 It found it´s way into the empty statement.
+The comments and whitespaces are collected when they are ought to be skipped,
+in the next() function in a extraBuffer Array, which is assigned and replaced
+sequentially each node (in this case just before and after the pass(";") or match(";")
+in the emptyStatement parser by invoking dumpExtras(node, "before") and dumpExtras(node, "after")
+another version of the function takes three arguments to support a deeper nesting
+in the extras object.
+
 
 ```
 es6> function f() { /* 32 */ ; /* 3453 */ ; /* 34534 */ ; /* 6345 */ }
@@ -610,9 +617,7 @@ es6>
 Ok, that didn´t work. But with some change.
 
 ```
-/syntax0.js successfully written.
-build_syntax: done
-linux-dww5:/s # es6 extras.js 
+linux-dww5:/s : es6 extras.js 
 -evaluating extras.js-
 function f () {
        
@@ -629,14 +634,16 @@ es6>
 ```
 
 It´s not perfect. For comparison the original code. This file was evaluated
-via ```es6 extras.js``` and the above was the result. Here is what it typed
+via es6 extras.js and the above was the result. Here is what it typed
 in. It´s not exactly the same. You see the /* 3 */ comment being on the wrong
 line ? And /* 6 */? It´s the lineterminator between the statements that´s
 added automatically? Is there one added? Or is it, the captured lineTerminator?
 Well, then this codegenerator may no longer use the nl() function if extras
 are turned on.
 
+
 ```js
+
 function f() {
     /* 1 */;
     /* 2 */;/* 3 */
@@ -644,9 +651,11 @@ function f() {
     /*5*/;/*6*//*7*//*8*/;/*9*/
 }
 console.log(f.toString());
+
 ```
 
 I added this to the empty statement
+
 
 ```js
     builder.emptyStatement = function emptyStatement(loc, extras) {
@@ -659,6 +668,7 @@ I added this to the empty statement
 ```
 
 After i added this to the builder and first got the undefined answer from above 
+
     
 ```js
     builder.whiteSpace = function (value, loc) {
