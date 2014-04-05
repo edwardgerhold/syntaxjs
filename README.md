@@ -595,28 +595,23 @@ CST
 ===
 
 It found it´s way into the empty statement.
-Like commented in http://github.com/getify/concrete-syntax-tree
-i try to flush the buffer whenever there can be a buffer. When
-it´s empty no buffer will be added, if it is, it will. This adds
-little to the parsers constant factor, but doesnt raise complexity
-as they are stored and passed without extra iterations.
-
 
 ```
-es6> function f() { /* 32 */ ; /* 3453 */ ; /* 34534 */ ; /* %$6345 */ }
+es6> function f() { /* 32 */ ; /* 3453 */ ; /* 34534 */ ; /* 6345 */ }
 undefined
 es6> f.toString()
 function f () {
     ;undefined;
     ;undefined;
 }
-es6>```
+es6>
+```
 
 Ok, that didn´t work. But with some change.
 
 ```
 /syntax0.js successfully written.
-# build_syntax: done
+build_syntax: done
 linux-dww5:/s # es6 extras.js 
 -evaluating extras.js-
 function f () {
@@ -641,7 +636,7 @@ added automatically? Is there one added? Or is it, the captured lineTerminator?
 Well, then this codegenerator may no longer use the nl() function if extras
 are turned on.
 
-```
+```js
 function f() {
     /* 1 */;
     /* 2 */;/* 3 */
@@ -652,7 +647,8 @@ console.log(f.toString());
 ```
 
 I added this to the empty statement
-```
+
+```js
     builder.emptyStatement = function emptyStatement(loc, extras) {
         var src = "";
         if (extras && extras.before) src += callBuilder(extras.before);
@@ -664,7 +660,7 @@ I added this to the empty statement
 
 After i added this to the builder and first got the undefined answer from above 
     
-```
+```js
     builder.whiteSpace = function (value, loc) {
         return value;
     };
