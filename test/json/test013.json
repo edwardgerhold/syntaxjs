@@ -1,0 +1,15 @@
+{
+	"class declaration with static and non static method":	
+	{
+	    "init": 
+		
+		"class C { static method() { return 100; } method() { return 200; } };",
+
+	    "tests": 
+	    [
+	    	["C.method()", 100  ],
+		["(new C).method()", 200 ]
+	    ]
+	}
+	
+}
