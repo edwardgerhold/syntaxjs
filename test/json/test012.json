@@ -1,0 +1,15 @@
+{
+	"for in test":	
+	{
+	    "init": 
+		
+		"let obj; let s = '', s2 = 0; for (x in (obj={a:1,b:2,c:3})) s+=x, s2+=obj[x];",
+
+	    "tests": 
+	    [
+	    	["s", "abc" ],
+		["s2", 6 ]
+	    ]
+	}
+	
+}
