@@ -4,6 +4,8 @@ syntaxjs
 Not bugfree EcmaScript 6 Interpreter written in EcmaScript 5
 
 (i haven´t seen a virtual machine or typed memory before so if you are looking for you´re right but a year too early)
+(this doesnt mean, that i am not planning it for a while and have no list how to do 
+the full code refactoring. In fact i have)
 (i will have to redo this readme over and over until it´s just a documentation)
 (it´s serious, but don´t take it too serious, i have quite problems writing plain english)
 
@@ -164,20 +166,47 @@ es6> .print id
 }
 ```
 
+
+The debug function is experimental and needs some better design. So all outputs
+are raw at the time.
+
+```js
+es6> debug({a:1,b:2,c:3,d(){}})
+Type() results in object
+[object Object]
+{
+        [[Prototype]]: [object Object]
+        [[Extensible]]: true
+        [[Bindings]]:
+                a: (number) ecw
+                b: (number) ecw
+                c: (number) ecw
+                d: (object) ecw
+        [[Symbols]]
+}
+undefined
+```
+
+
+
 Standard Steps
 ==============
 
-It´s really an interpreter
-Written by someone who is not in the business
-by someone who never had the chance to study but last time over video lectures which helped much
+It´s really an interpreter.
+I haven´t studied cs.
+I´m learning for life, for myself, future jobs.
+Here i have to learn how to write software.
 
 Source Code is entered
-It´s tokenized
-It´s parsed in Parser_API format + glue code
+It´s tokenized into an array (i did this for my syntax highlighter, i think
+i´ll replace it with the inline variant some day)
+It´s parsed in Parser_API format + glue code (self defined properties, nodes)
 It´s executed by visiting the nodes and returning the results in Completion Records
 If exceptions are thrown they are converted into real exceptions at the end of the eval call.
-Execution possibly calls JSON Parser
-or calls CodeGenerator (installed for checking out an own codegen in Function.prototype.toString())
+Execution possibly calls JSON Parser (should invoke regexp parser, too, but not in
+this version. i just didnt make it to write it yet. but it´s already understood, almost,
+how to create a matcher. I have so many automata lectures which show this in fact now.)
+or calls CodeGenerator (installed for checking out an own jscodegen in Function.prototype.toString())
 The value is returned
 
 The async versions

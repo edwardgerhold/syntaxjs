@@ -1953,13 +1953,14 @@ define("i18n-messages", function (require, exports, module) {
 define("slower-static-semantics", function (require, exports, modules) {
 
     var debugmode = false;
+    var hasConsole = typeof console === "object" && console && typeof console.log === "function";
 
     function debug() {
-        if (debugmode && typeof importScripts !== "function") console.log.apply(console, arguments);
+        if (debugmode && hasConsole) console.log.apply(console, arguments);
     }
 
     function debugdir() {
-        if (debugmode && typeof importScripts !== "function") console.dir.apply(console, arguments);
+        if (debugmode && hasConsole) console.dir.apply(console, arguments);
     }
 
     exports.UTF16Encode = UTF16Encode;
@@ -7410,16 +7411,13 @@ define("parser", function () {
         try {
             var node = fn.call(parser);
         } catch (ex) {
-            console.log(ex.name);
+            /* console.log(ex.name);
             console.log(ex.message);
-            console.log(ex.stack);
-            node = ex;
+            console.log(ex.stack); */
             throw ex;
-        } finally {
-            restoreTheDot();
-            return node;
-        }
-
+        } 
+        restoreTheDot();
+        return node;
     }
 
     var exports = parse;
@@ -9738,7 +9736,13 @@ exports.writePropertyDescriptor = writePropertyDescriptor;
 
 function writePropertyDescriptor(object, name, value) {
     if (IsSymbol(name)) {
+        // adding a backref to the symbol
+
+        value.symbol = name;
+
+        // i can not list them if i don´t (Object.getOwnPropertySymbols)
         return object["Symbols"][name.es5id] = value;
+
     } else {
         return object["Bindings"][name] = value;
     }
@@ -12007,36 +12011,82 @@ function ToPropertyKey(P) {
 }
 
 
-
-
 function GetOwnPropertyKeys(O, type) {
     var obj = ToObject(O);
     if (isAbrupt(obj = ifAbrupt(obj))) return obj;
-    var keys = OwnPropertyKeys(O);
+    var keys;
+
+    // differ from spec a little (i had to add a backref on desc coz there is only es5id as key)
+    if (type === "symbol") {
+        keys = OwnPropertySymbols(O);
+    } else if (type === "string") {
+        keys = OwnPropertyKeys(O);
+    }
+    
     if (isAbrupt(keys = ifAbrupt(keys))) return keys;
     var nameList = [];
     var gotAllNames = false;
     var next, nextKey;
     while (!gotAllNames) {
         next = IteratorStep(keys);
-        if (isAbrupt(next = ifAbrupt(next))) return next;
+        if (isAbrupt(next = ifAbrupt(next))) {
+    	    return next;
+    	}
         if (!next) gotAllNames = true;
         else {
             nextKey = IteratorValue(next);
             if (isAbrupt(nextKey = ifAbrupt(nextKey))) return nextKey;
-            if (Type(nextKey) === type)
-                nameList.push(nextKey);
+
+            // differs from spec if (Type(nextKey)==type) by if (type == "") above
+        	nameList.push(nextKey);
+
         }
     }
     return CreateArrayFromList(nameList);
 }
 
 
+function OwnPropertyKeys(O, type) {
+    var keys = [];
+    var bindings = getInternalSlot(O,"Bindings");
+    var key;
+    for (key in bindings) {
+        keys.push(key);
+    }
+    return MakeListIterator(keys);
+}
+
+function OwnPropertyKeysAsList(O) {
+    var keys = [];
+    var bindings = getInternalSlot(O, "Bindings");
+    var key;
+    for (key in bindings) {
+        keys.push(key);
+    }
+    return keys;
+}
+
+/*
+    trying to fix es5id and Object.getOwnPropertySymbols
+
+ */
+
+function OwnPropertySymbols(O) {
+    var keys = [];
+    var symbols = getInternalSlot(O, "Symbols");
+    var key, desc;
+    for (key in symbols) {
+        if (desc = symbols[key]) {
+            Assert(desc.symbol.es5id === key, "symbol key and backref should be the same");
+            keys.push(desc.symbol); // the backref desc.symbol is stuffed into in writePropertyDescriptor()
+        }
+    }
+    return MakeListIterator(keys);
+}
+
 /**
  * Created by root on 30.03.14.
  */
-
-
 
 function SetIntegrityLevel(O, level) {
     Assert(Type(O) === "object", "object expected");
@@ -12297,36 +12347,40 @@ function HasProperty(O, P) {
 }
 
 function Enumerate(O) {
-    var propList, name, proto, bindings, desc, index, denseList, isSparse;
+    var name, proto, bindings, desc, index, denseList, isSparse;
     var duplicateMap = Object.create(null);
-    propList = [];
-
+    var propList = [];
     var chain = [];
     proto = O;
+    // add all prototypes to enumerate into one list
     while (proto != null) {
         chain.push(proto);
         proto = GetPrototypeOf(proto);
     }
-    // 1) protoypes
-    // dupes werden undefined gesetzt
-    for (var k = chain.length -1; k >= 0; k--) {
+    // read the list backwards, coz O is the index 0 in the list.
+    for (var k = chain.length-1; k >= 0; k--) {
+
         var obj = chain[k];
+
         bindings = obj.Bindings;
+
         for (name in bindings) {
             if (Type(name) === "string") {
+
                 desc = OrdinaryGetOwnProperty(obj, name);
                 if (desc.enumerable === true) {
+                    // if i find a dupe from before, delete and let list be sparse
                     if ((index = duplicateMap[name]) !== undefined) {
                         propList[index] = undefined;
                         isSparse = true;
                     }
+                    // add to the dupemap the name
                     duplicateMap[name] = propList.push(name) - 1;
                 }
             }
         }
     }
-
-    if (isSparse) {
+    if (isSparse) { // 2*O(n) if it´s containing eliminated dupes (splice costs more)
         denseList = [];
         for (var i = 0, j = propList.length; i < j; i++) {
             if ((name = propList[i]) !== undefined) denseList.push(name);
@@ -12336,29 +12390,9 @@ function Enumerate(O) {
     return MakeListIterator(propList);
 }
 
-function OwnPropertyKeys(O) {
-    var keys = [];
-    var bindings = O.Bindings;
-    var key;
-    for (key in bindings) {
-        keys.push(key);
-    }
-    //return keys;
-    return MakeListIterator(keys);
-}
-
-function OwnPropertyKeysAsList(O) {
-    var keys = [];
-    var bindings = O.Bindings;
-    var key;
-    for (key in bindings) {
-        keys.push(key);
-    }
-    return keys;
-}
 
 function IsExtensible(O) {
-    if (Type(O) === "object") return !!getInternalSlot(O, "Extensible");
+    if (Type(O) === "object") return getInternalSlot(O, "Extensible");
     return false;
 }
 
@@ -13212,9 +13246,6 @@ function IteratorStep(iterator, value) {
     return result;
 }
 
-
-
-
 function CreateListIterator(list) {
     return MakeListIterator(list);
 }
@@ -13228,8 +13259,9 @@ function MakeListIterator(list) {
         if (nextPos < len) {
             value = list[nextPos];
             nextPos = nextPos + 1;
-            done = (nextPos === len);
-            return CreateItrResultObject(value, done);
+            // leaving line for correction: hint: use CreateListIterator from spec :) and fix then if it´s wrong
+            //done = (nextPos === len);
+            return CreateItrResultObject(value, false);
         }
         return CreateItrResultObject(undefined, true);
     });
@@ -20125,22 +20157,16 @@ var ObjectConstructor_defineProperties = function (thisArg, argList) {
     return ObjectDefineProperties(O, Properties);
 };
 
-//SetFunctionName(ObjectConstructor, "Object");
-//SetFunctionLength(ObjectConstructor, 1);
-LazyDefineBuiltinFunction(ObjectConstructor, "assign", 2, ObjectConstructor_assign);
-LazyDefineBuiltinFunction(ObjectConstructor, "create", 0, ObjectConstructor_create);
-LazyDefineBuiltinFunction(ObjectConstructor, "defineProperty", 0, ObjectConstructor_defineProperty);
-LazyDefineBuiltinFunction(ObjectConstructor, "defineProperties", 0, ObjectConstructor_defineProperties);
 
 
 
-setInternalSlot(ObjectConstructor, "Call", function Call(thisArg, argList) {
+var ObjectConstructor_call = function Call(thisArg, argList) {
     var value = argList[0];
     if (value === null || value === undefined) return ObjectCreate();
     return ToObject(value);
-});
+};
 
-setInternalSlot(ObjectConstructor, "Construct", function (argList) {
+var ObjectConstructor_construct = function (argList) {
     var value = argList[0];
     var type = Type(value);
     switch (type) {
@@ -20155,11 +20181,12 @@ setInternalSlot(ObjectConstructor, "Construct", function (argList) {
             break;
     }
     return ObjectCreate();
-});
+};
 
+setInternalSlot(ObjectConstructor, "Call", ObjectConstructor_call);
+setInternalSlot(ObjectConstructor, "Construct", ObjectConstructor_construct);
 
-LazyDefineProperty(ObjectConstructor, "seal", CreateBuiltinFunction(realm,
-    function (thisArg, argList) {
+var ObjectConstructor_seal = function (thisArg, argList) {
         var O;
         O = argList[0];
         if (Type(O) !== "object") return withError("Type", "First argument is object");
@@ -20167,8 +20194,7 @@ LazyDefineProperty(ObjectConstructor, "seal", CreateBuiltinFunction(realm,
         if (isAbrupt(status = ifAbrupt(status))) return status;
         if (status === false) return withError("Type", "seal: can not seal object");
         return O;
-    }
-));
+};
 
 
 var ObjectConstructor_freeze =function (thisArg, argList) {
@@ -20196,54 +20222,38 @@ var ObjectConstructor_getOwnPropertyNames = function (thisArg, argList) {
     return GetOwnPropertyKeys(O, "string");
 };
 
-LazyDefineBuiltinFunction(ObjectConstructor, "getOwnPropertyDescriptor", 2, ObjectConstructor_getOwnPropertyDescriptor);
-LazyDefineBuiltinFunction(ObjectConstructor, "getOwnPropertyNames", 1, ObjectConstructor_getOwnPropertyNames);
-LazyDefineBuiltinFunction(ObjectConstructor, "freeze", 1, ObjectConstructor_freeze);
-
-LazyDefineProperty(ObjectConstructor, "getOwnPropertySymbols", CreateBuiltinFunction(realm,
-    function (thisArg, argList) {
+var ObjectConstructor_getOwnPropertySymbols =     function (thisArg, argList) {
         var O = argList[0];
         return GetOwnPropertyKeys(O, "symbol");
-    }));
-
-LazyDefineProperty(ObjectConstructor, "getPrototypeOf", CreateBuiltinFunction(realm,
-    function (thisArg, argList) {
+};
+var ObjectConstructor_getPrototypeOf = function (thisArg, argList) {
         var O = argList[0];
         var obj = ToObject(O);
         if (isAbrupt(obj = ifAbrupt(obj))) return obj;
         return GetPrototypeOf(obj);
-    }));
-
-LazyDefineProperty(ObjectConstructor, "is", CreateBuiltinFunction(realm,
-    function (thisArg, argList) {
+};
+var ObjectConstructor_is = function (thisArg, argList) {
         var value1 = argList[0];
         var value2 = argList[1];
         return SameValue(value1, value2);
-    }));
-
-LazyDefineProperty(ObjectConstructor, "isExtensible", CreateBuiltinFunction(realm,
-    function (thisArg, argList) {
+};
+var ObjectConstructor_isExtensible = function (thisArg, argList) {
         var O = argList[0];
         if (Type(O) !== "object") return false;
         return IsExtensible(O);
-    }
-));
+};
 
-LazyDefineProperty(ObjectConstructor, "isSealed", CreateBuiltinFunction(realm,
-    function (thisArg, argList) {
+var ObjectConstructor_isSealed = function (thisArg, argList) {
         var O = argList[0];
         if (Type(O) !== "object") return true;
         return TestIntegrityLevel(O, "sealed");
-    }
-));
+};
 
-LazyDefineProperty(ObjectConstructor, "isFrozen", CreateBuiltinFunction(realm,
-    function (thisArg, argList) {
+var ObjectConstructor_isFrozen = function (thisArg, argList) {
         var O = argList[0];
         if (Type(O) !== "object") return true;
         return TestIntegrityLevel(O, "frozen");
-    }
-));
+};
 
 
 var ObjectConstructor_preventExtensions = function (thisArg, argList) {
@@ -20294,10 +20304,25 @@ var ObjectConstructor_mixin = function (thisArg, argList) {
     return MixinProperties(to, from);
 };
 
-LazyDefineBuiltinFunction(ObjectConstructor, "preventExtensions", 1, ObjectConstructor_preventExtensions);
+//SetFunctionName(ObjectConstructor, "Object");
+//SetFunctionLength(ObjectConstructor, 1);
+LazyDefineBuiltinFunction(ObjectConstructor, "assign", 2, ObjectConstructor_assign);
+LazyDefineBuiltinFunction(ObjectConstructor, "create", 0, ObjectConstructor_create);
+LazyDefineBuiltinFunction(ObjectConstructor, "defineProperty", 0, ObjectConstructor_defineProperty);
+LazyDefineBuiltinFunction(ObjectConstructor, "defineProperties", 0, ObjectConstructor_defineProperties);
+LazyDefineBuiltinFunction(ObjectConstructor, "freeze", 1, ObjectConstructor_freeze);
+LazyDefineBuiltinFunction(ObjectConstructor, "getOwnPropertyDescriptor", 2, ObjectConstructor_getOwnPropertyDescriptor);
+LazyDefineBuiltinFunction(ObjectConstructor, "getOwnPropertyNames", 1, ObjectConstructor_getOwnPropertyNames);
+LazyDefineBuiltinFunction(ObjectConstructor, "getOwnPropertySymbols", 1, ObjectConstructor_getOwnPropertySymbols);
+LazyDefineBuiltinFunction(ObjectConstructor, "getPrototypeOf", 1, ObjectConstructor_getPrototypeOf);
 LazyDefineBuiltinFunction(ObjectConstructor, "keys", 1, ObjectConstructor_keys);
 LazyDefineBuiltinFunction(ObjectConstructor, "mixin", 2, ObjectConstructor_mixin);
-
+LazyDefineBuiltinFunction(ObjectConstructor, "is", 1, ObjectConstructor_is);
+LazyDefineBuiltinFunction(ObjectConstructor, "isExtensible", 1, ObjectConstructor_isExtensible);
+LazyDefineBuiltinFunction(ObjectConstructor, "isSealed", 1, ObjectConstructor_isSealed);
+LazyDefineBuiltinFunction(ObjectConstructor, "isFrozen", 1, ObjectConstructor_isFrozen);
+LazyDefineBuiltinFunction(ObjectConstructor, "preventExtensions", 1, ObjectConstructor_preventExtensions);
+LazyDefineBuiltinFunction(ObjectConstructor, "seal", 2, ObjectConstructor_seal);
 
 function MixinProperties(target, source) {
     Assert(Type(target) === "object");
@@ -20351,6 +20376,44 @@ function MixinProperties(target, source) {
     return target;
 }
 
+
+/*
+    What a mess for refactoring. 2 styles and both deprecated behind the next 
+*/
+
+var ObjectConstructor_getOwnPropertyDescriptors = function (thisArg, argList) {
+    /*
+	http://gist.github.com/WebReflection/9353781
+	Object.getOwnPropertyDescriptors
+    */
+    var O = argList[0];
+    var obj = ToObject(O);
+    if (isAbrupt(obj = ifAbrupt(obj))) return obj;
+    var keys = OwnPropertyKeys(obj);
+    if (isAbrupt(keys = ifAbrupt(keys))) return keys;
+    var descriptors = ObjectCreate(getIntrinsic("%ObjectPrototype%"));
+    var gotAllNames = false;
+    while (gotAllNames === false) {
+	var next = IteratorStep(keys);
+	if (isAbrupt(next=ifAbrupt(next))) return next;
+	if (next === false) gotAllNames = true;
+	else {
+	    var nextKey = IteratorValue(next);
+	    nextKey = ToPropertyKey(nextKey);
+	    if (isAbrupt(nextKey=ifAbrupt(nextKey))) return nextKey;
+	    var desc = callInternalSlot("GetOwnProperty", obj, nextKey);
+	    if (isAbrupt(desc=ifAbrupt(desc))) return desc;
+	    var descriptor = FromPropertyDescriptor(desc);
+	    if (isAbrupt(descriptor=ifAbrupt(descriptor))) return descriptor;
+	    var status = CreateDataProperty(descriptors, nextKey, descriptor);
+	    // Assert(!isAbrupt(status));
+	    if (isAbrupt(status)) return status; 
+	}
+    }
+    return descriptors;
+};	
+
+LazyDefineBuiltinFunction(ObjectConstructor, "getOwnPropertyDescriptors", 1, ObjectConstructor_getOwnPropertyDescriptors);
 
 // ===========================================================================================================
 // ObjectPrototype
@@ -23761,12 +23824,12 @@ setInternalSlot(StructTypeConstructor, "Call", StructType_Call);
             DefineOwnProperty(globalThis, "isFinite", GetOwnProperty(intrinsics, "%IsFinite%"));
             DefineOwnProperty(globalThis, "isNaN", GetOwnProperty(intrinsics, "%IsNaN%"));
             DefineOwnProperty(globalThis, "load", GetOwnProperty(intrinsics, "%Load%"));
-            LazyDefineBuiltinConstant(globalThis, "null", null);
+//            LazyDefineBuiltinConstant(globalThis, "null", null);
             DefineOwnProperty(globalThis, "parseInt", GetOwnProperty(intrinsics, "%ParseInt%"));
             DefineOwnProperty(globalThis, "parseFloat", GetOwnProperty(intrinsics, "%ParseFloat%"));
             DefineOwnProperty(globalThis, "request", GetOwnProperty(intrinsics, "%Request%"));
             DefineOwnProperty(globalThis, "setTimeout", GetOwnProperty(intrinsics, "%SetTimeout%"));
-            LazyDefineBuiltinConstant(globalThis, "undefined", undefined);
+//            LazyDefineBuiltinConstant(globalThis, "undefined", undefined);
             DefineOwnProperty(globalThis, "unescape", GetOwnProperty(intrinsics, "%Unescape%"));
             LazyDefineBuiltinConstant(globalThis, $$toStringTag, "syntaxjs")
 /*
@@ -24341,9 +24404,7 @@ define("runtime", function () {
             globalEnv = realm.globalEnv;
             globalThis = realm.globalThis;
             eventQueue = realm.eventQueue;
-
         }
-
 
     }
 
@@ -24360,13 +24421,10 @@ define("runtime", function () {
 
     var CheckObjectCoercible = ecma.CheckObjectCoercible;
 
-    // ---- xs is used for intermodule 
 
-    // -----
     var line, column;
 
-
-    var cx; // der aktive Context; gegen getContext()
+    var cx; // der aktive Context? use getContext()
     var realm, intrinsics, globalEnv, globalThis;
     var stack, eventQueue;
 
@@ -27073,7 +27131,6 @@ define("runtime", function () {
         "SwitchStatement": true
     };
 
-// TODO: RESUME for Generator
     function ForStatement(node, labelSet) {
         "use strict";
         var initExpr = node.init;
@@ -27684,11 +27741,9 @@ define("runtime", function () {
     }
 
     function GeneratorComprehension(node) {
-
         var filter = node.filter;
         var blocks = node.blocks;
         var binding;
-
         var closure = FunctionCreate("generator", [], [], getLexEnv(), true);
         return callInternalSlot("Call", closure, undefined, []);
     }
@@ -28014,8 +28069,8 @@ define("runtime", function () {
             } else {
                 var value = desc.value;
                 var newValue;
+                
                 if (Type(value) === "object") {
-
                     if (IsCallable(value)) {
                         newValue = function () {
                             var c = callInternalSlot("Call", value, value, arguments);
@@ -28024,7 +28079,6 @@ define("runtime", function () {
                             return c;
                         };
                     } else {
-
                         newValue = TransformObjectToJSObject(value);
                     }
                 } else if (Type(value) === "symbol") {
@@ -28033,6 +28087,7 @@ define("runtime", function () {
                         description: value.Description
                     };
                 } else newValue = value;
+
                 Object.defineProperty(o, key, {
                     value: newValue,
                     writable: desc.writable,
