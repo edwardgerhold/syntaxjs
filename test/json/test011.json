@@ -1,0 +1,27 @@
+{
+	"concise method in object literal, without and with default parameters":	
+	{
+	    "init": 
+		
+		"let obj = { method() { return 10; }, method2(x=100, y=99) { return x-y; } }",
+
+	    "tests": 
+	    [
+	    	["obj.method()", 10 ],
+		["obj.method2()", 1 ]
+	    ]
+	},
+	
+	"concise method with rest argument resulting in array test":
+	{
+	    "init": 
+		
+		"let obj = { method(...rest) { return rest; } };",
+
+	    "tests": 
+	    [
+	    	["let a = obj.method(1,2,3,4,5); a.length", 5],
+		["let b = obj.method(1,2,3,4,5); b[b.length-1]", 5]
+	    ]
+	}	
+}
