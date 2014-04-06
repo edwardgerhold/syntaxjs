@@ -11632,6 +11632,16 @@ function SameValueZero(x, y) {
     if (isAbrupt(x = ifAbrupt(x))) return x;
     if (isAbrupt(y = ifAbrupt(y))) return y;
     if (Type(x) !== Type(y)) return false;
+    if (IsTypeObject(x)) {
+          // IsTypeObject(y)
+         if (SameValue(getInternalSlot(x, "TypeDescriptor"), getInternalSlot(y, "TypeDescriptor"))
+         && SameValue(getInternalSlot(x, "ViewedArrayBuffer"), getInternalSlot(y, "ViewedArrayBuffer"))
+         && SameValue(getInternalSlot(x, "ByteOffset"), getInternalSlot(y, "ByteOffset"))
+         && SameValue(getInternalSlot(x, "Opacity"), getInternalSlot(y, "Opacity"))) {
+             return true;
+         }
+        return false;
+    }
     if (Type(x) === "null") return true;
     if (Type(x) === "undefined") return true;
     if (Type(x) === "number") {
@@ -11656,6 +11666,7 @@ function SameValueZero(x, y) {
     if (x === y) return true;
     return false;
 }
+
 
 
 /**
@@ -14872,15 +14883,13 @@ var OnSuccessfulTransfer_Call = function (thisArg, argList) {
 /**
  * Created by root on 04.04.14.
  */
-
 /*
-Specification:
+ Specification:
  https://github.com/dslomov-chromium/typed-objects-es7
-
-    still have to read it
+ still have to read it
  */
 
-
+var Nil = null;
 
     function TypeDescriptorExoticObject() {
         var obj = Object.create(TypeDescriptorExoticObject.prototype);
@@ -14912,23 +14921,59 @@ Specification:
         toString: function () { return "[object TypeExoticObject]"; },
 
         Call: function (thisArg, argList) {
+            var typeObject = thisArg;
             if (argList.length === 0) {
-
-                return;
+                if (isGroundType(typeObject)) {
+                    var typeDescriptor = getInternalSlot(typeObject, "TypeDescriptor");
+                    return Default(typeDescriptor);
+                }
+                return CreateTypedObject(typeObject);
             }
             var arg0 = argList[0]
             if (getInternalSlot(arg0, "ArrayBufferData")) {
-               return;
+                 var length = argList[1];
+                 length = length || buffer.length;
+                 if (isGroundType(typeObject)) return withError("Type", "object is a ground object");
+                 return CreateTypedObjectFromBuffer(typedObject, buffer, length);
+
             } else if (arg0 != undefined) {
-                return;
+                 if (isGroundObject(typeObject)) return Coerce(typeObject, value);
+                 else {
+                     var o = CreateTypedObject(typeObject);
+                     typeDescriptor =getInternalSlot(typeObject, "TypeDescriptor");
+                     var dimensions = getInternalSlot(typeObject, "Dimensions");
+                     var buffer = getInternalSlot(typeObject, "ViewedArrayBuffer");
+                     var offset = getInternalSlot(o, "ByteOffset");
+                     ConvertAndCopyTo(typeDescriptor, dimensions, buffer, offset, value);
+                 }
             }
         },
 
-        GetOwnProperty: function () {
+        GetOwnProperty: function (P) {
+           var typeDescriptor = getInternalSlot(O, "TypeDescriptor");
+           var dimensions = getInternalSlot(O, "Dimensions");
+           var buffer = getInternalSlot(O, "ViewedArrayBuffer");
+           var offset = getInternalSlot(O, "ByteOffset");
+           if (dimensions === Nil) {
+               var value = getInternalSlot(typeDescriptor, "Structure");
+               var r = FieldRecord(P);
 
+           } else {
+
+               Assert(dimensions === Cons(length, remainingDimensions), "dimensions has to be Cons(doms, remainingDimensions)")
+               var isInteger;
+               if (!IsAbrupt(ToInteger(P))) isInteger = true;
+               if (!isInteger) return NormalCompletion(undefined);
+               var i = ToInteger(P);
+               var o = s * i + offset;
+               var value = Reify(typeDescriptor, remainingDimensions, buffer,o);
+
+           }
         },
         GetPrototypeOf: function () {
-
+            var O = this;
+            var typeDescriptor = getInternalSlot(O, "TypeDescriptor");
+            return typeDescriptor;
         },
         IsExtensible: function () {
             return false;
@@ -14941,11 +14986,24 @@ Specification:
     };
     addMissingProperties(TypeExoticObject.prototype, OrdinaryObject.prototype)
 
-    // Ground Structures
-    var int8,uint8,uint16,uint32,int32,float32,float64,any,string,object,int16;
+/*
+ Possibly subject of wrong impl.
+ */
 
+var int8 = "int8",
+    uint8 = "uint8",
+    int16 = "int16",
+    uint16 = "uint16",
+    uint32 = "uint32",
+    int32 = "int32",
+    float32 = "float32",
+    float64 = "float64",
+    any = "any",
+    string = "string",
+    object = "object";
 
-    var GroundStructures = {
+var GroundStructures = {
+        __proto__:null,
         "uint8": { "Structure": uint8, "Opacity": false },
         "int8": { "Structure": int8, "Opacity": false},
         "uint16": { "Structure": uint16, "Opacity": false},
@@ -14954,20 +15012,31 @@ Specification:
         "int32": { "Structure": int32, "Opacity": false},
         "float32": { "Structure": float32, "Opacity": false},
         "float64": { "Structure": float64, "Opacity": false},
-
         "any": { "Structure": any, "Opacity": true},
         "string": { "Structure": string, "Opacity": true},
         "object": { "Structure": object, "Opacity": true}
     };
 
-// but in some hours i will
+
+var groundTypes = Object.create(null);
+groundTypes.int8 = int8;
+groundTypes.uint8 = uint8;
+groundTypes.int16 = int16;
+groundTypes.uint16 = uint16;
+groundTypes.int32 = int32;
+groundTypes.uint32 = uint32;
+groundTypes.float32 = float32;
+groundTypes.float64 = float64;
+
+
+
+
 
 function AlignTo(value, alignment) {
     var r = (value % alignment);
     if (r != 0) return value + alignment - r;
     return value;
 }
-
 function IsTypeObject(O) {
     if (Type(O) != "object") return false;
     if (!hasInternalSlot(O, "TypeDescriptor")) return false;
@@ -14976,20 +15045,36 @@ function IsTypeObject(O) {
 }
 
 function isGroundStructure(S) {
+    switch(S) {
+        case int8:
+        case int16:
+        case uint8:
+        case uint16:
+        case uint32:
+        case float32:
+        case float64:
+        return true;
+        default:
+        return false;
+    }
+}
 
+function FieldRecord(fieldName, byteOffset, currentOffset, fieldType) {
+    if (arguments.length === 2) {
+        return { name: fieldName, type: byteOffset };
+    } else {
+
+    }
 }
 
 function Alignment(typeDescriptor) {
    var S = getInternalSlot(typeDescriptor, "Structure");
    if (isGroundStructure(S)) return Size(S);
-   var list = [];
+   else {
 
+   }
    //fieldType values for each
     //Alignment(TypeDescriptor(t))
-
-}
-
-function Size_typedObject(typedObject) {
 
 }
 function Size(structure, dimensions) {
@@ -15000,55 +15085,81 @@ function Size(structure, dimensions) {
         }
     }
 }
-
-
 function OffsetOf(fieldRecords, name) {
 
 }
-
-
 function CreateStructTypeDescriptor(structure) {
 
 }
-
 function CreateArrayTypeDescriptor(typeDescriptor) {
 
 }
-
 function GetOrCreateArrayTypeDescriptor(typeDescriptor) {
 
 }
-
 function GetOrCreateOpaqueTypeDescriptor(typeDescriptor) {
 
 }
-
 function CreateTypedObjectFromBuffer(arrayBuffer, byteOffset, typeObject) {
 
 }
-
 function CreateTypedObject(typeObject) {
-
 }
-
 function Default(typeDescriptor) {
-
 }
 function Coerce(typeDescriptor, value) {
 
 }
-
 function Initialize(typeDescriptor, dimensions, buffer, offset) {
 
 }
-
 function ConvertAndCopyTo(typeDescriptor, dimensions, buffer, offset, value) {
 
 }
-
 function Reify(typeDescriptor, dimensions, buffer, offset, opacity) {
 
 }
+
+function SameDimensions(d1, d2) {
+    if (d1 === Nil && d2 === Nil) return true;
+    // if (d1 = Cons(1, remainingDimensions1)
+    // if (d2 = Cons(1, remainingDimensions2)
+    // SameDimensions(remainingDimensions1, remainingDimensions2)
+}
+
+
+exports.Nil = Nil;
+exports.TypeDescriptorExoticObject = TypeDescriptorExoticObject;
+exports.TypeExoticObject = TypeExoticObject;
+exports.IsTypeObject = IsTypeObject;
+exports.FieldRecord = FieldRecord;
+exports.Alignment = Alignment;
+exports.Size = Size;
+exports.OffsetOf = OffsetOf;
+exports.CreateStructTypeDescriptor = CreateStructTypeDescriptor;
+exports.CreateArrayTypeDescriptor = CreateArrayTypeDescriptor;
+exports.GetOrCreateArrayTypeDescriptor = GetOrCreateArrayTypeDescriptor;
+exports.GetOrCreateOpaqueTypeDescriptor = GetOrCreateOpaqueTypeDescriptor;
+exports.CreateTypedObjectFromBuffer = CreateTypedObjectFromBuffer;
+exports.CreateTypedObject = CreateTypedObject;
+exports.Default = Default;
+exports.Coerce = Coerce;
+exports.Initialize = Initialize;
+exports.ConvertAndCopyTo = ConvertAndCopyTo;
+exports.Reify = Reify;
+exports.SameDimensions = SameDimensions;
+exports.GroundStructures = GroundStructures;
+exports.isGroundStructure = isGroundStructure;
+exports.groundTypes = groundTypes;
+exports.int8 = int8;
+exports.uint8 = uint8;
+exports.int16 = int16;
+exports.uint16 = uint16;
+exports.int32 = int32;
+exports.uint32 = uint32;
+exports.float32 = float32;
+exports.float64 = float64;
+
 
 
 
@@ -23840,10 +23951,11 @@ var TypePrototypePrototype_get = function (thisArg, argList) {
     var O = thisArg;
     if (!hasInternalSlot(O, "TypeDescriptor")) return withError("Type", "has no type descriptor")
     return NormalCompletion(getInternalSlot(O, "TypeDescriptor"));
-}
+};
 
 var TypePrototype_arrayType = function (thisArg, argList) {
     var O = thisArg;
+    var length = argList[0];
     if (!TypeObject(O)) return withError("Type", "not a typed object");
     var typeDescriptor = getInternalSlot(O, "TypeDescriptor");
     var numberLength = ToNumber(length);
@@ -23871,6 +23983,8 @@ var TypePrototype_opaqueType = function (thisArg, argList) {
     setInternalSlot(R, "Dimensions", dimensions);
     return NormalCompletion(R);
 };
+
+
 
 var StructType_Call = function (thisArg, argList) {
     var object = argList[0];
@@ -23906,7 +24020,6 @@ var StructType_Call = function (thisArg, argList) {
     return NormalCompletion(O);
 };
 
-
 // The above must be moved out of intrinsics/ into api for more speed creating realms.
 // that all "objects" gonna be refactored for typed memory is some other topic.
 
@@ -23914,9 +24027,12 @@ var StructType_Call = function (thisArg, argList) {
 setInternalSlot(StructTypeConstructor, "Call", StructType_Call);
 // StructType.prototype
 
+
+
 // Type.prototype
-    LazyDefineBuiltinFunction(TypePrototype, "arrayType", 1, TypePrototype_arrayType);
-    LazyDefineBuiltinFunction(TypePrototype, "opaqueType", 1, TypePrototype_opaqueType);
+LazyDefineAccessor(TypePrototype, "prototype", TypePrototypePrototype_get);
+LazyDefineBuiltinFunction(TypePrototype, "arrayType", 1, TypePrototype_arrayType);
+LazyDefineBuiltinFunction(TypePrototype, "opaqueType", 1, TypePrototype_opaqueType);
 
 
 
