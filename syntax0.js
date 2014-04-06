@@ -2959,6 +2959,11 @@ define("tokenizer", function () {
     };
 
 
+    function pass(c) {
+        if (c == ch) next();
+        else throw new SyntaxError("tokenizer: "+ c + " expected, saw "+ch)
+    }
+
 
     function Assert(test, message) {
         if (!test) throwError(new SyntaxError("tokenizer: "+message));
@@ -3062,164 +3067,44 @@ define("tokenizer", function () {
         }
         return false;
     }
-    /*
-    function TemplateLiteral() {
-        var template="";
-        var parseRest = false;
-
-        if (ch == "`" && (inputElementGoal !== inputElementTemplateTail)) {
-
-    		  	inputElementGoal = inputElementTemplateTail;
-                next();
-                while ((ch + lookahead) != "${") {  // doubles constant factor of ch each character (tl = 2n)
-                    template += ch;
-                    next();
-                    if (ch == "`") {
-                        template += "`";
-                        inputElementGoal = inputElementRegExp;
-                        pushtoken("NoSubstitutionTemplate", template);
-                        next();
-                        return token;
-                    }
-                }
-                template += ch; // $
-                next();
-                template += ch; // {
-
-                pushtoken("TemplateHead", template);
-                next();
-
-                /*
-                while (token.type != "TemplateTail") {
-                    template = "";
-                    if (ch == "`") {
-                        pushtoken("TemplateTail")
-                        next();
-                        break;
-                    }
-                    if (ch == "}") {
-                        while (ch + lookahead != "${") {
-                            template += ch;
-                            next();
-                        }
-                        template+=ch; // $
-                        next();
-                        template += ch; // {
-                        pushtoken("TemplateMiddle", template);
-                        next();
-
-                        var cooked = "";
-                        while (ch != "}") {
-                            cooked += ch;
-                            next();
-                        }
-                        pushtoken("Unparsed", cooked);
-                    }
-
-                }
-
-                inputElementGoal = inputElementRegExp;
-                */
-/*
-                return token;
-            } else if ((inputElementGoal == inputElementTemplateTail) && ch == "}") {
-
-                while ((ch+lookahead) != "${") {
-
-                    if (ch == "`") {
-
-                        template += ch;
-                        inputElementGoal = inputElementRegExp;
-                        pushtoken("TemplateTail", template);
-                        next();
-                        return token;
-
-                    }
-                    template += ch;
-                    next();
-                }
-                template += ch; // $
-                next();
-                template += ch; // {
-                pushtoken("TemplateMiddle", template);
-                next();
-                return token;
-    	    }
-
-
-        return false;
-    }
-*/
 
     function TemplateLiteral () {
-        //
-        // new order
         // `edward ${ ""+ist+y } toll ${ oder } nicht?`
         // [ "edward ", " \""+ist+y ", " toll ", " oder ", " nicht" ]
-        // where the first is always the template head, then the span, then the template
-        // the source is deferred for parsing in the runtime.
-        // this is raw and cooked strings.
-
-        var template = "";
-        var cooked = "";
-        var spans = [];
         if (ch === "`") {
-
-            template = "";
-            // template += ch;
-            next();
-
+            var template, cooked;
+            var spans = [];
+            pass("`");
             while (ch != undefined) {
-
-                // sammle template raw from }. to .${ and from `
-                while (ch + lookahead != "${") {
-                    // maybe it ends here
+                template = "";
+                while ((ch === "$" && lookahead === "{") === false) {
                     if (ch === "`") {
-                        //template += "`";
+                        spans.push(template);
                         pushtoken("TemplateLiteral", spans);
-                        next();
+                        pass("`");
                         return token;
                     }
                     template += ch;
                     next();
                 }
-                //template += ch; // $ dont collect dont strip
-                next();
-                //template += ch; // { dont collect dont strip
                 spans.push(template);
-
-                // sammle template cooked from ${. to  .}
+                pass("$");
+                pass("{");
                 cooked = "";
                 while (ch != "}") {
-                    /* add blocks inside template?
-                    if (ch == "{") {
-                        parens.push("{");
-                    }
-                    */
                     cooked += ch;
                     next();
-                    /*
-                    if (ch == "}" ) {
-                        if (parens.pop()) {
-                            cooked += ch;
-                            next();
-                        }
-                    }
-                    */
                 }
                 spans.push(cooked);
-                next(); // von } nach }.1
-
+                pass("}");
             }
         }
         return false;
     }
 
-
     function Comments() {
         var comment = "";
         var type;
-
         if ((ch + lookahead) === "//") {
             type = "LineComment";
             comment = "//";
@@ -3298,6 +3183,10 @@ define("tokenizer", function () {
     }
 
     function DivPunctuator() {
+
+        /*
+            this is old */
+
         var tok;
         if (ch === "/") {
             if (tok = Comments()) return token = tok;
@@ -3326,7 +3215,12 @@ define("tokenizer", function () {
 
     function Punctuation() {
 
-        // if (inputElementGoal === inputElementTemplateTail && ch == "}") return false;
+        /*
+
+            better is a hardcoded path and nested switch each char,
+            that´s forward parsing, and here it´s capture 4, go down to 1.
+
+         */
 
         if (ParensSemicolonComma[ch]) {
             pushtoken("Punctuator", ch, undefined, PunctToExprName[ch]);
@@ -9953,15 +9847,11 @@ function printException (error) {
 
 function makeMyExceptionText(name, message, callstack) {
     var text = "\n";
-    text += "An [[exception]] has been thrown!\n";
-    text += "[name]: "+ name + "\n";
-    text += "[message]: " + message + "\n";
-    text += "[stack]: " + callstack + "\n";
+    text += "An "+name+" exception was thrown!\n";
+    text += "message: '" + message + "'\n";
+    text += "callstack: " + callstack + "\n";
     return text;
 }
-
-
-
 
 function stringifyErrorStack(type, message) {
     var callStack = getStack();
@@ -15004,10 +14894,6 @@ groundTypes.uint32 = uint32;
 groundTypes.float32 = float32;
 groundTypes.float64 = float64;
 
-
-
-
-
 function AlignTo(value, alignment) {
     var r = (value % alignment);
     if (r != 0) return value + alignment - r;
@@ -15033,6 +14919,7 @@ function isGroundStructure(S) {
         default:
         return false;
     }
+
 }
 
 function FieldRecord(fieldName, byteOffset, currentOffset, fieldType) {
@@ -15092,8 +14979,13 @@ function Initialize(typeDescriptor, dimensions, buffer, offset) {
 function ConvertAndCopyTo(typeDescriptor, dimensions, buffer, offset, value) {
 
 }
+
 function Reify(typeDescriptor, dimensions, buffer, offset, opacity) {
 
+}
+
+function Cons(car, cdr) {
+   // wiki says from lisp: (cons 42 (cons 69 (cons 613 nil)))
 }
 
 function SameDimensions(d1, d2) {
@@ -15102,7 +14994,6 @@ function SameDimensions(d1, d2) {
     // if (d2 = Cons(1, remainingDimensions2)
     // SameDimensions(remainingDimensions1, remainingDimensions2)
 }
-
 
 exports.Nil = Nil;
 exports.TypeDescriptorExoticObject = TypeDescriptorExoticObject;
@@ -15123,6 +15014,7 @@ exports.Coerce = Coerce;
 exports.Initialize = Initialize;
 exports.ConvertAndCopyTo = ConvertAndCopyTo;
 exports.Reify = Reify;
+exports.Cons = Cons;
 exports.SameDimensions = SameDimensions;
 exports.GroundStructures = GroundStructures;
 exports.isGroundStructure = isGroundStructure;
@@ -15135,24 +15027,6 @@ exports.int32 = int32;
 exports.uint32 = uint32;
 exports.float32 = float32;
 exports.float64 = float64;
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 
@@ -25290,6 +25164,8 @@ define("runtime", function () {
                 for (var k = 0, l = substitutions.length; k < l; k++) {
                     args.push(substitutions[k]);
                 }
+                break;
+
             } else if (type === "SpreadExpression") {
                 var array = GetValue(Evaluate(arg));
                 if (isAbrupt(arg = ifAbrupt(arg))) return arg;
@@ -27575,15 +27451,17 @@ define("runtime", function () {
         var list = [];
         var spans = node.spans;
         var span;
+        var i, j;
         if (raw) {
             if (spans.length === 1) return spans;
-            for (var i = 0, j = spans.length; i < j; i+=2) {
-                if (span = spans[i]) list.push(span);
+            for (i = 0, j = spans.length; i < j; i+=2) {
+                if ((span = spans[i]) !== undefined) list.push(span);
             }
+
         } else {
             if (spans.length === 1) return [];
             for (i = 1, j = spans.length; i < j; i+=2) {
-                if (span = spans[i]) list.push(span);
+                if ((span = spans[i]) !== undefined) list.push(span);
             }
         }
         return list;
@@ -27597,13 +27475,14 @@ define("runtime", function () {
             var expr = Get(siteObj, ToString(i));
             if (isAbrupt(expr = ifAbrupt(expr))) return expr;
 
-            if ((i % 2) === 0) {
+            if (typeof expr === "string") {
                 expr = parseGoal("Expression", expr);
                 var exprRef = Evaluate(expr);
                 var exprValue = GetValue(exprRef);
                 if (isAbrupt(exprValue = ifAbrupt(exprValue))) return exprValue;
                 results.push(exprValue);
             }
+
         }
         return results;
     }
@@ -27611,11 +27490,10 @@ define("runtime", function () {
 
     function GetTemplateCallSite(templateLiteral) {
 
-        if (templateLiteral.siteObj) return templateLiteral.siteObj;
+        // if (templateLiteral.siteObj) return templateLiteral.siteObj;
 
         var cookedStrings = TemplateStrings(templateLiteral, false); // die expressions ??? bei mir jedenfalls gerade
         var rawStrings = TemplateStrings(templateLiteral, true); // strings
-
 
         var count = Math.max(cookedStrings.length, rawStrings.length);
         var siteObj = ArrayCreate(count);
@@ -27623,8 +27501,8 @@ define("runtime", function () {
         var index = 0;
         var prop, cookedValue, rawValue;
         while (index < count) {
-            prop = ToString(index);
 
+            prop = ToString(index);
             cookedValue = cookedStrings[index];
             rawValue = rawStrings[index];
 
