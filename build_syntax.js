@@ -41,7 +41,6 @@
 
 //#include "lib/heap/heap.js";
 //#include "lib/compile/compiler.js";
-//#include "lib/compile/arraycompiler.js";
 
 //#include "lib/api.js";
 
