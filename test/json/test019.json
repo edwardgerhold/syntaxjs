@@ -1,6 +1,5 @@
 {
-
-	"destructuring function arguments - named function":
+	"named fn - destructuring function arguments":
 	{
 	    "init": 
 		"let f = function g({a,b,c}) { return a+b+c }",
@@ -8,5 +7,16 @@
 	    [
 		["f({a:1,b:2,c:3})", 6]
 	    ]
+	},
+
+	"instantiate fdecl - destructuring inside of a functionbody":
+	{
+	    "init": 
+		"function f(o) { let {a,b,c} = o; return a+b+c; }",
+	    "tests": 
+	    [
+		["f({a:1,b:2,c:3})", 6]
+	    ]
 	}
 }
+

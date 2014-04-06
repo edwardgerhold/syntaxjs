@@ -25708,14 +25708,14 @@ define("runtime", function () {
             if (IsBindingPattern[type]) {
                 if (decl.init) initialiser = GetValue(Evaluate(decl.init));
                 else return withError("Type", "Destructuring Patterns must have some = Initialiser.");
-                if (isAbrupt(initialiser)) return initialiser;
+                if (isAbrupt(initialiser=ifAbrupt(initialiser))) return initialiser;
                 status = BindingInitialisation(decl, initialiser, env);
                 if (isAbrupt(status = ifAbrupt(status))) return status;
             } else {
                 if (decl.init) {
                     name = decl.id;
                     initialiser = GetValue(Evaluate(decl.init));
-                    if (isAbrupt(initialiser)) return initialiser;
+                    if (isAbrupt(initialiser=ifAbrupt(initialiser))) return initialiser;
                     if (IsCallable(initialiser)) {
                         if (IsAnonymousFunctionDefinition(decl.init) && !HasOwnProperty(initialiser, "name")) {
                             SetFunctionName(initialiser, name);
@@ -25876,6 +25876,7 @@ define("runtime", function () {
         }
         if (type === "DefaultParameter") {
             name = node.id;
+
             if (value === undefined) value = GetValue(Evaluate(node.init));
             if (env !== undefined) env.InitialiseBinding(name, value, strict);
             else {
@@ -25910,12 +25911,14 @@ define("runtime", function () {
                         return IndexedBindingInitialisation(decl, p, value, env);
                     } else {
                         if (env) {
+
                             if (decl.id) { // is not an identifier, is a "BindingElement"
-                                env.InitialiseBinding(decl.as.name, value.Get(decl.id.name, value));
+                                env.InitialiseBinding(decl.as.name, Get(value, decl.id.name, value));
                             } else {    // is not a bindingelement, is an "Identifier"
-                                env.InitialiseBinding(decl.name, value.Get(ToString(p), value));
+                                env.InitialiseBinding(decl.name, Get(value, ToString(p), value));
                             }
                         } else {
+
                             if (decl.id) { // BindingElement has el.id and el.as
                                 lhs = Evaluate(decl.id);
                                 PutValue(lhs, Get(value, decl.id.name));
@@ -25934,13 +25937,12 @@ define("runtime", function () {
             var decl;
             for (var p = 0, q = node.elements.length; p < q; p++) {
                 if (decl = node.elements[p]) {
-
                     if (env) {
 
-                        if (decl.id) env.InitialiseBinding(decl.as.name, value.Get(decl.id.name, value));
-                        else env.InitialiseBinding(decl.name, value.Get(decl.name, value));
-
+                        if (decl.id) env.InitialiseBinding(decl.as.name, Get(value, decl.id.name, value));
+                        else env.InitialiseBinding(decl.name, Get(value, decl.name, value));
                     } else {
+
                         if (decl.id) {
                             lhs = Evaluate(decl.id);
                             PutValue(lhs, Get(value, decl.id.name));
