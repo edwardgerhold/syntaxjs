@@ -9690,7 +9690,11 @@ function callInternalSlot(name, object, a, b, c, d) {
 }
 
 //
-// choose right internal function of object (got no polymorphism and auto type detection)
+//
+// This table is just the prequel of the original table
+// pointing from the typed memory to the object with the native functions
+// marked by a "native" flag and an offset into a hashtable with these objects
+// the tostrign is simulation and not just slowdown
 //
 
 var function_table = {
@@ -9704,7 +9708,11 @@ var function_table = {
     "[object SymbolPrimitiveType]": SymbolPrimitiveType.prototype,
     "[object EddiesDOMObjectWrapper]": ExoticDOMObjectWrapper.prototype,
     "[object EddiesDOMFunctionWrapper]": ExoticDOMFunctionWrapper.prototype,
-    "[object IntegerIndexedExoticObject]": IntegerIndexedExoticObject.prototype
+    "[object IntegerIndexedExoticObject]": IntegerIndexedExoticObject.prototype,
+    
+    "[object TypeExoticObject]": TypeExoticObject.prototype,
+    "[object TypeDescriptorExoticObject]": TypeDescriptorExoticObject.prototype
+    
 };
 
 function getFunction(obj, name) {
@@ -11268,7 +11276,9 @@ var object_tostring_to_type_table = {
     "[object StringExoticObject]": "object",
     "[object ArrayExoticObject]": "object",
     "[object ArgumentsExoticObject]": "object",
-    "[object SymbolPrimitiveType]": "symbol"
+    "[object SymbolPrimitiveType]": "symbol",
+    "[object TypeDescriptorExoticObject]": "object",
+    "[object TypeExoticObject]": "object"
 };
 
 var primitive_type_string_table = {
@@ -11632,6 +11642,7 @@ function SameValueZero(x, y) {
     if (isAbrupt(x = ifAbrupt(x))) return x;
     if (isAbrupt(y = ifAbrupt(y))) return y;
     if (Type(x) !== Type(y)) return false;
+
     if (IsTypeObject(x)) {
           // IsTypeObject(y)
          if (SameValue(getInternalSlot(x, "TypeDescriptor"), getInternalSlot(y, "TypeDescriptor"))
@@ -11642,6 +11653,7 @@ function SameValueZero(x, y) {
          }
         return false;
     }
+
     if (Type(x) === "null") return true;
     if (Type(x) === "undefined") return true;
     if (Type(x) === "number") {
@@ -11663,6 +11675,7 @@ function SameValueZero(x, y) {
     if (Type(x) === "symbol") {
         return x === y;
     }
+
     if (x === y) return true;
     return false;
 }
@@ -14502,42 +14515,8 @@ PendingTaskRecord.prototype.constructor = PendingTaskRecord;
 PendingTaskRecord.prototype.toString = PendingTaskRecord_toString;
 
 function TaskQueue() {
-    // use it like an array
-    // and use .nextIndex and .nextOne for iteration
-    // without the need for a shift() to go forward
-    // or to write the code down manually
-    var queue = Object.create(Array.prototype);
-    Object.defineProperty(queue, "length", {
-        value: 0,
-        enumerable: false
-    });
-    // set queue.nextIndex = 0 to start Iteration
-    Object.defineProperty(queue, "nextIndex", {
-        value: 0,
-        enumerable: false
-    });
-    // test queue.done convenient, wether it´s over
-    Object.defineProperty(queue, "done", {
-        get: function () {
-            return queue.nextIndex >= queue.length;
-        },
-        enumerable: false
-    });
-    // use nextOne to get the value at nextIndex and increase
-    Object.defineProperty(queue, "nextOne", {
-        value: function () {
-            if (!queue.done) {
-                var value = queue[queue.nextIndex];
-                queue.nextIndex += 1;
-                return value;
-            }
-            return undefined;
-        },
-        enumerable: false
-    })
-    return queue;
+    return [];
 }
-
 
 function makeTaskQueues(realm) {
     realm.LoadingTasks = TaskQueue();
@@ -14570,13 +14549,11 @@ function EnqueueTask(queueName, task, args) {
 }
 
 function NextTask (result, nextQueue) {
-
     if (isAbrupt(result = ifAbrupt(result))) {
         // performing implementation defined unhandled exception processing
         console.log("NextTask: Got exception - which will remain unhandled - for debugging, i print them out." )
         printException(result);
     }
-
     Assert(getStack().length === 0, "NextTask: The execution context stack has to be empty");
     var nextPending = nextQueue.shift();
     var newContext = ExecutionContext(null, getRealm());
@@ -14584,7 +14561,6 @@ function NextTask (result, nextQueue) {
     getStack().push(newContext);
     callInternalSlot("Call", nextPending.Task, undefined, nextPending.Arguments);
 }
-
 
 /**
  * Created by root on 31.03.14.
@@ -17167,14 +17143,11 @@ DefineOwnProperty(ArrayConstructor, $$create, {
     configurable: true
 });
 
-DefineOwnProperty(ArrayConstructor, $$toStringTag, {
-    value: "Array",
-    enumerable: false,
-    writable: false,
-    configurable: false
-});
 
-setInternalSlot(ArrayConstructor, "Call", function (thisArg, argList) {
+
+LazyDefineBuiltinConstant(ArrayPrototype, $$toStringTag, "Array");
+
+var ArrayConstructor_call =  function (thisArg, argList) {
 
     var O = thisArg;
     var array;
@@ -17256,24 +17229,20 @@ setInternalSlot(ArrayConstructor, "Call", function (thisArg, argList) {
         return array;
     }
 
-});
-setInternalSlot(ArrayConstructor, "Construct", function (argList) {
+};
+var ArrayConstructor_construct = function (argList) {
     var F = this;
     var argumentsList = argList;
     return OrdinaryConstruct(F, argumentsList);
-});
-DefineOwnProperty(ArrayConstructor, "length", {
-    value: 1,
-    enumerable: false,
-    writable: false,
-    configurable: false
-});
-DefineOwnProperty(ArrayConstructor, "prototype", {
-    value: ArrayPrototype,
-    enumerable: false,
-    writable: false,
-    configurable: false
-});
+};
+
+setInternalSlot(ArrayConstructor, "Call", ArrayConstructor_call);
+setInternalSlot(ArrayConstructor, "Construct", ArrayConstructor_construct);
+
+LazyDefineBuiltinConstant(ArrayConstructor, "length", 1);
+LazyDefineBuiltinConstant(ArrayConstructor, "length", 1);
+LazyDefineBuiltinConstant(ArrayConstructor, "prototype", ArrayPrototype);
+
 
 DefineOwnProperty(ArrayConstructor, "isArray", {
     value: CreateBuiltinFunction(realm, function isArray(thisArg, argList) {
