@@ -57,15 +57,14 @@ function usage() {
 }
 
 
-function basic_setup () {
-    var args = process.argv.slice(2);
-
-    for (var i = 1, j = args.length; i < j; i++) {
+function basic_setup (args) {
+    var fn;
+    for (var i = 0, j = args.length; i < j; i++) {
 	if (args[i] == "-w") writetests = true;
 	else if (args[i] == "-v") verbose = true;
-	else fn = args[i];
+	else fn = args[i]; 
     }
-    rawjson = fs.readFileSync(args[0], "utf8");
+    rawjson = fs.readFileSync(fn, "utf8");
     json = JSON.parse(rawjson);
     testnames = Object.keys(json);
     separator = "";
@@ -73,13 +72,16 @@ function basic_setup () {
 }
 
 function writeTest(current) {
+
 }
 
 function runTest(current, testname) {
+    // calling tester.js
     var tester = new Test();
     var code = current.init;
     var result = syntaxjs.eval(code, true, true);
     var tests = current.tests;
+
     tests.forEach(function (test) {
 	tester.add(function () {
 	    var code = test[0];
@@ -88,6 +90,7 @@ function runTest(current, testname) {
 	    this.assert(result, expected, code);
 	});
     });
+    
     console.log(separator);
     console.log(testname);
     console.log(code);
@@ -95,15 +98,15 @@ function runTest(current, testname) {
     tester.print();
 }
 
-(function main() {
+(function main(args) {
 
-    if (process.argv.length < 2) {
+    if (!args.length) {
         about();
 	usage();
 	process.exit(-1);
     }
 
-    basic_setup();
+    basic_setup(args);
     
     if (verbose) {
 	about();
@@ -112,10 +115,20 @@ function runTest(current, testname) {
     
     testnames.forEach(function (testname) {
 	var current = json[testname];
-	//if (writetests) writeTest(current);
-	//else 
-	runTest(current, testname);
+	 // a. convert to other testlibs writing tests.js to fs
+	// if (writetests) return writeTest(current);
+	// b. use tester.js as testrunner
+	try {
+	    runTest(current, testname);
+	} catch (ex) {
+	    console.log(separator);
+	    console.log("Exception at: "+testname);
+	    console.log(ex.name);
+	    console.log(ex.message);
+	    console.log(ex.stack);
+	    
+	}
     });
     
-}());
+}(process.argv.slice(2)));
 

@@ -1,3 +1,18 @@
+/*
+
+    tester.js is a test utility
+    it can not be used inside other tools
+    it´s own assertions are recorded in an array
+    for later printing or whatever analysis later
+    
+    when reading the code i notice
+    it´s older than syntax.js and 
+    from my homepage. i just reuse it.
+    and it needs further development :)
+    a litte.
+
+*/
+
 
 var testerjs = (function () {
 
@@ -69,7 +84,6 @@ SimpleTest.prototype.record = record;
 SimpleTest.prototype.stringify = stringify;
 /* Output */
 SimpleTest.prototype.print = print_results;
-SimpleTest.prototype.draw = print_canvas;
 SimpleTest.prototype.html = print_html;
 SimpleTest.prototype.process = process_results;
 
@@ -204,14 +218,16 @@ function notEquals(act, exp, mess) {
 function add_test(f) {
     this.tests.push(f);
 }
-function call_test (test, that, i) {
-	var r;
+
+function call_test (test, i) {
+	var that = this;
+	var rec;
 	try {
-	that.count.currentTest = i;
-	    r = test.call(that, that);
+	    that.count.currentTest = i;
+	    rec = test.call(that, that);
 	} catch(ex) {
 	    that.count.exceptions += 1;
-	    that.results.push(r={
+	    that.results.push(rec={
 		pass: false,
 		type: "Exception",
 		ex: ex,
@@ -221,8 +237,9 @@ function call_test (test, that, i) {
 	    console.log("EXCEPTION THROWN AT TEST "+(i+1));
 	    console.dir(ex);
 	}
-	return r;
+	return rec;
 }
+
 function run_tests() {
     var that = this;
     var l = this.tests.length;
@@ -232,7 +249,7 @@ function run_tests() {
     console.time(t);
     for (var i=0, j=tests.length; i < j; i++) {
 	if (test = tests[i]) {
-    	    call_test(test, that, i);
+    	    call_test.call(this, test, i);
 	}
     }
     console.timeEnd(t);
@@ -268,10 +285,13 @@ function format_html (rec) {
 	html += ": msg=";
 	html += span("expected", rec.expected);
 	html += "; ";
-	html += span("message", rec.message);
-    
-    }
-    else if (rec.type !== "Exception") {
+	html += span("message", rec.message);    
+    } else if (rec.type === "Exception") {
+    	html += ": ex=";
+	html += span("ex", rec.ex.message);
+	html += ": stack=";
+	html += span("stack", rec.ex.stack.substr(0));
+    } else {
 	html += ": actual=";
 	html += span("actual", rec.actual);
 	html += ", expected=";
@@ -279,13 +299,6 @@ function format_html (rec) {
 	html += "; ";
 	html += span("message", rec.message);
     } 
-     else {
-	html += ": ex=";
-	html += span("ex", rec.ex.message);
-	html += ": stack=";
-	html += span("stack", rec.ex.stack.substr(0));
-    }
-    // ready
     return span("result", html);
 }
 
@@ -301,12 +314,6 @@ function print_html(options) {
 	element.innerHTML += html;
     }
     else throw "tester.js: print_html({el:'#selector'||element}): el not found";
-}
-function print_canvas(options) {
-    var context = document.querySelector(options.el).getContext("2d");
-    var w = context.canvas.width;
-    var h = context.canvas.height;
-    var lh = h / this.results.length;
 }
 
 var tester = {
