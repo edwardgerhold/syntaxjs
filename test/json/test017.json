@@ -1,0 +1,74 @@
+{
+	
+	"destructuring assignment with object":
+	{
+	    "init": 
+		"let {a,b,c} = { a: 'Hallo', b: false, c() { let z = 10; return z; } };",
+
+	    "tests": 
+	    [
+		["a", "Hallo"],
+		["b", false],
+		["c()", 10 ]
+	    ]
+	},
+	
+	"destructuring assignment with arrays":
+	
+	{
+	    "init":
+		"let [a,b,c] = [ 'Hallo', false, function x() { return 10; } ]",
+	    "tests":
+		[
+		["a", "Hallo"],
+		["b", false],
+		["c()", 10 ]
+		    
+		]
+	    
+	
+	},
+	
+	
+	"with var - destructuring assignment with object":
+	{
+	    "init": 
+		"var {a,b,c} = { a: 'Hallo', b: false, c() { let z = 10; return z; } };",
+
+	    "tests": 
+	    [
+		["a", "Hallo"],
+		["b", false],
+		["c()", 10 ]
+	    ]
+	},
+	
+	
+	"with var - destructuring assignment with arrays":	
+	{
+	    "init":
+		"var [a,b,c] = [ 'Hallo', false, function x() { return 10; } ]",
+	    "tests":
+		[
+		["a", "Hallo"],
+		["b", false],
+		["c()", 10 ]
+		    
+		]
+	},
+	
+	
+	"restelement - with var - destructuring assignment with arrays":	
+	{
+	    "init":
+		"var [a, ...rest] = [ 'Hallo', false, function x() { return 10; } ]",
+	    "tests":
+		[
+		    ["a", "Hallo"],
+	    	    ["rest[0]", false],
+		    ["rest[1]()", 10 ]
+		]
+	}
+		
+	
+}

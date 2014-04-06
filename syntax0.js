@@ -3071,6 +3071,7 @@ define("tokenizer", function () {
     function TemplateLiteral () {
         // `edward ${ ""+ist+y } toll ${ oder } nicht?`
         // [ "edward ", " \""+ist+y ", " toll ", " oder ", " nicht" ]
+
         if (ch === "`") {
             var template, cooked;
             var spans = [];
@@ -11188,7 +11189,7 @@ function Type(O) {
     var tostring;
     if (type === "object") {
         if (O === null) return "null";
-        tostring = O.toString();
+        tostring = O.toString && O.toString();
         if (tostring === "[object CompletionRecord]") return Type(O.value);
         return object_tostring_to_type_table[tostring] || "object";
     }
@@ -24763,7 +24764,7 @@ define("runtime", function () {
         for (i = 0, j = lexDeclarations.length; i < j; i++) {
             debug("lexdecls: " + j);
             d = lexDeclarations[i];
-            dn = d.id.name;
+
             kind = d.kind;
             if (IsBindingPattern[d.type]) { // extra hack
                 boundNamesInPattern = BoundNames(d.elements);
@@ -24774,9 +24775,11 @@ define("runtime", function () {
                     if (isAbrupt(status)) return status;
                 }
             } else if (kind === "const") {
+                            dn = d.id.name;
                 status = env.CreateImmutableBinding(dn);
                 if (isAbrupt(status)) return status;
             } else if (kind === "let") {
+                            dn = d.id.name;
                 status = env.CreateMutableBinding(dn, deletableBindings);
                 if (isAbrupt(status)) return status;
             } else if (d.generator) {
@@ -27470,11 +27473,9 @@ define("runtime", function () {
     function SubstitutionEvaluation(siteObj) {
         var len = +Get(siteObj, "length");
         var results = [];
-
         for (var i = 0; i < len; i++) {
             var expr = Get(siteObj, ToString(i));
             if (isAbrupt(expr = ifAbrupt(expr))) return expr;
-
             if (typeof expr === "string") {
                 expr = parseGoal("Expression", expr);
                 var exprRef = Evaluate(expr);
@@ -27482,19 +27483,14 @@ define("runtime", function () {
                 if (isAbrupt(exprValue = ifAbrupt(exprValue))) return exprValue;
                 results.push(exprValue);
             }
-
         }
         return results;
     }
 
-
     function GetTemplateCallSite(templateLiteral) {
-
-        // if (templateLiteral.siteObj) return templateLiteral.siteObj;
-
+        if (templateLiteral.siteObj) return templateLiteral.siteObj;
         var cookedStrings = TemplateStrings(templateLiteral, false); // die expressions ??? bei mir jedenfalls gerade
         var rawStrings = TemplateStrings(templateLiteral, true); // strings
-
         var count = Math.max(cookedStrings.length, rawStrings.length);
         var siteObj = ArrayCreate(count);
         var rawObj = ArrayCreate(count);
@@ -27549,9 +27545,7 @@ define("runtime", function () {
         var formals = getCode(node, "params");
         var key = node.id;
 
-
         var computed = node.computed;
-
 
         var strict = IsStrict(body);
         var scope = getLexEnv();
@@ -28017,21 +28011,21 @@ define("runtime", function () {
         if (!node) return;
 
         if (typeof node === "string") {
-            debug("Evaluate(resolvebinding " + node + ")");
+    //        debug("Evaluate(resolvebinding " + node + ")");
             R = ResolveBinding(node);
             return R;
         }
 
         if (Array.isArray(node)) {
 
-            debug("Evaluate(StatementList)");
+      //      debug("Evaluate(StatementList)");
             if (node.type) R = evaluation[node.type](node, a, b, c);
             else R = evaluation.StatementList(node, a, b, c);
             return R;
 
         }
 
-        debug("Evaluate(" + node.type + ")");
+        // debug("Evaluate(" + node.type + ")");
         if (E = evaluation[node.type]) {
             tellExecutionContext(node, 0);
             R = E(node, a, b, c);
@@ -28176,6 +28170,14 @@ define("runtime", function () {
         });
     }
 
+    function DeepStaticJSSnapshotOfObject(O) {
+        var keys = OwnPropertyKeysAsList(O);
+        var o = {};
+        keys.forEach(function (key) {
+
+        });
+    }
+
     function TransformObjectToJSObject(O) {
         /*
          incomplete transformer/static proxy
@@ -28247,6 +28249,7 @@ define("runtime", function () {
     ExecuteTheCode.ExecuteAsync = ExecuteAsync;
     ExecuteTheCode.ExecuteAsyncTransform = ExecuteAsyncTransform;
     ExecuteTheCode.TransformObjectToJSObject = TransformObjectToJSObject;
+    ExecuteTheCode.DeepStaticJSSnapshotOfObject = DeepStaticJSSnapshotOfObject;
 
     return ExecuteTheCode;
 });
