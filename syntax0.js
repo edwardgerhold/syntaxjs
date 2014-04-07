@@ -2978,18 +2978,19 @@ define("tokenizer", function () {
     }
 
     var debugmode = true;
+    
+    var hasConsole = typeof console === "object" && console && typeof console.log === "function";
+    
     function debug() {
-        if (debugmode && typeof importScripts !== "function") {
+        if (debugmode && hasConsole) {
             if (typeof arguments[0] == "object") {
                 console.dir(arguments[0]);
             } else console.log.apply(console, arguments);
         }
     }
     function debugdir() {
-        if (debugmode && typeof importScripts !== "function") console.dir.apply(console, arguments);
+        if (debugmode && hasConsole) console.dir.apply(console, arguments);
     }
-
-
 
 
     function LineTerminator() {
@@ -8060,18 +8061,23 @@ define("js-codegen", function (require, exports, module) {
         var src = "do " + callBuilder(body) + " while (" + callBuilder(test) + ");";
         return src;
     };
+    
     builder.withStatement = function withStatement(obj, body, loc, extras) {
         var src = "";
-        if (extras && extras.with) callBuilder(extras.with.before);
+        if (extras && extras.with) src += callBuilder(extras.with.before);
         src += "with";
-        if (extras && extras.with) callBuilder(extras.with.after);
+        if (extras && extras.with) src += callBuilder(extras.with.after);
         src += " (" + callBuilder(obj) + ") " + callBuilder(body);
         return src;
     };
-    builder.debuggerStatement = function debuggerStatement(loc) {
-        var src = "debugger;";
+    builder.debuggerStatement = function debuggerStatement(loc, extras) {
+        var src = "";
+        if (extras && extras.before) src += callBuilder(extras.before)
+        src += "debugger";
+    	if (extras && extras.after) src += callBuilder(extras.after);
         return src;
     };
+
     builder.tryStatement = function (block, handler, guard, finalizer, loc, extras) {
         var src = "try " + callBuilder(block) + " catch (" + callBuilder(guard.params) + ") " + callBuilder(guard.block);
         if (finalizer) src += "finally " + callBuilder(finalizer.block);
@@ -8901,546 +8907,6 @@ define("builder",  function (require, exports, module) {
     return builder;
 });
 
-
-/*
-############################################################################################################################################################################################################
-
-    A codegenerator, which transforms the AST into an Array.
-    This is a version, where the builder has to be called on the complete AST, because it goes down recursivly.
-    A second version, which will be the "update" of this one, will do it only the node passed in at a time,
-    which means, that nodes passed in are already put into byte code format.
-    Probably the second version will do heap writes or return one typed array instead of returning nested arrays,
-    like this one, for making it easy.
-
-    Almost parallel, the runtime.js will be updated to supported interface-driven access to the ir code. That makes
-    it possible to read an array instead of the parser api ast nodes.
-
-    In the other version offsets are passed as parameters instead of objects, then i just store the offsets together
-    with the node (in one large typed array).
-
-############################################################################################################################################################################################################
-*/
-
-define("arraycompiler", function (require, exports, module) {
-    var builder = exports;
-
-    var byteCode = {
-        "loc": 999,
-        "true": 1,
-        "false": 0,
-        "null": - 1,
-        "undefined": -2,
-        "EmptyStatement": -127,
-        "AssignmentExpression": 32,
-        "Expression": 43,
-        "SequenceExpression" : 45,
-        "VariableDeclaration" : 33,
-        "VariableDeclarationList": 34,
-        "LexicalDeclaration": 37,
-        "GeneratorBody" : 324,
-        "FunctionDeclaration": 112,
-        "FunctionExpression": 113,
-        "Identifer": 45,
-        "NumericLiteral": 46,
-        "BooleanLiteral": 67,
-        "NullLiteral": 95,
-        "TemplateLiteral": 244,
-        "RegularExpressionLiteral": 300,
-        "StatementList": 2321,
-        "SwitchStatement": 455,
-        "WhileStatement": 2512,
-        "DoWhileStatement": 235,
-        "ForStatement": 2556,
-        "ForInStatement": 2342,
-        "ForOfStatement": 2345,
-        "IfStatement": 100,
-        "ReturnStatement": 23,
-        "ThrowStatement": 74,
-        "ContinueStatement": 84,
-        "BreakStatement": 85,
-        "YieldExpression": 24,
-        "CallExpression": 44,
-        "NewExpression": 234,
-        "MemberExpression": 25,
-        "ObjectExpression": 474,
-        "ArrayExpression": 2355,
-        "ArrayPattern" : 556,
-        "ObjectPattern": 663,
-        "Directive": 111,
-        "ArrayComprehension": 552,
-        "GeneratorComprehension": 252,
-        "MethodDefinition": 499,
-        "PropertyDefinition": 588,
-        "PropertyDefinitionList": 785,
-        "BinaryExpression": 2223,
-        "ThisStatement": 266,
-        "SuperExpression": 377,
-        "DebuggerStatement": 999,
-        "DefaultCase": 177,
-        "SwitchCase": 189,
-        "Finally": 200,
-        "ModuleDeclaration": 777,
-        "ExportStatement": 776,
-        "ImportStatement": 988,
-        "Program": 111,
-
-        "let": 2344,
-        "const": 6362,
-        "var": 6376
-    };
-    var byteDecoder = {};
-    for (var k in byteCode) {
-        if (Object.hasOwnProperty.call(byteCode, k))
-        byteDecoder[byteCode[k]] = k;
-    }
-
-    var nodeFields = {
-       "type": 0,
-       "body": 1,
-       "left": 1,
-       "kind": 1,
-       "argument": 1,
-       "right": 2,
-       "operator": 3
-    };
-
-    function locArray(loc) {
-        return [byteCode["loc"], loc.start.line,loc.start.column, loc.end.line, loc.end.column];
-    }
-    function byteString(str) {
-        //var a = [];
-        //for (var i = 0; i < str.length; i++) a.push(str.charCodeAt(i));
-        //return a;
-        return str;
-    }
-
-    builder.emptyStatement = function emptyStatement(loc) {
-        return [byteCode["EmptyStatement"],
-        locArray(loc)];
-    };
-
-    builder.directive = function (directive, loc) {
-      return [byteCode["Directive"],
-      byteString(directive),
-      locArray(loc)]
-    };
-
-    builder.literal = function (type, value, loc) {
-        return [byteCode[type],
-                value];
-    };
-
-    builder.identifier = function (name) {
-       return [byteCode["Identifier"], byteString(name)];
-    };
-
-    builder.functionDeclaration = function (body, params, strict, generator, loc) {
-
-        return [byteCode["FunctionDeclaration"],
-                callBuilder(body),
-                callBuilder(params),
-                +strict,
-                +generator,
-                locArray(loc)];
-    };
-    builder.functionExpression = function (body, params, strict, generator, loc) {
-        return [byteCode["FunctionExpression"],
-            callBuilder(body),
-            callBuilder(params),
-            +strict,
-            +generator,
-            locArray(loc)];
-    };
-
-    builder.variableStatement = function variableStatement(kind, decls, loc) {
-        return [byteCode["VariableStatement"],
-                byteCode[kind],
-                callBuilder(decls),
-                locArray(loc)
-                ];
-    };
-
-    builder.callExpression = function (callee, args, loc) {
-            return [byteCode["CallExpression"],
-                callBuilder(callee),
-                callBuilder(args),
-                locArray(loc)];
-    };
-    builder.newExpression = function (callee, args, loc) {
-        return [byteCode["NewExpression"],
-            callBuilder(callee),
-            callBuilder(args),
-            locArray(loc)];
-    };
-    builder.objectExpression = function (properties, loc) {
-        return [byteCode["ObjectExpression"],
-        callBuilder(properties),
-        locArray(loc)];
-    };
-    builder.arrayExpression = function (elements, loc) {
-        return [byteCode["ArrayExpression"],
-            callBuilder(elements),
-            locArray(loc)];
-    };
-
-    builder.blockStatement = function (body, loc) {
-        return [byteCode["BlockStatement"],
-        callBuilder(body),
-        locArray(loc)];
-    };
-    builder.binaryExpression = function (left, operator, right, loc) {
-        return [byteCode["BinaryExpression"],
-        callBuilder(left),
-        callBuilder(right),
-        byteCode[operator],
-        locArray(loc)];
-    };
-    builder.assignmentExpression = function (left, operator, right, loc) {
-        return [byteCode["AssignmentExpression"],
-            callBuilder(left),
-            callBuilder(right),
-            byteCode[operator],
-            locArray(loc)];
-    };
-    builder.propertyDefinition = function (id, expr, loc) {
-        return [
-            byteCode["PropertyDefinition"],
-            byteString(id),
-            callBuilder(expr),
-            locArray(loc)
-        ];
-    };
-    builder.methodDefinition = function (id, params, body, strict, statics, generator, loc) {
-        return [
-            byteCode["MethodDefinition"],
-            byteString(id),
-            callBuilder(params),
-            callBuilder(body),
-            +strict,
-            +statics,
-            +generator,
-            locArray(loc)
-        ];
-    };
-
-    builder.bindingElement = function (name, as, loc) {
-        return [byteCode["BindingElement"],
-            byteString(name),
-            byteString(as),
-        locArray(loc)]
-    };
-
-    builder.pattern =
-    builder.arrayPattern =
-    builder.objectPattern = function (properties, loc) {
-        var bc = [];
-        for (var i = 0, j = properties.length; i < j; i++) {
-            bc.push(callBuilder(properties[i]));
-        }
-        bc.push(locArray(loc));
-        return bc;
-    };
-    builder.expressionStatement = function expressionStatement(expr, loc) {
-        return [
-        byteCode["ExpressionStatement"],
-            callBuilder(expr),
-        locArray(loc)];
-
-    };
-    builder.labeledStatement = function labeledStatement(label, body, loc) {
-        return [
-            byteCode["LabeledStatement"],
-            callBuilder(body),
-            locArray(loc)
-        ];
-    };
-    builder.sequenceExpression = function (seq, loc) {
-        return [
-            byteCode["SequenceExpression"],
-            callBuilder(seq),
-            locArray(loc)
-        ];
-    };
-    builder.ifStatement = function ifStatement(test, condition, alternate, loc) {
-        return [byteCode["IfStatement"],
-            callBuilder(condition),
-            callBuilder(alternate),
-            locArray(loc)
-        ];
-    };
-    builder.switchStatement = function (discriminant, cases, isLexical, loc) {
-        var bc = [
-            byteCode["SwitchStatement"],
-            callBuilder(discriminant)
-        ];
-        var scbc = [];
-        for (var i = 0, j = cases.length; i < j; i++) {
-            scbc.push(callBuilder(cases[i]));
-        }
-        bc.push(scbc);
-        bc.push(locArray(loc));
-        return bc;
-    };
-    builder.whileStatement = function whileStatement(test, body, loc) {
-        return [
-            byteCode["WhileStatement"],
-            callBuilder(test),
-            callBuilder(body),
-            locArray(loc)
-        ];
-    };
-    builder.withStatement = function withStatement(obj, body, loc) {
-        return [
-            byteCode["WithStatement"],
-            callBuilder(body),
-            locArray(loc)
-        ];
-    };
-    builder.debuggerStatement = function debuggerStatement(loc) {
-        return [byteCode["DebuggerStatement"], locArray(loc)];
-    };
-    builder.tryStatement = function (block, handler, guard, finalizer, loc) {
-        return [
-            byteCode["TryStatement"],
-            callBuilder(block),
-            callBuilder(handler),
-            callBuilder(finalizer),
-            locArray(loc)
-        ];
-    };
-    builder.forInStatement = function forInStatement(left, right, body, isForEach, loc) {
-        return [
-            byteCode["ForInStatement"],
-            callBuilder(left),
-            callBuilder(right),
-            callBuilder(body),
-            locArray(loc)
-        ];
-    };
-    builder.forOfStatement = function forOfStatement(left, right, body, loc) {
-        return [
-            byteCode["ForOfStatement"],
-            callBuilder(left),
-            callBuilder(right),
-            callBuilder(body),
-            locArray(loc)
-        ];
-
-    };
-    builder.forStatement = function forStatement(init, condition, update, body, loc) {
-        return [
-            byteCode["ForStatement"],
-            callBuilder(init),              // later
-            callBuilder(condition),         // these
-            callBuilder(update),            // fn return
-            callBuilder(body),              // just offsets
-            locArray(loc)                   // for the heap
-        ];
-
-    };
-    builder.doWhileStatement = function doWhileStatement(body, test, loc) {
-        return [
-            byteCode["DoWhileStatement"],
-            callBuilder(body),
-            callBuilder(test),
-            locArray(loc)
-        ];
-    };
-    builder.throwStatement = function (expression, loc) {
-        return [byteCode["ThrowStatement"],
-            callBuilder(expression),
-            locArray(loc)
-        ];
-    };
-    builder.breakStatement = function (label, loc) {
-        return [byteCode["BreakStatement"],
-            byteString(label),
-            locArray(loc)];
-    };
-    builder.continueStatement = function (label, loc) {
-        return [byteCode["ContinueStatement"],
-        byteString(label),
-        locArray(loc)];
-    };
-    builder.returnStatement = function (expression, loc) {
-        return [byteCode["ReturnStatement"],
-            callBuilder(expression),
-            locArray(loc)
-        ];
-    };
-    builder.program = function (body, loc) {
-       var bc = [byteCode["Program"]];
-        for (var i = 0, j = body.length; i < j; i++) {
-            bc.push(callBuilder(body[i]));
-        }
-        bc.push(locArray(loc));
-        return bc;
-    };
-
-    function callBuilder(node) {
-        var args;
-        var name;
-        if (!node) return "";
-        if (Array.isArray(node)) {
-            var result = [];
-            var stm;
-            for (var i = 0, j = node.length; i < j; i++) {
-                if (stm = node[i]) {
-                    result.push( callBuilder(stm) );
-                }
-            }
-            return result;
-        } else if (typeof node === "string") {
-            return byteString(node);
-        } else {
-            name = node.type;
-            switch (name) {
-                case "BlockStatement":
-                    args = [node.body, node.loc];
-                    break;
-                case "FunctionDeclaration":
-                case "FunctionExpression":
-                case "GeneratorDeclaration":
-                case "GeneratorExpression":
-                    args = [node.id, node.params, node.body, node.strict, node.generator, node.expression, node.loc];
-                    break;
-                case "MethodDefinition":
-                    args = [node.id, node.params, node.body, node.strict, node.static, node.generator, node.loc];
-                    break;
-                case "ArrowExpression":
-                    args = [node.id, node.params, node.body, node.strict, node.generator, node.expression, node.loc];
-                    break;
-                case "ExpressionStatement":
-                case "SequenceExpression":
-                    args = [node.expression, node.loc];
-                    break;
-                case "VariableDeclarator":
-                    args = [node.id, node.init, node.loc];
-                    break;
-                case "VariableDeclaration":
-                case "LexicalDeclaration":
-                    args = [node.kind, node.declarations, node.loc];
-                    break;
-                case "EmptyStatement":
-                    args = [node.loc];
-                    break;
-                case "ForStatement":
-                    args = [node.init, node.test, node.update, node.body, node.loc];
-                    break;
-                case "ForInStatement":
-                case "ForOfStatement":
-                    args = [node.left, node.right, node.body, node.loc];
-                    break;
-                case "DoWhileStatement":
-                case "WhileStatement":
-                    args = [node.test, node.body, node.loc];
-                    break;
-                case "LabelledStatement":
-                    args = [node.label, node.statement, node.loc];
-                    break;
-                case "IfStatement":
-                    args = [node.test, node.consequent, node.alternate, node.loc];
-                    break;
-                case "TryStatement":
-                    args = [node.block, node.guard, node.finalizer, node.loc];
-                    break;
-                case "SwitchStatement":
-                    args = [node.discriminant, node.cases, node.loc];
-                    break;
-                case "WithStatement":
-                    args = [node.object, node.body, node.loc];
-                    break;
-                case "ComprehensionExpression":
-                    args = [node.blocks, node.filter, node.expression];
-                    break;
-                case "PropertyDefinition":
-                    args = [node.kind, node.key, node.value, node.loc];
-                    break;
-                case "AssignmentExpression":
-                case "BinaryExpression":
-                case "LogicalExpression":
-                    args = [node.operator, node.left, node.right, node.loc];
-                    break;
-                case "UnaryExpression":
-                    args = [node.operator, node.argument, node.prefix, node.loc];
-                    break;
-                case "MemberExpression":
-                    args = [node.object, node.property, node.computed, node.loc];
-                    break;
-                case "CallExpression":
-                case "NewExpression":
-                    args = [node.callee, node.arguments, node.loc];
-                    break;
-                case "ObjectPattern":
-                case "ArrayPattern":
-                    args = [node.elements, node.loc];
-                    break;
-                case "BindingElement":
-                    args = [node.id.name, node.as.name, node.loc];
-                    break;
-                case "ObjectExpression":
-                    args = [node.properties, node.loc];
-                    break;
-                case "ArrayExpression":
-                    args = [node.elements, node.loc];
-                    break;
-                case "DefaultParameter":
-                    args = [node.id, node.init, node.loc];
-                    break;
-                case "RestParameter":
-                    args = [node.id, node.init, node.loc];
-                    break;
-                case "SpreadExpression":
-                    args = [node.argument, node.loc];
-                    break;
-                case "ClassDeclaration":
-                case "ClassExpression":
-                    args = [node.id, node.extends, node.elements, node.expression, node.loc];
-                    break;
-                case "ThisExpression":
-                case "SuperExpression":
-                    args = [node.loc];
-                    break;
-                case "Program":
-                    args = [node.body, node.loc];
-                    break;
-                case "Identifier":
-                    args = [node.name || node.value, node.loc];
-                    break;
-                case "ReturnStatement":
-                case "ThrowStatement":
-                    args = [node.argument, node.loc];
-                    break;
-                case "BreakStatement":
-                case "ContinueStatement":
-                    args = [node.argument, node.label, node.loc];
-                    break;
-                case "YieldExpression":
-                    args = [node.argument, node.delegator, node.loc];
-                    break;
-                case "Directive":
-                case "Literal":
-                case "NumericLiteral":
-                case "StringLiteral":
-                case "NullLiteral":
-                case "BooleanLiteral":
-                case "TemplateLiteral":
-                    args = [node.type, node.value, node.loc];
-                    break;
-            }
-            name = name[0].toLowerCase() + name.slice(1);
-            return builder[name].apply(builder, args);
-        }
-    }
-    builder.callBuilder = callBuilder;
-    builder.compile = function (src) {
-	    var nodes;
-        if (typeof src === "string") nodes = require("parse")(src);
-        else nodes = src;
-        return callBuilder(nodes);
-    };
-    return builder;
-});
 
 /*
     API contains ecma-262 specification devices
@@ -11494,6 +10960,14 @@ function CheckObjectCoercible(argument) {
 }
 
 
+// 7.4.2014
+function CanonicalNumericString (argument) {
+    Assert(Type(argument) === "string", "CanonicalNumericString: arguments has to be a string");
+    var n = ToNumber(argument);
+    if (n === -0) return +0;
+    if (SameValue(ToString(n), argument) === false) return undefined;
+    return n;
+}
 /**
  * Created by root on 31.03.14.
  */
@@ -14483,13 +13957,91 @@ function DefineBuiltinProperties(O) {
  * Created by root on 31.03.14.
  */
 
-
 function NewModuleEnvironment(global) {
     return DeclarativeEnvironment(global);
 }
 
+/**
+ * Created by root on 07.04.14.
+ */
+
+function ModuleExoticObject (environment, exports) {
+    var m = Object.create(ModuleExoticObject.prototype);
+    setInternalSlot(m, "ModuleEnvironment", environment);
+    setInternalSlot(m, "Exports", exports);
+    return m;
+}
+
+ModuleExoticObject.prototype = {
+    constructor: "ModuleExoticObject",
+    toString: function () { return "[ModuleExoticObject]"; },
+    Get: function (P, R) {
+        var O = this;
+        Assert(IsPropertyKey(P), "[[Delete]] expecting P to be a valid property key");
+        var exports = getInternalSlot(O, "Exports");
+        if (!exports.indexOf(P) > -1) return undefined; // O(n) not hash??
+        var env = getInternalSlot(O, "ModuleEnvironment");
+        return env.GetBindingValue(P, true);
+    },
+    Set: function () {
+        return false;
+    },
+    Delete: function (P) {
+        Assert(IsPropertyKey(P), "[[Delete]] expecting P to be a valid property key");
+        var exports = getInternalSlot(O, "Exports");
+        if (hasRecordInList(exports, "Name", P)) return false; // O(n) not hash??
+        return true;
+    },
+    Enumerate: function () {
+        var O = this;
+        var exports = getInternalSlot(O, "Exports");
+        return MakeListIterator(exports);
+    },
+    OwnPropertyKeys: function () {
+        var O = this;
+        var exports = getInternalSlot(O, "Exports");
+        return MakeListIterator(exports);
+    },
+    HasProperty: function (P) {
+        var O = this;
+        var exports = getInternalSlot(O, "Exports");
+        if (exports.indexOf(P) > -1) return true; // O(n) not hash?? decide when completing
+        return false;
+    },
+    GetOwnProperty: function () {
+        return withError("Type", "The [[GetOwnProperty]] of ModuleExoticObjects is supposed to throw a TypeError.")
+    },
+    DefineOwnProperty: function () {
+        return false;
+    },
+    GetPrototypeOf: function () {
+        return null;
+    },
+    SetPrototypeOf: function (O) {
+        Assert(Type(O) == "object" || Type(O) == "null", "Module.SetPrototypeOf: Expecting object or null before returning false anyways");
+        return false;
+    },
+    IsExtensible: function () {
+        return false;
+    },
+
+}
+addMissingProperties(ModuleExoticObject.prototype, OrdinaryObject.prototype);
 
 
+function ModuleObjectCreate(environment, exports) {
+    Assert(environment.Bindings, "environment has to be a declarative record");
+    Assert(Array.isArray(exports), "exports has to be a list of string values");
+    // in a typed mem there will the pointers to the methods be set coz there is no
+    // prototype. we can point to native hashes, too, by just knowing the meaning of
+    // the pointer.
+    var m = ModuleExoticObject(environment, exports);
+    return m;
+}
+
+exports.ModuleObjectCreate = ModuleObjectCreate;
+exports.ModuleExoticObject = ModuleExoticObject;
+exports.NewModuleEnvironment = NewModuleEnvironment;
 
 /**
  * Created by root on 31.03.14.
@@ -24241,33 +23793,38 @@ define("runtime", function () {
     var ecma = require("api");
     var statics = require("slower-static-semantics");
 
-    var i18n = require("i18n-messages");
+    var i18n = require("i18n-messages"); // this is still a hoax, should focus on error messages
+                                         // especially repeating ones to create a string.format style
 
     var parseGoal = parse.parseGoal;
 
     var debugmode = false;
 
     var isWorker = typeof importScripts === "function" && typeof window === "undefined";
+    var hasConsole = typeof console === "object" && console && typeof console.log == "function";
 
     function debug() {
-        if (debugmode && !isWorker) console.log.apply(console, arguments);
+        if (debugmode && hasConsole) console.log.apply(console, arguments);
     }
 
     function debugdir() {
-        if (debugmode && !isWorker) console.dir.apply(console, arguments);
+        if (debugmode && hasConsole) console.dir.apply(console, arguments);
     }
     
     function consoleLog() {
-        if (!isWorker) console.log.apply(console, arguments);
+        if (hasConsole) console.log.apply(console, arguments);
     }
 
     function consoleDir() {
-        if (!isWorker) console.dir.apply(console, arguments);
+        if (hasConsole) console.dir.apply(console, arguments);
     }
 
 
     /*
      The interfaces for refactoring the runtime for the Bytecode
+     I don´t care for the difference beetween a stack machine and
+     a tree evaluation? I do, but the only way to make this here
+     usable for both is to go this way.
      */
 
     var Push = ecma.Push;
@@ -24454,8 +24011,6 @@ define("runtime", function () {
 
     var CreateEmptyIterator = CreateEmptyIterator;
     var ToBoolean = ecma.ToBoolean;
-
-
 
     var CreateItrResultObject = ecma.CreateItrResultObject;
     var IteratorNext = ecma.IteratorNext;
@@ -25151,6 +24706,20 @@ define("runtime", function () {
 
     /********************************************************************** continuing with the ast ********************************************************************************/
 
+    function isTemplateCallSite(O) {
+        return (Type(O) === "object" && HasProperty(O, "raw"));
+    }
+
+    function getTemplateArgumentList(siteObj, args) {
+        var substitutions = SubstitutionEvaluation(siteObj);
+        if (isAbrupt(substitutions = ifAbrupt(substitutions))) return substitutions;
+        args.push(siteObj);
+        for (var k = 0, l = substitutions.length; k < l; k++) {
+            args.push(substitutions[k]);
+        }
+        return args;
+    }
+
     function ArgumentListEvaluation(list) {
         var args = [],
             arg;
@@ -25161,12 +24730,7 @@ define("runtime", function () {
             type = arg.type;
             if (type === "TemplateLiteral") {
                 var siteObj = GetTemplateCallSite(arg);
-                var substitutions = SubstitutionEvaluation(siteObj);
-                if (isAbrupt(substitutions = ifAbrupt(substitutions))) return substitutions;
-                args.push(siteObj);
-                for (var k = 0, l = substitutions.length; k < l; k++) {
-                    args.push(substitutions[k]);
-                }
+                args = getTemplateArgumentList(siteObj, args);
                 break;
 
             } else if (type === "SpreadExpression") {
@@ -25183,6 +24747,16 @@ define("runtime", function () {
                 if (isAbrupt(argRef = ifAbrupt(argRef))) return argRef;
                 var argValue = GetValue(argRef);
                 if (isAbrupt(argValue = ifAbrupt(argValue))) return argValue;
+
+                // bugfix? or too much?
+                // String.raw(template) where template is an identifier
+                if (isTemplateCallSite(argValue)) {
+                    args = getTemplateArgumentList(argValue, args);
+                    break;
+                } // passes the test but adds 1 function call to isTemplateCallSite in 99% of
+                // not matching cases, maybe i should disallow calls to String.raw(template) for .
+                //
+
                 args.push(argValue);
             }
         }
@@ -28098,7 +27672,7 @@ define("runtime", function () {
         var exprRef, exprValue, text, type, message, stack, error, name, callstack;
 
         var node = typeof source === "string" ? parse(source) : source;
-        if (!node) throw "example: Call Evaluate(parse(source)) or Evaluate(source)";
+        if (!node) throw "example: Call ExecuteTheCode(parse(source)) or ExecuteTheCode(source)";
 
         if (!initialisedTheRuntime || !shellModeBool || resetEnvNowBool) {
             var realm = CreateRealm();
@@ -29718,7 +29292,7 @@ define("syntaxjs", function () {
         evalStaticXform: pdmacro(require("runtime").ExecuteAsyncStaticXform),
         evalAsync: pdmacro(require("runtime").ExecuteAsync),
         evalAsyncXform: pdmacro(require("runtime").ExecuteAsyncTransform),
-        arraycompile: pdmacro(require("arraycompiler").compile)
+        // arraycompile: pdmacro(require("arraycompiler").compile)
     };
     
     var syntaxjs_highlighter_api = {

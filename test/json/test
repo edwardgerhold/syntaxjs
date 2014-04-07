@@ -1,1 +1,1 @@
-../../tools/testmaker.js $1
+node ../../tools/testmaker.js $1
