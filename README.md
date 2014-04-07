@@ -27,7 +27,7 @@ es6> function *gen() { yield 10; }
 undefined
 es6> let it = gen();
 undefined
-es6> it.next();
+es6> it.next().value;
 10
 ```
 
