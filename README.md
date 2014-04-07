@@ -1,7 +1,7 @@
 syntaxjs
 ========
 
-Not bugfree EcmaScript 6 Interpreter written in EcmaScript 5
+Not bugfree EcmaScript 6 (7) Interpreter written in EcmaScript 5
 
 (i haven´t seen a virtual machine or typed memory before so if you are looking for you´re right but a year too early)
 (this doesnt mean, that i am not planning it for a while and have no list how to do 
@@ -166,12 +166,13 @@ es6> .print id
 }
 ```
 
+* got a new debug function added to global scope.
 
 The debug function is experimental and needs some better design. So all outputs
 are raw at the time.
 
 ```js
-es6> debug({a:1,b:2,c:3,d(){}})
+es6> debug({a:1,b:2,c:3,d(){},[Symbol.create]:true})
 Type() results in object
 [object Object]
 {
@@ -182,24 +183,28 @@ Type() results in object
                 b: (number) ecw
                 c: (number) ecw
                 d: (object) ecw
-        [[Symbols]]
-}
+        [[Symbols]]:
+}		@@create: (symbol) ---
 undefined
 ```
-
-
 
 Standard Steps
 ==============
 
 It´s really an interpreter.
-I haven´t studied cs.
-I´m learning for life, for myself, future jobs.
+I haven´t studied cs. I haven´t even studied. (I wish i would)
+But I´m learning for life, for myself, a future job. (Maybe)
 Here i have to learn how to write software.
+Little development is easy. SW-Engineering is an art and a craftmanship.
+So i´m missing some points. Some tools. Some reusable and sound sound.
+But youtube and lectures help much. (Mininum mathematically and generally).
+Hope to become better.
+
+However, it´s performing these standard steps like all other compilers do, too.
 
 Source Code is entered
 It´s tokenized into an array (i did this for my syntax highlighter, i think
-i´ll replace it with the inline variant some day)
+i´ll replace it with the inline variant some day, i don´t really care today.)
 It´s parsed in Parser_API format + glue code (self defined properties, nodes)
 It´s executed by visiting the nodes and returning the results in Completion Records
 If exceptions are thrown they are converted into real exceptions at the end of the eval call.
@@ -257,20 +262,38 @@ of the ECMA-262 Specification. They form (long named) the complete required AST 
 variables as lists or single values each node, which will be collected when parsing, say ast properties).
 One should update parser api for.
 
+* Semantic Analysis
+
 Everyone who cares not for and deferring them to semantic analysis should analyse
 the complexity of the semantics.js "slower-static-semantics" module. Doing this on 
 an AST to retrieve the properties in a second step hurts JIT and Interpreter hardly.
 It´s traversing the AST over and over. And even memoizing will only hinder redoing the
-same, but not omit the repeating traversals completly. The best is to do this in one
+same, but not omit the repeating queries completly. The best is to do this in one
 wash with the first syntactic parsing.
+
+* Contains
+
+And better then a ```{ type: "Program", contains: { "ContinueStatement": true /* must throw early error */ } }```,
+which was my best idea so far, is, when parsing the statements, to compare the resulting node
+against a blacklist hashtable. functions, programs have these tables containing the continue and break,
+the program has additionally no return. I costs little memory to create these tables. And almost no
+time to [[Get]] a stmt.type from the truth table. Querying node.contains would cost more. And 
+using Contains() would be quadratic, O(n) nodes times O(n) queries. The fastest would be
+```stmt=parseStmt(); if (productionIsBlackListedHereInPrgBody[stmt.type]) throw "early error";```
+
+* Properties 
 
 Example: MethodDefinitions should have .static (static class property) and .special (getter, setter)
 properties, it´s ugly to test oneself wether it´s a get or a set after the parser had that already.
+
+* Expressions being flagged
 
 ExpressionStatements and Expressions (Assignment, Binary) containing a function or should have "isAnonymousFunctionDefinition" (righthandside or syntax error, eh, function () is not allowed ;-)) and
 "isValidAssignmentTarget" (lefthandside) to reveal what they possess in constant time to the compiler. Waiting for
 the next node and checking it´s field is way to much if such properties can help you go constant.
 Hmm. I should elaborate the list here. That you can read it.
+
+* Template Literal Node
 
 ```
     // now (it´s not an effort to rename value to spans. It´s a new node which will carry .raw and .cooked)
@@ -312,7 +335,7 @@ possibly this could be refactored, but currently it is supporting the system to 
 .computed is IsComputedPropertyName (in objectliterals, resolves to a symbol)
 
 .computed in MemberExpression stands for obj[key] 
-But .computed in PropertyDefinitionLists stands for { [s]: prop } keys.
+But .computed in PropertyDefinitionLists (objectExpr.properties) stands for { [s]: prop } keys.
 
 together with of .const for IsConstantDeclaration
 a LetDeclarations and ConstDeclarations should be
@@ -331,21 +354,18 @@ a LetDeclarations and ConstDeclarations should be
 
  ```
 
+Wrong Implementation? 
+Other Implementation?
 
-Wrong Implementation?
-
-.kind should be on all declarations, that´s why i added it on the fly for letting the latter example run easy
-without reconsidering a declarations node which is not in the LexicallyDeclaredNames list. (One should elaborate
-wether a Let and Const List is easier to use in InstantiateXxxDeclaration or not)
-
-A little difference from the Parser_API by mistake is that i haven´t used "default" and "rest" in
-the function nodes because of the "RestParameter" and "DefaultArgument" nodes i introduced already.
-I wasn´t sure how to fill the default´s array. With the number of argument nodes and a null everywhere,
-where no default is? (Oh my god)
+For refactorDOP i´ve tried out Esprimas Parser and have seen some differences,
+BlockStatement and Arrays for FunctionBody, String .id and Identifier .id,
+.defaults and .rest or node.type "DefaultParameter" and type "RestParameter".
+I´ll have to align this.
 
 Additional Builder (Parser_API Builder, not Builder Pattern self)
 The codegen module is using the builder Pattern in combination with callBuilder(node) for perfection (is clean, read).
-Will be used for the compiler later, for sure, because i´ve interfaced with already.
+Will be used for the compiler later, for sure, because i´ve interfaced with already. But there
+without callBuilder directly at returning the node from the parser.
 
 ```
     var builder = {};
@@ -409,15 +429,19 @@ I think the best is to annotate the code now, because i´ve split the code up.
 = Bugs
 
 I have a few big things on my list
-And know the hundred and fifty open bugs
+And know the hundred and fifty open bugs (plus the other 300 mistakes)
 
-I know what´s going wrong
+I know what´s going wrong (mostly)
 But it takes time until i repair them
 
 Design Issues
 ============
 
 - Design Patterns
+
+After spotting them in 2014 the first time, i think it´s the best idea to update the
+code wherever i can to become equal to these patterns. It´s readable and maintable,
+communicatable, and looks and feels better than amateur code being somewhat similar.
 
 Update: the "nodefactory" an abstract factory with factory methods, in a concrete
 mozilla parser api nodes producing implementation will be in lib/parsenodes/nodefactory.js
@@ -461,6 +485,7 @@ adapter by passing in an object with three functions.
 I noticed it is not running in nashorn.
 That´s a real problem.
 It should
+
 ```
 function load() { [native code] }
 jjs> load("/s/syntax0.js");
@@ -482,12 +507,9 @@ Exception in thread "main" ECMAScript Exception: TypeError: Cannot get default s
         at jdk.nashorn.tools.Shell.main(Shell.java:130)
         at jdk.nashorn.tools.Shell.main(Shell.java:109)
 ```
-should interface with the java api here and bring it forward (think but have barrier of no experience with)
 
-and it doesn´t in Spidermonkey
-where i will check for load and print and look
+Spidermonkey
 
-ok i have tested it as i´ve written this
 
 ```
 js> load("syntax0.js");
@@ -503,11 +525,9 @@ js>
 
 ```
 
-seems like i have to fix something
-
-(spidermonkey is already working so far. but i have to take a list
-for print/console.log and other functions/properties provided/not provided
-to make some duck typing system complete)
+This was repaired a little later. I simply turned DOM Wrapper off.
+But it led me to find it better to ducktype for "hasConsole" rather
+than for "isSpidermonkey".
 
 - Heap
 
@@ -519,6 +539,10 @@ But was already recognized - that´s why there are callInternalSlot, setInternal
 and other Interfaces for handling the code later. The theory with the lookup table for functions is
 already made and i can reference native (js is "native" here) and compiled functions with. The secret
 is a special bit on the byte telling me, to read the function outside of the heap is what i add here.
+
+The other thing is, i have to replace all common objects and array accessess with
+wrapper function. On my PIII it´s a ruin, but later it´s a clean system, able to use
+typed memory and save it to typed and native slots pointed to by the objects.
 
 - Compiler
 
@@ -539,10 +563,10 @@ my time to change break the program (last year it served my homepage with the te
 experience how to treat software or my efforts with value).
 
 Should be refactored to use the AST instead of the tokens, well, the tokens AND the AST for highlighting
-is more than only the tokens, coz scope and eval results are inclusive.
+is more than only the tokens, coz scope and eval results, and interception are inclusive.
 requires data-astnodeid for mouseover/touch annotation of expression types
 
-(HAS TO BE REPAIRED, GOT BROKEN BY A BYTE OF MISTAKE IN DECEMBER WHICH HASN´T
+(HAS TO BE REPAIRED, GOT BROKEN BY SOME BYTES OF MISTAKE IN DECEMBER AND STILL HASN´T
 BEEN SPOTTED YET! IT MUST BE SO STUPID THAT I DIDN`T FIND AT ONCE IN DECEMBER
 OR IN EARLY JANUARY.)
 
@@ -620,8 +644,12 @@ and just test some strings of code. This will save a lot of time.
 Oh, the print of "init" is missing for orientation.
 
 
-CST 
-===
+
+more experimental notes:
+
+
+
+- CST 
 
 It found it´s way into the empty statement.
 The comments and whitespaces are collected when they are ought to be skipped,
@@ -667,8 +695,8 @@ via es6 extras.js and the above was the result. Here is what it typed
 in. It´s not exactly the same. You see the /* 3 */ comment being on the wrong
 line ? And /* 6 */? It´s the lineterminator between the statements that´s
 added automatically? Is there one added? Or is it, the captured lineTerminator?
-Well, then this codegenerator may no longer use the nl() function if extras
-are turned on.
+Well, then this codegenerator may no longer use the nl() function or tabs(indent)
+if extras are turned on.
 
 
 ```js
