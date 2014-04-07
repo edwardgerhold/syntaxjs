@@ -39,10 +39,9 @@
 */
 
 var VERSION = "0.0.1";
-var rawjson, json, writetests, testnames, verbose, fn, separator;
+var jsonfile, rawjson, json, writetests, testnames, verbose, fn, separator;
 var Test = require("../tools/tester0.js").Test;
 var syntaxjs = require("../syntax0.js").syntaxjs;
-
 var fs = require("fs");
 
 function about() {
@@ -58,13 +57,12 @@ function usage() {
 
 
 function basic_setup (args) {
-    var fn;
     for (var i = 0, j = args.length; i < j; i++) {
 	if (args[i] == "-w") writetests = true;
 	else if (args[i] == "-v") verbose = true;
-	else fn = args[i]; 
+	else jsonfile = args[i]; 
     }
-    rawjson = fs.readFileSync(fn, "utf8");
+    rawjson = fs.readFileSync(jsonfile, "utf8");
     json = JSON.parse(rawjson);
     testnames = Object.keys(json);
     separator = "";
@@ -122,7 +120,7 @@ function runTest(current, testname) {
 	    runTest(current, testname);
 	} catch (ex) {
 	    console.log(separator);
-	    console.log("Exception at: "+testname);
+	    console.log("Exception at: "+jsonfile+": "+testname);
 	    console.log(ex.name);
 	    console.log(ex.message);
 	    console.log(ex.stack);
