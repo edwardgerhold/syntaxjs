@@ -1,0 +1,24 @@
+{
+	"if statement":
+	{
+	    "init": 
+		"var r, r2; if (true) r=true; else r=false; if (false) r2=false; else r2=true;",
+
+	    "tests": 
+	    [
+		["r", true],
+		["r2", true]
+	    ]
+	},
+	"another if statement":
+	{
+	    "init": 
+		"var r, r2; if (1+2===3) r=true; else r=false; if (3 > 4) r2=false; else r2=true;",
+
+	    "tests": 
+	    [
+		["r", true],
+		["r2", true]
+	    ]
+	}
+}
