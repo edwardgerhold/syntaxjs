@@ -3,3 +3,4 @@ cd test/json/
 ./testall 
 cd $CWD
 
+

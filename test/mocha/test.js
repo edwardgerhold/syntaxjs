@@ -1,9 +1,7 @@
 var assert = require("assert");
-var syntaxjs = require("syntaxjs").syntaxjs;
+var syntaxjs = require("../../syntax0.js").syntaxjs;
 
 describe("Object.prototype.toString example", function () {
-
-
 	it("should be [object Object]", function () {
 	    assert.equal(syntaxjs.eval("({}).toString()"), "[object Object]");
 	});
@@ -19,5 +17,4 @@ describe("Object.prototype.toString example", function () {
 	it("should be [object String]", function () {
 	    assert.equal(syntaxjs.eval("(new String('Hallo')).toString()"), "[object String]");
 	});
-
 });

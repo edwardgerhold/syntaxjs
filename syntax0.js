@@ -1651,8 +1651,6 @@ define("tables", function (require, exports, module) {
         //"-":70,   <- unary - dupl key (hey! fix me!)
         //"+":70,   <- unary + dupl key 
         "!!": 70,
-        
-        
 
         ".": 80,
         "[": 80,
@@ -3587,11 +3585,19 @@ define("tokenizer", function () {
  * Created by root on 06.03.14.
  *
    * Early Errors is now separated from the parser.
+   * -------------------------------------------
    * This "visitor" performs a check on each node,
    * whether the data is valid or not.
    * What´s valid and what´s not is listed in the spec.
    *
    * If the data is invalid it throws a new SyntaxError()
+   *
+   * CONTAINS is the second experiment
+   * ----------------------------------
+   * Contains is now becoming a blacklist
+   * test with
+   * if (Contains[node.type][field]) throw SyntaxError;
+   *
  *
  */
 define("earlyerrors", function () {
@@ -3606,22 +3612,9 @@ define("earlyerrors", function () {
         if (handler) handler(node);
         return node;
     }
-
-    // EarlyErros.Script = i am for re-defining the whole mozilla api for ES6 and making a document with, but i am not informed about
-    // e.g. esprimas extensions of the AST (never seen).
-
     EarlyErrors.Program = function (node) {
-        /*SyntaxAssert(!staticSemantics.contains("BreakStatement"), "Break is not allowed in the outer script body");
-         //if (staticSemantics.contains("BreakStatement")) throw new SyntaxError("Break is not allowed in the outer script body");
-         if (staticSemantics.contains("ContinueStatement")) throw new SyntaxError("Continue is not allowed in the outer script body");
-         if (staticSemantics.contains("ReturnStatement")) throw new SyntaxError("Return is not allowed in the outer script body");*/
     };
-
     EarlyErrors.FunctionDeclaration = function (node) {
-        /*if (staticSemantics.contains("BreakStatement")) throw new SyntaxError("Break is not allowed outside of iterations");
-         if (staticSemantics.contains("ContinueStatement")) throw new SyntaxError("Continue is not allowed outside of iterations");
-         if (staticSemantics.contains("YieldExpression")) throw new SyntaxError("Yield must be an identifier outside of generators or strict mode");
-         */
     };
     EarlyErrors.ModuleDeclaration = function (node) {};
     EarlyErrors.Statement = function (node) {};
@@ -3644,9 +3637,35 @@ define("earlyerrors", function () {
     EarlyErrors.ArrowExpression = function (node) {};
     EarlyErrors.FormalParameterList = function (node) {};
 
+    /*
+
+        Contains is a blacklist
+        which has to be called
+        on each node in the parser
+        when the node is returned
+        to gain maximum performance.
+
+     */
+
+
+    var Contains = function (containerType, nodeType) {
+        var table = Contains[containerType];
+        if (table[nodeType]) return true;
+        return false;
+    };
+
+    Contains.Program = {
+        __proto__:null,
+       "BreakStatement":true,
+       "ContinueStatement": true,
+       "ReturnStatement": true
+    };
+
+
 
     return {
-        EarlyErrors: EarlyErrors
+        EarlyErrors: EarlyErrors,
+        Contains: Contains
     };
 });
 
@@ -3672,6 +3691,7 @@ define("parser", function () {
     var tokenize = require("tokenizer");
 
     var EarlyErrors = require("earlyerrors").EarlyErrors;
+    var Contains = require("earlyerrors").Contains;
 
     var withError, ifAbrupt, isAbrupt;
     var IsTemplateToken = tables.IsTemplateToken;
@@ -3753,6 +3773,22 @@ define("parser", function () {
     var generatorParameterStack = [];
     var strictModeStack = [];
     var inStrictMode = false;
+
+
+    var varNames, lexNames;
+    var varDecls, lexDecls;
+    var varNamesStack = [], lexNamesStack = [],
+        varDeclsStack = [], lexDeclsStack = [];
+
+    function pushVarNames () {varNamesStack.push(varNames);}
+    function popVarNames() {varNames = varNamesStack.pop();}
+    function pushLexNames () {lexNamesStack.push(lexNames);}
+    function popLexNames() {lexNames = lexNamesStack.pop();}
+    function pushVarDecls () {varDeclsStack.push(varDecls);}
+    function popVarDecls() {varDecls = varDeclsStack.pop();}
+    function pushLexDecls () {lexDeclsStack.push(lexDecls);}
+    function popLexDecls() {lexDecls = lexDeclsStack.pop();}
+
 
 
 
@@ -3872,218 +3908,9 @@ define("parser", function () {
         if (!test) throwError(new SyntaxError(message));
     }
 
-//
-// Parameter
-//
-
-    var staticSemantics;
-
-    function makeStaticSemantics(tokens) {
-        staticSemantics = StaticSemantics();
-    }
-
-    // GOT TO BE RENAMED.
-
-    function StaticSemantics() {
-        "use strict";
-
-        // Parameter
-        var parameters = Object.create(null);
-        parameters["Default"] = [];
-        parameters["GeneratorParameter"] = [];
-        parameters["NoReference"] = [];
-        parameters["In"] = [];
-        parameters["Return"] = [];
-        parameters["Yield"] = [];
-
-        // Contains
-        var container = Object.create(null);
-        var containers = [container];
-
-        // SymbolTable
-        var LexEnv = Object.create(null);
-        var VarEnv = LexEnv;
-        var varEnvs = [VarEnv];
-        var lexEnvs = [LexEnv];
-
-        /*
-         var lexNames;
-         var lexDecls;
-         var varNames;
-         var varDecls;
-         // stacks
-         var LexNames = [];
-         var LexDecls = [];
-         var VarNames = [];
-         var VarDecls = [];
-         */
-        // Contains
-
-        function newContainer() {
-            containers.push(container);
-            container = Object.create(null);
-        }
-
-        function popContainer() {
-            container = containers.pop();
-        }
-
-        function put(production, value) {
-            container[production] = value === undefined ? true : value;
-        }
-
-        function contains(production) {
-            if (container)
-                if (Object.hasOwnProperty.call(container, production)) return container[production] || true;
-            return false;
-        }
-
-        // Parameter 
-
-        function getParameter(name) {
-            var parameter = parameters[name];
-            return parameter[parameter.length-1];
-        }
-
-        function newParameter(name, value) {
-            var parameter = parameters[name];
-            return parameter.push(value);
-        }
-
-        function popParameter(name) {
-            var parameter = parameters[name];
-            return parameter.pop();
-        }
-
-        // Variable Environment
-
-        function newVarEnv() {
-            varEnvs.push(VarEnv);
-            VarEnv = Object.create(LexEnv);
-            /*
-             VarEnv.varNames = [];
-             VarEnv.varDecls = [];
-             */
-            lexEnvs.push(LexEnv);
-            LexEnv = Object.create(LexEnv);
-            /*
-             LexNames.push(lexNames);
-             lexNames = [];
-             LexDecls.push(lexDecls);
-             lexDecls = [];
-             */
-            return VarEnv;
-        }
-
-        function newLexEnv() {
-            lexEnvs.push(LexEnv);
-            LexEnv = Object.create(LexEnv);
-            /*
-             LexNames.push(lexNames);
-             lexNames = [];
-             LexDecls.push(lexDecls);
-             lexDecls = [];
-             */
-            return LexEnv;
-        }
-
-        function popEnvs() {
-            container = containers.pop();
-
-            if (LexEnv === VarEnv) {
-                VarEnv = varEnvs.pop();
-            }
-            LexEnv = lexEnvs.pop();
-            return LexEnv;
-        }
-
-        function addLexBinding(name, param) {
-            SyntaxAssert(!hasLexBinding(name), name + " is a duplicate identifier in lexical scope!");
-            LexEnv[name] = param === undefined ? true : param;
-        }
-
-
-        function addVarBinding(name, param) {
-            SyntaxAssert(!hasVarBinding(name) || !currentScopeNode.strict, name + " is a duplicate identifier in variable scope!");
-            VarEnv[name] = param === undefined ? true : param;
-        }
-
-        function hasVarBinding(name) {
-            if (typeof name == "string")
-                return Object.hasOwnProperty.call(VarEnv, name);
-
-        }
-
-        function hasLexBinding(name) {
-            if (typeof name == "string")
-                return Object.hasOwnProperty.call(LexEnv, name);
-        }
-
-        function addVarDecl(decl) {
-            varDecls.push(decl);
-        }
-        function varDecls() {
-            return varDecls;
-        }
-        function addLexDecl(decl) {
-            lexDecls.push(decl);
-        }
-        function lexDecls() {
-            return lexDecls;
-        }
-
-        function lexNames() {
-            var boundNames = [];
-            for (var v in LexEnv) {
-                if (Object.hasOwnProperty.call(LexEnv, v)) boundNames.push(v); // O(n) time to gather additionally
-            }
-            return boundNames;
-        }
-
-        function varNames() {
-            var boundNames = [];
-            for (var v in VarEnv) if (Object.hasOwnProperty.call(VarEnv, v)) boundNames.push(v); // lexNames should be a list + an object!! O(1) in both cases but 2*memory;
-            return boundNames;
-        }
-
-        return {
-            // parameters
-            getParameter: getParameter,
-            newParameter: newParameter,
-            popParameter: popParameter,
-            // contains
-            newContainer: newContainer,
-            popContainer: popContainer,
-            put: put,
-            contains: contains,
-            // lexNames, varNAmes
-            newVarEnv: newVarEnv, // var +& lex
-            newLexEnv: newLexEnv, // lex
-            popEnvs: popEnvs,
-            addLexBinding: addLexBinding,
-            addVarBinding: addVarBinding,
-            hasVarBinding: hasVarBinding,
-            hasLexBinding: hasLexBinding,
-            /*
-             addVarDecl: addVarDecl,
-             addLexDecl: addLexDecl,
-             varDecls: varDecls,
-             lexDecls: lexDecls,
-             */
-            lexNames: lexNames,
-            varNames: varNames,
-            //
-            constructor: StaticSemantics,
-            toString: function () { return "[object EcmaScript StaticSemantics]"}
-        };
-
-        // Needs to be renamed
-
-
-    }
 
     var debugmode = false;
-    var hasConsole = typeof importScripts !== "function" && typeof console === "object" && console != null;
+    var hasConsole = typeof console === "object" && console != null && typeof console.log === "function";
 
     function debug() {
         if (debugmode && hasConsole) {
@@ -4104,7 +3931,7 @@ define("parser", function () {
         nodeTable[
             node._id_ = ++nodeId
         ] = node;
-        //staticSemantics.put(type);
+        // staticSemantics.put(type);
         node.type = type;
         return node;
     }
@@ -4187,7 +4014,7 @@ define("parser", function () {
         if (typeof t === "string") t = tokenize(t);
         tokens = t || [];
 
-        makeStaticSemantics();
+        
 
         i = -1;
         j = tokens.length;
@@ -5384,12 +5211,12 @@ define("parser", function () {
                     l2 = loc && loc.end;
                     bindEl.loc = makeLoc(l1, l2);
 
-                    staticSemantics.addLexBinding(bindEl.as.name);
+                    // staticSemantics.addLexBinding(bindEl.as.name);
 
                     list.push(bindEl);
                 } else {
 
-                    staticSemantics.addLexBinding(id.name);
+                    // staticSemantics.addLexBinding(id.name);
                     list.push(id);
                 }
 
@@ -5469,8 +5296,8 @@ define("parser", function () {
             // node.id = id.name;
             node.id = id;
 
-            if (kind == "var") staticSemantics.addVarBinding(id.name);
-            else staticSemantics.addLexBinding(id.name);
+           // if (kind == "var") // staticSemantics.addVarBinding(id.name);
+           // else // staticSemantics.addLexBinding(id.name);
 
             if (v === "=") node.init = this.Initialiser();
             else node.init = null;
@@ -5649,7 +5476,7 @@ define("parser", function () {
         debug("ClassDeclaration (" + t + ", " + v + ")");
 
 
-            staticSemantics.newVarEnv();
+            // staticSemantics.newVarEnv();
 
             node = Node("ClassDeclaration");
             node.id = null;
@@ -5661,7 +5488,7 @@ define("parser", function () {
             var id = this.Identifier();
             node.id = id.name;
 
-            // staticSemantics.addLexBinding(id);
+            // // staticSemantics.addLexBinding(id);
 
             if (v === "extends") {
                 pass("extends");
@@ -5675,7 +5502,7 @@ define("parser", function () {
             }
             pass("}");
 
-            staticSemantics.popEnvs();
+            // staticSemantics.popEnvs();
             if (compile) return builder["classExpression"](node.id, node.extends, node.elements, node.loc);
             return node;
         }
@@ -5692,7 +5519,7 @@ define("parser", function () {
             pass("...");
             var node = Node("RestParameter");
             node.id = v;
-            staticSemantics.addLexBinding(v);
+            // staticSemantics.addLexBinding(v);
 
             pass(v);
             var l2 = loc && loc.end;
@@ -5759,8 +5586,10 @@ define("parser", function () {
             if (v) {
 
                 debug("FormalParameters ("+t+", "+v+")");
-                if (v === ")") break;
 
+                if (v === ")") {
+                    break;
+                }
                 else if (v === "...") {
                     id = this.RestParameter();
                     list.push(id);
@@ -5772,7 +5601,7 @@ define("parser", function () {
                         id = this.DefaultParameter();
                     } else {
                         id = this.Identifier();
-                        staticSemantics.addLexBinding(id.name);
+                        // staticSemantics.addLexBinding(id.name);
                     }
                     list.push(id);
                 }
@@ -5894,12 +5723,12 @@ define("parser", function () {
                 }
             }
 
-            if (id && !isExpr) staticSemantics.addVarBinding(id.name);
+            // if (id && !isExpr) // staticSemantics.addVarBinding(id.name);
 
-            staticSemantics.newVarEnv();
-            staticSemantics.newContainer();
+            // staticSemantics.newVarEnv();
+            // staticSemantics.newContainer();
 
-            if (id && isExpr) staticSemantics.addVarBinding(id.name);
+            // if (id && isExpr) // staticSemantics.addVarBinding(id.name);
 
             pass("(");
             node.params = this.FormalParameterList();
@@ -5920,27 +5749,24 @@ define("parser", function () {
             yieldIsId = yieldStack.pop();
             end = loc && loc.end;
             node.loc = makeLoc(start, end);
-
+            /*
             if (node.generator) {
 
                 AddGeneratorParentPointers(node);
 
             }
-
+            */
             defaultIsId = defaultStack.pop();
 
 
 
-            //node.lexNames = staticSemantics.lexNames();
-            //node.varNames = staticSemantics.varNames();
+            //node.lexNames = // staticSemantics.lexNames();
+            //node.varNames = // staticSemantics.varNames();
 
-            staticSemantics.popContainer();
-            staticSemantics.popEnvs();
+            // staticSemantics.popContainer();
+            // staticSemantics.popEnvs();
 
             currentScopeNode = scopeNodeStack.pop();
-
-
-
 
             EarlyErrors(node);
             return node;
@@ -5975,8 +5801,8 @@ define("parser", function () {
             var l1, l2;
             l1 = loc && loc.start;
 
-            staticSemantics.newLexEnv();
-            staticSemantics.newContainer();
+            // staticSemantics.newLexEnv();
+            // staticSemantics.newContainer();
 
             var node = Node("BlockStatement");
 	    debug("BlockStatement (" + t + ", " + v + ")");
@@ -5990,8 +5816,8 @@ define("parser", function () {
             node.loc = makeLoc(l1, l2);
 
             defaultIsId = defaultStack.pop();
-            staticSemantics.popContainer();
-            staticSemantics.popEnvs();
+            // staticSemantics.popContainer();
+            // staticSemantics.popEnvs();
 
             pass("}");
             return node;
@@ -6208,8 +6034,8 @@ define("parser", function () {
             var node, l1, l2;
             l1 = loc && loc.start;
 
-            staticSemantics.newContainer();
-            staticSemantics.newVarEnv();
+            // staticSemantics.newContainer();
+            // staticSemantics.newVarEnv();
 
 
             node = Node("ModuleDeclaration");
@@ -6235,8 +6061,8 @@ define("parser", function () {
 
             EarlyErrors(node);
 
-            staticSemantics.popContainer();
-            staticSemantics.popEnvs();
+            // staticSemantics.popContainer();
+            // staticSemantics.popEnvs();
 
             currentScopeNode = scopeNodeStack.pop();
             currentModuleScope =  currentModuleStack.pop();
@@ -6523,7 +6349,7 @@ define("parser", function () {
             defaultIsId: defaultIsId,
             yieldStack: yieldStack,
             defaultStack: defaultStack,
-            staticSemantics: staticSemantics,
+           // staticSemantics: staticSemantics,
             nodeTable: nodeTable
         };
         positions.push(o);
@@ -6547,7 +6373,7 @@ define("parser", function () {
             defaultIsId = o.defaultIsId;
             yieldStack = o.yieldStack;
             defaultStack = o.defaultStack;
-            staticSemantics = o.staticSemantics;
+           // staticSemantics = o.staticSemantics;
             nodeTable = o.nodeTable;
         }
     }
@@ -6627,8 +6453,8 @@ define("parser", function () {
 
             /* parse */
 
-            staticSemantics.newLexEnv();
-            staticSemantics.newContainer();
+            // staticSemantics.newLexEnv();
+            // staticSemantics.newContainer();
 
             if (numSemi === 2) {
                 node = Node("ForStatement");
@@ -6700,8 +6526,8 @@ define("parser", function () {
             node.loc = makeLoc(l1, l2);
             EarlyErrors(node);
 
-            staticSemantics.popContainer();
-            staticSemantics.popEnvs();
+            // staticSemantics.popContainer();
+            // staticSemantics.popEnvs();
 
             if (compile) {
                 if (node.type === "ForStatement") return builder["forStatement"](node.init, node.condition, node.update, node.body, loc);
@@ -6717,7 +6543,7 @@ define("parser", function () {
     function WhileStatement() {
         /* IterationStatement : while ( this.Expression ) Statement */
         if (v === "while") {
-            staticSemantics.newContainer();
+            // staticSemantics.newContainer();
             var l1, l2;
             l1 = loc && loc.start;
             var node = Node("WhileStatement");
@@ -6727,7 +6553,7 @@ define("parser", function () {
             node.body = this.Statement();
             l2 = loc && loc.end;
             EarlyErrors(node);
-            staticSemantics.popContainer();
+            // staticSemantics.popContainer();
             if (compile) return builder["whileStatement"](node.test, node.body, node.loc);
             return node;
         }
@@ -6763,7 +6589,7 @@ define("parser", function () {
             var l1, l2;
             l1 = loc && loc.start;
 
-            staticSemantics.newContainer();
+            // staticSemantics.newContainer();
 
             var node = Node("DoWhileStatement");
 
@@ -6778,7 +6604,7 @@ define("parser", function () {
             node.loc = makeLoc(l1, l2);
             EarlyErrors(node);
 
-            staticSemantics.popContainer();
+            // staticSemantics.popContainer();
 
             if (compile) return builder["doWhileStatement"](node.test, node.body, node.loc);
             return node;
@@ -6792,7 +6618,7 @@ define("parser", function () {
 
             defaultStack.push(defaultIsId);
             defaultIsId = false;
-            staticSemantics.newContainer();
+            // staticSemantics.newContainer();
 
             var c;
             var node = Node("SwitchStatement");
@@ -6817,7 +6643,7 @@ define("parser", function () {
             EarlyErrors(node);
 
             defaultIsId = defaultStack.pop();
-            staticSemantics.popContainer();
+            // staticSemantics.popContainer();
 
             if (compile) return builder["switchStatement"](node.discriminant, node.cases, node.loc);
             return node;
@@ -6903,7 +6729,12 @@ define("parser", function () {
         this.DirectivePrologue(program, nodes);
         do {
             node = this.FunctionDeclaration() || this.ClassDeclaration() || this.ModuleDeclaration() || this.Statement();
-            nodes.push(node);
+
+            /* O(1) test for contains */
+            if (!Contains["Program"][node.type]) nodes.push(node);
+            else throw new SyntaxError("contains: "+node.type+" is not allowed in Program");
+            /* new idea */
+
         } while (T != undefined);
         return nodes;
     }
@@ -6926,13 +6757,13 @@ define("parser", function () {
     parser.Program = Program;
     function Program() {
 
-        staticSemantics.newContainer(); // (node) attach contains and order it
-        staticSemantics.newVarEnv();    // newVarEnv(node) directly attach and save time
+        // staticSemantics.newContainer(); // (node) attach contains and order it
+        // staticSemantics.newVarEnv();    // newVarEnv(node) directly attach and save time
 
         var node = Node("Program");
         node.loc = loc = makeLoc();
         loc.start.line = 1;
-        loc.start.column = 0;
+        loc.start.column = 1;
         var l1 = loc && loc.start;
 
         next();
@@ -6946,12 +6777,12 @@ define("parser", function () {
         EarlyErrors(node);
 
         /*
-         node.lexNames = staticSemantics.lexNames();
-         node.varNames = staticSemantics.varNames();
+         node.lexNames = // staticSemantics.lexNames();
+         node.varNames = // staticSemantics.varNames();
          */
 
-        staticSemantics.popContainer();
-        staticSemantics.popEnvs();
+        // staticSemantics.popContainer();
+        // staticSemantics.popEnvs();
 
         if (compile) return builder["program"](node.body, loc);
         return node;
@@ -8991,13 +8822,9 @@ define("api", function (require, exports, module) {
 
 
 /*
-
     these interfaces
     replace member and arrays
     for replacement with typed array memory
-
-
-
  */
 
 
@@ -9440,6 +9267,40 @@ function isWorker() {
 
  }
  */
+
+var byteCodeMap = {
+    "type": 0,
+    "body": 1,  // body is always field 0 in the array
+    "id": 2,
+    "left": 1,
+    "right": 2
+};
+var astCodeMap = {
+    "type":"type",
+    "body":"body",
+    "id":"id",
+    "left":"left",
+    "right":"right",
+    "argument": "argument",
+    "computed": "computed"
+};
+var codeMap = astCodeMap;
+function getCode(code, field) {
+    if (code) {
+        return code[field];
+    }
+}
+function isCodeType(code, type) {
+    if (code) {
+        return code["type"] === type;
+    }
+}
+
+exports.getCode = getCode;
+exports.isCodeType = isCodeType;
+exports.codeMap = codeMap;
+exports.astCodeMap = astCodeMap;
+exports.byteCodeMap = byteCodeMap;
 
 /**
  * Created by root on 31.03.14.
@@ -11046,6 +10907,38 @@ function SameValueZero(x, y) {
 }
 
 
+
+function StrictEqualityComparison(x, y) {
+    var tx = Type(x);
+    var ty = Type(y);
+
+    if (tx !== ty) return false;
+
+    if (tx === "undefined" && ty === "null") return false;
+    if (ty === "undefined" && tx === "null") return false;
+
+}
+
+function AbstractEqualityComparison(x, y) {
+    var tx = Type(x);
+    var ty = Type(y);
+
+    if (tx === ty) return StrictEqualityComparison(x, y);
+
+    if (tx === "undefined" && ty === "null") return true;
+    if (ty === "undefined" && tx === "null") return true;
+
+}
+
+function AbstractRelationalComparison(leftFirst) {
+    var tx = Type(x);
+    var ty = Type(y);
+
+}
+
+exports.StrictEqualityComparison = StrictEqualityComparison;
+exports.AbstractEqualityComparison = AbstractEqualityComparison;
+exports.AbstractRelationalComparison = AbstractRelationalComparison;
 
 /**
  * Created by root on 30.03.14.
@@ -13977,9 +13870,9 @@ ModuleExoticObject.prototype = {
     toString: function () { return "[ModuleExoticObject]"; },
     Get: function (P, R) {
         var O = this;
-        Assert(IsPropertyKey(P), "[[Delete]] expecting P to be a valid property key");
+        Assert(IsPropertyKey(P), "[[Delete]] expecting P to be a valid property key");  
         var exports = getInternalSlot(O, "Exports");
-        if (!exports.indexOf(P) > -1) return undefined; // O(n) not hash??
+        if (exports.indexOf(P) > -1) return undefined;
         var env = getInternalSlot(O, "ModuleEnvironment");
         return env.GetBindingValue(P, true);
     },
@@ -13989,7 +13882,7 @@ ModuleExoticObject.prototype = {
     Delete: function (P) {
         Assert(IsPropertyKey(P), "[[Delete]] expecting P to be a valid property key");
         var exports = getInternalSlot(O, "Exports");
-        if (hasRecordInList(exports, "Name", P)) return false; // O(n) not hash??
+        if (exports.indexOf(P) > -1) return false;
         return true;
     },
     Enumerate: function () {
@@ -14005,7 +13898,7 @@ ModuleExoticObject.prototype = {
     HasProperty: function (P) {
         var O = this;
         var exports = getInternalSlot(O, "Exports");
-        if (exports.indexOf(P) > -1) return true; // O(n) not hash?? decide when completing
+        if (exports.indexOf(P) > -1) return true;
         return false;
     },
     GetOwnProperty: function () {
@@ -14023,11 +13916,9 @@ ModuleExoticObject.prototype = {
     },
     IsExtensible: function () {
         return false;
-    },
-
-}
+    }
+};
 addMissingProperties(ModuleExoticObject.prototype, OrdinaryObject.prototype);
-
 
 function ModuleObjectCreate(environment, exports) {
     Assert(environment.Bindings, "environment has to be a declarative record");
@@ -23819,6 +23710,12 @@ define("runtime", function () {
         if (hasConsole) console.dir.apply(console, arguments);
     }
 
+    //-----------------------------------------------------------
+    // setze Call Funktion im anderen Modul zu Call fuer ASTNode:
+    // ----------------------------------------------------------
+
+    ecma.OrdinaryFunction.prototype.Call = Call;
+    // Hey this is not once per realm.
 
     /*
      The interfaces for refactoring the runtime for the Bytecode
@@ -23827,49 +23724,20 @@ define("runtime", function () {
      usable for both is to go this way.
      */
 
+    // CURRENTLY NOT IN USE,
     var Push = ecma.Push;
     var Length = ecma.Length;
     var getField = ecma.getField;
     var setField = ecma.setField;
     var getRec = ecma.getRec;
     var setRec = ecma.setRec;
+    var codeMap = ecma.codeMap;
+    var byteCodeMap = ecma.byteCodeMap;
+    var astCodeMap = ecma.astCodeMap;
+    var getCode = ecma.getCode;
+    var isCodeType = ecma.isCodeType;
 
 
-    var byteCodeMap = {
-        "type": 0,
-        "body": 1,  // body is always field 0 in the array
-        "id": 2,
-        "left": 1,
-        "right": 2
-    };
-    var astCodeMap = {
-        "type":"type",
-        "body":"body",
-        "id":"id",
-        "left":"left",
-        "right":"right",
-        "argument": "argument",
-        "computed": "computed"
-    };
-
-    var codeMap = astCodeMap;
-
-    function getCode(code, field) {
-        if (code) {
-            return code[field];
-        }
-    }
-
-    function isCodeType(code, type) {
-        if (code) {
-            return code["type"] === type;
-        }
-    }
-
-
-    /*
-
-     */
 
 
     var DeclaredNames = statics.DeclaredNames;
@@ -23923,12 +23791,6 @@ define("runtime", function () {
     var ValidateAndApplyPropertyDescriptor = ecma.ValidateAndApplyPropertyDescriptor;
     var ThrowTypeError = ecma.ThrowTypeError;
 
-    var writePropertyDescriptor = ecma.writePropertyDescriptor;
-
-    var withError = ecma.withError;
-    var printException = ecma.printException;
-    var makeMyExceptionText = ecma.makeMyExceptionText;
-
 
     var $$unscopables = ecma.$$unscopables;
     var $$create = ecma.$$create;
@@ -23938,7 +23800,6 @@ define("runtime", function () {
     var $$iterator = ecma.$$iterator;
     var $$isRegExp = ecma.$$isRegExp;
     var $$isConcatSpreadable = ecma.isConcatSpreadable;
-
 
     var MakeMethod = ecma.MakeMethod;
     var NewFunctionEnvironment = ecma.NewFunctionEnvironment;
@@ -23984,7 +23845,6 @@ define("runtime", function () {
     var Reference = ecma.Reference;
     var GetIdentifierReference = ecma.GetIdentifierReference;
     var GetThisEnvironment = ecma.GetThisEnvironment;
-
     var GetOwnProperty = ecma.GetOwnProperty;
     var GetValue = ecma.GetValue;
     var PutValue = ecma.PutValue;
@@ -23997,29 +23857,21 @@ define("runtime", function () {
     var CreateListFromArrayLike = ecma.CreateListFromArrayLike;
     var TestIntegrityLevel = ecma.TestIntegrityLevel;
     var SetIntegrityLevel = ecma.SetIntegrityLevel;
-    var ifAbrupt = ecma.ifAbrupt;
-    var isAbrupt = ecma.isAbrupt;
     var Intrinsics;
-
     var MakeConstructor = ecma.MakeConstructor;
     var ArrayCreate = ecma.ArrayCreate;
     var ArraySetLength = ecma.ArraySetLength;
-    var unwrap = ecma.unwrap;
     var GeneratorStart = ecma.GeneratorStart;
     var GeneratorYield = ecma.GeneratorYield;
     var GeneratorResume = ecma.GeneratorResume;
-
     var CreateEmptyIterator = CreateEmptyIterator;
     var ToBoolean = ecma.ToBoolean;
-
     var CreateItrResultObject = ecma.CreateItrResultObject;
     var IteratorNext = ecma.IteratorNext;
     var IteratorComplete = ecma.IteratorComplete;
     var IteratorValue = ecma.IteratorValue;
     var GetIterator = ecma.GetIterator;
-
     var SetFunctionName = ecma.SetFunctionName;
-
     var Invoke = ecma.Invoke;
     var Get = ecma.Get;
     var Set = ecma.Set;
@@ -24034,11 +23886,9 @@ define("runtime", function () {
     var PreventExtensions = ecma.PreventExtensions;
     var IsExtensible = ecma.IsExtensible;
     var Put = ecma.Put;
-
     var GetMethod = ecma.GetMethod;
     var HasProperty = ecma.HasProperty;
     var HasOwnProperty = ecma.HasOwnProperty;
-
     var IsPropertyReference = ecma.IsPropertyReference;
     var MakeSuperReference = ecma.MakeSuperReference;
     var IsUnresolvableReference = ecma.IsUnresolvableReference;
@@ -24050,6 +23900,19 @@ define("runtime", function () {
     var empty = ecma.empty;
     var all = ecma.all;
 
+    var StrictEqualityComparison = ecma.StrictEqualityComparison;
+    var AbstractEqualityComparison = ecma.AbstractEqualityComparison;
+    var AbstractRelationalComparion = ecma.AbstractRelationalComparison;
+    var ArgumentsExoticObject = ecma.ArgumentsExoticObject;
+    var AddRestrictedFunctionProperties = ecma.AddRestrictedFunctionProperties;
+
+    var ifAbrupt = ecma.ifAbrupt;
+    var isAbrupt = ecma.isAbrupt;
+    var unwrap = ecma.unwrap;
+    var setInternalSlot = ecma.setInternalSlot;
+    var getInternalSlot = ecma.getInternalSlot;
+    var hasInternalSlot = ecma.hasInternalSlot;
+    var callInternalSlot = ecma.callInternalSlot;
     var getRealm = ecma.getRealm;
     var getLexEnv = ecma.getLexEnv;
     var getVarEnv = ecma.getVarEnv;
@@ -24057,35 +23920,15 @@ define("runtime", function () {
     var getIntrinsic = ecma.getIntrinsic;
     var getGlobalThis = ecma.getGlobalThis;
     var getGlobalEnv = ecma.getGlobalEnv;
-
     var getStack = ecma.getStack;
     var getContext = ecma.getContext;
     var getEventQueue = ecma.getEventQueue;
-
-    var ArgumentsExoticObject = ecma.ArgumentsExoticObject;
-    var AddRestrictedFunctionProperties = ecma.AddRestrictedFunctionProperties;
-    var setInternalSlot = ecma.setInternalSlot;
-    var getInternalSlot = ecma.getInternalSlot;
-    var hasInternalSlot = ecma.hasInternalSlot;
-    var callInternalSlot = ecma.callInternalSlot;
-
     var SetFunctionLength = ecma.SetFunctionLength;
+    var writePropertyDescriptor = ecma.writePropertyDescriptor;
+    var withError = ecma.withError;
+    var printException = ecma.printException;
+    var makeMyExceptionText = ecma.makeMyExceptionText;
 
-
-
-    //-----------------------------------------------------------
-    // setze Call Funktion im anderen Modul zu Call fuer ASTNode:
-    // ----------------------------------------------------------
-
-
-
-
-    ecma.OrdinaryFunction.prototype.Call = Call;
-    // Hey this is not once per realm.
-
-    //
-    // ----------------------------------------------------------
-    //
 
     function setCodeRealm(r) {  // IN THE RUNTIME, 
         // before evaluate accepts a realm
@@ -24750,6 +24593,13 @@ define("runtime", function () {
 
                 // bugfix? or too much?
                 // String.raw(template) where template is an identifier
+                
+            	//Can i defer this to where?
+            	// BindingInitialisation? If first argument is CallSite?
+            	// Or is this a spec violation to validate the identifier?
+            	// I am not sure if this should be in here.
+            	// For performance i of course say, no, it´s for 1 case and
+            	// 9 bio. not. So no.
                 if (isTemplateCallSite(argValue)) {
                     args = getTemplateArgumentList(argValue, args);
                     break;
@@ -26332,34 +26182,6 @@ define("runtime", function () {
     /** ************************************************************************************************************************************************************************************************ */
     /** ************************************************************************************************************************************************************************************************ */
 
-    function StrictEqualityComparison(x, y) {
-        var tx = Type(x);
-        var ty = Type(y);
-
-        if (tx !== ty) return false;
-
-        if (tx === "undefined" && ty === "null") return false;
-        if (ty === "undefined" && tx === "null") return false;
-
-    }
-
-    function AbstractEqualityComparison(x, y) {
-        var tx = Type(x);
-        var ty = Type(y);
-
-        if (tx === ty) return StrictEqualityComparison(x, y);
-
-        if (tx === "undefined" && ty === "null") return true;
-        if (ty === "undefined" && tx === "null") return true;
-
-    }
-
-    function AbstractRelationalComparison(leftFirst) {
-        var tx = Type(x);
-        var ty = Type(y);
-
-    }
-
     /** ************************************************************************************************************************************************************************************************ */
     /** ************************************************************************************************************************************************************************************************ */
     /** ************************************************************************************************************************************************************************************************ */
@@ -26663,7 +26485,6 @@ define("runtime", function () {
         return Evaluate(node.id);
     }
 
-// TODO: RESUME for Generator
     function ForInOfExpressionEvaluation(expr, iterationKind, labelSet) {
 
         var exprRef = Evaluate(expr);
@@ -26696,8 +26517,6 @@ define("runtime", function () {
         return keys;
     }
 
-
-// TODO: RESUME for Generator
     function ForInOfBodyEvaluation(lhs, stmt, keys, lhsKind, labelSet) {
         "use strict";
         var oldEnv = getLexEnv();
