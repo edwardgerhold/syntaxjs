@@ -29,5 +29,28 @@
 		["typeof x", "object"],
 		["x['a']", 1]
 	    ]	
-	}
+	},
+	
+	"JSON.stringify of an array":
+	{
+	    "init":
+		"let x = JSON.stringify([1,2,null,\"a\",\"b\"])",
+	    "tests":
+	    [
+	    
+		["x[0]", "["],
+		["x[x.length-1]", "]"]
+	    ]	
+	},
+	
+	"BUG: JSON.stringify of an object":
+	{
+	    "init":
+		"let x = JSON.stringify({a:1})",
+	    "tests":
+	    [
+		["x[0]", "{"],
+		["x[x.length-1]", "}"]
+	    ]	
+	}	
 }
