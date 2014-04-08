@@ -1,0 +1,33 @@
+{
+	"JSON.parse: JSONArray":
+	{
+	    "init": 
+		"let x = JSON.parse(\"[1,2,3]\")",
+	    "tests": 
+	    [
+		["x.length", 3],
+		["x[0]+x[1]+x[2]", 6]
+	    ]
+	},
+	
+	"JSON.parse: JSONObject":
+	{
+	    "init": 
+		"let x = JSON.parse(\"{}\")",
+	    "tests": 
+	    [
+		["Object.getPrototypeOf(x) === Object.prototype", true ]
+	    ]
+	},
+	"NEW BUG: JSON.parse: JSONObject with props":
+	{
+	    "init":
+		"let x = JSON.parse(\"{\"a\":1}\")",
+	    "tests":
+	    [
+	    
+		["typeof x", "object"],
+		["x['a']", 1]
+	    ]	
+	}
+}
