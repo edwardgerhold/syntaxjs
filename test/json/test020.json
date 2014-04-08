@@ -14,7 +14,16 @@
 	{
 	    "init": 
 		"var r, r2; if (1+2===3) r=true; else r=false; if (3 > 4) r2=false; else r2=true;",
-
+	    "tests": 
+	    [
+		["r", true],
+		["r2", true]
+	    ]
+	},
+	"and another if statement":
+	{
+	    "init": 
+		"function f() { return true; } var r = '', r2 = 0; if (r+r2 === '0' && f()) { r = r2 = true; } else { r=r2=false; }",
 	    "tests": 
 	    [
 		["r", true],

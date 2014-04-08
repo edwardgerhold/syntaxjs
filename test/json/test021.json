@@ -1,0 +1,32 @@
+{
+	"conditional statement":
+	{
+	    "init": 
+		"var r, r2; true ? (r = true, r2 = false) : (r = false, r2 = true);",
+
+	    "tests": 
+	    [
+		["r", true],
+		["r2", false]
+	    ]
+	},
+	"another conditional statement":
+	{
+	    "init": 
+		"let x = 120; let y = x === 120 ? true : false; ",
+	    "tests": 
+	    [
+		["y", true ]
+	    ]
+	},
+	"last is a bug. same conditional statement with wrapped test":
+	{
+	    "init": 
+		"let x = 120; let y = (x === 120) ? true : false; ",
+	    "tests": 
+	    [
+		["y", true ]
+	    ]
+	}	
+	
+}

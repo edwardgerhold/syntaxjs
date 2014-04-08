@@ -1,0 +1,14 @@
+{
+	
+	"arrow function with parens":
+	{
+	    "init": 
+		"let f = (a,b=3,...rest) => a+b+(rest[0]|0);",
+
+	    "tests": 
+	    [
+		["f(1,2,3)", 6],
+		["f(1)", 4]
+	    ]
+	}
+}
