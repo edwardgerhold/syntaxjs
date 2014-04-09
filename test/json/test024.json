@@ -1,0 +1,25 @@
+{
+	"map test":
+	{
+	    "init": 
+		"let key = {}, value = 'Hallo';\nlet m = new Map(); m.set(key, value);",
+	    "tests": 
+	    [
+		["m.has(key)", true],
+		["m.get(key)","Hallo"]
+	    ]
+	},
+	"set test":
+	{
+	    "init": 
+		"let obj = {}, value = 'Hallo';\nlet s = new Set(); s.set(obj); s.set(value);",
+	    "tests": 
+	    [
+		["s.has(obj)", true],
+		["s.has(value)",true],
+		["s.delete(value); s.has(value)", false],
+		["s.delete(obj); s.has(obj)", false]		
+	    ]
+	}	
+	
+}
