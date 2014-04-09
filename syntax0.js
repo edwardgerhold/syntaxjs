@@ -9268,6 +9268,12 @@ function isWorker() {
  }
  */
 
+
+/*
+
+    moved up from runtime
+ */
+
 var byteCodeMap = {
     "type": 0,
     "body": 1,  // body is always field 0 in the array
@@ -14829,27 +14835,27 @@ setInternalSlot(RequestFunction, "Call", function request(thisArg, argList) {
 // ##################################################################
 
 var RealmPrototype_get_global = function (thisArg, argList) {
-    var realmObject = thisArg;
-    if ((Type(realmObject) != "object") || !hasInternalSlot(realmObject, "Realm")) return withError("Type", "The this value is no realm object");
-    var realm = getInternalSlot(realmObject, "Realm");
+    var RealmConstructor = thisArg;
+    if ((Type(RealmConstructor) != "object") || !hasInternalSlot(RealmConstructor, "Realm")) return withError("Type", "The this value is no realm object");
+    var realm = getInternalSlot(RealmConstructor, "Realm");
     var globalThis = realm.globalThis;
     return globalThis;
 };
 
 var RealmPrototype_eval = function (thisArg, argList) {
     var source = argList[0];
-    var realmObject = thisArg;
-    if ((Type(realmObject) != "object") || !hasInternalSlot(realmObject, "Realm")) return withError("Type", "The this value is no realm object");
-    return IndirectEval(getInternalSlot(realmObject, "Realm"), source);
+    var RealmConstructor = thisArg;
+    if ((Type(RealmConstructor) != "object") || !hasInternalSlot(RealmConstructor, "Realm")) return withError("Type", "The this value is no realm object");
+    return IndirectEval(getInternalSlot(RealmConstructor, "Realm"), source);
 };
 
 var RealmConstructor_Call = function (thisArg, argList) {
-    var realmObject = thisArg;
+    var RealmConstructor = thisArg;
     var options = argList[0];
     var initializer = argList[1];
-    if (Type(realmObject) !== "object") return withError("Type", "The this value is not an object");
-    if (!hasInternalSlot(realmObject, "Realm")) return withError("Type", "The this value has not the required properties.");
-    if (getInternalSlot(realmObject, "Realm") !== undefined) return withError("Type", "the realm property has to be undefined");
+    if (Type(RealmConstructor) !== "object") return withError("Type", "The this value is not an object");
+    if (!hasInternalSlot(RealmConstructor, "Realm")) return withError("Type", "The this value has not the required properties.");
+    if (getInternalSlot(RealmConstructor, "Realm") !== undefined) return withError("Type", "the realm property has to be undefined");
     if (options === undefined) options = ObjectCreate(null);
     else if (Type(options) !== "object") return withError("Type", "options is not an object");
     var realm = CreateRealm();
@@ -14875,7 +14881,7 @@ var RealmConstructor_Call = function (thisArg, argList) {
     if (isAbrupt(Function = ifAbrupt(Function))) return Function;
     if ((Function !== undefined) && !IsCallable(Function)) return withError("Type", "Function should be a function");
     setInternalSlot(realm, "FunctionHook", Function);
-    setInternalSlot(realmObject, "Realm", realm);
+    setInternalSlot(RealmConstructor, "Realm", realm);
 
     realm.directEvalTranslate = translate;
     realm.directEvalFallback = fallback;
@@ -14886,10 +14892,10 @@ var RealmConstructor_Call = function (thisArg, argList) {
         if (!IsCallable(initializer)) return withError("Type", "initializer should be a function");
         var builtins = ObjectCreate();
         DefineBuiltinProperties(realm, builtins);
-        var status = callInternalSlot("Call", initializer, realmObject, [builtins]);
+        var status = callInternalSlot("Call", initializer, RealmConstructor, [builtins]);
         if (isAbrupt(status)) return status;
     }
-    return realmObject;
+    return RealmConstructor;
 };
 
 var RealmConstructor_Construct = function (argList) {
@@ -14900,11 +14906,62 @@ var RealmConstructor_Construct = function (argList) {
 
 var RealmConstructor_$$create = function (thisArg, argList) {
     var F = thisArg;
-    var realmObject = OrdinaryCreateFromConstructor(F, "%RealmPrototype%", {
+    var RealmConstructor = OrdinaryCreateFromConstructor(F, "%RealmPrototype%", {
         "Realm": undefined
     });
-    return realmObject;
+    return RealmConstructor;
 };
+
+
+var RealmConstructor_stdlib_get = function (thisArg, argList) {
+    var RealmConstructor = thisArg;
+    var source = argList[0];
+    if (Type(RealmConstructor) != "object" || !hasInternalSlot(RealmConstructor, "RealmRecord")) return withError("Type", "this value is not an object or has no [[RealmRecord]]");
+    var realm = getInternalSlot(RealmConstructor, "RealmRecord");
+    if (realm === undefined) return withError("Type", "[[RealmRecord]] is undefined?");
+    var props = ObjectCreate(getIntrinsic("%ObjectPrototype%"));
+
+    var bindings = getInternalSlot(getGlobalThis(), "Bindings");
+    var symbols = getInternalSlot(getGlobalThis(), "Symbols");
+
+    function forEachProperty(props, bindings) {
+        for (var P in bindings) {
+            var desc = bindings[P];
+            var newDesc = {
+                value: desc.value,
+                enumerable: desc.enumerable,
+                configurable: desc.configurable,
+                writable: desc.writable
+            };
+            var status = DefineOwnPropertyOrThrow(props, P, newDesc);
+            if (isAbrupt(status)) return status;
+        }
+    }
+    forEachProperty(props, bindings);
+    forEachProperty(props, symbols);
+
+};
+var RealmConstructor_intrinsics = function (thisArg, argList) {
+};
+var RealmConstructor_initGlobal = function (thisArg, argList) {
+};
+var RealmConstructor_directEval = function (thisArg, argList) {
+};
+var RealmConstructor_indirectEval = function (thisArg, argList) {
+    var RealmConstructor = thisArg;
+    var source = argList[0];
+    if (Type(RealmConstructor) != "object" || !hasInternalSlot(RealmConstructor, "RealmRecord")) return withError("Type", "this value is not an object or has no [[RealmRecord]]");
+    var realm = getInternalSlot(RealmConstructor, "RealmRecord");
+    if (realm === undefined) return withError("Type", "[[RealmRecord]] is undefined?");
+    return IndirectEval(realm, source);
+};
+LazyDefineBuiltinFunction(RealmConstructor, "intrinsics", 2, RealmConstructor_intrinsics);
+LazyDefineBuiltinFunction(RealmConstructor, "indirectEval", 2, RealmConstructor_indirectEval);
+LazyDefineBuiltinFunction(RealmConstructor, "initGlobal", 2, RealmConstructor_initGlobal);
+LazyDefineAccessor(RealmConstructor, "stdlib", 3, RealmConstructor_stdlib_get);
+
+
+
 
 // %Realm%
 setInternalSlot(RealmConstructor, "Call", RealmConstructor_Call);
@@ -14914,7 +14971,7 @@ MakeConstructor(RealmConstructor, false, RealmPrototype);
 // %RealmPrototype%
 LazyDefineAccessor(RealmPrototype, "global", CreateBuiltinFunction(realm,RealmPrototype_get_global, 0, "get global"));
 LazyDefineProperty(RealmPrototype, "eval", CreateBuiltinFunction(realm,RealmPrototype_eval, 1, "eval"));
-LazyDefineProperty(RealmConstructor, $$toStringTag, "Realm");
+LazyDefineProperty(RealmConstructor, $$toStringTag, "Reflect.Realm");
 
 
 
@@ -19354,6 +19411,11 @@ setInternalSlot(ProxyConstructor, "Construct", ProxyConstructor_Construct);
 // Reflect
 // ===========================================================================================================
 
+
+
+
+
+
 function reflect_parse_transformASTtoOrdinaries(node, options) {
     var success;
     var newNode;
@@ -19364,7 +19426,6 @@ function reflect_parse_transformASTtoOrdinaries(node, options) {
     var value;
     for (var k in node) {
         if (!loc && k === "loc") continue;
-
         if (Object.hasOwnProperty.call(node, k)) {
             current = node[k];
             if (current && typeof current === "object") {
@@ -19507,7 +19568,7 @@ var ReflectObject_set =function (thisArg, argList) {
     var key = ToPropertyKey(propertyKey);
     if (isAbrupt(key = ifAbrupt(key))) return key;
     if (receiver === undefined) receiver = target;
-    return obj.Set(key, V, receiver);
+    return callInternalSlot("Set", obj, key, V, receiver);
 };
 var ReflectObject_invoke = function (thisArg, argList) {
     var target = argList[0];
@@ -19529,7 +19590,7 @@ var ReflectObject_deleteProperty = function (thisArg, argList) {
     if (isAbrupt(obj = ifAbrupt(obj))) return obj;
     var key = ToPropertyKey(propertyKey);
     if (isAbrupt(key = ifAbrupt(key))) return key;
-    return obj.Delete(key);
+    return callInternalSlot("Delete", obj, key);
 };
 var ReflectObject_defineProperty = function (thisArg, argList) {
     var target = argList[0];
@@ -19547,13 +19608,13 @@ var ReflectObject_enumerate = function (thisArg, argList) {
     var target = argList[0];
     var obj = ToObject(target);
     if (isAbrupt(obj = ifAbrupt(obj))) return obj;
-    return obj.Enumerate();
+    return callInternalSlot("Enumerate", obj);
 };
 var ReflectObject_ownKeys = function (thisArg, argList) {
     var target = argList[0];
     var obj = ToObject(target);
     if (isAbrupt(obj = ifAbrupt(obj))) return obj;
-    return obj.OwnPropertyKeys();
+    return callInternalSlot("OwnPropertyKeys", obj);
 };
 
 
@@ -19567,13 +19628,14 @@ LazyDefineBuiltinFunction(ReflectObject, "getOwnPropertyDescriptor", 2, ReflectO
 LazyDefineBuiltinFunction(ReflectObject, "getPrototypeOf", 1, ReflectObject_getPrototypeOf);
 LazyDefineBuiltinFunction(ReflectObject, "has", 2, ReflectObject_has);
 LazyDefineBuiltinFunction(ReflectObject, "hasOwn", 2, ReflectObject_hasOwn);
+LazyDefineBuiltinFunction(ReflectObject, "Loader", 1, LoaderConstructor);
 LazyDefineBuiltinFunction(ReflectObject, "ownKeys", 1, ReflectObject_ownKeys);
 LazyDefineBuiltinFunction(ReflectObject, "parse", 1, ReflectObject_parse);
 LazyDefineBuiltinFunction(ReflectObject, "parseGoal", 1, ReflectObject_parseGoal);
 LazyDefineBuiltinFunction(ReflectObject, "preventExtensions", 1, ReflectObject_preventExtensions);
+LazyDefineBuiltinFunction(ReflectObject, "Realm", 1, RealmConstructor);
 LazyDefineBuiltinFunction(ReflectObject, "set", 3, ReflectObject_set);
 LazyDefineBuiltinFunction(ReflectObject, "setPrototypeOf", 2, ReflectObject_setPrototypeOf);
-
 LazyDefineBuiltinConstant(ReflectObject, $$toStringTag, "Reflect");
 
 
@@ -23375,16 +23437,15 @@ LazyDefineBuiltinFunction(TypePrototype, "opaqueType", 1, TypePrototype_opaqueTy
 
             DefineOwnProperty(globalThis, "StructType", GetOwnProperty(intrinsics, "%StructType%"));
 
-
             DefineOwnProperty(globalThis, "SyntaxError", GetOwnProperty(intrinsics, "%SyntaxError%"));
             LazyDefineProperty(globalThis, "System", realm.loader);
-
 
             DefineOwnProperty(globalThis, "TypeError", GetOwnProperty(intrinsics, "%TypeError%"));
             DefineOwnProperty(globalThis, "URIError", GetOwnProperty(intrinsics, "%URIError%"));
             DefineOwnProperty(globalThis, "Object", GetOwnProperty(intrinsics, "%Object%"));
             DefineOwnProperty(globalThis, "Promise", GetOwnProperty(intrinsics, "%Promise%"));
             DefineOwnProperty(globalThis, "Reflect", GetOwnProperty(intrinsics, "%Reflect%"));
+
             DefineOwnProperty(globalThis, "Set", GetOwnProperty(intrinsics, "%Set%"));
             DefineOwnProperty(globalThis, "String", GetOwnProperty(intrinsics, "%String%"));
             DefineOwnProperty(globalThis, "Symbol", GetOwnProperty(intrinsics, "%Symbol%"));
@@ -27356,7 +27417,8 @@ define("runtime", function () {
     function tellExecutionContext(node, instructionIndex, parent) {
         loc = node.loc || loc;
         var cx = getContext(); // expensive putting such here
-        cx.state = [node, instructionIndex, parent];
+        cx.state = [node, instructionIndex, parent]; // wrong but close (4 a tree)
+        cx.state.node = node;
     }
 
     evaluation.ScriptBody =

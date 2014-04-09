@@ -1,0 +1,12 @@
+{
+	"for in statements":
+	{
+	    "init": 
+		"let obj = {a:1,b:2,c:3}, results = [];\nfor (let x in obj) results.push(x);",
+	    "tests": 
+	    [
+		["results.length", 3],
+		["results[2]","c"]
+	    ]
+	}
+}
