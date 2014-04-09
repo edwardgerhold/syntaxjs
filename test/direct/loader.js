@@ -1,2 +1,0 @@
-var loader = new Loader();
-
