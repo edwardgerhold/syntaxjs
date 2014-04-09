@@ -3773,23 +3773,31 @@ define("parser", function () {
     var generatorParameterStack = [];
     var strictModeStack = [];
     var inStrictMode = false;
+    /*
+	with these arrays/lists i will grab the
+	TopLevelVarScopedDeclarations and LexicalDeclarations
+	and Names for the InstantiateXxxDeclaration functions
+	already at the first parsing stage for maximum efficiency.
+    */
 
 
-    var varNames, lexNames;
-    var varDecls, lexDecls;
+    var varNames = [], lexNames = [];
+    var varDecls = [], lexDecls = [];
     var varNamesStack = [], lexNamesStack = [],
         varDeclsStack = [], lexDeclsStack = [];
-
-    function pushVarNames () {varNamesStack.push(varNames);}
+    function pushVarNames () {varNamesStack.push(varNames);varNames=[];}
     function popVarNames() {varNames = varNamesStack.pop();}
-    function pushLexNames () {lexNamesStack.push(lexNames);}
+    function pushLexNames () {lexNamesStack.push(lexNames);lexNames=[];}
     function popLexNames() {lexNames = lexNamesStack.pop();}
-    function pushVarDecls () {varDeclsStack.push(varDecls);}
+    function pushVarDecls () {varDeclsStack.push(varDecls);varDecls=[];}
     function popVarDecls() {varDecls = varDeclsStack.pop();}
-    function pushLexDecls () {lexDeclsStack.push(lexDecls);}
+    function pushLexDecls () {lexDeclsStack.push(lexDecls);lexDecls=[];}
     function popLexDecls() {lexDecls = lexDeclsStack.pop();}
 
 
+    /*
+	These functions shall support getifys et al. CST idea.
+    */
 
 
     var withExtras = true;
@@ -3821,14 +3829,15 @@ define("parser", function () {
         node.extras[prop] = extraBuffer;
         extraBuffer = [];
     }
-/*
 
-*/
+    /*
 
-    var currentScopeNode;   // can be class, function, module
-    var scopeNodeStack = [];
-    var currentModuleScope; // just be module
-    var currentModuleStack = [];
+    */
+
+    var currentNode;   // can be class, function, module
+    var nodeStack = [];
+    var currentModule; // just be module
+    var moduleStack = [];
     // have to finsish this crap urgently.
 
     // loc information (not completed yet)
@@ -5145,7 +5154,7 @@ define("parser", function () {
 
             if (withExtras && extraBuffer.length) dumpExtras2(node, "before");
             
-            if (currentScopeNode) currentScopeNode.needsSuper = true; 
+            if (currentNode) currentNode.needsSuper = true; 
             // wird nicht im classDefaultConstructor erkannt sein.!
             
             if (compile) return builder.superExpression(node.loc);
@@ -5403,8 +5412,8 @@ define("parser", function () {
 	debug("MethodDefinition (" + t + ", " + v + ")");
         node = Node("MethodDefinition");
 
-        scopeNodeStack.push(currentScopeNode)
-        currentScopeNode = node;
+        nodeStack.push(currentNode)
+        currentNode = node;
 
         if (v =="[") node.computed = true;
         node.id = this.PropertyKey();
@@ -5439,7 +5448,7 @@ define("parser", function () {
         EarlyErrors(node);
         if (compile) return builder.methodDefinition(node.id, node.params, node.body, node.strict, node.static, node.generator, node.loc);
 
-        currentScopeNode = scopeNodeStack.pop();
+        currentNode = nodeStack.pop();
 
         return node;
 
@@ -5702,8 +5711,8 @@ define("parser", function () {
                 node.generator = false;
             }
 
-            scopeNodeStack.push(currentScopeNode);
-            currentScopeNode = node;
+            nodeStack.push(currentNode);
+            currentNode = node;
 
 
             node.id = null;
@@ -5766,7 +5775,7 @@ define("parser", function () {
             // staticSemantics.popContainer();
             // staticSemantics.popEnvs();
 
-            currentScopeNode = scopeNodeStack.pop();
+            currentNode = nodeStack.pop();
 
             EarlyErrors(node);
             return node;
@@ -6041,9 +6050,9 @@ define("parser", function () {
             node = Node("ModuleDeclaration");
             node.strict = true;
 
-            scopeNodeStack.push(currentScopeNode);
-            currentModuleStack.push(currentModuleScope);
-            currentScopeNode = currentModuleScope = node;
+            nodeStack.push(currentNode);
+            moduleStack.push(currentModule);
+            currentNode = currentModule = node;
 
             node.exportEntries = [];
             node.knownExports = [];
@@ -6064,8 +6073,8 @@ define("parser", function () {
             // staticSemantics.popContainer();
             // staticSemantics.popEnvs();
 
-            currentScopeNode = scopeNodeStack.pop();
-            currentModuleScope =  currentModuleStack.pop();
+            currentNode = nodeStack.pop();
+            currentModule =  moduleStack.pop();
 
             return node;
         }
@@ -6201,7 +6210,7 @@ define("parser", function () {
                     node.as = this.Identifier();
                 }
 
-                currentScopeNode.moduleRequests.push(node);
+                currentNode.moduleRequests.push(node);
 
                 list.push(node);
                 if (v === ",") {
@@ -6260,7 +6269,7 @@ define("parser", function () {
                 var names = BoundNames(node.exports);
                 for (var i = 0, j = names.length; i < j; i++) {
                     var name = names[i];
-                    currentModuleScope.exportEntries.push({ ModuleRequest: null, ImportName: null, LocalName: name, ExportName: name });
+                    currentModule.exportEntries.push({ ModuleRequest: null, ImportName: null, LocalName: name, ExportName: name });
                 }
                 skip(";");
                 if (!node.exports) throwError(new SyntaxError("should be an error in the export statement"));
@@ -6349,7 +6358,6 @@ define("parser", function () {
             defaultIsId: defaultIsId,
             yieldStack: yieldStack,
             defaultStack: defaultStack,
-           // staticSemantics: staticSemantics,
             nodeTable: nodeTable
         };
         positions.push(o);
@@ -6373,7 +6381,6 @@ define("parser", function () {
             defaultIsId = o.defaultIsId;
             yieldStack = o.yieldStack;
             defaultStack = o.defaultStack;
-           // staticSemantics = o.staticSemantics;
             nodeTable = o.nodeTable;
         }
     }
@@ -6690,7 +6697,6 @@ define("parser", function () {
             node = Node("EmptyStatement");
             node.loc = makeLoc(loc && loc.start, loc && loc.end);
 
-
                 dumpExtras2(node, "before");
 
             pass(";");
@@ -6728,13 +6734,14 @@ define("parser", function () {
         var node, strict;
         this.DirectivePrologue(program, nodes);
         do {
-            node = this.FunctionDeclaration() || this.ClassDeclaration() || this.ModuleDeclaration() || this.Statement();
-
+            if (node = this.FunctionDeclaration() || this.ClassDeclaration() || this.ModuleDeclaration() || this.Statement()) {
+	    
             /* O(1) test for contains */
             if (!Contains["Program"][node.type]) nodes.push(node);
             else throw new SyntaxError("contains: "+node.type+" is not allowed in Program");
             /* new idea */
 
+	    }
         } while (T != undefined);
         return nodes;
     }
@@ -6757,9 +6764,6 @@ define("parser", function () {
     parser.Program = Program;
     function Program() {
 
-        // staticSemantics.newContainer(); // (node) attach contains and order it
-        // staticSemantics.newVarEnv();    // newVarEnv(node) directly attach and save time
-
         var node = Node("Program");
         node.loc = loc = makeLoc();
         loc.start.line = 1;
@@ -6767,7 +6771,7 @@ define("parser", function () {
         var l1 = loc && loc.start;
 
         next();
-        currentScopeNode = node;
+        currentNode = node;
         var body = this.SourceElements(node);
         node.body = body;
 
@@ -6775,14 +6779,6 @@ define("parser", function () {
         l2 = loc && loc.end;
         node.loc = makeLoc(l1, l2);
         EarlyErrors(node);
-
-        /*
-         node.lexNames = // staticSemantics.lexNames();
-         node.varNames = // staticSemantics.varNames();
-         */
-
-        // staticSemantics.popContainer();
-        // staticSemantics.popEnvs();
 
         if (compile) return builder["program"](node.body, loc);
         return node;
@@ -7019,6 +7015,7 @@ define("parser", function () {
     function JSONArray() {
         if (v === "[") {
             var node = Node("JSONArray");
+            pass("[");
             var elements = JSONElementList();
             if (isAbrupt(elements = ifAbrupt(elements))) return elements;
             node.elements = elements;
@@ -7033,7 +7030,6 @@ define("parser", function () {
 
     function JSONElementList() {
         var list = [];
-        next();
         while (v !== "]") {
             var node = JSONValue();
             if (isAbrupt(node = ifAbrupt(node))) return node;
@@ -7051,6 +7047,7 @@ define("parser", function () {
     function JSONObject() {
         if (v === "{") {
             var node = Node("JSONObject");
+            pass("{");
             var properties = JSONMemberList();
             if (isAbrupt(properties = ifAbrupt(properties))) return properties;
             node.properties = properties;
@@ -7078,7 +7075,6 @@ define("parser", function () {
 
     function JSONMemberList() {
         var list = [];
-        next();
         while (v !== "}") {
             var node = JSONMember();
             if (isAbrupt(node = ifAbrupt(node))) return node;
@@ -7100,9 +7096,7 @@ define("parser", function () {
         try {
             ast = parser.Program();
         } catch (ex) {
-            console.log("[Parser Exception]")
-            console.dir(ex);
-            console.log(ex.name);
+            console.log("[Parser Exception]: " + ex.name)
             console.log(ex.message);
             console.log(ex.stack);
             ast = ex;
@@ -8933,11 +8927,12 @@ exports.writePropertyDescriptor = writePropertyDescriptor;
 
 function writePropertyDescriptor(object, name, value) {
     if (IsSymbol(name)) {
+
         // adding a backref to the symbol
-
-        value.symbol = name;
-
+        // value.symbol = name;
         // i can not list them if i don´t (Object.getOwnPropertySymbols)
+        // (until i can be sure that globalsymbolregistry got them all)
+
         return object["Symbols"][name.es5id] = value;
 
     } else {
@@ -9602,11 +9597,6 @@ function GetGlobalObject() {
 /**
  * Created by root on 30.03.14.
  */
-    // ===========================================================================================================
-    // Execution Context
-    // - has got a stack
-    // xs.stack = [ctx1, .., ctxn];
-    // ===========================================================================================================
 
 function ExecutionContext(outer, realm, state, generator) {
     "use strict";
@@ -10913,6 +10903,13 @@ function SameValueZero(x, y) {
 }
 
 
+/*
+
+    the following three functions are not used,
+    because of a native strict equal and abstract equal
+    but will be completed somewhen
+
+ */
 
 function StrictEqualityComparison(x, y) {
     var tx = Type(x);
@@ -12162,6 +12159,11 @@ function CreateArrayIterator(array, kind) {
 // Encode, Decode Algorithms
 // ===========================================================================================================
 
+var HexDigits = require("tables").HexDigits; // CAUTION: require
+
+var uriReserved = ";/?:@&=+$,";
+var uriUnescaped = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789~_.!\"*'()";
+
 function Encode(string, unescapedSet) {
     var strLen = string.length;
     var R = "";
@@ -12207,8 +12209,6 @@ function UTF8Encode(V) {
     return [V];
 }
 
-var HexDigits = require("tables").HexDigits; // CAUTION: require
-
 function Decode(string, reservedSet) {
     var strLen = string.length;
     var R = "";
@@ -12232,8 +12232,6 @@ function Decode(string, reservedSet) {
         k = k + 1;
     }
 }
-var uriReserved = ";/?:@&=+$,";
-var uriUnescaped = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789~_.!\"*'()";
 
 
 // ===========================================================================================================
@@ -14602,7 +14600,6 @@ exports.float64 = float64;
         var SetConstructor = createIntrinsicConstructor(intrinsics, "Set", 0, "%Set%");
         var SetPrototype = createIntrinsicPrototype(intrinsics, "%SetPrototype%");
         var SetIteratorPrototype = createIntrinsicPrototype(intrinsics, "%SetIteratorPrototype%");
-        var __mapSetUniqueInternalUniqueKeyCounter__ = 0;
         var TypedArrayConstructor = createIntrinsicConstructor(intrinsics, "TypedArray", 0, "%TypedArray%");
         var TypedArrayPrototype = createIntrinsicPrototype(intrinsics, "%TypedArrayPrototype%");
         var Uint8ArrayConstructor = createIntrinsicConstructor(intrinsics, "Uint8Array", 0, "%Uint8Array%");
@@ -19628,12 +19625,12 @@ LazyDefineBuiltinFunction(ReflectObject, "getOwnPropertyDescriptor", 2, ReflectO
 LazyDefineBuiltinFunction(ReflectObject, "getPrototypeOf", 1, ReflectObject_getPrototypeOf);
 LazyDefineBuiltinFunction(ReflectObject, "has", 2, ReflectObject_has);
 LazyDefineBuiltinFunction(ReflectObject, "hasOwn", 2, ReflectObject_hasOwn);
-LazyDefineBuiltinFunction(ReflectObject, "Loader", 1, LoaderConstructor);
+LazyDefineBuiltinFunction(ReflectObject, "Loader", 1, getIntrinsic("%Loader%"));
 LazyDefineBuiltinFunction(ReflectObject, "ownKeys", 1, ReflectObject_ownKeys);
 LazyDefineBuiltinFunction(ReflectObject, "parse", 1, ReflectObject_parse);
 LazyDefineBuiltinFunction(ReflectObject, "parseGoal", 1, ReflectObject_parseGoal);
 LazyDefineBuiltinFunction(ReflectObject, "preventExtensions", 1, ReflectObject_preventExtensions);
-LazyDefineBuiltinFunction(ReflectObject, "Realm", 1, RealmConstructor);
+LazyDefineBuiltinFunction(ReflectObject, "Realm", 1, getIntrinsic("%Realm%"));
 LazyDefineBuiltinFunction(ReflectObject, "set", 3, ReflectObject_set);
 LazyDefineBuiltinFunction(ReflectObject, "setPrototypeOf", 2, ReflectObject_setPrototypeOf);
 LazyDefineBuiltinConstant(ReflectObject, $$toStringTag, "Reflect");
@@ -19654,8 +19651,7 @@ IsNaNFunction = CreateBuiltinFunction(realm, function isNaN(thisArg, argList) {
 
 IsFiniteFunction = CreateBuiltinFunction(realm, function isFinite(thisArg, argList) {
     var number = ToNumber(argList[0]);
-    if (number == Infinity || number == -Infinity || number != number) return false;
-    return true
+    return  !(number == Infinity || number == -Infinity || number != number);
 }, 1, "isFinite");
 
 // ===========================================================================================================
@@ -22409,19 +22405,6 @@ setInternalSlot(SetTimeoutFunction, "Call", function (thisArg, argList) {
 
 //
 // Map, WeakMap, Set
-//
-//
-// To achieve constant O(1) XS within ES5 i do one thing, as long
-// as i have not even written the compiler and bytecode
-// I set an internal Property with a String Value, which can be used
-// as a key to get the record with the entry very fast.
-//
-// for (k in listobj) is listing in order of creation
-// that is a tradeoff for es5
-// i do not like array.indexOf, coz each lookup is up to O(n)
-// and we want it to be constant
-
-var uniqueInMapKey = 0;
 
 setInternalSlot(MapConstructor, "Prototype", FunctionPrototype);
 setInternalSlot(MapPrototype, "Prototype", ObjectPrototype);
@@ -22612,6 +22595,7 @@ DefineOwnProperty(MapPrototype, "delete", {
             delete entries[internalKey];
             return NormalCompletion(true);
         }
+
         return NormalCompletion(false);
     }, 1, "delete"),
     writable: false,
@@ -22682,13 +22666,14 @@ DefineOwnProperty(MapPrototype, $$toStringTag, {
     configurable: false
 });
 
+var UniqueMapAndSetES5Counter = 0;
 function __checkInternalUniqueKey(value, writeIfUndefined) {
     var internalKey;
     if (Type(value) === "object") {
-        internalKey = getInternalSlot(value, "__mapSetInternalUniqueKey__");
+        internalKey = getInternalSlot(value, "UniqueMapAndSetES5Key");
         if (internalKey === undefined) {
-            internalKey = (++__mapSetUniqueInternalUniqueKeyCounter__) + Math.random();
-            if (writeIfUndefined) setInternalSlot(value, "__mapSetInternalUniqueKey__", internalKey);
+            internalKey = (++UniqueMapAndSetES5Counter) + Math.random();
+            if (writeIfUndefined) setInternalSlot(value, "UniqueMapAndSetES5Key", internalKey);
         }
         return internalKey;
     }
