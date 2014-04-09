@@ -3637,6 +3637,7 @@ define("earlyerrors", function () {
     EarlyErrors.ArrowExpression = function (node) {};
     EarlyErrors.FormalParameterList = function (node) {};
 
+
     /*
 
         Contains is a blacklist
@@ -3650,8 +3651,7 @@ define("earlyerrors", function () {
 
     var Contains = function (containerType, nodeType) {
         var table = Contains[containerType];
-        if (table[nodeType]) return true;
-        return false;
+        return !!table[nodeType];
     };
 
     Contains.Program = {
@@ -3660,9 +3660,11 @@ define("earlyerrors", function () {
        "ContinueStatement": true,
        "ReturnStatement": true
     };
-
-
-
+    Contains.FunctionDeclaration = {
+	__proto__:null,
+       "BreakStatement":true,
+       "ContinueStatement": true
+    };
     return {
         EarlyErrors: EarlyErrors,
         Contains: Contains
@@ -5649,8 +5651,10 @@ define("parser", function () {
         if (v === "}") return body;
         this.DirectivePrologue(parent, body);
         while (v !== undefined && v !== "}") {
-            node = this.FunctionDeclaration() || this.ModuleDeclaration() || this.ClassDeclaration() || this.Statement();
-            body.push(node);
+            if (node = this.FunctionDeclaration() || this.ModuleDeclaration() || this.ClassDeclaration() || this.Statement()) {
+        	if (!Contains.FunctionDeclaration[node.type]) body.push(node);
+        	else throw new SyntaxError("contains: "+node.type+" is not allowed in a functionBody");
+            }
         }
         return body;
     }
@@ -5732,12 +5736,6 @@ define("parser", function () {
                 }
             }
 
-            // if (id && !isExpr) // staticSemantics.addVarBinding(id.name);
-
-            // staticSemantics.newVarEnv();
-            // staticSemantics.newContainer();
-
-            // if (id && isExpr) // staticSemantics.addVarBinding(id.name);
 
             pass("(");
             node.params = this.FormalParameterList();
