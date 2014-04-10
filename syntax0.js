@@ -402,11 +402,15 @@ define("tables", function (require, exports, module) {
 
     var ReservedWordsInStrictMode = {
         __proto__:null,
+        "implements":true,
+        "interface":true,
         "private":true,
         "package":true,
-        "interface":true,
+        "static":true,
         "public":true,
         "protected":true,
+        "let": true,
+        "yield":true,
         "enum":true
     };
 
@@ -1350,16 +1354,16 @@ define("tables", function (require, exports, module) {
         "void": "Keyword",
         "while": "Keyword",
         "with": "Keyword",
-        "enum": "FutureReservedWord",
-        "extends": "FutureReservedWord",
-        "implements": "FutureReservedWord",
-        "interface": "FutureReservedWord",
-        "package": "FutureReservedWord",
-        "private": "FutureReservedWord",
-        "protected": "FutureReservedWord",
-        "public": "FutureReservedWord",
+        "enum": "Keyword",
+        "extends": "Keyword",
+        "implements": "Keyword",
+        "interface": "Keyword",
+        "package": "Keyword",
+        "private": "Keyword",
+        "protected": "Keyword",
+        "public": "Keyword",
         "static": "Keyword",
-        "yield": "FutureReservedWord",
+        "yield": "Keyword",
         "null": "NullLiteral",
         "true": "BooleanLiteral",
         "false": "BooleanLiteral",
@@ -3538,6 +3542,8 @@ define("tokenizer", function () {
         next();
         do {
     	    offset = i;
+            // refactor next:
+            // move if () tests herein and free the fn from
             WhiteSpace() || LineTerminator() || DivPunctuator() || NumericLiteral() ||  Punctuation() || KeywordOrIdentifier() || StringLiteral() || TemplateLiteral();
         } while (ch !== undefined);
         return tokens;
@@ -3729,8 +3735,8 @@ define("parser", function () {
     var isDirective = tables.isDirective;
     var isStrictDirective = tables.isStrictDirective;
     var isAsmDirective = tables.isAsmDirective;
-
-
+    var ForbiddenArgumentsInStrict = tables.ForbiddenArgumentsInStrict;
+    var ReservedWordsInStrictMode = tables.ReservedWordsInStrictMode;
     //
 
     // ==========================================================
@@ -3773,8 +3779,22 @@ define("parser", function () {
     var defaultIsId = true;
     var generatorParameter = false;
     var generatorParameterStack = [];
-    var strictModeStack = [];
-    var inStrictMode = false;
+
+    /*
+	parser needs strict mode for early errors
+    */
+
+    var strictStack = [];
+    var isStrict = false;
+    function pushStrict(v) {
+        strictStack.push(isStrict);
+        isStrict = v;
+    }
+    function popStrict() {
+        isStrict = strictStack.pop();
+    }
+                
+    
     /*
 	with these arrays/lists i will grab the
 	TopLevelVarScopedDeclarations and LexicalDeclarations
@@ -3782,6 +3802,18 @@ define("parser", function () {
 	already at the first parsing stage for maximum efficiency.
     */
 
+    /*
+
+        wow, is this really cheaper, than a traversal?
+        creating the 8 arrays each invocation is a horror for me.
+
+        still not satisfied:
+        issue: parseGoal("FunctionBody", source);
+
+        does not return any lists containing the infos.
+
+        hint: esprimas body=blockstatement would make it easier.
+     */
 
     var varNames = [], lexNames = [];
     var varDecls = [], lexDecls = [];
@@ -3795,12 +3827,58 @@ define("parser", function () {
     function popVarDecls() {varDecls = varDeclsStack.pop();}
     function pushLexDecls () {lexDeclsStack.push(lexDecls);lexDecls=[];}
     function popLexDecls() {lexDecls = lexDeclsStack.pop();}
+    function pushDecls() {
+        pushVarDecls();
+        pushVarNames();
+        pushLexNames();
+        pushLexDecls();
+    }
+    function pushLexOnly() {
+        pushLexNames();
+        pushLexDecls();
+    }
+    function popLexOnly(node) {
+        node.lexNames = lexNames;
+        node.lexDecls = lexDecls;
+        popLexNames();
+        popLexDecls();
+    }
+    function popDecls(node) {
+        node.varNames = varNames;
+        node.lexNames = lexNames;
+        node.varDecls = varDecls;
+        node.lexDecls = lexDecls;
+        popVarDecls();
+        popVarNames();
+        popLexDecls();
+        popLexNames();
+    }
 
 
     /*
 	These functions shall support getifys et al. CST idea.
     */
 
+    var captureExtraTypes = {
+        __proto__:null,
+        "WhiteSpace":true,
+        "LineTerminator": true,
+        "MultiLineComment":true,
+        "LineComment":true,
+    };
+
+    var captureExtraValues = {
+        __proto__: null,
+        "(": true,
+        ")": true,
+        "[": true,
+        "]": true,
+        "}": true,
+        "{": true,
+        ";": true,
+        ":": true,
+        ",": true
+    };
 
     var withExtras = true;
     var extraBuffer = [];
@@ -3915,10 +3993,6 @@ define("parser", function () {
     function Assert(test, message) {
         if (!test) throwError(new Error(message));
     }
-    function SyntaxAssert(test, message) {
-        if (!test) throwError(new SyntaxError(message));
-    }
-
 
     var debugmode = false;
     var hasConsole = typeof console === "object" && console != null && typeof console.log === "function";
@@ -4021,11 +4095,21 @@ define("parser", function () {
 
     function resetVariables(t) {
         ast = null;
+	
+	    nodeTable = Object.create(null);
+
+        lexDecls = [];
+        varDecls = [];
+        lexNames = [];
+        varNames = [];
+        lexDeclsStack = [];
+        varDeclsStack = [];
+        lexNamesStack = [];
+        varNamesStack = [];
+
 
         if (typeof t === "string") t = tokenize(t);
         tokens = t || [];
-
-        
 
         i = -1;
         j = tokens.length;
@@ -4049,8 +4133,8 @@ define("parser", function () {
     }
     
     function consume(i) {
-	debug("consuming "+i+" tokens");
-	while (i > 0) { next(); i--; }
+	    debug("consuming "+i+" tokens");
+	    while (i > 0) { next(); i--; }
     }
 
     function pass(C) {
@@ -4077,27 +4161,6 @@ define("parser", function () {
     function hasNext() {
         return lookahead != undefined;
     }
-
-    var captureExtraTypes = {
-        __proto__:null,
-        "WhiteSpace":true,
-        "LineTerminator": true,
-        "MultiLineComment":true,
-        "LineComment":true,
-    };
-
-    var captureExtraValues = {
-        __proto__: null,
-        "(": true,
-        ")": true,
-        "[": true,
-        "]": true,
-        "}": true,
-        "{": true,
-        ";": true,
-        ":": true,
-        ",": true
-    };
 
     function nextToken () {
         return tokenizer.next();
@@ -4156,10 +4219,8 @@ define("parser", function () {
             var node = Node("Identifier");
             node.name = v;
             node.loc = T.loc;
-
-            debug("Identifier packed " + v);
-
             pass(v);
+
 
             if (compile) return builder["identifier"](node.name, loc);
             return node;
@@ -4886,6 +4947,9 @@ define("parser", function () {
                 node = Node("ArrowExpression");
                 node.kind = "arrow";
                 node.strict = true;
+                
+                pushStrict(true);
+		
                 node.expression = true;
                 node.params = (expr ? [expr] : this.ArrowParameterList(covered));
                 pass("=>");
@@ -4893,6 +4957,9 @@ define("parser", function () {
                 l2 = loc && loc.end;
                 node.loc = makeLoc(l1, l2);
                 EarlyErrors(node);
+                
+                popStrict();
+                
                 if (compile) return builder.arrowExpression(node.params, node.body, node.loc);
                 return node;
             } else {
@@ -5222,13 +5289,24 @@ define("parser", function () {
                     l2 = loc && loc.end;
                     bindEl.loc = makeLoc(l1, l2);
 
+                    if (isStrict && ForbiddenArgumentsInStrict[bindEl.as.name]) {
+                        throw new SyntaxError(bindEl.as.name + " is not a valid binding identifier in strict mode");
+                    }
+
                     // staticSemantics.addLexBinding(bindEl.as.name);
 
                     list.push(bindEl);
                 } else {
 
+                    if (isStrict && ForbiddenArgumentsInStrict[id.name]) {
+                        throw new SyntaxError(v + " is not a valid bindingidentifier in strict mode");
+                    }
+
+
                     // staticSemantics.addLexBinding(id.name);
+
                     list.push(id);
+
                 }
 
                 if (v === ",") {
@@ -5236,7 +5314,7 @@ define("parser", function () {
                     if (v === "}") break;
                     continue;
                 }
-                //else if (v !== "}") throwError(new SyntaxError("illegal statement in binding element list"));
+
             }
 
             pass("}");
@@ -5304,15 +5382,25 @@ define("parser", function () {
             node.kind = kind;
 
             var id = this.Identifier();
-            // node.id = id.name;
+
             node.id = id;
 
-           // if (kind == "var") // staticSemantics.addVarBinding(id.name);
-           // else // staticSemantics.addLexBinding(id.name);
+            if (isStrict && (ReservedWordsInStrictMode[id.name] || ForbiddenArgumentsInStrict[id.name])) {
+                throw new SyntaxError(id.name + " is not a valid identifier in strict mode");
+            }
+
+
+            if (kind == "var") {
+                varNames.push(id.name);
+                varDecls.push(node);
+            } else {
+                lexNames.push(id.name);
+                lexDecls.push(node);
+            }
+
 
             if (v === "=") node.init = this.Initialiser();
             else node.init = null;
-            
             return node;
         }
 
@@ -5411,7 +5499,8 @@ define("parser", function () {
             // set c() {}
         }
 
-	debug("MethodDefinition (" + t + ", " + v + ")");
+	    debug("MethodDefinition (" + t + ", " + v + ")");
+
         node = Node("MethodDefinition");
 
         nodeStack.push(currentNode)
@@ -5420,6 +5509,9 @@ define("parser", function () {
         if (v =="[") node.computed = true;
         node.id = this.PropertyKey();
 
+        if (isStrict && ForbiddenArgumentsInStrict[node.id.name]) {
+            throw new SyntaxError(node.id.name + " is not a valid method identifier in strict mode")
+        }
 
         node.generator = isGenerator;
         if (!isObjectMethod) node.static = isStaticMethod;
@@ -5442,11 +5534,10 @@ define("parser", function () {
         node.body = this.FunctionBody(node);
         pass("}");
 	
-	node.specialMethod = specialMethod;
-	l2 = loc && loc.end;
+	    node.specialMethod = specialMethod;
+	    l2 = loc && loc.end;
     	node.loc = makeLoc(l1, l2);
-	
-	
+
         EarlyErrors(node);
         if (compile) return builder.methodDefinition(node.id, node.params, node.body, node.strict, node.static, node.generator, node.loc);
 
@@ -5489,8 +5580,14 @@ define("parser", function () {
 
             // staticSemantics.newVarEnv();
 
+            pushDecls();
+
             node = Node("ClassDeclaration");
             node.id = null;
+
+            node.strict = true;
+            pushStrict(true);
+
             node.expression = !! isExpr;
             node.extends = null;
             node.elements = [];
@@ -5514,6 +5611,11 @@ define("parser", function () {
             pass("}");
 
             // staticSemantics.popEnvs();
+
+            popStrict();
+
+            popDecls(node);
+
             if (compile) return builder["classExpression"](node.id, node.extends, node.elements, node.loc);
             return node;
         }
@@ -5530,6 +5632,11 @@ define("parser", function () {
             pass("...");
             var node = Node("RestParameter");
             node.id = v;
+
+            if (isStrict && ForbiddenArgumentsInStrict[v]) {
+                throw new SyntaxError(v + " is not a valid rest identifier in strict mode");
+            }
+
             // staticSemantics.addLexBinding(v);
 
             pass(v);
@@ -5612,7 +5719,9 @@ define("parser", function () {
                         id = this.DefaultParameter();
                     } else {
                         id = this.Identifier();
-                        // staticSemantics.addLexBinding(id.name);
+                    }
+                    if (isStrict && ForbiddenArgumentsInStrict[id.name]) {
+                        throw new SyntaxError(id.name + " is not allowed in strict mode");
                     }
                     list.push(id);
                 }
@@ -5647,15 +5756,20 @@ define("parser", function () {
     function FunctionBody(parent) {
         var body = [];
         body.type = "FunctionStatementList";
-        var node, strict;
+        var node;
         if (v === "}") return body;
-        this.DirectivePrologue(parent, body);
+                
+        pushStrict(this.DirectivePrologue(parent, body) || isStrict); // right or wrong? contained in strict code. tests will show
+        
         while (v !== undefined && v !== "}") {
             if (node = this.FunctionDeclaration() || this.ModuleDeclaration() || this.ClassDeclaration() || this.Statement()) {
-        	if (!Contains.FunctionDeclaration[node.type]) body.push(node);
-        	else throw new SyntaxError("contains: "+node.type+" is not allowed in a functionBody");
+        	    if (!Contains.FunctionDeclaration[node.type]) body.push(node);
+        	    else throw new SyntaxError("contains: "+node.type+" is not allowed in a functionBody");
             }
         }
+        
+        popStrict();
+        
         return body;
     }
 
@@ -5696,7 +5810,7 @@ define("parser", function () {
 
         if (v === "function") {
 
-	debug("FunctionDeclaration (" + t + ", " + v + ")");
+            debug("FunctionDeclaration (" + t + ", " + v + ")");
 
 
             defaultStack.push(defaultIsId);
@@ -5721,16 +5835,25 @@ define("parser", function () {
 
             node.id = null;
             node.params = [];
-            node.expression = !! isExpr;
-            node.strict = false;
-            node.body = [];
+            node.expression = !!isExpr;
 
+            node.strict = isStrict; // RIGHT or Wrong? contained in strict code?
+
+
+            node.body = [];
 
             var id;
 
-            if (v !== "(") id = this.Identifier();
-            if (id) node.id = id.name;
-            else {
+            if (v !== "(") {
+                id = this.Identifier();
+                node.id = id.name;
+
+                if (!node.expression) {
+                    varNames.push(id.name);
+                    varDecls.push(node);
+                }
+
+            } else {
                 if (!node.expression) {
                     throwError(new SyntaxError("Function and Generator Declarations must have a name [only expressions can be anonymous]"));
                 }
@@ -5749,35 +5872,33 @@ define("parser", function () {
                 yieldIsId = false;
             }
 
+
+            pushDecls();
+
             pass("{");
             node.body = this.FunctionBody(node);
             pass("}");
+
+            popDecls(node);
+
 
             yieldIsId = yieldStack.pop();
             end = loc && loc.end;
             node.loc = makeLoc(start, end);
             /*
             if (node.generator) {
-
                 AddGeneratorParentPointers(node);
-
             }
             */
+            EarlyErrors(node);
+
             defaultIsId = defaultStack.pop();
-
-
-
-            //node.lexNames = // staticSemantics.lexNames();
-            //node.varNames = // staticSemantics.varNames();
-
-            // staticSemantics.popContainer();
-            // staticSemantics.popEnvs();
-
             currentNode = nodeStack.pop();
 
-            EarlyErrors(node);
+            if (compile) return builder.functionDeclaration(node.id, node.params, node.body, node.strict, node.generator, node.expression, node.loc, node.extras);
             return node;
         }
+
         return null;
     }
 
@@ -5817,16 +5938,27 @@ define("parser", function () {
             defaultStack.push(defaultIsId);
             defaultIsId = true;
 
+            pushLexNames();
+            pushLexDecls();
+
             pass("{");
             node.body = this.StatementList();
             l2 = loc && loc.end;
             node.loc = makeLoc(l1, l2);
 
             defaultIsId = defaultStack.pop();
-            // staticSemantics.popContainer();
-            // staticSemantics.popEnvs();
+
+
 
             pass("}");
+
+
+            node.lexNames = lexNames;
+            node.lexDecls = lexDecls;
+            popLexNames();
+            popLexDecls();
+
+
             return node;
 
         }
@@ -5908,6 +6040,11 @@ define("parser", function () {
     parser.WithStatement = WithStatement;
     function WithStatement() {
         if (v === "with") {
+
+            if (isStrict) {
+                throw new SyntaxError("with not allowed in strict mode");
+            }
+
             var node = Node("WithStatement");
             var l1 = loc && loc.start;
 
@@ -5989,7 +6126,9 @@ define("parser", function () {
             l1 = loc && loc.start;
             pass("catch");
             pass("(");
+
             node.params = this.FormalParameterList();
+
             pass(")");
             node.block = this.Statement();
             l2 = loc && loc.end;
@@ -6045,6 +6184,8 @@ define("parser", function () {
             // staticSemantics.newVarEnv();
 
 
+            pushDecls();
+
             node = Node("ModuleDeclaration");
             node.strict = true;
 
@@ -6065,6 +6206,8 @@ define("parser", function () {
             node.body = this.ModuleBody(node);
             l2 = loc && loc.end;
             node.loc = makeLoc(l1, l2);
+
+            popDecls(node);
 
             EarlyErrors(node);
 
@@ -6710,8 +6853,9 @@ define("parser", function () {
 
     parser.DirectivePrologue = DirectivePrologue;
     function DirectivePrologue(containingNode, nodes) {
+        var strict = false;
         while (t === "StringLiteral" && isDirective[v]) {
-            if (isStrictDirective[v]) containingNode.strict = true;
+            if (isStrictDirective[v]) strict = containingNode.strict = true;
             else if (isAsmDirective[v]) containingNode.asm = true;
             var l1 = loc && loc.start;
             var node = Node("Directive");
@@ -6723,14 +6867,16 @@ define("parser", function () {
             if (compile) node = builder.directive(node.value, node.loc);
             nodes.push(node);
         }
-        return;
+        return strict;
     }
 
     parser.SourceElements = SourceElements;
     function SourceElements(program) {
         var nodes = [];
-        var node, strict;
-        this.DirectivePrologue(program, nodes);
+        var node;
+        
+        pushStrict(this.DirectivePrologue(program, nodes));
+        
         do {
             if (node = this.FunctionDeclaration() || this.ClassDeclaration() || this.ModuleDeclaration() || this.Statement()) {
 	    
@@ -6741,6 +6887,9 @@ define("parser", function () {
 
 	    }
         } while (T != undefined);
+        
+        popStrict();
+        
         return nodes;
     }
 
@@ -6768,7 +6917,11 @@ define("parser", function () {
         loc.start.column = 1;
         var l1 = loc && loc.start;
 
-        next();
+
+        next(); // walk to first token
+
+        pushDecls();
+
         currentNode = node;
         var body = this.SourceElements(node);
         node.body = body;
@@ -6777,6 +6930,8 @@ define("parser", function () {
         l2 = loc && loc.end;
         node.loc = makeLoc(l1, l2);
         EarlyErrors(node);
+
+        popDecls(node);
 
         if (compile) return builder["program"](node.body, loc);
         return node;
@@ -7092,7 +7247,9 @@ define("parser", function () {
     function parse(sourceCodeOrTokens) {
         resetVariables(sourceCodeOrTokens);
         try {
+
             ast = parser.Program();
+
         } catch (ex) {
             console.log("[Parser Exception]: " + ex.name)
             console.log(ex.message);
@@ -7131,6 +7288,7 @@ define("parser", function () {
         try {
             var node = fn.call(parser);
         } catch (ex) {
+            console.log("[Parser Exception @parseGoal]: " + ex.name)
             /* console.log(ex.name);
             console.log(ex.message);
             console.log(ex.stack); */
