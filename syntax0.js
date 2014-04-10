@@ -3622,11 +3622,16 @@ define("tokenizer", function () {
  */
 define("earlyerrors", function () {
 
-    // ========================================================================================================
-    // Early Errors - Attach Handler for Production as Property of EarlyErrors
-    // Symbol Table, Contains, Grammar Parameters
-    // ========================================================================================================
 
+    /**
+     *
+     * Early Errors - maybe be factored out again by other implementation
+     * (currently a stub)
+     *
+     * @param node
+     * @returns {*}
+     * @constructor
+     */
     function EarlyErrors(node) {
         var handler = EarlyErrors[node.type];
         if (handler) handler(node);
@@ -3659,16 +3664,17 @@ define("earlyerrors", function () {
     EarlyErrors.FormalParameterList = function (node) {};
 
 
-    /*
-
-        Contains is a blacklist
-        which has to be called
-        on each node in the parser
-        when the node is returned
-        to gain maximum performance.
-
+    /**
+     *  Contains is a blacklist
+     * which has to be called
+     * on each node in the parser
+     * when the node is returned
+     * to gain maximum performance.
+     * @param containerType
+     * @param nodeType
+     * @returns {boolean}
+     * @constructor
      */
-
     var Contains = function (containerType, nodeType) {
         var table = Contains[containerType];
         return !!table[nodeType];
@@ -7723,7 +7729,7 @@ define("js-codegen", function (require, exports, module) {
         return src;
     };
     builder.arrayPattern = function (elements, loc, extras) {
-        var src, e;
+        var src ="", e;
         src += "[";
         for (var i = 0, j = elements.length; i < j; i++) {
             if (e = elements[i]) {
@@ -7826,7 +7832,7 @@ define("js-codegen", function (require, exports, module) {
             builder.generatorDeclaration =
                 builder.generatorExpression = function (id, params, body, strict, generator, expression, loc, extras) {
                     var src = "";
-                    var st;
+
                     src = "function";
                     if (generator) src += "*";
                     src += " ";
@@ -26918,7 +26924,7 @@ define("runtime", function () {
 
     function ForBodyEvaluation(testExpr, incrementExpr, stmt, labelSet) {
         "use strict";
-        var V;
+        var V = undefined;
         var result;
         var testExprRef, testExprValue;
         var incrementExprRef, incrementExprValue;
@@ -26932,9 +26938,11 @@ define("runtime", function () {
 
             result = Evaluate(stmt);
 
+            // here is a fix if no completion comes out
             if (result instanceof CompletionRecord) {
                 if (result.value !== empty) V = result.value;
             } else V = result;
+            // hmm, there will be new fresh bindings
 
             if (!LoopContinues(result, labelSet)) return result;
             if (incrementExpr) {
@@ -29318,26 +29326,22 @@ define("syntaxjs", function () {
 * a) node.js
 * b) browsers
 * c) web workers of browsers
+* d) load() but depends on node.js and console.log()
+* have to implement "print()"
 *
-* I´ve seen, it doesn´t work for example with "nashorn" in Java.
-* For that we will have to add another curly block, to support.
 *
+* @type {exports}
 */
 
+var syntaxjs = require("syntaxjs");
 
-//var syntaxjs = (function () {
+if (syntaxjs.system === "node") {
+    if (!module.parent) syntaxjs.nodeShell();
+} else if (syntaxjs.system === "browser") {
+    syntaxjs.startHighlighterOnLoad();
+} else if (syntaxjs.system === "worker") {
+    syntaxjs.subscribeWorker();
+} else if (syntaxjs.system === "spidermonkey") {
+    print("syntax.js was successfully loaded");
+}
 
-    var syntaxjs = require("syntaxjs");
-
-    if (syntaxjs.system === "node") {
-        if (!module.parent) syntaxjs.nodeShell();
-    } else if (syntaxjs.system === "browser") {
-        syntaxjs.startHighlighterOnLoad();
-    } else if (syntaxjs.system === "worker") {
-        syntaxjs.subscribeWorker();
-    } else if (syntaxjs.system === "spidermonkey") {
-        print("syntax.js was successfully loaded");
-    }
-
-//    return syntaxjs;
-//}());
