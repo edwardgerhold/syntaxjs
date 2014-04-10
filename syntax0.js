@@ -4546,7 +4546,7 @@ define("parser", function () {
         
             if (v == "[" || v == ".") return this.MemberExpression(node);
             else if (v == "(") return this.CallExpression(node);
-            else if (IsTemplateToken[t]) return this.CallExpression(node);
+            else if (IsTemplateToken[t]) return this.ession(node);
         
             // strawman:concurrency addition 
             // else if (v == "!") return this.MemberExpression(node);
@@ -5567,8 +5567,6 @@ define("parser", function () {
          return node;
          }*/
 
-        return node;
-
     }
 
     parser.ClassDeclaration = ClassDeclaration;
@@ -5754,16 +5752,20 @@ define("parser", function () {
     parser.GeneratorBody = GeneratorBody;
 
     function FunctionBody(parent) {
-        var body = [];
-        body.type = "FunctionStatementList";
+
+        var contains = Contains["FunctionDeclaration"]; // rename to FunctionBody?
         var node;
+        var body = [];
+
+        body.type = "FunctionStatementList";
+
         if (v === "}") return body;
                 
         pushStrict(this.DirectivePrologue(parent, body) || isStrict); // right or wrong? contained in strict code. tests will show
-        
+
         while (v !== undefined && v !== "}") {
             if (node = this.FunctionDeclaration() || this.ModuleDeclaration() || this.ClassDeclaration() || this.Statement()) {
-        	    if (!Contains.FunctionDeclaration[node.type]) body.push(node);
+        	    if (!contains[node.type]) body.push(node);
         	    else throw new SyntaxError("contains: "+node.type+" is not allowed in a functionBody");
             }
         }
@@ -5800,7 +5802,6 @@ define("parser", function () {
                 AddGeneratorParentPointers(node[key], node);
             });
         }
-        return;
     }
 
     parser.FunctionDeclaration = FunctionDeclaration;
@@ -5908,7 +5909,6 @@ define("parser", function () {
             for (var i = 0, j = node.length; i < j; i++) {
                 AddParentPointers(node[i], parent);
             }
-            return;
         } else {
             for (var k in node) {
                 if (Object.hasOwnProperty.call(node, k)) {
@@ -6864,25 +6864,25 @@ define("parser", function () {
 
     parser.SourceElements = SourceElements;
     function SourceElements(program) {
-        var nodes = [];
+        var body = [];
         var node;
         
-        pushStrict(this.DirectivePrologue(program, nodes));
-        
+        pushStrict(this.DirectivePrologue(program, body));
+        var contains = Contains["Program"];
+
         do {
             if (node = this.FunctionDeclaration() || this.ClassDeclaration() || this.ModuleDeclaration() || this.Statement()) {
-	    
-            /* O(1) test for contains */
-            if (!Contains["Program"][node.type]) nodes.push(node);
-            else throw new SyntaxError("contains: "+node.type+" is not allowed in Program");
-            /* new idea */
 
-	    }
+                /* O(1) test for contains */
+                if (!contains[node.type]) body.push(node);
+                else throw new SyntaxError("contains: "+node.type+" is not allowed in Program");
+                /* new idea */
+	        }
         } while (token != undefined);
         
         popStrict();
         
-        return nodes;
+        return body;
     }
 
 
@@ -6915,8 +6915,7 @@ define("parser", function () {
         pushDecls();
 
         currentNode = node;
-        var body = this.SourceElements(node);
-        node.body = body;
+        node.body = this.SourceElements(node);
 
         var l2;
         l2 = loc && loc.end;
@@ -7091,15 +7090,13 @@ define("parser", function () {
             ifAbrupt = require("api").ifAbrupt;
             isAbrupt = require("api").isAbrupt;
         }
-        var tree = JSONValue();
-        return tree;
+        return JSONValue();
     }
 
     parser.JSONValue = JSONValue;
 
     function JSONValue() {
-        var value = JSONObject() || JSONArray() || JSONNumber() || JSONString() || JSONBooleanLiteral() || JSONNullLiteral();
-        return value;
+        return JSONObject() || JSONArray() || JSONNumber() || JSONString() || JSONBooleanLiteral() || JSONNullLiteral();
     }
 
     parser.JSONString = JSONString;
@@ -8166,10 +8163,9 @@ define("js-codegen", function (require, exports, module) {
             var result = parser(src);
         } catch (ex) {
             result = "[" + ex.name + "]" + ex.message + ";\r\n" + tabs(1) + ex.stack + "\r\n";
-        } finally {
-            return result;
         }
         unsetBuilder(builder);
+        return result;
     }
 
     function build(ast) {
@@ -26747,7 +26743,7 @@ define("runtime", function () {
                 getContext().LexEnv = iterationEnv;
                 status = BindingInitialisation(lhs, nextValue, iterationEnv);
                 if (isAbrupt(status)) {
-                    getContext().LexEnv = oldEnv
+                    getContext().LexEnv = oldEnv;
                     return status;
                 }
                 status = NormalCompletion(undefined);
@@ -27720,7 +27716,7 @@ define("runtime", function () {
     }
 
     function ExecuteAsync (source) {
-        var p = makePromise(function (resolve, reject) {
+       return makePromise(function (resolve, reject) {
             initializeTheRuntime();
             var result = Evaluate(parse(source));
             if (isAbrupt(result)) {
@@ -27734,7 +27730,7 @@ define("runtime", function () {
             }
             endRuntime();
         });
-        return p;
+
     }
 
     function ExecuteAsyncTransform (source) {
