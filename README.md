@@ -2,25 +2,16 @@ syntaxjs
 ========
 
 
-Not bugfree EcmaScript 6 (7*) Interpreter written in EcmaScript 5.
+Not bugfree(*) EcmaScript 6 (7**) Interpreter written in EcmaScript 5.
 This project was started on a PIII/933 in a dorm and is
 now continued on a notebook with 2 cores still in the dorm.
 It´s a fun project. 
 Hmm, i notice difficulties with writing plain text with myself.
 I´m working on it.
 
+(*) locks up recently [will become repaired] 
+(**) contains at last one implemented proposal and others begun
 
-(*) contains at last one implemented proposal and others begun
-
-
-```
-es6> function *gen() { yield 10; }
-undefined
-es6> let it = gen();
-undefined
-es6> it.next().value;
-10
-```
 
 New: Multiple Realms
 ======================
@@ -286,6 +277,19 @@ Missing
 = Bugs
 
 
+```
+// this is the only practically not working yet
+// i shouldn´t show it first
+es6> function *gen() { yield 10; }
+undefined
+es6> let it = gen();
+undefined
+es6> it.next().value;
+10
+// About the stack machine, or a parent pointer plus instruction index
+```
+
+
 Design Issues
 ============
 
@@ -337,6 +341,19 @@ js>
 
 Tests
 =====
+
+
+I am writing new tests in /test/json.
+
+Run ./testall in the root dir or from /test/json
+
+I will change testmaker.js to write down unit tests
+for other libraries from the .json files.
+
+The final test shall be test262 which can be run, too,
+but that is another story. First i need new tests from
+myself for myself to finish this program.
+
 
 ```
 testmaker.js 0.0.0 for tester.js for syntax.js by Edward
