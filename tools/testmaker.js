@@ -84,8 +84,21 @@ function runTest(current, testname) {
 	tester.add(function () {
 	    var code = test[0];
 	    var expected = test[1];
-	    var result = syntaxjs.eval(code, true);
-	    this.assert(result, expected, code);
+	    var fn = test[2];	
+	    switch (fn) {
+		case "throws":
+		    this.throws(function () {
+			var result = syntaxjs.eval(code, true);
+		    }, code);
+		    break;
+		case "NaN": 
+		    var result = syntaxjs.eval(code, true);
+		    this.assert(result != result, true, code);
+		    break;
+		default:
+		    var result = syntaxjs.eval(code, true);
+		    this.assert(result, expected, code);
+	    }	    
 	});
     });
     

@@ -3664,13 +3664,26 @@ define("earlyerrors", function () {
         __proto__:null,
        "BreakStatement":true,
        "ContinueStatement": true,
-       "ReturnStatement": true
+       "ReturnStatement": true,
+       "SuperExpression": true
     };
+
     Contains.FunctionDeclaration = {
 	__proto__:null,
        "BreakStatement":true,
        "ContinueStatement": true
     };
+
+    Contains.ModuleDeclaration = {
+        __proto__:null,
+        "BreakStatement":true,
+        "ContinueStatement": true,
+        "ReturnStatement": true,
+        "SuperExpression": true
+    };
+
+
+
     return {
         EarlyErrors: EarlyErrors,
         Contains: Contains
@@ -6211,9 +6224,6 @@ define("parser", function () {
 
             EarlyErrors(node);
 
-            // staticSemantics.popContainer();
-            // staticSemantics.popEnvs();
-
             currentNode = nodeStack.pop();
             currentModule =  moduleStack.pop();
 
@@ -6238,9 +6248,10 @@ define("parser", function () {
         pass("{");
         var item;
         while (v !== undefined && v !== "}") {
-            item = this.ExportStatement() || this.ModuleDeclaration() || this.ImportStatement() || this.Statement();
-            if (item) list.push(item);
-            else throwError(new SyntaxError("Error parsing module body"));
+            if (item = this.ExportStatement() || this.ModuleDeclaration() || this.ImportStatement() || this.Statement()) {
+                if (!Contains.ModuleDeclaration[item.type]) list.push(item);
+                else throw new SyntaxError("contains: "+item.type+" not allowed in ModuleDeclarations");
+            }
         }
         pass("}");
         return list;

@@ -260,10 +260,10 @@ function process_results(f) {
 }
 function print_results() {
     var str = "[Tests: "+this.tests.length;
-    str += " Asserts: "+this.count.assertions;
-    str += " Passed: "+this.count.passed;
-    str += " Failed: "+this.count.failed;
-    str += " Exceptions: "+this.count.exceptions;
+    str += ", Asserts: "+this.count.assertions;
+    str += ", Passed: "+this.count.passed;
+    str += ", Failed: "+this.count.failed;
+    str += ", Exceptions: "+this.count.exceptions;
     str += "]";
     console.log(str);
     this.results.forEach(function (rec) {
