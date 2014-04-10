@@ -27440,7 +27440,7 @@ define("runtime", function () {
             getContext().LexEnv = forEnv;
             var continuer = ComprehensionEvaluation(node, accumulator);
             getContext().LexEnv = oldEnv;
-            if (isAbrupt(continuer = ifAbrupt(continu))) return continuer;
+            if (isAbrupt(continuer = ifAbrupt(continuer))) return continuer;
         }
 
 
