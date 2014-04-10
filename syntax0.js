@@ -3795,8 +3795,7 @@ define("parser", function () {
     var i; // tokens[i] pointer
     var j; // tokens.length;
 
-    var nodeTable = Object.create(null); // A linear list of all nodes indexed by node._id_
-                                         // in a hashtable format
+
     var parser = Object.create(null);
 
     // Production Parameters 
@@ -3998,29 +3997,24 @@ define("parser", function () {
         isNoIn = noInStack.pop();
     }
 
-    function makeErrorStackString(error) {
+    function augmentErrorStack(error) {
         var stack = error.stack;
         var line = loc && loc.start.line;
         var column = loc && loc.start.column;
-        var location = "{syntax.js} A Parser Error occured at line " + line + ", column " + column + "\r\n";
+        var location = "A syntax.js parser error occured at line " + line + ", column " + column + "\r\n";
         error.stack = location;
         if (stack) error.stack += stack;
         return error;
     }
 
-    function throwError(obj) {
-        makeErrorStackString(obj);
-        throw obj;
-    }
-
-    function syntaxError(C) {
+    function charExpectedString(C) {
         var line = loc && loc.start.line;
         var column = loc && loc.start.column;
-        throwError(new SyntaxError(C + " expected at line " + line + ", column " + column));
+        return C + " expected at line " + line + ", column " + column;
     }
 
     function Assert(test, message) {
-        if (!test) throwError(new Error(message));
+        if (!test) throw new Error(message);
     }
 
     var debugmode = false;
@@ -4042,9 +4036,9 @@ define("parser", function () {
    
     function Node(type /*, linkToken*/ ) {
         var node = Object.create(null);
-        nodeTable[
+        //nodeTable[
             node._id_ = ++nodeId
-        ] = node;
+        //] = node;
         // staticSemantics.put(type);
         node.type = type;
         return node;
@@ -4079,9 +4073,6 @@ define("parser", function () {
         return lookahead;
     }
 
-    function error(err) {
-        throw err;
-    }
 
     function unquote(str) {
         return ("" + str).replace(/^("|')|("|')$/g, ""); //'
@@ -4125,7 +4116,7 @@ define("parser", function () {
     function resetVariables(t) {
         ast = null;
 	
-	    nodeTable = Object.create(null);
+	    //nodeTable = Object.create(null);
 
         lexDecls = [];
         varDecls = [];
@@ -4144,6 +4135,7 @@ define("parser", function () {
         j = tokens.length;
         T = v = t = undefined;
         lookahead = lookaheadt = undefined;
+
     }
 
     // ========================================================================================================
@@ -4152,24 +4144,16 @@ define("parser", function () {
 
     parser.skip = skip;
     parser.next = next;
-    parser.scan = scan;
 
-    function scan(C) {
-        debug("scan (advance 2 tokens): " + C);
-        if (lookahead === C) next();
-        else syntaxError(C);
-        next();
-    }
-    
     function consume(i) {
 	    debug("consuming "+i+" tokens");
 	    while (i > 0) { next(); i--; }
     }
 
-    function pass(C) {
+    function pass(C) { // match
         debug("pass this token: " + C);
         if (v === C) next();
-        else syntaxError(C);
+        else throw new SyntaxError(charExpectedString(C));
     }
 
     function skip(C) {
@@ -4178,7 +4162,7 @@ define("parser", function () {
             next();
             return true;
         } else {
-            debug("cant skip: " + C + " /at " + v);
+            debug("can't skip: " + C + " ("+v+")");
             return false;
         }
     }
@@ -4207,17 +4191,13 @@ define("parser", function () {
                 v = T.value;
 //                if (withExtras && captureExtraValues[v]) extraBuffer.push(T);
                 loc = T.loc;
-
             } else {
                 t = v = undefined;
             }
             lookahead = righthand(tokens, i);	// i see, i have to update that. it just picks them off the array. 
-            return T;				// origin: first the tokenizer tokenized html for my syntax highlighter
-        } else if (i == j) {
-            T = v = t = undefined;
-            return false;
+            return T;				// origin: formerly the tokenizer tokenized html for my syntax highlighter
         }
-        throw error(new RangeError("parse: next(): Unexpected end. Mean called once to often. Should stop on j = length."));
+        return T = v = t = undefined;
     }
 
     // ========================================================================================================
@@ -4337,7 +4317,7 @@ define("parser", function () {
             }
 
             /*else if (v !== "]") {
-             throwError(new SyntaxError("buggy element list"));
+             throw new SyntaxError("buggy element list");
              }*/
 
         } while (v && v !== "]");
@@ -4398,7 +4378,8 @@ define("parser", function () {
             node.loc = T && T.loc;
         }
         if (node) return node;
-        throwError(new SyntaxError("invalid property key in definition list"));
+
+        throw new SyntaxError("invalid property key in definition");
         return null;
     }
 
@@ -4417,7 +4398,7 @@ define("parser", function () {
                 node = Node("PropertyDefinition");
                 node.kind = v;
                 method = this.MethodDefinition(parent, true);
-                if (!method) throwError(new SyntaxError("Error parsing MethodDefinition in ObjectExpression"));
+                if (!method) throw new SyntaxError("Error parsing MethodDefinition in ObjectExpression");
                 node.key = method.id;
                 node.value = method;
                 list.push(node);
@@ -4442,7 +4423,7 @@ define("parser", function () {
 
                         node.kind = "init";
                         id = this.PropertyKey();
-                        if (!id) throwError(new SyntaxError("error parsing objectliteral shorthand"))
+                        if (!id) throw new SyntaxError("error parsing objectliteral shorthand")
                         node.key = id;
                         node.value = id;
                         list.push(node);
@@ -4454,7 +4435,7 @@ define("parser", function () {
                         node.computed = true;
                         pass(":");
                         node.value = this.AssignmentExpression();
-                        if (!node.value) throwError(new SyntaxError("error parsing objectliteral := [symbol_expr]: assignmentexpression"))
+                        if (!node.value) throw new SyntaxError("error parsing objectliteral := [symbol_expr]: assignmentexpression");
                         list.push(node);
 
                     } else if (lookahead === ":") { // key: AssignmentExpression
@@ -4463,14 +4444,14 @@ define("parser", function () {
                         node.key = this.PropertyKey();
                         pass(":");
                         node.value = this.AssignmentExpression();
-                        if (!node.value) throwError(new SyntaxError("error parsing objectliteral := propertykey : assignmentexpression"))
+                        if (!node.value) throw new SyntaxError("error parsing objectliteral := propertykey : assignmentexpression")
                         list.push(node);
 
                     } else if (computedPropertyName && v == "(") {
 
                         node.kind = "method";
                         method = this.MethodDefinition(parent, true, computedPropertyName);
-                        if (!method) throwError(new SyntaxError("Error parsing method definition in ObjectExpression."));
+                        if (!method) throw new SyntaxError("Error parsing method definition in ObjectExpression.");
                         node.key = method.id;
                         node.computed = method.computed;
                         node.value = method;
@@ -4480,7 +4461,7 @@ define("parser", function () {
 
                         node.kind = "method";
                         method = this.MethodDefinition(parent, true);
-                        if (!method) throwError(new SyntaxError("Error parsing method definition in ObjectExpression."));
+                        if (!method) throw new SyntaxError("Error parsing method definition in ObjectExpression.");
                         node.key = method.id;
                         node.computed = method.computed;
                         node.value = method;
@@ -4567,7 +4548,7 @@ define("parser", function () {
 
                 } else {
 
-                    throwError(new SyntaxError("MemberExpression . Identifier expects a valid IdentifierString or an IntegerString as PropertyKey."));
+                    throw new SyntaxError("MemberExpression . Identifier expects a valid IdentifierString or an IntegerString as PropertyKey.");
                 }
 
                 pass(v);
@@ -4614,7 +4595,7 @@ define("parser", function () {
                     }
 
                     //else if (v !== ")") {
-                    //    throwError(new SyntaxError("Error parsing the argument list of a call expression"));
+                    //    throw new SyntaxError("Error parsing the argument list of a call expression");
                     //}
 
                 } while (v !== undefined && i < j);
@@ -4963,7 +4944,7 @@ define("parser", function () {
                 covered.push(T);
             }
 
-            if (i >= j) throwError(new SyntaxError("no tokens left over covering expression"));
+            if (i >= j) throw new SyntaxError("no tokens left over covering expression");
 
             pass(")");
 
@@ -5173,7 +5154,7 @@ define("parser", function () {
         if (v === "," || ExprEndOfs[v] || ltNext) return leftHand;
 
         if (t !== "Punctuator" && !InOrOfInsOf[v]) {
-            // throwError(new SyntaxError("can not parse expression"));
+            // throw new SyntaxError("can not parse expression");
             var error = new Error();        
             debug(error.stack.split("\n").join("\r\n"));
             return leftHand;
@@ -5206,7 +5187,7 @@ define("parser", function () {
             pass(v);
 
             node.right = this.AssignmentExpressionNoIn(node);
-            if (!node.right) throwError(new SyntaxError("can not parse a valid righthandside for this assignment expression"));
+            if (!node.right) throw new SyntaxError("can not parse a valid righthandside for this assignment expression");
 
             l2 = loc && loc.end;
             node.loc = makeLoc(l1, l2);
@@ -5223,7 +5204,7 @@ define("parser", function () {
             node.right = this.AssignmentExpression();
 
             if (!node.right) {
-        	throwError(new SyntaxError("can not parse a valid righthandside for this binary expression"));
+        	throw new SyntaxError("can not parse a valid righthandside for this binary expression");
     		//node = node.left;
     		//return node;
     	    } 
@@ -5347,6 +5328,7 @@ define("parser", function () {
             }
 
             pass("}");
+
         } else if (v === "[") {
 
             pass("[");
@@ -5363,7 +5345,7 @@ define("parser", function () {
                     continue;
                 }
                 
-                //else if (v !== "]") throwError(new SyntaxError("illegal statement in binding pattern"));
+                //else if (v !== "]") throw new SyntaxError("illegal statement in binding pattern");
             }
             pass("]");
         }
@@ -5490,7 +5472,7 @@ define("parser", function () {
 
     parser.MethodDefinition = MethodDefinition;
     function MethodDefinition(parent, isObjectMethod, computedPropertyName) {
-
+                                        // THESE I WILL LOOSE WHEN REFACTORING
         var l1, l2;
         var node;
         var isStaticMethod = false;
@@ -5884,7 +5866,7 @@ define("parser", function () {
 
             } else {
                 if (!node.expression) {
-                    throwError(new SyntaxError("Function and Generator Declarations must have a name [only expressions can be anonymous]"));
+                    throw new SyntaxError("Function and Generator Declarations must have a name [only expressions can be anonymous]");
                 }
             }
 
@@ -6255,7 +6237,7 @@ define("parser", function () {
             pass(v);
             return specifier;
         }
-        throwError(new SyntaxError("can not make out ModuleSpecifier"));
+        throw new SyntaxError("can not make out ModuleSpecifier");
     }
     parser.ModuleBody = ModuleBody;
 
@@ -6319,7 +6301,7 @@ define("parser", function () {
                     pass(",");
                     continue;
                 } else {
-                    throwError(new SyntaxError("BindingElement did not terminate with a , or }"));
+                    throw new SyntaxError("BindingElement did not terminate with a , or }");
                 }
             }
             return list;
@@ -6353,7 +6335,7 @@ define("parser", function () {
                         pass(",");
                         continue;
                     } else if (v !== "from") {
-                        throwError(new SyntaxError("invalid import statement"));
+                        throw new SyntaxError("invalid import statement");
                     }
                 }
             }
@@ -6387,7 +6369,7 @@ define("parser", function () {
                     pass(",");
                     continue;
                 } else {
-                    throwError(new SyntaxError("BindingElement did not terminate with a , or }"));
+                    throw new SyntaxError("BindingElement did not terminate with a , or }");
                 }
             }
             return list;
@@ -6442,7 +6424,7 @@ define("parser", function () {
                     currentModule.exportEntries.push({ ModuleRequest: null, ImportName: null, LocalName: name, ExportName: name });
                 }
                 skip(";");
-                if (!node.exports) throwError(new SyntaxError("should be an error in the export statement"));
+                if (!node.exports) throw new SyntaxError("should be an error in the export statement");
             }
 
 
@@ -6528,7 +6510,7 @@ define("parser", function () {
             defaultIsId: defaultIsId,
             yieldStack: yieldStack,
             defaultStack: defaultStack,
-            nodeTable: nodeTable
+ //           nodeTable: nodeTable
         };
         positions.push(o);
         return o;
@@ -6551,7 +6533,7 @@ define("parser", function () {
             defaultIsId = o.defaultIsId;
             yieldStack = o.yieldStack;
             defaultStack = o.defaultStack;
-            nodeTable = o.nodeTable;
+   //         nodeTable = o.nodeTable;
         }
     }
 
@@ -6676,7 +6658,7 @@ define("parser", function () {
                     node.left = this.LeftHandSideExpression();
                 }
 
-                if (!node.left) throwError(new SyntaxError("can not parse a valid lefthandside expression for for statement"));
+                if (!node.left) throw new SyntaxError("can not parse a valid lefthandside expression for for statement");
 
                 if (lookahead === "in" || lookahead === "of") next();
 
@@ -6690,12 +6672,12 @@ define("parser", function () {
                     node.right = this.AssignmentExpression();
                 }
 
-                if (!node.right) throwError(new SyntaxError("can not parse a valid righthandside expression for for statement"));
+                if (!node.right) throw new SyntaxError("can not parse a valid righthandside expression for for statement");
 
                 pass(")");
 
             } else {
-                throwError(new SyntaxError("invalid syntax in for statement"));
+                throw new SyntaxError("invalid syntax in for statement");
             }
 
             node.body = this.Statement();
@@ -6724,7 +6706,8 @@ define("parser", function () {
             var l1, l2;
             l1 = loc && loc.start;
             var node = Node("WhileStatement");
-            scan("(");
+            pass("while")
+            pass("(");
             node.test = this.Expression();
             pass(")");
             node.body = this.Statement();
@@ -7084,8 +7067,8 @@ define("parser", function () {
     function Disjunction() {
         var node = Node("disjunction");
         var alternative = Alternative();
-        if (lookahead === "|") {
-            scan("|");
+        if (ch === "|") {
+            pass("|");
             var disjunction = Disjunction();
             if (disjunction) node.disjunction = disjunction;
         }
@@ -7111,7 +7094,7 @@ define("parser", function () {
     function RegularExpressionLiteral() {
         var tree = Pattern();
         if (tree) return tree;
-        else throwError(new SyntaxError("Can not parse Regular Expression Source with Goal Symbol Pattern"));
+        else throw new SyntaxError("Can not parse Regular Expression Source with Goal Symbol Pattern");
     }
 
     // ===========================================================================================================
@@ -7398,7 +7381,7 @@ define("parser", function () {
         debug("Enabling CST extras")
         Object.keys(parser).forEach(function (k) {
             if (typeof parser[k] === "function" && !parser[k].wrapped) {
-                if (k == "next" || k == "scan" || k == "pass" || k.indexOf("JSON")===0) return; // for my hacky wacky system
+                if (k == "next" || k == "pass" || k.indexOf("JSON")===0) return; // for my hacky wacky system
                 debug("wrapping "+k)
                 var originalFunction = parser[k];
                 var parseFunction = function () {
