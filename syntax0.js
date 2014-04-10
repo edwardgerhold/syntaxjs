@@ -12426,7 +12426,7 @@ function DaysInYear(y) {
 }
 
 function DayFromYear(y) {
-    return msPerDay * DayFromYear(y);
+    return 365 * (y - 1970) + floor((y-1969/4)) - floor((y-1901)/100) + floor((y-1601)/400);
 }
 
 function YearFromTime(t) {
@@ -14838,7 +14838,7 @@ setInternalSlot(DebugFunction, "Call", function debugfunc (thisArg, argList)  {
     	    console.log("[object Function]: "+funcName);
         }
         console.log(toString);
-        console.log("{")
+        console.log("{");
 
         var bindings = getInternalSlot(O, "Bindings");
         var symbols = getInternalSlot(O, "Symbols");
@@ -14867,10 +14867,10 @@ setInternalSlot(DebugFunction, "Call", function debugfunc (thisArg, argList)  {
             console.log(TAB+"[[ThisMode]]: "+thisMode);
 
             var formals = getInternalSlot(O, "FormalParameters");
-            console.log(TAB+"[[FormalParameters]]:")
+            console.log(TAB+"[[FormalParameters]]:");
             console.log(formals.join(","));
 
-            console.log(TAB+"[[Code]]:")
+            console.log(TAB+"[[Code]]:");
 
             var code = getInternalSlot(O, "Code");
             console.log(JSON.stringify(code, null, 4));
@@ -14949,7 +14949,7 @@ setInternalSlot(RequestFunction, "Call", function request(thisArg, argList) {
         var handler = CreateBuiltinFunction(realm, function handler(thisArg, argList) {
             var resolve = argList[0];
             var reject = argList[1];
-        })
+        });
 
         d = OrdinaryConstruct(PromiseConstructor, [handler]);
 
@@ -14962,7 +14962,7 @@ setInternalSlot(RequestFunction, "Call", function request(thisArg, argList) {
         xhr.send();
 
         return xhr.responseText;
-        return d;
+
     } else if (isNode()) {
 
     } else if (isWorker()) {
@@ -15122,7 +15122,7 @@ LazyDefineProperty(RealmConstructor, $$toStringTag, "Reflect.Realm");
 // ##################################################################
 
 function hasRecordInList(list, field, value) {
-    if (!list) return false
+    if (!list) return false;
     for (var i = 0, j = list.length; i < j; i++) {
         var r = list[i];
         if (r[field] === value) return true;
@@ -15225,7 +15225,7 @@ function CreateLoadRequestObject(name, metadata, address, source) {
 
 // 27.1. updated
 function LoadModule(loader, name, options) {
-    debug2("loadmodule")
+    debug2("loadmodule");
     if (!options) options = ObjectCreate();
     var name = ToString(name);
     if (isAbrupt(name = ifAbrupt(name))) return name;
@@ -15559,7 +15559,7 @@ function PromiseOfStartLoadPartWayThrough(step, loader, name, metadata, source, 
 // 26.1
 function AsyncStartLoadPartwayThrough() {
     var F = OrdinaryFunction();
-    debug2("AsyncStartLoadPartwayThrough: start")
+    debug2("AsyncStartLoadPartwayThrough: start");
     var AsyncStartLoadPartwayThrough_Call = function (thisArg, argList) {
         debug2("AsyncStartLoadPartwayThrough_Call");
         var resolve = argList[0];
@@ -15570,7 +15570,7 @@ function AsyncStartLoadPartwayThrough() {
         var step = state.Step;
         var source = state.ModuleSource;
 
-        if (hasRecordInList(loader.Modules, "Name", name)) return withError("Type", "Got name in loader.Modules")
+        if (hasRecordInList(loader.Modules, "Name", name)) return withError("Type", "Got name in loader.Modules");
         if (hasRecordInList(loader.Loads, "Name", name)) return withError("Type", "loader.Loads contains another entry with name '"+name+"'");
         var load = CreateLoad(name);
         load.Metadata = state.ModuleMetadata;
@@ -15613,7 +15613,7 @@ function CreateModuleLinkageRecord (loader, body) {
     setInternalSlot(M, "LinkErrors", []);
     var realm = loader.Realm;
     var globalEnv = realm.globalEnv;
-    var env = NewModuleEnvironment(globalEnv)
+    var env = NewModuleEnvironment(globalEnv);
     setInternalSlot(M, "Environment", env);
     return M;
 }
@@ -15645,11 +15645,11 @@ function LinkSet(loader, loads, done, resolve, reject) {
     ls.constructor = LinkSet;
     return ls;
 }
-LinkSet.prototype.toString = function () { return "[object LinkSet]"; }
+LinkSet.prototype.toString = function () { return "[object LinkSet]"; };
 
 // 27.1.
 function CreateLinkSet(loader, startingLoad) {
-    debug2("createlinkset")
+    debug2("createlinkset");
     if (Type(loader) !== "object") return withError("Type", "CreateLinkSet: loader has to be an object");
     if (!hasInternalSlot(loader, "Load")) return withError("Type", "CreateLinkSet: loader is missing internal properties");
     var promiseCapability = PromiseBuiltinCapability();
@@ -15684,7 +15684,7 @@ function AddLoadToLinkSet(linkSet, load) {
 
 // 27.1.
 function UpdateLinkSetOnLoad(linkSet, load) {
-    debug2("updatelinksetonload")
+    debug2("updatelinksetonload");
     var loads = linkSet.Loads;
     Assert(loads.indexOf(loads) > -1, "linkset.Loads has to contain load");
     Assert(load.Status === "loaded" || load.Status === "linked", "load.Status must be one of loaded or linked");
@@ -15705,7 +15705,7 @@ function UpdateLinkSetOnLoad(linkSet, load) {
 
 // 27.1.
 function LinkSetFailed(linkSet, exc) {
-    debug2("linksetfailed")
+    debug2("linksetfailed");
     var loader = linkSet.Loader;
     var loads = linkSet.Loads;
     for (var i = 0, j = loads.length; i < j; i++) {
@@ -15718,16 +15718,16 @@ function LinkSetFailed(linkSet, exc) {
         }
     }
     var result = callInternalSlot("Call", linkset.Reject, undefined, [exc]);
-    Assert(!isAbrupt(result), "linkSet.reject had to terminate normally")
+    Assert(!isAbrupt(result), "linkSet.reject had to terminate normally");
     return NormalCompletion(result);
 }
 
 // 27.1.    USING EXPENSIVE SPLICES to EMPTY the array (and .indexOf Arrays )
 function FinishLoad(loader, load) {
-    debug2("finishload")
+    debug2("finishload");
     var name = load.Name;
     if (name !== undefined) {
-        Assert(!hasRecordInList(loader.Modules, "Key", load.Name), "there may be no duplicate records in loader.Modules")
+        Assert(!hasRecordInList(loader.Modules, "Key", load.Name), "there may be no duplicate records in loader.Modules");
         loader.Modules.push({ key: load.Name, value: load.Module });
     }
     var idx;
@@ -15785,7 +15785,7 @@ function FinishLoad(loader, load) {
 
 function LinkageGroups(start) {
     Assert(Array.isArray(start), "start has to be a list of LinkSet Records");
-    debug2("linkage groups starts")
+    debug2("linkage groups starts");
     var G = start.Loads;
     var kind;
     for (var i = 0, j = G.length; i < j; i++) {
@@ -15898,7 +15898,7 @@ function ResolveExportEntries(M, visited) {
     for (var i = 0, j = knownExportEntries.length; i < j; i++) {
 
         var entry = knownExportEntries[i];
-        var modReq = entry.ModuleRequest
+        var modReq = entry.ModuleRequest;
         var otherMod = LookupModuleDependency(M, modReq);
 
         if (entry.Module !== null && entry.LocalName !== null && !boundNames[entry.LocalName]) { // caps
@@ -16037,7 +16037,7 @@ function LinkDeclarativeModules(loads, loader) {
     for (i = 0, j = loads.length; i < j; i++) {
         var resolvedDeps = [];
         var unlinkedDeps = [];
-        var pair = loads[i]
+        var pair = loads[i];
         var deps = pair.load.Dependencies;
         var pairModule = pair.Module;
         for (var k = 0; k < deps.length; k++) {
@@ -16127,7 +16127,6 @@ function EnsureEvaluated(mod, seen, loader) {
     var stack = getStack();
     if (stack.length) getStack().pop();
     stack.push(initContext);
-    cx  = initContext;
     var r = Evaluate(body);
     Assert(stack.pop() === initContext, "EnsureEvaluated: The right context could not be popped off the stack.");
     return r;
@@ -16154,7 +16153,7 @@ function IterableToList(iterable) {
 // Seite 21 von 43
 
 function GetOption(options, name) {
-    debug2("get options")
+    debug2("get options");
     if (options == undefined) return undefined;
     if (Type(options) !== "object") return withError("Type", "options is not an object");
     return Get(options, name);
@@ -16242,7 +16241,7 @@ var LoaderConstructor_Call = function (thisArg, argList) {
     if (isAbrupt(status)) return status;
     status = define_loader_pipeline_hook("instantiate");
     if (isAbrupt(status)) return status;
-    if (getInternalSlot(loader, "LoaderRecord") !== undefined) return withError("Type", "loader.[[LoaderRecord]] seems to have been changed, expected the undefined value.")
+    if (getInternalSlot(loader, "LoaderRecord") !== undefined) return withError("Type", "loader.[[LoaderRecord]] seems to have been changed, expected the undefined value.");
 
     var loaderRecord = CreateLoaderRecord(realm, loader);
     setInternalSlot(loader, "LoaderRecord", loaderRecord);
@@ -16312,7 +16311,7 @@ var LoaderPrototype_keys = function (thisArg, argList) {
 };
 // 31.1.
 var LoaderPrototype_define = function (thisArg, argList) {
-    debug2("loaderprotodefine")
+    debug2("loaderprotodefine");
     var name = argList[0];
     var source =argList[1];
     var options = argList[2];
@@ -16335,7 +16334,7 @@ var LoaderPrototype_define = function (thisArg, argList) {
 
 // 31.1.
 var LoaderPrototype_load = function (thisArg, argList) {
-    debug2("loaderprotoload")
+    debug2("loaderprotoload");
     var name = argList[0];
     var options = argList[1];
     var loader = thisLoader(thisArg);
@@ -16350,7 +16349,7 @@ var LoaderPrototype_load = function (thisArg, argList) {
 
 // 31.1.
 var LoaderPrototype_module = function (thisArg, argList) {
-    debug2("loaderprotomodule")
+    debug2("loaderprotomodule");
     var source = argList[0];
     var options = argList[1];
     var loader = thisLoader(thisArg);
@@ -16364,7 +16363,7 @@ var LoaderPrototype_module = function (thisArg, argList) {
     var successCallback = EvaluateLoadedModule();
     setInternalSlot(successCallback, "Loader", loaderRecord);
     setInternalSlot(successCallback, "Load", load);
-    var p = PromiseThen(linkSet.Done, successCallback)
+    var p = PromiseThen(linkSet.Done, successCallback);
     var sourcePromise = PromiseOf(source);
     ProceedToTranslate(loader, load, sourcePromise);
     return NormalCompletion(p);
@@ -16372,7 +16371,7 @@ var LoaderPrototype_module = function (thisArg, argList) {
 
 // 31.1.
 var LoaderPrototype_import = function (thisArg, argList) {
-    debug2("loaderprototypeimport")
+    debug2("loaderprototypeimport");
     var name = argList[0];
     var options = argList[1];
     var loader = thisLoader(thisArg);
@@ -16381,14 +16380,14 @@ var LoaderPrototype_import = function (thisArg, argList) {
     var p = LoadModule(loaderRecord, name, options);
     if (isAbrupt(p = ifAbrupt(p))) return p;
     var F = EvaluateLoadedModule();
-    setInternalSlot(F, "Loader", loaderRecord)
+    setInternalSlot(F, "Loader", loaderRecord);
     var p = PromiseThen(p, F);
     return p;
 };
 
 // 31.1.
 var LoaderPrototype_eval = function (thisArg, argList) {
-    debug2("loaderprototypeeval")
+    debug2("loaderprototypeeval");
     var source = argList[0];
     var loader = thisLoader(thisArg);
     if (isAbrupt(loader = ifAbrupt(loader))) return loader;
@@ -16398,7 +16397,7 @@ var LoaderPrototype_eval = function (thisArg, argList) {
 
 // 31.1.
 var LoaderPrototype_get = function (thisArg, argList) {
-    debug2("loaderprototypeget")
+    debug2("loaderprototypeget");
     var loader = thisLoader(thisArg);
     if (isAbrupt(loader = ifAbrupt(loader))) return loader;
     var name = ToString(argList[0]);
@@ -16418,7 +16417,7 @@ var LoaderPrototype_get = function (thisArg, argList) {
 };
 // 31.1.
 var LoaderPrototype_has = function (thisArg, argList) {
-    debug2("loaderprototypehas")
+    debug2("loaderprototypehas");
     var loader = thisLoader(thisArg);
     if (isAbrupt(loader = ifAbrupt(loader))) return loader;
     var name = ToString(argList[0]);
@@ -16436,7 +16435,7 @@ var LoaderPrototype_has = function (thisArg, argList) {
 };
 // 31.1.
 var LoaderPrototype_set = function (thisArg, argList) {
-    debug2("loaderprototypeset")
+    debug2("loaderprototypeset");
     var name = argList[0];
     var module = argList[1];
     var loader = thisLoader(thisArg);
@@ -16483,7 +16482,7 @@ var LoaderPrototype_normalize = function (thisArg, argList) {
     return NormalCompletion(name);
 };
 var LoaderPrototype_locate = function (thisArg, argList) {
-    var loadRequest = argList[0];r
+    var loadRequest = argList[0];
     return Get(loadRequest, "name");
 };
 var LoaderPrototype_fetch = function (thisArg, argList) {
@@ -16678,7 +16677,8 @@ var ArrayConstructor_call =  function (thisArg, argList) {
     var Pk, itemK;
     var items;
 
-    numberOfArgs === argList.length;
+    numberOfArgs = argList.length;
+
     if (numberOfArgs === 1) {
         len = GetValue(argList[0]);
         if (Type(O) === "object" && !getInternalSlot(O, "ArrayInitialisationState")) {
@@ -16765,8 +16765,8 @@ DefineOwnProperty(ArrayConstructor, "isArray", {
     value: CreateBuiltinFunction(realm, function isArray(thisArg, argList) {
         var arg = GetValue(argList[0]);
         // if (Type(arg) !== "object") return false;
-        if (arg instanceof ArrayExoticObject) return true;
-        return false;
+        return arg instanceof ArrayExoticObject;
+
     }),
     enumerable: false,
     writable: true,
@@ -17260,7 +17260,7 @@ var ArrayPrototype_splice = function splice(thisArg, argList) {
             var from = ToString(k+actualDeleteCount);
             var to = ToString(k+itemCount);
             var fromPresent = HasProperty(O, from);
-            if (isAbrupt(fromPresent = ifAbrupt(fromPresent)));
+            if (isAbrupt(fromPresent = ifAbrupt(fromPresent))) return fromPresent;
             if (fromPresent  === true) {
                 var fromValue = Get(O, from);
                 if (isAbrupt(fromValue = ifAbrupt(fromValue))) return fromValue;
@@ -17810,7 +17810,7 @@ var StringRawFunction = CreateBuiltinFunction(realm, function raw(thisArg, argLi
         stringElements.push(nextSub);
         nextIndex = nextIndex + 1;
     }
-    if (isAbrupt(cooked = ifAbrupt(cooked))) return cooked;
+
 });
 
 DefineOwnProperty(StringConstructor, "raw", {
@@ -17846,7 +17846,7 @@ function GetReplaceSubstitution (matched, string, postion, captures) {
     Assert(Array.isArray(captures), "captures is a possibly empty list but a list");
     var tailPos = position + matchLength;
     var m = captures.length;
-    result = matched.replace("$$", "$");
+    var result = matched.replace("$$", "$");
     /*
      Table 39 - Replacement Text Symbol Substitutions missing
      Please fix your skills here
@@ -17862,15 +17862,15 @@ var normalizeOneOfs = {
 };
 
 var StringPrototype_normalize = function (thisArg, argList) {
-    var form = argList[0];
+    var from = argList[0];
     var S = CheckObjectCoercible(thisArg);
     if (isAbrupt(S = ifAbrupt(S))) return S;
     S = ToString(S);
     if (isAbrupt(S = ifAbrupt(S))) return S;
-    if (form === undefined) from = "NFC";
-    var f = ToString(form);
+    if (from === undefined) from = "NFC";
+    var f = ToString(from);
     if ((f = ifAbrupt(f)) && ifAbrupt(f)) return f;
-    if (!normalizeOneOfs[f]) return withError("Range", "f is not one of nfc, nfd, nfkc, nfkd.")
+    if (!normalizeOneOfs[f]) return withError("Range", "f is not one of nfc, nfd, nfkc, nfkd.");
     if (S.normalize) {
         // powers of native es.
         var ns = S.normalize(f);
@@ -17909,9 +17909,9 @@ var StringPrototype_replace = function (thisArg, argList) {
             }
 
             if (match) {
-                matched = searchString;
+                var matched = searchString;
                 if (IsCallable(replaceValue)) {
-                    var replValue = callInternalSlot("Call", replaceValue, undefined, [matched, pos, string])
+                    var replValue = callInternalSlot("Call", replaceValue, undefined, [matched, pos, string]);
                     if (isAbrupt(replValue = ifAbrupt(replValue))) return replValue;
                     var replStr = ToString(replValue);
                     if (isAbrupt(replStr = ifAbrupt(replStr))) return replStr;
@@ -18294,17 +18294,17 @@ var StringPrototype_at = function (thisArg, argList) {
     var O = CheckObjectCoercible(thisArg);
     var S = ToString(O);
     if (isAbrupt(S=ifAbrupt(S))) return S;
-    var position = ToInteger(pos);
+    var pos = ToInteger(position);
     if (isAbrupt(pos=ifAbrupt(pos))) return pos;
     var size = S.length;
-    if (position < size || position > size) return NormalCompletion("");
+    if (pos < size || pos > size) return NormalCompletion("");
     var first = S[position];
     var cuFirst = s.charCodeAt(0);
     if (cuFirst < 0xD800 || cuFirst > 0xDBFF || (position + 1 === size)) return NormalCompletion(first);
     var cuSecond = S.charCodeAt[position+1];
     if (cuSecond < 0xDC00 || cuSecond > 0xDFFF) return NormalCompletion(first);
     var second = S.charCodeAt[position+1];
-    var cp = (first - 0xD800) * 0x400+(second-0xDC00)+0x1000
+    var cp = (first - 0xD800) * 0x400+(second-0xDC00)+0x1000;
     return String.fromCharCode(cuFirst, cuSecond);
 };
 
@@ -18544,7 +18544,7 @@ var SymbolFunction_keyFor = function (thisArg, argList) {
 
 var SymbolFunction_for = function (thisArg, argList) {
     var key = argList[0];
-    var stringKey = ToString(key)
+    var stringKey = ToString(key);
     if (isAbrupt(stringKey = ifAbrupt(stringKey))) return stringKey;
     var e = getRealm().GlobalSymbolRegistry[key];
     if (e !== undefined && SameValue(e.Key, stringKey)) return NormalCompletion(e.Symbol);
@@ -18626,7 +18626,7 @@ setInternalSlot(ErrorConstructor, "Call", function (thisArg, argList) {
     }
 
     CreateDataProperty(O, "stack", stringifyErrorStack());
-    setInternalSlot(O, "toString", function () { return "[object Error]"; })
+    setInternalSlot(O, "toString", function () { return "[object Error]"; });
     return O;
 });
 
@@ -18673,7 +18673,7 @@ DefineOwnProperty(ErrorPrototype, "toString", {
 
 function createNativeError(nativeType, ctor, proto) {
     var name = nativeType + "Error";
-    var intrProtoName = "%" + nativeType + "ErrorPrototype%"
+    var intrProtoName = "%" + nativeType + "ErrorPrototype%";
     //SetFunctionName(ctor, name);
     setInternalSlot(ctor, "Call", function (thisArg, argList) {
         var func = this;
@@ -18699,7 +18699,7 @@ function createNativeError(nativeType, ctor, proto) {
             if (isAbrupt(status)) return status;
         }
 
-        CreateDataProperty(O, "stack", stringifyErrorStack())
+        CreateDataProperty(O, "stack", stringifyErrorStack());
 
         // interne representation
         setInternalSlot(O, "toString", function () {
@@ -18806,10 +18806,11 @@ setInternalSlot(DateConstructor, "Call", function (thisArg, argList) {
                 } else {
                     tv = ToNumber(v);
                 }
+            }
                 if (isAbrupt(tv = ifAbrupt(tv))) return tv;
                 setInternalSlot(O, "DateValue", TimeClip(tv));
                 return O;
-            }
+
         }
     } else if (numberOfArgs === 0) {
         if (Type(O) === "object" && hasInternalSlot(O, "DateValue") && getInternalSlot(O, "DateValue") === undefined) {
@@ -19121,17 +19122,17 @@ setInternalSlot(UnescapeFunction, "Call", function (thisArg, argList) {
 
 
 
-// ===========================================================================================================
-// parseInt, parseFloat
-// ===========================================================================================================
+var ParseIntFunction_call = function (thisArg, argList) {
+    return parseInt(""+argList[0], +argList[1]);
+};
 
-setInternalSlot(ParseIntFunction, "Call", function (thisArg, argList) {
-    return parseInt(argList[0], argList[1]);
-});
+var ParseFloatFunction_call = function (thisArg, argList) {
+    return parseFloat(""+argList[0]);
+};
+setInternalSlot(ParseIntFunction, "Call", ParseIntFunction_call);
 
-setInternalSlot(ParseFloatFunction, "Call", function (thisArg, argList) {
-    return parseFloat(argList[0], argList[1]);
-});
+setInternalSlot(ParseFloatFunction, "Call", ParseFloatFunction_call);
+
 
 
 //===========================================================================================================
@@ -19189,8 +19190,7 @@ var MathObject_cos = function (thisArg, argList) {
 };
 var MathObject_atan = function (thisArg, argList) {
     var x = +argList[0];
-    var y = +argList[1];
-    return NormalCompletion(Math.atan(x,y));
+    return NormalCompletion(Math.atan(x));
 };
 var MathObject_atan2 = function (thisArg, argList) {
     var x = +argList[0];
@@ -19396,7 +19396,7 @@ var NumberPrototype_toFixed = function (thisArg, argList) {
     if (fractionDigits === undefined) return ToString(x);
     var f = ToInteger(fractionDigits);
     if (isAbrupt(f = ifAbrupt(f))) return f;
-    if ((f < 0) || (f > 20)) return withError("Range", "fractionDigits is less or more than 20")
+    if ((f < 0) || (f > 20)) return withError("Range", "fractionDigits is less or more than 20");
     if (x !== x) return "NaN";
     var s = "";
     if (x < 0) {
@@ -19585,7 +19585,7 @@ function reflect_parse_transformASTtoOrdinaries(node, options) {
         }
     }
     return newNode;
-};
+}
 
 
 var ReflectObject_parse = function (thisArg, argList) {
@@ -19837,7 +19837,7 @@ var ObjectConstructor_assign = function (thisArg, argList) {
     return to;
 };
 var ObjectConstructor_create = function (thisArg, argList) {
-    var O = argList[0]
+    var O = argList[0];
     var Properties = argList[1];
     if (Type(O) !== "object" && Type(O) !== "null") return withError("Type", "create: argument is not an object or null");
     var obj = ObjectCreate(O);
@@ -20154,7 +20154,7 @@ var ObjectPrototype_isPrototypeOf = function (thisArg, argList) {
         if (V == null) return false;
         if (SameValue(O, V)) return true;
     }
-    return false;
+
 };
 
 
@@ -20189,7 +20189,7 @@ var builtinTagsByToString = {
     "[object ProxyExoticObject]": "Proxy",
     "[object ArgumentsExoticObject]": "Arguments",
     "[object OrdinaryFunction]": "Function",
-    "[object StringExoticObject]": "String",
+    "[object StringExoticObject]": "String"
 };
 
 
@@ -20259,7 +20259,7 @@ var ObjectPrototype_proto_ = {
     get: CreateBuiltinFunction(realm, ObjectPrototype_get_proto, "get __proto__", 0),
     set: CreateBuiltinFunction(realm, ObjectPrototype_set_proto, "set __proto___", 0)
 };
-DefineOwnProperty(ObjectPrototype, "__proto__", ObjectPrototype_proto_)
+DefineOwnProperty(ObjectPrototype, "__proto__", ObjectPrototype_proto_);
 
 
 LazyDefineBuiltinFunction(ObjectPrototype, $$create, 0, ObjectPrototype_$$create);
@@ -20380,7 +20380,7 @@ function GetNotifier(O) {
     var proto;
     var notifier = getInternalSlot(O, "Notifier");
     if (notifier === undefined) {
-        proto = Get(getIntrinsics(), "NotifierPrototype%")
+        proto = Get(getIntrinsics(), "NotifierPrototype%");
         notifier = ObjectCreate(proto);
         setInternalSlot(notifier, "Target", O);
         setInternalSlot(notifier, "ChangeObservers", []);
@@ -21029,11 +21029,7 @@ function Quote(value) {
     for (var i = 0, j = value.length; i < j; i++) {
         ch = value[i];
         la = value[i + 1];
-        if (false) {
-
-        } else {
-            product += ch;
-        }
+        product += ch;
     }
     return product + "\"";
 }
@@ -21254,7 +21250,7 @@ DefineOwnProperty(JSONObject, "stringify", {
                     else if (Type(v) === "object") {
                         if (hasInternalSlot(v, "NumberData") || hasInternalSlot(v, "StringData")) item = ToString(v);
                         if (item != undefined && PropertyList.indexOf(item) < 0) {
-                            _state.PropertyList = PropertyList
+                            _state.PropertyList = PropertyList;
                             PropertyList.push(item);
                         }
                     }
@@ -21368,7 +21364,7 @@ var PromiseConstructor_race = function (thisArg, argList) {
     for (;;) {
         var next = IteratorStep(iterator);
         if (isAbrupt(next = ifAbrupt(next))) return next;
-        if ((next = IfAbruptRejectPromise(next, promiseCapability)) &&isAbrupt(next)) return next
+        if ((next = IfAbruptRejectPromise(next, promiseCapability)) &&isAbrupt(next)) return next;
         if (next === false) return NormalCompletion(promiseCapability.Promise);
         var nextValue = IteratorValue(next);
         if ((nextValue=IfAbruptRejectPromise(nextValue, promiseCapability)) && isAbrupt(nextValue)) return nextValue;
@@ -21377,7 +21373,7 @@ var PromiseConstructor_race = function (thisArg, argList) {
         var result = Invoke(nextPromise, "then", [promiseCapability.Resolve, promiseCapability.Reject]);
         if ((result = IfAbruptRejectPromise(result, promiseCapability)) && isAbrupt(result)) return result;
     }
-    return NormalCompletion(undefined);
+
 };
 
 function makePromiseAllResolveElementsFunction () {
@@ -21506,7 +21502,7 @@ LazyDefineProperty(PromisePrototype, $$toStringTag, "Promise");
 // createIntrinsics has to become the DefineProperty rows only.
 
 function PromiseNew (executor) {
-    debug2("promisenew")
+    debug2("promisenew");
     var promise = AllocatePromise(getIntrinsic("%Promise%"));
     return InitializePromise(promise, executor);
 }
@@ -21624,7 +21620,7 @@ function CreateResolveFunction (promise) {
 }
 
 function NewPromiseCapability(C) {
-    debug2("newpromisecap")
+    debug2("newpromisecap");
     if (!IsConstructor(C)) return withError("Type", "C is no constructor");
     // Assertion Step 2 missing 25.4.3.1
     var promise = CreateFromConstructor(C);
@@ -21702,8 +21698,8 @@ function AllocatePromise(constructor) {
 function IsPromise(x) {
     if (Type(x) !== "object") return false;
     if (!hasInternalSlot(x, "PromiseStatus")) return false;
-    if (getInternalSlot(x, "PromiseStatus") === undefined) return false;
-    return true;
+    return getInternalSlot(x, "PromiseStatus") !== undefined;
+
 }
 
 
@@ -21906,7 +21902,7 @@ DefineOwnProperty(ArrayBufferPrototype, $$toStringTag, {
     enumerable: false,
     configurable: false
 });
-setInternalSlot(ArrayBufferPrototype, "Prototype", ObjectPrototype)
+setInternalSlot(ArrayBufferPrototype, "Prototype", ObjectPrototype);
 DefineOwnProperty(ArrayBufferPrototype, "byteLength", {
     get: CreateBuiltinFunction(realm, function (thisArg, argList) {
         var O = thisArg;
@@ -21936,7 +21932,7 @@ var DataViewConstructor_Call= function (thisArg, argList) {
     var byteOffset = argList[1];
     var byteLength = argList[2];
     if (byteOffset === undefined) byteOffset = 0;
-    if (Type(O) !== "object" || !hasInternalSlot(O, "DataView")) return withError("Type", "DataView object expected")
+    if (Type(O) !== "object" || !hasInternalSlot(O, "DataView")) return withError("Type", "DataView object expected");
     Assert(hasInternalSlot(O, "ViewedArrayBuffer"), "O has to have a ViewedArrayBuffer slot.");
     var viewedArrayBuffer = getInternalSlot(O, "ViewedArrayBuffer");
     if (viewedArrayBuffer !== undefined) return withError("Type", "ViewedArrayBuffer of DataView has to be undefined.");
@@ -21948,7 +21944,7 @@ var DataViewConstructor_Call= function (thisArg, argList) {
     var numberOffset = ToNumber(byteOffset);
     var offset = ToInteger(numberOffset);
     if (isAbrupt(offset=ifAbrupt(offset))) return offset;
-    if (numberOffset !== offset || offset < 0) return withError("Range", "numberOffset is not equal to offset or is less than 0.")
+    if (numberOffset !== offset || offset < 0) return withError("Range", "numberOffset is not equal to offset or is less than 0.");
     var byteBufferLength = getInternalSlot(buffer, "ArrayBufferByteLength");
     if (offset > byteBufferLength) return withError("Range", "offset > byteBufferLength");
     if (byteLength === undefined) {
@@ -22463,7 +22459,7 @@ function createTypedArrayPrototype(proto) {
     LazyDefineAccessor(proto, "byteOffset", CreateBuiltinFunction(realm, TypedArrayPrototype_get_byteOffset, 0, "get byteOffset"));
     LazyDefineAccessor(proto, $$toStringTag, CreateBuiltinFunction(realm, TypedArrayPrototype_get_$$toStringTag, 0, "get [Symbol.toStringTag]"));
     return proto;
-};
+}
 
 // ===========================================================================================================
 // Create Typed Arrays
@@ -22489,9 +22485,7 @@ function createTypedArrayVariant(_type, _bpe, _ctor, _proto) {
     });
 
     setInternalSlot(_ctor, "Construct", function (argList) {
-        var F = this;
-        var args = argList;
-        return OrdinaryConstruct(F, args);
+        return OrdinaryConstruct(this, argList);
     });
     DefineOwnProperty(_ctor, "BYTES_PER_ELEMENT", {
         value: _bpe,
@@ -22601,7 +22595,6 @@ setInternalSlot(MapConstructor, "Call", function Call(thisArg, argList) {
         status = callInternalSlot("Call", adder, map, [k, v]);
         if (isAbrupt(status)) return status;
     }
-    return NormalCompletion(map);
 });
 
 setInternalSlot(MapConstructor, "Construct", function Construct(argList) {
@@ -22960,7 +22953,7 @@ setInternalSlot(SetConstructor, "Call", function Call(thisArg, argList) {
         status = callInternalSlot("Call", adder, set, [v]);
         if (isAbrupt(status)) return status;
     }
-    return NormalCompletion(set);
+
 
 });
 setInternalSlot(SetConstructor, "Construct", function Construct(argList) {
@@ -23428,7 +23421,7 @@ LazyDefineBuiltinFunction(MessagePortPrototype, "postMessage", 0, MessagePortPro
  */
 var TypePrototypePrototype_get = function (thisArg, argList) {
     var O = thisArg;
-    if (!hasInternalSlot(O, "TypeDescriptor")) return withError("Type", "has no type descriptor")
+    if (!hasInternalSlot(O, "TypeDescriptor")) return withError("Type", "has no type descriptor");
     return NormalCompletion(getInternalSlot(O, "TypeDescriptor"));
 };
 
