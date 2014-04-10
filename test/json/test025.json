@@ -1,0 +1,31 @@
+{
+	"eval and arguments function args throw in strict mode":
+	{
+	    "init": 
+		"\"use strict\"; function f(eval, arguments) {}",
+	    "tests": 
+	    [
+		[null,null, "throws"]
+	    ]
+	},
+	
+	"eval and arguments identifier names throw in strict mode":
+	{
+	    "init": 
+		"\"use strict\"; let eval, arguments;",
+	    "tests": 
+	    [
+		[null,null, "throws"]
+	    ]
+	},
+	
+	"var eval and arguments identifier names do NOT throw in non strict mode":
+	{
+	    "init": 
+		"var eval, arguments;\nfunction f(eval, arguments) {return arguments}",
+	    "tests": 
+	    [
+		["eval = f(0,1);", 1]
+	    ]
+	}
+}
