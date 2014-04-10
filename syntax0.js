@@ -3710,13 +3710,25 @@ define("earlyerrors", function () {
 
 /*
  ############################################################################################################################################################################################################
+ Parser
+ very old
+ legacy code?
+ delete
 
- Parser - Converts a stream of EcmaScript Tokens into a Mozilla Parser API AST instead of into the good looking Original Strings
- (because i never heard of before)
- 
- BTW. THIS PARSER IS VERY OLD AND THE OLDEST PIECES ARE OLDER THAN ME TAKING THE 
- LECTURE FOR. MEANWHILE I GOT INTERESTED. BUT THERE IS TO DO.
+ uses input arrays from tokenize(src)
+ doesnt call tokenizer.next() (at the time, will somewhen happen, isnt that urgent)
 
+ has a second function parseGoal(goal, srcOrArr)
+ which can be invoked from anywhere within
+
+ it predicts at forstatement
+ it saves/restores the parser state before/after parseGoal
+ it collects and reparses at cover parenthesized expressions and arrow param list
+
+ it has some ugly old conditions in the while () i notice
+ it misses some syntax errors, early errors.
+
+ and i some words i had for this comment
  ############################################################################################################################################################################################################
  */
 
@@ -3789,11 +3801,11 @@ define("parser", function () {
 
     var lookahead, lookaheadt; // lookahead
     var tokens;
-    var T = Object.create(null); // current token
+    var token = Object.create(null); // current token
     var t; // current token type
     var v; // current token value
-    var i; // tokens[i] pointer
-    var j; // tokens.length;
+    var i; // tokens[i] pointer     (array version)
+    var j; // tokens.length;        (array version)
 
 
     var parser = Object.create(null);
@@ -4133,7 +4145,7 @@ define("parser", function () {
 
         i = -1;
         j = tokens.length;
-        T = v = t = undefined;
+        token = v = t = undefined;
         lookahead = lookaheadt = undefined;
 
     }
@@ -4183,21 +4195,21 @@ define("parser", function () {
         if (i < j) {
             i += 1;
             lastloc = loc;
-            T = tokens[i];  // this function really works on an array 
-            if (T) {
-                t = T.type;
-                if (withExtras && captureExtraTypes[t]) extraBuffer.push(T);
+            token = tokens[i];  // this function really works on an array
+            if (token) {
+                t = token.type;
+                if (withExtras && captureExtraTypes[t]) extraBuffer.push(token);
                 if (SkipableWhiteSpace[t]) return next();
-                v = T.value;
-//                if (withExtras && captureExtraValues[v]) extraBuffer.push(T);
-                loc = T.loc;
+                v = token.value;
+//                if (withExtras && captureExtraValues[v]) extraBuffer.push(token);
+                loc = token.loc;
             } else {
                 t = v = undefined;
             }
             lookahead = righthand(tokens, i);	// i see, i have to update that. it just picks them off the array. 
-            return T;				// origin: formerly the tokenizer tokenized html for my syntax highlighter
+            return token;				// origin: formerly the tokenizer tokenized html for my syntax highlighter
         }
-        return T = v = t = undefined;
+        return token = v = t = undefined;
     }
 
     // ========================================================================================================
@@ -4210,7 +4222,7 @@ define("parser", function () {
         var node;
         if (IsAnyLiteral[t]) {
             node = Node(t);
-            node.details = T.details;
+            node.details = token.details;
             node.value = v;
             debug("Literal packed " + v);
             node.loc = makeLoc(loc && loc.start, loc && loc.end);
@@ -4227,7 +4239,7 @@ define("parser", function () {
 
             var node = Node("Identifier");
             node.name = v;
-            node.loc = T.loc;
+            node.loc = token.loc;
             pass(v);
 
 
@@ -4375,7 +4387,7 @@ define("parser", function () {
         if (!node && (Keywords[v])) {
             node = Node("Identifier");
             node.name = v;
-            node.loc = T && T.loc;
+            node.loc = token && token.loc;
         }
         if (node) return node;
 
@@ -4535,7 +4547,7 @@ define("parser", function () {
                     var property = Object.create(null);
                     property.type = "Identifier";
                     property.name = v;
-                    property.loc = T.loc
+                    property.loc = token.loc
                     node.property = property;
 
                 } else if (v === "!") {
@@ -4547,12 +4559,9 @@ define("parser", function () {
                     // setzt .eventual auf true
 
                 } else {
-
                     throw new SyntaxError("MemberExpression . Identifier expects a valid IdentifierString or an IntegerString as PropertyKey.");
                 }
-
                 pass(v);
-
             } else return node.object;
 
             // recur toString().toString().toString().valueOf().toString()
@@ -4937,16 +4946,17 @@ define("parser", function () {
                 } else if (v === ")") {
                     parens.pop();
                     if (!parens.length) {
-                        covered.push(T);
+                        covered.push(token);
                         break;
                     }
                 }
-                covered.push(T);
+                covered.push(token);
             }
 
             if (i >= j) throw new SyntaxError("no tokens left over covering expression");
 
             pass(")");
+
 
         }
 
@@ -4973,8 +4983,10 @@ define("parser", function () {
                 if (compile) return builder.arrowExpression(node.params, node.body, node.loc);
                 return node;
             } else {
+
                 return this.CoverParenthesizedExpression(covered);
             }
+
 
         }
         return null;
@@ -5018,7 +5030,7 @@ define("parser", function () {
             if (defaultIsId) {
                 var node = Node("Identifier");
                 node.name = "default";
-                node.loc = T && T.loc;
+                node.loc = token && token.loc;
                 pass("default");
                 return node;
             }
@@ -5033,7 +5045,7 @@ define("parser", function () {
             if (yieldIsId) {
                 var node = Node("Identifier");
                 node.name = "yield";
-                node.loc = T && T.loc;
+                node.loc = token && token.loc;
                 pass("yield");
                 return node;
             }
@@ -5711,7 +5723,6 @@ define("parser", function () {
 
         do {
 
-
             if (v) {
 
                 debug("FormalParameters ("+t+", "+v+")");
@@ -5744,7 +5755,7 @@ define("parser", function () {
 
             }
 
-        } while (v !== undefined && v !== ")" && i < j);
+        } while (v !== undefined && v !== ")");
 
         return list;
     }
@@ -5944,31 +5955,22 @@ define("parser", function () {
             // staticSemantics.newContainer();
 
             var node = Node("BlockStatement");
-	    debug("BlockStatement (" + t + ", " + v + ")");
+
+            debug("BlockStatement (" + t + ", " + v + ")");
 
             defaultStack.push(defaultIsId);
             defaultIsId = true;
 
-            pushLexNames();
-            pushLexDecls();
+            pushLexOnly();
 
             pass("{");
             node.body = this.StatementList();
             l2 = loc && loc.end;
             node.loc = makeLoc(l1, l2);
-
             defaultIsId = defaultStack.pop();
-
-
-
             pass("}");
 
-
-            node.lexNames = lexNames;
-            node.lexDecls = lexDecls;
-            popLexNames();
-            popLexDecls();
-
+            popLexOnly(node);
 
             return node;
 
@@ -6501,7 +6503,7 @@ define("parser", function () {
             tokens: tokens,
             i: i,
             j: j,
-            T: T,
+            token: token,
             t: t,
             v: v,
             lookahead: lookahead,
@@ -6523,7 +6525,7 @@ define("parser", function () {
             tokens = o.tokens;
             i = o.i;
             j = o.j;
-            T = o.T;
+            token = o.token;
             t = o.t;
             v = o.v;
             lookahead = o.lookahead;
@@ -6898,7 +6900,7 @@ define("parser", function () {
             /* new idea */
 
 	    }
-        } while (T != undefined);
+        } while (token != undefined);
         
         popStrict();
         
@@ -7290,7 +7292,7 @@ define("parser", function () {
             tokens = tokenize(text);
         }
 
-        lookahead = lookaheadt = T = v = t = undefined;
+        lookahead = lookaheadt = token = v = t = undefined;
         i = -1;
         j = tokens.length;
         next();
@@ -7311,7 +7313,7 @@ define("parser", function () {
     }
 
     var exports = parse;
-    exports.parse = parse;
+    exports.parser = parser;
     exports.parseGoal = parseGoal;
     exports.setBuilder = setBuilder;
     exports.unsetBuilder = unsetBuilder;
@@ -7343,9 +7345,11 @@ define("parser", function () {
         observers.forEach(notifyObserver);
         return node;
     }
+
     /*
      * Builder Object can be compilers, more analyzers, whatever can be done behind the interface
      */
+
     var saveBuilder = [];
     function unsetBuilder(objBuilder) {
         var state;
