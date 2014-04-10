@@ -1,0 +1,11 @@
+{
+	"template with nested {} in the ${}":
+	{
+	    "init": 
+		"let s = String.raw`Edward ${ (function(){return 'ist'}()) } toll`;",
+	    "tests": 
+	    [
+		["s", "Edward ist toll"]
+	    ]
+	}
+}

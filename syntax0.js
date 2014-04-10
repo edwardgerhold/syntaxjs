@@ -3078,6 +3078,7 @@ define("tokenizer", function () {
         if (ch === "`") {
             var template, cooked;
             var spans = [];
+            var braces;
             pass("`");
             while (ch != undefined) {
                 template = "";
@@ -3095,9 +3096,22 @@ define("tokenizer", function () {
                 pass("$");
                 pass("{");
                 cooked = "";
+                braces = ["{"];
                 while (ch != "}") {
+                    if (ch == "{") braces.push("{");
                     cooked += ch;
                     next();
+                    // addition: block nesting ${ (function(){return 10; }()) }
+                    if (ch == "}") {
+                        braces.pop();
+                        if (!braces.length) {
+                            break;
+                        } else {
+                            cooked += ch;
+                            next();
+                        }
+                    }
+                    // block nesting end
                 }
                 spans.push(cooked);
                 pass("}");
@@ -3618,6 +3632,7 @@ define("earlyerrors", function () {
         if (handler) handler(node);
         return node;
     }
+
     EarlyErrors.Program = function (node) {
     };
     EarlyErrors.FunctionDeclaration = function (node) {
@@ -3654,11 +3669,11 @@ define("earlyerrors", function () {
 
      */
 
-
     var Contains = function (containerType, nodeType) {
         var table = Contains[containerType];
         return !!table[nodeType];
     };
+
 
     Contains.Program = {
         __proto__:null,
@@ -3668,11 +3683,13 @@ define("earlyerrors", function () {
        "SuperExpression": true
     };
 
+
     Contains.FunctionDeclaration = {
 	__proto__:null,
        "BreakStatement":true,
        "ContinueStatement": true
     };
+
 
     Contains.ModuleDeclaration = {
         __proto__:null,
@@ -3681,7 +3698,6 @@ define("earlyerrors", function () {
         "ReturnStatement": true,
         "SuperExpression": true
     };
-
 
 
     return {
@@ -6249,8 +6265,10 @@ define("parser", function () {
         var item;
         while (v !== undefined && v !== "}") {
             if (item = this.ExportStatement() || this.ModuleDeclaration() || this.ImportStatement() || this.Statement()) {
+
                 if (!Contains.ModuleDeclaration[item.type]) list.push(item);
                 else throw new SyntaxError("contains: "+item.type+" not allowed in ModuleDeclarations");
+
             }
         }
         pass("}");
