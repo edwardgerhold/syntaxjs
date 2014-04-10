@@ -1,11 +1,8 @@
 syntaxjs
 ========
 
-Not bugfree EcmaScript 6 (7*) Interpreter written in EcmaScript 5.
-On the way to become ECMA-262 conformant, when it´s time too.
-Have to rewrite this file. *I have at least one implemented ES7 proposal and a few begun.
-And to update the Source Code for JSDoc comments.
-Meanwhile i get used to modern IDEs
+
+Not bugfree EcmaScript 6 Interpreter written in EcmaScript 5.
 This project was started on a PIII/933 in a dorm and is
 now continued on a notebook with 2 cores still in the dorm.
 It´s a fun project. 
