@@ -1,11 +1,22 @@
+
 Placeholder for the License Terms for syntaxjs
 
 syntax0.js (c) or (w) Edward Gerhold 2013, 2014
 
 I still have to figure out, which license is the right one.
 
+
+I think i will find the answer in the Open Source Definition.
+opensource.org/docs/osd
+but i won´t finish this update of the license today
+i will write down what´s standing there then
+making sure to hit the osd then
+
+
+Here are my first notes of what the license will outline:
+
 * EcmaScript 6 Specification belongs to Ecma, TC-39, and it´s editor,
-which is most of the code.
+which is most of the code. (And the more sophisticated, something to learn from.)
 * Mozilla Parser API belongs to Mozilla, which is the Syntaxtree Format.
 * There is a module with a functional parser by Douglas Crockford, from a
 tutorial on his website, written down by hand. It´s currently not in use, 
@@ -28,7 +39,9 @@ the internal methods are not updated with yet.
 * Which will incorporate EventTarget, Event, and MessagePort from the DOM.
 The names are already registered in the global environment. (Whether i come
 to implement the Node Interface when doing the propagation is open.)
+* I have started to include dslmomovs Type Objects specification from github
 * Everything else is written and even invented by me. 
+
 
 I think i can grant you the rights to use, modify and distribute the software
 and make your own with
@@ -39,6 +52,19 @@ I should take the "Do what the fuck you wanna do with license", i have seen
 together with the releases of the promises-aplus-tests, by Domenic Denicola. I think
 it´s his public domain license. The license expresses what i mean.
 
+
+Oh. 
+All persons namely called are not affiliated with me in any way. I just took
+from the internet, what was there. I meant not to disturb or stress anyone with,
+please. I simply want the tool to be open, free, and be there for anyone.
+
 Have fun!
+(Or be annoyed at the moment because of the open bugs, hehe. 
+I´ll mark it big and fat if it´s no longer the case.)
+
+Edward
+
+
+
 
 
