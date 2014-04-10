@@ -1,0 +1,11 @@
+{
+	"early errors: break, return, continue, super in Program":
+	{
+	    "init": 
+		"break",
+	    "tests": 
+	    [
+		[null, null, "throws"]
+	    ]
+	}
+}
