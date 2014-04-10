@@ -501,7 +501,7 @@ define("tables", function (require, exports, module) {
         "]": true,
         "}": true,
         "case": true,
-        "default": true,
+        "default": true
     };
 
     var PrimaryValues = {
@@ -808,7 +808,7 @@ define("tables", function (require, exports, module) {
         "DoWhileStatement": "doStatement",
         "IfStatement": "ifStatement",
         "ExpressionStatement": "expressionStatement",
-        "SequenceExpression": "sequenceStatement",
+        "SequenceExpression": "sequenceStatement"
     };
 
     var DOM = {
@@ -844,7 +844,7 @@ define("tables", function (require, exports, module) {
     };
     var NodeJSObjects = {
         "process": true,
-        "global": true,
+        "global": true
     };
 
     var Comment = {
@@ -1163,7 +1163,7 @@ define("tables", function (require, exports, module) {
         "w": true,
         "x": true,
         "y": true,
-        "z": true,
+        "z": true
     };
     var IdentifierPart = {
         __proto__: null,
@@ -2110,8 +2110,8 @@ define("slower-static-semantics", function (require, exports, modules) {
     }
 
     function IsVarDeclaration(node) {
-        if (node.kind === "var" && node.type === "VariableDeclaration") return true;
-        return false;
+        return node.kind === "var" && node.type === "VariableDeclaration";
+
     }
 
     var isStrictDirective = {
@@ -2123,7 +2123,7 @@ define("slower-static-semantics", function (require, exports, modules) {
     exports.IsStrict = IsStrict;
 
     function IsStrict(node) {
-        var n;
+
         if (!Array.isArray(node)) {
             if (node) {
                 var type = node.type;
@@ -2657,8 +2657,8 @@ define("slower-static-semantics", function (require, exports, modules) {
     }
 
     function IsConstantDeclaration(node) {
-        if (node.kind === "const") return true;
-        return false;
+        return node.kind === "const";
+
     }
     var LetOrConst = {
         __proto__: null,
@@ -2756,7 +2756,7 @@ define("slower-static-semantics", function (require, exports, modules) {
                         ch = value[i];
                         pos = vlen - (i - 2);
                         n = MVHexDecimal[ch];
-                        if (pos > 0) n = n * (pos * 15)
+                        if (pos > 0) n = n * (pos * 15);
                         mv += n;
                     }
                     return mv;
@@ -2783,7 +2783,7 @@ define("slower-static-semantics", function (require, exports, modules) {
                     ch = value[i];
                     pos = i;
                     n = MVHexDecimal[ch];
-                    n = n / (10 * pos)
+                    n = n / (10 * pos);
                     mv += n;
                 }
                 return mv;
@@ -2803,7 +2803,7 @@ define("slower-static-semantics", function (require, exports, modules) {
                     ch = intg[i];
                     pos = j - i;
                     n = MVHexDecimal[ch];
-                    if (pos > 0) n = n * (pos * 10)
+                    if (pos > 0) n = n * (pos * 10);
                     mv += n;
                 }
 
@@ -2813,7 +2813,7 @@ define("slower-static-semantics", function (require, exports, modules) {
                     ch = fp[i];
                     pos = i + 1;
                     n = MVHexDecimal[ch];
-                    n = n / (10 * pos)
+                    n = n / (10 * pos);
                     mv += n;
                 }
             }
@@ -2822,7 +2822,7 @@ define("slower-static-semantics", function (require, exports, modules) {
                     ch = exp[i];
                     pos = j - i;
                     n = MVHexDecimal[ch];
-                    if (pos > 0) n = n * (Math.pow(10, -pos))
+                    if (pos > 0) n = n * (Math.pow(10, -pos));
                     mv += n;
                 }
                 if (sgn == "-") {
@@ -3176,7 +3176,7 @@ define("tokenizer", function () {
 
                     } else if (LineTerminators[ch] || i > j) {
                         throw new SyntaxError("Unexpected end of line, while parsing RegularExpressionLiteral at line " + line + ", column " + column);
-                        return false;
+
                     }
                     expr += ch;
                     next();
@@ -3396,7 +3396,7 @@ define("tokenizer", function () {
                 }
                 value = eval("\'" + raw + "\'");
             }
-            [ raw, value ]
+            return [ raw, value ]
         }
         return false;
     }
@@ -3891,7 +3891,7 @@ define("parser", function () {
         "WhiteSpace":true,
         "LineTerminator": true,
         "MultiLineComment":true,
-        "LineComment":true,
+        "LineComment":true
     };
 
     var captureExtraValues = {
@@ -4028,7 +4028,7 @@ define("parser", function () {
     function Node(type /*, linkToken*/ ) {
         var node = Object.create(null);
         //nodeTable[
-            node._id_ = ++nodeId
+            node._id_ = ++nodeId;
         //] = node;
         // staticSemantics.put(type);
         node.type = type;
@@ -4370,7 +4370,7 @@ define("parser", function () {
         if (node) return node;
 
         throw new SyntaxError("invalid property key in definition");
-        return null;
+
     }
 
     function PropertyDefinitionList(parent) {
@@ -4413,7 +4413,7 @@ define("parser", function () {
 
                         node.kind = "init";
                         id = this.PropertyKey();
-                        if (!id) throw new SyntaxError("error parsing objectliteral shorthand")
+                        if (!id) throw new SyntaxError("error parsing objectliteral shorthand");
                         node.key = id;
                         node.value = id;
                         list.push(node);
@@ -4434,7 +4434,7 @@ define("parser", function () {
                         node.key = this.PropertyKey();
                         pass(":");
                         node.value = this.AssignmentExpression();
-                        if (!node.value) throw new SyntaxError("error parsing objectliteral := propertykey : assignmentexpression")
+                        if (!node.value) throw new SyntaxError("error parsing objectliteral := propertykey : assignmentexpression");
                         list.push(node);
 
                     } else if (computedPropertyName && v == "(") {
@@ -4525,7 +4525,7 @@ define("parser", function () {
                     var property = Object.create(null);
                     property.type = "Identifier";
                     property.name = v;
-                    property.loc = token.loc
+                    property.loc = token.loc;
                     node.property = property;
 
                 } else if (v === "!") {
@@ -4716,7 +4716,7 @@ define("parser", function () {
     parser.ComprehensionFilters = ComprehensionFilters;
 
     function ComprehensionFilters() {
-        var list = []
+        var list = [];
         while (v == "if") {
             pass("if");
             pass("(");
@@ -5504,7 +5504,7 @@ define("parser", function () {
 
         node = Node("MethodDefinition");
 
-        nodeStack.push(currentNode)
+        nodeStack.push(currentNode);
         currentNode = node;
 
         if (v =="[") node.computed = true;
@@ -6686,7 +6686,7 @@ define("parser", function () {
             var l1, l2;
             l1 = loc && loc.start;
             var node = Node("WhileStatement");
-            pass("while")
+            pass("while");
             pass("(");
             node.test = this.Expression();
             pass(")");
@@ -7243,7 +7243,7 @@ define("parser", function () {
             ast = parser.Program();
 
         } catch (ex) {
-            console.log("[Parser Exception]: " + ex.name)
+            console.log("[Parser Exception]: " + ex.name);
             console.log(ex.message);
             console.log(ex.stack);
             ast = ex;
@@ -7254,7 +7254,7 @@ define("parser", function () {
     function parseGoal(goal, source) {
 
         if (!withError) {
-            var api = require("api")
+            var api = require("api");
             withError = api && api.withError;
             ifAbrupt = api && api.ifAbrupt;
             isAbrupt = api && api.isAbrupt;
@@ -7280,7 +7280,7 @@ define("parser", function () {
         try {
             var node = fn.call(parser);
         } catch (ex) {
-            console.log("[Parser Exception @parseGoal]: " + ex.name)
+            console.log("[Parser Exception @parseGoal]: " + ex.name);
             /* console.log(ex.name);
             console.log(ex.message);
             console.log(ex.stack); */
@@ -7360,11 +7360,11 @@ define("parser", function () {
 
 
     function enableExtras () {
-        debug("Enabling CST extras")
+        debug("Enabling CST extras");
         Object.keys(parser).forEach(function (k) {
             if (typeof parser[k] === "function" && !parser[k].wrapped) {
                 if (k == "next" || k == "pass" || k.indexOf("JSON")===0) return; // for my hacky wacky system
-                debug("wrapping "+k)
+                debug("wrapping "+k);
                 var originalFunction = parser[k];
                 var parseFunction = function () {
             	    console.log("parsing "+originalFunction.name+ " at  "+ v + " "+ t + " " + lookahead);
@@ -7383,7 +7383,7 @@ define("parser", function () {
         });
     }
     function disableExtras () {
-        debug("Disabling CST extras")
+        debug("Disabling CST extras");
         Object.keys(parser).forEach(function (k) {
             if (typeof parser[k] === "function" && parser[k].wrapped)
                 parser[k] = parser[k].wrapped;
@@ -7658,6 +7658,7 @@ define("js-codegen", function (require, exports, module) {
     }
 
     builder.spreadExpression = function (argument, loc, extras) {
+        //noinspection UnnecessaryLocalVariableJS
         var src = "..." + callBuilder(argument);
         return src;
     };
@@ -7870,7 +7871,7 @@ define("js-codegen", function (require, exports, module) {
         }
         src += ")";
         return src;
-    }
+    };
 
     builder.memberExpression = function (object, property, computed) {
         var src = "";
@@ -7965,7 +7966,7 @@ define("js-codegen", function (require, exports, module) {
         src += SPC + operator + SPC;
         src += callBuilder(right);
         return src;
-    }
+    };
 
     builder.assignmentExpression = function (operator, left, right, loc, extras) {
         var src = "";
@@ -7973,7 +7974,7 @@ define("js-codegen", function (require, exports, module) {
         src += SPC + operator + SPC;
         src += callBuilder(right);
         return src;
-    }
+    };
 
     builder.pattern = function () {};
     builder.expressionStatement = function expressionStatement(expr, loc, extras) {
@@ -8047,7 +8048,7 @@ define("js-codegen", function (require, exports, module) {
     };
     builder.debuggerStatement = function debuggerStatement(loc, extras) {
         var src = "";
-        if (extras && extras.before) src += callBuilder(extras.before)
+        if (extras && extras.before) src += callBuilder(extras.before);
         src += "debugger";
     	if (extras && extras.after) src += callBuilder(extras.after);
         return src;
@@ -8059,7 +8060,7 @@ define("js-codegen", function (require, exports, module) {
         return src;
     };
     builder.forInStatement = function forInStatement(left, right, body, isForEach, loc, extras) {
-        var src = "for ("
+        var src = "for (";
         src += callBuilder(left);
         src += " in ";
         src += callBuilder(right);
@@ -8068,7 +8069,7 @@ define("js-codegen", function (require, exports, module) {
         return src;
     };
     builder.forOfStatement = function forOfStatement(left, right, body, loc, extras) {
-        var src = "for ("
+        var src = "for (";
         src += callBuilder(left);
         src += " of ";
         src += callBuilder(right);
@@ -8077,7 +8078,7 @@ define("js-codegen", function (require, exports, module) {
         return src;
     };
     builder.forStatement = function forStatement(init, test, update, body, loc, extras) {
-        var src = "for ("
+        var src = "for (";
         if (init) src += callBuilder(init);
         src += ";";
         if (test) src += callBuilder(test);
@@ -23983,7 +23984,7 @@ define("runtime", function () {
     var $$hasInstance = ecma.$$hasInstance;
     var $$iterator = ecma.$$iterator;
     var $$isRegExp = ecma.$$isRegExp;
-    var $$isConcatSpreadable = ecma.isConcatSpreadable;
+    var $$isConcatSpreadable = ecma.$$isConcatSpreadable;
 
     var MakeMethod = ecma.MakeMethod;
     var NewFunctionEnvironment = ecma.NewFunctionEnvironment;
@@ -24061,7 +24062,7 @@ define("runtime", function () {
     var Set = ecma.Set;
     var DefineOwnProperty = ecma.DefineOwnProperty;
     var DefineOwnPropertyOrThrow = ecma.DefineOwnPropertyOrThrow;
-    var Delete = ecma.Delete
+    var Delete = ecma.Delete;
     var Enumerate = ecma.Enumerate;
     var OwnPropertyKeys = ecma.OwnPropertyKeys;
     var OwnPropertyKeysAsList = ecma.OwnPropertyKeysAsList;
@@ -24136,8 +24137,8 @@ define("runtime", function () {
 
     function inStrict (node) {
         if (node && node.strict) return true;
-        if (getLexEnv().strict) return true;
-        return false;
+        return getLexEnv().strict;
+
     }
 
     var CheckObjectCoercible = ecma.CheckObjectCoercible;
@@ -24212,8 +24213,8 @@ define("runtime", function () {
     }
 
     function IsIdentifier(obj) {
-        if (obj.type == "Identifier") return true;
-        return false;
+        return obj.type == "Identifier";
+
     }
 
     function InstantiateModuleDeclaration(module, env) {
@@ -24463,8 +24464,7 @@ define("runtime", function () {
         var varDeclarations = VarScopedDeclarations(code);
         var argumentsObjectNeeded;
 
-        if (thisMode === "lexical") argumentsObjectNeeded = false;
-        else argumentsObjectNeeded = true;
+        argumentsObjectNeeded = thisMode !== "lexical";
 
         var d;
         var fn;
@@ -24618,6 +24618,7 @@ define("runtime", function () {
         var name;
         var indx = len - 1;
         var param;
+        var g,s;
 
         while (indx >= 0) {
 
@@ -24632,8 +24633,8 @@ define("runtime", function () {
                         name = elem.as ? elem.as.name : (elem.name || elem.value);
                         if (!mappedNames[name]) {
                             mappedNames[name] = true;
-                            var g = MakeArgGetter(name, env);
-                            var s = MakeArgSetter(name, env);
+                            g = MakeArgGetter(name, env);
+                            s = MakeArgSetter(name, env);
                             callInternalSlot("DefineOwnProperty", map, name, {
                                 get: g,
                                 set: s,
@@ -24654,8 +24655,8 @@ define("runtime", function () {
 
                     if (name && !mappedNames[name]) {
                         mappedNames[name] = true;
-                        var g = MakeArgGetter(name, env);
-                        var s = MakeArgSetter(name, env);
+                        g = MakeArgGetter(name, env);
+                        s = MakeArgSetter(name, env);
                         callInternalSlot("DefineOwnProperty", map, name, {
                             get: g,
                             set: s,
@@ -24727,8 +24728,8 @@ define("runtime", function () {
         var formals = makeArgumentsSetterFormals(name);
         //var bodyText = parseGoal("FunctionBody", name + "= " + name + "_arg;");
         //var formals = parseGoal("FormalParameterList", name + "_arg");
-        var F = FunctionCreate("normal", formals, bodyText, env, true);
-        return F;
+        return FunctionCreate("normal", formals, bodyText, env, true);
+
     }
 
     /********************************************************************** continuing with the ast ********************************************************************************/
@@ -24851,7 +24852,7 @@ define("runtime", function () {
         var calleeName = Get(this, "name");
         var callerName = callerContext.callee;
 
-        stack.push(calleeContext)
+        stack.push(calleeContext);
 
         calleeContext.caller = callerName;
         calleeContext.callee = calleeName;
@@ -25021,8 +25022,8 @@ define("runtime", function () {
     };
 
     function SkipDecl(node) {
-        if (SkipMeDeclarations[node.type] && !node.expression) return true;
-        return false;
+        return SkipMeDeclarations[node.type] && !node.expression;
+
     }
 
     function EvaluateConciseBody(F) {
@@ -25140,7 +25141,7 @@ define("runtime", function () {
         } else {
             return NormalCompletion(empty);
         }
-        return closure;
+
     }
 
     evaluation.ArrowExpression = ArrowExpression;
@@ -25296,11 +25297,11 @@ define("runtime", function () {
     evaluation.VariableDeclaration = VariableDeclaration;
 
     function VariableDeclaration(node) {
-        var decl, decl2, init, arr, initialiser, status, env;
+        var decl, decl2, init, arr, initialiser, status;
 
         // console.log("decl for "+node.type);
         var env = isCodeType(node, "VariableDeclaration") ? (node.kind === "var" ? getVarEnv() : getLexEnv()) : getLexEnv();
-        var i, j, p, q, type
+        var i, j, p, q, type;
 
         var name;
         var cx = getContext();
@@ -25374,14 +25375,14 @@ define("runtime", function () {
 
     }
 
-    evaluation.BindingElement = BindingElement
+    evaluation.BindingElement = BindingElement;
     function BindingElement (node) {
         if (node.as) {
             return ResolveBinding(node.as);
         } else {
             return Identifier(node);
         }
-        return null;
+
     }
 
     function IteratorBindingInitialisation() {
@@ -25660,7 +25661,7 @@ define("runtime", function () {
     evaluation.BooleanLiteral = BooleanLiteral;
 
     function BooleanLiteral(node) {
-        return node.value === "true" ? true : false;
+        return node.value === "true";
     }
 
     evaluation.Literal = Literal;
@@ -26046,7 +26047,7 @@ define("runtime", function () {
 
                 var LexEnv = getLexEnv();
 
-                if (newName) LexEnv.SetMutableBinding(newName, result)
+                if (newName) LexEnv.SetMutableBinding(newName, result);
                 else LexEnv.SetMutableBinding(identName, result);
                 newName = undefined;
             }
@@ -26599,8 +26600,8 @@ define("runtime", function () {
         if (completion.type === "normal") return true;
         if (completion.type !== "continue") return false;
         if (completion.target === "" || completion.target === undefined) return true;
-        if (labelSet && labelSet[completion.target]) return true;
-        return false;
+        return labelSet && labelSet[completion.target];
+
     }
 
     evaluation.WhileStatement = WhileStatement;
@@ -26630,7 +26631,6 @@ define("runtime", function () {
 
         }
 
-        return NormalCompletion(V);
     }
 
     function DoWhileStatement(node, labelSet) {
@@ -26746,7 +26746,10 @@ define("runtime", function () {
                 }
                 getContext().LexEnv = iterationEnv;
                 status = BindingInitialisation(lhs, nextValue, iterationEnv);
-                if (isAbrupt(status)) return (getContext().LexEnv = oldEnv), status;
+                if (isAbrupt(status)) {
+                    getContext().LexEnv = oldEnv
+                    return status;
+                }
                 status = NormalCompletion(undefined);
 
             }
@@ -26771,7 +26774,7 @@ define("runtime", function () {
         var tright = right.type;
 
 
-        var labelSet = labelSet || Object.create(null);
+        labelSet = labelSet || Object.create(null);
         var lhsKind = "assignment";
         var iterationKind = "enumerate";
 
@@ -26816,7 +26819,7 @@ define("runtime", function () {
         var type = node.type;
         var fn = evaluation[type];
         if (fn) result = fn(node, labelSet);
-        else throw SyntaxError("can not evaluate " + type);
+        else throw new SyntaxError("can not evaluate " + type);
         return NormalCompletion(result);
     }
 
@@ -26944,7 +26947,7 @@ define("runtime", function () {
                 if (!LoopContinues(incrementExprValue, labelSet)) return incrementExprValue;
             }
         }
-        return NormalCompletion(V);
+
     }
 
     function CaseSelectorEvaluation(node) {
@@ -26964,7 +26967,7 @@ define("runtime", function () {
         var R;
         var defaultClause;
         var searching = true;
-        loop: for (var i = 0, j = caseBlock.length; i < j; i++) {
+        for (var i = 0, j = caseBlock.length; i < j; i++) {
             clause = caseBlock[i];
             if (clause.type === "DefaultCase") {
                 defaultClause = clause;
@@ -26979,7 +26982,7 @@ define("runtime", function () {
                     if (sList) {
                         R = GetValue(Evaluate(sList));
                         if (isAbrupt(R)) {
-                            if (R.type === "break") break loop;
+                            if (R.type === "break") break;
                             if (R.type === "continue") return withError("Type", "continue is not allowed in a switch statement");
                             if (R.type === "throw") return R;
                             if (R.type === "return") return R;
@@ -26987,7 +26990,7 @@ define("runtime", function () {
                             V = R;
                         }
                     }
-                    if (isAbrupt(R)) break loop;
+                    if (isAbrupt(R)) break;
                 }
 
             }
@@ -27385,7 +27388,7 @@ define("runtime", function () {
                 var putStatus = Put(accumulator, ToString(len), exprValue, true);
                 if (isAbrupt(putStatus = ifAbrupt(putStatus))) return putStatus;
                 len = len + 1;
-                var putStatus = Put(accumulator, "length", len, true);
+                putStatus = Put(accumulator, "length", len, true);
                 if (isAbrupt(putStatus = ifAbrupt(putStatus))) return putStatus;
 
             }
@@ -27431,12 +27434,12 @@ define("runtime", function () {
                 if (isAbrupt(status)) return status;
             }
             getContext().LexEnv = forEnv;
-            var continu = ComprehensionEvaluation(node, accumulator);
+            var continuer = ComprehensionEvaluation(node, accumulator);
             getContext().LexEnv = oldEnv;
-            if (isAbrupt(continu = ifAbrupt(continu))) return continu;
+            if (isAbrupt(continuer = ifAbrupt(continu))) return continuer;
         }
 
-        return accumulator;
+
     }
 
     function ArrayComprehension(node) {
@@ -27451,7 +27454,6 @@ define("runtime", function () {
             status = QualifierEvaluation(blocks[i], node, array);
             if (isAbrupt(status = ifAbrupt(status))) return status;
         }
-
         return array;
     }
 
@@ -27622,13 +27624,15 @@ define("runtime", function () {
         var task, val;
         var func, timeout, time, result;
 
+        // pendingExceptions = []
+
         function handler() {
             if (task = eventQueue.shift()) {
                 func = task.func;
                 time = Date.now();
                 if (time >= (task.time + task.timeout)) {
                     if (IsCallable(func)) result = func.Call(ThisResolution());
-                    if (isAbrupt(result)) result = result; // ThrowAbruptThrowCompletion(result);
+                    // if (isAbrupt(result)) result; // ThrowAbruptThrowCompletion(result);
                 } else eventQueue.push(task);
             }
             if (eventQueue.length) setTimeout(handler, 0);
