@@ -4064,7 +4064,6 @@ define("parser", function () {
         return lookahead;
     }
 
-
     function unquote(str) {
         return ("" + str).replace(/^("|')|("|')$/g, ""); //'
     }
@@ -9800,12 +9799,12 @@ function NormalCompletion(argument, label) {
     if (argument instanceof CompletionRecord) {
         completion = argument;
     } else {
-        completion = CompletionRecord(); // realm.completion;
+        completion = CompletionRecord();
         completion.value = argument;
-        completion.type = "normal"
+        completion.type = "normal";
         completion.target = label;
     }
-    realm.completion = completion;
+    realm.completion = completion; // i removed saving them and just using one. why is that here again?
     return completion;
 }
 
@@ -10005,18 +10004,18 @@ function PutValue(V, W) {
 
 function IsPropertyReference(V) {
     var base = GetBase(V);
-    if (Type(base) === "object" || HasPrimitiveBase(V)) return true;
-    return false;
+    return Type(base) === "object" || HasPrimitiveBase(V);
+
 }
 
 function IsSuperReference(V) {
-    if (V.thisValue) return true;
-    return false;
+    return V.thisValue;
+
 }
 
 function IsUnresolvableReference(V) {
-    if (V.base === undefined) return true;
-    return false;
+    return V.base === undefined;
+
 }
 
 function IsStrictReference(V) {
@@ -10033,8 +10032,8 @@ function GetBase(V) {
 
 function HasPrimitiveBase(V) {
     var type = Type(GetBase(V));
-    if (type === "string" || type === "boolean" || type === "number" || type === "symbol") return true;
-    return false;
+    return type === "string" || type === "boolean" || type === "number" || type === "symbol";
+
 }
 
 function GetThisValue(V) {
@@ -10205,7 +10204,7 @@ DeclarativeEnvironment.prototype = {
     CreateMutableBinding: function CreateMutableBinding(N, D) {
         var envRec = this.Bindings;
         debug("declenv create mutablebinding: " + N);
-        var configValue = D === true || D === undefined ? true : false;
+        var configValue = !!(D === true || D === undefined);
         if (N in envRec) return withError("Reference", N + " is bereits deklariert");
         else createIdentifierBinding(envRec, N, undefined, configValue);
         return NormalCompletion();
@@ -10427,7 +10426,7 @@ ObjectEnvironment.prototype = {
     CreateMutableBinding: function (N, D) {
         debug("object env: createmutablebinding mit key: " + N);
         var O = this.BoundObject;
-        var configValue = D === true ? true : false;
+        var configValue = D === true;
         return callInternalSlot("DefineOwnProperty", O,N, {
             value: undefined,
             writable: true,
@@ -10528,8 +10527,8 @@ GlobalEnvironment.prototype = {
 
     HasBinding: function (N) {
         if (this.LexEnv.HasBinding(N)) return true;
-        if (this.objEnv.HasBinding(N)) return true;
-        return false;
+        return this.objEnv.HasBinding(N);
+
     },
     CreateMutableBinding: function (N, D) {
         return this.LexEnv.CreateMutableBinding(N, D);
@@ -10576,12 +10575,12 @@ GlobalEnvironment.prototype = {
         return this.objEnv.GetThisBinding();
     },
     HasVarDeclaration: function (N) {
-        if (this.VarNames[N]) return true;
-        return false;
+        return this.VarNames[N];
+
     },
     HasLexicalDeclaration: function (N) {
-        if (this.LexEnv.HasBinding(N)) return true;
-        return false;
+        return this.LexEnv.HasBinding(N);
+
     },
     CanDeclareGlobalVar: function (N) {
         debug("candeclarevar");
@@ -10852,19 +10851,18 @@ function ToBoolean(V) {
     }
     if (type === "number") V = thisNumberValue(V);
     if (typeof V === "number") {
-        if (V === +0 || V === -0 || V !== V) return false;
-        else return true;
+        return !(V === +0 || V === -0 || V !== V);
     }
 
     if (type === "string") V = thisStringValue(V);
     if (typeof V === "string") {
-        if (V === "" || V.length === 0) return false;
-        return true;
+        return !(V === "" || V.length === 0);
+
     }
 
     if (V instanceof SymbolPrimitiveType) return true;
-    if (Type(V) === "object") return true;
-    return false;
+    return Type(V) === "object";
+
 }
 
 function ToNumber(V) {
@@ -10995,20 +10993,20 @@ function SameValue(x, y) {
         return false;
     }
     if (Type(x) === "string") {
-        if ((x.length === y.length) && x === y) return true;
-        return false;
+        return (x.length === y.length) && x === y;
+
     }
     if (Type(x) === "boolean") {
-        if ((x && y) || (!x && !y)) return true;
-        return false;
+        return (x && y) || (!x && !y);
+
     }
 
     if (Type(x) === "symbol") {
         return x === y;
     }
 
-    if (x === y) return true;
-    return false;
+    return x === y;
+
 }
 
 function SameValueZero(x, y) {
@@ -11018,13 +11016,11 @@ function SameValueZero(x, y) {
 
     if (IsTypeObject(x)) {
           // IsTypeObject(y)
-         if (SameValue(getInternalSlot(x, "TypeDescriptor"), getInternalSlot(y, "TypeDescriptor"))
-         && SameValue(getInternalSlot(x, "ViewedArrayBuffer"), getInternalSlot(y, "ViewedArrayBuffer"))
-         && SameValue(getInternalSlot(x, "ByteOffset"), getInternalSlot(y, "ByteOffset"))
-         && SameValue(getInternalSlot(x, "Opacity"), getInternalSlot(y, "Opacity"))) {
-             return true;
-         }
-        return false;
+         return SameValue(getInternalSlot(x, "TypeDescriptor"), getInternalSlot(y, "TypeDescriptor"))
+             && SameValue(getInternalSlot(x, "ViewedArrayBuffer"), getInternalSlot(y, "ViewedArrayBuffer"))
+             && SameValue(getInternalSlot(x, "ByteOffset"), getInternalSlot(y, "ByteOffset"))
+             && SameValue(getInternalSlot(x, "Opacity"), getInternalSlot(y, "Opacity"));
+
     }
 
     if (Type(x) === "null") return true;
@@ -11033,24 +11029,24 @@ function SameValueZero(x, y) {
         if (x === y) return true;
         if (x === "NaN" && y === "NaN") return true;
         if (x === +0 && y === -0) return true;
-        if (x === -0 && y === +0) return true;
-        return false;
+        return x === -0 && y === +0;
+
     }
     if (Type(x) === "string") {
-        if ((x.length === y.length) && x === y) return true;
-        return false;
+        return (x.length === y.length) && x === y;
+
     }
     if (Type(x) === "boolean") {
-        if ((x && y) || (!x && !y)) return true;
-        return false;
+        return (x && y) || (!x && !y);
+
     }
 
     if (Type(x) === "symbol") {
         return x === y;
     }
 
-    if (x === y) return true;
-    return false;
+    return x === y;
+
 }
 
 
@@ -11134,8 +11130,8 @@ function CreateDataPropertyOrThrow(O, P, V) {
 
 function IsPropertyKey(P) {
     if (typeof P === "string") return true;
-    if (P instanceof SymbolPrimitiveType) return true;
-    return false;
+    return P instanceof SymbolPrimitiveType;
+
 }
 
 function PropertyDescriptor(V, W, E, C) {
@@ -11150,23 +11146,23 @@ function PropertyDescriptor(V, W, E, C) {
 function IsAccessorDescriptor(desc) {
     if (desc == null) return false;
     if (typeof desc !== "object") return false;
-    if (("get" in desc) || ("set" in desc)) return true;
-    return false;
+    return ("get" in desc) || ("set" in desc);
+
 }
 
 function IsDataDescriptor(desc) {
     if (desc == null) return false;
     if (typeof desc !== "object") return false;
-    if (("value" in desc) || ("writable" in desc)) return true;
-    return false;
+    return ("value" in desc) || ("writable" in desc);
+
 }
 
 function IsGenericDescriptor(desc) {    // hat nur enum oder config props
     if (desc === null) return false;
     if (typeof desc !== "object") return false;
-    if (!IsAccessorDescriptor(desc) && !IsDataDescriptor(desc) &&
-        (("configurable" in desc) || ("enumerable" in desc))) return true;
-    return false;
+    return !IsAccessorDescriptor(desc) && !IsDataDescriptor(desc) &&
+        (("configurable" in desc) || ("enumerable" in desc));
+
 }
 
 function FromPropertyDescriptor(desc) {
@@ -11677,7 +11673,7 @@ function Get(O, P) {
 }
 
 function OrdinaryObjectGet(O, P, R) {
-    Assert(IsPropertyKey(P), "Get (object) expects a valid Property Key (got " + P + ")")
+    Assert(IsPropertyKey(P), "Get (object) expects a valid Property Key (got " + P + ")");
     var desc = callInternalSlot("GetOwnProperty", O, P);
     if (isAbrupt(desc = ifAbrupt(desc))) return desc;
     if (desc === undefined) {
@@ -11699,7 +11695,7 @@ function OrdinaryObjectGet(O, P, R) {
 
 function Set(O, P, V, R) {
     var ownDesc, parent, setter;
-    Assert(IsPropertyKey(P), "Set (object) expects a valid Property Key")
+    Assert(IsPropertyKey(P), "Set (object) expects a valid Property Key");
     ownDesc = callInternalSlot("GetOwnProperty", O, P); // readPropertyDescriptor(O, P);
     if (isAbrupt(ownDesc = ifAbrupt(ownDesc))) return ownDesc;
     if (ownDesc === undefined) {
@@ -11772,8 +11768,8 @@ function HasOwnProperty(O, P) {
     Assert(Type(O) === "object", "HasOwnProperty: first argument has to be an object");
     Assert(IsPropertyKey(P), "HasOwnProperty: second argument has to be a valid property key, got " + P);
     var desc = callInternalSlot("GetOwnProperty", O, P);
-    if (desc === undefined) return false;
-    return true;
+    return desc !== undefined;
+
 }
 
 function HasProperty(O, P) {
@@ -11908,14 +11904,14 @@ function BoundFunctionCreate(B, T, argList) {
 
 function IsCallable(O) {
     if (O instanceof CompletionRecord) return IsCallable(O.value);
-    if (Type(O) === "object" && O.Call) return true;
-    return false;
+    return Type(O) === "object" && O.Call;
+
 }
 
 function IsConstructor(F) {
     if (F instanceof CompletionRecord) return IsConstructor(F.value);
-    if (F && F.Construct) return true;
-    return false;
+    return F && F.Construct;
+
 }
 
 
@@ -13275,8 +13271,8 @@ StringExoticObject.prototype = assign(StringExoticObject.prototype, {
         if (SameValue(absIndex, P) === false) return false;
         var str = this.StringData;
         var len = str.length;
-        if (len <= index) return false;
-        return true;
+        return len > index;
+
     },
     GetOwnProperty: function (P) {
         Assert(IsPropertyKey(P), "P has to be a valid property key");
@@ -13750,9 +13746,7 @@ ProxyExoticObject.prototype = {
         if (isAbrupt(targetDesc = ifAbrupt(targetDesc))) return targetDesc;
         var extensibleTarget = ToBoolean(extensibleTarget);
         var settingConfigFalse;
-        if (D.configurable !== undefined && !D.configurable) {
-            settingConfigFalse = true;
-        } else settingConfigFalse = false;
+        settingConfigFalse = D.configurable !== undefined && !D.configurable;
         if (targetDesc === undefined) {
             if (!extensibleTarget) return withError("Type", "target not extensible");
             if (settingConfigFalse) return withError("Type", "not configurable descriptor or undefined and no target descriptor?!");
@@ -13964,7 +13958,7 @@ function EnqueueTask(queueName, task, args) {
 function NextTask (result, nextQueue) {
     if (isAbrupt(result = ifAbrupt(result))) {
         // performing implementation defined unhandled exception processing
-        console.log("NextTask: Got exception - which will remain unhandled - for debugging, i print them out." )
+        console.log("NextTask: Got exception - which will remain unhandled - for debugging, i print them out." );
         printException(result);
     }
     Assert(getStack().length === 0, "NextTask: The execution context stack has to be empty");
@@ -14037,8 +14031,8 @@ ModuleExoticObject.prototype = {
     Delete: function (P) {
         Assert(IsPropertyKey(P), "[[Delete]] expecting P to be a valid property key");
         var exports = getInternalSlot(O, "Exports");
-        if (exports.indexOf(P) > -1) return false;
-        return true;
+        return exports.indexOf(P) <= -1;
+
     },
     Enumerate: function () {
         var O = this;
@@ -14053,8 +14047,8 @@ ModuleExoticObject.prototype = {
     HasProperty: function (P) {
         var O = this;
         var exports = getInternalSlot(O, "Exports");
-        if (exports.indexOf(P) > -1) return true;
-        return false;
+        return exports.indexOf(P) > -1;
+
     },
     GetOwnProperty: function () {
         return withError("Type", "The [[GetOwnProperty]] of ModuleExoticObjects is supposed to throw a TypeError.")
@@ -14285,7 +14279,7 @@ function InternalStructuredClone (input, memory, targetRealm) {
         // unsetRealm() img.
         var deepClone = true;
     }
-    memory.push({ input: input, output: output })
+    memory.push({ input: input, output: output });
     if (deepClone) {
         var keys = OwnPropertyKeysAsList(output);
         var outputKey;
@@ -14296,7 +14290,7 @@ function InternalStructuredClone (input, memory, targetRealm) {
             if (isAbrupt(sourceValue = ifAbrupt(sourceValue))) return sourceValue;
             var clonedValue = InternalStructuredClone(sourceValue, memory);
             if (isAbrupt(clonedValue = ifAbrupt(clonedValue))) return clonedValue;
-            var outputSet = Set(output, outputKey, clonedValue, output)
+            var outputSet = Set(output, outputKey, clonedValue, output);
             if (isAbrupt(outputSet)) return outputSet;
         }
     }
@@ -14394,7 +14388,7 @@ var Nil = null;
                 }
                 return CreateTypedObject(typeObject);
             }
-            var arg0 = argList[0]
+            var arg0 = argList[0];
             if (getInternalSlot(arg0, "ArrayBufferData")) {
                  var length = argList[1];
                  length = length || buffer.length;
@@ -14425,7 +14419,7 @@ var Nil = null;
 
            } else {
 
-               Assert(dimensions === Cons(length, remainingDimensions), "dimensions has to be Cons(doms, remainingDimensions)")
+               Assert(dimensions === Cons(length, remainingDimensions), "dimensions has to be Cons(doms, remainingDimensions)");
                var isInteger;
                if (!IsAbrupt(ToInteger(P))) isInteger = true;
                if (!isInteger) return NormalCompletion(undefined);
@@ -14449,7 +14443,7 @@ var Nil = null;
         }
 
     };
-    addMissingProperties(TypeExoticObject.prototype, OrdinaryObject.prototype)
+    addMissingProperties(TypeExoticObject.prototype, OrdinaryObject.prototype);
 
 /*
  Possibly subject of wrong impl.
@@ -14501,8 +14495,8 @@ function AlignTo(value, alignment) {
 function IsTypeObject(O) {
     if (Type(O) != "object") return false;
     if (!hasInternalSlot(O, "TypeDescriptor")) return false;
-    if (!hasInternalSlot(O, "ViewedArrayBuffer")) return false;
-    return true;
+    return hasInternalSlot(O, "ViewedArrayBuffer");
+
 }
 
 function isGroundStructure(S) {
