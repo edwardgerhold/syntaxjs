@@ -1,3 +1,20 @@
+
+
+=== DEPRECATION ====
+
+
+The way to solve the static semantics by reworking the symbol table,
+and some stacks (or lists) to save parameters while going into deeply nested code,
+stays almost the same, but the code gets better.
+
+
+So these docs should be considered little helpful but already out-of-date
+
+
+
+
+
+
 useful and useless documents
 ============================
 
@@ -14,6 +31,11 @@ me, that it isn´t a standard idea. I just haven´t heard.
 The most meaningful is to resolve the incompabilities beetween syntax.js and esprima. With a couple of edits, the parser should be exchangable. Today, i don´t know about the output of 
 esprimas harmony branch, i haven´t tested yet. But in the later days, this will be one of the issues on the list, to make both compatible. This doc actually is incomplete, but will be
 overworked over time.
+
+Example: Esprima: funcDecl.body === blockStatement. Syntax: funcDecl.Body === [ Statements ] (Array a.k.a. StatementList)
+Both: Places where Identifiers are Strings, esprima probably already moved to Identifier Nodes. I had and had changed and
+have to change back again, while it was a change back to use the strings like in the docs. I will
+update for using the nodes only, too (it´s easier to handle later without string special case which i had to impl. into runtime.js)
 
 Missing documents
 =================
@@ -42,5 +64,16 @@ Missing documents
     - Objects become OrdinaryObjects()
     - Functions become OrdinaryFunctions()
     - Arrays become ExoticArrayObjects()
-    
+
+    names are almost literally the same as in the spec.
+    Even the capitialization is the same.
+
+
+    tools
+
+
+    "This here is a goldmine for tool developers,
+    if you can refactor this code automatically, you are great." - Edward
+
+
     

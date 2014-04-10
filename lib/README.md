@@ -1,3 +1,7 @@
+These files have to be reordered inside some days. Two, three, four get merged.
+Maybe i split out another piece. Then i can write up again, what´s inside these directories.
+
+
 Splitting up continues
 ======================
 
@@ -224,7 +228,9 @@ was my development file on my Pentium III.
     
     the thing is this can be replaced by some design patterns.
     a builder for example or a factory, depending on a config 
-    object. 
+    object.
+
+     (??? what? what did i mean?) (Delete is an option, heh)
 
 * lib/app.js
 
@@ -233,3 +239,4 @@ was my development file on my Pentium III.
     
     (there are patterns for)
     
+

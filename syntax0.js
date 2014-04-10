@@ -29254,10 +29254,7 @@ define("syntaxjs", function () {
     var syntaxjs = Object.create(null);
     var VERSION = "0.0.1";
     
-    var nativeGlobalObject = typeof window !== "undefined" ? 
-				    window : typeof global !== "undefined" ?
-				    global : typeof importScripts === "function" ? 
-				    self   : {};
+
 				    
     var syntaxjs_public_api_readonly = {
     
@@ -29280,6 +29277,8 @@ define("syntaxjs", function () {
         readFile: pdmacro(require("fswraps").readFile),	
         readFileSync: pdmacro(require("fswraps").readFileSync),
 
+
+  // put into fswraps.js please
         evalFile: pdmacro(function (name, callback, errback) {
             var syntaxjs = this;
             return this.readFile(name, function (code) {
