@@ -26890,6 +26890,8 @@ define("runtime", function () {
         var varDcl, isConst, dn, forDcl;
         var oldEnv, loopEnv, bodyResult;
         var cx = getContext();
+        // FRESH BINDINGS
+        var perIterationBindings = [];
 
         if (!labelSet) {
             labelSet = Object.create(null);
@@ -26901,7 +26903,7 @@ define("runtime", function () {
             if (IsVarDeclaration(initExpr)) {
                 varDcl = Evaluate(initExpr);
                 if (!LoopContinues(varDcl, labelSet)) return varDcl;
-                return ForBodyEvaluation(testExpr, incrExpr, body, labelSet);
+                return ForBodyEvaluation(testExpr, incrExpr, body, labelSet, perIterationBindings);
 
             } else if (IsLexicalDeclaration(initExpr)) {
 
@@ -26912,11 +26914,14 @@ define("runtime", function () {
                 for (var i = 0, j = initExpr.declarations.length; i < j; i++) {
                     var names = BoundNames(initExpr.declarations[i]);
                     for (var y = 0, z = names.length; y < z; y++) {
-                        dn = names[y];
+                        var dn = names[y];
                         if (isConst) {
                             loopEnv.CreateImmutableBinding(dn);
                         } else {
                             loopEnv.CreateMutableBinding(dn, false);
+
+                            // FRESH BINDINGS: collect the names here
+                            perIterationBindings.push(dn);
                         }
                     }
                 }
@@ -26929,7 +26934,10 @@ define("runtime", function () {
                     return forDcl;
                 }
 
-                bodyResult = ForBodyEvaluation(testExpr, incrExpr, body, labelSet);
+                // FRESH BINDINGS: set the perI
+                if (isConst) perIterationBindings = [];
+
+                bodyResult = ForBodyEvaluation(testExpr, incrExpr, body, labelSet, perIterationBindings);
 
                 getContext().LexEnv = oldEnv;
                 return bodyResult;
@@ -26938,18 +26946,41 @@ define("runtime", function () {
                 var exprRef = Evaluate(initExpr);
                 var exprValue = GetValue(exprRef);
                 if (!LoopContinues(exprValue, labelSet)) return exprValue;
-                return ForBodyEvaluation(testExpr, incrExpr, body, labelSet);
+                return ForBodyEvaluation(testExpr, incrExpr, body, labelSet, perIterationBindings);
             }
         }
 
     }
 
-    function ForBodyEvaluation(testExpr, incrementExpr, stmt, labelSet) {
+    function CreatePerIterationEnvironment(perIterationBindings) {
+        var len = perIterationBindings.length;
+        if (len) {
+            var lastIterationEnv = getLexEnv();
+            var outer = lastIterationEnv.outer;
+            Assert(outer != null, "CreatePerIterationEnvironment: outer MUST NOT be null");
+            var thisIterationEnv = NewDeclarativeEnvironment(outer);
+            for (var i = 0; i < len; i++) {
+                var bn = perIterationBindings[i];
+                var status = thisIterationEnv.CreateMutableBinding(bn, false);
+                Assert(!isAbrupt(status), "status may not be an abrupt completion");
+                var lastValue = lastIterationEnv.GetBindingValue(bn);
+                if (isAbrupt(lastValue = ifAbrupt(lastValue))) return lastValue;
+                thisIterationEnv.InitialiseBinding(bn, lastValue);
+            }
+            getContext().LexEnv = thisIterationEnv;
+        }
+        return NormalCompletion(undefined);
+    }
+
+
+    function ForBodyEvaluation(testExpr, incrementExpr, stmt, labelSet, perIterationBindings) {
         "use strict";
         var V = undefined;
         var result;
         var testExprRef, testExprValue;
         var incrementExprRef, incrementExprValue;
+        var status = CreatePerIterationEnvironment(perIterationBindings);
+        if (isAbrupt(status)) return status;
         for (;;) {
             if (testExpr) {
                 testExprRef = Evaluate(testExpr);
@@ -26967,6 +26998,12 @@ define("runtime", function () {
             // hmm, there will be new fresh bindings
 
             if (!LoopContinues(result, labelSet)) return result;
+
+            // new fresh bindings
+            status = CreatePerIterationEnvironment(perIterationBindings);
+            if (isAbrupt(status)) return status;
+            // maybe it just works :)
+
             if (incrementExpr) {
                 incrementExprRef = Evaluate(incrementExpr);
                 incrementExprValue = GetValue(incrementExprRef);
