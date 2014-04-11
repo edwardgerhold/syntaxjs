@@ -1,0 +1,12 @@
+{
+	"destructuring of string props seen on es-discuss.":
+	{
+	    "init": 
+		"let {length} = '123456';",
+	    "tests": 
+	    [
+		["length", 6]
+	    ]
+	}	
+		
+}
