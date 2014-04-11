@@ -1,5 +1,5 @@
 {
-	"destructuring of string props seen on es-discuss.":
+	"spec invalid: destructuring of string props seen on es-discuss. added ToObject() which is invalid for several reasons.":
 	{
 	    "init": 
 		"let {length} = '123456';",
