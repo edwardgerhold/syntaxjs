@@ -23081,6 +23081,27 @@ DefineOwnProperty(SetPrototype, "delete", {
     configurable: false
 });
 
+
+var SetPrototype_entries = function (thisArg, argList) {
+    return CreateSetIterator(thisArg, "key+value");
+};
+var SetPrototype_keys = function (thisArg, argList) {
+    return CreateSetIterator(thisArg, "key");
+};
+var SetPrototype_values = function (thisArg, argList) {
+    return CreateSetIterator(thisArg, "value");
+};
+
+var SetPrototype_forEach = function (thisArg, argList) {
+
+};
+
+
+LazyDefineBuiltinFunction(SetPrototype, "keys", 0, SetPrototype_keys);
+LazyDefineBuiltinFunction(SetPrototype, "values", 0, SetPrototype_values);
+LazyDefineBuiltinFunction(SetPrototype, "entries", 0, SetPrototype_entries);
+LazyDefineBuiltinFunction(SetPrototype, "forEach", 0, SetPrototype_forEach);
+LazyDefineBuiltinFunction(SetPrototype, $$iterator, 0, SetPrototype_values);
 //
 // SetIterator
 //
@@ -23088,13 +23109,21 @@ function CreateSetIterator(set, kind) {
     var S = ToObject(set);
     if (isAbrupt(S = ifAbrupt(S))) return S;
     if (!hasInternalSlot(S, "SetData")) return withError("Type", "object has no internal SetData slot");
-    var entries = getInternalSlot(S, "SetData");
+    var origEntries = getInternalSlot(S, "SetData");
     var SetIteratorPrototype = Get(getIntrinsics(), "%SetIteratorPrototype%");
     var iterator = ObjectCreate(SetIteratorPrototype, {
         "IteratedSet": undefined,
         "SetNextIndex": undefined,
         "SetIterationKind": undefined
     });
+    /* price of creating my es5 iterator is a pre-run of O(n) to
+        translate the set into some array (currently)
+     */
+    var entries = [];
+    for (var keys in origEntries) entries.push(origEntries[keys]);
+    /*
+     
+     */
     setInternalSlot(iterator, "IteratedSet", entries);
     setInternalSlot(iterator, "SetNextIndex", 0);
     setInternalSlot(iterator, "SetIterationKind", kind);
@@ -23128,11 +23157,12 @@ DefineOwnProperty(SetIteratorPrototype, "next", {
     value: CreateBuiltinFunction(realm, function next(thisArg, argList) {
         var O = thisArg;
         if (Type(O) !== "object") return withError("Type", "the this value is not an object");
-        if (!hasInternalSlot(O, "Set") || !hasInternalSlot(O, "SetNextIndex") || !hasInternalSlot(O, "SetIterationKind")) return withError("Type", "iterator has not all of the required internal properties");
-        var entries = getInternalSlot(O, "Set");
+        if (!hasInternalSlot(O, "IteratedSet") || !hasInternalSlot(O, "SetNextIndex") || !hasInternalSlot(O, "SetIterationKind")) return withError("Type", "iterator has not all of the required internal properties");
+        var entries = getInternalSlot(O, "IteratedSet");
         var kind = getInternalSlot(O, "SetIterationKind");
         var index = getInternalSlot(O, "SetNextIndex");
         var result;
+        var len = entries.length;
         while (index < len) {
             var e = entries[index];
             index = index + 1;
@@ -26696,8 +26726,9 @@ define("runtime", function () {
             return withError("Type", "ForInOfExpression: iterationKind is neither enumerate nor iterate.");
         }
         if (isAbrupt(keys)) {
+    	    if (keys.type === "throw") return keys;
             if (LoopContinues(exprValue, labelSet) === false) return exprValue;
-            Assert(keys.type === "continue");
+            Assert(keys.type === "continue", "invalid completion value: "+keys.type);
             return Completion("break");
         }
         return keys;

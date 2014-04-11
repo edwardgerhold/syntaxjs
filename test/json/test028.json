@@ -1,0 +1,11 @@
+{
+	"set iteration was forgotten?":
+	{
+	    "init": 
+		"let s = new Set(['a','b','c']);",
+	    "tests": 
+	    [
+		["let s2=''; for (let x of s) s2+=x; s2", "abc"]
+	    ]
+	}
+}
