@@ -4052,21 +4052,25 @@ define("parser", function () {
     // ========================================================================================================
     // lookahead functions
     // ========================================================================================================
-
+    var isComment = { __proto__: true, "LineComment": true, "MultiLineComment": true}
     function righthand(tokens, i) {
         var lookahead; // = " ";
         var b = 0;
         var t;
         ltNext = false;
-        do {
+        for(;;) {
             b++;
             t = tokens[i + b];
             if (t === undefined) return undefined;
             lookahead = t.value;
             lookaheadt = t.type;
-            if (WhiteSpaces[lookaheadt]) continue;
-            if (LineTerminators[lookaheadt]) ltNext = true;
-        } while (WhiteSpaces[lookaheadt]);
+            if (WhiteSpaces[lookahead[0]]) continue;
+            if (LineTerminators[lookahead[0]]) {
+                ltNext = true; continue;
+            }
+            if (isComment[lookaheadt]) continue;
+            break;
+        }
         return lookahead;
     }
 
@@ -4182,10 +4186,10 @@ define("parser", function () {
             token = tokens[i];  // this function really works on an array
             if (token) {
                 t = token.type;
-                if (withExtras && captureExtraTypes[t]) extraBuffer.push(token);
+                // if (withExtras && captureExtraTypes[t]) extraBuffer.push(token);
                 if (SkipableWhiteSpace[t]) return next();
                 v = token.value;
-//                if (withExtras && captureExtraValues[v]) extraBuffer.push(token);
+//              if (withExtras && captureExtraValues[v]) extraBuffer.push(token);
                 loc = token.loc;
             } else {
                 t = v = undefined;
@@ -4822,8 +4826,10 @@ define("parser", function () {
 
         var hasStop = typeof stop === "string";
 
-        if (!parenthesised && (ExprNoneOfs[v] || (v === "let" && lookahead === "["))) return null;
+        if (!parenthesised && ExprNoneOfs[v]) /*|| (v === "let" && lookahead === "["))*/ return null;
+        
         do {
+        
             debug("expr at " + v);
 
             if (hasStop && v === stop) break;
@@ -4907,6 +4913,8 @@ define("parser", function () {
 
     function CoverParenthesisedExpressionAndArrowParameterList() {
 
+
+
         var parens = [];
         var covered = [];
         var cover = false;
@@ -4916,9 +4924,11 @@ define("parser", function () {
         if (t === "Identifier" && lookahead === "=>") {
 
             expr = this.Identifier();
-            cover = true;
+            cover = true;            
+            
 
         } else if (v === "(") {
+
             if (lookahead === "for") return this.GeneratorComprehension();
 
             cover = true;
@@ -4946,8 +4956,10 @@ define("parser", function () {
 
         if (cover) {
 
-
             if (v === "=>") {
+
+                pass("=>");
+
                 node = Node("ArrowExpression");
                 node.kind = "arrow";
                 node.strict = true;
@@ -4955,8 +4967,10 @@ define("parser", function () {
                 pushStrict(true);
 		
                 node.expression = true;
+                
+                
                 node.params = (expr ? [expr] : this.ArrowParameterList(covered));
-                pass("=>");
+                
                 node.body = this.ConciseBody(node);
                 l2 = loc && loc.end;
                 node.loc = makeLoc(l1, l2);
@@ -4966,9 +4980,11 @@ define("parser", function () {
                 
                 if (compile) return builder.arrowExpression(node.params, node.body, node.loc);
                 return node;
-            } else {
 
+            } else {
+            
                 return this.CoverParenthesizedExpression(covered);
+                
             }
 
 
@@ -5713,7 +5729,7 @@ define("parser", function () {
         do {
 
             if (v) {
-                x = i;
+                //x = i;
 
                 debug("FormalParameters ("+t+", "+v+")");
 
@@ -5743,7 +5759,7 @@ define("parser", function () {
                     continue;
                 }
 
-                if (x == i) next();
+                //if (x == i) next();
 
             }
 

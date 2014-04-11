@@ -6,11 +6,13 @@ Not bugfree(*) EcmaScript 6 (7**) Interpreter written in EcmaScript 5.
 This project was started on a PIII/933 in a dorm and is
 now continued on a notebook with 2 cores still in the dorm.
 It´s a fun project. 
-Hmm, i notice difficulties with writing plain text with myself.
+Hmm, i notice difficulties with writing plain text with myself nowadays.
 I´m working on it.
 
-(*) locks up recently [will become repaired] 
-(**) contains at last one implemented proposal and others begun
+(*) found the stupid lockup bug from march in the old lookahead fn,
+which i edited in march, while new tests where missing.
+
+(**) contains at last one implemented proposal and more
 
 
 New: Multiple Realms

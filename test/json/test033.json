@@ -1,0 +1,11 @@
+{
+	"arrow function no parens (fixed whitespace bug from march, was in the lookahead func)":
+	{
+	    "init": 
+		"let f = x    => x*x; " ,
+	    "tests": 
+	    [
+		["f(100)", 10000 ]
+	    ]
+	}
+}
