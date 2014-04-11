@@ -1,0 +1,11 @@
+{
+	"map iteration was forgotten, too?":
+	{
+	    "init": 
+		"let m = new Map(); let o = {}, p = {}; m.set(o, 'Hallo'); m.set(p, 'Welt');" ,
+	    "tests": 
+	    [
+		["let s=''; for (let e of m) s+=e[1]+' '; s;", "Hallo Welt "]
+	    ]
+	}
+}

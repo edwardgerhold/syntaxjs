@@ -22772,33 +22772,26 @@ DefineOwnProperty(MapPrototype, "clear", {
     configurable: false
 });
 
-DefineOwnProperty(MapPrototype, "keys", {
-    value: CreateBuiltinFunction(realm, function keys(thisArg, argList) {
+
+var MapPrototype_keys = function (thisArg, argList) {
         var O = thisArg;
         return CreateMapIterator(O, "key");
-    }),
-    writable: false,
-    enumerable: false,
-    configurable: false
-});
-DefineOwnProperty(MapPrototype, "values", {
-    value: CreateBuiltinFunction(realm, function values(thisArg, argList) {
+};
+
+var MapPrototype_values = function (thisArg, argList) {
         var O = thisArg;
         return CreateMapIterator(O, "value");
-    }),
-    writable: false,
-    enumerable: false,
-    configurable: false
-});
-DefineOwnProperty(MapPrototype, "entries", {
-    value: CreateBuiltinFunction(realm, function entries(thisArg, argList) {
+};
+
+var MapPrototype_entries = function (thisArg, argList) {
         var O = thisArg;
         return CreateMapIterator(O, "key+value");
-    }),
-    writable: false,
-    enumerable: false,
-    configurable: false
-});
+}
+
+LazyDefineBuiltinFunction(MapPrototype, "entries", 0, MapPrototype_entries);
+LazyDefineBuiltinFunction(MapPrototype, "keys", 0, MapPrototype_keys);
+LazyDefineBuiltinFunction(MapPrototype, "values", 0, MapPrototype_values);
+LazyDefineBuiltinFunction(MapPrototype, $$iterator, 0, MapPrototype_entries);
 
 DefineOwnProperty(MapConstructor, $$create, {
     value: CreateBuiltinFunction(realm, function $$create(thisArg, argList) {
@@ -22839,6 +22832,9 @@ function __checkInternalUniqueKey(value, writeIfUndefined) {
     if (value === null) internalKey = internalKey + "" + internalKey;
     return internalKey;
 }
+
+
+
 
 //
 // Map Iterator
