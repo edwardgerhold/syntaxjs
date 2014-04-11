@@ -3136,6 +3136,9 @@ define("tokenizer", function () {
             return token;
         } else if (ch + lookahead === "/*") {
             type = "MultiLineComment";
+            comment = "/*";
+            next();	// fix /*/ funny experience
+            next();	// i bet i find some more here.
             while (ch + lookahead !== "*/") {
                 if (ch === undefined) {
                     throw new SyntaxError("Unexpected end of file");
@@ -3735,6 +3738,7 @@ define("earlyerrors", function () {
  it misses some syntax errors, early errors.
 
  and i some words i had for this comment
+
  ############################################################################################################################################################################################################
  */
 
@@ -3761,13 +3765,7 @@ define("parser", function () {
     var propKeys = tables.propKeys;
     var BindingIdentifiers = tables.BindingIdentifiers;
     var ExprNoneOfs = tables.ExprNoneOfs;
-    var MethodKeyByType = tables.MethodKeyByType;
-    var MethodKeyByValue = tables.MethodKeyByValue;
     var StartBinding = tables.StartBinding;
-    var LPAREN = tables.LPAREN;
-    var RPAREN = tables.RPAREN;
-    var LPARENOF = tables.LPARENOF;
-    var Punctuators = tables.Punctuators;
     var WhiteSpaces = tables.WhiteSpaces;
     var LineTerminators = tables.LineTerminators;
     var Keywords = tables.Keywords;
@@ -4049,30 +4047,6 @@ define("parser", function () {
         return string;
     }
 
-    // ========================================================================================================
-    // lookahead functions
-    // ========================================================================================================
-    var isComment = { __proto__: true, "LineComment": true, "MultiLineComment": true}
-    function righthand(tokens, i) {
-        var lookahead; // = " ";
-        var b = 0;
-        var t;
-        ltNext = false;
-        for(;;) {
-            b++;
-            t = tokens[i + b];
-            if (t === undefined) return undefined;
-            lookahead = t.value;
-            lookaheadt = t.type;
-            if (WhiteSpaces[lookahead[0]]) continue;
-            if (LineTerminators[lookahead[0]]) {
-                ltNext = true; continue;
-            }
-            if (isComment[lookaheadt]) continue;
-            break;
-        }
-        return lookahead;
-    }
 
     function unquote(str) {
         return ("" + str).replace(/^("|')|("|')$/g, ""); //'
@@ -4200,6 +4174,36 @@ define("parser", function () {
         return token = v = t = undefined;
     }
 
+    /*
+        lookahead function
+        will be replaced someday, when i throw away the tokenizer stage,
+         which i really only implemented for my syntax highlighter which
+         became legacy code as i started working on the es6 runtime.
+     */
+
+    var isComment = { __proto__: true, "LineComment": true, "MultiLineComment": true}
+    function righthand(tokens, i) {
+        var lookahead; // = " ";
+        var b = 0;
+        var t;
+        ltNext = false;
+        for(;;) {
+            b++;
+            t = tokens[i + b];
+            if (t === undefined) return undefined;
+            lookahead = t.value;
+            lookaheadt = t.type;
+            if (WhiteSpaces[lookahead[0]]) continue;
+            if (LineTerminators[lookahead[0]]) {
+                ltNext = true; continue;
+            }
+            if (isComment[lookaheadt]) continue;
+            break;
+        }
+        return lookahead;
+    }
+
+
     // ========================================================================================================
     // Literals, Identifier
     // ========================================================================================================
@@ -4240,7 +4244,6 @@ define("parser", function () {
     parser.Identifier = Identifier;
     parser.ClassExpression = ClassExpression;
     parser.TemplateLiteral = TemplateLiteral;
-
 
 
     function ClassExpression() {
@@ -4815,7 +4818,6 @@ define("parser", function () {
     }
 
     parser.Expression = Expression;
-
     function Expression(stop, parenthesised) {
 
         var list = [];
@@ -4826,12 +4828,11 @@ define("parser", function () {
 
         var hasStop = typeof stop === "string";
 
-        if (!parenthesised && ExprNoneOfs[v]) /*|| (v === "let" && lookahead === "["))*/ return null;
+        if (!parenthesised && (ExprNoneOfs[v] || (v === "let" && lookahead === "["))) return null;
         
         do {
         
-            debug("expr at " + v);
-
+            
             if (hasStop && v === stop) break;
             ae = this.AssignmentExpression();
             if (ae) list.push(ae);
@@ -4982,7 +4983,7 @@ define("parser", function () {
                 return node;
 
             } else {
-            
+
                 return this.CoverParenthesizedExpression(covered);
                 
             }
