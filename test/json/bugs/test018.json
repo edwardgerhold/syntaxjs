@@ -1,0 +1,12 @@
+{
+	"destructuring function arguments":
+	{
+	    "init": 
+		"let f = function ({a,b,c}) { return a+b+c }",
+	    "tests": 
+	    [
+		["f({a:1,b:2,c:3})", 6]
+	    ]
+	}
+	
+}

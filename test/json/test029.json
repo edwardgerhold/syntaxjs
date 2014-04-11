@@ -1,0 +1,15 @@
+{
+	"destructuring default initialisers forgotten?":
+	{
+	    "init": 
+		"let {a:alias=1,b=2,c} = {b:3,c:4}",
+	    "tests": 
+	    [
+		["alias", 1],
+		["b", 3],
+		["c", 4]
+	    ]
+	}
+	
+		
+}

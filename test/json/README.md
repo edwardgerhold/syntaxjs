@@ -8,8 +8,6 @@ run ./test filename.json to test only one
 
 The tests may be seen with a little delay each time they start,
 because each test initialiser initialises a whole set of new 
-builtin objects. which means each time the interpreter is 
-initialized completly again. This is a decision, it could be 
-kept alive for all tests but i decided to initialise a new 
-environment each time.
+builtin objects. Which means each time the interpreter is 
+initialized completly again.  
 

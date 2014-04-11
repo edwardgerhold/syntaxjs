@@ -5298,18 +5298,24 @@ define("parser", function () {
                     // staticSemantics.addLexBinding(bindEl.as.name);
 
                     list.push(bindEl);
+
+                    if (v === "=") {
+                        bindEl.init = this.Initialiser();
+                    }
+
                 } else {
 
                     if (isStrict && ForbiddenArgumentsInStrict[id.name]) {
                         throw new SyntaxError(v + " is not a valid bindingidentifier in strict mode");
                     }
-
-
                     // staticSemantics.addLexBinding(id.name);
-
                     list.push(id);
 
+                    if (v === "=") {
+                        id.init = this.Initialiser();
+                    }
                 }
+
 
                 if (v === ",") {
                     pass(",");
@@ -5329,7 +5335,12 @@ define("parser", function () {
                 if (v === "...") id = this.RestParameter();
                 else if (StartBinding[v]) id = this.BindingPattern();
                 else id = this.Identifier();
+
                 if (id) list.push(id);
+
+                if (v === "=") {
+                    id.init = this.Initialiser();
+                }
 
                 if (v === ",") {
                     pass(",");
@@ -5702,6 +5713,7 @@ define("parser", function () {
         do {
 
             if (v) {
+                x = i;
 
                 debug("FormalParameters ("+t+", "+v+")");
 
@@ -5730,6 +5742,8 @@ define("parser", function () {
                     pass(",");
                     continue;
                 }
+
+                if (x == i) next();
 
             }
 
@@ -9622,7 +9636,7 @@ CodeRealm.prototype.evalAsync =
     CodeRealm.prototype.evalFileAsync = function (file) {
         var realm = this;
         return require("fswraps").readFileP(name).then(function (code) {
-            return realm.toValue(code);
+            return realm.eval(code);
         }, function (err) {
             throw err;
         });
@@ -9680,9 +9694,11 @@ function CreateRealm () {
     realmRec.loader = loader;
     var newGlobal = createGlobalThis(realmRec, ObjectCreate(null), intrinsics);
     var newGlobalEnv = GlobalEnvironment(newGlobal);
+
     // i think this is a bug and no execution context should be required
     context.VarEnv = newGlobalEnv;
     context.LexEnv = newGlobalEnv;
+
 
     realmRec.globalThis = newGlobal;
     realmRec.globalEnv = newGlobalEnv;
@@ -9736,8 +9752,6 @@ function setCodeRealm(r) {  // CREATE REALM (API)
     }
     require("runtime").setCodeRealm(r);
 }
-
-
 
 
 function GetGlobalObject() {
@@ -25365,7 +25379,7 @@ define("runtime", function () {
         var elem;
         var val;
         var cx = getContext();
-        var identName, newName;
+        var identName, newName, init;
         if (decl.type === "ObjectPattern" || decl.type === "ObjectExpression") {
 
             for (var p = 0, q = decl.elements.length; p < q; p++) {
@@ -25375,12 +25389,27 @@ define("runtime", function () {
                     if (elem.id) {
                         identName = elem.id.name || elem.id.value;
                         newName = elem.as.name || elem.as.value;
+
                     } else {
                         identName = elem.name || elem.value;
                         newName = undefined;
                     }
 
+                    /* default initialiser */
+                    if (elem.init) {
+                        var initialiser = GetValue(Evaluate(elem.init));
+                        if (isAbrupt(initialiser = ifAbrupt(initialiser))) return initialiser;
+                    }
+
                     var val = Get(obj, ToString(identName));
+                    val = ifAbrupt(val);
+                    if (isAbrupt(val)) return val;
+
+                    /* intiialiser */
+                    if (val === undefined && initialiser != undefined) {
+                            val = initialiser;
+                    }
+
                     if (env !== undefined) {
                         if (newName) env.InitialiseBinding(newName, val);
                         else env.InitialiseBinding(identName, val);
@@ -25427,6 +25456,7 @@ define("runtime", function () {
 
             for (var i = 0, j = decl.elements.length; i < j; i++) {
                 if (elem = decl.elements[i]) {
+
                     if (elem.id) {
                         identName = elem.id.name;
                         newName = elem.as.name;
@@ -25434,22 +25464,42 @@ define("runtime", function () {
                         identName = elem.name || elem.value;
                         newName = undefined;
                     }
+
+
+                    /* default initialiser */
+                    if (elem.init) {
+                        var initialiser = GetValue(Evaluate(elem.init));
+                        if (isAbrupt(initialiser = ifAbrupt(initialiser))) return initialiser;
+                    }
+
                     val = Get(value, ToString(i));
+                    val = ifAbrupt(val);
+                    if (isAbrupt(val)) return val;
+
+                    /* intiialiser*/
+                    if (val === undefined && initialiser != undefined) {
+                        val = initialiser;
+                    }
+
+
                     // nextIndex = nextIndex + 1;
                     if (env !== undefined) {
                         if (newName) env.InitialiseBinding(newName, val);
                         else env.InitialiseBinding(identName, val);
                     } else {
+
                         var lref = Evaluate(elem);
                         if (isAbrupt(lref = ifAbrupt(lref))) return lref;
-                        PutValue(lref, array);
+                        PutValue(lref, val);
                     }
                 }
             }
+
         } else if (decl && decl.type === "RestParameter") {
             var array = ArrayCreate(len - nextIndex);
             var name = decl.id;
             debug("processing restparameter: " + name);
+
             for (var i = nextIndex; i < len; i++) {
                 elem = value.Get(ToString(i), value);
                 if (isAbrupt(elem = ifAbrupt(elem))) return elem;
@@ -25465,7 +25515,7 @@ define("runtime", function () {
             if (env !== undefined) {
                 env.InitialiseBinding(name, array);
             } else {
-                var lref = Reference(name, getLexEnv(), cx.strict);
+                var lref = Reference(name, getLexEnv(), getContext().strict);
                 if (isAbrupt(lref = ifAbrupt(lref))) return lref;
                 PutValue(lref, array);
             }

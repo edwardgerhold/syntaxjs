@@ -1,0 +1,14 @@
+{
+	"destructuring default initialisers forgotten?":
+	{
+	    "init": 
+		"let [a=1,b=2,...rest] = [,,1,2,3,4,5]",
+	    "tests": 
+	    [
+		["rest.join()", "1,2,3,4,5"],
+		["a", 1],
+		["b", 2]
+	    ]
+	}
+		
+}
