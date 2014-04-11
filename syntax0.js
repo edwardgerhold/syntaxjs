@@ -5151,10 +5151,7 @@ define("parser", function () {
 
         if (t !== "Punctuator" && !InOrOfInsOf[v]) {
             // throw new SyntaxError("can not parse expression");
-            var error = new Error();        
-            debug(error.stack.split("\n").join("\r\n"));
             return leftHand;
-        
         }
 
         if (v === "?") {
@@ -5187,10 +5184,11 @@ define("parser", function () {
 
             l2 = loc && loc.end;
             node.loc = makeLoc(l1, l2);
-            return node;
+            return rotate_binexps(node);
 
         } else if (BinaryOperators[v] && (!isNoIn || (isNoIn && v != "in"))) {
 	    debug("BinaryExpression  (" + t + ", " + v + ")");
+
             node = Node("BinaryExpression");
             node.longName = PunctToExprName[v];
             node.operator = v;
@@ -5198,12 +5196,10 @@ define("parser", function () {
             debug(v);
             pass(v);
             node.right = this.AssignmentExpression();
-
             if (!node.right) {
-        	throw new SyntaxError("can not parse a valid righthandside for this binary expression");
-    		//node = node.left;
-    		//return node;
-    	    } 
+        	    throw new SyntaxError("can not parse a valid righthandside for this binary expression");
+    	    }
+
             l2 = loc && loc.end;
             node.loc = makeLoc(l1, l2);
             node = rotate_binexps(node); 
@@ -8947,12 +8943,15 @@ define("api", function (require, exports, module) {
     var parseGoal = parse.parseGoal;
 
     var debugmode = false;
+
+    var hasConsole = typeof console !== "undefined" && typeof console == "object" && console && typeof console.log == "function";
+
     function debug() {
-        if (debugmode && typeof importScripts !== "function") console.log.apply(console, arguments);
+        if (debugmode && hasConsole) console.log.apply(console, arguments);
     }
 
     function debug2() {
-        if (typeof importScripts !== "function") console.log.apply(console, arguments);
+        if (hasConsole) console.log.apply(console, arguments);
     }
 
 
@@ -12540,16 +12539,16 @@ function printCodeEvaluationState() {
     var parent = state[2];
 
     var str = "["+(node&&node.type)+" === "+instructionIndex+"] of ["+(parent&&parent.type)+"]";
-    console.log(str);
+    if (hasConsole) console.log(str);
 }
 
 function callbackWrong(generator, body) {
-    console.log("##callbackWrong()##");
+    if (hasConsole) console.log("##callbackWrong()##");
     printCodeEvaluationState(); // temp fn
     var result = exports.Evaluate(body);
     if (isAbrupt(result = ifAbrupt(result))) return result;
     if (isAbrupt(result = ifAbrupt(result)) && result.type === "return") {
-        console.log("##callbackWrong() Condition##");
+        if (hasConsole) console.log("##callbackWrong() Condition##");
         setInternalSlot(generator, "GeneratorState", "completed");
         if (isAbrupt(result = ifAbrupt(result))) return result;
         getContext().callback = undefined;
@@ -12559,7 +12558,7 @@ function callbackWrong(generator, body) {
 }
 
 function GeneratorStart(generator, body) {
-    console.log("##GeneratorStart()##");
+    if (hasConsole) console.log("##GeneratorStart()##");
     Assert(getInternalSlot(generator, "GeneratorState") === undefined, "GeneratorStart: GeneratorState has to be undefined");
     var cx = getContext();
     cx.generator = generator;
@@ -12579,7 +12578,7 @@ function GeneratorStart(generator, body) {
 }
 
 function GeneratorResume(generator, value) {
-    console.log("##GeneratorResume()##");
+    if (hasConsole) console.log("##GeneratorResume()##");
 
     if (Type(generator) !== "object") return withError("Type", "resume: Generator is not an object");
     if (!hasInternalSlot(generator, "GeneratorState")) return withError("Type", "resume: Generator has no GeneratorState property");
@@ -12596,13 +12595,13 @@ function GeneratorResume(generator, value) {
 
     var x = getContext();
     if (x !== methodContext) {
-        console.log("GENERATOR ACHTUNG 2: CONTEXT MISMATCH TEST NICHT BESTANDEN - resume");
+        if (hasConsole) console.log("GENERATOR ACHTUNG 2: CONTEXT MISMATCH TEST NICHT BESTANDEN - resume");
     }
     return result;
 }
 
 function GeneratorYield(itrNextObj) {
-    console.log("##GeneratorYield()##");
+    if (hasConsole) console.log("##GeneratorYield()##");
     Assert(HasOwnProperty(itrNextObj, "value") && HasOwnProperty(itrNextObj, "done"), "expecting itrNextObj to have value and done properties");
 
     var genContext = getContext();
@@ -12611,11 +12610,11 @@ function GeneratorYield(itrNextObj) {
 
     var x = getStack().pop();
     if (x !== genContext) {
-        console.log("GENERATOR ACHTUNG 1: CONTEXT MISMATCH TEST NICHT BESTANDEN - yield");
+        if (hasConsole) console.log("GENERATOR ACHTUNG 1: CONTEXT MISMATCH TEST NICHT BESTANDEN - yield");
     };
     // compl = yield smth;
     genContext.callback = function (compl) {
-        console.log("##callback() return compl to left of = yield##");
+        if (hasConsole) console.log("##callback() return compl to left of = yield##");
         return compl;
     };
     return NormalCompletion(itrNextObj);
@@ -23102,9 +23101,13 @@ LazyDefineBuiltinFunction(SetPrototype, "values", 0, SetPrototype_values);
 LazyDefineBuiltinFunction(SetPrototype, "entries", 0, SetPrototype_entries);
 LazyDefineBuiltinFunction(SetPrototype, "forEach", 0, SetPrototype_forEach);
 LazyDefineBuiltinFunction(SetPrototype, $$iterator, 0, SetPrototype_values);
-//
-// SetIterator
-//
+/**
+ *
+ * @param set
+ * @param kind
+ * @returns {*}
+ * @constructor
+ */
 function CreateSetIterator(set, kind) {
     var S = ToObject(set);
     if (isAbrupt(S = ifAbrupt(S))) return S;
@@ -23122,7 +23125,7 @@ function CreateSetIterator(set, kind) {
     var entries = [];
     for (var keys in origEntries) entries.push(origEntries[keys]);
     /*
-     
+
      */
     setInternalSlot(iterator, "IteratedSet", entries);
     setInternalSlot(iterator, "SetNextIndex", 0);
@@ -23130,19 +23133,9 @@ function CreateSetIterator(set, kind) {
     return iterator;
 }
 
-DefineOwnProperty(SetIteratorPrototype, "constructor", {
-    value: undefined,
-    writable: false,
-    enumerable: false,
-    configurable: false
-});
 
-DefineOwnProperty(SetIteratorPrototype, $$toStringTag, {
-    value: "Set Iterator",
-    writable: false,
-    enumerable: false,
-    configurable: false
-});
+LazyDefineBuiltinConstant(SetIteratorPrototype, "constructor", undefined);
+LazyDefineBuiltinConstant(SetIteratorPrototype, $$toStringTag, "Set Iterator");
 
 DefineOwnProperty(SetIteratorPrototype, $$iterator, {
     value: CreateBuiltinFunction(realm, function $$iterator(thisArg, argList) {
@@ -23900,10 +23893,8 @@ define("runtime", function () {
     var parse = require("parser");
     var ecma = require("api");
     var statics = require("slower-static-semantics");
-
     var i18n = require("i18n-messages"); // this is still a hoax, should focus on error messages
                                          // especially repeating ones to create a string.format style
-
     var parseGoal = parse.parseGoal;
 
     var debugmode = false;
@@ -26554,7 +26545,7 @@ define("runtime", function () {
 
         var gen = getContext().generator;
         if (gen) {
-            console.log("## generator function executing ##");
+            if (hasConsole) console.log("## generator function executing ##");
             // set Instruction Index to saved Index + 1
         }
 
@@ -27711,11 +27702,11 @@ define("runtime", function () {
         initialisedTheRuntime = false;
     }
 
-    function ExecuteTheCode(source, shellModeBool, resetEnvNowBool) {
+    function execute(source, shellModeBool, resetEnvNowBool) {
         var exprRef, exprValue, text, type, message, stack, error, name, callstack;
 
         var node = typeof source === "string" ? parse(source) : source;
-        if (!node) throw "example: Call ExecuteTheCode(parse(source)) or ExecuteTheCode(source)";
+        if (!node) throw "example: Call execute(parse(source)) or execute(source)";
 
         if (!initialisedTheRuntime || !shellModeBool || resetEnvNowBool) {
             var realm = CreateRealm();
@@ -27801,10 +27792,8 @@ define("runtime", function () {
         /*
          incomplete transformer/static proxy
          */
-
         var o = {};
         var keys = OwnPropertyKeysAsList(O);
-
         keys.forEach(function (key) {
 
             var desc = GetOwnProperty(O, key);
@@ -27832,7 +27821,7 @@ define("runtime", function () {
             } else {
                 var value = desc.value;
                 var newValue;
-                
+
                 if (Type(value) === "object") {
                     if (IsCallable(value)) {
                         newValue = function () {
@@ -27862,15 +27851,13 @@ define("runtime", function () {
 
         return o;
     }
-
-    ExecuteTheCode.setCodeRealm = setCodeRealm;
-    ExecuteTheCode.Evaluate = Evaluate;
-    ExecuteTheCode.ExecuteAsync = ExecuteAsync;
-    ExecuteTheCode.ExecuteAsyncTransform = ExecuteAsyncTransform;
-    ExecuteTheCode.TransformObjectToJSObject = TransformObjectToJSObject;
-    ExecuteTheCode.DeepStaticJSSnapshotOfObject = DeepStaticJSSnapshotOfObject;
-
-    return ExecuteTheCode;
+    execute.setCodeRealm = setCodeRealm;
+    execute.Evaluate = Evaluate;
+    execute.ExecuteAsync = ExecuteAsync;
+    execute.ExecuteAsyncTransform = ExecuteAsyncTransform;
+    execute.TransformObjectToJSObject = TransformObjectToJSObject;
+    execute.DeepStaticJSSnapshotOfObject = DeepStaticJSSnapshotOfObject;
+    return execute;
 });
 
 
