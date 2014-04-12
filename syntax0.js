@@ -1463,6 +1463,7 @@ define("tables", function (require, exports, module) {
         "void": "UnaryExpression",
         "--": "UnaryExpression",
         "++": "UnaryExpression",
+        "!!": "UnaryExpression",
         // + und - fehlen hier
         "!": "UnaryExpression",
         "*": "MultiplicativeExpression",
@@ -1545,6 +1546,7 @@ define("tables", function (require, exports, module) {
         "+": true,
         "~": true,
         "!": true,
+        "!!": true,
         "typeof": true,
         "void": true,
         "delete": true
@@ -3913,6 +3915,18 @@ define("earlyerrors", function () {
 
  and i some words i had for this comment
 
+
+ -- using the builder nodefactory would be cool
+    so i can use either nodes or bytes
+    but for that a few parameters must update to es6
+    (could use my own for purpose and replace or propose later)
+    then will be there no return node, only return builder.variableStatement() etc
+
+    // a map of the fn types must be made to map UpperCase and lowerCase firstChars.
+
+    HINT: i have no list (array) of all parser_api fns to generate the thing from
+    // or to handwrite the table with
+
  ############################################################################################################################################################################################################
  */
 
@@ -3965,6 +3979,7 @@ define("parser", function () {
 
     var ast;
     var ltNext; // will be set if a lineterminator is before the next token, unset else
+    var gotSemi;
     var lookahead, lookaheadt; // lookahead
     var tokens;
     var token = Object.create(null); // current token
@@ -3985,9 +4000,9 @@ define("parser", function () {
     var defaultIsId = true;
     var generatorParameter = false;
     var generatorParameterStack = [];
-    
-    
-    
+
+
+
 
     /*
      parser needs strict mode for early errors
@@ -4128,37 +4143,37 @@ define("parser", function () {
     var currentModule; // just be module
     var moduleStack = [];
     // have to finsish this crap urgently.
-    
+
     /*
-	state
-	
-	Contains[ExpressionStatement] ruins my simple Contains blacklist
-	directly implemented in the StatementList Algorithms...
-    */
-    
+     state
+
+     Contains[ExpressionStatement] ruins my simple Contains blacklist
+     directly implemented in the StatementList Algorithms...
+     */
+
     // this could help, but i should need a piece of paper plus spec
     // to write down what i don´t mind now (my memory is sometimes weak)
     /*
-    var inState;
-    var inState_Program = 1;
-    var inState_Function = 2;
-    var inState_Method = 3;
-    var inState_Class = 4;
-    var inState_Module = 5;
-    var inStateStack = [];
-    */
+     var inState;
+     var inState_Program = 1;
+     var inState_Function = 2;
+     var inState_Method = 3;
+     var inState_Class = 4;
+     var inState_Module = 5;
+     var inStateStack = [];
+     */
     /*
-	inState = inState_Function;
-    
-	in SuperExpression
-	
-	var noSuper = { 1 : true, 5 : true };
+     inState = inState_Function;
 
-	if (noSuper[inState] && node.type === "
-	
-	
-    */
-    
+     in SuperExpression
+
+     var noSuper = { 1 : true, 5 : true };
+
+     if (noSuper[inState] && node.type === "
+
+
+     */
+
 
     var loc = makeLoc();
     var text;
@@ -4348,6 +4363,16 @@ define("parser", function () {
             return false;
         }
     }
+
+    function semicolon() {
+        if (v == ";") {
+            gotSemi = true;
+            skip(";")
+        } else {
+            gotSemi = false;
+        }
+    }
+
 
     function eos() {
         return i >= j;
@@ -5031,6 +5056,9 @@ define("parser", function () {
     }
 
     parser.Expression = Expression;
+
+    // PLEASE RE-WRI-TE: PAREN EXPR, EXPR, EXPRSTMT, SEQEXPR and factor out unclearness from last year
+
     function Expression(stop, parenthesised) {
 
         var list = [];
@@ -5044,7 +5072,6 @@ define("parser", function () {
         if (!parenthesised && (ExprNoneOfs[v] || (v === "let" && lookahead === "["))) return null;
 
         do {
-
 
             if (hasStop && v === stop) break;
             ae = this.AssignmentExpression();
@@ -5435,9 +5462,9 @@ define("parser", function () {
             node = rotate_binexps(node);
             return node;
 
- //       } else if (v != "," && v != ";" && !ltNext && v != ")" && v != "]" && v != "}") {
+            //       } else if (v != "," && v != ";" && !ltNext && v != ")" && v != "]" && v != "}") {
 
-     //       throw new SyntaxError("something is missing, maybe the operator?")
+            //       throw new SyntaxError("something is missing, maybe the operator?")
 
         } else {
 
@@ -5449,11 +5476,11 @@ define("parser", function () {
     parser.SuperExpression = SuperExpression;
 
 
-        var ContainNoSuperIn = {
-            "Program" : true,
-            "ModuleDeclaration": true,
-            "Module" : true
-        };
+    var ContainNoSuperIn = {
+        "Program" : true,
+        "ModuleDeclaration": true,
+        "Module" : true
+    };
 
     function SuperExpression() {
 
@@ -5473,7 +5500,8 @@ define("parser", function () {
                 if (ContainNoSuperIn[currentNode.type]) {
                     throw new SyntaxError("contains: super is not allowed in "+currentNode.type);
                 }
-                currentNode.needsSuper = true;
+                currentNode.needsSuper = true; // needsSuper is ES6 Term, maybe should just be .super for Parser_API
+                // currentNode.super = true;
             }
 
             if (currentNode === ast) {
@@ -5486,7 +5514,7 @@ define("parser", function () {
             // da parseGoal nicht auf currentNode zugreifen kann.
             // solution:
             // STATE VARIABLE!!!! statt property
-            
+
             if (compile) return builder.superExpression(node.loc);
             return node;
 
@@ -5662,15 +5690,15 @@ define("parser", function () {
                 throw new SyntaxError(id.name + " is not a valid identifier in strict mode");
             }
 
-    /*
-            if (kind == "var") {
-                varNames.push(id.name);
-                varDecls.push(node);
-            } else {
-                lexNames.push(id.name);
-                lexDecls.push(node);
-            }
-    */
+            /*
+             if (kind == "var") {
+             varNames.push(id.name);
+             varDecls.push(node);
+             } else {
+             lexNames.push(id.name);
+             lexDecls.push(node);
+             }
+             */
 
             if (v === "=") node.init = this.Initialiser();
             else node.init = null;
@@ -5695,12 +5723,12 @@ define("parser", function () {
                 continue;
             } else if (t === "Identifier" || StartBinding[v]) {
                 continue;
-    	    } else if (ltNext) {
-        	    break;
-    	    } else if (v === ";") {
-    		    pass(";");
+            } else if (ltNext) {
                 break;
-    	    } else if (v === undefined) {
+            } else if (v === ";") {
+                pass(";");
+                break;
+            } else if (v === undefined) {
                 break;
             }
 
@@ -6130,12 +6158,12 @@ define("parser", function () {
             if (v !== "(") {
                 id = this.Identifier();
                 node.id = id.name;
-/*
-                if (!node.expression) {
-                    varNames.push(id.name);
-                    varDecls.push(node);
-                }
-*/
+                /*
+                 if (!node.expression) {
+                 varNames.push(id.name);
+                 varDecls.push(node);
+                 }
+                 */
             } else {
                 if (!node.expression) {
                     throw new SyntaxError("Function and Generator Declarations must have a name [only expressions can be anonymous]");
@@ -6366,9 +6394,9 @@ define("parser", function () {
             var stmt = this.Statement();
 
             if (!IsIteration[stmt.type]) {
-        	throw new SyntaxError("A LabelledStatement must be an Iteration Statement");
+                throw new SyntaxError("A LabelledStatement must be an Iteration Statement");
             }
-            
+
             node.statement = stmt;
             var l2 = loc && loc.end;
             node.loc = makeLoc(l1, l2);
@@ -6720,7 +6748,7 @@ define("parser", function () {
             if (i >= j) break;
             s = this.Statement();
             list.push(s);
-            
+
         } while (!FinishSwitchStatementList[v]);
         return list;
     }
@@ -6732,30 +6760,30 @@ define("parser", function () {
         debug("stmtlist():");
         do {
             if (i >= j) break;
-            
+
             s = this.Statement();
             list.push(s);
-            
-        
-    	/*
-    	    es6> let id = 0;
-    	    undefined
-    	    es6> id id
-    	    0
-    	    
-    	    should throw first statement.
-    	    
-    	    
-    	    shall better recognize ; and lt here.
-    	    
-    	    skip(";") has to register, if one was found.
-    	    
-    	    if (!ltNext) it should throw
-    	    
-    	*/
-        
-            
-                        
+
+
+            /*
+             es6> let id = 0;
+             undefined
+             es6> id id
+             0
+
+             should throw first statement.
+
+
+             shall better recognize ; and lt here.
+
+             skip(";") has to register, if one was found.
+
+             if (!ltNext) it should throw
+
+             */
+
+
+
         } while (!FinishStatementList[v]);
 
         return list;
@@ -6765,27 +6793,27 @@ define("parser", function () {
 
     function Statement(a, b, c, d) {
         var node;
-        
-        /*
-        if (debugmode) {
-    	    var start = loc && loc.start;
-    	    var line = start && start.line;
-    	    var col = start && start.col;
-            debug("statement at " + v + " at line "+line+", col "+col);
-        }
-        */
 
-        
+        /*
+         if (debugmode) {
+         var start = loc && loc.start;
+         var line = start && start.line;
+         var col = start && start.col;
+         debug("statement at " + v + " at line "+line+", col "+col);
+         }
+         */
+
+
         var fn = this[StatementParsers[v]];
         if (fn) node = fn.call(this, a, b, c, d);
         if (!node) {
-    		node = this.LabelledStatement(a, b, c, d) || this.Expression(a,b,c,d);
-	}
-	if (node) {
-    	    skip(";");
-    	    return node;
-    	}
-    	return null;
+            node = this.LabelledStatement(a, b, c, d) || this.Expression(a,b,c,d);
+        }
+        if (node) {
+            skip(";");
+            return node;
+        }
+        return null;
     }
 
     /*
@@ -6898,7 +6926,17 @@ define("parser", function () {
             pass("for");
             pass("(");
 
-            /* predict */
+            /* predict
+            *
+            * this works with the tokens array
+            * for the inline lexer i have to prefetch
+            * the WHOLE forStatement to use PARSEGOAL on.
+            *
+            * and - a parser should have an own parseGoal fn
+            * with separate state variables (just a parseGoal = parser_factory() parser)
+            * (later when making factories and replacing the one-and-only multiple realm shared state sys
+            * by a fresh instance of each for each realm)
+            */
 
             parens.push("(");
             for (var y = i; y < j; y++) {
@@ -6935,7 +6973,7 @@ define("parser", function () {
                         node.init = this.VariableStatementNoIn();
                     } else {
                         node.init = this.ExpressionNoIn();
-                	pass(";")
+                        pass(";")
                     }
 
                 }
@@ -7136,6 +7174,7 @@ define("parser", function () {
     function SwitchCase() {
 
         if (v === "case") {
+
             var node = Node("SwitchCase");
             pass("case");
             node.test = this.Expression(":");
@@ -7205,12 +7244,12 @@ define("parser", function () {
                 if (!contains[node.type]) body.push(node);
                 else throw new SyntaxError("contains: "+node.type+" is not allowed in Program");
                 /* new idea */
-                                
+
             } else {
-        	if (token != undefined)
-        	throw new SyntaxError("unexpected token " + t + " with value " +v);
+                if (token != undefined)
+                    throw new SyntaxError("unexpected token " + t + " with value " +v);
             }
-            
+
         } while (token != undefined);
 
         popStrict();
@@ -7246,8 +7285,8 @@ define("parser", function () {
         next(); // walk to first token
 
         pushDecls();    // symbol table replacement only with the varscoped lists is stupid,
-                    // i need duplicate identifier check anyways. (staticsemantics object symbol/list/contains mixture was a better idea)
-                        // redo symbol table which can make lists for getting semantic analysis into syntactic stage
+        // i need duplicate identifier check anyways. (staticsemantics object symbol/list/contains mixture was a better idea)
+        // redo symbol table which can make lists for getting semantic analysis into syntactic stage
 
         currentNode = node;
 
@@ -7440,7 +7479,7 @@ define("parser", function () {
             ifAbrupt = require("api").ifAbrupt;
             isAbrupt = require("api").isAbrupt;
         }
-        
+
         return JSONValue();
     }
 
@@ -7591,15 +7630,15 @@ define("parser", function () {
             ast = parser.Program();
 
         } catch (ex) {
-        
-    	  //  throw ex;
+
+            //  throw ex;
 
             console.log("[Parser Exception]: " + ex.name);
             console.log(ex.message);
             console.log(ex.stack);
             ast = ex;
 
-           // if ((x = parse(y)) instanceof Error) idea to return if abrupt later
+            // if ((x = parse(y)) instanceof Error) idea to return if abrupt later
         }
 
 
@@ -7615,7 +7654,7 @@ define("parser", function () {
             isAbrupt = api && api.isAbrupt;
 
             // use the (x instanceof Error) better in runtime to remove dependency
-            
+
         }
 
         saveTheDot();
@@ -7640,8 +7679,8 @@ define("parser", function () {
         } catch (ex) {
             console.log("[Parser Exception @parseGoal]: " + ex.name);
             console.log(ex.name);
-             console.log(ex.message);
-             console.log(ex.stack);
+            console.log(ex.message);
+            console.log(ex.stack);
             node = ex;
         }
         restoreTheDot();
@@ -26096,6 +26135,9 @@ define("runtime", function () {
         } else if (isPrefixOperation) {
 
             switch (op) {
+                case "!!":
+                    newValue = ToBoolean(GetValue(exprRef));
+                    return NormalCompletion(newValue);
                 case "~":
                     oldValue = ToNumber(GetValue(exprRef));
                     newValue = ~oldValue;
