@@ -9,6 +9,17 @@
 	    [
 		[null, null, "throws"]
 	    ]
-	}
+	},
 	
+	"upgrading parser to disallow bogus inputs ii":
+	{
+	    "init": 
+		"!",
+	    "throws": true,
+	    "tests": 
+	    [
+		[null, null, "throws"]
+	    ]
+	}
+		
 }

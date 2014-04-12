@@ -5307,6 +5307,9 @@ define("parser", function () {
             node.prefix = true;
             pass(v);
             node.argument = this.PostfixExpression();
+            if (node.argument == null) {
+                throw new SyntaxError("invalid unary expression "+node.operator+", operand missing");
+            }
             var l2 = loc && loc.end;
             node.loc = makeLoc(l1, l2);
             return node;
@@ -6694,6 +6697,7 @@ define("parser", function () {
             if (i >= j) break;
             s = this.Statement();
             list.push(s);
+            
         } while (!FinishSwitchStatementList[v]);
         return list;
     }
@@ -6705,8 +6709,30 @@ define("parser", function () {
         debug("stmtlist():");
         do {
             if (i >= j) break;
+            
             s = this.Statement();
             list.push(s);
+            
+        
+    	/*
+    	    es6> let id = 0;
+    	    undefined
+    	    es6> id id
+    	    0
+    	    
+    	    should throw first statement.
+    	    
+    	    
+    	    shall better recognize ; and lt here.
+    	    
+    	    skip(";") has to register, if one was found.
+    	    
+    	    if (!ltNext) it should throw
+    	    
+    	*/
+        
+            
+                        
         } while (!FinishStatementList[v]);
 
         return list;
