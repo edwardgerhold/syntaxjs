@@ -165,7 +165,7 @@ function runTest(current, testname) {
 	    
 	} catch (ex) {
 	    
-	    console.log("Exception at: "+jsonfile+": "+testname);
+	    console.log("FAIL: Exception at: "+jsonfile+": "+testname);
 	    console.log(ex.name);
 	    console.log(ex.message);
 	    console.log(ex.stack);

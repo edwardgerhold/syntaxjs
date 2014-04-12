@@ -1,0 +1,3 @@
+echo "testall´s stdout is piped into grep - showing all PASS lines"
+./testall | grep PASS
+

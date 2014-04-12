@@ -33,7 +33,7 @@
 	"JSON.parse: JSONObject with props":
 	{
 	    "init":
-		"let x = JSON.parse(\"{\"a\":1}\")",
+		"let x = JSON.parse('{\"a\":1}')",
 	    "tests":
 	    [
 	    
