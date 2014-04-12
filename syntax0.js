@@ -400,6 +400,14 @@ define("fswraps", function (require, exports) {
 define("tables", function (require, exports, module) {
 
     "use strict";
+    
+    var FewUnaryKeywords = {
+	__proto_:null,
+	"void": true,
+	"typeof": true,
+	"delete": true
+    };
+    exports.FewUnaryKeywords = FewUnaryKeywords;
 
     var StartOfThreeFourPunctuators = {
         __proto__:null,
@@ -592,7 +600,8 @@ define("tables", function (require, exports, module) {
         "TemplateHead": "TemplateLiteral",
         "StringLiteral": "Literal",
         "BooleanLiteral": "Literal",
-        "NullLiteral": "Literal"
+        "NullLiteral": "Literal",
+        "RegularExpressionLiteral": "RegularExpressionLiteral"
     };
 
 
@@ -1801,10 +1810,12 @@ define("tables", function (require, exports, module) {
         "++": true
     };
 
+
     var PunctOrLT = {
         "Punctuator": true,
         "LineTerminator": true
     };
+    
 
     exports.isDirective = isDirective;
     exports.isStrictDirective = isStrictDirective;
@@ -2908,6 +2919,7 @@ define("tokenizer", function () {
     var TypeOfToken = tables.TypeOfToken;
 
     var PunctOrLT = tables.PunctOrLT;
+    var FewUnaryKeywords = tables.FewUnaryKeywords;
     var AllowedLastChars = tables.AllowedLastChars;
     var OneOfThesePunctuators = tables.OneOfThesePunctuators;
 
@@ -3606,7 +3618,7 @@ define("tokenizer", function () {
         token.computed =  computed;
 
         //if (inputElementGoal != inputElementTemplateTail) {
-        if ((PunctOrLT[type]) && (!OneOfThesePunctuators[value])) {
+        if (FewUnaryKeywords[value] || (PunctOrLT[type] && !OneOfThesePunctuators[value])) {
             inputElementGoal = inputElementRegExp;
         }
         else inputElementGoal = inputElementDiv;
@@ -3850,6 +3862,7 @@ define("parser", function () {
     var Contains = require("earlyerrors").Contains;
 
     var withError, ifAbrupt, isAbrupt;
+    var IsIteration = tables.IsIteration;
     var IsTemplateToken = tables.IsTemplateToken;
     var FinishStatementList = tables.FinishStatementList;
     var FinishSwitchStatementList = tables.FinishSwitchStatementList;
@@ -5523,7 +5536,7 @@ define("parser", function () {
                 throw new SyntaxError(id.name + " is not a valid identifier in strict mode");
             }
 
-
+    /*
             if (kind == "var") {
                 varNames.push(id.name);
                 varDecls.push(node);
@@ -5531,7 +5544,7 @@ define("parser", function () {
                 lexNames.push(id.name);
                 lexDecls.push(node);
             }
-
+    */
 
             if (v === "=") node.init = this.Initialiser();
             else node.init = null;
@@ -5984,12 +5997,12 @@ define("parser", function () {
             if (v !== "(") {
                 id = this.Identifier();
                 node.id = id.name;
-
+/*
                 if (!node.expression) {
                     varNames.push(id.name);
                     varDecls.push(node);
                 }
-
+*/
             } else {
                 if (!node.expression) {
                     throw new SyntaxError("Function and Generator Declarations must have a name [only expressions can be anonymous]");
@@ -6217,7 +6230,13 @@ define("parser", function () {
             var label = this.Identifier();
             node.label = label.name;
             pass(":");
-            node.statement = this.Statement();
+            var stmt = this.Statement();
+
+            if (!IsIteration[stmt.type]) {
+        	throw new SyntaxError("A LabelledStatement must be an Iteration Statement");
+            }
+            
+            node.statement = stmt;
             var l2 = loc && loc.end;
             node.loc = makeLoc(l1, l2);
             EarlyErrors(node);
