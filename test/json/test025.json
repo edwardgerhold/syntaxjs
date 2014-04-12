@@ -5,14 +5,14 @@
 		"\"use strict\"; function f(eval, arguments) {}",
 	    "tests": 
 	    [
-		[null,null, "throws"]
+		[null ,null, "throws"]
 	    ]
 	},
 	
 	"eval and arguments identifier names throw in strict mode":
 	{
 	    "init": 
-		"\"use strict\"; let eval, arguments;",
+		"\"use strict\";let eval, arguments;",
 	    "tests": 
 	    [
 		[null,null, "throws"]

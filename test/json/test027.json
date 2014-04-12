@@ -2,7 +2,7 @@
 	"early errors: break, return, continue, super in Program":
 	{
 	    "init": 
-		"break",
+		"break;",
 	    "tests": 
 	    [
 		[null, null, "throws"]

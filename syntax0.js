@@ -3670,7 +3670,11 @@ define("tokenizer", function () {
             // move if () tests herein and free the fn from
             //switch (ch) {
             
+//            debug("InputElement before = " + inputElementGoal");
+            
             WhiteSpace() || LineTerminator() || DivPunctuator() || NumericLiteral() ||  Punctuation() || KeywordOrIdentifier() || StringLiteral() || TemplateLiteral();
+            
+//            debug("InputElement after = " + inputElementGoal");
             
             //}
             
@@ -7105,7 +7109,7 @@ define("parser", function () {
                 /* new idea */
                                 
             } else {
-            
+        	if (token != undefined)
         	throw new SyntaxError("unexpected token " + t + " with value " +v);
             }
             

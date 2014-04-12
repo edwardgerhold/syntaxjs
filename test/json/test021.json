@@ -3,7 +3,6 @@
 	{
 	    "init": 
 		"var r, r2; true ? (r = true, r2 = false) : (r = false, r2 = true);",
-
 	    "tests": 
 	    [
 		["r", true],
