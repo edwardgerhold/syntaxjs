@@ -3802,6 +3802,15 @@ define("earlyerrors", function () {
     };
 
 
+    /*
+	Problem:
+	
+	"ExpressionStatement"
+	
+	blocks contains.
+    
+    */
+
     Contains.FunctionDeclaration = {
 	__proto__:null,
        "BreakStatement":true,
@@ -5352,18 +5361,21 @@ define("parser", function () {
             var node = Node("SuperExpression");
             node.loc = makeLoc(l1, l1);
 
-            if (withExtras && extraBuffer.length) dumpExtras2(node, "before");
+            // if (withExtras && extraBuffer.length) dumpExtras2(node, "before");
 
             pass("super");
 
-            if (withExtras && extraBuffer.length) dumpExtras2(node, "before");
+            // if (withExtras && extraBuffer.length) dumpExtras2(node, "after");
 
             if (currentNode) currentNode.needsSuper = true;
-            // wird nicht im classDefaultConstructor erkannt sein.!
 
+            // "super" wird nicht im classDefaultConstructor erkannt sein.!
+            // da parseGoal nicht auf currentNode zugreifen kann.
+            // solution:
+            // STATE VARIABLE!!!! statt property
+            
             if (compile) return builder.superExpression(node.loc);
             return node;
-
         }
         return null;
     }
@@ -5375,11 +5387,11 @@ define("parser", function () {
             var node = Node("ThisExpression");
             node.loc = makeLoc(l1, l1);
 
-            if (withExtras && extraBuffer.length) dumpExtras2(node, "before");
+            // if (withExtras && extraBuffer.length) dumpExtras2(node, "before");
 
             pass("this");
 
-            if (withExtras && extraBuffer.length) dumpExtras2(node, "after");
+            // if (withExtras && extraBuffer.length) dumpExtras2(node, "after");
 
             if (compile) return builder.thisExpression(node.loc);
             return node;
@@ -6155,9 +6167,9 @@ define("parser", function () {
             l1 = loc && loc.start;
             node = Node("ReturnStatement");
 
-            if (withExtras && extraBuffer.length) dumpExtras2(node, "before");
+            // if (withExtras && extraBuffer.length) dumpExtras2(node, "before");
             pass("return");
-            if (withExtras && extraBuffer.length) dumpExtras2(node, "after");
+            // if (withExtras && extraBuffer.length) dumpExtras2(node, "after");
 
             if (v !== ";") {
 
@@ -6188,9 +6200,9 @@ define("parser", function () {
             var node = Node("WithStatement");
             var l1 = loc && loc.start;
 
-            if (withExtras) dumpExtras(node, "with", "before");
+            // if (withExtras) dumpExtras(node, "with", "before");
             pass("with");
-            if (withExtras) dumpExtras(node, "with", "after");
+            // if (withExtras) dumpExtras(node, "with", "after");
 
             pass("(");
 
@@ -6612,7 +6624,10 @@ define("parser", function () {
         debug("statement at " + v);
         var fn = this[StatementParsers[v]];
         if (fn) node = fn.call(this, a, b, c, d);
-        if (!node) node = (this.LabelledStatement(a, b, c, d) || this.Expression(a, b, c, d));
+        
+        if (!node) {
+    		node = this.LabelledStatement(a, b, c, d) || this.Expression(a,b,c,d);
+	}
         skip(";");
         return node;
     }
@@ -7138,7 +7153,7 @@ define("parser", function () {
 
         } else if (v === "$") {
 
-        } else if ((v === "\\" && lookahead === "b") || (v === "\\" && lookahead === "B")) {
+        } else if (v === "\\" && (lookahead === "b" || lookahead === "B")) {
 
         } else if (v === "(" && lookahead === "=") {
 
@@ -7251,12 +7266,15 @@ define("parser", function () {
 
     parser.JSONText = JSONText;
 
+
     function JSONText() {
+
         if (!withError) {
             withError = require("api").withError;
             ifAbrupt = require("api").ifAbrupt;
             isAbrupt = require("api").isAbrupt;
         }
+        
         return JSONValue();
     }
 
@@ -18053,7 +18071,7 @@ LazyDefineBuiltinConstant(SymbolFunction, "isRegExp", $$isRegExp);
 LazyDefineBuiltinConstant(SymbolFunction, "iterator", $$iterator);
 LazyDefineBuiltinFunction(SymbolFunction, "keyFor", 1, SymbolFunction_keyFor /* ,realm */);
 LazyDefineBuiltinConstant(SymbolFunction, "prototype", SymbolPrototype);
-LazyDefineBuiltinConstant(SymbolFunction, "toInstance", $$hasInstance);
+LazyDefineBuiltinConstant(SymbolFunction, "hasInstance", $$hasInstance);
 LazyDefineBuiltinConstant(SymbolFunction, "toPrimitive", $$toPrimitive);
 LazyDefineBuiltinConstant(SymbolFunction, "toStringTag", $$toStringTag);
 LazyDefineBuiltinConstant(SymbolFunction, "unscopables", $$unscopables);
@@ -24818,12 +24836,15 @@ define("runtime", function () {
                 status = BindingInitialisation(decl, initialiser, env);
                 if (isAbrupt(status = ifAbrupt(status))) return status;
             } else {
+                
                 if (decl.init) {
-                    name = decl.id;
+                    
+                    name = decl.id.name;
+                    
                     initialiser = GetValue(Evaluate(decl.init));
                     if (isAbrupt(initialiser=ifAbrupt(initialiser))) return initialiser;
                     if (IsCallable(initialiser)) {
-                        if (IsAnonymousFunctionDefinition(decl.init) && !HasOwnProperty(initialiser, "name")) {
+                        if (!HasOwnProperty(initialiser, "name")) {
                             SetFunctionName(initialiser, name);
                         }
                     }
