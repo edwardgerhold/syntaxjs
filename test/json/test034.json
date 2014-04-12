@@ -9,7 +9,7 @@
 	    ]
 	},
 	
-	"computed properties which are symbols":
+	"computed properties which are symbols ii":
 	{
 	    "init": 
 		"let s = Symbol(), t = Symbol(), u = Symbol(),\n obj = { set [s](v) { this[u] = v; }, get [s]() { return this[u]; }, get [t]() { return 'Welt'; } };" ,
