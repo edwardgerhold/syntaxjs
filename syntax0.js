@@ -3617,12 +3617,10 @@ define("tokenizer", function () {
         token.value = value;
         token.computed =  computed;
 
-        //if (inputElementGoal != inputElementTemplateTail) {
+
         if (FewUnaryKeywords[value] || (PunctOrLT[type] && !OneOfThesePunctuators[value])) {
             inputElementGoal = inputElementRegExp;
         }
-        else inputElementGoal = inputElementDiv;
-        //}
 
         // produce loc information
         token.offset = offset;
@@ -3653,6 +3651,7 @@ define("tokenizer", function () {
     function tokenize(jstext, callback) {
         if (jstext) sourceCode = jstext;
         if (callback) cb = callback;
+
         inputElementGoal = inputElementRegExp;
         tokens = [];
         line = 1;
@@ -3664,11 +3663,20 @@ define("tokenizer", function () {
         next();
         do {
             offset = i;
+            
+            token = null; // temp
+                
             // refactor next:
             // move if () tests herein and free the fn from
             //switch (ch) {
+            
             WhiteSpace() || LineTerminator() || DivPunctuator() || NumericLiteral() ||  Punctuation() || KeywordOrIdentifier() || StringLiteral() || TemplateLiteral();
+            
             //}
+            
+            if (!token) {
+        	throw new SyntaxError("Unknown Character: "+ch);
+            }
 
         } while (ch !== undefined);
 
@@ -3929,6 +3937,9 @@ define("parser", function () {
     var defaultIsId = true;
     var generatorParameter = false;
     var generatorParameterStack = [];
+    
+    
+    
 
     /*
      parser needs strict mode for early errors
@@ -4069,8 +4080,38 @@ define("parser", function () {
     var currentModule; // just be module
     var moduleStack = [];
     // have to finsish this crap urgently.
+    
+    /*
+	state
+	
+	Contains[ExpressionStatement] ruins my simple Contains blacklist
+	directly implemented in the StatementList Algorithms...
+    */
+    
+    // this could help, but i should need a piece of paper plus spec
+    // to write down what i don´t mind now (my memory is sometimes weak)
+    /*
+    var inState;
+    var inState_Program = 1;
+    var inState_Function = 2;
+    var inState_Method = 3;
+    var inState_Class = 4;
+    var inState_Module = 5;
+    var inStateStack = [];
+    */
+    /*
+	inState = inState_Function;
+    
+	in SuperExpression
+	
+	var noSuper = { 1 : true, 5 : true };
 
-    var lastloc = makeLoc();
+	if (noSuper[inState] && node.type === "
+	
+	
+    */
+    
+
     var loc = makeLoc();
     var text;
 
@@ -4277,7 +4318,6 @@ define("parser", function () {
 
             i += 1;
 
-            lastloc = loc;
             token = tokens[i];  // this function really works on an array
 
             // later it is "token = lookahead; lookahead = next(); not more, not less"
@@ -5579,12 +5619,15 @@ define("parser", function () {
             if (v === ",") {
                 pass(",");
                 continue;
-            } else if (v === ";") {
-                break;
             } else if (t === "Identifier" || StartBinding[v]) {
                 continue;
-            }
-
+    	    } else if (ltNext) {
+        	break;
+    	    } else if (v === ";") {
+    		pass(";");
+                break;
+    	    } 
+    	    
             break;
         }
         return list;
@@ -5601,7 +5644,6 @@ define("parser", function () {
         var node, decl, l1, l2;
         if (v === "var" || v === "let" || v === "const") {
             debug("VariableStatement (" + t + ", " + v + ")");
-
             l1 = loc && loc.start;
             node = Node("VariableDeclaration");
             node.declarations = [];
@@ -6621,15 +6663,27 @@ define("parser", function () {
 
     function Statement(a, b, c, d) {
         var node;
-        debug("statement at " + v);
+        
+        /*
+        if (debugmode) {
+    	    var start = loc && loc.start;
+    	    var line = start && start.line;
+    	    var col = start && start.col;
+            debug("statement at " + v + " at line "+line+", col "+col);
+        }
+        */
+
+        
         var fn = this[StatementParsers[v]];
         if (fn) node = fn.call(this, a, b, c, d);
-        
         if (!node) {
     		node = this.LabelledStatement(a, b, c, d) || this.Expression(a,b,c,d);
 	}
-        skip(";");
-        return node;
+	if (node) {
+    	    skip(";");
+    	    return node;
+    	}
+    	return null;
     }
 
     /*
@@ -6772,14 +6826,16 @@ define("parser", function () {
                     node.init = null;
                     pass(";");
                 } else {
+
                     if (v === "var") {
                         node.init = this.VariableStatementNoIn();
                     } else if (LetOrConst[v]) {
                         node.init = this.VariableStatementNoIn();
                     } else {
                         node.init = this.ExpressionNoIn();
+                	pass(";")
                     }
-                    pass(";")
+
                 }
 
                 if (v === ";") {
@@ -7047,7 +7103,12 @@ define("parser", function () {
                 if (!contains[node.type]) body.push(node);
                 else throw new SyntaxError("contains: "+node.type+" is not allowed in Program");
                 /* new idea */
+                                
+            } else {
+            
+        	throw new SyntaxError("unexpected token " + t + " with value " +v);
             }
+            
         } while (token != undefined);
 
         popStrict();
@@ -27305,10 +27366,18 @@ define("runtime", function () {
         }
 
         // convert references into values to return values to the user (toValue())
+	try {
+
         exprRef = Evaluate(node);
         if (Type(exprRef) === "reference") exprValue = GetValue(exprRef);
         else exprValue = exprRef;
 
+	} catch (ex) {
+	
+	    console.log("Real JS Exception:");
+	    throw ex;
+	
+	}
 
         // exception handling. really temporarily in this place like this
         if (isAbrupt(exprValue = ifAbrupt(exprValue))) {
