@@ -1,0 +1,1 @@
+./testall | grep FAIL

@@ -5329,11 +5329,15 @@ define("parser", function () {
     parser.ConditionalExpression = ConditionalExpression;
 
     function ConditionalExpression(left) {
+
         if (left && v === "?") {
+
             debug("ConditionalExpression ("+t+","+v+")");
             var l1 = loc && loc.start,
                 l2;
+
             var node = Node("ConditionalExpression");
+
             node.test = left;
             pass("?");
             node.consequent = this.AssignmentExpression();
@@ -5366,19 +5370,11 @@ define("parser", function () {
         if (!yieldIsId && v === "yield") node = this.YieldExpression();
         if (!node) node = this.CoverParenthesisedExpressionAndArrowParameterList();
 
-
-
-        if (!node) leftHand = this.UnaryExpression(); // recurses up
-        else leftHand = node;
-
-
-
+        leftHand = node || this.UnaryExpression(); // recurs up
         if (!leftHand) return null;
-
-
         if (v === undefined) return leftHand;
 
-        if ((isNoIn === true && InOrOf[v])) return leftHand; // i am at "in" or "of" in the expr
+        if ((isNoIn && InOrOf[v])) return leftHand; // i am at "in" or "of" in the expr
 
         if (v === "," || ExprEndOfs[v] || ltNext) return leftHand;
 
@@ -5386,6 +5382,7 @@ define("parser", function () {
             // throw new SyntaxError("can not parse expression");
             return leftHand;
         }
+
 
         if (v === "?") {
             node = this.ConditionalExpressionNoIn(leftHand);
@@ -5437,12 +5434,26 @@ define("parser", function () {
             node.loc = makeLoc(l1, l2);
             node = rotate_binexps(node);
             return node;
+
+ //       } else if (v != "," && v != ";" && !ltNext && v != ")" && v != "]" && v != "}") {
+
+     //       throw new SyntaxError("something is missing, maybe the operator?")
+
         } else {
+
             return leftHand;
+
         }
     }
 
     parser.SuperExpression = SuperExpression;
+
+
+        var ContainNoSuperIn = {
+            "Program" : true,
+            "ModuleDeclaration": true,
+            "Module" : true
+        };
 
     function SuperExpression() {
 
@@ -5458,7 +5469,18 @@ define("parser", function () {
 
             // if (withExtras && extraBuffer.length) dumpExtras2(node, "after");
 
-            if (currentNode) currentNode.needsSuper = true;
+            if (currentNode) {
+                if (ContainNoSuperIn[currentNode.type]) {
+                    throw new SyntaxError("contains: super is not allowed in "+currentNode.type);
+                }
+                currentNode.needsSuper = true;
+            }
+
+            if (currentNode === ast) {
+                throw new SyntaxError("contains: super Expression is not allowed in program")
+            }
+
+
 
             // "super" wird nicht im classDefaultConstructor erkannt sein.!
             // da parseGoal nicht auf currentNode zugreifen kann.
@@ -5467,6 +5489,7 @@ define("parser", function () {
             
             if (compile) return builder.superExpression(node.loc);
             return node;
+
         }
         return null;
     }
@@ -7222,9 +7245,12 @@ define("parser", function () {
 
         next(); // walk to first token
 
-        pushDecls();
+        pushDecls();    // symbol table replacement only with the varscoped lists is stupid,
+                    // i need duplicate identifier check anyways. (staticsemantics object symbol/list/contains mixture was a better idea)
+                        // redo symbol table which can make lists for getting semantic analysis into syntactic stage
 
         currentNode = node;
+
         node.body = this.SourceElements(node);
 
         var l2;
