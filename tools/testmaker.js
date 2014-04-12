@@ -39,7 +39,7 @@
 */
 
 var VERSION = "0.0.1";
-var jsonfile, rawjson, json, writetests, testnames, verbose, fn, separator;
+var jsonfile, rawjson, json, writetests, testnames, verbose, fn, separator, doubleseparator;
 var Test = require("../tools/tester0.js").Test;
 var syntaxjs = require("../syntax0.js").syntaxjs;
 var fs = require("fs");
@@ -66,7 +66,10 @@ function basic_setup (args) {
     json = JSON.parse(rawjson);
     testnames = Object.keys(json);
     separator = "";
-    for (var i = 0; i < 50; i++) separator += "-";
+    doubleseparator = "";
+    for (var i = 0; i < 79; i++) separator += "-";
+    for (var i = 0; i < 79; i++) doubleseparator += "=";
+    
 }
 
 function writeTest(current) {
@@ -75,12 +78,17 @@ function writeTest(current) {
 
 function runTest(current, testname) {
     // calling tester.js
+    
     var tester = new Test();
     var code = current.init;
     var throws = current.throws;
-    
+
+
+    console.log("TEST: " + testname);
+//    console.log("INIT: " + code);
+    console.log(code);
+
     if (throws) {
-	// defer
 	try {	
 	    var result = syntaxjs.eval(code, true, true);
 	} catch (ex) {
@@ -88,19 +96,19 @@ function runTest(current, testname) {
 	}
     } else {
 	var result = syntaxjs.eval(code, true, true);
-    }
-    
+    }    
     var tests = current.tests;
-    
-    // run all "throws tests on the code
-
-    tests.forEach(function (test) {
+    var testnum = 0;
+    tests.forEach(function (test, index) {
+	++testnum;
 	tester.add(function () {
+
 	    var code = test[0];
 	    var expected = test[1];
 	    var fn = test[2];	
 	    
 	    switch (fn) {
+		
 		case "throws":
 		    this.throws(function () {
 			var result = syntaxjs.eval(code, true);
@@ -114,16 +122,16 @@ function runTest(current, testname) {
 		    var result = syntaxjs.eval(code, true);
 		    this.assert(result, expected, code);
 	    }	    
+	    
+	    
 	});
     });
-    
-    console.log(separator);
-    console.log(testname);
-    console.log(code);
-    
-    
+        
     tester.run();
     tester.print();
+    
+    
+    
 }
 
 (function main(args) {
@@ -141,14 +149,20 @@ function runTest(current, testname) {
 	console.log(rawjson);
     }
     
-    testnames.forEach(function (testname) {
+    console.log( "\n" + (jsonfile + " " + doubleseparator).substr(0,79));
+    
+    testnames.forEach(function (testname, index) {
 	
 	var current = json[testname];
+	
+
 	 // a. convert to other testlibs writing tests.js to fs
 	// if (writetests) return writeTest(current);
 	// b. use tester.js as testrunner
 	try {
 	    runTest(current, testname);
+	    if (index < (testnames.length - 1)) console.log("\n" + separator);
+	    
 	} catch (ex) {
 	    
 	    console.log("Exception at: "+jsonfile+": "+testname);
