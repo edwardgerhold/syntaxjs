@@ -1,11 +1,22 @@
 syntaxjs
 ========
 
-
 Not bugfree(*) EcmaScript 6 (7**) Interpreter written in EcmaScript 5.
-This project was started on a PIII/933 in a dorm and is
+This project was started on a PIII/933 with mcedit in a dorm and is
 now continued on a notebook with 2 cores still in the dorm.
 It´s a fun project. 
+
+I have a lack in actual software engineering practices,
+and maybe had to reinvent the wheel first (that´s what the oldest code is)
+before i got through the parsing and interpreting lectures. I´m even behind
+with the typed memory system. But i see this as an opportunity to learn, how
+to work through "old, bad, dirty, chaotic, inconsistently designed, error 
+prone, legacy code" and to figure out how to use build tools and github. 
+If i would be better with these tools, i would replace the build process.
+It´s like using grunt for build tasks, and sweetjs for macros like ReturnIfAbrupt
+and maybe that or something else for including file snippets in the code,
+and even make my JSDoc comments correct.
+
 Hmm, i notice difficulties with writing plain text with myself nowadays.
 I´m working on it.
 
@@ -13,6 +24,77 @@ I´m working on it.
 which i edited in march, while new tests where missing.
 
 (**) contains at last one implemented proposal and more
+
+The Good and the Bad: Crushing all style conventions (for code readers)
+======================================================================
+I just came back from buying food and thought, what´s next?
+Now i´m typing this code style paragraph.
+
+The ECMA-262 Specification uses FirstLetterCaps with CamelCase.
+I see in my new Webstorm Trial, that modern IDE´s get the hint,
+that the "Constructor" does return a primitive value, which would
+get lost.
+
+You can breathe up. Syntax.js is "new" free. All Objects created
+are created via Object.create (or nodes are directly returned), so
+that no "new" will ever appear anywhere. Except for real native JS 
+Constructors like Object, Array, etc. Of course, i can´t change
+ArrayBuffer or other real native Builtins from the engines. You 
+should use them like you always do. But all objects created by 
+Syntax.js just follow the "No new required" rules, that people
+don´t get mad figuring out what´s a constructor and what´s not.
+
+So the Functions and Objects have evil "Caps" turned on. 
+Here i have some inconsistent stylistic things done, which should be aligned.
+All non-ECMA-262 definitions should start with a lower case 
+letter, except for "Constructors" (but they´ll be usable without 
+new).
+
+Means, the Code makes very bad use of identifiers. Currently.
+I can take a list of all my CapsFirstFunctionsAndVariables, and put a tool 
+on the code to rewrite all the names.
+
+
+New, old idea:
+==============
+1. Get rid of shared state and create a new set of all pieces each realm
+
+I shouldn´t share states between realms, when using tokenizer, parser,
+runtime. I should put that all into a function which creates altogether
+once each realm and rewrite syntaxjs.eval to use a hidden created REALM,
+the old shared state from the first parts of the implementation is still
+active. I push and pop the states onto and from the stack to change between
+realms. In reality (in a already finished system) this would cost and be 
+lousy (it IS lousy). So one of my aims when reworking tokenizer and parser
+is to get rid of the original execute function called by "syntaxjs.eval" and
+create with each realm (one should be created by default) a complete new set
+of parser and runtime (that they do not share any variable but the function
+which created them, say, they have the same parent function).
+
+Kicking the old syntax highlighter (lib/highlighter/highlighter-app.hs)
+=======================================================================
+
+Probably one of the best ideas, coz this thing (it´s nowadays broken
+anyways) depends on the standalone tokenizer. I will create a list of
+tokens on demand with the new parser. 
+
+Kicking the syntax highlighter makes most sense. a) nobody uses it,
+because it is no application but a homepage hack, where that toValue
+Button originated from.
+b) I can get rid of the stupidest dependency on my tokenizer. 
+c) When i let the parser do the listings for the highlighter, i can
+show AST informations, and that was the questions, with which i left
+my tokenizer (one year ago, without knowing, that i´ll do a runtime for).
+d) I can REWRITE IT!!!!! It needs some polish and some furniture to play
+sit on. 
+
+Wow. 17 Minutes. For that lousy english. Ok, i´ll better return to the
+project.
+
+Now back to the usage:
+======================
+
+It needs node.js to build. And to use the shell. 
 
 
 New: Multiple Realms
@@ -39,6 +121,19 @@ realm2.eval("x");
 realm.eval("x");
 // 10
 ```
+
+
+Again, the Realms are working independently, but they share parser,
+tokenizer, runtime on each invocation, which makes a save and restore
+of the last state, which could be interrupted necessary, unless i get
+rid of the shared state.
+
+A set of factories will return tokenizer objects, parser objects, 
+runtime objects.
+
+Probably in some days, or say weeks, i do not know what happens between.
+(This is not a business work, but a homework, which can be interrupted easily.)
+
 
 Regular Usage
 =============
