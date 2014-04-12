@@ -2638,10 +2638,11 @@ define("slower-static-semantics", function (require, exports, modules) {
         if (typeof node === "string") return node;
         var type = node.type;
         var id = node.id;
+        if (type === "StringLiteral") return StringValue(node);
         if (type === "Identifier") return StringValue(node);
         if (typeof id === "string") return id;
         if (type === "MethodDefinition") return PropName(id);
-        if (typeof id === "object") return PropName(id);
+        if (typeof id === "object") return StringValue(id);
     }
 
     function PropNameList(node, checkList) {
@@ -3598,12 +3599,12 @@ define("tokenizer", function () {
             lookahead = sourceCode[i + 1];
             if (k) { return next(--k); }
             return ch;
-        } else if (i === j) {
+        } else if (i >= j) {
             ch = undefined;
             lookahead = undefined;
             return false;
         }
-        throw new RangeError("next() over last character");
+//        throw new RangeError("next() over last character");
     }
 
 
@@ -3678,7 +3679,7 @@ define("tokenizer", function () {
             
             //}
             
-            if (!token) {
+            if (!token && i < j) {
         	throw new SyntaxError("Unknown Character: "+ch);
             }
 
@@ -25501,12 +25502,6 @@ define("runtime", function () {
 
 
 
-
-
-
-
-
-
         var node = propertyDefinition.value;
 
         var strict = node.strict;
@@ -25540,8 +25535,9 @@ define("runtime", function () {
             } else {
 
                 // init
-                propName = PropName(key);
-
+                propName = ""+ PropName(key);
+    		if (isAbrupt(propName=ifAbrupt(propName))) return propName;
+	
             }
 
             // value
