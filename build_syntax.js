@@ -28,7 +28,7 @@
 
 /*// #include "lib/intl/identifier-module.js"; // disabled */
 
-//#include "lib/intl/i18n.js";
+/* // #include "lib/intl/i18n.js"; */
 
 //#include "lib/parsenodes/semantics.js";
 
@@ -39,8 +39,8 @@
 //#include "lib/parsenodes/parser.js";
 //#include "lib/parsenodes/cstcodegen.js";
 
-//#include "lib/heap/heap.js";
-//#include "lib/compile/compiler.js";
+/* // #include "lib/heap/heap.js";
+   // #include "lib/compile/compiler.js"; */
 
 //#include "lib/api.js";
 

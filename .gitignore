@@ -4,3 +4,5 @@
 /out/
 /coverage/
 /not_inc/
+/compile
+/optimizer

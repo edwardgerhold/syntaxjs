@@ -1,8 +1,0 @@
-#!/bin/bash
-X=$1
-if test -n $X;
-then
-    cp test0.js test${X}.js
-    cp code0.js code${X}.js
-fi
-
