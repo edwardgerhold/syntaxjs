@@ -401,15 +401,16 @@ define("tables", function (require, exports, module) {
 
     "use strict";
     
-    var FewUnaryKeywords = {
+    var FewUnaryKeywords = { // for regex in the tokenizer
 	__proto_:null,
+	"yield":true, // yield inputelement=regexp nolthere assignmentexpr 
 	"void": true,
 	"typeof": true,
 	"delete": true
     };
     exports.FewUnaryKeywords = FewUnaryKeywords;
 
-    var StartOfThreeFourPunctuators = {
+    var StartOfThreeFourPunctuators = {	// for punctuator in the tokenizer
         __proto__:null,
         "!":true,
         "=":true,
@@ -2888,7 +2889,10 @@ define("slower-static-semantics", function (require, exports, modules) {
 });
 
 
-define("tokenizer", function () {
+define("tokenizer", function () { // should use this factory to create one each realm again
+                                    // and rename "define" to not collide with "AMD" as the
+                            // module system is anyways only for internal purposes.
+
 
     "use strict";
     var exports = {};
@@ -2923,6 +2927,7 @@ define("tokenizer", function () {
     var FewUnaryKeywords = tables.FewUnaryKeywords;
     var AllowedLastChars = tables.AllowedLastChars;
     var OneOfThesePunctuators = tables.OneOfThesePunctuators;
+    var SkipableToken = tables.SkipableToken;
 
     /*
      var unicode = require("unicode-support");
@@ -2948,7 +2953,7 @@ define("tokenizer", function () {
     var inputElementTemplateTail = 3;
     var inputElementGoal = inputElementRegExp;
     var withExtras = true;
-    var isWS, isLT, isCM;
+
     var debugmode = false;
     var hasConsole = typeof console === "object" && console && typeof console.log === "function";
 
@@ -2966,7 +2971,7 @@ define("tokenizer", function () {
     }
 
     function Assert(test, message) {
-        if (!test) throwError(new SyntaxError("tokenizer: "+message));
+        if (!test) throw new SyntaxError("assertion failed in tokenizer: "+message);
     }
 
     function updateStack(se) {
@@ -2977,9 +2982,8 @@ define("tokenizer", function () {
 
     function LineTerminator() {
         if (LineTerminators[ch]) {
-            isLT = true;
             makeToken("LineTerminator", ch);
-            isLT = false;
+            if (!(ch  === "\r" && lookahead === "\n")) nextLine();
             next();
             return token;
         }
@@ -2996,9 +3000,9 @@ define("tokenizer", function () {
                 next();
                 spaces += ch;
             }
-            isWS = true;
+
             makeToken("WhiteSpace", spaces);
-            isWS = false;
+
             next();
             return token;
         }
@@ -3018,7 +3022,9 @@ define("tokenizer", function () {
             string += ch;
 
             big: while (next()) {
+
                 string += ch;
+
                 if (ch === quotecharacter) {
                     n = string.length - 2;
                     do {
@@ -3026,19 +3032,36 @@ define("tokenizer", function () {
                         else if (string[n - 1] === "\\" && string[n - 2] !== "\\") break big;
                     } while (string[n -= 2] === "\\");
                 }
+
                 if (LineTerminators[lookahead]) {
+
                     n = string.length - 1;
+
                     while (string[n] === "\\") {
                         if (string[n - 1] === "\\") {
                             multiline = false;
                             n -= 2;
                         } else {
                             multiline = true;
+
+                            // damn that strings are immutable.
+                            // a new line costs a copy here
+                            // coz the dull "\" is applied already.
+                            // got to rewrite multiline part. by flipping this if´s multiline bool and putting string+=ch below.
+
+                            string = string.substr(0, string.length-1);
+
+                            // forgetting bout \ is expensive this versions
+
+
                             nextLine();
                             break;
                         }
                     }
                 }
+
+
+
                 if (LineTerminators[ch]) {
                     if (!multiline) throw new SyntaxError("Unexpected token ILLEGAL");
                     else multiline = false;
@@ -3048,6 +3071,7 @@ define("tokenizer", function () {
             next();
             return token;
         }
+
         return false;
     }
 
@@ -3111,9 +3135,9 @@ define("tokenizer", function () {
                 next();
                 comment += ch;
             }
-            isCM = true;
+
             makeToken(type, comment);
-            isCM = false;
+
             next();
             return token;
         } else if (ch + lookahead === "/*") {
@@ -3133,9 +3157,9 @@ define("tokenizer", function () {
             }
             comment += "*/";    // ch + lookahead
             next();
-            isCM = true;
+
             makeToken(type, comment);
-            isCM = false;
+
             next();
             return token;
         }
@@ -3144,10 +3168,12 @@ define("tokenizer", function () {
 
 
     function RegularExpressionLiteral() {
-        var expr = "";
-        var flags = "";
-        var n, l;
+
         if (ch === "/" && !NotBeforeRegExp[tokenType]) {
+
+            var expr = "";
+            var flags = "";
+            var n;
 
             if (!RegExpNoneOfs[lookahead] && !LineTerminators[lookahead]) {
 
@@ -3160,6 +3186,11 @@ define("tokenizer", function () {
                             // reached last character of regex
                             // here is my old algorithm to backtrack wether / is escaped or not
                             // i check for \ and before for \\ and look as far as it goes.
+
+                            // the new algo: will prolly have a "escaped" state variable switching at \ on and off after testing next
+                            // being if (escaped and ch == "\") its and escaped \ and escape is off again, if the thirf
+                            // is \ escape is on again and if the next is " it is escaped. and then turned off.
+                            // (no backtracking)
                             n = expr.length - 1;
                             do {
                                 // if not escaped or escaped and character before !=
@@ -3170,7 +3201,7 @@ define("tokenizer", function () {
                             // then i break out;
 
 
-                        } else if (LineTerminators[ch] || (i >= j)) {
+                        } else if (LineTerminators[ch] || ch == undefined) {
                             throw new SyntaxError("Unexpected end of line, while parsing RegularExpressionLiteral at line " + line + ", column " + column);
                         }
 
@@ -3183,12 +3214,11 @@ define("tokenizer", function () {
                 return false;
             }
 
-
-            if (ch === "/") {
+            if (ch === "/") { // is the second / which closes the regexp.
                 pass("/");
                 var hasFlags = {};
 
-                while (RegExpFlags[ch]) { // besorge noch die flags
+                while (RegExpFlags[ch]) { // besorge noch die flags, collect flags
 
                     if (hasFlags[ch]) throw new SyntaxError("duplicate flags not allowed in regular expressions");
 
@@ -3202,7 +3232,8 @@ define("tokenizer", function () {
 
                 inputElementGoal = inputElementDiv;
 
-                //    console.dir(token);
+                // next() is already done with the collection of flags.
+
                 return token;
             }
 
@@ -3221,16 +3252,13 @@ define("tokenizer", function () {
             if (tok = Comments()) return token = tok;
 
             if (inputElementGoal === inputElementRegExp) {
-
                 if (tok = RegularExpressionLiteral()) {
+                    inputElementGoal = inputElementDiv;
                     return token = tok;
                 }
                 inputElementGoal = inputElementDiv;
-
             }
-
             if (inputElementGoal !== inputElementRegExp) {
-
                 if (ch + lookahead === "/=") {
                     next();
                     makeToken("Punctuator", "/=", undefined, PunctToExprName["/="]);
@@ -3339,9 +3367,9 @@ define("tokenizer", function () {
          hardcode the rest forward next
          */
         var punct;
-
-        if (StartOfThreeFourPunctuators[ch]) {
-
+        if (!StartOfThreeFourPunctuators[ch]) {
+            punct = sourceCode[i] + sourceCode[i+1];
+        } else {
             punct = sourceCode[i] + sourceCode[i + 1] + sourceCode[i + 2] + sourceCode[i + 3];
             if (punct === ">>>=") {
                 next();next();next();
@@ -3359,13 +3387,8 @@ define("tokenizer", function () {
             }
 
             punct = punct[0] + punct[1];
-
-        } else {
-            punct = sourceCode[i] + sourceCode[i+1];
         }
-
         // only if one or two
-
         if (Punctuators[punct]) {
             next();
             makeToken("Punctuator", punct, undefined, PunctToExprName[punct]);
@@ -3383,9 +3406,9 @@ define("tokenizer", function () {
         return false;
     }
 
-    function DecimalDigitsHelp(number) {
-        var dot;
-        if (DecimalDigits[ch] || (ch === "." && DecimalDigits[lookahead] && (dot = true))) {
+    function getDecimalDigits(number) {
+        var dot = 0;
+        if (DecimalDigits[ch] || (ch === "." && DecimalDigits[lookahead] && (++dot))) {
             number += ch;
             for (;;) {
                 if (DecimalDigits[lookahead] || (lookahead === "." && !dot)) {
@@ -3404,7 +3427,12 @@ define("tokenizer", function () {
                         }
                         return number;
                     }
-                } else break;
+                } else if (lookahead === "." && dot) {
+                    throw new SyntaxError("unexpected number");
+                } else {
+                    break;
+                }
+
             }
             return number;
         }
@@ -3448,7 +3476,7 @@ define("tokenizer", function () {
             next();
             return token;
         } else if (DecimalDigits[ch] || (ch === "." && DecimalDigits[lookahead])) {
-            number = DecimalDigitsHelp(number);
+            number = getDecimalDigits(number);
             makeToken("NumericLiteral", number, +number, "DecimalLiteral");
             next();
             return token;
@@ -3547,6 +3575,14 @@ define("tokenizer", function () {
     function KeywordOrIdentifier() {
         var token = "", e;
         var raw = "";
+        // defer raw and value to parser stage? or not?
+        // when unpacking the literal and the keywords
+        // then convert unicode and stuff.
+        // that a parser literal has raw and value and
+        // a tokenizer one is just raw.
+        // directly coming issue: for the new
+        // not native ""+ of \u{sdf} should be some translation
+        // into a surrogate first. Or shouldn´t
 
 
         if (!IdentifierStart[ch] && !UnicodeIDStart[ch]) return false;
@@ -3610,7 +3646,7 @@ define("tokenizer", function () {
 
     function makeToken(type, value, computed, longName) {
 
-        if (!isWS && !isCM) tokenType = type;
+        if (!SkipableToken[type]) tokenType = type;
 
         token = Object.create(null);
         token.type = type;
@@ -3618,31 +3654,36 @@ define("tokenizer", function () {
         token.value = value;
         token.computed =  computed;
 
-
         if (FewUnaryKeywords[value] || (PunctOrLT[type] && !OneOfThesePunctuators[value])) {
             inputElementGoal = inputElementRegExp;
         }
 
         // produce loc information
-        token.offset = offset;
+
+
         token.loc = {
-            __proto__: null,
             source: filename,
             start: {
                 line: line,
                 column: column
             }
         };
+
         if (value != undefined) column += value.length;
+
         token.loc.end = {
-            __proto__: null,
             line: line,
             column: column - 1
         };
 
-        if (isLT && (!(value  === "\r" && lookahead === "\n"))) nextLine();
+        token.offset = offset;
+
+        // range is common in esprima. will soon fix this parser for es.
+        token.loc.range = [offset, offset + (((value&&value.length)-1)|0) ]
+
         if (createCustomToken) token = createCustomToken(token);
-        tokens.push(token);
+        tokens.push(token); //
+
         // if (cb) cb(token);
         // emit("token", token);
         return token;
@@ -3662,25 +3703,22 @@ define("tokenizer", function () {
         ch = undefined;
         lookahead = sourceCode[0];
         next();
+
+        var tokenTest;
         do {
             offset = i;
-            
-            token = null; // temp
-                
-            // refactor next:
-            // move if () tests herein and free the fn from
-            //switch (ch) {
-            
-//            debug("InputElement before = " + inputElementGoal");
-            
-            WhiteSpace() || LineTerminator() || DivPunctuator() || NumericLiteral() ||  Punctuation() || KeywordOrIdentifier() || StringLiteral() || TemplateLiteral();
-            
-//            debug("InputElement after = " + inputElementGoal");
-            
-            //}
-            
-            if (!token && i < j) {
-        	throw new SyntaxError("Unknown Character: "+ch);
+
+            tokenTest = WhiteSpace()
+            || LineTerminator()
+            || DivPunctuator()
+            || NumericLiteral()
+            ||  Punctuation()
+            || KeywordOrIdentifier()
+            || StringLiteral()
+            || TemplateLiteral()
+
+            if (!tokenTest && i < j) {
+                throw new SyntaxError("Unknown Character: "+ch+" at offset "+i+" at line "+line+" at column "+column);
             }
 
         } while (ch !== undefined);
@@ -3701,9 +3739,14 @@ define("tokenizer", function () {
     tokenizer.Punctuation = Punctuation;
     tokenizer.TemplateLiteral = TemplateLiteral;
 
+
+
     tokenize.tokenizer = tokenizer;
     tokenize.setCustomTokenMaker = setCustomTokenMaker;
     tokenize.unsetCustomTokenMaker = unsetCustomTokenMaker;
+
+
+
 
     function setCustomTokenMaker (func) {
         if (typeof func === null) {
@@ -5627,13 +5670,18 @@ define("parser", function () {
             } else if (t === "Identifier" || StartBinding[v]) {
                 continue;
     	    } else if (ltNext) {
-        	break;
+        	    break;
     	    } else if (v === ";") {
-    		pass(";");
+    		    pass(";");
                 break;
-    	    } 
-    	    
-            break;
+    	    } else if (v === undefined) {
+                break;
+            }
+
+
+            throw new SyntaxError("illegal token after "+kind+": " + v)
+
+            //break;
         }
         return list;
     }
@@ -7491,11 +7539,18 @@ define("parser", function () {
             ast = parser.Program();
 
         } catch (ex) {
+        
+    	  //  throw ex;
+
             console.log("[Parser Exception]: " + ex.name);
             console.log(ex.message);
             console.log(ex.stack);
             ast = ex;
+
+           // if ((x = parse(y)) instanceof Error) idea to return if abrupt later
         }
+
+
         return ast;
     }
 
@@ -7506,6 +7561,9 @@ define("parser", function () {
             withError = api && api.withError;
             ifAbrupt = api && api.ifAbrupt;
             isAbrupt = api && api.isAbrupt;
+
+            // use the (x instanceof Error) better in runtime to remove dependency
+            
         }
 
         saveTheDot();
@@ -7529,10 +7587,10 @@ define("parser", function () {
             var node = fn.call(parser);
         } catch (ex) {
             console.log("[Parser Exception @parseGoal]: " + ex.name);
-            /* console.log(ex.name);
+            console.log(ex.name);
              console.log(ex.message);
-             console.log(ex.stack); */
-            throw ex;
+             console.log(ex.stack);
+            node = ex;
         }
         restoreTheDot();
         return node;
@@ -25497,13 +25555,7 @@ define("runtime", function () {
 
         var kind = propertyDefinition.kind;
         var key =  propertyDefinition.key;
-
-
-
-
-
         var node = propertyDefinition.value;
-
         var strict = node.strict;
         var isComputed = propertyDefinition.computed;
 
@@ -25563,12 +25615,10 @@ define("runtime", function () {
                 }
                 // FOR NOW
 
-                // Der neue IsAnonymousFn fehlt noch.
 
                 status = CreateDataProperty(newObj, propName, propValue);
                 if (isAbrupt(status)) return status;
             }
-
         } else if (kind === "method") {
             propValue = Evaluate(node, newObj);
             if (isAbrupt(propValue = ifAbrupt(propValue))) return propValue;

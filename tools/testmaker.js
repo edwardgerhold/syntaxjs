@@ -77,14 +77,29 @@ function runTest(current, testname) {
     // calling tester.js
     var tester = new Test();
     var code = current.init;
-    var result = syntaxjs.eval(code, true, true);
+    var throws = current.throws;
+    
+    if (throws) {
+	// defer
+	try {	
+	    var result = syntaxjs.eval(code, true, true);
+	} catch (ex) {
+	    result = ex;
+	}
+    } else {
+	var result = syntaxjs.eval(code, true, true);
+    }
+    
     var tests = current.tests;
+    
+    // run all "throws tests on the code
 
     tests.forEach(function (test) {
 	tester.add(function () {
 	    var code = test[0];
 	    var expected = test[1];
 	    var fn = test[2];	
+	    
 	    switch (fn) {
 		case "throws":
 		    this.throws(function () {
@@ -105,6 +120,8 @@ function runTest(current, testname) {
     console.log(separator);
     console.log(testname);
     console.log(code);
+    
+    
     tester.run();
     tester.print();
 }
@@ -125,6 +142,7 @@ function runTest(current, testname) {
     }
     
     testnames.forEach(function (testname) {
+	
 	var current = json[testname];
 	 // a. convert to other testlibs writing tests.js to fs
 	// if (writetests) return writeTest(current);
@@ -132,7 +150,7 @@ function runTest(current, testname) {
 	try {
 	    runTest(current, testname);
 	} catch (ex) {
-	    console.log(separator);
+	    
 	    console.log("Exception at: "+jsonfile+": "+testname);
 	    console.log(ex.name);
 	    console.log(ex.message);

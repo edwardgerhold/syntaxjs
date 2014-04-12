@@ -3,6 +3,7 @@
 	{
 	    "init": 
 		"\"use strict\"; function f(eval, arguments) {}",
+	    "throws":true,
 	    "tests": 
 	    [
 		[null ,null, "throws"]
@@ -13,6 +14,8 @@
 	{
 	    "init": 
 		"\"use strict\";let eval, arguments;",
+	    "throws": true,
+	    
 	    "tests": 
 	    [
 		[null,null, "throws"]
@@ -23,6 +26,7 @@
 	{
 	    "init": 
 		"var eval, arguments;\nfunction f(eval, arguments) {return arguments}",
+	
 	    "tests": 
 	    [
 		["eval = f(0,1);", 1]

@@ -1,0 +1,13 @@
+{
+	
+	"multiline String":
+	{
+	    "init": 
+		"let s = 'this\\\nis\\\na\\\nmultiline\\\nstring';" ,
+	    "tests": 
+	    [
+		["s", "this\nis\na\nmultiline\nstring" ]
+	    ]
+	}
+	
+}
