@@ -26136,18 +26136,21 @@ define("runtime", function () {
 
             switch (op) {
                 case "!!":
-                    newValue = ToBoolean(GetValue(exprRef));
-                    return NormalCompletion(newValue);
+                    return NormalCompletion(ToBoolean(GetValue(exprRef)));
                 case "~":
                     oldValue = ToNumber(GetValue(exprRef));
+                    if (isAbrupt(newValue)) return newValue;
                     newValue = ~oldValue;
                     return NormalCompletion(newValue);
                 case "!":
                     oldValue = ToNumber(GetValue(exprRef));
+                    if (isAbrupt(newValue)) return newValue;
                     newValue = !oldValue;
                     return NormalCompletion(newValue);
                 case "+":
-                    return NormalCompletion(ToNumber(GetValue(exprRef)));
+                    newValue = ToNumber(GetValue(exprRef))
+                    if (isAbrupt(newValue)) return newValue;
+                    return NormalCompletion(newValue);
                     break;
                 case "-":
                     oldValue = ToNumber(GetValue(exprRef));
