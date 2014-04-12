@@ -23883,6 +23883,8 @@ define("runtime", function () {
     var scriptLocation;
 
     var initialisedTheRuntime = false;
+    var shellMode; // keep strict mode turned on
+    var keepStrict; // idea for legacy shell mode (until i remove whole syntaxjs.eval for syntaxjs.createRealm().eval() and kick shared state with factories)
     var evaluation = Object.create(null);
 
     var strictModeStack = [];
@@ -23936,6 +23938,56 @@ define("runtime", function () {
         return obj;
     }
 
+
+    /* // # include "lib/parsenodes/runtime_instantiations.js"
+
+
+        will explement all ECMA-262 helper functions, which
+        are not directly associated with a production name
+        into this external file
+
+        maybe differentiate between instantiate + argumentsobject
+        and helpers for e.g. accumulation or switch-case, which are
+        in runtime_helpers or _additionals. maybe a good sorted
+        runtime is even better.
+
+        Anyways the included ECMA-262 operations here are the ops,
+         which operate on the AST. the AST is separated from the lib/api and lib/intrinsics
+         except for a little
+
+         parseGoal/BoundNames in GeneratorFunction
+         parseGoal/BoundNames in Function
+         and if i forgot, somewhere else, all else in api/ and intr/ _is_ AST free.
+         That worked almost.
+
+         There is some shared state from "single realm" to "multi realm" left over,
+         which is a target for the next edits.
+
+
+        break it into
+
+        _instantiation
+        _callexpressions
+        _arguments
+        _bindinginitialisation
+
+        files or parts
+
+        find out what to do with
+
+        ...accumulation
+        ...qualifier
+        ...caseblock eval
+        ...forbody eval
+
+        (sort to the productions)
+        (put the big call/instantiate into a new file or two)
+
+     */
+
+
+
+
     function ResolveBinding(name) {
         var lex = getLexEnv();
         var strict = getContext().strict;
@@ -23965,6 +24017,27 @@ define("runtime", function () {
         }
 
     }
+
+    /*
+
+            Btw.
+
+            FDECL
+            GENDECL
+
+            .expr
+            .gen
+
+            THIS IS BULL***
+
+            use one or none,
+            hehe. Or write better docs
+            and accept both
+
+            Want the verbose number
+            coz node.type eval works fine then
+
+     */
 
     var isFuncDecl = {
         "GeneratorDeclaration":true,
@@ -24324,6 +24397,7 @@ define("runtime", function () {
         return obj;
     }
 
+
     function CompleteStrictArgumentsObject(obj) {
         AddRestrictedFunctionProperties(obj);
         return obj;
@@ -24517,10 +24591,15 @@ define("runtime", function () {
                 // 9 bio. not. So no.
                 if (isTemplateCallSite(argValue)) {
                     args = getTemplateArgumentList(argValue, args);
+                    // better: acceppt the call site, but use the provided args instead of this SubstituionEvaluation.
                     break;
-                } // passes the test but adds 1 function call to isTemplateCallSite in 99% of
+                }
+
+                // passes the test but adds 1 function call to isTemplateCallSite in 99% of
                 // not matching cases, maybe i should disallow calls to String.raw(template) for .
                 //
+
+
 
                 args.push(argValue);
             }
@@ -24569,6 +24648,7 @@ define("runtime", function () {
         var params = getInternalSlot(this, "FormalParameters");
         var code = getInternalSlot(this, "Code");
         var thisMode = getInternalSlot(this, "ThisMode");
+        var strictFn = getInternalSlot(this, "Strict");
         var scope = getInternalSlot(this, "Environment");
         var realm = getRealm();
         debug("thisMode = " + thisMode);
@@ -24579,7 +24659,8 @@ define("runtime", function () {
         var calleeContext = ExecutionContext(getLexEnv());
 
         calleeContext.realm = realm;
-        var calleeName = Get(this, "name");
+        var calleeName = Get(this, "name"); // costs time and money, is just for the context.name for stackframe
+                                            // should be clear from callexpr.callee BoundName already what the f is called.
         var callerName = callerContext.callee;
 
         stack.push(calleeContext);
@@ -24587,27 +24668,35 @@ define("runtime", function () {
         calleeContext.caller = callerName;
         calleeContext.callee = calleeName;
 
+
         if (thisMode === "lexical") {
             localEnv = NewDeclarativeEnvironment(scope);
+
         } else {
 
-            if (thisMode === "strict") {
+
+            if (thisMode === "strict" || strictFn) {
 
                 this.thisValue = thisArg;
                 calleeContext.strict = true;
 
             } else {
 
-                if (thisArg === null || thisArg === undefined) {
+                if (thisArg === null || thisArg === undefined || !strictFn) {
+
                     this.thisValue = getGlobalThis();
+
                 } else if (Type(thisArg) !== "object") {
+
                     this.thisValue = ToObject(thisArg);
+
                 } else {
                     this.thisValue = thisArg;
                 }
 
 
             }
+
             localEnv = NewFunctionEnvironment(this, this.thisValue);
         }
 
@@ -24619,7 +24708,6 @@ define("runtime", function () {
         if (isAbrupt(status = ifAbrupt(status))) {
             return status;
         }
-
 
         result = EvaluateBody(this);
         Assert(stack.pop() === calleeContext, "The right context could not be popped from the stack");
@@ -25476,7 +25564,7 @@ define("runtime", function () {
 
          }
          */
-        return withError("Syntax", "Can not create Regular Expression from Literal " + literalSource);
+        return withError("Syntax", "Can not create Regular Expression from Literal (currently not implemented)");// + literalSource);
     }
     evaluation.RegularExpressionLiteral = RegularExpressionLiteral;
 
@@ -25651,8 +25739,9 @@ define("runtime", function () {
         var isComputed = propertyDefinition.computed;
 
         var status;
-        var exprRef, exprValue;
+        //var exprRef, exprValue;
         var propRef, propName, propValue;
+        /*
         var closure;
         var formals;
         var body;
@@ -25660,7 +25749,7 @@ define("runtime", function () {
         var hasSuperRef;
         var homeObject;
         var methodName;
-        var functionPrototype;
+        var functionPrototype;*/
 
         /* I refactored it today, but resetted it tonight, i rewrite it tomorrow */
 
@@ -26203,14 +26292,6 @@ define("runtime", function () {
     }
     evaluation.UnaryExpression = UnaryExpression;
     evaluation.BinaryExpression = BinaryExpression;
-
-    /** ************************************************************************************************************************************************************************************************ */
-    /** ************************************************************************************************************************************************************************************************ */
-    /** ************************************************************************************************************************************************************************************************ */
-
-    /** ************************************************************************************************************************************************************************************************ */
-    /** ************************************************************************************************************************************************************************************************ */
-    /** ************************************************************************************************************************************************************************************************ */
 
     function instanceOfOperator(O, C) {
         if (Type(C) !== "object") return withError("Type", "instanceOfOperator: C is not an object.");
@@ -27436,8 +27517,10 @@ define("runtime", function () {
 
         var v;
         var cx = getContext();
-        if (program.strict) {
+
+        if (program.strict || keepStrict) {
             cx.strict = true;
+            if (shellMode) keepStrict = true;
         }
 
         var status = InstantiateGlobalDeclaration(program, getGlobalEnv(), []);
@@ -27560,12 +27643,15 @@ define("runtime", function () {
     function execute(source, shellModeBool, resetEnvNowBool) {
         var exprRef, exprValue, text, type, message, stack, error, name, callstack;
 
+        shellMode =  shellModeBool; // prolly just for this legacy execute function
+
         var node = typeof source === "string" ? parse(source) : source;
         if (!node) throw "example: Call execute(parse(source)) or execute(source)";
 
         if (!initialisedTheRuntime || !shellModeBool || resetEnvNowBool) {
             var realm = CreateRealm();
             ecma.setCodeRealm(realm);
+            keepStrict = false;
             initializeTheRuntime();
             setScriptLocation();
             NormalCompletion(undefined);

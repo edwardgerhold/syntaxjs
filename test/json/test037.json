@@ -1,0 +1,34 @@
+{
+	
+	"testing non strict mode this (possibly turned around)":
+	{
+	    "init": 
+		"function f() { return !!this; }",
+	    "tests": 
+	    [
+		[" f()", true ]
+	    ]
+	},
+	
+	"testing strict mode this (possibly turned around) ":
+	{
+	    "init": 
+		"function g() { 'use strict'; return !!this; }",
+	    "tests": 
+	    [
+		["g()", false]
+	    ]
+	},
+	
+	
+	"testing global strict mode and f-this ":
+	{
+	    "init": 
+		"'use strict'; function f() { return !!this }",
+	    "tests": 
+	    [
+		["f()", false]
+	    ]
+	}
+		
+}
