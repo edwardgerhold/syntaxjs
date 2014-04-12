@@ -1,0 +1,23 @@
+{
+	"computed properties which are symbols":
+	{
+	    "init": 
+		"let s = Symbol(), t = Symbol(), obj = { [s]: 'Hallo', get [t]() { return 'Welt'; } };" ,
+	    "tests": 
+	    [
+		["obj[s] + ' ' + obj[t]", "Hallo Welt" ]
+	    ]
+	},
+	
+	"computed properties which are symbols":
+	{
+	    "init": 
+		"let s = Symbol(), t = Symbol(), u = Symbol(),\n obj = { set [s](v) { this[u] = v; }, get [s]() { return this[u]; }, get [t]() { return 'Welt'; } };" ,
+	    "tests": 
+	    [
+		["obj[s] = 'Hallo';", "Hallo"],
+		["obj[u];", "Hallo"],		
+		["obj[s] + ' ' + obj[t]", "Hallo Welt" ]
+	    ]
+	}
+}
