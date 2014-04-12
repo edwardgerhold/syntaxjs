@@ -1,0 +1,14 @@
+{
+	
+	"upgrading parser to disallow bogus inputs":
+	{
+	    "init": 
+		"let x + 1",
+	    "throws": true,
+	    "tests": 
+	    [
+		[null, null, "throws"]
+	    ]
+	}
+	
+}
