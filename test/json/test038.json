@@ -1,0 +1,35 @@
+{
+	
+	"escape identifier":
+	{
+	    "init": 
+		"var \u0078 = 10;",
+	    "tests": 
+	    [
+		["x", 10 ]
+	    ]
+	},
+	
+	"escape keyword ":
+	{
+	    "init": 
+		"\u0076\u0061r x = 10;",
+	    "throws":true,
+	    "tests": 
+	    [
+		["x", 10]
+	    ]
+	},
+	
+	
+	"testing global strict mode and f-this ":
+	{
+	    "init": 
+		"'use strict'; function f() { return !!this }",
+	    "tests": 
+	    [
+		["f()", false]
+	    ]
+	}
+		
+}

@@ -547,6 +547,7 @@ define("tables", function (require, exports, module) {
         "NumericLiteral": "Literal",
         "BooleanLiteral": "Literal",
         "NullLiteral": "Literal",
+        "Literal": "Literal",
         "ArrayExpression": "ArrayExpression",
         "ObjectExpression": "ObjectExpression",
         "ArrayComprehension": "ArrayComprehension"
@@ -601,6 +602,7 @@ define("tables", function (require, exports, module) {
         "TemplateHead": "TemplateLiteral",
         "StringLiteral": "Literal",
         "BooleanLiteral": "Literal",
+        "Literal":"Literal",
         "NullLiteral": "Literal",
         "RegularExpressionLiteral": "RegularExpressionLiteral"
     };
@@ -1125,7 +1127,8 @@ define("tables", function (require, exports, module) {
         "O": true,
         "o": true
     };
-    var SingleEscape = {
+
+    var SingleEscapeCharacter = {
         __proto__: null,
         "b": "\b",
         "t": "\t",
@@ -1454,7 +1457,11 @@ define("tables", function (require, exports, module) {
         "BooleanLiteral": true,
         "StringLiteral": true,
         "TemplateLiteral": true,
-        "RegularExpressionLiteral": true
+        "RegularExpressionLiteral": true,
+
+        "Literal":true // with escape sequence.
+        
+        
     };
     var PunctToExprName = {
         __proto__: null,
@@ -1797,8 +1804,6 @@ define("tables", function (require, exports, module) {
 
 
     var AllowedLastChars = {
-        ")": true,
-        "]": true,
         "}": true,
         ";": true,
         ":": true,
@@ -1871,7 +1876,7 @@ define("tables", function (require, exports, module) {
     exports.SignedInteger = SignedInteger;
     exports.ParensSemicolonComma = ParensSemicolonComma;
     exports.NumericLiteralLetters = NumericLiteralLetters;
-    exports.SingleEscape = SingleEscape;
+    exports.SingleEscapeCharacter = SingleEscapeCharacter;
     exports.IdentifierStart = IdentifierStart;
     exports.IdentifierPart = IdentifierPart;
     exports.Types = Types;
@@ -2907,13 +2912,13 @@ define("tokenizer", function () { // should use this factory to create one each 
     var LineTerminators = tables.LineTerminators;
     var HexDigits = tables.HexDigits;
     var BinaryDigits = tables.BinaryDigits;
+    var SingleEscapeCharacter = tables.SingleEscapeCharacter;
     var OctalDigits = tables.OctalDigits;
     var DecimalDigits = tables.DecimalDigits;
     var ExponentIndicator = tables.ExponentIndicator;
     var SignedInteger = tables.SignedInteger;
     var ParensSemicolonComma = tables.ParensSemicolonComma;
     var NumericLiteralLetters = tables.NumericLiteralLetters;
-    var SingleEscape = tables.SingleEscape;
     var IdentifierStart = tables.IdentifierStart;
     var IdentifierPart = tables.IdentifierPart;
     var RegExpFlags = tables.RegExpFlags;
@@ -3444,7 +3449,9 @@ define("tokenizer", function () { // should use this factory to create one each 
     function NumericLiteral() {
         var number = "",
             longName, computed = 0;
+
         if (ch === "0" && NumericLiteralLetters[lookahead]) {
+
             number += ch;
             next();
             if ((ch === "x" || ch === "X") && HexDigits[lookahead]) {
@@ -3485,41 +3492,83 @@ define("tokenizer", function () { // should use this factory to create one each 
         }
         return false;
     }
+    
+    
+        function getUnicodeBody() {
+
+                    var max, now = 0, raw = "";
+                    
+                    if (lookahead == "1") max = 5;
+                    else if (lookahead == "0") max = 4;
+                    else throw new SyntaxError("unexpected kind of unicode literal");
+                    
+                    
+                    while (HexDigits[lookahead]) {
+                        next();
+                        ++now;
+                        raw += ch;
+                        if (now === max) break;
+                    }
+                    
+                    if (now < max) throw new SyntaxError("unexpected kind of unicode literal "+max+" digits expected");
+
+		    return raw;
+    }
 
     function EscapeSequence() {
         var raw = "";
         var value = "";
 
+ 
         if (ch == "\\") {
+        var longName = "EscapeSequence";
+            
             raw += ch;
+            
+            
             if (lookahead === "u") {
                 next();
                 raw += ch;
                 if (lookahead == "{") {
+                    
                     next();
                     raw += ch;
-                    while (HexDigits[lookahead]) {
-                        next();
-                        raw += ch;
-                    }
+                    
+                    
+                    raw += getUnicodeBody();
+                    
                     if (lookahead === "}") {
                         next();
                         raw += ch;
                         value = eval("\'" + raw + "\'");
-                    } // else throw "missing }"
-                } else {
-                    while (HexDigits[lookahead]) {
-                        next();
-                        raw += ch;
-                        /*++i;
-                         if (i == 4) break; // some type more */
+                    } else {
+                	throw new SyntaxError("expecting } to close unicode seq.");
                     }
+                    
+                } else {
+                    
+                    raw += getUnicodeBody();
+
                     // value = String.fromCharCode(+(raw.substr(2, raw.length-1)));
+                
                     value = eval("\'" + raw + "\'");
+                
                 }
             } else if (SingleEscapeCharacter[lookahead]) {
+                
                 next();
-                raw = SingleEscape[ch];
+                raw = SingleEscapeCharacter[ch];
+                
+            } else if (OctalDigits[lookahead]) {
+    
+		next();
+		raw += ch;
+		while (OctalDigits[lookahead]) {
+		    next();
+        	    raw += ch;
+        	} 
+                value = parseInt(raw.substr(1, raw.length), 8);
+                
             } else if (lookahead === "x") {
                 next();
                 raw += ch;
@@ -3528,12 +3577,30 @@ define("tokenizer", function () { // should use this factory to create one each 
                     raw += ch;
                 }
                 value = eval("\'" + raw + "\'");
+        
             }
-            return [ raw, value ]
+             else {
+        	throw new SyntaxError("invalid escape sequence "+ch+ " "+lookahead);
+            }
+            
+            
+            
+            return value;
+            
+            
+	    /*
+            makeToken("Literal", value, undefined, longName); // remove computed and go with esprimas raw and value
+
+            next();
+            
+            return token;
+            */
+            
         }
+        
         return false;
     }
-
+/*
     function UnicodeEscape() {
         var raw = "",
             value = "",
@@ -3573,10 +3640,11 @@ define("tokenizer", function () { // should use this factory to create one each 
         }
         return [ raw, value ];
     }
-
+*/
     function KeywordOrIdentifier() {
         var token = "", e;
         var raw = "";
+        var escaped = false;
         // defer raw and value to parser stage? or not?
         // when unpacking the literal and the keywords
         // then convert unicode and stuff.
@@ -3590,34 +3658,48 @@ define("tokenizer", function () { // should use this factory to create one each 
         if (!IdentifierStart[ch] && !UnicodeIDStart[ch]) return false;
 //    	    !String.isIdentifierStart(ch.codePointAt(0))) return false;
 
+
         if (ch !== "\\") {
             token += ch;
+
         } else {
-            if (lookahead === "u") {
-                e = UnicodeEscape();
-                token += e[1];
-            } else {
-                return false;
-            }
+
+    	    token = EscapeSequence();
+
+    	    escaped = true;
+    	    
+    	    
+    	    if (!IdentifierPart[lookahead] && (lookahead != "\\")) {
+
+		if (IdentifierStart[token]) makeToken("Identifier", token);
+    		else throw new SyntaxError("unexpected escape sequence");
+    		
+    		next();
+    		return token;
+    		
+    	    } 
+    	    
         }
 
-        while (IdentifierPart[lookahead] ||
+
+        while (IdentifierPart[lookahead] || lookahead == "\\" ||
 
             // (lookahead && String.isIdentifierPart(lookahead.codePointAt(0)))
             // move table to unicodeIDcontinue
 
             UnicodeIDContinue[lookahead]) {
+            
             next();
-
-            if (ch === "\\" && lookahead === "u") {
-                e = UnicodeEscape();
-                token += e[1];
+            if (ch === "\\") {
+        	escaped = true;
+                token += EscapeSequence();
             } else {
                 token += ch;
             }
         }
-        makeToken(TypeOfToken[token] || "Identifier", token, token);
-
+        
+        makeToken((escaped ? "Identifier" : (TypeOfToken[token] || "Identifier")), token, token);
+        
         next();
 
         return token;
@@ -3656,9 +3738,10 @@ define("tokenizer", function () { // should use this factory to create one each 
         token.value = value;
         token.computed =  computed;
 
-        if (FewUnaryKeywords[value] || (PunctOrLT[type] && !OneOfThesePunctuators[value])) {
+        if ((FewUnaryKeywords[value] || PunctOrLT[type]) && !OneOfThesePunctuators[value]) {
             inputElementGoal = inputElementRegExp;
-        }
+        } else inputElementGoal = inputElementDiv;
+        
 
         // produce loc information
 
@@ -3714,7 +3797,8 @@ define("tokenizer", function () { // should use this factory to create one each 
             || LineTerminator()
             || DivPunctuator()
             || NumericLiteral()
-            ||  Punctuation()
+            // || EscapeSequence()
+            || Punctuation()
             || KeywordOrIdentifier()
             || StringLiteral()
             || TemplateLiteral()
@@ -3725,6 +3809,7 @@ define("tokenizer", function () { // should use this factory to create one each 
 
         } while (ch !== undefined);
 
+	//console.log("tokenizer returns");
         return tokens;
     }
 
@@ -3735,7 +3820,6 @@ define("tokenizer", function () { // should use this factory to create one each 
     tokenizer.Comments = Comments;
     tokenizer.DivPunctuator = DivPunctuator;
     tokenizer.RegularExpressionLiteral = RegularExpressionLiteral;
-    tokenizer.UnicodeEscape = UnicodeEscape;
     tokenizer.EscapeSequence = EscapeSequence;
     tokenizer.NumericLiteral = NumericLiteral;
     tokenizer.Punctuation = Punctuation;
@@ -5735,8 +5819,10 @@ define("parser", function () {
 
             throw new SyntaxError("illegal token after "+kind+": " + v)
 
-            //break;
+            //break;        
         }
+        
+        if (!list.length) throw new SyntaxError("expecting identifier names after "+kind);
         return list;
     }
     parser.VariableStatement = VariableStatement;
@@ -7246,8 +7332,10 @@ define("parser", function () {
                 /* new idea */
 
             } else {
+            
                 if (token != undefined)
                     throw new SyntaxError("unexpected token " + t + " with value " +v);
+            
             }
 
         } while (token != undefined);
@@ -23597,7 +23685,7 @@ define("runtime", function () {
     "use strict";
 
 
-    var parse = require("parser");
+    var parse = require("parser"); // CREATE A NEW PARSER (which creates a new tokenizer) HERE (when realm creates a NEW RUNTIME)
     var ecma = require("api");
     var statics = require("slower-static-semantics");
 //    var i18n = require("i18n-messages"); // this is still a hoax, should focus on error messages
@@ -24682,7 +24770,7 @@ define("runtime", function () {
 
             } else {
 
-                if (thisArg === null || thisArg === undefined || !strictFn) {
+                if (thisArg === null || thisArg === undefined) {
 
                     this.thisValue = getGlobalThis();
 
@@ -24690,8 +24778,11 @@ define("runtime", function () {
 
                     this.thisValue = ToObject(thisArg);
 
-                } else {
+                } else if (Type(thisArg) === "object") {
+                
                     this.thisValue = thisArg;
+                } else {
+        	    this.thisValue = getGlobalThis();
                 }
 
 
