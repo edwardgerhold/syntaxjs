@@ -3204,7 +3204,7 @@ define("tokenizer", function () { // should use this factory to create one each 
                                 // if not escaped or escaped and character before !=
                                 if ((expr[n] !== "\\") || (expr[n - 1] === "\\" && expr[n - 2] !== "\\")) {
                                     break big;
-                  c              }
+                                }
                             } while (expr[n -= 2] === "\\");
                             // then i break out;
                         } else if (LineTerminators[ch] || ch == undefined) {
@@ -14225,31 +14225,25 @@ List.prototype.pop = List.prototype.removeLast;
 List.prototype.shift = List.prototype.removeFirst;
 
 
+
+
+
 function RegExpInitialize(obj, pattern, flags) {
 
 	var P, F, BMP;;
 	if (pattern === undefined) P = "";
 	else P = ToString(pattern);
 	if (isAbrupt(P=ifAbrupt(P))) return P;
-
 	if (flags === undefined) F = "";
-	BMP = !(F.indexOf("u") >-1);
-    if (BMP) {
+    else F = ToString(flags);
+	BMP = F.indexOf("u") === -1;
 
-        var parsed = parseGoal("Pattern", P);
-
-        // steps missing
-
-    } else {
-
-        var parsed = parseGoal("Pattern", P);
-
-    }
-
+    var parsed = parseGoal("Pattern", P);
 
     setInternalSlot(obj, "OriginalFlags", F);
     setInternalSlot(obj, "OriginalSource", P);
-    setInternalSlot(obj, "RegExpMatcher", RegExpMatcher);
+    setInternalSlot(obj, "RegExpMatcher", RegExpMatcher(patternCharacters, flags, parsed));
+
     var putStatus = Put(obj, "lastIndex", 0, true);
     if (isAbrupt(putStatus=ifAbrupt(putStatus))) return putStatus;
     return NormalCompletion(obj);
@@ -14262,7 +14256,7 @@ function RegExpAllocate(constructor) {
 		"OriginalSource": undefined,
 		"OriginalFlags": undefined
 	});
-	var status = DefinePropertyOrThrow(obj, "lastIndex", {
+	var status = DefineOwnPropertyOrThrow(obj, "lastIndex", {
 		writable: true,
 		configurable: false,
 		enumerable: false,
@@ -14282,7 +14276,7 @@ function RegExpAllocate(constructor) {
     all other "node traversing" functions.
  */
 
-function RegExpMatcher(patternCharacters, flags) {
+function RegExpMatcher(patternCharacters, flags, parsed) {
 
     var matcher = {};
     matcher.Input = patternCharacters; // patternCharacters is the input alphabet i guess, that means the whole set of codepoints/units and not a-z
@@ -14313,10 +14307,7 @@ function RegExpMatcher(patternCharacters, flags) {
 function Pattern (node) {
     var disjunction = node.disjunction;
     var m = this.evaluate(disjunction);
-}
-
-function Disjunction (node) {
-    return function m (str, index) {
+    return function matcher (str, index) {
           this.Input = new String(str);
           var listIndex = this.Input.indexOf(str[index]);
           this.InputLength = this.Input.length;
@@ -14327,16 +14318,49 @@ function Disjunction (node) {
     };
 }
 
-function Alternative (node) {
+function Disjunction (node) {
     var alternative = node.alternative;
     var disjunction = node.disjunction;
-    var m1 = this.evaluate(alternative);
-    var m2 = this.evaluate(disjunction);
+    if (!disjunction) {
+        return this.evaluate(alternaive);
+    } else {
+        var m1 = this.evaluate(alternative);
+        var m2 = this.evaluate(disjunction);
+        return function m(x, c) {
+            var r = m1.call(this, x, c);
+            if (this.isFailure(r)) return r;
+            return m2.call(this, x, c);
+        };
+    }
+    return null;
+}
+
+function Term () {
+    if (node.assertion) {
+        this.evaluate(node.assertion);
+    }
+}
+
+var LineTerminator = require("tables").LineTerminator;
+
+function Assertion(node) {
+
     return function m (x, c) {
-        var r = m1.call(this, x, c);
-        if (this.isFailure(r)) return r;
-        return m2.call(this, x, c);
-    };
+
+        if (node == "^") {
+            return function assertion_tester (x) {
+                var e = x.endIndex;
+                if (e === 0) return true;
+                if (this.Multiline === false) return false;
+                if (LineTerminator[this.Input[e-1]]) return true;
+            }
+        }
+
+        var r = !!t.call(this, c);
+        if (!r) return null;
+        return c.call(this, x);
+
+    }
 }
 
 
@@ -21989,8 +22013,26 @@ var RegExp_$$create = function (thisArg, argList) {
     return RegExpAllocate(thisArg);
 };
 var RegExp_Call = function (thisArg, argList) {
-    var obj = thisArg;
-    return obj;
+    var func = RegExpConstructor;
+    var pattern = argList[0];
+    var flags = argList[1];
+    var O = thisArg;
+    var P, F, testP;
+    if (!hasInternalSlot(O, "RegExpMatcher") || getInternalSlot(O, "RegExpMatcher") !== undefined) {
+        if (testP=(Type(pattern) === "object" && hasInternalSlot(pattern, "RegExpMatcher"))) return pattern;
+        O = RegExpAlloc(func);
+        if (isAbrupt(O = ifAbrupt(O))) return O;
+    }
+    if (testP) {
+        if (getInternalSlot(pattern, "RegExpMatcher") !== undefined) return withError("Type", "patterns [[RegExpMatcher]] isnt undefined");
+        if (flags != undefined) return withError("Type", "flag should be undefined for this call");
+        P = getInternalSlot(pattern, "OriginalSource");
+        F = getInternalSlot(pattern, "OriginalFlags");
+    } else {
+        P = pattern;
+        F = flags;
+    }
+    return RegExpInitialize(O, P, F);
 };
 var RegExp_Construct = function (argList) {
     return Construct(this, argList);
