@@ -3436,6 +3436,7 @@ define("tokenizer", function () { // should use this factory to create one each 
         return false;
     }
 
+
     function NumericLiteral() {
         var number = "",
             longName, computed = 0;
@@ -3472,11 +3473,25 @@ define("tokenizer", function () { // should use this factory to create one each 
                 computed = +(parseInt(number.substr(2), 8).toString(10));
             }
             makeToken("NumericLiteral", number, computed, longName);
+
+	    if (!(WhiteSpaces[lookahead]||Punctuators[lookahead]||LineTerminators[lookahead]) && lookahead != undefined) {
+        	throw new SyntaxError("unexpected token illegal");
+            }
+
             next();
+            
             return token;
         } else if (DecimalDigits[ch] || (ch === "." && DecimalDigits[lookahead])) {
             number = getDecimalDigits(number);
             makeToken("NumericLiteral", number, +number, "DecimalLiteral");
+            
+
+
+	    if (!(WhiteSpaces[lookahead]||Punctuators[lookahead]||LineTerminators[lookahead]) && lookahead != undefined) {
+        	throw new SyntaxError("unexpected token illegal");
+            }
+
+
             next();
             return token;
         }
@@ -14277,7 +14292,6 @@ function RegExpAllocate(constructor) {
  */
 
 function RegExpMatcher(patternCharacters, flags, parsed) {
-
     var matcher = {};
     matcher.Input = patternCharacters; // patternCharacters is the input alphabet i guess, that means the whole set of codepoints/units and not a-z
     matcher.inputLength = 0;
@@ -14344,9 +14358,7 @@ function Term () {
 var LineTerminator = require("tables").LineTerminator;
 
 function Assertion(node) {
-
     return function m (x, c) {
-
         if (node == "^") {
             return function assertion_tester (x) {
                 var e = x.endIndex;
@@ -14355,11 +14367,9 @@ function Assertion(node) {
                 if (LineTerminator[this.Input[e-1]]) return true;
             }
         }
-
         var r = !!t.call(this, c);
         if (!r) return null;
         return c.call(this, x);
-
     }
 }
 
