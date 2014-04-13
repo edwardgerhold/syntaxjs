@@ -3192,7 +3192,7 @@ define("tokenizer", function () { // should use this factory to create one each 
 
                         if (ch === "/") {
                             // reached last character of regex
-                            // here is my old algorithm to backtrack wether / is escaped or not
+                            // here is my old algorithm to backtrack if / is escaped or not
                             // i check for \ and before for \\ and look as far as it goes.
 
                             // the new algo: will prolly have a "escaped" state variable switching at \ on and off after testing next
@@ -3204,20 +3204,15 @@ define("tokenizer", function () { // should use this factory to create one each 
                                 // if not escaped or escaped and character before !=
                                 if ((expr[n] !== "\\") || (expr[n - 1] === "\\" && expr[n - 2] !== "\\")) {
                                     break big;
-                                }
+                  c              }
                             } while (expr[n -= 2] === "\\");
                             // then i break out;
-
-
                         } else if (LineTerminators[ch] || ch == undefined) {
                             throw new SyntaxError("Unexpected end of line, while parsing RegularExpressionLiteral at line " + line + ", column " + column);
                         }
-
                         expr += ch;
                         next();
-
                     }
-
             } else {
                 return false;
             }
@@ -3225,23 +3220,16 @@ define("tokenizer", function () { // should use this factory to create one each 
             if (ch === "/") { // is the second / which closes the regexp.
                 pass("/");
                 var hasFlags = {};
-
                 while (RegExpFlags[ch]) { // besorge noch die flags, collect flags
-
                     if (hasFlags[ch]) throw new SyntaxError("duplicate flags not allowed in regular expressions");
-
                     flags += ch;
                     hasFlags[ch] = true;
-
                     next();
                 }
-
                 makeToken("RegularExpressionLiteral", [expr, flags]);
-
+                                                    // "/"+expr+"/"+flags
                 inputElementGoal = inputElementDiv;
-
                 // next() is already done with the collection of flags.
-
                 return token;
             }
 
@@ -3976,6 +3964,7 @@ define("earlyerrors", function () {
         Contains: Contains
     };
 });
+
 
 
 
@@ -5416,10 +5405,8 @@ define("parser", function () {
     function PostfixExpression(lhs) {
         debug("PostfixExpression (" + t + ", " + v + ")");
         var l1 = loc && loc.start;
-        //if (v == "(") lhs = this.CoverParenthesisedExpressionAndArrowParameterList();
-        //else
-        
-        lhs = lhs || this.LeftHandSideExpression()
+        if (v == "(") lhs = this.ParenthesizedExpression();
+        else lhs = lhs || this.LeftHandSideExpression()
         if (lhs) debug("got lhs " + lhs.type);
         if (lhs && UpdateOperators[v]) {
             var node = Node("UnaryExpression");
@@ -5470,7 +5457,7 @@ define("parser", function () {
             node.argument = this.PostfixExpression();
             var l2 = loc && loc.end;
             if (node.argument == null) {
-                throw new SyntaxError("invalid unary expression "+node.operator+", operand missing " + stringifyLoc(l2));
+                throw new SyntaxError("invalid unary expression "+node.operator+", operand missing " + stringifyLoc(loc));
             }
 
             node.loc = makeLoc(l1, l2);
@@ -5531,8 +5518,9 @@ define("parser", function () {
 
         if (!yieldIsId && v === "yield") node = this.YieldExpression();
         if (!node) node = this.CoverParenthesisedExpressionAndArrowParameterList();
-
         leftHand = node || this.UnaryExpression(); // recurs up
+        
+        
         if (!leftHand) return null;
         if (v === undefined) return leftHand;
 
@@ -5597,9 +5585,6 @@ define("parser", function () {
             node = rotate_binexps(node);
             return node;
 
-            //       } else if (v != "," && v != ";" && !ltNext && v != ")" && v != "]" && v != "}") {
-
-            //       throw new SyntaxError("something is missing, maybe the operator?")
 
         } else {
 
@@ -7500,10 +7485,10 @@ define("parser", function () {
                 case "^":
                     node.assertion = "^";
                     pass("^");
-                    break;
+                    break
                 case "$":
                     node.assertion = "$";
-                    pass("$");
+                        pass("$");
                     break;
                 case "\\":
                     if (lookahead === "b" || lookahead === "B") {
@@ -7733,13 +7718,13 @@ define("parser", function () {
     }
 
     function Disjunction () {
-        var list = [];
-        do {
-            var alternative = this.Alternative();
-            list.push(alternative);
-
-        } while (v == "|" );
-        return list;
+        var node = Node("Disjunction");
+        node.alternative = this.Alternative();
+        if (v === "|") {
+            pass("|")
+            node.disjunction = Disjunction();
+        }
+        return node;
     }
 
     function Alternative() {       
@@ -7754,9 +7739,7 @@ define("parser", function () {
 
     function Pattern() {
         var node = Node("Pattern");
-        var alternatives;
-        alternatives = this.Alternative();
-        node.pattern = alternatives;            
+        node.disjunction = this.Disjunction();
         return node;
     }
 
@@ -7781,9 +7764,16 @@ define("parser", function () {
         if (t === "RegularExpressionLiteral") {
             var l1 = loc && loc.start;
             var node = Node("RegularExpressionLiteral");
+
             // value is an array
             node.value = v[0];
             node.flags = v[1];
+
+            /* // value is the whole literal string
+            var lastIndex = v.lastIndexOf("/");
+            node.value = v.substr(1, lastIndex - 1);
+            node.flags = v.substr(lastIndex + 1, v.length-lastIndex);
+            */
             var l2 = loc && loc.end;
             node.loc = makeLoc(l1,l2);
             next();
@@ -14236,19 +14226,38 @@ List.prototype.shift = List.prototype.removeFirst;
 
 
 function RegExpInitialize(obj, pattern, flags) {
+
 	var P, F, BMP;;
 	if (pattern === undefined) P = "";
 	else P = ToString(pattern);
 	if (isAbrupt(P=ifAbrupt(P))) return P;
 
 	if (flags === undefined) F = "";
-	BMP = !(F.indexOf("u") >-1)
+	BMP = !(F.indexOf("u") >-1);
+    if (BMP) {
 
+        var parsed = parseGoal("Pattern", P);
+
+        // steps missing
+
+    } else {
+
+        var parsed = parseGoal("Pattern", P);
+
+    }
+
+
+    setInternalSlot(obj, "OriginalFlags", F);
+    setInternalSlot(obj, "OriginalSource", P);
+    setInternalSlot(obj, "RegExpMatcher", RegExpMatcher);
+    var putStatus = Put(obj, "lastIndex", 0, true);
+    if (isAbrupt(putStatus=ifAbrupt(putStatus))) return putStatus;
+    return NormalCompletion(obj);
 }
 
 function RegExpAllocate(constructor) {
 
-	var obj = OrdinaryCreateFromConstructor(constructor, "%RegExpPrototype",{
+	var obj = OrdinaryCreateFromConstructor(constructor, "%RegExpPrototype%",{
 		"RegExpMatcher": undefined,
 		"OriginalSource": undefined,
 		"OriginalFlags": undefined
@@ -14263,6 +14272,73 @@ function RegExpAllocate(constructor) {
 	if (isAbrupt(status = ifAbrupt(status))) return status;
 	return NormalCompletion(obj);		
 }
+
+/*
+    this will become the first AST evaluator
+
+    which isnt in runtime.js
+
+    i can make an extra file, but should stick it to
+    all other "node traversing" functions.
+ */
+
+function RegExpMatcher(patternCharacters, flags) {
+
+    var matcher = {};
+    matcher.Input = patternCharacters; // patternCharacters is the input alphabet i guess, that means the whole set of codepoints/units and not a-z
+    matcher.inputLength = 0;
+    matcher.NCapturingParens = 0;
+    matcher.ignoreCase = false;
+    matcher.Multiline = false;
+    matcher.Unicode = false;
+    matcher.Pattern = Pattern;
+    matcher.Disjunction = Disjunction;
+    matcher.Alternative = Alternative;
+    matcher.isFailure = function (r) {
+        return r === null;
+    };
+    matcher.Continuation = function (steps) {
+        return steps;
+    }
+    matcher.State = function (lastIndex, str) {
+        return [lastIndex, str];
+    };
+    matcher.evaluate = function (node) {
+        var f = this[node.type];
+        if (f) return f.call(this, node);
+    };
+    return matcher;
+}
+
+function Pattern (node) {
+    var disjunction = node.disjunction;
+    var m = this.evaluate(disjunction);
+}
+
+function Disjunction (node) {
+    return function m (str, index) {
+          this.Input = new String(str);
+          var listIndex = this.Input.indexOf(str[index]);
+          this.InputLength = this.Input.length;
+          var c = this.Continuation(function (state) { return state; });
+          var cap = new Array(this.NCapturingParens + 1); // indexed 1 bis
+          var x = this.State(listIndex, cap);
+          return m.call(this, x,c);
+    };
+}
+
+function Alternative (node) {
+    var alternative = node.alternative;
+    var disjunction = node.disjunction;
+    var m1 = this.evaluate(alternative);
+    var m2 = this.evaluate(disjunction);
+    return function m (x, c) {
+        var r = m1.call(this, x, c);
+        if (this.isFailure(r)) return r;
+        return m2.call(this, x, c);
+    };
+}
+
 
     // Structured Clone Algorithms
     // strawman for es7
