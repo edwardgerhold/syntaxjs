@@ -26316,7 +26316,9 @@ define("runtime", function () {
 
             switch (op) {
                 case "!!":
-                    return NormalCompletion(ToBoolean(GetValue(exprRef)));
+            	    oldValue = GetValue(exprRef);
+            	    if (isAbrupt(oldValue)) return oldValue;
+                    return NormalCompletion(ToBoolean(oldValue));
                 case "~":
                     oldValue = ToNumber(GetValue(exprRef));
                     if (isAbrupt(newValue)) return newValue;
