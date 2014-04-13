@@ -4,18 +4,32 @@ syntaxjs
 Not bugfree(*) EcmaScript 6 (7**) Interpreter written in EcmaScript 5.
 This project was started on a PIII/933 with mcedit in a dorm and is
 now continued on a notebook with 2 cores still in the dorm.
-It´s a fun project. 
+It´s a fun project. (***)
 
 Hmm, i notice difficulties with writing plain text with myself nowadays.
 I´m working on it.
 
-(*) found the stupid lockup bug from march in the old lookahead fn,
-which i edited in march, while new tests where missing.
+(*) now working on the lockups, missing errors, and just tokenizer and
+parser, until it runs arbitrary code.
 
 (**) contains at last one implemented proposal and more
 
+(***) serious documentation and proper seriously written license will 
+take some weeks and a day more or two. JSDoc will replace the chaotic
+few comments left between.
+
+(****) the files have to be cleaned up inside, that some functions move.
+and maybe two files become one.
+
+
 New: Multiple Realms
 ======================
+
+Issue: How to get rid of the shared state and pushing and restoring it?
+A realm creates a fresh set of intrinsics and essential functions and A parser creates a fresh tokenizer. 
+Making an "a fresh parser each realm"-factory out of the old functions with shared state will be fun.
+A few days until i can commit that. I have to work through the code, til i got it in place.
+
 
 ```bash
 npm install -g  #to install syntaxjs from it´s directory
@@ -142,6 +156,12 @@ Solution:
 The solution will be not to create a living model of the object, which i suspect my transform function
 to create, but to create a snapshot of the current state of the object. That needs no getters and setters
 and returns recursivly objects and arrays with object and array prototypes.
+
+The other thing is, others want active object. With PROXIES, we could do it easily and i should test for
+proxy and fall back to getters and setters (little more limited to get and set invoking the conversion hook).
+The non-Proxy should be a fallback. Later in an ES6 engine it makes a lot of fun, to use this code. And in 
+ES7 with new NATIVE types, it´s easy to continue with ES8-10 (while we learned from and compile a binary one).
+
 
 * got a new debug function added to global scope.
 
@@ -275,10 +295,10 @@ propose ```function [node.type](node) { ...process node here.. }```
 	var ptr = heap.store(builder[node.argument.type](node.argument)));
 	code[0] = byteCode["return"];
 	ptr = ptr || 0;
-	code[1] = ptr & 0xFFFFFF;  // oh it´s wrong
-	code[2] = ptr & 0xFFFF;
-	code[3] = ptr & 0xFF;
-	return code;
+	code[1] = (ptr >> 16) & 0xFF;  // oh it´s wrong
+	code[2] = (ptr >> 8)  & 0xFF;  // am i mismatching three address
+	code[3] = ptr	      & 0xFF;  // and write a three-byte address??? hehe
+	return code;		       // cosmic waves decoded in the back of the head without getting the full meaning, but a similarity, he?
     };
 
 ```
@@ -479,7 +499,7 @@ console.log(f.toString());
         return value;
     };
     builder.lineComment = function(value, loc) {
-        return value + "\n";
+        return value;
     };
     builder.multiLineComment= function (value, loc) {
         return value;

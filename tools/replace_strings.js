@@ -51,6 +51,10 @@ function write(filename, data) {
 }
 
 (function main() {
+    if (process.argv[2] === undefined) {
+	console.log("    usage: node replace_strings.js 'search' 'replace' file1.js file2.js ... filen.js");
+	process.exit();
+    }
     var search = new RegExp(process.argv[2], "g");
     var replace = process.argv[3];
     var filenames = process.argv.slice(4);

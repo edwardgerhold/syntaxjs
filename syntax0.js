@@ -261,7 +261,7 @@ function require(deps, factory) {
 // file imports
 // *******************************************************************************************************************************
 
-define("fswraps", function (require, exports) {
+define("filesystem", function (require, exports) {
 
     /*
      var concreteAdapter = makeAdapter({
@@ -289,9 +289,9 @@ define("fswraps", function (require, exports) {
      */
 
 
-    function makeAdapter(methods, optionalThis) {
+    function makeAdapter(methods) {
         if (arguments.length == 0 || typeof methods !== "object" || methods === null) {
-            throw new TypeError("makeAdapter(methods, optionalThis) expects { test: {}, work: {} } where work[ĸ]() will be called iff test[k]() succeeds. Both need to be functions. Optional is a methods.default function if no test succeeds.");
+            throw new TypeError("makeAdapter(methods) expects { test: {}, work: {} } where work[ĸ]() will be called iff test[k]() succeeds. Both need to be functions. Optional is a methods.default function if no test succeeds.");
         }
         var keys = Object.keys(methods.test);
         return function adapterFunction () {
@@ -299,19 +299,16 @@ define("fswraps", function (require, exports) {
                 var k = keys[i];
 
                 var test = methods.test[k];
-                if (typeof test != "function") {
-                    throw new TypeError("adapter: adaptee.test['"+k+"'] is not a function");
-                }
 
-                if (test()) {
+                if ((typeof test == "function" && test()) || test === true) {
                     var work = methods.work[k];
                     if (typeof work != "function") {
                         throw new TypeError("adapter: adaptee.work['"+k+"'] is not a function");
                     }
-                    return work.apply(optionalThis || this, arguments);
+                    return work.apply(this, arguments);
                 }
             }
-            if (typeof methods["default"] == "function") return methods["default"].apply(optionalThis || this, arguments);
+            if (typeof methods["default"] == "function") return methods["default"].apply(this, arguments);
         };
     }
 
@@ -382,6 +379,7 @@ define("fswraps", function (require, exports) {
     exports.readFileSync = readFileSync;
     exports.makeAdapter = makeAdapter;
 
+    return exports;
 });
 
 
@@ -761,7 +759,7 @@ define("tables", function (require, exports, module) {
         "W": true
     };
 
-    var NotPatternCharacter = {
+    var NonPatternCharacter = {
         "^": true,
         "$": true,
         "\\": true,
@@ -864,6 +862,7 @@ define("tables", function (require, exports, module) {
         "createElement": true,
         "createDocumentFragment": true
     };
+
     var HTML5Objects = {
         "localStorage": true,
         "sessionStorage": true,
@@ -874,8 +873,9 @@ define("tables", function (require, exports, module) {
     };
     var NodeJSObjects = {
         "process": true,
-        "global": true
+        "global": true,
     };
+
 
     var Comment = {
         __proto__: null,
@@ -1853,10 +1853,11 @@ define("tables", function (require, exports, module) {
     exports.uriAlpha = uriAlpha;
     exports.uriMark = uriMark;
     exports.uriReserved = uriReserved;
-    exports.NotPatternCharacter = NotPatternCharacter;
+    exports.NonPatternCharacter = NonPatternCharacter;
     exports.CharacterClassEscape = CharacterClassEscape;
     exports.ControlLetter = ControlLetter;
     exports.ControlEscape = ControlEscape;
+
     exports.DOM = DOM;
     exports.HTML5Objects = HTML5Objects;
     exports.NodeJSObjects = NodeJSObjects;
@@ -3989,7 +3990,7 @@ define("earlyerrors", function () {
  doesnt call tokenizer.next() (at the time, will somewhen happen, isnt that urgent)
 
  has a second function parseGoal(goal, srcOrArr)
- which can be invoked from anywhere within
+ ch can be invoked from anywhere within
 
  it predicts at forstatement
  it saves/restores the parser state before/after parseGoal
@@ -4385,17 +4386,46 @@ define("parser", function () {
     // source locations
     // ========================================================================================================
 
-    function makeLoc(start, end) {
+    function makeLoc(start, end, filename, source) {
         return {
             start: start || {},
-            end: end || {}
+            end: end || {},
+            source: source,
+    	    filename: filename
         };
     }
+    
+    function stringifyLoc(loc) { 
+	var str = "";
+	if (!loc) return str;
+	if (typeof loc == "object") {
+	    if (loc.start) {
+		var start = loc.start;
+		var end = loc.end;
+		if (start) {
+		    str +=  "@loc.start: line " +start.line + ", column "+start.column;
+		}
+		if (end) {
+		    if (start) str += ", ";
+		    else str += "@";
+		    str +=  "loc.end: line " +end.line + ", column "+end.column;	    
+		}
+	    } else if (loc.line != undefined) {
+		str = "@loc: line " +loc.line + ", column "+loc.column;	    
+	    }
+	    return str;
+	}
+    }
+
 
     function resetVariables(t) {
         ast = null;
 
+    
         //nodeTable = Object.create(null);
+
+	//nodeTable makes an ast navigatable.
+	
 
         lexDecls = [];
         varDecls = [];
@@ -5165,7 +5195,7 @@ define("parser", function () {
                 continue;
             } else break;
 
-        } while (i < j && v !== undefined);
+        } while (v !== undefined);
 
         l2 = loc && loc.end;
 
@@ -5268,13 +5298,9 @@ define("parser", function () {
                     }
                 }
                 covered.push(token);
+                if (v === undefined) throw new SyntaxError("no tokens left over covering expression");
             }
-
-            if (i >= j) throw new SyntaxError("no tokens left over covering expression");
-
             pass(")");
-
-
         }
 
         if (cover) {
@@ -5405,6 +5431,29 @@ define("parser", function () {
         return lhs;
     }
 
+
+    function stringifyLoc(loc) { 
+	var str = "";
+	if (!loc) return str;
+	if (typeof loc == "object") {
+	    if (loc.start) {
+		var start = loc.start;
+		var end = loc.end;
+		if (start) {
+		    str +=  "@loc.start: line " +start.line + ", column "+start.column;
+		}
+		if (end) {
+		    str +=  "@loc.end: line " +end.line + ", column "+end.column;	    
+		}
+	    } else if (loc.line != undefined) {
+		str = "@loc: line " +loc.line + ", column "+loc.column;	    
+	    }
+	    return str;
+	}
+    }
+    
+    
+
     function UnaryExpression() {
 
         if (UnaryOperators[v] || UpdateOperators[v]) {
@@ -5416,10 +5465,11 @@ define("parser", function () {
             node.prefix = true;
             pass(v);
             node.argument = this.PostfixExpression();
-            if (node.argument == null) {
-                throw new SyntaxError("invalid unary expression "+node.operator+", operand missing");
-            }
             var l2 = loc && loc.end;
+            if (node.argument == null) {
+                throw new SyntaxError("invalid unary expression "+node.operator+", operand missing " + stringifyLoc(l2));
+            }
+
             node.loc = makeLoc(l1, l2);
             return node;
         }
@@ -6169,7 +6219,7 @@ define("parser", function () {
         return body;
     }
 
-    function AddGeneratorParentPointers (node, parent) {
+    function CreateTablePlusAddParentPointerIds (node, parent, nodeTable) {
         /*
          on yield: set suspend flag
          that exit´s any nested evaluation loop and returns without mourning
@@ -6182,20 +6232,26 @@ define("parser", function () {
          and then continue one right
 
          */
+         
+        nodeTable = nodeTable || Object.create(null);
+        
         if (Array.isArray(node)) {
             for (var i = 0, j = node.length; i < j; i++) {
-                AddGeneratorParentPointers(node[i], node);
+                CreateTablePlusAddParentPointerIds(node[i], node, nodeTable);
             }
-            return;
+            return nodeTable;
         }
-        if (typeof node === "object" && node != null
-            && node.loc) {
-            node.parent = parent;
+        if (typeof node === "object" && node != null && node.loc) {
+
+            if (node.parent = parent["_id_"]) {
+        	nodeTable["_id_"] = parent;
+            }
             Object.keys(node).forEach(function (key) {
                 if (typeof node[key] != "object" || !node || key === "parent" || key === "loc" || key == "extras") return;
-                AddGeneratorParentPointers(node[key], node);
+                CreateTablePlusAddParentPointerIds(node[key], node, nodeTable);
             });
         }
+        return nodeTable;
     }
 
     parser.FunctionDeclaration = FunctionDeclaration;
@@ -6280,16 +6336,14 @@ define("parser", function () {
             yieldIsId = yieldStack.pop();
             end = loc && loc.end;
             node.loc = makeLoc(start, end);
-            /*
-             if (node.generator) {
-             AddGeneratorParentPointers(node);
-             }
-             */
-            EarlyErrors(node);
 
+            if (node.generator) {            
+                node.nodesById = CreateTablePlusAddParentPointerIds(node);
+            }
+
+            EarlyErrors(node);
             defaultIsId = defaultStack.pop();
             currentNode = nodeStack.pop();
-
             if (compile) return builder.functionDeclaration(node.id, node.params, node.body, node.strict, node.generator, node.expression, node.loc, node.extras);
             return node;
         }
@@ -7392,7 +7446,7 @@ define("parser", function () {
     // ===========================================================================================================
     // Regular Expression Parser
     // ===========================================================================================================
-    var quantifierPrefixes = {
+    var FirstOfQuantifierPrefix = {
         "*": true,
         "+": true,
         "?": true,
@@ -7425,7 +7479,7 @@ define("parser", function () {
     var ControlLetter = tables.ControlLetter;
     var ControlEscape = tables.ControlEscape;
     var CharacterClassEscape = tables.CharacterClassEscape;
-    var NotPatternCharacter = tables.NotPatternCharacter;
+    var NonPatternCharacter = tables.NonPatternCharacter;
 
 
     Object.keys(ControlLetter).forEach(function (key) {
@@ -7435,7 +7489,7 @@ define("parser", function () {
 
     function Term () {
         var node;
-        if (FirstOfAssertion[v] || !NotPatternCharacter[v]) {
+        if (FirstOfAssertion[v] || !NonPatternCharacter[v]) {
             node = Node("Assertion");
             var assertion;
             var first = v;            
@@ -7500,7 +7554,7 @@ define("parser", function () {
                     pass(".");
                     break;
                 default:
-                    if (!NotPatternCharacter[v]) {
+                    if (!NonPatternCharacter[v]) {
                         node.atom = v;
                         next();
                     }
@@ -7515,7 +7569,7 @@ define("parser", function () {
         return null;
     }
     function Quantifier () {
-        if (quantifierPrefixes[v]) {
+        if (FirstOfQuantifierPrefix[v]) {
 
             var quantifier = v;
             if (v == "{") {
@@ -7681,7 +7735,7 @@ define("parser", function () {
             var alternative = this.Alternative();
             list.push(alternative);
 
-        } while (v == "|");
+        } while (v == "|" );
         return list;
     }
 
@@ -7690,7 +7744,8 @@ define("parser", function () {
        do {
             var term = this.Term();
             alternative.push(term);
-        } while (v != "|");          
+
+        } while (v != "|" && v != undefined);
        return alternative;
     }
 
@@ -7763,7 +7818,8 @@ define("parser", function () {
     parser.JSONString = JSONString;
 
     function JSONString() {
-        if (t === "StringLiteral") {
+
+        if (t === "StringLiteral" || (t == "Literal" && typeof v == "string"))  {
             var q1, q2;
             q1 = v[0];
             q2 = v[v.length - 1];
@@ -7778,18 +7834,20 @@ define("parser", function () {
     parser.JSONNumber = JSONNumber;
 
     function JSONNumber() {
-        if (t === "NumericLiteral") {
+        if (t === "NumericLiteral" || (t == "Literal" && typeof v === "number")) {
             var node = Node("JSONNumber");
             node.value = v;
             next();
             return node;
         }
     }
+
     parser.JSONFraction = JSONFraction;
-
     function JSONFraction() {
-
+        return null;
     }
+
+
     parser.JSONNullLiteral = JSONNullLiteral;
 
     function JSONNullLiteral() {
@@ -7833,7 +7891,7 @@ define("parser", function () {
 
     function JSONElementList() {
         var list = [];
-        while (v !== "]") {
+        while (v !== "]" && v !== undefined) {
             var node = this.JSONValue();
             if (isAbrupt(node = ifAbrupt(node))) return node;
             if (node) list.push(node);
@@ -7878,7 +7936,7 @@ define("parser", function () {
 
     function JSONMemberList() {
         var list = [];
-        while (v !== "}") {
+        while (v !== "}" && v !== undefined) {
             var node = this.JSONMember();
             if (isAbrupt(node = ifAbrupt(node))) return node;
             if (node) list.push(node);
@@ -8872,7 +8930,7 @@ define("js-codegen", function (require, exports, module) {
  */
 
 
-define("api", function (require, exports, module) {
+define("api", function (require, exports) {
 
     "use strict";
     // var heap = require("heap");
@@ -9565,12 +9623,12 @@ CodeRealm.prototype.constructor = CodeRealm;
 
 CodeRealm.prototype.fileToValue =
     CodeRealm.prototype.evalFile = function (filename) {
-        var rf = require("fswraps").readFileSync;
+        var rf = require("filesystem").readFileSync;
         if (typeof rf === "function") {
             var code = rf(filename);
             return this.eval(code);
         } else {
-            throw new TypeError("can not read file "+filename+" with fswraps module");
+            throw new TypeError("can not read file "+filename+" with filesystem module");
         }
     };
 
@@ -9603,7 +9661,7 @@ CodeRealm.prototype.eval =
 CodeRealm.prototype.evalAsync =
     CodeRealm.prototype.evalFileAsync = function (file) {
         var realm = this;
-        return require("fswraps").readFileP(name).then(function (code) {
+        return require("filesystem").readFileP(name).then(function (code) {
             return realm.eval(code);
         }, function (err) {
             throw err;
@@ -14174,6 +14232,34 @@ List.prototype.pop = List.prototype.removeLast;
 List.prototype.shift = List.prototype.removeFirst;
 
 
+function RegExpInitialize(obj, pattern, flags) {
+	var P, F, BMP;;
+	if (pattern === undefined) P = "";
+	else P = ToString(pattern);
+	if (isAbrupt(P=ifAbrupt(P))) return P;
+
+	if (flags === undefined) F = "";
+	BMP = !(F.indexOf("u") >-1)
+
+}
+
+function RegExpAllocate(constructor) {
+
+	var obj = OrdinaryCreateFromConstructor(constructor, "%RegExpPrototype",{
+		"RegExpMatcher": undefined,
+		"OriginalSource": undefined,
+		"OriginalFlags": undefined
+	});
+	var status = DefinePropertyOrThrow(obj, "lastIndex", {
+		writable: true,
+		configurable: false,
+		enumerable: false,
+		value: undefined
+
+	});	
+	if (isAbrupt(status = ifAbrupt(status))) return status;
+	return NormalCompletion(obj);		
+}
 
     // Structured Clone Algorithms
     // strawman for es7
@@ -14323,7 +14409,6 @@ var OnSuccessfulTransfer_Call = function (thisArg, argList) {
  Indicates failure of the structured clone algorithm.
  {Rationale: typically, ECMAScript operations throw RangeError for similar failures, but we need to preserve DOM compatibnility}
  */
-
 
 /**
  * Created by root on 04.04.14.
@@ -14799,6 +14884,12 @@ exports.float64 = float64;
         setInternalSlot(ThrowTypeError, "Construct", undefined);
 
 
+/**
+ *
+ * debug(val) is some util.inspect() with now just less styling
+ *
+ *
+ */
 
 setInternalSlot(DebugFunction, "Call", function debugfunc (thisArg, argList)  {
 
@@ -14814,14 +14905,14 @@ setInternalSlot(DebugFunction, "Call", function debugfunc (thisArg, argList)  {
     }
 
     if (type == "object") {
-	var isCallable = IsCallable(O);
-	
-	if (!isCallable)  {
-    	    var toString = Invoke(O, "toString", []);
-    	    if (isAbrupt(toString=ifAbrupt(toString))) return toString;
+        var isCallable = IsCallable(O);
+
+        if (!isCallable)  {
+            var toString = Invoke(O, "toString", []);
+            if (isAbrupt(toString=ifAbrupt(toString))) return toString;
         } else {
             var funcName = Get(O, "name");
-    	    console.log("[object Function]: "+funcName);
+            console.log("[object Function]: "+funcName);
         }
         console.log(toString);
         console.log("{");
@@ -14861,102 +14952,135 @@ setInternalSlot(DebugFunction, "Call", function debugfunc (thisArg, argList)  {
             var code = getInternalSlot(O, "Code");
             console.log(JSON.stringify(code, null, 4));
         }
-        
+
         console.log("}");
-        
+
         return NormalCompletion();
     }
-    
+
     if (type == "number") {
-	console.log("Number");
-	console.log("binary (base 2): "+O.toString(2));
-	console.log("decimal (base 10): "+O.toString(10));
-	console.log("hex (base 16): "+O.toString(16));
-    
+        console.log("Number");
+        console.log("binary (base 2): "+O.toString(2));
+        console.log("decimal (base 10): "+O.toString(10));
+        console.log("hex (base 16): "+O.toString(16));
+
     } else if (type == "string") {
-	var len = O.length;
-	console.log("String");
-	console.log("value: "+O);
-	console.log("length: "+len);
-    
+        var len = O.length;
+        console.log("String");
+        console.log("value: "+O);
+        console.log("length: "+len);
+
     } else if (type == "symbol") {
-	console.log("Symbol");
-	var descr = getInternalSlot(O, "Description");
-	console.log("[[Description]]: " +descr);
+        console.log("Symbol");
+        var descr = getInternalSlot(O, "Description");
+        console.log("[[Description]]: " +descr);
     } else if (type == "boolean") {
-	console.log("Boolean");
-	console.log("value: "+!!O);	
-    } 
-    
-    
+        console.log("Boolean");
+        console.log("value: "+!!O);
+    }
+
+
     return NormalCompletion();
+
+});
+/**
+ *
+ *  load(file);
+ *
+ *
+ */
+var loaderAdapter = require("filesystem").makeAdapter({
+    test: {
+        "node": typeof process === "object" && typeof window === "undefined",
+        "browser": typeof window === "object" && typeof XMLHttpRequest === "function",
+        "worker": typeof window == "undefined" && typeof importScripts === "function" && typeof XMLHttpRequest === "function",
+        "sm": typeof load === "function" && typeof print === "function"
+    },
+    work: (function () {
+        function xmlHTTPrequest(file) {
+            var xhr;
+            try {
+                xhr = new XMLHttpRequest();
+                xhr.open("GET", file, false);
+                xhr.send(null);
+                return xhr.responseText;
+            } catch (ex) {
+                return withError("Type", "can not xml http request " + file);
+            }
+        }
+
+        return {
+            "node": function (file) {
+                var data;
+                var fs = module.require("fs");
+                try {
+                    data = fs.readFileSync(file, "utf8");
+                } catch (ex) {
+                    return withError("Type", "fs.readFileSync threw a "+ex.name+" exception "+ ex.message+"\n"+ (ex.stack&&ex.stack.toString()));
+                }
+                return data;
+            },
+            "browser": xmlHTTPrequest,
+            "worker": xmlHTTPrequest,
+            "sm": function (file) {
+                return load(file)
+            }
+        };
+
+
+    }())
 
 });
 
 setInternalSlot(LoadFunction, "Call", function load(thisArg, argList) {
     var file = argList[0];
-    var fs, xhr, data;
-    if (isWindow()) {
-        try {
-            xhr = new XMLHttpRequest();
-            xhr.open("GET", file, false);
-            xhr.send(null);
-            return xhr.responseText;
-        } catch (ex) {
-            return withError("Type", "can not xml http request " + file);
-        }
-    } else if (isNode()) {
-        fs = syntaxjs._nativeModule.require("fs");
-        try {
-            data = fs.readFileSync(file, "utf8");
-            return data;
-        } catch (ex) {
-            return withError("Type", "fs.readFileSync threw an exception");
-        }
-    } else if (isWorker()) {
-        try {
-            xhr = new XMLHttpRequest();
-            xhr.open("GET", file, false);
-            xhr.send(null);
-            return xhr.responseText;
-        } catch (ex) {
-            return withError("Type", "can not xml http request " + file);
-        }
-    } else {
-        return withError("Type", "Unknown architecture. Load function not available.");
+    try {
+        var data = loaderAdapter(file);
+    } catch (ex) {
+        return withError("Type", "loaderAdaper fails with a " + ex.name + ": " + ex.message + "\n" + ex.stack)
     }
+    return data;
 });
 
-setInternalSlot(RequestFunction, "Call", function request(thisArg, argList) {
-    var url = argList[0];
-    var d, p;
-    if (isWindow()) {
+/**
+ *
+ * request
+ *
+ *
+ *
+ *
+ */
 
-        var handler = CreateBuiltinFunction(realm, function handler(thisArg, argList) {
-            var resolve = argList[0];
-            var reject = argList[1];
-        });
+    setInternalSlot(RequestFunction, "Call", function request(thisArg, argList) {
+        var url = argList[0];
+        var d, p;
+        if (isWindow()) {
 
-        d = OrdinaryConstruct(PromiseConstructor, [handler]);
+            var handler = CreateBuiltinFunction(realm, function handler(thisArg, argList) {
+                var resolve = argList[0];
+                var reject = argList[1];
+            });
 
-        var xhr = new XMLHttpRequest();
-        xhr.open("GET", url, true);
-        xhr.onload = function (e) {
-            if (xhr.status !== 200 || xhr.status === 301) {}
-        };
+            d = OrdinaryConstruct(PromiseConstructor, [handler]);
 
-        xhr.send();
+            var xhr = new XMLHttpRequest();
+            xhr.open("GET", url, true);
+            xhr.onload = function (e) {
+                if (xhr.status !== 200 || xhr.status === 301) {}
+            };
 
-        return xhr.responseText;
+            xhr.send();
 
-    } else if (isNode()) {
+            return xhr.responseText;
 
-    } else if (isWorker()) {
+        } else if (isNode()) {
 
-    } else {
-        return withError("Type", "Unknown architecture. Request function not available.");
-    }
-});
+        } else if (isWorker()) {
+
+        } else {
+            return withError("Type", "Unknown architecture. Request function not available.");
+        }
+    });
 
 // ##################################################################
 // Das Code Realm als %Realm%
@@ -21779,10 +21903,11 @@ function makeResolveFunction () {
 
 
 // ===========================================================================================================
-// Regular Expression
+// Regular Expressiong	
 // ===========================================================================================================
 
 MakeConstructor(RegExpConstructor, true, RegExpPrototype);
+
 
 var RegExp_$$create = function (thisArg, argList) {
     return RegExpAllocate(thisArg);
@@ -21806,6 +21931,10 @@ var RegExpPrototype_test = function (thisArg, argList) {
 };
 setInternalSlot(RegExpConstructor, "Call", RegExp_Call);
 setInternalSlot(RegExpConstructor, "Construct", RegExp_Construct);
+
+LazyDefineBuiltinConstant(RegExpConstructor, "prototype", RegExpPrototype);
+LazyDefineBuiltinConstant(RegExpPrototype, "constructor", RegExpConstructor);
+
 LazyDefineBuiltinConstant(RegExpPrototype, $$isRegExp, true);
 LazyDefineBuiltinConstant(RegExpPrototype, $$toStringTag, "RegExp");
 LazyDefineBuiltinFunction(RegExpConstructor, $$create, 1, RegExp_$$create);
@@ -29486,15 +29615,15 @@ define("syntaxjs", function () {
         createRealm: pdmacro(require("api").createPublicCodeRealm),
         toJsLang: pdmacro(require("js-codegen")),				// <-- needs exports fixed
 
-        makeAdapter: pdmacro(require("fswraps").makeAdapter),
+        makeAdapter: pdmacro(require("filesystem").makeAdapter),
 
     // experimental functions
 
-        readFile: pdmacro(require("fswraps").readFile),	
-        readFileSync: pdmacro(require("fswraps").readFileSync),
+        readFile: pdmacro(require("filesystem").readFile),	
+        readFileSync: pdmacro(require("filesystem").readFileSync),
 
 
-  // put into fswraps.js please
+  // put into filesystem.js please
         evalFile: pdmacro(function (name, callback, errback) {
             var syntaxjs = this;
             return this.readFile(name, function (code) {
