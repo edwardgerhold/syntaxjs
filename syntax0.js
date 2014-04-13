@@ -10669,6 +10669,8 @@ function ToBoolean(V) {
 function ToNumber(V) {
     var T;
 
+    if (isAbrupt(V)) return V;
+    
     if (V instanceof CompletionRecord) return ToNumber(V.value);
 
     if (V === undefined) return NaN;
@@ -26321,28 +26323,30 @@ define("runtime", function () {
                     return NormalCompletion(ToBoolean(oldValue));
                 case "~":
                     oldValue = ToNumber(GetValue(exprRef));
-                    if (isAbrupt(newValue)) return newValue;
+                    if (isAbrupt(oldValue)) return oldValue;
                     newValue = ~oldValue;
                     return NormalCompletion(newValue);
                 case "!":
                     oldValue = ToNumber(GetValue(exprRef));
-                    if (isAbrupt(newValue)) return newValue;
+                    if (isAbrupt(oldValue)) return oldValue;
                     newValue = !oldValue;
                     return NormalCompletion(newValue);
                 case "+":
-                    newValue = ToNumber(GetValue(exprRef))
+            	    oldValue = GetValue(exprRef);
+            	    if (isAbrupt(oldValue)) return oldValue;
+                    newValue = ToNumber(oldValue);
                     if (isAbrupt(newValue)) return newValue;
                     return NormalCompletion(newValue);
                     break;
                 case "-":
-                    oldValue = ToNumber(GetValue(exprRef));
-                    if (oldValue != oldValue) return NormalCompletion(oldValue);
-                    return NormalCompletion(-oldValue);
+                    oldValue = GetValue(exprRef);
+                    newValue = ToNumber(oldValue);
+            	    if (isAbrupt(newValue)) return newValue;
+                    return NormalCompletion(-newValue);
                     break;
                 case "++":
                     oldValue = ToNumber(GetValue(exprRef));
-                    if (isAbrupt(oldValue)) return oldValue;
-                    oldValue = unwrap(oldValue);
+                    if (isAbrupt(oldValue=ifAbrupt(oldValue))) return oldValue;
                     newValue = oldValue + 1;
                     status = PutValue(exprRef, newValue);
                     if (isAbrupt(status)) return status;
@@ -26350,8 +26354,7 @@ define("runtime", function () {
                     break;
                 case "--":
                     oldValue = ToNumber(GetValue(exprRef));
-                    if (isAbrupt(oldValue)) return oldValue;
-                    oldValue = unwrap(oldValue);
+                    if (isAbrupt(oldValue=ifAbrupt(oldValue))) return oldValue;
                     newValue = oldValue - 1;
                     status = PutValue(exprRef, newValue);
                     if (isAbrupt(status)) return status;
