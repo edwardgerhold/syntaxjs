@@ -5416,7 +5416,10 @@ define("parser", function () {
     function PostfixExpression(lhs) {
         debug("PostfixExpression (" + t + ", " + v + ")");
         var l1 = loc && loc.start;
-        lhs = lhs || this.LeftHandSideExpression();
+        //if (v == "(") lhs = this.CoverParenthesisedExpressionAndArrowParameterList();
+        //else
+        
+        lhs = lhs || this.LeftHandSideExpression()
         if (lhs) debug("got lhs " + lhs.type);
         if (lhs && UpdateOperators[v]) {
             var node = Node("UnaryExpression");
@@ -15026,10 +15029,7 @@ var loaderAdapter = require("filesystem").makeAdapter({
                 return load(file)
             }
         };
-
-
     }())
-
 });
 
 setInternalSlot(LoadFunction, "Call", function load(thisArg, argList) {
