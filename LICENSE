@@ -40,6 +40,10 @@ the internal methods are not updated with yet.
 The names are already registered in the global environment. (Whether i come
 to implement the Node Interface when doing the propagation is open.)
 * I have started to include dslmomovs Type Objects specification from github
+* Then i have a special project viewed on the internet, over es-discuss and
+got interested in. The Concrete Syntax Tree by getify et al. This tool contains
+little portions of some upcoming Source Code preserving Tree, which will be
+suitable for code editors.
 * Everything else is written and even invented by me. 
 
 
