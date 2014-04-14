@@ -1708,9 +1708,7 @@ define("tables", function (require, exports, module) {
     var RegExpNoneOfs = {
         __proto__: null,
         "*": true,
-        //    "\\":true,
-        "/": true,
-        "[": true
+        "/": true
     };
 
     /* 1. Versuch */
@@ -1928,7 +1926,6 @@ define("tables", function (require, exports, module) {
     exports.StartOfThreeFourPunctuators = StartOfThreeFourPunctuators;
 
     return exports;
-
 
 });
 
@@ -3219,6 +3216,7 @@ define("tokenizer", function () { // should use this factory to create one each 
 
             if (ch === "/") { // is the second / which closes the regexp.
                 pass("/");
+
                 var hasFlags = {};
                 while (RegExpFlags[ch]) { // besorge noch die flags, collect flags
                     if (hasFlags[ch]) throw new SyntaxError("duplicate flags not allowed in regular expressions");
@@ -3226,6 +3224,11 @@ define("tokenizer", function () { // should use this factory to create one each 
                     hasFlags[ch] = true;
                     next();
                 }
+                if (!(WhiteSpaces[ch]||Punctuators[ch]||LineTerminators[ch]) && ch != undefined) {
+                    // let flags be /geg/gimuyfff then lexer is now at fff and that´s a syntaxerror
+                    throw new SyntaxError("unexpected token illegal");
+                }
+
                 makeToken("RegularExpressionLiteral", [expr, flags]);
                                                     // "/"+expr+"/"+flags
                 inputElementGoal = inputElementDiv;
@@ -7446,333 +7449,6 @@ define("parser", function () {
         return node;
     }
 
-    // ===========================================================================================================
-    // Regular Expression Parser
-    // ===========================================================================================================
-    var FirstOfQuantifierPrefix = {
-        "*": true,
-        "+": true,
-        "?": true,
-        "{": true
-    };
-
-
-    var FirstOfAssertion = {
-        __proto__:null,
-        "^":true,
-        "$":true,
-        "\\":true,
-        "(":true
-    };
-
-    var FollowOfAssertion = {
-        __proto__:null,
-        "b": "\\",
-        "B": "\\"
-    };
-
-    var FirstOfAtom = {
-        __proto__:null,
-        "^":true,
-        "$":true,
-        "\\":true,
-        ".":true
-    };
-
-    var ControlLetter = tables.ControlLetter;
-    var ControlEscape = tables.ControlEscape;
-    var CharacterClassEscape = tables.CharacterClassEscape;
-    var NonPatternCharacter = tables.NonPatternCharacter;
-
-
-    Object.keys(ControlLetter).forEach(function (key) {
-        FirstOfAtom[key] = true;
-    });
-
-
-    function Term () {
-        var node;
-        if (FirstOfAssertion[v] || !NonPatternCharacter[v]) {
-            node = Node("Assertion");
-            var assertion;
-            var first = v;            
-            switch (v){
-                case "^":
-                    node.assertion = "^";
-                    pass("^");
-                    break
-                case "$":
-                    node.assertion = "$";
-                        pass("$");
-                    break;
-                case "\\":
-                    if (lookahead === "b" || lookahead === "B") {
-                        next();
-                        node.assertion = "\\"+v;
-                    }
-                    break;
-                case "(":
-                    if (lookahead === "?") {
-                        pass("(")
-                        pass("?");
-                        if (v =="=") {
-                            pass("=");
-                            node.assertion = this.Disjunction();
-                            node.modifiers = "?=";
-                        } else if (v == "!") {
-                            pass("!");
-                            node.assertion = this.Disjunction();
-                            node.modifiers = "?!";                            
-                        }
-                    }
-                    break;
-                default:
-                    return null;
-            }
-            
-        }
-        if (FirstOfAtom[v]) {
-            node = Node("Atom");
-            switch (v) {
-                case ".":
-                case "\\":
-                    node.atom = this.AtomEscape();
-                    break;
-                case "[":
-                    node.atom = this.CharacterClass();
-                    break;
-                case "(":
-                    pass("(")
-                    if (v == "?" && lookhead == ":") {
-                        pass("?");
-                        pass(":");
-                        node.atom = "?:"
-                        node.disjunction = this.Disjunction();
-                    } else {
-                        node.atom = this.Disjunction();
-                    }    
-                    break;                
-                case ".":
-                    node.atom = ".";
-                    pass(".");
-                    break;
-                default:
-                    if (!NonPatternCharacter[v]) {
-                        node.atom = v;
-                        next();
-                    }
-
-            }
-            if (node) {
-                var quantifier = this.Quantifier();
-                if (quantifier) node.quantifier = quantifier;
-            }
-            return node;
-        }
-        return null;
-    }
-    function Quantifier () {
-        if (FirstOfQuantifierPrefix[v]) {
-
-            var quantifier = v;
-            if (v == "{") {
-
-                pass("{");
-                if (DecimalDigits[v])  {
-                    var q1 = "";
-                    while (DecimalDigits[v]) {
-                        q1 += v;
-                        next();
-                    }
-                    if (v == ",") {
-                        var q2 = "";
-                        pass(",");
-                        while (DecimalDigits[v]) {
-                            q1 += v;
-                            next();
-                        }
-                    } else if (v == "}") {
-                        pass("}");
-                        return [q1];
-                    } else {
-                        throw new SyntaxError("invalid quantifier");
-                    }
-                    pass("}");
-                    return [q1, q2];
-                } else {
-                    throw new SyntaxError("invalid quantifier");
-                }
-
-            } else {
-                pass(quantifier);
-                return quantifier;
-            }
-        }            
-        return null;
-    }
-
-    function AtomEscape() {
-        var escape = "\\";
-        if (DecimalDigits[lookahead]) {
-            pass("\\");
-            while (DecimalDigits[v]) {
-                escape += v;
-                next();
-            }
-            return escape;
-        }
-        else if (ControlLetter[lookahead]) {
-            pass("\\");
-            escape += v;
-            pass(v);
-            return escape;
-        } else if (CharacterClassEscape[lookahead]) {
-            pass("\\");
-            escape += v;
-            return escape;
-        }
-        return escape;
-    }
-
-    var DecimalDigits = tables.DecimalDigits;
-    var Hexdigits = tables.HexDigits;
-    function ClassEscape() {
-        var escape = "\\";        
-        if (DecimalDigits[lookahead]) {        
-            pass("\\");
-            if (v == "0" && (lookahead === "x" || lookahead === "X")) {
-                // HexEscapeSequence
-                escape += "0";
-                pass("0");
-                escape += v;
-                pass(v);
-                while (HexDigits[v]) {
-                    escape += v;
-                    next();
-                }
-                return escape;
-            }
-            if (v == "u") {
-                // UnicodeEscapeSequence
-                escape += "u";
-                pass("u");                
-                while (HexDigits[v]) {
-                    escape += v;
-                    next();
-                }
-                return escape;
-            }
-            while (DecimalDigits[v]) {
-                escape += v;
-                next();
-            }
-            return escape;
-        } else if (lookahead === "b") {
-            pass("\\");
-            escape += "b";
-            pass("b");
-            return escape;
-        } else if (CharacterClassEscape[lookahead]) {
-            pass("\\");
-            escape += v;
-            pass(v);
-            return escape;
-        } else {
-            
-            if (lookahead == "c") {
-                pass("\\");
-                pass("c");
-                // not strikt (requires 3 token lookahead)
-                if (ControlLetter[v]) {
-                    escape += v;
-                }
-                pass(v);
-                return escape;
-            }
-            if (ControlEscape[lookahead]) {
-                pass("\\");
-                escape += v;
-                pass(v);
-                return escape;
-            }
-        }
-    }
-
-    function ClassRanges() {
-        // ranges = [ 0, [1-7], 8, 9, [10-125] ]
-        var ranges = [];
-        while (v != "]") {
-            var left = v;
-            if (v == "\\") {
-                left = ClassEscape();
-                if (!left) return null; // ???
-            } else {
-                pass(v);
-            }
-            if (v == "-") {
-                pass("-");
-                var right = v;
-                ranges.push([left,right]);
-            } else {
-                ranges.push(left);
-            }
-        }
-        return ranges;
-    }
-
-    function CharacterClass() {
-            var node = Node("CharacterClass");
-            pass("[");
-            if (v == "^") {
-                node.negation = true;
-                pass("^");
-            }                
-            node.ranges = this.ClassRanges();
-            pass("]");
-            return node;
-    }
-
-    function Disjunction () {
-        var node = Node("Disjunction");
-        node.alternative = this.Alternative();
-        if (v === "|") {
-            pass("|")
-            node.disjunction = Disjunction();
-        }
-        return node;
-    }
-
-    function Alternative() {       
-       var alternative = [];
-       do {
-            var term = this.Term();
-            alternative.push(term);
-
-        } while (v != "|" && v != undefined);
-       return alternative;
-    }
-
-    function Pattern() {
-        var node = Node("Pattern");
-        node.disjunction = this.Disjunction();
-        return node;
-    }
-
-    parser.Pattern = Pattern;
-    parser.Alternative = Alternative;
-    parser.Disjunction = Disjunction;
-    parser.ClassRanges = ClassRanges;
-    parser.ClassEscape = ClassEscape;
-    parser.Term = Term;
-    parser.CharacterClass = CharacterClass;
-    parser.AtomEscape = AtomEscape;
-
-
-    // the parser returns this node first
-    // when the Builtin RegExp is created
-    // this will be parsed with the above
-
-
     parser.RegularExpressionLiteral = RegularExpressionLiteral;
 
     function RegularExpressionLiteral() {
@@ -7796,6 +7472,7 @@ define("parser", function () {
         }
         return null;        
     }
+
 
     // ===========================================================================================================
     // JSON Parser is invoked via parseGoal from the Runtime of the Interpreter and is incompatible
@@ -8131,6 +7808,387 @@ define("parser", function () {
     }
     // enableExtras();
     // uncomment for endless loop
+    return exports;
+});
+
+/*
+
+    The tokenizer is different from the remaining tokenization.
+    I just need the array of code points.
+
+    So i thought it´s better to separate it.
+
+    Mistakes will be resolved when i´m through the whole evaluation specification
+    and have completed implementing the RegExp.prototype methods.
+
+      MY own question to myself is, how do i generate the automaton from (without violating spec)?
+      Starting one from scratch is easy for me. But to see through the
+      mist here, i got still some work to do. I will answer the question soon.
+
+ */
+
+define("regexp-parser", function (require, exports) {
+"use strict";
+    var tables = require("tables");
+
+    var ch, lookahead, index, input, length;
+    var parser = Object.create(null);
+
+    function Node(type) {
+        return {
+            type: type
+        };
+    }
+
+    function pass(c) {
+        if (c == ch) next();
+        else throw new SyntaxError("RegExpParser: " + c + " expected")
+    }
+
+    function next() {
+        if (index < length) {
+            ch = lookahead;
+            lookahead = input[++index];
+            return ch;
+        }
+        return undefined;
+    }
+
+    var FirstOfQuantifierPrefix = {
+        "*": true,
+        "+": true,
+        "?": true,
+        "{": true
+    };
+
+
+    var FirstOfAssertion = {
+        __proto__: null,
+        "^": true,
+        "$": true,
+        "\\": true,
+        "(": true
+    };
+
+    var FollowOfAssertion = {
+        __proto__: null,
+        "b": "\\",
+        "B": "\\"
+    };
+
+    var FirstOfAtom = {
+        __proto__: null,
+        "^": true,
+        "$": true,
+        "\\": true,
+        ".": true
+    };
+
+    var ControlLetter = tables.ControlLetter;
+    var ControlEscape = tables.ControlEscape;
+    var CharacterClassEscape = tables.CharacterClassEscape;
+    var NonPatternCharacter = tables.NonPatternCharacter;
+
+    Object.keys(ControlLetter).forEach(function (key) {
+        FirstOfAtom[key] = true;
+    });
+
+
+    function Term() {
+        var node;
+        if (FirstOfAssertion[ch] || !NonPatternCharacter[ch]) {
+            node = Node("Assertion");
+            var assertion;
+            var first = ch;
+            switch (ch) {
+                case "^":
+                    node.assertion = "^";
+                    pass("^");
+                    break
+                case "$":
+                    node.assertion = "$";
+                    pass("$");
+                    break;
+                case "\\":
+                    if (lookahead === "b" || lookahead === "B") {
+                        next();
+                        node.assertion = "\\" + ch;
+                    }
+                    break;
+                case "(":
+                    if (lookahead === "?") {
+                        pass("(")
+                        pass("?");
+                        if (ch == "=") {
+                            pass("=");
+                            node.assertion = this.Disjunction();
+                            node.modifiers = "?=";
+                        } else if (ch == "!") {
+                            pass("!");
+                            node.assertion = this.Disjunction();
+                            node.modifiers = "?!";
+                        }
+                    }
+                    break;
+                default:
+                    return null;
+            }
+
+        }
+        if (FirstOfAtom[ch]) {
+            node = Node("Atom");
+            switch (ch) {
+                case ".":
+                case "\\":
+                    node.atom = this.AtomEscape();
+                    break;
+                case "[":
+                    node.atom = this.CharacterClass();
+                    break;
+                case "(":
+                    pass("(")
+                    if (ch == "?" && lookhead == ":") {
+                        pass("?");
+                        pass(":");
+                        node.atom = "?:"
+                        node.disjunction = this.Disjunction();
+                    } else {
+                        node.atom = this.Disjunction();
+                    }
+                    break;
+                case ".":
+                    node.atom = ".";
+                    pass(".");
+                    break;
+                default:
+                    if (!NonPatternCharacter[ch]) {
+                        node.atom = ch;
+                        next();
+                    }
+
+            }
+            if (node) {
+                var quantifier = this.Quantifier();
+                if (quantifier) node.quantifier = quantifier;
+            }
+            return node;
+        }
+        return null;
+    }
+
+    function Quantifier() {
+        if (FirstOfQuantifierPrefix[ch]) {
+
+            var quantifier = ch;
+            if (ch == "{") {
+
+                pass("{");
+                if (DecimalDigits[ch]) {
+                    var q1 = "";
+                    while (DecimalDigits[ch]) {
+                        q1 += ch;
+                        next();
+                    }
+                    if (ch == ",") {
+                        var q2 = "";
+                        pass(",");
+                        while (DecimalDigits[ch]) {
+                            q1 += ch;
+                            next();
+                        }
+                    } else if (ch == "}") {
+                        pass("}");
+                        return [q1];
+                    } else {
+                        throw new SyntaxError("invalid quantifier");
+                    }
+                    pass("}");
+                    return [q1, q2];
+                } else {
+                    throw new SyntaxError("invalid quantifier");
+                }
+
+            } else {
+                pass(quantifier);
+                return quantifier;
+            }
+        }
+        return null;
+    }
+
+    function AtomEscape() {
+        var escape = "\\";
+        if (DecimalDigits[lookahead]) {
+            pass("\\");
+            while (DecimalDigits[ch]) {
+                escape += ch;
+                next();
+            }
+            return escape;
+        }
+        else if (ControlLetter[lookahead]) {
+            pass("\\");
+            escape += ch;
+            pass(ch);
+            return escape;
+        } else if (CharacterClassEscape[lookahead]) {
+            pass("\\");
+            escape += ch;
+            return escape;
+        }
+        return escape;
+    }
+
+    var DecimalDigits = tables.DecimalDigits;
+    var Hexdigits = tables.HexDigits;
+
+    function ClassEscape() {
+        var escape = "\\";
+        if (DecimalDigits[lookahead]) {
+            pass("\\");
+            if (ch == "0" && (lookahead === "x" || lookahead === "X")) {
+                // HexEscapeSequence
+                escape += "0";
+                pass("0");
+                escape += ch;
+                pass(ch);
+                while (HexDigits[ch]) {
+                    escape += ch;
+                    next();
+                }
+                return escape;
+            }
+            if (ch == "u") {
+                // UnicodeEscapeSequence
+                escape += "u";
+                pass("u");
+                while (HexDigits[ch]) {
+                    escape += ch;
+                    next();
+                }
+                return escape;
+            }
+            while (DecimalDigits[ch]) {
+                escape += ch;
+                next();
+            }
+            return escape;
+        } else if (lookahead === "b") {
+            pass("\\");
+            escape += "b";
+            pass("b");
+            return escape;
+        } else if (CharacterClassEscape[lookahead]) {
+            pass("\\");
+            escape += ch;
+            pass(ch);
+            return escape;
+        } else {
+
+            if (lookahead == "c") {
+                pass("\\");
+                pass("c");
+                // not strikt (requires 3 token lookahead)
+                if (ControlLetter[ch]) {
+                    escape += ch;
+                }
+                pass(ch);
+                return escape;
+            }
+            if (ControlEscape[lookahead]) {
+                pass("\\");
+                escape += ch;
+                pass(ch);
+                return escape;
+            }
+        }
+    }
+
+    function ClassRanges() {
+        // ranges = [ 0, [1-7], 8, 9, [10-125] ]
+        var ranges = [];
+        while (ch != "]" && ch != undefined) {
+            var left = ch;
+            if (ch == "\\") {
+                left = ClassEscape();
+                if (!left) return null; // ???
+            } else {
+                pass(ch);
+            }
+            if (ch == "-") {
+                pass("-");
+                var right = ch;
+                ranges.push([left, right]);
+            } else {
+                ranges.push(left);
+            }
+        }
+        return ranges;
+    }
+
+    function CharacterClass() {
+        var node = Node("CharacterClass");
+        pass("[");
+        if (ch == "^") {
+            node.negation = true;
+            pass("^");
+        }
+        node.ranges = this.ClassRanges();
+        pass("]");
+        return node;
+    }
+
+    function Disjunction() {
+        var node = Node("Disjunction");
+        node.alternative = this.Alternative();
+        if (ch === "|") {
+            pass("|")
+            node.disjunction = Disjunction();
+        }
+        return node;
+    }
+
+    function Alternative() {
+
+        /*
+        var alternative = [];
+        do {
+            var term = this.Term();
+            alternative.push(term);
+        } while (ch != "|" && ch != undefined);
+        return alternative;
+        */
+
+        return this.Term();
+    }
+
+    function Pattern() {
+        var node = Node("Pattern");
+        node.disjunction = this.Disjunction();
+        return node;
+    }
+    
+    function parse(string) {
+        input = string || "";
+        length = input.length;
+        if (length === 0) return Node("Pattern");
+        index = -1;
+        lookahead = string[0];
+        next();
+        return Pattern.call(parser);
+    }
+
+    parser.Pattern = Pattern;
+    parser.Alternative = Alternative;
+    parser.Disjunction = Disjunction;
+    parser.ClassRanges = ClassRanges;
+    parser.ClassEscape = ClassEscape;
+    parser.Term = Term;
+    parser.CharacterClass = CharacterClass;
+    parser.AtomEscape = AtomEscape;
+        
+    exports.parser = parser;
+    exports.parse = parse;
     return exports;
 });
 
@@ -14241,17 +14299,35 @@ List.prototype.shift = List.prototype.removeFirst;
 
 
 
+var tables = require("tables");
+var LineTerminators = tables.LineTerminators;
 
+function RegExpCreate(P, F) {
+    var obj = RegExpAllocate(getIntrinsic("%RegExp%"));
+    if (isAbrupt(obj=ifAbrupt(obj))) return obj;
+    return RegExpInitialize(obj, P, F);
+}
+
+function EscapeRegExpPattern(P, F) {
+    var S = "";
+    for (var i = 0, j = P.length; i < j; i++) {
+        var codePoint = P[i];
+        if (codePoint === "/") {
+            S += "\\/";
+        } else S += codePoint;
+    }
+    return S;
+}
 
 function RegExpInitialize(obj, pattern, flags) {
 
-	var P, F, BMP;;
-	if (pattern === undefined) P = "";
-	else P = ToString(pattern);
-	if (isAbrupt(P=ifAbrupt(P))) return P;
-	if (flags === undefined) F = "";
+    var P, F, BMP;;
+    if (pattern === undefined) P = "";
+    else P = ToString(pattern);
+    if (isAbrupt(P=ifAbrupt(P))) return P;
+    if (flags === undefined) F = "";
     else F = ToString(flags);
-	BMP = F.indexOf("u") === -1;
+    BMP = F.indexOf("u") === -1;
 
     var parsed = parseGoal("Pattern", P);
 
@@ -14266,69 +14342,158 @@ function RegExpInitialize(obj, pattern, flags) {
 
 function RegExpAllocate(constructor) {
 
-	var obj = OrdinaryCreateFromConstructor(constructor, "%RegExpPrototype%",{
-		"RegExpMatcher": undefined,
-		"OriginalSource": undefined,
-		"OriginalFlags": undefined
-	});
-	var status = DefineOwnPropertyOrThrow(obj, "lastIndex", {
-		writable: true,
-		configurable: false,
-		enumerable: false,
-		value: undefined
+    var obj = OrdinaryCreateFromConstructor(constructor, "%RegExpPrototype%",{
+        "RegExpMatcher": undefined,
+        "OriginalSource": undefined,
+        "OriginalFlags": undefined
+    });
+    var status = DefineOwnPropertyOrThrow(obj, "lastIndex", {
+        writable: true,
+        configurable: false,
+        enumerable: false,
+        value: undefined
 
-	});	
-	if (isAbrupt(status = ifAbrupt(status))) return status;
-	return NormalCompletion(obj);		
+    });
+    if (isAbrupt(status = ifAbrupt(status))) return status;
+    return NormalCompletion(obj);
 }
 
+
+
+function RegExpExec (R, S, ignore) {
+    Assert(getInternalSlot(R, "RegExpMatcher") != undefined, "RegExpExec: R must be a initialized RegExp instance");
+    Assert(Type(S) === "string");
+    Assert(ignore !== undefined ? Type(ignore) === "boolean" : true, "ignore has to be a bool if ignore is provided");
+    var length = S.length;
+    var global, sticky, matcher, flags, matchSucceeded, e, fullUnicode, putStatus, eUTF;
+    if (ignore === undefined) ignore = false;
+    if (ignore) global = false;
+    else {
+        var lastIndex = Get(R, "lastIndex");
+        var i = ToInteger(lastIndex);
+        if (isAbrupt(i = ifAbrupt(i))) return i;
+        var global = ToBoolean(Get(R, "global"));
+        if (isAbrupt(global = ifAbrupt(global))) return global;
+    }
+    sticky = ToBoolean(Get(R, "sticky"));
+    if (isAbrupt(sticky = ifAbrupt(sticky))) return sticky;
+    matcher = getInternalSlot(R, "RegExpMatcher");
+    flags = getInternalSlot(R, "OriginalFlags");
+    fullUnicode = flags.indexOf("u") > -1;
+    matchSucceeded = false;
+    while (!matchSucceeded) {
+        if (i < 0 || i > length) {
+            if (ignore) {
+                putStatus = Put(R, "lastIndex", 0, true);
+                if (isAbrupt(putStatus = ifAbrupt(putStatus))) return putStatus;
+                return NormalCompletion(null);
+            }
+        }
+        r = matcher(S, i);
+        if (r === FAILURE) {
+            if (sticky) {
+                if (ignore) {
+                    putStatus = Put(R, "lastIndex", 0, true);
+                    if (isAbrupt(putStatus = ifAbrupt(putStatus))) return putStatus;
+                }
+                return NormalCompletion(null);
+            }
+            i = i + 1;
+        } else {
+            Assert(Array.isArray(r) && r.length === 2, "RegExpExec: r has to be a state instance");
+            matchSucceeded = true;
+        }
+    }
+    e = r.endIndex;
+    if (fullUnicode) {
+            // index
+    }
+    if (global) {
+        putStatus = Put(R, "lastIndex", e, true);
+        if (isAbrupt(putStatus = ifAbrupt(putStatus))) return putStatus;
+    }
+    var n = matcher.machine.NCapturingParens;
+    var A = ArrayCreate(n + 1);
+    var matchIndex = i;
+    var status;
+    status = CreateDataProperty(A, "index", matchindex);
+    if (isAbrupt(status)) return status;
+    status = CreateDataProperty(A, "input", S);
+    if (isAbrupt(status)) return status;
+    status = CreateDataProperty(A, "length", n + 1);
+    if (isAbrupt(status)) return status;
+    var matchedSubstr = S.substr(i, e);
+    status = CreateDataProperty(A, "0", matchedSubstr);
+    var captureString;
+    for (i = 1; i <= n; i++) {
+        var captureI = r.captures[i];
+        if (fullUnicode) {
+            captureString = captureI;
+        } else {
+            captureString = captureI;
+        }
+        status = CreateDataProperty(A, ToString(i), captureString);
+        if (isAbrupt(status)) return status;
+    }
+    return NormalCompletion(A);
+}
+
+
+
 /*
-    this will become the first AST evaluator
 
-    which isnt in runtime.js
 
-    i can make an extra file, but should stick it to
-    all other "node traversing" functions.
+
+
  */
 
+var FAILURE = null;
+
 function RegExpMatcher(patternCharacters, flags, parsed) {
-    var matcher = {};
-    matcher.Input = patternCharacters; // patternCharacters is the input alphabet i guess, that means the whole set of codepoints/units and not a-z
-    matcher.inputLength = 0;
-    matcher.NCapturingParens = 0;
-    matcher.ignoreCase = false;
-    matcher.Multiline = false;
-    matcher.Unicode = false;
-    matcher.Pattern = Pattern;
-    matcher.Disjunction = Disjunction;
-    matcher.Alternative = Alternative;
-    matcher.isFailure = function (r) {
-        return r === null;
+
+    var laterARealAutomaton = {};
+    laterARealAutomaton.flags = flags;
+    laterARealAutomaton.Input = patternCharacters;
+    laterARealAutomaton.inputLength = 0;
+    laterARealAutomaton.NCapturingParens = 0;
+    laterARealAutomaton.ignoreCase = false;
+    laterARealAutomaton.Multiline = false;
+    laterARealAutomaton.Unicode = false;
+    laterARealAutomaton.Pattern = Pattern;
+    laterARealAutomaton.Disjunction = Disjunction;
+    laterARealAutomaton.Alternative = Alternative;
+    laterARealAutomaton.isFailure = function (r) {
+        return r === FAILURE;
     };
-    matcher.Continuation = function (steps) {
+    laterARealAutomaton.Continuation = function (steps) {
         return steps;
     }
-    matcher.State = function (lastIndex, str) {
+    laterARealAutomaton.State = function (lastIndex, str) {
         return [lastIndex, str];
     };
-    matcher.evaluate = function (node) {
+    laterARealAutomaton.evaluate = function (node) {
         var f = this[node.type];
         if (f) return f.call(this, node);
     };
+
+
+    var matcher = laterARealAutomaton.evaluate(parsed);
+    matcher.machine = laterARealAutomaton;
     return matcher;
+
 }
 
 function Pattern (node) {
     var disjunction = node.disjunction;
     var m = this.evaluate(disjunction);
     return function matcher (str, index) {
-          this.Input = new String(str);
-          var listIndex = this.Input.indexOf(str[index]);
-          this.InputLength = this.Input.length;
-          var c = this.Continuation(function (state) { return state; });
-          var cap = new Array(this.NCapturingParens + 1); // indexed 1 bis
-          var x = this.State(listIndex, cap);
-          return m.call(this, x,c);
+        this.Input = new String(str);
+        var listIndex = this.Input.indexOf(str[index]);
+        this.InputLength = this.Input.length;
+        var c = this.Continuation(function (state) { return state; });
+        var cap = new Array(this.NCapturingParens + 1); // indexed 1 bis
+        var x = this.State(listIndex, cap);
+        return m.call(this, x,c);
     };
 }
 
@@ -14336,7 +14501,7 @@ function Disjunction (node) {
     var alternative = node.alternative;
     var disjunction = node.disjunction;
     if (!disjunction) {
-        return this.evaluate(alternaive);
+        return this.evaluate(alternative);
     } else {
         var m1 = this.evaluate(alternative);
         var m2 = this.evaluate(disjunction);
@@ -14355,23 +14520,23 @@ function Term () {
     }
 }
 
-var LineTerminator = require("tables").LineTerminator;
-
 function Assertion(node) {
     return function m (x, c) {
         if (node == "^") {
-            return function assertion_tester (x) {
+            return function assertion_tester_caret (x) {
                 var e = x.endIndex;
                 if (e === 0) return true;
                 if (this.Multiline === false) return false;
-                if (LineTerminator[this.Input[e-1]]) return true;
+                return LineTerminators[this.Input[e-1]];
             }
         }
+
+
         var r = !!t.call(this, c);
         if (!r) return null;
         return c.call(this, x);
     }
-}
+};
 
 
     // Structured Clone Algorithms
@@ -22018,7 +22183,6 @@ function makeResolveFunction () {
 
 MakeConstructor(RegExpConstructor, true, RegExpPrototype);
 
-
 var RegExp_$$create = function (thisArg, argList) {
     return RegExpAllocate(thisArg);
 };
@@ -22047,16 +22211,269 @@ var RegExp_Call = function (thisArg, argList) {
 var RegExp_Construct = function (argList) {
     return Construct(this, argList);
 };
-var RegExpPrototype_get_global = function (thisArg, argList) {};
-var RegExpPrototype_get_multiline = function (thisArg, argList) {};
-var RegExpPrototype_get_ignoreCase = function (thisArg, argList) {};
-var RegExpPrototype_get_source = function (thisArg, argList) {};
-var RegExpPrototype_compile = function (thisArg, argList) {
+var RegExpPrototype_get_global = function (thisArg, argList) {
+    var R = thisArg;
+    if (Type(R) != "object") return withError("Type", "this value is no object");
+    if (!hasInternalSlot(R, "OriginalFlags")) return withError("Type", "this value has no [[OriginalFlags]]");
+    var flags = getInternalSlot(R, "OriginalFlags");
+    return flags.indexOf("g");
 };
+var RegExpPrototype_get_multiline = function (thisArg, argList) {
+    var R = thisArg;
+    if (Type(R) != "object") return withError("Type", "this value is no object");
+    if (!hasInternalSlot(R, "OriginalFlags")) return withError("Type", "this value has no [[OriginalFlags]]");
+    var flags = getInternalSlot(R, "OriginalFlags");
+    return flags.indexOf("m");
+};
+var RegExpPrototype_get_ignoreCase = function (thisArg, argList) {
+    var R = thisArg;
+    if (Type(R) != "object") return withError("Type", "this value is no object");
+    if (!hasInternalSlot(R, "OriginalFlags")) return withError("Type", "this value has no [[OriginalFlags]]");
+    var flags = getInternalSlot(R, "OriginalFlags");
+    return flags.indexOf("i");
+};
+var RegExpPrototype_get_sticky = function (thisArg, argList) {
+    var R = thisArg;
+    if (Type(R) != "object") return withError("Type", "this value is no object");
+    if (!hasInternalSlot(R, "OriginalFlags")) return withError("Type", "this value has no [[OriginalFlags]]");
+    var flags = getInternalSlot(R, "OriginalFlags");
+    return flags.indexOf("y");
+};
+
+var RegExpPrototype_get_unicode = function (thisArg, argList) {
+    var R = thisArg;
+    if (Type(R) != "object") return withError("Type", "this value is no object");
+    if (!hasInternalSlot(R, "OriginalFlags")) return withError("Type", "this value has no [[OriginalFlags]]");
+    var flags = getInternalSlot(R, "OriginalFlags");
+    return flags.indexOf("u");
+};
+
+var RegExpPrototype_get_source = function (thisArg, argList) {
+    var R = thisArg;
+    if (Type(R) != "object") return withError("Type", "this value is no object");
+    if (!hasInternalSlot(R, "OriginalSource")) return withError("Type", "this value has no [[OriginalSource]]");
+    if (!hasInternalSlot(R, "OriginalFlags")) return withError("Type", "this value has no [[OriginalFlags]]");
+    var source =getInternalSlot(R, "OriginalSource");
+    var flags = getInternalSlot(R, "OriginalFlags");
+    if (source === undefined || flags === undefined) return withError("Type", "source and flags may not be undefined");
+    return EscapeRegExpPattern(source, flags);
+};
+
+
 var RegExpPrototype_exec = function (thisArg, argList) {
+    var R = thisArg;
+    var string = argList[0];
+    var S;
+    if (Type(R) !== "object") return withError("Type", "this value is not an object");
+    if (!hasInternalSlot(R, "RegExpMatcher")) return withError("Type", "this value has not [[RegExpMatcher]] internal slot");
+    if (getInternalSlot(R, "RegExpMatcher") === undefined) return withError("Type", "this value has not [[RegExpMatcher]] internal slot defined");
+    S = ToString(string);
+    if (isAbrupt(S=ifAbrupt(S))) return S;
+    return RegExpExec(R,S);
 };
+
+var RegExpPrototype_search = function (thisArg, argList) {
+    var rx = thisArg;
+    var S = argList[0];
+    if (Type(rx) !== "object") return withError("Type", "this value is not an obect");
+    if (!hasInternalSlot(rx, "RegExpMatcher")) return withError("Type", "this value has no [[RegExpMatcher]] internal slot");
+    var matcher = getInternalSlot(rx, "RegExpMatcher");
+    var string = ToString(S);
+    if (isAbrupt(string=ifAbrupt(string))) return string;
+    var result = RegExpExec(rx, string, true);
+    if (isAbrupt(result=ifAbrupt(result))) return result;
+    if (result == null) return -1;
+    return Get(result, "index");
+};
+var RegExpPrototype_match = function (thisArg, argList) {
+    var rx = thisArg;
+    var string = argList[0];
+    var S;
+    if (Type(rx) !== "object") return withError("Type", "this value is not an object");
+    if (!hasInternalSlot(rx, "RegExpMatcher")) return withError("Type", "this value has not [[RegExpMatcher]] internal slot");
+    if (getInternalSlot(rx, "RegExpMatcher") === undefined) return withError("Type", "this value has not [[RegExpMatcher]] internal slot defined");
+    S = ToString(string);
+    if (isAbrupt(S=ifAbrupt(S))) return S;
+    var global = ToBoolean(Get(rx, "global"));
+    if (isAbrupt(global=ifAbrupt(global))) return global;
+    if (!global) {
+        return RegExpExec(rx, S);
+    } else {
+        var putStatus = Put(rx, "lastIndex", 0, true);
+        if (isAbrupt(putStatus)) return putStatus;
+        var A = ArrayCreate(0);
+        var previousLastIndex = 0;
+        var n = 0;
+        var lastMatch = true;
+        while (lastMatch) {
+            var result = RegExpExec(rx, S);
+            if (isAbrupt(result=ifAbrupt(result))) return result;
+            if (result === null) lastMatch = false;
+            else {
+                var thisIndex = ToInteger(Get(rx, "lastIndex"));
+                if (isAbrupt(thisIndex=ifAbrupt(thisIndex))) return thisIndex;
+                if (thisIndex === previousLastIndex) {
+                    putStatus = Put(rx, "lastIndex", thisIndex + 1, true);
+                    if (isAbrupt(putStatus)) return putStatus;
+                    previousLastIndex = thisIndex + 1;
+                } else {
+                    previousLastIndex = thisIndex;
+                }
+                var matchStr = Get(result, "0");
+                var defineStatus = CreateDataPropertyOrThrow(A, ToString(n), matchStr);
+                if (isAbrupt(defineStatus)) return defineStatus;
+                n =  n + 1;
+            }
+        }
+        if (n === 0) return NormalCompletion(null);
+        return NormalCompletion(A);
+    }
+};
+
 var RegExpPrototype_test = function (thisArg, argList) {
+    var R = thisArg;
+    var string = argList[0];
+    if (Type(R) !== "object") return withError("Type", "this value is no object");
+    var match = Invoke(R, "exec", [string]);
+    if (isAbrupt(match=ifAbrupt(match))) return match;
+    return NormalCompletion(match !== null);
 };
+
+
+var RegExpPrototype_compile = function (thisArg, argList) {
+
+
+
+};
+var RegExpPrototype_split = function (thisArg, argList) {
+
+};
+
+var RegExpPrototype_replace = function (thisArg, argList) {
+    var string = argList[0];
+    var replaceValue = argList[1];
+    var rx = thisArg;
+    var S;
+    if (Type(rx) !== "object") return withError("Type", "this value is not an object");
+    if (!hasInternalSlot(rx, "RegExpMatcher")) return withError("Type", "this value has not [[RegExpMatcher]] internal slot");
+    if (getInternalSlot(rx, "RegExpMatcher") === undefined) return withError("Type", "this value has not [[RegExpMatcher]] internal slot defined");
+
+    var nCaptures = rx.machine.NCapturingParens;
+    S = ToString(string);
+    if (isAbrupt(S=ifAbrupt(S))) return S;
+    var functionalReplace = IsCallable(replaceValue);
+    var global = ToBoolean(Get(rx, "global"));
+    if (isAbrupt(global=ifAbrupt(global))) return global;
+    var accumulatedResult = "";
+    var nextSrcPosition = 0;
+    if (global) {
+        var putStatus = Put(rx, "lastIndex", 0, true);
+        if (isAbrupt(putStatus)) return putStatus;
+    }
+    var previousLastIndex = 0;
+    var done = false;
+    var accumulatedResult = "";
+    var nextSrcPosition = 0;
+    var matchLength;
+    while (!done) {
+        var result = RegExpExec(rx, S);
+        if (isAbrupt(result=ifAbrupt(result))) return result;
+        if (result === null) done = true;
+        else {
+            if (global) {
+                var thisIndex = ToInteger(Get(rx, "lastIndex"));
+                if (isAbrupt(thisIndex = ifAbrupt(thisIndex))) return thisIndex;
+                if (thisIndex === previousLastIndex) {
+                    var putStatus = Put(rx, "lastIndex", thisIndex + 1, true);
+                    if (isAbrupt(putStatus)) return putStatus;
+                    var previousLastIndex = thisIndex + 1;
+                } else {
+                    previousLastIndex = thisIndex;
+                }
+            }
+            var sub = GetRegExpSubstitution(result);
+            var matched = Get(result, "0");
+            if (isAbrupt(matched=ifAbrupt(matched))) return matched;
+            var position = Get(result, "index");
+            if (isAbrupt(position = ifAbrupt(position))) return position;
+            var n = 0;
+            var captures = [];
+            while (n < nCaptures) {
+                var capN = Get(result, ToString(n));
+                if(isAbrupt(capN=ifAbrupt(capN))) return capN;
+                captures.push(capN);
+                n = n + 1;
+            }
+            if (functionalReplace === true) {
+                var replacerArgs = [matched];
+                replacerArgs = replacerArgs.concat(captures);
+                var replValue = callInternalSlot("Call", replaceValue, undefined, replacerArgs);
+                var replacement = ToString(replValue);
+            } else {
+                replacement = GetReplaceSubstitution(matched, string, position, captures);
+            }
+            if (isAbrupt(replacement=ifAbrupt(replacement))) return replacement;
+            var matchLength = matched.length;
+            var replStr = ToString(replacement);
+            if (isAbrupt(replStr=ifAbrupt(replStr))) return replStr;
+
+
+            /*
+
+             Achtung: Dokument pruefen
+
+             Steps verschoben ???
+
+
+             */
+        /*
+            return {
+                position: position,
+                matchLength: matchLength,
+                replacement: replString
+            }; */
+
+            accumulatedResult = accumulatedResult + S.substr(nextSrcPosition, position - nextSrcPosition);
+            nextSrcPosition = position + matchLength;
+        }
+
+    }
+
+    return NormalCompletion( accumulatedResult + S.substr(nextSrcPosition, S.length - nextSrcPosition) );
+};
+
+
+var RegExpPrototype_toString = function (thisArg, argList) {
+    var R = thisArg;
+    if (Type(R) !== "object") return withError("Type", "this value is not an object");
+    if (!hasInternalSlot(R, "RegExpMatcher")) return withError("Type", "this value has not [[RegExpMatcher]] internal slot");
+    if (getInternalSlot(R, "RegExpMatcher") === undefined) return withError("Type", "this value has not [[RegExpMatcher]] internal slot defined");
+    var pattern = ToString(Get(R, "source"));
+    if (isAbrupt(pattern=ifAbrupt(pattern))) return pattern;
+    var result = "/" + pattern + "/";
+    var global = ToBoolean(Get(R, "global"));
+    if (isAbrupt(global=ifAbrupt(global))) return global;
+    if (global) result += "g";
+
+    var ignoreCase = ToBoolean(Get(R, "ignoreCase"));
+    if (isAbrupt(ignoreCase=ifAbrupt(ignoreCase))) return ignoreCase;
+    if (ignoreCase) result += "i";
+
+    var multiline = ToBoolean(Get(R, "multiline"));
+    if (isAbrupt(multiline=ifAbrupt(multiline))) return multiline;
+    if (multiline) result += "m";
+
+    var unicode = ToBoolean(Get(R, "unicode"));
+    if (isAbrupt(unicode=ifAbrupt(unicode))) return unicode;
+    if (unicode) result += "u";
+
+    var sticky = ToBoolean(Get(R, "sticky"));
+    if (isAbrupt(sticky=ifAbrupt(sticky))) return sticky;
+    if (sticky) result += "y";
+    return result;
+};
+
+
 setInternalSlot(RegExpConstructor, "Call", RegExp_Call);
 setInternalSlot(RegExpConstructor, "Construct", RegExp_Construct);
 
@@ -22071,12 +22488,19 @@ LazyDefineAccessor(RegExpPrototype, "ignoreCase", RegExpPrototype_get_ignoreCase
 LazyDefineAccessor(RegExpPrototype, "global", RegExpPrototype_get_global, undefined);
 LazyDefineAccessor(RegExpPrototype, "multiline", RegExpPrototype_get_multiline, undefined);
 LazyDefineAccessor(RegExpPrototype, "source", RegExpPrototype_get_source, undefined);
+LazyDefineAccessor(RegExpPrototype, "sticky", RegExpPrototype_get_sticky, undefined);
+LazyDefineAccessor(RegExpPrototype, "unicode", RegExpPrototype_get_unicode, undefined);
 
 LazyDefineProperty(RegExpPrototype, "lastIndex", 0);
 
 LazyDefineBuiltinFunction(RegExpPrototype, "compile", 1, RegExpPrototype_compile);
 LazyDefineBuiltinFunction(RegExpPrototype, "exec", 1, RegExpPrototype_exec);
+LazyDefineBuiltinFunction(RegExpPrototype, "match", 1, RegExpPrototype_match);
+LazyDefineBuiltinFunction(RegExpPrototype, "replace", 1, RegExpPrototype_replace);
+LazyDefineBuiltinFunction(RegExpPrototype, "search", 1, RegExpPrototype_search);
+LazyDefineBuiltinFunction(RegExpPrototype, "split", 1, RegExpPrototype_split);
 LazyDefineBuiltinFunction(RegExpPrototype, "test", 1, RegExpPrototype_test);
+LazyDefineBuiltinFunction(RegExpPrototype, "toString", 1, RegExpPrototype_toString);
 
 
 
@@ -26084,12 +26508,14 @@ define("runtime", function () {
     /* ^ debugger ****************************************************************************************************** */
 
     function RegularExpressionLiteral(node) {
-        
-         var literalSource = node.value;
-         
-         var pattern = parseGoal("Pattern", literalSource);
 
+        var parse = require("regexp-parser").parse;
+         var literalSource = node.value;
+         var flags = node.flags;
+         var pattern = parse(literalSource);
          if (hasConsole) console.log(JSON.stringify(pattern, null, 4));
+
+         // if (pattern) return RegExpCreate
 
          return withError("Syntax", "Can not create Regular Expression from Literal (currently not implemented)");// + literalSource);
     }

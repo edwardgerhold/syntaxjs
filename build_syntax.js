@@ -37,6 +37,8 @@
 //#include "lib/parsenodes/earlyerrors.js";
 
 //#include "lib/parsenodes/parser.js";
+//#include "lib/parsenodes/regexp_parser.js";
+
 //#include "lib/parsenodes/cstcodegen.js";
 
 /* // #include "lib/heap/heap.js";

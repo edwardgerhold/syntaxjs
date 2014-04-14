@@ -1,3 +1,4 @@
-let x = /[A-z]/g;
+let x = /a[A-z]+/g;
+
 
 
