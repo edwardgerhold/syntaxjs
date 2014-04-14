@@ -1,0 +1,12 @@
+{
+	"Regular Expression Object":
+	{
+	    "init": 
+		"let rx = new RegExp('a|b|c','i')",
+	    "tests": 
+	    [
+		["rx instanceof RegExp", true ],
+		["rx[Symbol.isRegExp]", true ]
+	    ]
+	}	
+}
