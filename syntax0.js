@@ -9298,6 +9298,18 @@ function LazyDefineBuiltinFunction(O, name, arity, fproto, e, w, c) {
     });
 }
 
+exports.LazyDefineAccessorFunction = LazyDefineAccessorFunction;
+function LazyDefineAccessorFunction(O, name, arity, g, s, e, c) { 
+    if (e === undefined) e = false;
+    if (c === undefined) c = true;
+    return callInternalSlot("DefineOwnProperty", O, name, {
+        configurable: c,
+        enumerable: e,
+        get: g ? CreateBuiltinFunction(getRealm(), g, arity, name) : undefined,
+        set: s ? CreateBuiltinFunction(getRealm(), s, arity, name) : undefined
+    });
+}
+
 function LazyDefineAccessor(obj, name, g, s, e, c) {
     if (e === undefined) e = false;
     if (c === undefined) c = true;
@@ -14353,7 +14365,7 @@ function RegExpInitialize(obj, pattern, flags) {
 
     setInternalSlot(obj, "OriginalFlags", F);
     setInternalSlot(obj, "OriginalSource", P);
-    setInternalSlot(obj, "RegExpMatcher", createRegExpMatcher(patternCharacters, flags));
+    setInternalSlot(obj, "RegExpMatcher", createRegExpMatcher(patternCharacters));
 
     var putStatus = Put(obj, "lastIndex", 0, true);
     if (isAbrupt(putStatus=ifAbrupt(putStatus))) return putStatus;
@@ -14377,8 +14389,6 @@ function RegExpAllocate(constructor) {
     if (isAbrupt(status = ifAbrupt(status))) return status;
     return NormalCompletion(obj);
 }
-
-
 
 function RegExpExec (R, S, ignore) {
     Assert(getInternalSlot(R, "RegExpMatcher") != undefined, "RegExpExec: R must be a initialized RegExp instance");
@@ -14409,14 +14419,14 @@ function RegExpExec (R, S, ignore) {
                 return NormalCompletion(null);
             }
         }
-        r = matcher(S, i);
+        var r = matcher(S, i);
         if (r === FAILURE) {
             if (sticky) {
                 if (ignore) {
                     putStatus = Put(R, "lastIndex", 0, true);
                     if (isAbrupt(putStatus = ifAbrupt(putStatus))) return putStatus;
                 }
-                return NormalCompletion(null);
+            	return NormalCompletion(null);
             }
             i = i + 1;
         } else {
@@ -14432,7 +14442,7 @@ function RegExpExec (R, S, ignore) {
         putStatus = Put(R, "lastIndex", e, true);
         if (isAbrupt(putStatus = ifAbrupt(putStatus))) return putStatus;
     }
-    var n = matcher.machine.NCapturingParens;
+    var n = matcher.evaluator.NCapturingParens;
     var A = ArrayCreate(n + 1);
     var matchIndex = i;
     var status;
@@ -14458,21 +14468,17 @@ function RegExpExec (R, S, ignore) {
     return NormalCompletion(A);
 }
 
-
-
 /*
 
 
 
-
- */
-
+*/
 var FAILURE = null;
 
-function createRegExpMatcher(patternCharacters, flags, pattern) {
+function createRegExpMatcher(pattern) {
     var variables = {};
-    variables.flags = flags;
-    variables.Input = patternCharacters;
+    variables.flags = undefined;
+    variables.Input = undefined;	// will be pattern characters or the STR 
     variables.inputLength = 0;
     variables.NCapturingParens = 0;
     variables.ignoreCase = false;
@@ -14481,7 +14487,11 @@ function createRegExpMatcher(patternCharacters, flags, pattern) {
     return makeEvaluator(variables, pattern);
 }
 
+
 function makeEvaluator(evaluator, pattern) {
+    var evaluator = function() {
+	return evaluator.matcher.apply(evaluator, arguments);
+    };
     evaluator.Pattern = Pattern;
     evaluator.Disjunction = Disjunction;
     evaluator.Alternative = Alternative;
@@ -14496,43 +14506,58 @@ function makeEvaluator(evaluator, pattern) {
     };
     evaluator.evaluate = function (node) {
 	if (node === undefined) return FAILURE;
-        var f = this[node.type];
-        if (f) return f.call(this, node);
+        var f = this[node.type];4
+        if (f) return f.call(evaluator, node);
     };
-    return evaluator.evaluate.call(evaluator, pattern);
+
+    var matcher = evaluator.evaluate.call(evaluator, pattern);
+    evaluator.matcher = matcher;    
+    
+    return evaluator;
 }
 
 function Pattern (node) {
+    // start at Pattern :: Disjunction
     var disjunction = node.disjunction;
     var m = this.evaluate(disjunction);
     // i guess here the compiled stuff can land.
-    // and the closure just works on bytestreams then    
+    // and the closure just works on bytestreams then        
     
     return function matcher (str, index) {
         this.Input = new String(str);
         var listIndex = this.Input.indexOf(str[index]);
         this.InputLength = this.Input.length;
         var c = this.Continuation(function (state) { return state; });
-        var cap = new Array(this.NCapturingParens + 1); // indexed 1 bis
+        var cap = new Array((this.NCapturingParens|0) + 1); // indexed 1 bis
         var x = this.State(listIndex, cap);
-        return m.call(this, x,c);
+
+        if (m != FAILURE) return m.call(this, x,c);
+        // temp disabled
     };
 }
 
 function Disjunction (node) {
     var alternative = node.alternative;
     var disjunction = node.disjunction;
-    if (!disjunction) {
-        return this.evaluate(alternative);
-    } else {
+    if (!disjunction && alternative) {			// gates
+        var a = this.evaluate(alternative);
+        if (!a) return FAILURE;
+        return a;
+    } else if (disjunction && alternative) {		// power on
         var m1 = this.evaluate(alternative);
+        if (!m1) return FAILURE;
         var m2 = this.evaluate(disjunction);
+        if (!m2) return FAILURE;
         return function m(x, c) {
-            var r = m1.call(this, x, c);
-            if (this.isFailure(r)) return r;
+            var r;
+
+            r = m1.call(this, x, c);
+            if (!this.isFailure(r)) return r;
+
             return m2.call(this, x, c);
         };
     }  
+    return FAILURE;
 }
 
 function Term () {
@@ -14542,7 +14567,8 @@ function Term () {
 }
 
 function Alternative(node) {
-
+    return FAILURE;
+    var atom = node.atom
 }
 
 function Assertion(node) {
@@ -14560,7 +14586,6 @@ function Assertion(node) {
         return c.call(this, x);
     }
 }
-
 
 
     // Structured Clone Algorithms
@@ -22448,7 +22473,7 @@ var RegExpPrototype_replace = function (thisArg, argList) {
     if (!hasInternalSlot(rx, "RegExpMatcher")) return withError("Type", "this value has not [[RegExpMatcher]] internal slot");
     if (getInternalSlot(rx, "RegExpMatcher") === undefined) return withError("Type", "this value has not [[RegExpMatcher]] internal slot defined");
 
-    var nCaptures = rx.machine.NCapturingParens;
+    var nCaptures = rx.NCapturingParens;
     S = ToString(string);
     if (isAbrupt(S=ifAbrupt(S))) return S;
     var functionalReplace = IsCallable(replaceValue);
@@ -22574,12 +22599,12 @@ LazyDefineBuiltinConstant(RegExpPrototype, $$isRegExp, true);
 LazyDefineBuiltinConstant(RegExpPrototype, $$toStringTag, "RegExp");
 LazyDefineBuiltinFunction(RegExpConstructor, $$create, 1, RegExp_$$create);
 
-LazyDefineAccessor(RegExpPrototype, "ignoreCase", RegExpPrototype_get_ignoreCase, undefined);
-LazyDefineAccessor(RegExpPrototype, "global", RegExpPrototype_get_global, undefined);
-LazyDefineAccessor(RegExpPrototype, "multiline", RegExpPrototype_get_multiline, undefined);
-LazyDefineAccessor(RegExpPrototype, "source", RegExpPrototype_get_source, undefined);
-LazyDefineAccessor(RegExpPrototype, "sticky", RegExpPrototype_get_sticky, undefined);
-LazyDefineAccessor(RegExpPrototype, "unicode", RegExpPrototype_get_unicode, undefined);
+LazyDefineAccessorFunction(RegExpPrototype, "ignoreCase",  0, RegExpPrototype_get_ignoreCase);
+LazyDefineAccessorFunction(RegExpPrototype, "global",  0, RegExpPrototype_get_global);
+LazyDefineAccessorFunction(RegExpPrototype, "multiline",  0, RegExpPrototype_get_multiline);
+LazyDefineAccessorFunction(RegExpPrototype, "source",  0, RegExpPrototype_get_source);
+LazyDefineAccessorFunction(RegExpPrototype, "sticky",  0, RegExpPrototype_get_sticky);
+LazyDefineAccessorFunction(RegExpPrototype, "unicode", 0, RegExpPrototype_get_unicode);
 
 LazyDefineProperty(RegExpPrototype, "lastIndex", 0);
 
@@ -22591,6 +22616,7 @@ LazyDefineBuiltinFunction(RegExpPrototype, "search", 1, RegExpPrototype_search);
 LazyDefineBuiltinFunction(RegExpPrototype, "split", 1, RegExpPrototype_split);
 LazyDefineBuiltinFunction(RegExpPrototype, "test", 1, RegExpPrototype_test);
 LazyDefineBuiltinFunction(RegExpPrototype, "toString", 1, RegExpPrototype_toString);
+
 
 
 
