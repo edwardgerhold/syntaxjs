@@ -1,0 +1,57 @@
+{
+	
+	"for loop to look at instantiate block declaration bound lexnames":
+	{
+	    "init": 
+		"let x = NaN; for (let int i = 10, j = 0; i > j; i--) { let binding = i; x=binding; }",
+	    "tests": 
+	    [
+		["x", 1 ]
+	    ]
+	},
+	
+	"equal for loop but without block semantics.":
+	{
+	    "init": 
+		"let x = NaN; let binding; for (let int i = 10, j = 0; i > j; i--) binding = i, x=binding; ",
+	    "tests": 
+	    [
+		["x", 1 ]
+	    ]
+	},
+	
+	"this for loop is ok":
+	{
+	    "init": 
+		"for (let str = 'start'; str != ''; str = '') { var x = 1; let y = 2; }",
+	    "tests": 
+	    [
+		["x", 1],
+		["y", null, "throws"],
+		["str", null, "throws"]
+	    ]
+	},
+	"fixed for expression evaluation for (;str;)":
+	{
+	    "init": 
+		"for (let str = 'start'; str; str = '') { var x = 1; let y = 2; }",
+	    "tests": 
+	    [
+		["x", 1],
+		["y", null, "throws"],
+		["str", null, "throws"]
+	    ]
+	},
+
+	"oh, let´s test a var in the parens, str should be epsilon":
+	{
+	    "init": 
+		"for (var str = 'start'; str; str = '') { var x = 1; let y = 2; }",
+	    "tests": 
+	    [
+		["x", 1],
+		["y", null, "throws"],
+		["str", ""]
+	    ]
+	}
+}

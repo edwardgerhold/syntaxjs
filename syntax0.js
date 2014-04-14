@@ -3756,8 +3756,8 @@ define("tokenizer", function () { // should use this factory to create one each 
 
         if ((FewUnaryKeywords[value] || PunctOrLT[type]) && !OneOfThesePunctuators[value]) {
             inputElementGoal = inputElementRegExp;
-        } /*else {
-            inputElementGoal = inputElementDiv;*/
+        } else
+            inputElementGoal = inputElementDiv;
         
 
         // produce loc information
@@ -3826,6 +3826,8 @@ define("tokenizer", function () { // should use this factory to create one each 
         } while (ch !== undefined);
 
 	//console.log("tokenizer returns");
+
+	// relative, the next version will do the standard again.
         return tokens;
     }
 
@@ -15216,7 +15218,7 @@ exports.float64 = float64;
 
 setInternalSlot(PrintFunction, "Call", function (thisArg, argList) {
    var str = "";
-   var j = argList.length;
+   var j = argList.length-1;
    if (j == 1) str = argList[0];
    else {
        for (var i = 0; i < j; i++) {
@@ -25307,8 +25309,8 @@ define("runtime", function () {
                     var names = BoundNames(decl);
                     for (var y = 0, z = names.length; y < z; y++) {
                         var dn = names[y];
-                        if (type === "VariableDeclarator") {
-                            if (kind === "const") {
+                        if (type === "VariableDeclarator") { // here i had a bug first
+                            if (kind === "const") { // this will fail with es (decl has no .kind yet, just the array´s container node)
                                 status = env.CreateImmutableBinding(dn);
                                 if (isAbrupt(status)) return status;
                             } else {
@@ -25335,7 +25337,7 @@ define("runtime", function () {
         var params = getCode(node, "params");
         var body = getCode(node, "body");
         var generator = !!getCode(node,"generator");
-        var needsSuper = getCode(node, "needsSuper");
+        var needsSuper = !!getCode(node, "needsSuper");
         var strict = cx.strict || !!getCode(node,"strict");
         var scope = env;
 
@@ -26336,7 +26338,6 @@ define("runtime", function () {
     }
 
     function IteratorBindingInitialisation() {
-
     }
 
     function IndexedBindingInitialisation(decl, nextIndex, value, env) {
@@ -27574,10 +27575,16 @@ define("runtime", function () {
                 /*
                  // break out of all iterations like this
                  // that´s all and it will work
+                 
+                 ///// MAN, I AM NOT STUPID
+                 
+                 I WILL INTRODUCE A abrupt YIELD COMPLETION FOR
+                 THAT REASON. WILL DO SO I HAVE NOT TO 
+                 WORRY ABOUT STATE VARIABLES TELLING ME
+                 I HAVE YIELDED.
 
                  if (gen && suspendedGenerator) {
                  return stmtValue;
-
                  }
 
                  // same for going back in and resuming
@@ -27763,7 +27770,7 @@ define("runtime", function () {
             if (isAbrupt(nextValue = ifAbrupt(nextValue))) return nextValue;
             if (lhsKind === "assignment") {
 
-                if (lhs.type !== "ObjectPattern" && lhs.type !== "ArrayPattern") {
+                if (!IsBindingPattern[lhs.type]) {
 
                     lhsRef = Evaluate(lhs);
                     status = PutValue(lhsRef, nextValue);
@@ -27838,7 +27845,6 @@ define("runtime", function () {
         var body = getCode(node, "body");
         var tleft = left.type;
         var tright = right.type;
-
         var labelSet = labelSet || Object.create(null);
         var lhsKind;
         var iterationKind = "iterate";
@@ -27919,6 +27925,7 @@ define("runtime", function () {
         if (initExpr) {
 
             if (IsVarDeclaration(initExpr)) {
+
                 varDcl = Evaluate(initExpr);
                 if (!LoopContinues(varDcl, labelSet)) return varDcl;
                 return ForBodyEvaluation(testExpr, incrExpr, body, labelSet, perIterationBindings);
@@ -28000,9 +28007,10 @@ define("runtime", function () {
         var status = CreatePerIterationEnvironment(perIterationBindings);
         if (isAbrupt(status)) return status;
         for (;;) {
+
             if (testExpr) {
                 testExprRef = Evaluate(testExpr);
-                testExprValue = GetValue(testExprRef);
+                testExprValue = ToBoolean(GetValue(testExprRef));
                 if (testExprValue === false) return NormalCompletion(V);
                 if (!LoopContinues(testExprValue, labelSet)) return testExprValue;
             }
@@ -28073,7 +28081,6 @@ define("runtime", function () {
                     }
                     if (isAbrupt(R)) break;
                 }
-
             }
         }
 
@@ -28930,6 +28937,7 @@ define("runtime", function () {
     execute.DeepStaticJSSnapshotOfObject = DeepStaticJSSnapshotOfObject;
     return execute;
 });
+
 
 
 
