@@ -25153,30 +25153,30 @@ define("runtime", function () {
         var decl, functionsToInitialize = [];
         var fn;
         var fo;
-        var type;
+        var type, kind;
         var status;
 
         for (var i = 0, j = declarations.length; i < j; i++) {
             if (decl = declarations[i]) {
-
-                 var names = BoundNames(decl);
-                 for (var y = 0, z = names.length; y < z; y++) {
-                    var dn = names[y];
-
-                     if (type === "VariableDeclarator") {
-                         if (decl.kind === "const") {
-                             status = env.CreateImmutableBinding(dn);
-                             if (isAbrupt(status)) return status;
-                         } else {
-                             status = env.CreateMutableBinding(dn);
-                             if (isAbrupt(status)) return status;
-                         }
-                     } else if (isFuncDecl[type] && (!decl.expression)) {
-                         functionsToInitialize.push(decl);
-                     }
-
-
-                 }
+                type = decl.type;
+                kind = decl.kind;
+                if (isFuncDecl[type] && (!decl.expression)) {
+                    functionsToInitialize.push(decl);
+                } else {
+                    var names = BoundNames(decl);
+                    for (var y = 0, z = names.length; y < z; y++) {
+                        var dn = names[y];
+                        if (type === "VariableDeclarator") {
+                            if (kind === "const") {
+                                status = env.CreateImmutableBinding(dn);
+                                if (isAbrupt(status)) return status;
+                            } else {
+                                status = env.CreateMutableBinding(dn);
+                                if (isAbrupt(status)) return status;
+                            }
+                        }
+                    }
+                }
             }
         }
         for (i = 0, j = functionsToInitialize.length; i < j; i++) {
