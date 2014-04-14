@@ -1937,28 +1937,28 @@ define("tables", function (require, exports, module) {
 
 /*
 
-    BIG FAT MISINTERPRETATION OF ECMA-262
-    
-    Static Semantics: Name of a Production equals 
-    a Property of the Production collected at runtime.
-    
-    For the first try i used the "Contains" algorithm
-    or a second recursion on the node to determine the
-    static semantics values.
-    
-    
-    This requires a SOLID and not "dirty" augmentation
-    of the used parser api AST, making sure, all extra
-    properties exist on the right objects.
-    
-    This will be handimplemented in the parser.js by
-    going from production to production with the draft text.
-    
-    
-    Currently these slow algorithms are still running.
+ BIG FAT MISINTERPRETATION OF ECMA-262
+
+ Static Semantics: Name of a Production equals
+ a Property of the Production collected at runtime.
+
+ For the first try i used the "Contains" algorithm
+ or a second recursion on the node to determine the
+ static semantics values.
 
 
-*/
+ This requires a SOLID and not "dirty" augmentation
+ of the used parser api AST, making sure, all extra
+ properties exist on the right objects.
+
+ This will be handimplemented in the parser.js by
+ going from production to production with the draft text.
+
+
+ Currently these slow algorithms are still running.
+
+
+ */
 
 
 define("slower-static-semantics", function (require, exports, modules) {
@@ -2218,26 +2218,26 @@ define("slower-static-semantics", function (require, exports, modules) {
             // BoundNames einzeln
             if (node = list) {
 
-            type = node.type;
+                type = node.type;
 
-            if (type === "ArrayPattern" || type == "ObjectPattern") {
-                names = BoundNames(node.elements, names);
-            } else if (type === "ForDeclaration") names = BoundNames(node.id, names);
-            else if (type === "ExportStatement") names = BoundNames(node.exports, names);
+                if (type === "ArrayPattern" || type == "ObjectPattern") {
+                    names = BoundNames(node.elements, names);
+                } else if (type === "ForDeclaration") names = BoundNames(node.id, names);
+                else if (type === "ExportStatement") names = BoundNames(node.exports, names);
 
 
-            /*
-                alle nach id.name (identifier node) transformieren !!!
+                /*
+                 alle nach id.name (identifier node) transformieren !!!
 
-             */
+                 */
 
-            else if (type === "FunctionDeclaration")names.push(node.id);
-            else if (type === "VariableDeclarator") names.push(node.id.name);
+                else if (type === "FunctionDeclaration")names.push(node.id);
+                else if (type === "VariableDeclarator") names.push(node.id.name);
 
-            else if (type === "GeneratorDeclaration") names.push(node.id);
-            else if (type === "Identifier") names.push(node.name);
-            else if (type === "DefaultParameter") names.push(node.id);
-            else if (type === "RestParameter") names.push(node.id);
+                else if (type === "GeneratorDeclaration") names.push(node.id);
+                else if (type === "Identifier") names.push(node.name);
+                else if (type === "DefaultParameter") names.push(node.id);
+                else if (type === "RestParameter") names.push(node.id);
 
             }
             debug("BoundNames: " + names.join(","));
@@ -2303,6 +2303,8 @@ define("slower-static-semantics", function (require, exports, modules) {
                             names = BoundNames(decl, names);
                         }
                     }
+                } else if (type === "BlockStatement") {
+                    names = VarDeclaredNames(node.body, names);
                 } else if (type === "FunctionDeclaration" && !node.expression && !node.expression) {
                     names.push(node.id);
                 } else if (type === "IfStatement") {
@@ -2354,6 +2356,9 @@ define("slower-static-semantics", function (require, exports, modules) {
                             list.push(decl);
                         }
                     }
+
+                } else if (type === "BlockStatement") {
+                    VarScopedDeclarations(node.body, list);
                 } else if (type === "FunctionDeclaration") {
                     if (!node.expression) list.push(node);
                 } else if (type === "IfStatement") {
@@ -2361,6 +2366,7 @@ define("slower-static-semantics", function (require, exports, modules) {
                     VarScopedDeclarations(node.alternate, list);
                 } else if (type === "SwitchStatement") {
                     VarScopedDeclarations(node.cases, list);
+
                 } else if (IterationStatement[type]) {
 
                     if (type === "ForStatement") {
@@ -2392,12 +2398,12 @@ define("slower-static-semantics", function (require, exports, modules) {
         var node, decl, i, j, k, l;
         if (!names) names = [];
         if (!body) return names;
+
         for (i = 0, j = body.length; i < j; i++) {
             if (node = body[i]) {
                 var type = node.type;
                 if (type === "LexicalDeclaration" || (type === "VariableDeclaration" && (node.kind === "let" || node.kind === "const"))) {
                     var decls = node.declarations;
-
                     for (k = 0, l = decls.length; k < l; k++) {
                         if (decl = decls[k]) {
                             names = BoundNames(decl, names);
@@ -2447,8 +2453,10 @@ define("slower-static-semantics", function (require, exports, modules) {
         var node, decl, i, j, k, l;
         list = list || [];
 
+
         if (!body) return list;
         if (!Array.isArray(body)) body = [body];
+
 
         for (i = 0, j = body.length; i < j; i++) {
             if (node = body[i]) {
@@ -2558,7 +2566,7 @@ define("slower-static-semantics", function (require, exports, modules) {
             def = defs[i];
             if (def && def.type === "MethodDefinition") {
                 if (def.static) {
-            	    var id = def.id && def.id.name;
+                    var id = def.id && def.id.name;
                     if (id && checkList[id] && def.kind !== "get" && def.kind !== "set") return withError("Syntax", "duplicate static method definition: " + id);
                     else {
                         checkList[id] = def.kind;
@@ -2621,22 +2629,22 @@ define("slower-static-semantics", function (require, exports, modules) {
     exports.StringValue = StringValue;
 
     function StringValue(node) {
-	if (!node) return;
+        if (!node) return;
         switch (node.type) {
-        case "Identifier":
-            return node.name;
-        case "StringLiteral":
-            return node.value.slice(1, node.value.length - 1);
-        case "NumericLiteral":
-            return node.value;
-        case "DefaultParameter":
-        case "RestParameter":
-            return node.id;
-        case "FunctionExpression":
-        case "GeneratorExpression":
-        case "FunctionDeclaration":
-        case "GeneratorDeclaration":
-            return node.id
+            case "Identifier":
+                return node.name;
+            case "StringLiteral":
+                return node.value.slice(1, node.value.length - 1);
+            case "NumericLiteral":
+                return node.value;
+            case "DefaultParameter":
+            case "RestParameter":
+                return node.id;
+            case "FunctionExpression":
+            case "GeneratorExpression":
+            case "FunctionDeclaration":
+            case "GeneratorDeclaration":
+                return node.id
         }
     }
 
@@ -2663,7 +2671,7 @@ define("slower-static-semantics", function (require, exports, modules) {
     }
 
     function ElisionWidth(E) {
-        return E && E.width || 0;
+        return (E && E.width)|0;
     }
 
     function IsConstantDeclaration(node) {
@@ -7933,7 +7941,7 @@ define("regexp-parser", function (require, exports) {
                 default:
                     return null;
             }
-
+            return node;
         }
         if (FirstOfAtom[ch]) {
             node = Node("Atom");
@@ -8142,7 +8150,7 @@ define("regexp-parser", function (require, exports) {
         var node = Node("Disjunction");
         node.alternative = this.Alternative();
         if (ch === "|") {
-            pass("|")
+            pass("|");
             node.disjunction = Disjunction();
         }
         return node;
@@ -25139,7 +25147,9 @@ define("runtime", function () {
     function InstantiateBlockDeclaration(code, env) {
         "use strict";
         var ex;
+
         var declarations = LexicalDeclarations(code);
+
         var decl, functionsToInitialize = [];
         var fn;
         var fo;
@@ -25148,19 +25158,25 @@ define("runtime", function () {
 
         for (var i = 0, j = declarations.length; i < j; i++) {
             if (decl = declarations[i]) {
-                if (!decl.vmDeclared) {
-                    if (type === "LexicalDeclaration") {
-                        if (decl.kind === "const") {
-                            status = env.CreateImmutableBinding(decl.id);
-                            if (isAbrupt(status)) return status;
-                        } else {
-                            status = env.CreateMutableBinding(decl.id);
-                            if (isAbrupt(status)) return status;
-                        }
-                    } else if (isFuncDecl[type] && (!decl.expression)) {
-                        functionsToInitialize.push(decl);
-                    }
-                }
+
+                 var names = BoundNames(decl);
+                 for (var y = 0, z = names.length; y < z; y++) {
+                    var dn = names[y];
+
+                     if (type === "VariableDeclarator") {
+                         if (decl.kind === "const") {
+                             status = env.CreateImmutableBinding(dn);
+                             if (isAbrupt(status)) return status;
+                         } else {
+                             status = env.CreateMutableBinding(dn);
+                             if (isAbrupt(status)) return status;
+                         }
+                     } else if (isFuncDecl[type] && (!decl.expression)) {
+                         functionsToInitialize.push(decl);
+                     }
+
+
+                 }
             }
         }
         for (i = 0, j = functionsToInitialize.length; i < j; i++) {
@@ -26087,8 +26103,11 @@ define("runtime", function () {
             type = decl.type;
 
             // wird von binding intialisation vorher initialisiert,
+
             // hier wird das initialiser assignment durchgefuehrt, wenn
             // der code evaluiert wird.
+
+
             if (IsBindingPattern[type]) {
                 if (decl.init) initialiser = GetValue(Evaluate(decl.init));
                 else return withError("Type", "Destructuring Patterns must have some = Initialiser.");
@@ -30190,7 +30209,7 @@ define("syntaxjs", function () {
             return this.eval(this.readFileSync(name));
         }),
 
-        subscribeWorker: pdmacro(require("syntaxjs-worker").subscribeWorker),
+
         evalStaticXform: pdmacro(require("runtime").ExecuteAsyncStaticXform),
         evalAsync: pdmacro(require("runtime").ExecuteAsync),
         evalAsyncXform: pdmacro(require("runtime").ExecuteAsyncTransform),
@@ -30209,11 +30228,15 @@ define("syntaxjs", function () {
     if (typeof window == "undefined" && typeof self !== "undefined" && typeof importScripts !== "undefined") {
     // worker export
         syntaxjs.system = "worker";
+        syntaxjs_public_api_readonly.subscribeWorker = pdmacro(require("syntaxjs-worker").subscribeWorker);
+
     } else if (typeof window !== "undefined") {
     // browser export
         syntaxjs.system = "browser";
-        syntaxjs_highlighter_api.highlightElements = pdmacro(require("highlight-gui").highlightElements),
-        syntaxjs_highlighter_api.startHighlighterOnLoad = pdmacro(require("highlight-gui").startHighlighterOnLoad)
+
+        syntaxjs_public_api_readonly.subscribeWorker = pdmacro(require("syntaxjs-worker").subscribeWorker);
+        syntaxjs_highlighter_api.highlightElements = pdmacro(require("highlight-gui").highlightElements);
+        syntaxjs_highlighter_api.startHighlighterOnLoad = pdmacro(require("highlight-gui").startHighlighterOnLoad);
 
     } else if (typeof process !== "undefined") {
     // node js export
