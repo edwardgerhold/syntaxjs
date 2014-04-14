@@ -8136,7 +8136,7 @@ define("regexp-parser", function (require, exports) {
 
     function CharacterClass() {
         var node = Node("CharacterClass");
-        pass("[");
+        pass("[");e
         if (ch == "^") {
             node.negation = true;
             pass("^");
@@ -8183,7 +8183,15 @@ define("regexp-parser", function (require, exports) {
         index = -1;
         lookahead = string[0];
         next();
-        return Pattern.call(parser);
+        try {
+        var result = Pattern.call(parser);
+        } catch (ex) {
+    	    console.log("DEBUG REGULAR EXPRESSION PARSER EXCEPTION");
+    	    console.log(ex.name);
+    	    console.log(ex.message);
+    	    console.log(""+ex.stack);
+        }
+        return result;
     }
 
     parser.Pattern = Pattern;
@@ -14311,6 +14319,8 @@ List.prototype.shift = List.prototype.removeFirst;
 var tables = require("tables");
 var LineTerminators = tables.LineTerminators;
 
+exports.RegExpCreate = RegExpCreate;
+
 function RegExpCreate(P, F) {
     var obj = RegExpAllocate(getIntrinsic("%RegExp%"));
     if (isAbrupt(obj=ifAbrupt(obj))) return obj;
@@ -14338,11 +14348,12 @@ function RegExpInitialize(obj, pattern, flags) {
     else F = ToString(flags);
     BMP = F.indexOf("u") === -1;
 
-    var parsed = parseGoal("Pattern", P);
+    var parse = require("regexp-parser").parse
+    var patternCharacters = parse(P);
 
     setInternalSlot(obj, "OriginalFlags", F);
     setInternalSlot(obj, "OriginalSource", P);
-    setInternalSlot(obj, "RegExpMatcher", RegExpMatcher(patternCharacters, flags, parsed));
+    setInternalSlot(obj, "RegExpMatcher", createRegExpMatcher(patternCharacters, flags));
 
     var putStatus = Put(obj, "lastIndex", 0, true);
     if (isAbrupt(putStatus=ifAbrupt(putStatus))) return putStatus;
@@ -14458,43 +14469,45 @@ function RegExpExec (R, S, ignore) {
 
 var FAILURE = null;
 
-function RegExpMatcher(patternCharacters, flags, parsed) {
+function createRegExpMatcher(patternCharacters, flags, pattern) {
+    var variables = {};
+    variables.flags = flags;
+    variables.Input = patternCharacters;
+    variables.inputLength = 0;
+    variables.NCapturingParens = 0;
+    variables.ignoreCase = false;
+    variables.Multiline = false;
+    variables.Unicode = false;
+    return makeEvaluator(variables, pattern);
+}
 
-    var laterARealAutomaton = {};
-    laterARealAutomaton.flags = flags;
-    laterARealAutomaton.Input = patternCharacters;
-    laterARealAutomaton.inputLength = 0;
-    laterARealAutomaton.NCapturingParens = 0;
-    laterARealAutomaton.ignoreCase = false;
-    laterARealAutomaton.Multiline = false;
-    laterARealAutomaton.Unicode = false;
-    laterARealAutomaton.Pattern = Pattern;
-    laterARealAutomaton.Disjunction = Disjunction;
-    laterARealAutomaton.Alternative = Alternative;
-    laterARealAutomaton.isFailure = function (r) {
+function makeEvaluator(evaluator, pattern) {
+    evaluator.Pattern = Pattern;
+    evaluator.Disjunction = Disjunction;
+    evaluator.Alternative = Alternative;
+    evaluator.isFailure = function (r) {
         return r === FAILURE;
     };
-    laterARealAutomaton.Continuation = function (steps) {
+    evaluator.Continuation = function (steps) {
         return steps;
     };
-    laterARealAutomaton.State = function (lastIndex, str) {
+    evaluator.State = function (lastIndex, str) {
         return [lastIndex, str];
     };
-    laterARealAutomaton.evaluate = function (node) {
+    evaluator.evaluate = function (node) {
+	if (node === undefined) return FAILURE;
         var f = this[node.type];
         if (f) return f.call(this, node);
     };
-
-
-    var matcher = laterARealAutomaton.evaluate(parsed);
-    matcher.machine = laterARealAutomaton;
-    return matcher;
-
+    return evaluator.evaluate.call(evaluator, pattern);
 }
 
 function Pattern (node) {
     var disjunction = node.disjunction;
     var m = this.evaluate(disjunction);
+    // i guess here the compiled stuff can land.
+    // and the closure just works on bytestreams then    
+    
     return function matcher (str, index) {
         this.Input = new String(str);
         var listIndex = this.Input.indexOf(str[index]);
@@ -14519,14 +14532,17 @@ function Disjunction (node) {
             if (this.isFailure(r)) return r;
             return m2.call(this, x, c);
         };
-    }
-  
+    }  
 }
 
 function Term () {
     if (node.assertion) {
         this.evaluate(node.assertion);
     }
+}
+
+function Alternative(node) {
+
 }
 
 function Assertion(node) {
@@ -14539,13 +14555,12 @@ function Assertion(node) {
                 return LineTerminators[this.Input[e-1]];
             }
         }
-
-
         var r = !!t.call(this, c);
         if (!r) return null;
         return c.call(this, x);
     }
-};
+}
+
 
 
     // Structured Clone Algorithms
@@ -22291,28 +22306,28 @@ var RegExpPrototype_get_global = function (thisArg, argList) {
     if (Type(R) != "object") return withError("Type", "this value is no object");
     if (!hasInternalSlot(R, "OriginalFlags")) return withError("Type", "this value has no [[OriginalFlags]]");
     var flags = getInternalSlot(R, "OriginalFlags");
-    return flags.indexOf("g");
+    return NormalCompletion(flags.indexOf("g") > -1);
 };
 var RegExpPrototype_get_multiline = function (thisArg, argList) {
     var R = thisArg;
     if (Type(R) != "object") return withError("Type", "this value is no object");
     if (!hasInternalSlot(R, "OriginalFlags")) return withError("Type", "this value has no [[OriginalFlags]]");
     var flags = getInternalSlot(R, "OriginalFlags");
-    return flags.indexOf("m");
+    return NormalCompletion(flags.indexOf("m") > -1);
 };
 var RegExpPrototype_get_ignoreCase = function (thisArg, argList) {
     var R = thisArg;
     if (Type(R) != "object") return withError("Type", "this value is no object");
     if (!hasInternalSlot(R, "OriginalFlags")) return withError("Type", "this value has no [[OriginalFlags]]");
     var flags = getInternalSlot(R, "OriginalFlags");
-    return flags.indexOf("i");
+    return NormalCompletion(flags.indexOf("i") > -1);
 };
 var RegExpPrototype_get_sticky = function (thisArg, argList) {
     var R = thisArg;
     if (Type(R) != "object") return withError("Type", "this value is no object");
     if (!hasInternalSlot(R, "OriginalFlags")) return withError("Type", "this value has no [[OriginalFlags]]");
     var flags = getInternalSlot(R, "OriginalFlags");
-    return flags.indexOf("y");
+    return NormalCompletion(flags.indexOf("y") > -1);
 };
 
 var RegExpPrototype_get_unicode = function (thisArg, argList) {
@@ -22320,7 +22335,7 @@ var RegExpPrototype_get_unicode = function (thisArg, argList) {
     if (Type(R) != "object") return withError("Type", "this value is no object");
     if (!hasInternalSlot(R, "OriginalFlags")) return withError("Type", "this value has no [[OriginalFlags]]");
     var flags = getInternalSlot(R, "OriginalFlags");
-    return flags.indexOf("u");
+    return NormalCompletion(flags.indexOf("u") > -1);
 };
 
 var RegExpPrototype_get_source = function (thisArg, argList) {
@@ -22545,7 +22560,7 @@ var RegExpPrototype_toString = function (thisArg, argList) {
     var sticky = ToBoolean(Get(R, "sticky"));
     if (isAbrupt(sticky=ifAbrupt(sticky))) return sticky;
     if (sticky) result += "y";
-    return result;
+    return NormalCompletion(result);
 };
 
 
@@ -24715,6 +24730,7 @@ define("runtime", function () {
     // essential-api (essential internals)
     //
 
+    var RegExpCreate = ecma.RegExpCreate;
 
 
 //    var List = ecma.List;
@@ -26593,17 +26609,17 @@ define("runtime", function () {
 
     /* ^ debugger ****************************************************************************************************** */
 
+
+    
     function RegularExpressionLiteral(node) {
-
-        var parse = require("regexp-parser").parse;
-         var literalSource = node.value;
+         var source = node.value;
          var flags = node.flags;
-         var pattern = parse(literalSource);
-         if (hasConsole) console.log(JSON.stringify(pattern, null, 4));
+         return RegExpCreate(source, flags);
 
-         // if (pattern) return RegExpCreate
-
-         return withError("Syntax", "Can not create Regular Expression from Literal (currently not implemented)");// + literalSource);
+//        var parse = require("regexp-parser").parse;
+//         var pattern = parse(literalSource);
+//         if (hasConsole) console.log(JSON.stringify(pattern, null, 4));
+//         return withError("Syntax", "Can not create Regular Expression from Literal (currently not implemented)");// + literalSource);
     }
     evaluation.RegularExpressionLiteral = RegularExpressionLiteral;
 
@@ -28709,6 +28725,9 @@ define("runtime", function () {
 	} catch (ex) {
 	
 	    console.log("Real JS Exception:");
+	    console.log(ex);
+	    console.log(ex.message);	    
+	    console.log(ex.stack);	    
 	    throw ex;
 	
 	}
