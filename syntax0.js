@@ -14343,7 +14343,7 @@ function EscapeRegExpPattern(P, F) {
     var S = "";
     for (var i = 0, j = P.length; i < j; i++) {
         var codePoint = P[i];
-        if (codePoint === "/") {
+        if (codePoint === "/" && P[i-1] != "\\" || P[i-2]=="\\") {
             S += "\\/";
         } else S += codePoint;
     }
@@ -14430,7 +14430,7 @@ function RegExpExec (R, S, ignore) {
             }
             i = i + 1;
         } else {
-            Assert(Array.isArray(r) && r.length === 2, "RegExpExec: r has to be a state instance");
+            Assert(r && r.endIndex && r.captures, "RegExpExec: r has to be a state instance");
             matchSucceeded = true;
         }
     }
@@ -14476,43 +14476,40 @@ function RegExpExec (R, S, ignore) {
 var FAILURE = null;
 
 function createRegExpMatcher(pattern) {
-    var variables = {};
-    variables.flags = undefined;
-    variables.Input = undefined;	// will be pattern characters or the STR 
-    variables.inputLength = 0;
-    variables.NCapturingParens = 0;
-    variables.ignoreCase = false;
-    variables.Multiline = false;
-    variables.Unicode = false;
-    return makeEvaluator(variables, pattern);
-}
-
-
-function makeEvaluator(evaluator, pattern) {
+    var patternMatcher; // Evaluate(Pattern::Disjunction) returns the [[RegExpMatcher]](x,c) i guess
     var evaluator = function() {
-	return evaluator.matcher.apply(evaluator, arguments);
+        return patternMatcher.apply(evaluator, arguments);
     };
+    // variables
+    evaluator.flags = undefined;
+    evaluator.Input = undefined;	// will be pattern characters or the STR
+    evaluator.inputLength = 0;
+    evaluator.NCapturingParens = 0;
+    evaluator.ignoreCase = false;
+    evaluator.Multiline = false;
+    evaluator.Unicode = false;
+    // interpreter
     evaluator.Pattern = Pattern;
     evaluator.Disjunction = Disjunction;
     evaluator.Alternative = Alternative;
+    evaluator.Term = Term;
+    evaluator.Assertion = Assertion;
     evaluator.isFailure = function (r) {
         return r === FAILURE;
     };
     evaluator.Continuation = function (steps) {
         return steps;
     };
-    evaluator.State = function (lastIndex, str) {
-        return [lastIndex, str];
+    evaluator.State = function (endIndex, captures) {
+        return { endIndex: endIndex, captures: captures };
     };
     evaluator.evaluate = function (node) {
 	if (node === undefined) return FAILURE;
         var f = this[node.type];4
         if (f) return f.call(evaluator, node);
     };
-
-    var matcher = evaluator.evaluate.call(evaluator, pattern);
-    evaluator.matcher = matcher;    
-    
+    patternMatcher = evaluator.evaluate.call(evaluator, pattern);
+    evaluator.patternMatcher = patternMatcher;
     return evaluator;
 }
 
@@ -14521,8 +14518,8 @@ function Pattern (node) {
     var disjunction = node.disjunction;
     var m = this.evaluate(disjunction);
     // i guess here the compiled stuff can land.
-    // and the closure just works on bytestreams then        
-    
+    // and the closure just works on bytestreams anyways
+
     return function matcher (str, index) {
         this.Input = new String(str);
         var listIndex = this.Input.indexOf(str[index]);
@@ -14556,19 +14553,24 @@ function Disjunction (node) {
 
             return m2.call(this, x, c);
         };
-    }  
-    return FAILURE;
-}
-
-function Term () {
-    if (node.assertion) {
-        this.evaluate(node.assertion);
     }
+    return FAILURE;
 }
 
 function Alternative(node) {
+    if (!node) return FAILURE;
+    var alternative = node.atom;
+    var term = node.term;
+    // abc ist alternative alternative term.. oder [x,y,]
+    if (!atom) return FAILURE;
+}
+
+function Term (node) {
+    if (!node) return FAILURE;
+    if (node.assertion) {
+        return this.evaluate(node.assertion);
+    }
     return FAILURE;
-    var atom = node.atom
 }
 
 function Assertion(node) {
@@ -14581,6 +14583,7 @@ function Assertion(node) {
                 return LineTerminators[this.Input[e-1]];
             }
         }
+
         var r = !!t.call(this, c);
         if (!r) return null;
         return c.call(this, x);
@@ -15191,7 +15194,7 @@ exports.float64 = float64;
         var MessagePortPrototype = createIntrinsicPrototype(intrinsics, "%MessagePortPrototype%");
 
         var DebugFunction = createIntrinsicFunction(intrinsics, "debug", 1, "%DebugFunction%");
-
+        var PrintFunction = createIntrinsicFunction(intrinsics, "print", 1, "%PrintFunction%");
 
 
         var StructTypeConstructor = createIntrinsicConstructor(intrinsics, "StructType", 0, "%StructType%");
@@ -15211,12 +15214,28 @@ exports.float64 = float64;
         setInternalSlot(ThrowTypeError, "Construct", undefined);
 
 
+setInternalSlot(PrintFunction, "Call", function (thisArg, argList) {
+   var str = "";
+   var j = argList.length;
+   if (j == 1) str = argList[0];
+   else {
+       for (var i = 0; i < j; i++) {
+           str += argList[i] + " ";
+       }
+       str += argList[j];
+   }
+   if (hasConsole) console.log(str);
+   else if (hasPrint) print(str);
+   return NormalCompletion(undefined);
+});
+
 /**
  *
  * debug(val) is some util.inspect() with now just less styling
  *
  *
  */
+
 
 setInternalSlot(DebugFunction, "Call", function debugfunc (thisArg, argList)  {
 
@@ -24396,6 +24415,7 @@ LazyDefineBuiltinFunction(TypePrototype, "opaqueType", 1, TypePrototype_opaqueTy
 //            LazyDefineBuiltinConstant(globalThis, "null", null);
             DefineOwnProperty(globalThis, "parseInt", GetOwnProperty(intrinsics, "%ParseInt%"));
             DefineOwnProperty(globalThis, "parseFloat", GetOwnProperty(intrinsics, "%ParseFloat%"));
+            DefineOwnProperty(globalThis, "print", GetOwnProperty(intrinsics, "%PrintFunction%"));
             DefineOwnProperty(globalThis, "request", GetOwnProperty(intrinsics, "%Request%"));
             DefineOwnProperty(globalThis, "setTimeout", GetOwnProperty(intrinsics, "%SetTimeout%"));
             LazyDefineBuiltinConstant(globalThis, "undefined", undefined);
@@ -24673,11 +24693,11 @@ define("runtime", function () {
 //    var i18n = require("i18n-messages"); // this is still a hoax, should focus on error messages
     // especially repeating ones to create a string.format style
     var parseGoal = parse.parseGoal;
-
     var debugmode = false;
 
     var isWorker = typeof importScripts === "function" && typeof window === "undefined";
     var hasConsole = typeof console === "object" && console && typeof console.log == "function";
+    var hasPrint = typeof print === "function";
 
     function debug() {
         if (debugmode && hasConsole) console.log.apply(console, arguments);
@@ -24696,11 +24716,21 @@ define("runtime", function () {
     }
 
     //-----------------------------------------------------------
-    // setze Call Funktion im anderen Modul zu Call fuer ASTNode:
+    // assignment!!! setze Call Funktion im anderen Modul zu Call fuer ASTNode:
     // ----------------------------------------------------------
 
     ecma.OrdinaryFunction.prototype.Call = Call;
+
     // Hey this is not once per realm.
+    /****************************************************/
+    // more assignments
+
+    ecma.EvaluateBody = EvaluateBody;
+    ecma.Evaluate = Evaluate;
+    ecma.CreateGeneratorInstance = CreateGeneratorInstance;
+
+    /****************************************************/
+
 
     /*
      The interfaces for refactoring the runtime for the Bytecode
@@ -24916,6 +24946,8 @@ define("runtime", function () {
     var makeMyExceptionText = ecma.makeMyExceptionText;
 
 
+
+
     function setCodeRealm(r) {  // IN THE RUNTIME, 
         // before evaluate accepts a realm
         // and public evalute is only defined on each realm
@@ -25072,7 +25104,7 @@ define("runtime", function () {
 
     function InstantiateModuleDeclaration(module, env) {
 
-        var ex;
+        var ex, name;
         var lexNames = LexicallyDeclaredNames(module);
         var varNames = VarDeclaredNames(module);
         var boundNames = BoundNames(module);
@@ -25891,15 +25923,6 @@ define("runtime", function () {
         }
     }
 
-    /****************************************************/
-
-    // put to xs and eval once each realm.
-
-    ecma.EvaluateBody = EvaluateBody;
-    ecma.Evaluate = Evaluate;
-    ecma.CreateGeneratorInstance = CreateGeneratorInstance;
-
-    /****************************************************/
 
     function CreateGeneratorInstance(F) {
         var env = GetThisEnvironment();
@@ -26622,11 +26645,23 @@ define("runtime", function () {
 
     function DebuggerStatement(node) {
         var loc = node.loc;
-        var line = loc && loc.start ? loc.start.line : "unknown";
-        var column = loc && loc.start ? loc.start.column : "unknown";
+        var line = loc && loc.start ? loc.start.line : "bug";
+        var column = loc && loc.start ? loc.start.column : "bug";
         banner("DebuggerStatement at line " + (line) + ", " + (column) + "\n");
 
 
+        banner("stack")
+        if (hasConsole) console.dir(getStack());
+        else if (hasPrint) print(getStack());
+        banner("lexenv")
+        if (hasConsole) console.dir(getLexEnv());
+        else if (hasPrint) print(getLexEnv());
+        banner("varenv")
+        if (hasConsole) console.dir(getVarEnv());
+        else if (hasPrint) print(getVarEnv());
+        banner("realm");
+        if (hasConsole) console.dir(getRealm());
+        else if (hasPrint) print(getRealm());
 
         banner("DebuggerStatement end");
         return NormalCompletion(undefined);

@@ -6,7 +6,28 @@
 	    "tests": 
 	    [
 		["rx instanceof RegExp", true ],
-		["rx[Symbol.isRegExp]", true ]
+		["rx[Symbol.isRegExp]", true ],
+		["rx.global", false],
+		["rx.sticky", false],
+		["rx.multiline", false],
+		["rx.unicode", false],
+		["rx.ignoreCase", true]
 	    ]
-	}	
+	},
+	"Regular Expression Literal":
+	{
+	    "init": 
+		"let rx = /a|b|c/gymu",
+	    "tests": 
+	    [
+		["rx instanceof RegExp", true ],
+		["rx[Symbol.isRegExp]", true ],
+		["rx.global", true],
+		["rx.sticky", true],
+		["rx.multiline", true],
+		["rx.unicode", true],
+		["rx.ignoreCase", false]
+		
+	    ]
+	}
 }
