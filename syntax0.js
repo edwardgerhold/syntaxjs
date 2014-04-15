@@ -5712,7 +5712,7 @@ define("parser", function () {
 
             pass("{");
 
-            while (v !== "}") {
+    	    while (v != "}") {
 
                 if (StartBinding[v]) id = this.BindingPattern();
                 else id = this.Identifier();
@@ -5755,10 +5755,12 @@ define("parser", function () {
                 if (v === ",") {
                     pass(",");
                     if (v === "}") break;
-
+		    continue;
+                } else if (v != "}") {
+            	    throw new SyntaxError("invalid binding property list. csv and terminating }");
                 }
 
-            }
+            } 
 
             pass("}");
 
@@ -5780,10 +5782,10 @@ define("parser", function () {
                 if (v === ",") {
                     pass(",");
                     if (v === "]") break;
-
+		    continue;
+                } else if (v !== "]") {
+            	    throw new SyntaxError("invalid binding element list. csv and terminating ]");
                 }
-
-                //else if (v !== "]") throw new SyntaxError("illegal statement in binding pattern");
             }
             pass("]");
         }
@@ -5868,9 +5870,7 @@ define("parser", function () {
 
             if (v === ",") {
                 pass(",");
-                continue;
-            } else if (t === "Identifier" || StartBinding[v]) {
-                continue;
+                continue;             
             } else if (ltNext) {
                 break;
             } else if (v === ";") {
@@ -14432,6 +14432,7 @@ function RegExpExec (R, S, ignore) {
             }
             i = i + 1;
         } else {
+    	    if (!(r && r.endIndex && r.captures)) return withError("Type", "RegExpExec: r has to be a state instance. Assertion failed.");
             Assert(r && r.endIndex && r.captures, "RegExpExec: r has to be a state instance");
             matchSucceeded = true;
         }
@@ -24672,7 +24673,7 @@ LazyDefineBuiltinFunction(TypePrototype, "opaqueType", 1, TypePrototype_opaqueTy
 
     exports.printException = printException;
     exports.makeMyExceptionText = makeMyExceptionText;
-    exports.List = List;
+//    exports.List = List; // never used (should be removed from code base)
 
 
 
@@ -29060,6 +29061,59 @@ define("highlight", ["tables", "tokenizer"], function (tables, tokenize) {
 
 });
 
+/*
+
+
+
+    The Highlighter
+    
+    The Reason for the tokenizer to be separate
+    
+    It was running for a long time on my homepage for fun
+    
+    Later i continued this weak highlighter with the draft
+    
+    Now i have much bad code mixed with seriously engineered code.
+
+
+
+    My Tip:
+    
+    Kick this highlighter.
+    
+bad:    It has just tokens.
+    
+so:    Get the parse tree.
+    (And with a token list)
+    
+    
+plus:    Get the AST information by
+    getting a node id and setting
+    it on the span element.
+    
+and:    Evaluate in an own realm per
+    PRE Element.
+    Btw. HTML Designer prolly and 
+    rather use -pre with code inside-,
+    i should change this, too.
+
+        
+    
+    Kick it for the following reason:
+    
+    make the tokenizer a part of the parser
+    
+    (just a few changes, to get
+    rid of "next" working on an array
+    and an expensiver "righthand" function
+    doing a lookahead scan to the
+    right, then letting last lookat(1) fall 
+    back to 0 by assignment
+    and get the next token.)
+    
+
+*/
+
 
 if (typeof window != "undefined") {
 
@@ -29951,9 +30005,9 @@ if (typeof window != "undefined") {
                         key = target.innerText || target.textContent || target.innerHTML;
                         html = "";
                         /*
-                        var oid;
-                        if (oid=target.getAttribute("data-syntaxjs-oid")) {
-                        
+                        var nodeid;
+                        if (nodeid=target.getAttribute("data-syntaxjs-nodeid")) {
+                    	    
                         }
                         */
                         /*
@@ -29986,7 +30040,7 @@ if (typeof window != "undefined") {
                         }
 
                         /*
-                        var oid;
+                        var nodeid;
                         if (oid=target.getAttribute("data-syntaxjs-oid")) {
                             html += "<br>Newsflash: dieses Token hat eine spezielle Id, die es ermoeglicht in den anderen Syntaxtree zu navigieren.<br>";
                         }

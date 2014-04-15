@@ -164,12 +164,14 @@ function runTest(current, testname) {
 	    if (index < (testnames.length - 1)) console.log("\n" + separator);
 	    
 	} catch (ex) {
-	    
+	    if (!current.throws) {
 	    console.log("FAIL: Exception at: "+jsonfile+": "+testname);
 	    console.log(ex.name);
 	    console.log(ex.message);
 	    console.log(ex.stack);
-	    
+	    } else {
+	    console.log("PASS: initialisation code throws");
+	    }
 	}
     });
     

@@ -3,7 +3,7 @@
 	"for loop to look at instantiate block declaration bound lexnames":
 	{
 	    "init": 
-		"let x = NaN; for (let int i = 10, j = 0; i > j; i--) { let binding = i; x=binding; }",
+		"let x = NaN; for (let i = 10, j = 0; i > j; i--) { let binding = i; x=binding; }",
 	    "tests": 
 	    [
 		["x", 1 ]
@@ -13,7 +13,7 @@
 	"equal for loop but without block semantics.":
 	{
 	    "init": 
-		"let x = NaN; let binding; for (let int i = 10, j = 0; i > j; i--) binding = i, x=binding; ",
+		"let x = NaN; let binding; for (let i = 10, j = 0; i > j; i--) binding = i, x=binding; ",
 	    "tests": 
 	    [
 		["x", 1 ]
@@ -53,5 +53,11 @@
 		["y", null, "throws"],
 		["str", ""]
 	    ]
-	}
+	},
+	"WUT? let int i = 10 passed for declaration... have to add a syntax error.":
+	{
+	    "init": 
+		"for (let int i = 10, j = 0; i > j; i--) { let binding = i; x=binding; }",
+	    "throws":true
+	}	
 }
