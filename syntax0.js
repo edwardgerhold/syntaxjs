@@ -5247,7 +5247,7 @@ function makeParser() {
             } else if (ltNext) {
                 break;
             } else if (ExprEndOfs[v]) {                
-                break;
+                break;        
             } else if (v != undefined) {
                 console.log("i="+i)
                 console.log("j="+j)
@@ -25765,8 +25765,10 @@ function makeRuntime() {
 
             } else if (type === "SpreadExpression") {
                 var array = GetValue(Evaluate(arg));
-                if (isAbrupt(arg = ifAbrupt(arg))) return arg;
-                for (var k = 0, l = Get(array, "length"); k < l; k++) {
+                if (isAbrupt(array = ifAbrupt(array))) return array;
+                var l = Get(array, "length")
+                if (isAbrupt(l=ifAbrupt(l))) return l;
+                for (var k = 0; k < l; k++) {
                     value = Get(array, ToString(k));
                     if (isAbrupt(value = ifAbrupt(value))) return value;
                     args.push(value);
@@ -25832,7 +25834,8 @@ function makeRuntime() {
             //    PrepareForTailCall();
         }
 
-        var result = callInternalSlot("Call", func, thisValue, argList);
+        var
+            result = callInternalSlot("Call", func, thisValue, argList);
 
         //if (tailPosition) {
         //}
@@ -26849,7 +26852,9 @@ function makeRuntime() {
 
                 var spreadRef = Evaluate(element);
                 var spreadObj = GetValue(spreadRef);
+                if (isAbrupt(spreadObj=ifAbrupt(spreadObj))) return spreadObj;
                 var spreadLen = Get(spreadObj, "length");
+                if (isAbrupt(spreadLen=ifAbrupt(spreadLen))) return spreadLen;
 
                 for (var k = 0; k < spreadLen; k++) {
 
@@ -28131,7 +28136,6 @@ function makeRuntime() {
     }
 
     function CaseBlockEvaluation(input, caseBlock) {
-
         var clause;
         var clauseSelector;
         var runDefault = true;
@@ -28146,7 +28150,6 @@ function makeRuntime() {
             if (clause.type === "DefaultCase") {
                 defaultClause = clause;
             } else {
-
                 clauseSelector = CaseSelectorEvaluation(clause);
                 if (isAbrupt(clauseSelector)) return clauseSelector;
                 if (searching) matched = SameValue(input, clauseSelector);
@@ -28168,7 +28171,6 @@ function makeRuntime() {
                 }
             }
         }
-
         if (!isAbrupt(R)) searching = true; // kein Break.
         if (searching && defaultClause) {
             R = Evaluate(defaultClause.consequent);
@@ -28215,7 +28217,6 @@ function makeRuntime() {
             for (i = 0, j = spans.length; i < j; i+=2) {
                 if ((span = spans[i]) !== undefined) list.push(span);
             }
-
         } else {
             if (spans.length === 1) return [];
             for (i = 1, j = spans.length; i < j; i+=2) {
@@ -28252,7 +28253,6 @@ function makeRuntime() {
         var index = 0;
         var prop, cookedValue, rawValue;
         while (index < count) {
-
             prop = ToString(index);
             cookedValue = cookedStrings[index];
             rawValue = rawStrings[index];
@@ -28263,12 +28263,14 @@ function makeRuntime() {
                 writable: false,
                 configurable: false
             });
+
             if (rawValue !== undefined) callInternalSlot("DefineOwnProperty", rawObj, prop, {
                 value: rawValue,
                 enumerable: false,
                 writable: false,
                 configurable: false
             });
+
             index = index + 1;
         }
         SetIntegrityLevel(rawObj, "frozen");
@@ -28345,18 +28347,13 @@ function makeRuntime() {
     function MethodDefinition(node, object) {
         "use strict";
         var fproto;
-
         if (node.generator) {
             var intrinsics = getIntrinsics();
             fproto = Get(intrinsics, "%GeneratorFunction%");
         }
-
         var methodDef = DefineMethod(node, object, fproto);
         if (isAbrupt(methodDef = ifAbrupt(methodDef))) return methodDef;
-
-
         SetFunctionName(methodDef.closure, methodDef.key);
-
         var desc = {
             value: methodDef.closure,
             writable: true,
@@ -28365,7 +28362,6 @@ function makeRuntime() {
         };
         return DefineOwnPropertyOrThrow(object, methodDef.key, desc);
     }
-
     evaluation.ClassDeclaration = ClassDeclaration;
 
     function ClassDeclaration(node) {
@@ -28377,23 +28373,19 @@ function makeRuntime() {
         var staticMethods = StaticMethodDefinitions(elements);
         var protoMethods = PrototypeMethodDefinitions(elements);
         var protoParent;
-        var intrinsics = getIntrinsics();
-        var ObjectPrototype = Get(intrinsics, "%ObjectPrototype%");
-        var FunctionPrototype = Get(intrinsics, "%FunctionPrototype%");
+        var ObjectPrototype = getIntrinsic("%ObjectPrototype%");
+        var FunctionPrototype = getIntrinsic("%FunctionPrototype%");
         var className = node.id;
         var isExtending = node.extends;
         var constructorParent;
         var Proto;
-        var element, decl;
-        var name, isStatic;
+        var decl;
         var status;
-        var type;
-        var expression = node.expression;
 
         if (node.extends) {
             superclass = GetValue(Evaluate(node.extends));
+            if (isAbrupt(superclass=ifAbrupt(superclass))) return superclass;
         }
-
         if (!superclass) {
             protoParent = null;
             constructorParent = FunctionPrototype;
@@ -28401,24 +28393,24 @@ function makeRuntime() {
             if (Type(superclass) !== "object") return withError("Type", "superclass is no object");
             if (!IsConstructor(superclass)) return withError("Type", "superclass is no constructor");
             protoParent = Get(superclass, "prototype");
+            if (isAbrupt(protoParent=ifAbrupt(protoParent))) return protoParent;
             if (Type(protoParent) !== "object" && Type(protoParent) !== "null") return withError("Type", "prototype of superclass is not object, not null");
             constructorParent = superclass;
         }
-
         Proto = ObjectCreate(protoParent);
-
+        if (isAbrupt(Proto=ifAbrupt(Proto))) return Proto;
         var lex = getLexEnv();
         var scope = NewDeclarativeEnvironment(lex);
         if (className) {
             lex.CreateMutableBinding(className);
         }
-
         var caller = cx.callee;
         getContext().LexEnv = scope;
         cx.callee = className;
         cx.caller = caller;
         getContext().LexEnv = scope;
         var F = FunctionCreate("normal", [], null, scope, true, FunctionPrototype, constructorParent);
+        if (isAbrupt(F=ifAbrupt(F))) return F;
 
         if (!constructor) {
             if (isExtending) {
@@ -28453,7 +28445,8 @@ function makeRuntime() {
                 if (isAbrupt(status)) return status;
             }
         }
-        if (node.extends) {
+
+        if (protoParent) {
             setInternalSlot(F, "HomeObject", protoParent);
             setInternalSlot(F, "MethodName", "constructor");
         }
@@ -28461,7 +28454,8 @@ function makeRuntime() {
         MakeConstructor(F, false, Proto);
 
         if (className) {
-            SetFunctionName(F, className);
+            var status = SetFunctionName(F, className);
+            if (isAbrupt(status)) return status;
             lex.InitialiseBinding(className, F);
         }
 

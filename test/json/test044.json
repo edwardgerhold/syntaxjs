@@ -1,0 +1,30 @@
+{
+	"rest spread tests":
+	{
+	    "init": 		
+		"let [...rest] = [...[1,2,3,4,5]]",
+	    "tests": 
+	    [
+		["rest.length", 5],
+		["rest[4]", 5]
+	    ]
+	}	,
+	"rest spread tests 2":
+	{
+	    "init": 		
+		"let f = ...rest  => [...rest]",
+	    "tests": 
+	    [
+		["let a = f(1,2,3,4,5); a.length === 5 && a[4] === 5", true]
+	    ]
+	},	
+	"rest spread tests 3":
+	{
+	    "init": 		
+		"let f = (a,b,c,d, ...rest)  => [a,b,c,d, ...rest]",
+	    "tests": 
+	    [
+		["let a = f('a',...['b','c','d','e']); a.length === 5 && a[4] === 'e';", true]
+	    ]
+	}
+}
