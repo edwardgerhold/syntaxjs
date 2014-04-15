@@ -2564,7 +2564,7 @@ define("slower-static-semantics", function (require, exports, modules) {
             for (var i = 0, j = defs.length; i < j; i++) {
                 if (def = defs[i]) {
                     if (def.isConstructor) return def;
-                    if (def.id === "constructor") return def;
+                    if (def.id.name === "constructor") return def;
                     if (def.ctor) return def.ctor;
                 }
             }
@@ -2572,7 +2572,7 @@ define("slower-static-semantics", function (require, exports, modules) {
             def = defs;
             if (!def) return null;
             if (def.isConstructor) return def;
-            if (def.id === "constructor") return def;
+            if (def.id.name === "constructor") return def;
             if (def.ctor) return def.ctor;
         }
         return null;
@@ -3407,7 +3407,7 @@ function makeTokenizer () {
          */
         var punct;
         if (!StartOfThreeFourPunctuators[ch]) {
-            punct = sourceCode[i] + sourceCode[i+1];
+            punct = ch + lookahead;
         } else {
             punct = sourceCode[i] + sourceCode[i + 1] + sourceCode[i + 2] + sourceCode[i + 3];
             if (punct === ">>>=") {
@@ -3471,7 +3471,6 @@ function makeTokenizer () {
                 } else {
                     break;
                 }
-
             }
             return number;
         }
@@ -5991,11 +5990,16 @@ function makeParser() {
 
         if (v === ";") {
             if (!isObjectMethod) pass(";");
+            else throw new SyntaxError("invalid ; in object literal");
         }
 
-        if (v === "static" && !isObjectMethod) {
-            isStaticMethod = true;
-            pass(v);
+        if (v === "static") {
+    	    if (!isObjectMethod) {
+        	isStaticMethod = true;
+        	pass(v);
+    	    } else {
+        	throw new SyntaxError("static is not allowed in objects");
+            }
         }
 
         if (v === "*") {
@@ -6003,7 +6007,6 @@ function makeParser() {
             pass(v);
         } else if (v === "get") {
             specialMethod = isGetter = true;
-
             pass(v);
             // get c() {}
         } else if (v === "set") {

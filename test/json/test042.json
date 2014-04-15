@@ -1,0 +1,16 @@
+{
+	"class constructor needs bugfix i think":
+	{
+	    "init": 		
+		"class C { constructor(...args) { for (x of args.entries()) { this[x[0]] = x[1]; } } method() { return 200; } static method() { return 100; } }",
+	    "tests": 
+	    [
+		["let c = new C('a',2,true,{a:4},[5]); c instanceof C;", true],
+	    	["C.method()", 100  ],
+		["(new C).method()", 200 ],
+		["c[0]", "a"],
+		["c[1]", 2],
+		["c[2]", true]
+	    ]
+	}	
+}

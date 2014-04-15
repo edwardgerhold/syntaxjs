@@ -19,17 +19,6 @@
 	    [
 		["x", 10]
 	    ]
-	},
-	
-	
-	"testing global strict mode and f-this ":
-	{
-	    "init": 
-		"'use strict'; function f() { return !!this }",
-	    "tests": 
-	    [
-		["f()", false]
-	    ]
 	}
-		
+			
 }

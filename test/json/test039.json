@@ -26,8 +26,8 @@
 		["rx.sticky", true],
 		["rx.multiline", true],
 		["rx.unicode", true],
-		["rx.ignoreCase", false]
-		
+		["rx.ignoreCase", false]		
 	    ]
 	}
+	
 }
