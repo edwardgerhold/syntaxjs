@@ -2998,7 +2998,7 @@ function makeTokenizer () {
     var inputElementRegExp = 2;
     var inputElementTemplateTail = 3;
     var inputElementGoal = inputElementRegExp;
-    var withExtras = true;
+    var withExtras = false;
     var debugmode = false;
     var hasConsole = typeof console === "object" && console && typeof console.log === "function";
 
@@ -4244,6 +4244,7 @@ function makeParser() {
 
     var withExtras = true;
     var extraBuffer = [];
+    
     function newExtrasNode(data) {
         var node = Node("Extras");
         if (data) node.extras = data;
@@ -4564,10 +4565,10 @@ function makeParser() {
 
             if (token) {
                 t = token.type;
-                // if (withExtras && captureExtraTypes[t]) extraBuffer.push(token);
+                if (withExtras && captureExtraTypes[t]) extraBuffer.push(token);
                 if (SkipableToken[t]) return next();
                 v = token.value;
-//              if (withExtras && captureExtraValues[v]) extraBuffer.push(token);
+                if (withExtras && captureExtraValues[v]) extraBuffer.push(token);
                 loc = token.loc;
             } else {
                 t = v = undefined;
@@ -4587,7 +4588,7 @@ function makeParser() {
      ( i read all the parser books and watched videos after writing that code )
      */
 
-    var isComment = { __proto__: true, "LineComment": true, "MultiLineComment": true};
+
     function righthand(tokens, i) {
         var lookahead; // = " ";
         var b = 0;
@@ -5249,6 +5250,12 @@ function makeParser() {
             } else if (ExprEndOfs[v]) {                
                 break;
             } else if (v != undefined) {
+                console.log("i="+i)
+                console.log("j="+j)
+
+                console.log("v="+v);
+                console.log("t="+t);
+
                 throw new SyntaxError("invalid expression statement");
             }
 
@@ -5686,11 +5693,11 @@ function makeParser() {
             var node = Node("SuperExpression");
             node.loc = makeLoc(l1, l1);
 
-            // if (withExtras && extraBuffer.length) dumpExtras2(node, "before");
+            if (withExtras && extraBuffer.length) dumpExtras2(node, "before");
 
             pass("super");
 
-            // if (withExtras && extraBuffer.length) dumpExtras2(node, "after");
+            if (withExtras && extraBuffer.length) dumpExtras2(node, "after");
 
             if (currentNode) {
                 if (ContainNoSuperIn[currentNode.type]) {
@@ -5725,11 +5732,11 @@ function makeParser() {
             var node = Node("ThisExpression");
             node.loc = makeLoc(l1, l1);
 
-            // if (withExtras && extraBuffer.length) dumpExtras2(node, "before");
+            if (withExtras && extraBuffer.length) dumpExtras2(node, "before");
 
             pass("this");
 
-            // if (withExtras && extraBuffer.length) dumpExtras2(node, "after");
+            if (withExtras && extraBuffer.length) dumpExtras2(node, "after");
 
             if (compile) return builder.thisExpression(node.loc);
             return node;
@@ -6518,9 +6525,9 @@ function makeParser() {
             l1 = loc && loc.start;
             node = Node("ReturnStatement");
 
-            // if (withExtras && extraBuffer.length) dumpExtras2(node, "before");
+            if (withExtras && extraBuffer.length) dumpExtras2(node, "before");
             pass("return");
-            // if (withExtras && extraBuffer.length) dumpExtras2(node, "after");
+            if (withExtras && extraBuffer.length) dumpExtras2(node, "after");
 
             if (v !== ";") {
 
@@ -6551,9 +6558,9 @@ function makeParser() {
             var node = Node("WithStatement");
             var l1 = loc && loc.start;
 
-            // if (withExtras) dumpExtras(node, "with", "before");
+            if (withExtras) dumpExtras(node, "with", "before");
             pass("with");
-            // if (withExtras) dumpExtras(node, "with", "after");
+            if (withExtras) dumpExtras(node, "with", "after");
 
             pass("(");
 
@@ -7827,14 +7834,13 @@ function makeParser() {
         debug("Enabling CST extras");
         Object.keys(parser).forEach(function (k) {
             if (typeof parser[k] === "function" && !parser[k].wrapped) {
-                if (k == "next" || k == "pass" || k.indexOf("JSON")===0) return; // for my hacky wacky system
+                if (k == "next" || k == "pass" || k == "parse" || k == "parseGoal" || k.indexOf("JSON")===0) return; // for my hacky wacky system
                 debug("wrapping "+k);
                 var originalFunction = parser[k];
                 var parseFunction = function () {
                     console.log("parsing "+originalFunction.name+ " at  "+ v + " "+ t + " " + lookahead);
-
                     var b = exchangeBuffer();
-                    var node = originalFunction.call(this, arguments);
+                    var node = originalFunction.apply(parser, arguments);
                     if (node) {
                         if (b.length) console.dir(b);
                         node.extras = b;
@@ -7861,8 +7867,8 @@ function makeParser() {
     }
 
 
-    // enableExtras();
-    // uncomment for endless loop
+    //enableExtras();
+    //uncomment for endless loop
     return exports;
 
 
@@ -7984,11 +7990,11 @@ define("regexp-parser", function (require, exports) {
                         if (ch == "=") {
                             pass("=");
                             node.assertion = this.Disjunction();
-                            node.modifiers = "?=";
+                            node.prefix = "?=";
                         } else if (ch == "!") {
                             pass("!");
                             node.assertion = this.Disjunction();
-                            node.modifiers = "?!";
+                            node.prefix = "?!";
                         }
                     }
                     break;

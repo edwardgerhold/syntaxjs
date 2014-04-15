@@ -1,0 +1,6 @@
+echo "running from /test262/, don´t forget to keep strg-d pressed for a while coz each time the syntax.js shell appears after evaluating a test file, which is left by ctrl-d. i guess now follow real results."
+TESTDIR=/test262
+cd /s/
+$TESTDIR/tools/packaging/test262.py --command='node /s/syntax0.js' --tests=$TESTDIR
+
+
