@@ -4578,8 +4578,8 @@ define("parser", function () {
             if (t === undefined) return undefined;
             lookahead = t.value;
             lookaheadt = t.type;
-            if (LineTerminators[lookahead[0]]) {
-                ltNext = true; continue;
+            if (lookaheadt === "LineTerminator") {
+                ltNext = true;
             }
             if (SkipableToken[lookaheadt]) continue;
             break;
@@ -5301,7 +5301,6 @@ define("parser", function () {
     function CoverParenthesisedExpressionAndArrowParameterList() {
 
 
-
         var parens = [];
         var covered = [];
         var cover = false;
@@ -5312,7 +5311,11 @@ define("parser", function () {
 
             expr = this.Identifier();
             cover = true;
-
+            
+	} else if (v === "..." && lookaheadt === "Identifier") {
+    	
+            expr = this.RestParameter();
+            cover = true;
 
         } else if (v === "(") {
 
@@ -5895,7 +5898,7 @@ define("parser", function () {
                 break;
             } else if (v === undefined) {
                 break;
-            }
+            } 
 
 
             throw new SyntaxError("illegal token after "+kind+": " + v);
@@ -30104,7 +30107,7 @@ if (typeof window != "undefined") {
                 if (config) config = JSON.parse(config);
                 else config = defaultOptions();
                 var onload = function (e) {
-                    setTimeout(function () { highlightElements(config); }, 0);
+                    setTimeout(highlightElements.bind(null,config), 0);
                 };
                 addEventListener(window, "DOMContentLoaded", onload, false);
             }
