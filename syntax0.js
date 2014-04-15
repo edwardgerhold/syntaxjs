@@ -1646,6 +1646,7 @@ define("tables", function (require, exports, module) {
         "<<=": 10,
         ">>=": 10,
         ">>>=": 10,
+
         "&=": 10,
         "|=": 10,
         "?": 20,
@@ -1674,11 +1675,9 @@ define("tables", function (require, exports, module) {
         "in": 40,
         "of": 40,
 
-
         "+": 50,
         "-": 50,
-
-
+        
         "*": 60,
         "/": 60,
         "%": 60,
@@ -1695,6 +1694,21 @@ define("tables", function (require, exports, module) {
         "[": 80,
         "(": 80
 
+    };
+    
+    exports.UnaryOperatorPrecedence = UnaryOperatorPrecedence;
+    var UnaryOperatorPrecedence = {
+	__proto__: null,
+	"-":70,   
+        "+":70,   
+        "!!": 70,
+        "~": 70,
+        "!":70,
+        "++":70,
+        "--":70,
+        "delete":70,
+        "void":70,
+        "typeof":70
     };
 
     var RegExpFlags = {
@@ -2966,6 +2980,9 @@ define("tokenizer", function () { // should use this factory to create one each 
      */
 
     var createCustomToken = null;
+
+function makeTokenizer () {
+
     var sourceCode;
     var i, j;
     var token;
@@ -2973,8 +2990,7 @@ define("tokenizer", function () { // should use this factory to create one each 
     var ch, lookahead;	// lookahead0 and lookahead1
     var cb;
     var tokens = [];
-    var line = 1,
-        column = 1;
+    var line = 1, column = 1;
     var lines = [];
     var offset = 0;
     var filename = null;
@@ -2983,7 +2999,6 @@ define("tokenizer", function () { // should use this factory to create one each 
     var inputElementTemplateTail = 3;
     var inputElementGoal = inputElementRegExp;
     var withExtras = true;
-
     var debugmode = false;
     var hasConsole = typeof console === "object" && console && typeof console.log === "function";
 
@@ -3008,7 +3023,6 @@ define("tokenizer", function () { // should use this factory to create one each 
         var oldstack = se.stack;
         se.stack = "syntax.js tokenizer,\nfunction tokenize,\n does not recognize actual input. ch=" + ch + ", lookahead=" + lookahead + ", line=" + line + ", col=" + column + ", offset=" + offset + ", i="+i+" " +sourceCode+" \n" + oldstack;
     }
-
 
     function LineTerminator() {
         if (LineTerminators[ch]) {
@@ -3816,7 +3830,7 @@ define("tokenizer", function () { // should use this factory to create one each 
         inputElementGoal = inputElementRegExp;
         tokens = [];
         line = 1;
-        column = 0;
+        column = 1;
         i = -1;
         j = sourceCode.length;
         ch = undefined;
@@ -3865,7 +3879,7 @@ define("tokenizer", function () { // should use this factory to create one each 
     tokenize.tokenizer = tokenizer;
     tokenize.setCustomTokenMaker = setCustomTokenMaker;
     tokenize.unsetCustomTokenMaker = unsetCustomTokenMaker;
-
+    tokenize.makeTokenizer = makeTokenizer;
 
 
 
@@ -3879,12 +3893,17 @@ define("tokenizer", function () { // should use this factory to create one each 
 
     function unsetCustomTokenMaker () {
         createCustomToken = null;
-    }
+    }   
 
+    return tokenize;
+
+}
     //console.dir(tokenize("... args;...args"));
     //process.exit(0);
 
-    return tokenize;
+    // return tokenize;
+
+    return makeTokenizer();
 
 });
 
@@ -4091,8 +4110,9 @@ define("parser", function () {
     var isAsmDirective = tables.isAsmDirective;
     var ForbiddenArgumentsInStrict = tables.ForbiddenArgumentsInStrict;
     var ReservedWordsInStrictMode = tables.ReservedWordsInStrictMode;
+    var ExprEndOfs = tables.ExprEndOfs;
 
-
+function makeParser() {
 
     var ast;
     var ltNext; // will be set if a lineterminator is before the next token, unset else
@@ -4117,6 +4137,7 @@ define("parser", function () {
     var defaultIsId = true;
     var generatorParameter = false;
     var generatorParameterStack = [];
+
 
 
 
@@ -4943,7 +4964,7 @@ define("parser", function () {
 
             if (v == "[" || v == ".") return this.MemberExpression(node);
             else if (v == "(") return this.CallExpression(node);
-            else if (IsTemplateToken[t]) return this.ession(node);
+            else if (IsTemplateToken[t]) return this.CallExpression(node);
 
             // strawman:concurrency addition 
             // else if (v == "!") return this.MemberExpression(node);
@@ -4971,18 +4992,17 @@ define("parser", function () {
 
                     if (v === ")") break;
 
-                    arg = this.SpreadExpression() || this.AssignmentExpression();
-                    if (arg) args.push(arg);
+                    if (arg = this.SpreadExpression() || this.AssignmentExpression()) {
+                        args.push(arg);
+                    } 
+                    
                     if (v === ",") {
                         pass(",");
-
+                    } else if (v != ")" && v != undefined) {
+                        throw new SyntaxError("Error parsing the argument list of a call expression");
                     }
 
-                    //else if (v !== ")") {
-                    //    throw new SyntaxError("Error parsing the argument list of a call expression");
-                    //}
-
-                } while (v !== undefined && i < j);
+                } while (v !== undefined);
 
             pass(")");
             return args;
@@ -5173,7 +5193,6 @@ define("parser", function () {
             }
 
             node.expression = this.AssignmentExpression();
-
             l2 = loc && loc.end;
             node.loc = makeLoc(l1, l2);
             EarlyErrors(node);
@@ -5205,7 +5224,7 @@ define("parser", function () {
 
     // PLEASE RE-WRI-TE: PAREN EXPR, EXPR, EXPRSTMT, SEQEXPR and factor out unclearness from last year
 
-    function Expression(stop, parenthesised) {
+    function Expression(stop, parenthesized) {
 
         var list = [];
         var node;
@@ -5215,19 +5234,23 @@ define("parser", function () {
 
         var hasStop = typeof stop === "string";
 
-        if (!parenthesised && (ExprNoneOfs[v] || (v === "let" && lookahead === "["))) return null;
+        if (!parenthesized && (ExprNoneOfs[v] || (v === "let" && lookahead === "["))) return null;
 
         do {
 
             if (hasStop && v === stop) break;
-            ae = this.AssignmentExpression();
-            if (ae) list.push(ae);
+            if (ae = this.AssignmentExpression()) list.push(ae);            
             if (hasStop && v === stop) break;
 
             if (v === ",") {
                 pass(",");
-
-            } else break;
+            } else if (ltNext) {
+                break;
+            } else if (ExprEndOfs[v]) {                
+                break;
+            } else if (v != undefined) {
+                throw new SyntaxError("invalid expression statement");
+            }
 
         } while (v !== undefined);
 
@@ -5236,15 +5259,15 @@ define("parser", function () {
         switch (list.length) {
             case 0:
                 return null;
-                break;
+
             case 1:
                 node = list[0];
-                if (parenthesised) return this.ParenthesizedExpressionNode(node, l1, l2);
+                if (parenthesized) return this.ParenthesizedExpressionNode(node, l1, l2);
                 return this.ExpressionStatement(node, l1, l2);
-                break;
+
             default:
                 node = this.SequenceExpression(list, l1, l2);
-                if (parenthesised) return this.ParenthesizedExpressionNode(node, l1, l2);
+                if (parenthesized) return this.ParenthesizedExpressionNode(node, l1, l2);
                 else return node;
         }
     }
@@ -5453,9 +5476,12 @@ define("parser", function () {
     function PostfixExpression(lhs) {
         debug("PostfixExpression (" + t + ", " + v + ")");
         var l1 = loc && loc.start;
+        
         if (v == "(") lhs = this.ParenthesizedExpression();
         else lhs = lhs || this.LeftHandSideExpression();
+        
         if (lhs) debug("got lhs " + lhs.type);
+        
         if (lhs && UpdateOperators[v]) {
             var node = Node("UnaryExpression");
             node.operator = v;
@@ -5478,13 +5504,13 @@ define("parser", function () {
 		var start = loc.start;
 		var end = loc.end;
 		if (start) {
-		    str +=  "@loc.start: line " +start.line + ", column "+start.column;
+		    str +=  "from line " +start.line + ", column "+start.column;
 		}
 		if (end) {
-		    str +=  "@loc.end: line " +end.line + ", column "+end.column;	    
+		    str +=  "- line " +end.line + ", column "+end.column;	    
 		}
 	    } else if (loc.line != undefined) {
-		str = "@loc: line " +loc.line + ", column "+loc.column;	    
+		  str = "from line " +loc.line + ", column "+loc.column;	              
 	    }
 	    return str;
 	}
@@ -5553,6 +5579,8 @@ define("parser", function () {
     parser.PrimaryExpression = PrimaryExpression;
     parser.PostfixExpression = PostfixExpression;
     parser.UnaryExpression = UnaryExpression;
+
+
 
 
     parser.AssignmentExpression = AssignmentExpression;
@@ -6106,16 +6134,17 @@ define("parser", function () {
 
             var l1 = loc && loc.start;
             pass("...");
-            var node = Node("RestParameter");
+            var node = Node("RestParameter");            
             node.id = v;
-
+            if (t !== "Identifier") {
+                throw new SyntaxError("invalid rest parameter, identifier expected");
+            }
             if (isStrict && ForbiddenArgumentsInStrict[v]) {
                 throw new SyntaxError(v + " is not a valid rest identifier in strict mode");
             }
-
             // staticSemantics.addLexBinding(v);
-
             pass(v);
+
             var l2 = loc && loc.end;
             node.loc = makeLoc(l1, l2);
             if (compile) return builder["restParameter"](node.id, node.loc);
@@ -6174,12 +6203,13 @@ define("parser", function () {
         var id;
         var x;
 
+        
         do {
 
             if (v) {
                 //x = i;
-
-                debug("FormalParameters ("+t+", "+v+")");
+                debug("FormalParameters ("+t+", "+v+")");   
+                
 
                 if (v === ")") {
                     break;
@@ -6204,13 +6234,11 @@ define("parser", function () {
 
                 if (v === ",") {
                     pass(",");
-
+                } else if (v !== undefined && v !== ")") {
+                    throw new SyntaxError("error parsing formal parameter list");
                 }
-
-                //if (x == i) next();
-
+            
             }
-
         } while (v !== undefined && v !== ")");
 
         return list;
@@ -6803,7 +6831,6 @@ define("parser", function () {
                         if (imp) list.push(imp);
                     } else if (v === ",") {
                         pass(",");
-
                     } else if (v !== "from") {
                         throw new SyntaxError("invalid import statement");
                     }
@@ -6879,9 +6906,6 @@ define("parser", function () {
                 node.all = true;
                 pass(v);
                 node.from = this.FromClause();
-
-
-
                 skip(";");
 
             } else {
@@ -6917,13 +6941,12 @@ define("parser", function () {
         list.type = "StatementList";
         list.switch = true;
         var s;
-        debug("swstmtlist():");
+        
         do {
-            if (i >= j) break;
-            s = this.Statement();
-            list.push(s);
-
+            if (v == undefined) break;
+            if (s = this.Statement()) list.push(s);
         } while (!FinishSwitchStatementList[v]);
+        
         return list;
     }
 
@@ -7742,7 +7765,7 @@ define("parser", function () {
     exports.disableExtras = disableExtras;
     exports.setWithExtras = setWithExtras;
     exports.isWithExtras = isWithExtras;
-
+    exports.makeParser = makeParser;
     /*
      * Observers. Turning the parser into some observable
      */
@@ -7836,9 +7859,17 @@ define("parser", function () {
     function isWithExtras() {
         return !!withExtras;
     }
+
+
     // enableExtras();
     // uncomment for endless loop
     return exports;
+
+
+}
+
+    return makeParser();
+    
 });
 
 /*
@@ -24738,6 +24769,30 @@ define("runtime", function () {
         if (hasConsole) console.dir.apply(console, arguments);
     }
 
+
+function makeRuntime() {
+
+
+
+        /*
+
+            create new lexer and parser
+            here
+
+            and remove the "shared state"
+
+            from the realm.
+
+        */
+
+
+
+
+
+
+
+
+
     //-----------------------------------------------------------
     // assignment!!! setze Call Funktion im anderen Modul zu Call fuer ASTNode:
     // ----------------------------------------------------------
@@ -28956,7 +29011,12 @@ define("runtime", function () {
     execute.ExecuteAsyncTransform = ExecuteAsyncTransform;
     execute.TransformObjectToJSObject = TransformObjectToJSObject;
     execute.DeepStaticJSSnapshotOfObject = DeepStaticJSSnapshotOfObject;
+    execute.makeRuntime = makeRuntime;
     return execute;
+
+}
+
+    return makeRuntime();
 });
 
 
