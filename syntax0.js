@@ -3765,12 +3765,8 @@ function makeTokenizer () {
             lookahead = sourceCode[i + 1];
             if (k) { return next(--k); }
             return ch;
-        } else if (i >= j) {
-            ch = undefined;
-            lookahead = undefined;
-            return false;
         }
-//        throw new RangeError("next() over last character");
+        return !!(ch = lookahead = undefined);
     }
 
 
@@ -4987,23 +4983,24 @@ function makeParser() {
             pass("(");
             args = [];
 
-            if (v !== ")")
+            if (v !== ")") {
                 do {
 
                     if (v === ")") break;
 
                     if (arg = this.SpreadExpression() || this.AssignmentExpression()) {
                         args.push(arg);
-                    } 
-                    
+                    }
+
                     if (v === ",") {
                         pass(",");
+
                     } else if (v != ")" && v != undefined) {
-                        throw new SyntaxError("Error parsing the argument list of a call expression");
+                        throw new SyntaxError("illegal argument list");
                     }
 
                 } while (v !== undefined);
-
+            }
             pass(")");
             return args;
         }
@@ -5016,10 +5013,8 @@ function makeParser() {
         var node, tmp, l1, l2;
         l1 = l2 = (loc && loc.start);
 
-        if (callee == undefined)
-            callee = this.MemberExpression();
 
-        if (callee) {
+        if (callee = (callee||this.MemberExpression())) {
             l1 = callee.loc && callee.loc.start;
 
             node = Node("CallExpression");
@@ -5061,7 +5056,9 @@ function makeParser() {
                 }
 
             } else {
+                // It´s not a call expression, ( does not match
 
+                // i have to rewrite the expression parts so i care for writing few things down.
                 return node.callee;
             }
 
@@ -5926,6 +5923,7 @@ function makeParser() {
                 pass(",");
                 continue;             
             } else if (ltNext) {
+                if (v == ";") pass(";");
                 break;
             } else if (v === ";") {
                 pass(";");
@@ -5934,8 +5932,8 @@ function makeParser() {
                 break;
             } 
 
+            throw new SyntaxError("illegal token "+v+" after "+kind+" declaration");
 
-            throw new SyntaxError("illegal token after "+kind+": " + v);
 
             //break;        
         }
@@ -6213,18 +6211,14 @@ function makeParser() {
         var id;
         var x;
 
-        
+        if (v && v != ")")
         do {
 
-            if (v) {
+
                 //x = i;
                 debug("FormalParameters ("+t+", "+v+")");   
-                
 
-                if (v === ")") {
-                    break;
-                }
-                else if (v === "...") {
+                if (v === "...") {
                     id = this.RestParameter();
                     list.push(id);
                 } else if (StartBinding[v]) {
@@ -6248,7 +6242,7 @@ function makeParser() {
                     throw new SyntaxError("error parsing formal parameter list");
                 }
             
-            }
+
         } while (v !== undefined && v !== ")");
 
         return list;
