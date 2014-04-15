@@ -2310,6 +2310,16 @@ define("slower-static-semantics", function (require, exports, modules) {
                 } else if (type === "IfStatement") {
                     names = VarDeclaredNames(node.consequent, names);
                     names = VarDeclaredNames(node.alternate, names);
+	        } else if (type === "WhileStatement") {
+                    VarDeclaredNames(node.body, names);
+                } else if (type === "DoWhileStatement") {
+                    VarDeclaredNames(node.body, names);
+                } else if (type === "TryStatement") {
+                    VarDeclaredNames(node.guard, names);
+                } else if (type === "CatchClause") {
+                    VarDeclaredNames(node.block, names);
+                } else if (type === "Finally") {
+                    VarDeclaredNames(node.block, names);
                 } else if (type === "SwitchStatement") {
                     names = VarDeclaredNames(node.discriminant, names);
                     names = VarDeclaredNames(node.cases);
@@ -2350,13 +2360,11 @@ define("slower-static-semantics", function (require, exports, modules) {
                 var type = node.type;
                 if (type === "VariableDeclaration" && node.kind === "var") {
                     var decls = node.declarations;
-
                     for (k = 0, l = decls.length; k < l; k++) {
                         if (decl = decls[k]) {
                             list.push(decl);
                         }
                     }
-
                 } else if (type === "BlockStatement") {
                     VarScopedDeclarations(node.body, list);
                 } else if (type === "FunctionDeclaration") {
@@ -2364,9 +2372,18 @@ define("slower-static-semantics", function (require, exports, modules) {
                 } else if (type === "IfStatement") {
                     VarScopedDeclarations(node.consequent, list);
                     VarScopedDeclarations(node.alternate, list);
+                } else if (type === "WhileStatement") {
+                    VarScopedDeclarations(node.body, list);
+                } else if (type === "DoWhileStatement") {
+                    VarScopedDeclarations(node.body, list);
+                } else if (type === "TryStatement") {
+                    VarScopedDeclarations(node.handler, list);
+                } else if (type === "CatchClause") {
+                    VarScopedDeclarations(node.block, list);
+                } else if (type === "Finally") {
+                    VarScopedDeclarations(node.block, list);
                 } else if (type === "SwitchStatement") {
                     VarScopedDeclarations(node.cases, list);
-
                 } else if (IterationStatement[type]) {
 
                     if (type === "ForStatement") {

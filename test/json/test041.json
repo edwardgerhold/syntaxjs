@@ -1,0 +1,24 @@
+{
+	
+	"try catch":
+	{
+	    "init": 
+		"let e; try { throw 'i am king. pigs can fly. (this implication is right) [cited from MIT6.042 seen last year]'; } catch (ex) { e = ex; }",
+	    "tests": 
+	    [
+		["e", "i am king. pigs can fly. (this implication is right) [cited from MIT6.042 seen last year]" ]
+	    ]
+	},
+	
+	"try statement and block test with vars.":
+	{
+	    "init": 
+		"let a = 0; try { let binding = 'Hallo'; var str = binding + ' Welt'; a = 1; } catch(ex) { a = 2 }",
+	    "tests": 
+	    [
+		["a", 1 ],
+		["str", "Hallo Welt"],
+		["binding", null, "throws"]
+	    ]
+	}
+}
