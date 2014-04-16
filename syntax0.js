@@ -2531,7 +2531,9 @@ define("slower-static-semantics", function (require, exports, modules) {
         if (node && !Array.isArray(node)) {
             type = node.type;
             if (type === "SuperExpression") return true;
-            if (type === "MethodDefinition") {
+
+            if (type === "MethodDefinition" || type == "FunctionDeclaration") {
+                if (node.needsSuper == true) return true;
                 contains = ReferencesSuper(node.params);
                 if (contains) return true;
                 contains = ReferencesSuper(node.body);
@@ -12393,8 +12395,8 @@ function CreateBuiltinFunction(realm, steps, len, name) {
 function MakeMethod (F, methodName, homeObject) {
     Assert(IsCallable(F), "MakeMethod: method is not a function");
     Assert(methodName === undefined || IsPropertyKey(methodName), "MakeMethod: methodName is neither undefined nor a valid property key");
-    var hoType = Type(homeObject);
-    Assert(hoType === "undefined" || hoType === "object", "MakeMethod: HomeObject is neither undefined nor object.");
+    var homeObjectType = Type(homeObject);
+    Assert(homeObjectType === "undefined" || homeObjectType === "object", "MakeMethod: HomeObject is neither undefined nor object.");
     setInternalSlot(F, "NeedsSuper", true);
     setInternalSlot(F, "HomeObject", homeObject);
     setInternalSlot(F, "MethodName", methodName);
@@ -12415,7 +12417,7 @@ function MakeSuperReference(propertyKey, strict) {
 function GetSuperBinding(obj) {
     if (Type(obj) !== "object") return undefined;
     if (getInternalSlot(obj, "NeedsSuper") !== true) return undefined;
-    //if (!hasInternalSlot(obj, "HomeObject")) return undefined;
+    if (!hasInternalSlot(obj, "HomeObject")) return undefined;
     return getInternalSlot(obj, "HomeObject");
 }
 
@@ -26267,6 +26269,7 @@ function makeRuntime() {
             callee = GetValue(exprRef);
         }
         if (isAbrupt(callee = ifAbrupt(callee))) return callee;
+
         if (!IsConstructor(callee)) {
             return withError("Type", "expected function is not a constructor");
         }
@@ -26286,6 +26289,7 @@ function makeRuntime() {
         "use strict";
         var callee = node.callee;
         var notSuperExpr = callee.type !== "SuperExpression";
+
         var strict = getContext().strict;
         var tailCall = !! node.tailCall;
         var exprRef;
@@ -26936,22 +26940,11 @@ function makeRuntime() {
         var kind = propertyDefinition.kind;
         var key =  propertyDefinition.key;
         var node = propertyDefinition.value;
+        var computed = propertyDefinition.computed;
         var strict = node.strict;
-        var isComputed = propertyDefinition.computed;
-
         var status;
-        //var exprRef, exprValue;
-        var propRef, propName, propValue;
-        /*
-        var closure;
-        var formals;
-        var body;
-        var scope;
-        var hasSuperRef;
-        var homeObject;
-        var methodName;
-        var functionPrototype;*/
 
+        var propRef, propName, propValue;
         /* I refactored it today, but resetted it tonight, i rewrite it tomorrow */
 
         // TOMORROW ? (FOUR DAYS AGO)
@@ -26959,11 +26952,17 @@ function makeRuntime() {
         if (kind == "init") {
 
             // prop key
-            if (isComputed) {
+            if (computed) {
                 var symRef = Evaluate(key);
                 var symValue = GetValue(symRef);
+
                 if (isAbrupt(symValue = ifAbrupt(symValue))) return symValue;
-                if (!IsSymbol(symValue)) return withError("Type", "A [computed] property inside an object literal has to evaluate to a Symbol primitive");
+
+                if (!IsSymbol(symValue)) symValue = ToString(symValue);
+                if (isAbrupt(symValue = ifAbrupt(symValue))) return symValue;
+
+                if (!IsPropertyKey(symValue)) return withError("Type", "A [computed] property inside an object literal has to evaluate to a Symbol primitive");
+
                 propName = symValue;
             } else {
 
@@ -26988,7 +26987,7 @@ function makeRuntime() {
 
                 // B 3.
                 // DOESNT WORK
-                if (!isComputed && propName === "__proto__") {
+                if (!computed && (propName === "__proto__")) {
                     if (Type(propValue) === "object" || propValue === null) {
                         return callInternalSlot("SetPrototypeOf", newObj, propValue);
                     }
@@ -27010,7 +27009,10 @@ function makeRuntime() {
             if (node.computed) {
                 propName = GetValue(Evaluate(key));
                 if (isAbrupt(propName = ifAbrupt(propName))) return propName;
-                if (!IsSymbol(propName)) return withError("Type", "A [computed] property inside an object literal has to evaluate to a Symbol primitive");
+                if (!IsSymbol(propName)) propName = ToString(propName);
+                if (isAbrupt(propName = ifAbrupt(propName))) return propName;
+                if (!IsPropertyKey(propName)) return withError("Type", "A [computed] property has to evaluate to valid property key");
+
             } else {
                 propName = typeof key === "string" ? key : key.name || key.value;
             }
@@ -28100,27 +28102,23 @@ function makeRuntime() {
             }
 
             result = Evaluate(stmt);
-
             // here is a fix if no completion comes out
+
             if (result instanceof CompletionRecord) {
                 if (result.value !== empty) V = result.value;
             } else V = result;
             // hmm, there will be new fresh bindings
-
             if (!LoopContinues(result, labelSet)) return result;
-
             // new fresh bindings
             status = CreatePerIterationEnvironment(perIterationBindings);
             if (isAbrupt(status)) return status;
             // maybe it just works :)
-
             if (incrementExpr) {
                 incrementExprRef = Evaluate(incrementExpr);
                 incrementExprValue = GetValue(incrementExprRef);
                 if (!LoopContinues(incrementExprValue, labelSet)) return incrementExprValue;
             }
         }
-
     }
 
     function CaseSelectorEvaluation(node) {
@@ -28177,10 +28175,8 @@ function makeRuntime() {
                 V = GetValue(R);
             }
         }
-
         return V;
     }
-
     evaluation.SwitchStatement = SwitchStatement;
 
     function SwitchStatement(node) {
@@ -28250,21 +28246,18 @@ function makeRuntime() {
             prop = ToString(index);
             cookedValue = cookedStrings[index];
             rawValue = rawStrings[index];
-
             if (cookedValue !== undefined) callInternalSlot("DefineOwnProperty", siteObj, prop, {
                 value: cookedValue,
                 enumerable: false,
                 writable: false,
                 configurable: false
             });
-
             if (rawValue !== undefined) callInternalSlot("DefineOwnProperty", rawObj, prop, {
                 value: rawValue,
                 enumerable: false,
                 writable: false,
                 configurable: false
             });
-
             index = index + 1;
         }
         SetIntegrityLevel(rawObj, "frozen");
@@ -28285,48 +28278,38 @@ function makeRuntime() {
 
     evaluation.TemplateLiteral = TemplateLiteral;
 
-
     var defaultClassConstructorFormalParameters = parseGoal("FormalParameterList", "...args");
     var defaultClassConstructorFunctionBody = parseGoal("FunctionBody", "return super(...args);");
-
 
     function DefineMethod(node, object, functionPrototype) {
         "use strict";
         var body = getCode(node, "body");
         var formals = getCode(node, "params");
         var key = node.id;
-
         var computed = node.computed;
-
         var strict = IsStrict(body);
         var scope = getLexEnv();
         var closure;
         var generator = node.generator;
-
         var propKey;
-
         if (computed) {
             propKey = GetValue(Evaluate(key));
             if (isAbrupt(propKey = ifAbrupt(propKey))) return propKey;
-            if (!IsSymbol(propKey)) return withError("Type", "A [computed] property inside an object literal has to evaluate to a Symbol primitive");
+            if (!IsSymbol(propKey)) propKey = ToString(propKey);
+            if (isAbrupt(propKey = ifAbrupt(propKey))) return propKey;
+            if (!IsPropertyKey(propKey)) return withError("Type", "A [computed] property has to evaluate to valid property key");
         } else {
             propKey = PropName(node);
         }
 
-        var methodName = propKey;
         if (isAbrupt(propKey = ifAbrupt(propKey))) return propKey;
-
+        if (generator) closure = GeneratorFunctionCreate("method", formals, body, scope, strict, functionPrototype);
+        else closure = FunctionCreate("method", formals, body, scope, strict, functionPrototype);
+        if (isAbrupt(closure = ifAbrupt(closure))) return closure;
 
         if (ReferencesSuper(node)) {
-            var home = getInternalSlot(object, "HomeObject");
-        } else {
-            home = undefined;
-            methodName = undefined;
+            MakeMethod(closure, propKey, GetPrototypeOf(object));
         }
-
-        if (generator) closure = GeneratorFunctionCreate("method", formals, body, scope, strict, functionPrototype, home, methodName);
-        else closure = FunctionCreate("method", formals, body, scope, strict, functionPrototype, home, methodName);
-        if (isAbrupt(closure = ifAbrupt(closure))) return closure;
 
         var rec = {
             key: propKey,
@@ -28334,8 +28317,6 @@ function makeRuntime() {
         };
         return NormalCompletion(rec);
     }
-
-
 
     evaluation.MethodDefinition = MethodDefinition;
     function MethodDefinition(node, object) {
@@ -28426,7 +28407,6 @@ function makeRuntime() {
         });
 
         var i, j;
-
         for (i = 0, j = protoMethods.length; i < j; i++) {
             if (decl = protoMethods[i]) {
                 status = evaluation.MethodDefinition(decl, Proto);
@@ -28439,12 +28419,10 @@ function makeRuntime() {
                 if (isAbrupt(status)) return status;
             }
         }
-
         if (protoParent) {
             setInternalSlot(F, "HomeObject", protoParent);
             setInternalSlot(F, "MethodName", "constructor");
         }
-
         MakeConstructor(F, false, Proto);
 
         if (className) {
@@ -28452,18 +28430,14 @@ function makeRuntime() {
             if (isAbrupt(status)) return status;
             lex.InitialiseBinding(className, F);
         }
-
         getContext().LexEnv = lex;
         return NormalCompletion(F);
     }
-
-
     function SuperExpression(node) {
         return NormalCompletion(empty);
     }
     evaluation.SuperExpression = SuperExpression;
     evaluation.ModuleDeclaration = ModuleDeclaration;
-
 
     function ModuleDeclaration(node) {
         var body = getCode(node, "body");
@@ -28972,7 +28946,6 @@ function makeRuntime() {
             } else {
                 var value = desc.value;
                 var newValue;
-
                 if (Type(value) === "object") {
                     if (IsCallable(value)) {
                         newValue = function () {

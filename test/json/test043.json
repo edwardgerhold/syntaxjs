@@ -2,7 +2,7 @@
 	"class D inherits from class C":
 	{
 	    "init": 		
-		"class C { constructor(...args) { for (x of args.entries()) { this[x[0]] = x[1]; } } method() { return 200; } static method() { return 100; } }\nclass D extends C { static method () { return 300; } method() { super();/*still a bug but now i am here*/ } }",
+		"class C { constructor(...args) { for (x of args.entries()) { this[x[0]] = x[1]; } } method() { return 200; } static method() { return 100; } }\nclass D extends C { static method () { return 300; } method() { return super(); } }",
 	    "tests": 
 	    [
 		["let d = new D('a',2,true,{a:4},[5]); d instanceof D;", true],
@@ -13,6 +13,17 @@
 		["d[3].a", 4],
 		["d[4][0]", 5],
 		["D.method()", 300]
+	    ]
+	},
+	
+	"method super call":
+	{
+	    "init": 		
+		"class C { constructor(...args) { for (x of args.entries()) { this[x[0]] = x[1]; } }\n method() { return 200; }\n static method() { return 100; }\n }\nclass D extends C {\n static method () { return 300; }\n method() { return super(); }\n }",
+	    "tests": 
+	    [
+		["let d = new D('a',2,true,{a:4},[5]); d instanceof D;", true],
+		["d.method()", 200]
 	    ]
 	}	
 }

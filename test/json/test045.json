@@ -1,0 +1,12 @@
+{
+	"computed property keys not only for symbol values":
+	{
+	    "init": 		
+		"let obj = { ['a'+'b'+1]: 234, [{}]: 'normal behaviour for subscript' };",
+	    "tests": 
+	    [
+		["obj.ab1", 234],
+		["obj['[object Object]']", "normal behaviour for subscript"]
+	    ]
+	}	
+}
