@@ -18173,8 +18173,6 @@ var ArrayPrototype_copyWithin = function (thisArg, argList) {
     if (isAbrupt(relativeEnd=ifAbrupt(relativeEnd))) return relativeEnd;
     if (relativeEnd < 0) final = max((len+relativeEnd),0);
     else final = min(relativeEnd, len);
-    if (relativeEnd < 0) final = max((len+relativeEnd), 0);
-    else final = min(relativeEnd, len);
     var count = min(final-from, len-to);
     var direction;
     if (from < to && (to < from+count)) {
@@ -18220,7 +18218,7 @@ var ArrayPrototype_unshift = function unshift(thisArg, argList) {
     if (isAbrupt(len=ifAbrupt(len))) return len;
     var argCount = argList.length;
     var k = len;
-    // first move 0...n to k..n+k
+    // first move 0...n to k+1..n+k+1
     while (k > 0) {
         var from = ToString(k-1);
         var to = ToString(k+argCount-1);
@@ -18239,7 +18237,7 @@ var ArrayPrototype_unshift = function unshift(thisArg, argList) {
     }
     var j = 0;
     var i = 0;
-    // second insert new 0..k
+    // secondly insert new 0..k before [k+1..n+k+1]
     while (i < items.length) {
         var E = items[i];
         var putStatus = Put(O, ToString(j), E, true);
@@ -18249,7 +18247,7 @@ var ArrayPrototype_unshift = function unshift(thisArg, argList) {
     }
     putStatus = Put(O, "length", len+argCount, true);
     if (isAbrupt(putStatus)) return putStatus;
-    // thats unshift (renumber the old, prepend the new) == O(n) total
+    // thats unshift (renumber the old, prepend the new) == O(n) total copy and define
     return NormalCompletion(len+argCount);
 };
 
@@ -18309,6 +18307,35 @@ var ArrayPrototype_find = function (thisArg, argList) {
     return NormalCompletion(-1);
 };
 
+var ArrayPrototype_fill = function (thisArg, argList) {
+    var value = argList[0];
+    var start = argList[1];
+    var end = argList[2];
+    var O = ToObject(thisArg);
+    if (isAbrupt(O=ifAbrupt(O))) return O;
+    var lenVal = Get(O, "length");
+    var len = ToLength(lenVal);
+    if (isAbrupt(len=ifAbrupt(len))) return len;
+    var k, final;
+    var relativeStart = ToInteger(start);
+    if (isAbrupt(relativeStart=ifAbrupt(relativeStart))) return relativeStart;
+    if (relativeStart < 0) k = max((len+relativeStart), 0);
+    else k = min(relativeStart, len);
+    var relativeEnd;
+    if (end === undefined) relativeEnd = len;
+    else relativeEnd = ToInteger(end);
+    if (isAbrupt(relativeEnd=ifAbrupt(relativeEnd))) return relativeEnd;
+    if (relativeEnd < 0) final = max((len+relativeEnd),0);
+    else final = min(relativeEnd, len);
+    while (k < final) {
+        var Pk = ToString(k);
+        var putStatus = Put(O, Pk, value, true);
+        if (isAbrupt(putStatus)) return putStatus;
+        k = k + 1;
+    }
+    return NormalCompletion(O);
+};
+
 MakeConstructor(ArrayConstructor, true, ArrayPrototype);
 setInternalSlot(ArrayConstructor, "Call", ArrayConstructor_call);
 setInternalSlot(ArrayConstructor, "Construct", ArrayConstructor_construct);
@@ -18318,6 +18345,7 @@ setInternalSlot(ArrayPrototype, "Prototype", ObjectPrototype);
 LazyDefineBuiltinConstant(ArrayConstructor, "prototype", ArrayPrototype);
 LazyDefineBuiltinFunction(ArrayPrototype, "concat", 1, ArrayPrototype_concat);
 LazyDefineBuiltinFunction(ArrayPrototype, "copyWithin", 2, ArrayPrototype_copyWithin);
+LazyDefineBuiltinFunction(ArrayPrototype, "fill", 1, ArrayPrototype_fill);
 LazyDefineBuiltinFunction(ArrayPrototype, "find", 1, ArrayPrototype_find);
 LazyDefineBuiltinFunction(ArrayPrototype, "findIndex", 1, ArrayPrototype_findIndex);
 
