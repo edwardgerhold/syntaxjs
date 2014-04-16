@@ -38,13 +38,13 @@
 		["e.method()", 700]
 	    ]
 	},
-	"fixing super calls in class without extends (maybe i violate spec to create classes with object.prototype as home object, must read again)":
+	"failing super calls in classes which don´t extend (they inherit from null and not object.prototype in the specification)":
 	{
 	    "init": "class C { toString() { return super(); } }",
-	    
+	    "throws":true,
 	    "tests": [
 	    
-		["(new C).toString()", "[object Object]"]
+		["(new C).toString()", "[object Object]", "throws"]
 	    ]
 	}
 	

@@ -8,9 +8,13 @@ var obj1 = {
     }
 };
 
+debug(obj1);
+
 var obj2 = {
     __proto__: obj1
 };
+
+debug(obj2);
 
 obj2.f = f.toMethod(obj2);
 

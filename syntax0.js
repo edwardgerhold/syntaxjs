@@ -25898,7 +25898,7 @@ function makeRuntime() {
             }
 
             localEnv = NewFunctionEnvironment(this, this.thisValue);
-            if (isAbrupt(localEnv=ifAbrupt(localEnv))) return localEnv;
+            if (isAbrupt(localEnv=ifAbrupt(localEnv))) return localEnv;""
         }
 
 
@@ -28358,13 +28358,13 @@ function makeRuntime() {
         var decl;
         var status;
 
-        if (node.extends) {
+        if (isExtending) {
             superclass = GetValue(Evaluate(node.extends));
             if (isAbrupt(superclass=ifAbrupt(superclass))) return superclass;
         }
         if (!superclass) {
-            //protoParent = null;
-            protoParent = ObjectPrototype;
+            protoParent = null;
+            // protoParent = ObjectPrototype;
             constructorParent = FunctionPrototype;
         } else {
             if (Type(superclass) !== "object") return withError("Type", "superclass is no object");
@@ -28402,7 +28402,6 @@ function makeRuntime() {
             SetFunctionLength(F, ExpectedArgumentCount(constructor.params));
             setInternalSlot(F, "Code", constructor.body);
         }
-
         setInternalSlot(F, "Construct", function (argList) {
             var F = this;
             return OrdinaryConstruct(F, argList);
