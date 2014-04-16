@@ -18204,10 +18204,84 @@ var ArrayPrototype_copyWithin = function (thisArg, argList) {
 };
 
 var ArrayPrototype_reduce = function reduce(thisArg, argList) {
-
+    var callback = argList[0];
+    var initialValue = argList[1];
+    var O = ToObject(thisArg);
+    if (isAbrupt(O=ifAbrupt(O))) return O;
+    var lenValue = Get(O, "length");
+    var len = ToLength(lenValue);
+    if (isAbrupt(len=ifAbrupt(len))) return len;
+    if (!IsCallable(callback)) return withError("Type", "reduce: first argument should be a function");
+    var k = 0;
+    var accumulator;
+    if (argList.length > 1) {
+        accumulator = initialValue;
+    } else {
+        var kPresent = false;
+        while (!kPresent && (k < len)) {
+            var Pk = ToString(k);
+            var kPresent = HasProperty(O, Pk);
+            if (isAbrupt(kPresent=ifAbrupt(kPresent))) return kPresent;
+            if (kPresent) {
+                accumulator = Get(O, Pk);
+                if (isAbrupt(accumulator=ifAbrupt(accumulator))) return accumulator;
+            }
+            k = k + 1;
+        }
+        if (!kPresent) return withError("Type", "kPresent is still false");
+    }
+    while (k < len) {
+        Pk = ToString(k);
+        kPresent = HasProperty(O, Pk);
+        if (kPresent) {
+            var kValue = Get(O, Pk);
+            if (isAbrupt(kPresent = ifAbrupt(kPresent)));
+            accumulator = callInternalSlot("Call", callback, undefined, [accumulator, kValue, k, O]);
+            if (isAbrupt(accumulator=ifAbrupt(accumulator))) return accumulator;
+        }
+        k = k + 1;
+    }
+    return NormalCompletion(accumulator);
 };
-var ArrayPrototype_reduceRight = function reduce(thisArg, argList) {
-
+var ArrayPrototype_reduceRight = function reduceRight(thisArg, argList) {
+    var callback = argList[0];
+    var initialValue = argList[1];
+    var O = ToObject(thisArg);
+    if (isAbrupt(O=ifAbrupt(O))) return O;
+    var lenValue = Get(O, "length");
+    var len = ToLength(lenValue);
+    if (isAbrupt(len=ifAbrupt(len))) return len;
+    if (!IsCallable(callback)) return withError("Type", "reduce: first argument should be a function");
+    var accumulator;
+    var k = len - 1;
+    if (argList.length > 1) {
+        accumulator = initialValue;
+    } else {
+        var kPresent = false;
+        while (!kPresent && (k >= 0)) {
+            var Pk = ToString(k);
+            var kPresent = HasProperty(O, Pk);
+            if (isAbrupt(kPresent=ifAbrupt(kPresent))) return kPresent;
+            if (kPresent) {
+                accumulator = Get(O, Pk);
+                if (isAbrupt(accumulator=ifAbrupt(accumulator))) return accumulator;
+            }
+            k = k - 1;
+        }
+        if (!kPresent) return withError("Type", "kPresent is still false");
+    }
+    while (k >= 0) {
+        Pk = ToString(k);
+        kPresent = HasProperty(O, Pk);
+        if (kPresent) {
+            var kValue = Get(O, Pk);
+            if (isAbrupt(kPresent = ifAbrupt(kPresent)));
+            accumulator = callInternalSlot("Call", callback, undefined, [accumulator, kValue, k, O]);
+            if (isAbrupt(accumulator=ifAbrupt(accumulator))) return accumulator;
+        }
+        k = k - 1;
+    }
+    return NormalCompletion(accumulator);
 };
 var ArrayPrototype_unshift = function unshift(thisArg, argList) {
     var items = argList;

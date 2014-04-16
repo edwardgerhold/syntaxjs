@@ -78,7 +78,7 @@ node syntax0.js [filename.js] executes a file
 or just starts a readline shell when called without arguments
 
 ```javascript
-es6> let f = x => x*x; // can be that the actual version is hanging if no parens are used and whitespaces around the arrow for whatever reasons i haven´t noticed now. It was error free soon ago.
+es6> let f = x => x*x;  // all working again
 undefined
 es6> f(100);
 10000

@@ -1,0 +1,18 @@
+{
+	"added reduce and reduce right, (concat, fill, findIndex, find, copyWithin)":
+	{
+	    "init": 		
+		"let a = [1,2,3]",
+	    "tests": 
+	    [
+		["a.reduce((x,y)=>x+y);", 6],
+		["a.reduceRight((x,y)=>x+y)",6],
+		["a.findIndex(x=>x==3)", 2],
+		["a.find(x=>x>2)", 3],
+		["a.unshift(1)", 4],
+		["a.join()", "1,1,2,3"],
+		["a.concat([2,3],4).join()", "1,1,2,3,2,3,4"],
+		["(a.copyWithin(2,0,2)).join()", "1,1,1,1"]
+	    ]
+	}
+}
