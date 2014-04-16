@@ -2,7 +2,7 @@ function f() {
     return super();
 }
 
-var obj1 = {
+let obj1 = {
     f() {
 	return "yes";
     }
@@ -10,12 +10,12 @@ var obj1 = {
 
 debug(obj1);
 
-var obj2 = {
+let obj2 = {
     __proto__: obj1
 };
 
 debug(obj2);
 
-obj2.f = f.toMethod(obj2);
+obj2.f = f.toMethod(obj1, "f");
 
 console.log(obj2.f());

@@ -12,7 +12,6 @@ but i won´t finish this update of the license today
 i will write down what´s standing there then
 making sure to hit the osd then
 
-
 Here are my first notes of what the license will outline:
 
 * EcmaScript 6 Specification belongs to Ecma, TC-39, and it´s editor,
@@ -44,8 +43,8 @@ to implement the Node Interface when doing the propagation is open.)
 got interested in. The Concrete Syntax Tree by getify et al. This tool contains
 little portions of some upcoming Source Code preserving Tree, which will be
 suitable for code editors.
-* Everything else is written and even invented by me. 
-
+* Everything else is written and even invented by me. You can see it at the
+mistakes. That´s mine..
 
 I think i can grant you the rights to use, modify and distribute the software
 and make your own with
@@ -55,7 +54,6 @@ that´s for sure. But to be correct, i still have to figure out, what we got.u
 I should take the "Do what the fuck you wanna do with license", i have seen
 together with the releases of the promises-aplus-tests, by Domenic Denicola. I think
 it´s his public domain license. The license expresses what i mean.
-
 
 Oh. 
 All persons namely called are not affiliated with me in any way. I just took
