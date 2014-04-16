@@ -18197,7 +18197,6 @@ var ArrayPrototype_copyWithin = function (thisArg, argList) {
             var deleteStatus = DeletePropertyOrThrow(O, toKey);
             if (isAbrupt(deleteStatus)) return deleteStatus;
         }
-
         from = from + direction;
         to = to + direction;
         count = count - 1;
@@ -18215,15 +18214,36 @@ var ArrayPrototype_unshift = function unshift(thisArg, argList) {
 
 };
 
-
 var ArrayPrototype_predicate = function (thisArg, argList) {
 
 };
 var ArrayPrototype_findIndex = function (thisArg, argList) {
-
+    var predicate = argList[0];
+    var optThisArg = argList[1];
+    var O = ToObject(thisArg);
+    if (isAbrupt(O=ifAbrupt(O))) return O;
+    var lenValue = Get(O, "length");
+    var len = ToLength(lenValue);
+    if (isAbrupt(len=ifAbrupt(len))) return len;
+    if (!IsCallable(predicate)) return withError("Type", "findIndex: predicate argument has to be a function");
+    var T;
+    if (optThisArg != undefined) T = optThisArg; else T = undefined; // or just "optThisArg = T;"
+    var k = 0;
+    while (k < len) {
+        var Pk = ToString(k);
+        var kPresent = HasProperty(O, Pk);
+        if (isAbrupt(kPresent=ifAbrupt(kPresent))) return kPresent;
+        if (kPresent === true) {
+            var kValue = Get(O, Pk);
+            if (isAbrupt(kValue=ifAbrupt(kValue))) return kValue;
+            var testResult = callInternalSlot("Call", predicate, T, [kValue, k, O]);
+            if (isAbrupt(testResult=ifAbrupt(testResult))) return testResult;
+            if (ToBoolean(testResult) === true) return NormalCompletion(k);
+        }
+        k = k + 1;
+    }
+    return NormalCompletion(-1);
 };
-
-
 
 MakeConstructor(ArrayConstructor, true, ArrayPrototype);
 setInternalSlot(ArrayConstructor, "Call", ArrayConstructor_call);
