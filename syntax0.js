@@ -8214,17 +8214,12 @@ define("regexp-parser", function (require, exports) {
     }
 
     function Alternative() {
-
-        /*
         var alternative = [];
         do {
             var term = this.Term();
             alternative.push(term);
-        } while (ch != "|" && ch != undefined);
-        return alternative;
-        */
-
-        return this.Term();
+        } while (term && ch != "|" && ch != undefined);
+	return alternative;
     }
 
     function Pattern() {
@@ -12044,8 +12039,9 @@ function OrdinaryFunction() {
     setInternalSlot(F, "Realm", undefined);
     setInternalSlot(F, "Extensible", true);
     setInternalSlot(F, "Environment", undefined);
-    setInternalSlot(F, "Code", undefined);
+    setInternalSlot(F, "NeedsSuper", undefined);
     setInternalSlot(F, "FormalParameters", undefined);
+    setInternalSlot(F, "Code", undefined);
     return F;
 }
 
@@ -12101,15 +12097,12 @@ function BoundFunctionCreate(B, T, argList) {
 function IsCallable(O) {
     if (O instanceof CompletionRecord) return IsCallable(O.value);
     return Type(O) === "object" && O.Call;
-
 }
 
 function IsConstructor(F) {
     if (F instanceof CompletionRecord) return IsConstructor(F.value);
     return F && F.Construct;
-
 }
-
 
 function SetFunctionLength(F, L) {
     L = ToLength(L);
@@ -12195,24 +12188,19 @@ function FunctionInitialise(F, kind, paramList, body, scope, strict, homeObject,
 function GetPrototypeFromConstructor(C, intrinsicDefaultProto) {
     var realm, intrinsics;
     Assert((typeof intrinsicDefaultProto === "string"), "intrinsicDefaultProto has to be a string");
-
     if (!IsConstructor(C)) return withError("Type", "GetPrototypeFromConstructor: C is no constructor");
-
     var proto = Get(C, "prototype");
     if (isAbrupt(proto = ifAbrupt(proto))) return proto;
-
     if (Type(proto) !== "object") {
         var realm = getInternalSlot(C, "Realm");
         if (realm) intrinsics = realm.intrinsics;
         else intrinsics = getIntrinsics();
         proto = Get(getIntrinsics(), intrinsicDefaultProto);
     }
-
     return proto;
 }
 
 function OrdinaryCreateFromConstructor(constructor, intrinsicDefaultProto, internalDataList) {
-
     Assert(HasProperty(getIntrinsics(), intrinsicDefaultProto), "the chosen intrinsic default proto has to be defined in the intrinsic");
     var O, result;
     var proto = GetPrototypeFromConstructor(constructor, intrinsicDefaultProto);
@@ -12266,7 +12254,6 @@ function OrdinaryConstruct(F, argList) {
     return obj;
 }
 
-
 function MakeConstructor(F, writablePrototype, prototype) {
     var installNeeded = false;
 
@@ -12293,23 +12280,16 @@ function MakeConstructor(F, writablePrototype, prototype) {
     return F;
 }
 
-
 function OrdinaryHasInstance(C, O) {
     var BC, P;
-
     if (!IsCallable(C)) return false;
-
     if (BC = getInternalSlot(C, "BoundTargetFunction")) {
         return OrdinaryHasInstance(BC, O);
     }
-
     if (Type(O) !== "object") return false;
-
     P = Get(C, "prototype");
     if (isAbrupt(P = ifAbrupt(P))) return P;
-
     if (Type(P) !== "object") return withError("Type", "OrdinaryHasInstance: P not object");
-
     while (O = GetPrototypeOf(O)) {
         if (isAbrupt(O = ifAbrupt(O))) return O;
         if (O === null) return false;
@@ -12371,6 +12351,7 @@ function CreateBuiltinFunction(realm, steps, len, name) {
     setInternalSlot(F, "FormalParameters", undefined);
     setInternalSlot(F, "Prototype", getIntrinsic("%FunctionPrototype%"));
     setInternalSlot(F, "Environment", undefined);
+    setInternalSlot(F, "NeedsSuper", undefined);
     setInternalSlot(F, "Strict", true);
     setInternalSlot(F, "Realm", realm);
     AddRestrictedFunctionProperties(F);
@@ -21389,6 +21370,7 @@ DefineOwnProperty(FunctionPrototype, "call", {
     enumerable: false,
     configurable: true
 });
+
 DefineOwnProperty(FunctionPrototype, $$hasInstance, {
     value: CreateBuiltinFunction(realm, function $$hasInstance(thisArg, argList) {
         var V = argList[0];
