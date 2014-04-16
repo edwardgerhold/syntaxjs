@@ -6313,8 +6313,10 @@ function makeParser() {
         }
         if (typeof node === "object" && node != null && node.loc) {
 
-                node.parent = parent["_id_"];
+                if (parent) {
+            	    node.parent = parent["_id_"];
         	    nodeTable["_id_"] = parent;
+        	}
 
             Object.keys(node).forEach(function (key) {
                 if (typeof node[key] != "object" || !node || key === "parent" || key === "loc" || key == "extras") return;
@@ -17136,8 +17138,12 @@ function IsSparseArray(A) {
     return false;
 }
 
-MakeConstructor(ArrayConstructor, true, ArrayPrototype);
-setInternalSlot(ArrayPrototype, "Prototype", ObjectPrototype);
+
+function isArray(A) {
+    return A instanceof ArrayExoticObject;
+}
+
+
 
 DefineOwnProperty(ArrayConstructor, $$create, {
     value: CreateBuiltinFunction(realm, function $$create(thisArg, argList) {
@@ -17153,8 +17159,6 @@ DefineOwnProperty(ArrayConstructor, $$create, {
 });
 
 
-
-LazyDefineBuiltinConstant(ArrayPrototype, $$toStringTag, "Array");
 
 var ArrayConstructor_call =  function (thisArg, argList) {
 
@@ -17246,12 +17250,6 @@ var ArrayConstructor_construct = function (argList) {
     return OrdinaryConstruct(F, argumentsList);
 };
 
-setInternalSlot(ArrayConstructor, "Call", ArrayConstructor_call);
-setInternalSlot(ArrayConstructor, "Construct", ArrayConstructor_construct);
-
-LazyDefineBuiltinConstant(ArrayConstructor, "length", 1);
-LazyDefineBuiltinConstant(ArrayConstructor, "length", 1);
-LazyDefineBuiltinConstant(ArrayConstructor, "prototype", ArrayPrototype);
 
 
 DefineOwnProperty(ArrayConstructor, "isArray", {
@@ -17442,22 +17440,14 @@ DefineOwnProperty(ArrayPrototype, "toString", {
     configurable: true
 });
 
-var ArrayPrototype_toLocaleString = function toLocaleString(thisArg, argList) {
-
-};
-LazyDefineBuiltinFunction(ArrayPrototype, "toLocaleString", 2, ArrayPrototype_toLocaleString);
 
 function IsConcatSpreadable(O) {
+    if (Type(O) !== "object") return false;
     if (isAbrupt(O)) return O;
     var spreadable = Get(O, $$isConcatSpreadable);
     if (isAbrupt(spreadable = ifAbrupt(spreadable))) return spreadable;
     if (spreadable !== undefined) return ToBoolean(spreadable);
     return O instanceof ArrayExoticObject;
-
-}
-
-function isArray(A) {
-    return A instanceof ArrayExoticObject;
 }
 
 var ArrayPrototype_concat = function (thisArg, argList) {
@@ -17515,7 +17505,7 @@ var ArrayPrototype_concat = function (thisArg, argList) {
     if (isAbrupt(putStatus)) return putStatus;
     return NormalCompletion(A);
 };
-LazyDefineBuiltinFunction(ArrayPrototype, "concat", 1, ArrayPrototype_concat);
+
 
 DefineOwnProperty(ArrayPrototype, "join", {
     value: CreateBuiltinFunction(realm, function join(thisArg, argList) {
@@ -17839,12 +17829,6 @@ var ArrayPrototype_splice = function splice(thisArg, argList) {
     if (isAbrupt(putStatus)) return putStatus;
     return NormalCompletion(A);
 };
-var ArrayPrototype_unshift = function unshift(thisArg, argList) {
-
-};
-
-LazyDefineBuiltinFunction(ArrayPrototype, "splice", 2, ArrayPrototype_splice);
-LazyDefineBuiltinFunction(ArrayPrototype, "unshift", 1, ArrayPrototype_unshift);
 
 DefineOwnProperty(ArrayPrototype, "indexOf", {
     value: CreateBuiltinFunction(realm, function indexOf(thisArg, argList) {
@@ -18097,16 +18081,6 @@ DefineOwnProperty(ArrayPrototype, "some", {
     configurable: true
 });
 
-var ArrayPrototype_predicate = function (thisArg, argList) {
-
-};
-var ArrayPrototype_findIndex = function (thisArg, argList) {
-
-};
-
-LazyDefineBuiltinFunction(ArrayPrototype, "predicate", 1, ArrayPrototype_predicate);
-LazyDefineBuiltinFunction(ArrayPrototype, "findIndex", 1, ArrayPrototype_findIndex);
-
 DefineOwnProperty(ArrayPrototype, "entries", {
     value: CreateBuiltinFunction(realm, function entries(thisArg, argList) {
         var O = ToObject(thisArg);
@@ -18168,10 +18142,68 @@ DefineOwnProperty(ArrayPrototype, $$unscopables, {
 });
 
 
-var ArrayPrototype_copyWithin = function (thisArg, argList) {
+
+var ArrayPrototype_toLocaleString = function toLocaleString(thisArg, argList) {
 
 };
 
+
+var ArrayPrototype_copyWithin = function (thisArg, argList) {
+    var target = argList[0];
+    var start = argList[1];
+    var end = argList[2];
+    var O = ToObject(thisArg);
+    if (isAbrupt(O=ifAbrupt(O))) return O;
+    var lenVal = Get(O, "length");
+    var len = ToLength(lenVal);
+    if (isAbrupt(len=ifAbrupt(len))) return len;
+    var relativeTarget = ToInteger(target);
+    if (isAbrupt(relativeTarget=ifAbrupt(relativeTarget))) return relativeTarget;
+    var from, to, final;
+    if (relativeTarget < 0) to = max((len+relativeTarget), 0);
+    else to = min(relativeTarget, len);
+    var relativeStart = ToInteger(start);
+    if (isAbrupt(relativeStart=ifAbrupt(relativeStart))) return relativeStart;
+    if (relativeStart < 0) from = max((len+relativeStart), 0);
+    else from = min(relativeStart, len);
+    var relativeEnd;
+    if (end === undefined) relativeEnd = len;
+    else relativeEnd = ToInteger(end);
+    if (isAbrupt(relativeEnd=ifAbrupt(relativeEnd))) return relativeEnd;
+    if (relativeEnd < 0) final = max((len+relativeEnd),0);
+    else final = min(relativeEnd, len);
+    if (relativeEnd < 0) final = max((len+relativeEnd), 0);
+    else final = min(relativeEnd, len);
+    var count = min(final-from, len-to);
+    var direction;
+    if (from < to && (to < from+count)) {
+        direction = -1;
+        from = from + count - 1;
+        to = to + count - 1;
+    } else {
+        direction = 1;
+    }
+    while (count > 0) {
+        var fromKey = ToString(from);
+        var toKey = ToString(to);
+        var fromPresent = HasProperty(O, fromKey);
+        if (isAbrupt(fromPresent=ifAbrupt(fromPresent))) return fromPresent;
+        if (fromPresent === true) {
+            var fromVal = Get(O, fromKey);
+            if (isAbrupt(fromVal = ifAbrupt(fromVal))) return fromVal;
+            var putStatus = Put(O, toKey, fromVal, true);
+            if (isAbrupt(putStatus)) return putStatus;
+        } else {
+            var deleteStatus = DeletePropertyOrThrow(O, toKey);
+            if (isAbrupt(deleteStatus)) return deleteStatus;
+        }
+
+        from = from + direction;
+        to = to + direction;
+        count = count - 1;
+    }
+    return NormalCompletion(O);
+};
 
 var ArrayPrototype_reduce = function reduce(thisArg, argList) {
 
@@ -18179,10 +18211,37 @@ var ArrayPrototype_reduce = function reduce(thisArg, argList) {
 var ArrayPrototype_reduceRight = function reduce(thisArg, argList) {
 
 };
-LazyDefineBuiltinFunction(ArrayPrototype, "copyWithin", 1, ArrayPrototype_copyWithin);
+var ArrayPrototype_unshift = function unshift(thisArg, argList) {
+
+};
+
+
+var ArrayPrototype_predicate = function (thisArg, argList) {
+
+};
+var ArrayPrototype_findIndex = function (thisArg, argList) {
+
+};
+
+
+
+MakeConstructor(ArrayConstructor, true, ArrayPrototype);
+setInternalSlot(ArrayConstructor, "Call", ArrayConstructor_call);
+setInternalSlot(ArrayConstructor, "Construct", ArrayConstructor_construct);
+LazyDefineBuiltinConstant(ArrayConstructor, "length", 1);
+
+setInternalSlot(ArrayPrototype, "Prototype", ObjectPrototype);
+LazyDefineBuiltinConstant(ArrayConstructor, "prototype", ArrayPrototype);
+LazyDefineBuiltinFunction(ArrayPrototype, "concat", 1, ArrayPrototype_concat);
+LazyDefineBuiltinFunction(ArrayPrototype, "copyWithin", 2, ArrayPrototype_copyWithin);
+LazyDefineBuiltinFunction(ArrayPrototype, "findIndex", 1, ArrayPrototype_findIndex);
+LazyDefineBuiltinFunction(ArrayPrototype, "predicate", 1, ArrayPrototype_predicate);
 LazyDefineBuiltinFunction(ArrayPrototype, "reduce", 1, ArrayPrototype_reduce);
 LazyDefineBuiltinFunction(ArrayPrototype, "reduceRight", 1, ArrayPrototype_reduceRight);
-
+LazyDefineBuiltinFunction(ArrayPrototype, "splice", 2, ArrayPrototype_splice);
+LazyDefineBuiltinFunction(ArrayPrototype, "toLocaleString", 2, ArrayPrototype_toLocaleString);
+LazyDefineBuiltinFunction(ArrayPrototype, "unshift", 1, ArrayPrototype_unshift);
+LazyDefineBuiltinConstant(ArrayPrototype, $$toStringTag, "Array");
 // ===========================================================================================================
 // Array Iterator
 // ===========================================================================================================

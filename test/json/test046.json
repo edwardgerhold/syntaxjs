@@ -10,5 +10,18 @@
 		["j",6],
 		["f()", 11]
 	    ]
-	}	
+	},
+	"testing actuality of expressions in default parameters 2":
+	{
+	    "init": 		
+		"let i = 2, j = 3; let f = (a=i*2, b=j*3) => { print(a,b,i,j); ++i, ++j; return a+b; }",
+	    "tests": 
+	    [
+		["f()", 13],
+		["f()", 18],
+		["f()", 23],
+		["f()", 28]
+	    ]
+	}
+			
 }
