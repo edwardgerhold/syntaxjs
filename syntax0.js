@@ -9,7 +9,12 @@
     and processes each recursivly for more inclusions,
 
     - each file is an amd-like module except for amd-prolly.js
-
+    
+	Good news: The "AMD like" is going to go.
+	I´ll rework the thing to create fresh instances of 
+	parser and runtime each realm, and with the closure
+	function i can throw away the module wrappers.
+	
     - anything included inside these files is not runnable alone and
       only modularised for better maintainability
 
@@ -7014,10 +7019,16 @@ function makeParser() {
         if (!node) {
             node = this.LabelledStatement(a, b, c, d) || this.Expression(a,b,c,d);
         }
+        
+        
         if (node) {
+    	    
+    	    // semicolon();
+    	    
             skip(";");
             return node;
         }
+        
         return null;
     }
 
@@ -17123,10 +17134,6 @@ DefineOwnProperty(ConsoleObject, "html", {
 });
 
 
-// ===========================================================================================================
-// Array Constructor (not the exotic object type returned by)
-// ===========================================================================================================
-
 function IsSparseArray(A) {
     var len = Get(A, "length");
     var elem;
@@ -17138,11 +17145,9 @@ function IsSparseArray(A) {
     return false;
 }
 
-
 function isArray(A) {
     return A instanceof ArrayExoticObject;
 }
-
 
 
 DefineOwnProperty(ArrayConstructor, $$create, {
@@ -17158,10 +17163,7 @@ DefineOwnProperty(ArrayConstructor, $$create, {
     configurable: true
 });
 
-
-
 var ArrayConstructor_call =  function (thisArg, argList) {
-
     var O = thisArg;
     var array;
     var intLen;
@@ -17173,7 +17175,6 @@ var ArrayConstructor_call =  function (thisArg, argList) {
     var numberOfArgs;
     var Pk, itemK;
     var items;
-
     numberOfArgs = argList.length;
 
     if (numberOfArgs === 1) {
@@ -17205,7 +17206,7 @@ var ArrayConstructor_call =  function (thisArg, argList) {
         }
         putStatus = Put(array, "length", intLen, true);
         if (isAbrupt(putStatus)) return putStatus;
-        return array;
+        return NormalCompletion(array);
 
     } else {
         len = GetValue(argList[0]);
@@ -17240,7 +17241,7 @@ var ArrayConstructor_call =  function (thisArg, argList) {
         }
         putStatus = Put(array, "length", numberOfArgs, true);
         if (isAbrupt(putStatus)) return putStatus;
-        return array;
+        return NormalCompletion(array);
     }
 
 };
@@ -18211,11 +18212,45 @@ var ArrayPrototype_reduceRight = function reduce(thisArg, argList) {
 
 };
 var ArrayPrototype_unshift = function unshift(thisArg, argList) {
-
-};
-
-var ArrayPrototype_predicate = function (thisArg, argList) {
-
+    var items = argList;
+    var O = ToObject(thisArg);
+    if (isAbrupt(O=ifAbrupt(O))) return O;
+    var lenValue = Get(O, "length");
+    var len = ToLength(lenValue);
+    if (isAbrupt(len=ifAbrupt(len))) return len;
+    var argCount = argList.length;
+    var k = len;
+    // first move 0...n to k..n+k
+    while (k > 0) {
+        var from = ToString(k-1);
+        var to = ToString(k+argCount-1);
+        var fromPresent = HasProperty(O,from);
+        if (isAbrupt(fromPresent=ifAbrupt(fromPresent))) return fromPresent;
+        if (fromPresent === true) {
+            var fromValue = Get(O, from);
+            if (isAbrupt(fromValue=ifAbrupt(fromValue))) return fromValue;
+            var putStatus = Put(O, to, fromValue, true);
+            if (isAbrupt(putStatus)) return putStatus;
+        } else {
+            var deleteStatus = DeletePropertyOrThrow(O, to);
+            if (isAbrupt(deleteStatus)) return deleteStatus;
+        }
+        k = k - 1;
+    }
+    var j = 0;
+    var i = 0;
+    // second insert new 0..k
+    while (i < items.length) {
+        var E = items[i];
+        var putStatus = Put(O, ToString(j), E, true);
+        if(isAbrupt(putStatus)) return putSttus;
+        i = i + 1;
+        j = j + 1;
+    }
+    putStatus = Put(O, "length", len+argCount, true);
+    if (isAbrupt(putStatus)) return putStatus;
+    // thats unshift (renumber the old, prepend the new) == O(n) total
+    return NormalCompletion(len+argCount);
 };
 
 var ArrayPrototype_findIndex = function (thisArg, argList) {
@@ -18285,7 +18320,7 @@ LazyDefineBuiltinFunction(ArrayPrototype, "concat", 1, ArrayPrototype_concat);
 LazyDefineBuiltinFunction(ArrayPrototype, "copyWithin", 2, ArrayPrototype_copyWithin);
 LazyDefineBuiltinFunction(ArrayPrototype, "find", 1, ArrayPrototype_find);
 LazyDefineBuiltinFunction(ArrayPrototype, "findIndex", 1, ArrayPrototype_findIndex);
-LazyDefineBuiltinFunction(ArrayPrototype, "predicate", 1, ArrayPrototype_predicate);
+
 LazyDefineBuiltinFunction(ArrayPrototype, "reduce", 1, ArrayPrototype_reduce);
 LazyDefineBuiltinFunction(ArrayPrototype, "reduceRight", 1, ArrayPrototype_reduceRight);
 LazyDefineBuiltinFunction(ArrayPrototype, "splice", 2, ArrayPrototype_splice);

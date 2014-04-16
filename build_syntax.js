@@ -9,7 +9,12 @@
     and processes each recursivly for more inclusions,
 
     - each file is an amd-like module except for amd-prolly.js
-
+    
+	Good news: The "AMD like" is going to go.
+	I´ll rework the thing to create fresh instances of 
+	parser and runtime each realm, and with the closure
+	function i can throw away the module wrappers.
+	
     - anything included inside these files is not runnable alone and
       only modularised for better maintainability
 
