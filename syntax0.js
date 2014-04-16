@@ -18035,16 +18035,6 @@ DefineOwnProperty(ArrayPrototype, "filter", {
     configurable: true
 });
 
-var ArrayPrototype_reduce = function reduce(thisArg, argList) {
-
-};
-var ArrayPrototype_reduceRight = function reduce(thisArg, argList) {
-
-};
-
-LazyDefineBuiltinFunction(ArrayPrototype, "reduce", 1, ArrayPrototype_reduce);
-LazyDefineBuiltinFunction(ArrayPrototype, "reduceRight", 1, ArrayPrototype_reduceRight);
-
 DefineOwnProperty(ArrayPrototype, "every", {
     value: CreateBuiltinFunction(realm, function every(thisArg, argList) {
         var callback = argList[0];
@@ -18176,6 +18166,22 @@ DefineOwnProperty(ArrayPrototype, $$unscopables, {
     writable: true,
     configurable: true
 });
+
+
+var ArrayPrototype_copyWithin = function (thisArg, argList) {
+
+};
+
+
+var ArrayPrototype_reduce = function reduce(thisArg, argList) {
+
+};
+var ArrayPrototype_reduceRight = function reduce(thisArg, argList) {
+
+};
+LazyDefineBuiltinFunction(ArrayPrototype, "copyWithin", 1, ArrayPrototype_copyWithin);
+LazyDefineBuiltinFunction(ArrayPrototype, "reduce", 1, ArrayPrototype_reduce);
+LazyDefineBuiltinFunction(ArrayPrototype, "reduceRight", 1, ArrayPrototype_reduceRight);
 
 // ===========================================================================================================
 // Array Iterator
