@@ -2531,8 +2531,7 @@ define("slower-static-semantics", function (require, exports, modules) {
         if (node && !Array.isArray(node)) {
             type = node.type;
             if (type === "SuperExpression") return true;
-
-            if (type === "MethodDefinition" || type == "FunctionDeclaration") {
+            if (type === "MethodDefinition" || type == "FunctionDeclaration" || type == "GeneratorDeclaration") {
                 if (node.needsSuper == true) return true;
                 contains = ReferencesSuper(node.params);
                 if (contains) return true;
@@ -4508,23 +4507,23 @@ function makeParser() {
     parser.next = next;
 
     function consume(i) {
-        debug("consuming "+i+" tokens");
+        // debug("consuming "+i+" tokens");
         while (i > 0) { next(); i--; }
     }
 
     function pass(C) { // match
-        debug("pass this token: " + C);
+        // debug("pass this token: " + C);
         if (v === C) next();
         else throw new SyntaxError(charExpectedString(C));
     }
 
     function skip(C) {
         if (v === C) {
-            debug("skipped: " + C);
+            // debug("skipped: " + C);
             next();
             return true;
         } else {
-            debug("can't skip: " + C + " ("+v+")");
+            // debug("can't skip: " + C + " ("+v+")");
             return false;
         }
     }
@@ -4619,7 +4618,7 @@ function makeParser() {
             node = Node(t);
             node.details = token.details;
             node.value = v;
-            debug("Literal packed " + v);
+            // debug("Literal packed " + v);
             node.loc = makeLoc(loc && loc.start, loc && loc.end);
             pass(v);
             if (compile) return builder[node.type](node.value, loc);
@@ -4912,7 +4911,7 @@ function makeParser() {
 
     function MemberExpression(obj) {
         var node, l1, l2;
-        debug("MemberExpression (" + t + ", " + v + ")");
+        // debug("MemberExpression (" + t + ", " + v + ")");
 
         obj = obj || this.PrimaryExpression();
 
@@ -4980,7 +4979,7 @@ function makeParser() {
     function Arguments() {
         var args, arg;
         if (v === "(") {
-            debug("Arguments (" + t + ", " + v + ")");
+            // debug("Arguments (" + t + ", " + v + ")");
 
             pass("(");
             args = [];
@@ -5424,7 +5423,7 @@ function makeParser() {
 
     function PrimaryExpression() {
         var fn, node;
-        debug("PrimaryExpression (" + t + ", " + v + ")");
+        // debug("PrimaryExpression (" + t + ", " + v + ")");
         fn = this[PrimaryExpressionByValue[v]];
         if (!fn) fn = this[PrimaryExpressionByType[t]];
         if (!fn && yieldIsId && v === "yield") fn = this.YieldAsIdentifier;
@@ -5468,7 +5467,7 @@ function makeParser() {
     }
 
     function YieldExpression() {
-        debug("YieldExpression");
+        // debug("YieldExpression");
         if (v === "yield" && !yieldIsId) {
             pass("yield");
             var node = Node("YieldExpression");
@@ -5479,13 +5478,13 @@ function makeParser() {
     }
 
     function PostfixExpression(lhs) {
-        debug("PostfixExpression (" + t + ", " + v + ")");
+        // debug("PostfixExpression (" + t + ", " + v + ")");
         var l1 = loc && loc.start;
         
         if (v == "(") lhs = this.ParenthesizedExpression();
         else lhs = lhs || this.LeftHandSideExpression();
         
-        if (lhs) debug("got lhs " + lhs.type);
+        // debug("got lhs " + (lhs&&lhs.type));
         
         if (lhs && UpdateOperators[v]) {
             var node = Node("UnaryExpression");
@@ -5526,7 +5525,7 @@ function makeParser() {
     function UnaryExpression() {
 
         if (UnaryOperators[v] || UpdateOperators[v]) {
-            debug("UnaryExpression ("+t+","+v+")");
+            // debug("UnaryExpression ("+t+","+v+")");
 
             var l1 = loc && loc.start;
             var node = Node("UnaryExpression");
@@ -5560,7 +5559,7 @@ function makeParser() {
 
         if (left && v === "?") {
 
-            debug("ConditionalExpression ("+t+","+v+")");
+            // debug("ConditionalExpression ("+t+","+v+")");
             var l1 = loc && loc.start,
                 l2;
 
@@ -5590,7 +5589,7 @@ function makeParser() {
 
     parser.AssignmentExpression = AssignmentExpression;
     function AssignmentExpression() {
-        debug("AssignmentExpression (" + t + ", " + v + ")");
+        // debug("AssignmentExpression (" + t + ", " + v + ")");
 
         var node = null,
             leftHand, l1, l2;
@@ -5621,23 +5620,23 @@ function makeParser() {
         }
 
 
-        debug("before recursion fix ("+t+","+v+")");
+        // debug("before recursion fix ("+t+","+v+")");
 
         if (v === "." || v === "[") leftHand = this.MemberExpression(leftHand) || leftHand;
         else if (v === "(" || v === "`") leftHand = this.CallExpression(leftHand) || leftHand;
         else if (v == "++" || v == "--") leftHand = this.PostfixExpression(leftHand) || leftHand;
 
-        debug("after recursion fix ("+t+","+v+")");
+        // debug("after recursion fix ("+t+","+v+")");
 
         if (AssignmentOperators[v] && (!isNoIn || (isNoIn && v != "in"))) {
 
             node = Node("AssignmentExpression");
-            debug("AssignmentExpression found (" + t + ", " + v + ")");
+            // debug("AssignmentExpression found (" + t + ", " + v + ")");
             node.longName = PunctToExprName[v];
             node.operator = v;
             node.left = leftHand;
 
-            debug(v);
+            // debug(v);
             pass(v);
 
             node.right = this.AssignmentExpressionNoIn(node);
@@ -5648,13 +5647,13 @@ function makeParser() {
             return rotate_binexps(node);
 
         } else if (BinaryOperators[v] && (!isNoIn || (isNoIn && v != "in"))) {
-            debug("BinaryExpression  (" + t + ", " + v + ")");
+            // debug("BinaryExpression  (" + t + ", " + v + ")");
 
             node = Node("BinaryExpression");
             node.longName = PunctToExprName[v];
             node.operator = v;
             node.left = leftHand;
-            debug(v);
+            // debug(v);
             pass(v);
             node.right = this.AssignmentExpression();
             if (!node.right) {
@@ -5748,7 +5747,7 @@ function makeParser() {
         if (v === "=") {
             pass("=");
             var expr = this.AssignmentExpression();
-            debug("Returning from initialiser");
+            // debug("Returning from initialiser");
             return expr;
         }
         return null;
@@ -5870,7 +5869,7 @@ function makeParser() {
     parser.VariableDeclaration = VariableDeclaration;
 
     function VariableDeclaration(kind) {
-        debug("VariableDeclaration (" + t + ", " + v + ")");
+        // debug("VariableDeclaration (" + t + ", " + v + ")");
         var node = this.BindingPattern();
 
         if (node) {
@@ -5880,7 +5879,7 @@ function makeParser() {
 
         if (t === "Identifier" || (v === "yield" && yieldIsId) || (v === "default" && defaultIsId)) {
 
-            debug("VariableDeclarator (" + t + ", " + v + ")");
+            // debug("VariableDeclarator (" + t + ", " + v + ")");
             node = Node("VariableDeclarator");
 
             node.kind = kind;
@@ -5954,7 +5953,7 @@ function makeParser() {
     function VariableStatement() {
         var node, decl, l1, l2;
         if (v === "var" || v === "let" || v === "const") {
-            debug("VariableStatement (" + t + ", " + v + ")");
+            // debug("VariableStatement (" + t + ", " + v + ")");
             l1 = loc && loc.start;
             node = Node("VariableDeclaration");
             node.declarations = [];
@@ -6015,7 +6014,7 @@ function makeParser() {
             // set c() {}
         }
 
-        debug("MethodDefinition (" + t + ", " + v + ")");
+        // debug("MethodDefinition (" + t + ", " + v + ")");
 
         node = Node("MethodDefinition");
 
@@ -6089,7 +6088,7 @@ function makeParser() {
     function ClassDeclaration(isExpr) {
         var node, m;
         if (v === "class") {
-            debug("ClassDeclaration (" + t + ", " + v + ")");
+            // debug("ClassDeclaration (" + t + ", " + v + ")");
 
 
             // staticSemantics.newVarEnv();
@@ -6140,7 +6139,7 @@ function makeParser() {
 
     function RestParameter() {
         if (v === "...") {
-            debug("RestParameter (" + t + ", " + v + ")");
+            // debug("RestParameter (" + t + ", " + v + ")");
 
             var l1 = loc && loc.start;
             pass("...");
@@ -6167,7 +6166,7 @@ function makeParser() {
 
     function SpreadExpression() {
         if (v === "...") {
-            debug("SpreadExpression (" + t + ", " + v + ")");
+            // debug("SpreadExpression (" + t + ", " + v + ")");
 
             var l1 = loc && loc.start;
             pass("...");
@@ -6185,7 +6184,7 @@ function makeParser() {
     function DefaultParameter() { // ES6
         var node;
         if (t == "Identifier" && lookahead == "=") {
-            debug("DefaultParameter (" + t + ", " + v + ")");
+            // debug("DefaultParameter (" + t + ", " + v + ")");
 
             var l1 = loc&&loc.start;
             node = Node("DefaultParameter");
@@ -6205,7 +6204,7 @@ function makeParser() {
     function FormalParameterList() {
         var list = [];
 
-        debug("FormalParameterList (" + t + ", " + v + ")");
+        // debug("FormalParameterList (" + t + ", " + v + ")");
 
         list.type = "FormalParameterList";
 
@@ -6218,7 +6217,7 @@ function makeParser() {
 
 
                 //x = i;
-                debug("FormalParameters ("+t+", "+v+")");   
+                // debug("FormalParameters ("+t+", "+v+")");
 
                 if (v === "...") {
                     id = this.RestParameter();
@@ -6313,9 +6312,9 @@ function makeParser() {
         }
         if (typeof node === "object" && node != null && node.loc) {
 
-            if (node.parent = parent["_id_"]) {
-        	nodeTable["_id_"] = parent;
-            }
+                node.parent = parent["_id_"];
+        	    nodeTable["_id_"] = parent;
+
             Object.keys(node).forEach(function (key) {
                 if (typeof node[key] != "object" || !node || key === "parent" || key === "loc" || key == "extras") return;
                 CreateTablePlusAddParentPointerIds(node[key], node, nodeTable);
@@ -6331,7 +6330,7 @@ function makeParser() {
 
         if (v === "function") {
 
-            debug("FunctionDeclaration (" + t + ", " + v + ")");
+            // debug("FunctionDeclaration (" + t + ", " + v + ")");
 
 
             defaultStack.push(defaultIsId);
@@ -6452,7 +6451,7 @@ function makeParser() {
 
             var node = Node("BlockStatement");
 
-            debug("BlockStatement (" + t + ", " + v + ")");
+            // debug("BlockStatement (" + t + ", " + v + ")");
 
             defaultStack.push(defaultIsId);
             defaultIsId = true;
@@ -6960,7 +6959,7 @@ function makeParser() {
         var list = [];
         list.type = "StatementList";
         var s;
-        debug("stmtlist():");
+        // debug("stmtlist():");
         do {
             if (i >= j) break;
 
@@ -7002,7 +7001,7 @@ function makeParser() {
          var start = loc && loc.start;
          var line = start && start.line;
          var col = start && start.col;
-         debug("statement at " + v + " at line "+line+", col "+col);
+         // debug("statement at " + v + " at line "+line+", col "+col);
          }
          */
 
@@ -7830,11 +7829,11 @@ function makeParser() {
 
 
     function enableExtras () {
-        debug("Enabling CST extras");
+        // debug("Enabling CST extras");
         Object.keys(parser).forEach(function (k) {
             if (typeof parser[k] === "function" && !parser[k].wrapped) {
                 if (k == "next" || k == "pass" || k == "parse" || k == "parseGoal" || k.indexOf("JSON")===0) return; // for my hacky wacky system
-                debug("wrapping "+k);
+                // debug("wrapping "+k);
                 var originalFunction = parser[k];
                 var parseFunction = function () {
                     console.log("parsing "+originalFunction.name+ " at  "+ v + " "+ t + " " + lookahead);
@@ -7852,7 +7851,7 @@ function makeParser() {
         });
     }
     function disableExtras () {
-        debug("Disabling CST extras");
+        // debug("Disabling CST extras");
         Object.keys(parser).forEach(function (k) {
             if (typeof parser[k] === "function" && parser[k].wrapped)
                 parser[k] = parser[k].wrapped;
@@ -25497,6 +25496,7 @@ function makeRuntime() {
             }
         }
 
+
         if (argumentsObjectNeeded) {
             if (strict) {
                 env.CreateImmutableBinding("arguments");
@@ -25898,6 +25898,7 @@ function makeRuntime() {
             }
 
             localEnv = NewFunctionEnvironment(this, this.thisValue);
+            if (isAbrupt(localEnv=ifAbrupt(localEnv))) return localEnv;
         }
 
 
@@ -28362,7 +28363,8 @@ function makeRuntime() {
             if (isAbrupt(superclass=ifAbrupt(superclass))) return superclass;
         }
         if (!superclass) {
-            protoParent = null;
+            //protoParent = null;
+            protoParent = ObjectPrototype;
             constructorParent = FunctionPrototype;
         } else {
             if (Type(superclass) !== "object") return withError("Type", "superclass is no object");
@@ -28424,7 +28426,6 @@ function makeRuntime() {
             setInternalSlot(F, "MethodName", "constructor");
         }
         MakeConstructor(F, false, Proto);
-
         if (className) {
             var status = SetFunctionName(F, className);
             if (isAbrupt(status)) return status;

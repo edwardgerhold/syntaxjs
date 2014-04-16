@@ -1,0 +1,8 @@
+fn=test/json/test${1}.json
+if [ -e $fn ]; 
+then
+    node tools/testmaker.js $fn
+else
+    echo "usage: ./testnr 043; # runs test/json/test043.json, file must exist"
+fi
+

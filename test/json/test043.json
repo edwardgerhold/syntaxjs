@@ -25,5 +25,28 @@
 		["let d = new D('a',2,true,{a:4},[5]); d instanceof D;", true],
 		["d.method()", 200]
 	    ]
-	}	
+	},	
+	"super calling super calling super":
+	{
+	    "init": 		
+		"class C { constructor(...args) { for (x of args.entries()) { this[x[0]] = x[1]; } }\n method() { return 200; }\n static method() { return 100; }\n }\nclass D extends C {\n static method () { return 300; }\n method() { return super(); }\n }\nclass E extends D { method() { return 500 + super(); } }",
+	    "tests": 
+	    [
+		["let d = new D('a',2,true,{a:4},[5]); d instanceof D;", true],
+		["d.method()", 200],
+		["let e = new E('Test'); e[0]", "Test"],
+		["e.method()", 700]
+	    ]
+	},
+	"fixing super calls in class without extends (maybe i violate spec to create classes with object.prototype as home object, must read again)":
+	{
+	    "init": "class C { toString() { return super(); } }",
+	    
+	    "tests": [
+	    
+		["(new C).toString()", "[object Object]"]
+	    ]
+	}
+	
+	
 }
