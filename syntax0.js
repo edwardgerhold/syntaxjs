@@ -9800,12 +9800,25 @@ function Type(O) {
     var type = typeof O;
     var tostring;
     if (type === "object") {
-        if (O === null) return "null";
+        if (O === null) return NULL;
         tostring = O.toString && O.toString();
         if (tostring === "[object CompletionRecord]") return Type(O.value);
-        return object_tostring_to_type_table[tostring] || "object";
+        return object_tostring_to_type_table[tostring] || OBJECT;
     }
-    return type; // primitive_type_string_table[type];
+    switch(type) {
+        case "number":
+            return NUMBER;
+        case "boolean":
+            return BOOLEAN;
+        case "string":
+            return STRING;
+        case "symbol":
+            return SYMBOL;
+        case "null":
+            return NULL;
+        case "undefined":
+            return UNDEFINED;
+    }
 }
 
 function ToPrimitive(V, prefType) {
@@ -13179,7 +13192,7 @@ ModuleExoticObject.prototype = {
         return null;
     },
     SetPrototypeOf: function (O) {
-        Assert(Type(O) === OBJECT || Type(O) == "null", "Module.SetPrototypeOf: Expecting object or null before returning false anyways");
+        Assert(Type(O) === OBJECT || Type(O) === NULL, "Module.SetPrototypeOf: Expecting object or null before returning false anyways");
         return false;
     },
     IsExtensible: function () {
@@ -13875,7 +13888,7 @@ function AlignTo(value, alignment) {
     return value;
 }
 function IsTypeObject(O) {
-    if (Type(O) != "object") return false;
+    if (Type(O) !== OBJECT) return false;
     if (!hasInternalSlot(O, "TypeDescriptor")) return false;
     return hasInternalSlot(O, "ViewedArrayBuffer");
 
@@ -14412,7 +14425,7 @@ setInternalSlot(LoadFunction, "Call", function load(thisArg, argList) {
 
 var RealmPrototype_get_global = function (thisArg, argList) {
     var RealmConstructor = thisArg;
-    if ((Type(RealmConstructor) != "object") || !hasInternalSlot(RealmConstructor, "Realm")) return withError("Type", "The this value is no realm object");
+    if ((Type(RealmConstructor) !== OBJECT) || !hasInternalSlot(RealmConstructor, "Realm")) return withError("Type", "The this value is no realm object");
     var realm = getInternalSlot(RealmConstructor, "Realm");
     var globalThis = realm.globalThis;
     return globalThis;
@@ -14421,7 +14434,7 @@ var RealmPrototype_get_global = function (thisArg, argList) {
 var RealmPrototype_eval = function (thisArg, argList) {
     var source = argList[0];
     var RealmConstructor = thisArg;
-    if ((Type(RealmConstructor) != "object") || !hasInternalSlot(RealmConstructor, "Realm")) return withError("Type", "The this value is no realm object");
+    if ((Type(RealmConstructor) !== OBJECT) || !hasInternalSlot(RealmConstructor, "Realm")) return withError("Type", "The this value is no realm object");
     return IndirectEval(getInternalSlot(RealmConstructor, "Realm"), source);
 };
 
@@ -14492,7 +14505,7 @@ var RealmConstructor_$$create = function (thisArg, argList) {
 var RealmConstructor_stdlib_get = function (thisArg, argList) {
     var RealmConstructor = thisArg;
     var source = argList[0];
-    if (Type(RealmConstructor) != "object" || !hasInternalSlot(RealmConstructor, "RealmRecord")) return withError("Type", "this value is not an object or has no [[RealmRecord]]");
+    if (Type(RealmConstructor) !== OBJECT || !hasInternalSlot(RealmConstructor, "RealmRecord")) return withError("Type", "this value is not an object or has no [[RealmRecord]]");
     var realm = getInternalSlot(RealmConstructor, "RealmRecord");
     if (realm === undefined) return withError("Type", "[[RealmRecord]] is undefined?");
     var props = ObjectCreate(getIntrinsic("%ObjectPrototype%"));
@@ -14526,7 +14539,7 @@ var RealmConstructor_directEval = function (thisArg, argList) {
 var RealmConstructor_indirectEval = function (thisArg, argList) {
     var RealmConstructor = thisArg;
     var source = argList[0];
-    if (Type(RealmConstructor) != "object" || !hasInternalSlot(RealmConstructor, "RealmRecord")) return withError("Type", "this value is not an object or has no [[RealmRecord]]");
+    if (Type(RealmConstructor) !== OBJECT || !hasInternalSlot(RealmConstructor, "RealmRecord")) return withError("Type", "this value is not an object or has no [[RealmRecord]]");
     var realm = getInternalSlot(RealmConstructor, "RealmRecord");
     if (realm === undefined) return withError("Type", "[[RealmRecord]] is undefined?");
     return IndirectEval(realm, source);
@@ -15912,7 +15925,7 @@ var LoaderPrototype_normalize = function (thisArg, argList) {
     var name = argList[0];
     var refererName = argList[1];
     var refererAddress = argList[2];
-    Assert(Type(name) == "string", "Loader.prototype.normalize: name has to be a string.");
+    Assert(Type(name) === STRING, "Loader.prototype.normalize: name has to be a string.");
     return NormalCompletion(name);
 };
 var LoaderPrototype_locate = function (thisArg, argList) {
@@ -21610,28 +21623,28 @@ var RegExp_Construct = function (argList) {
 };
 var RegExpPrototype_get_global = function (thisArg, argList) {
     var R = thisArg;
-    if (Type(R) != "object") return withError("Type", "this value is no object");
+    if (Type(R) !== OBJECT) return withError("Type", "this value is no object");
     if (!hasInternalSlot(R, "OriginalFlags")) return withError("Type", "this value has no [[OriginalFlags]]");
     var flags = getInternalSlot(R, "OriginalFlags");
     return NormalCompletion(flags.indexOf("g") > -1);
 };
 var RegExpPrototype_get_multiline = function (thisArg, argList) {
     var R = thisArg;
-    if (Type(R) != "object") return withError("Type", "this value is no object");
+    if (Type(R) !== OBJECT) return withError("Type", "this value is no object");
     if (!hasInternalSlot(R, "OriginalFlags")) return withError("Type", "this value has no [[OriginalFlags]]");
     var flags = getInternalSlot(R, "OriginalFlags");
     return NormalCompletion(flags.indexOf("m") > -1);
 };
 var RegExpPrototype_get_ignoreCase = function (thisArg, argList) {
     var R = thisArg;
-    if (Type(R) != "object") return withError("Type", "this value is no object");
+    if (Type(R) !== OBJECT) return withError("Type", "this value is no object");
     if (!hasInternalSlot(R, "OriginalFlags")) return withError("Type", "this value has no [[OriginalFlags]]");
     var flags = getInternalSlot(R, "OriginalFlags");
     return NormalCompletion(flags.indexOf("i") > -1);
 };
 var RegExpPrototype_get_sticky = function (thisArg, argList) {
     var R = thisArg;
-    if (Type(R) != "object") return withError("Type", "this value is no object");
+    if (Type(R) !== OBJECT) return withError("Type", "this value is no object");
     if (!hasInternalSlot(R, "OriginalFlags")) return withError("Type", "this value has no [[OriginalFlags]]");
     var flags = getInternalSlot(R, "OriginalFlags");
     return NormalCompletion(flags.indexOf("y") > -1);
@@ -21639,7 +21652,7 @@ var RegExpPrototype_get_sticky = function (thisArg, argList) {
 
 var RegExpPrototype_get_unicode = function (thisArg, argList) {
     var R = thisArg;
-    if (Type(R) != "object") return withError("Type", "this value is no object");
+    if (Type(R) !== OBJECT) return withError("Type", "this value is no object");
     if (!hasInternalSlot(R, "OriginalFlags")) return withError("Type", "this value has no [[OriginalFlags]]");
     var flags = getInternalSlot(R, "OriginalFlags");
     return NormalCompletion(flags.indexOf("u") > -1);
@@ -21647,7 +21660,7 @@ var RegExpPrototype_get_unicode = function (thisArg, argList) {
 
 var RegExpPrototype_get_source = function (thisArg, argList) {
     var R = thisArg;
-    if (Type(R) != "object") return withError("Type", "this value is no object");
+    if (Type(R) !== OBJECT) return withError("Type", "this value is no object");
     if (!hasInternalSlot(R, "OriginalSource")) return withError("Type", "this value has no [[OriginalSource]]");
     if (!hasInternalSlot(R, "OriginalFlags")) return withError("Type", "this value has no [[OriginalFlags]]");
     var source =getInternalSlot(R, "OriginalSource");
@@ -22514,7 +22527,7 @@ var TypedArrayPrototype_get_$$toStringTag = function get_toStringTag(thisArg, ar
     if (Type(O) !== OBJECT) return withError("Type", "the this value is not an object");
     if (!hasInternalSlot(O, "TypedArrayName")) return withError("Type", "the this value has no [[TypedArrayName]] slot");
     var name = getInternalSlot(O, "TypedArrayName");
-    Assert(Type(name) == "string", "name has to be a string value");
+    Assert(Type(name) == STRING, "name has to be a string value");
     return NormalCompletion(name);
 };
 
