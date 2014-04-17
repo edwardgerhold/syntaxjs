@@ -26128,6 +26128,13 @@ define("runtime", function () {
                 return NormalCompletion(falseValue);
             }
         }
+        var lazyTypes = Object.create(null);
+	lazyTypes[OBJECT] = "object";
+	lazyTypes[NUMBER] = "number";
+	lazyTypes[SYMBOL] = "symbol";
+	lazyTypes[STRING] = "string";
+	lazyTypes[NULL] = "null";
+	lazyTypes[UNDEFINED] = "undefined";
         function UnaryExpression(node) {
             var status;
             var isPrefixOperation = node.prefix;
@@ -26142,7 +26149,7 @@ define("runtime", function () {
                     val = GetValue(exprRef);
                 } else val = exprRef;
                 if (isAbrupt(val = ifAbrupt(val))) return val;
-                var lazyTypeString = Type(val);
+                var lazyTypeString = lazyTypes[Type(val)];
                 if (IsCallable(val)) return NormalCompletion("function");
                 if (val === null) return NormalCompletion("object");
                 return NormalCompletion(lazyTypeString);
