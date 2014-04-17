@@ -3,11 +3,10 @@
 	{
 	    "init": 
 		"let name = 'Edward'; let value = 'worth'; let template = `Mr. ${name} has ${value} and ...`;",
-
 	    "tests": 
 	    [
 		["name+value", "Edwardworth"],
-	    	["String.raw(template)", "Mr. Edward has worth and ..." ],
+	    	["String.raw(template, 'Edward','worth','value')", "Mr. Edward has worth and ..." ],
 	    	["String.raw`My name is ${name}`", "My name is Edward" ],
 	    	["String.raw(`Mr. ${name} has ${value} and ...`)", "Mr. Edward has worth and ..." ]
 	    ]

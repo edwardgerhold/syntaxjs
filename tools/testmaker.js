@@ -39,7 +39,7 @@
 */
 
 var VERSION = "0.0.1";
-var jsonfile, rawjson, json, writetests, testnames, verbose, fn, separator, doubleseparator;
+var jsonfile, rawjson, json, writetests, testnames, verbose, fn, separator, doubleseparator, realm;
 var Test = require("../tools/tester0.js").Test;
 var syntaxjs = require("../syntax0.js").syntaxjs;
 var fs = require("fs");
@@ -53,6 +53,7 @@ function usage() {
     console.log("testmaker.js tests.json (calls tester.js and syntax.js with the testdata at once)");
     console.log("-v = verbose and prints tests.json out each time");
     console.log("-w = (unimplemented, will write code instead of calling tester)");
+    console.log("-r = check out a new realm for the test");
 }
 
 
@@ -60,6 +61,7 @@ function basic_setup (args) {
     for (var i = 0, j = args.length; i < j; i++) {
 	if (args[i] == "-w") writetests = true;
 	else if (args[i] == "-v") verbose = true;
+	else if (args[i] == "-r") realm = true;
 	else jsonfile = args[i]; 
     }
     rawjson = fs.readFileSync(jsonfile, "utf8");
@@ -82,20 +84,25 @@ function runTest(current, testname) {
     var tester = new Test();
     var code = current.init;
     var throws = current.throws;
-
+    var rlm, result;
 
     console.log("TEST: " + testname);
 //    console.log("INIT: " + code);
     console.log(code);
+    if (realm) {
+	rlm = syntaxjs.createRealm();
+    }
 
     if (throws) {
 	try {	
-	    var result = syntaxjs.eval(code, true, true);
+	    if (realm) result = rlm.eval(code);
+	    else result = syntaxjs.eval(code, true, true);
 	} catch (ex) {
 	    result = ex;
 	}
     } else {
-	var result = syntaxjs.eval(code, true, true);
+	if (realm) result = rlm.eval(code);
+	else result = syntaxjs.eval(code, true, true);
     }    
     var tests = current.tests;
     var testnum = 0;
@@ -106,32 +113,28 @@ function runTest(current, testname) {
 	    var code = test[0];
 	    var expected = test[1];
 	    var fn = test[2];	
-	    
+	    var result;
 	    switch (fn) {
-		
 		case "throws":
 		    this.throws(function () {
-			var result = syntaxjs.eval(code, true);
+			if (realm) rlm.eval(code);
+			else syntaxjs.eval(code, true);
 		    }, code);
 		    break;
 		case "NaN": 
-		    var result = syntaxjs.eval(code, true);
+		    if (realm) result = rlm.eval(code);
+		    else result = syntaxjs.eval(code, true);
 		    this.assert(result != result, true, code);
 		    break;
 		default:
-		    var result = syntaxjs.eval(code, true);
+		    if (realm) result = rlm.eval(code);
+		    else result = syntaxjs.eval(code, true);
 		    this.assert(result, expected, code);
 	    }	    
-	    
-	    
 	});
     });
-        
     tester.run();
     tester.print();
-    
-    
-    
 }
 
 (function main(args) {

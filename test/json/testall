@@ -1,6 +1,6 @@
 TESTMAKER=../../tools/testmaker.js
 for f in *.json; 
 do
-    node $TESTMAKER $f
+    node $TESTMAKER $1 $f
 done
 
