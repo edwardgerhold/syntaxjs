@@ -2624,7 +2624,7 @@ define("slower-static-semantics", function (require, exports, modules) {
         if (node.kind === "get" || node.kind === "set") return true;
     }
 
-    function HasInitialiser(node) {
+    function HasInitializer(node) {
         var type = node.type;
         if (node.id && node.init) return true;
         else if (type === "AssignmentExpression" && node.operator === "=") return true;
@@ -2918,7 +2918,7 @@ define("slower-static-semantics", function (require, exports, modules) {
     exports.PrototypeMethodDefinitions = PrototypeMethodDefinitions;
     exports.StaticMethodDefinitions = StaticMethodDefinitions;
     exports.SpecialMethod = SpecialMethod;
-    exports.HasInitialiser = HasInitialiser;
+    exports.HasInitializer = HasInitializer;
     exports.IsSimpleParameterList = IsSimpleParameterList;
     exports.ExpectedArgumentCount = ExpectedArgumentCount;
     exports.IsValidSimpleAssignmentTarget = IsValidSimpleAssignmentTarget;
@@ -4038,49 +4038,46 @@ define("earlyerrors", function () {
 
 define("parser", function () {
 
-    "use strict";
-//    var i18n = require("i18n-messages");
-    var tables = require("tables");
-    var tokenize = require("tokenizer");
-
-    var EarlyErrors = require("earlyerrors").EarlyErrors;
-    var Contains = require("earlyerrors").Contains;
-
-    var withError, ifAbrupt, isAbrupt;
-    var IsIteration = tables.IsIteration;
-    var IsTemplateToken = tables.IsTemplateToken;
-    var FinishStatementList = tables.FinishStatementList;
-    var FinishSwitchStatementList = tables.FinishSwitchStatementList;
-    var StatementParsers = tables.StatementParsers;
-    var PrimaryExpressionByValue = tables.PrimaryExpressionByValue;
-    var PrimaryExpressionByType = tables.PrimaryExpressionByType;
-    var SkipableToken = tables.SkipableToken;
-    var InOrOfInsOf = tables.InOrOfInsOf;
-    var InOrOf = tables.InOrOf;
-    var propKeys = tables.propKeys;
-    var BindingIdentifiers = tables.BindingIdentifiers;
-    var ExprNoneOfs = tables.ExprNoneOfs;
-    var StartBinding = tables.StartBinding;
-    var WhiteSpaces = tables.WhiteSpaces;
-    var LineTerminators = tables.LineTerminators;
-    var Keywords = tables.Keywords;
-    var IsAnyLiteral = tables.IsAnyLiteral;
-    var PunctToExprName = tables.PunctToExprName;
-    var BinaryOperators = tables.BinaryOperators;
-    var AssignmentOperators = tables.AssignmentOperators;
-    var UnaryOperators = tables.UnaryOperators;
-    var UpdateOperators = tables.UpdateOperators;
-    var ExprEndOfs = tables.ExprEndOfs;
-    var OperatorPrecedence = tables.OperatorPrecedence;
-    var isDirective = tables.isDirective;
-    var isStrictDirective = tables.isStrictDirective;
-    var isAsmDirective = tables.isAsmDirective;
-    var ForbiddenArgumentsInStrict = tables.ForbiddenArgumentsInStrict;
-    var ReservedWordsInStrictMode = tables.ReservedWordsInStrictMode;
-    var ExprEndOfs = tables.ExprEndOfs;
 
     function makeParser() {
-
+        "use strict";
+//    var i18n = require("i18n-messages");
+        var tables = require("tables");
+        var tokenize = require("tokenizer");
+        var EarlyErrors = require("earlyerrors").EarlyErrors;
+        var Contains = require("earlyerrors").Contains;
+        var withError, ifAbrupt, isAbrupt;
+        var IsIteration = tables.IsIteration;
+        var IsTemplateToken = tables.IsTemplateToken;
+        var FinishStatementList = tables.FinishStatementList;
+        var FinishSwitchStatementList = tables.FinishSwitchStatementList;
+        var StatementParsers = tables.StatementParsers;
+        var PrimaryExpressionByValue = tables.PrimaryExpressionByValue;
+        var PrimaryExpressionByType = tables.PrimaryExpressionByType;
+        var SkipableToken = tables.SkipableToken;
+        var InOrOfInsOf = tables.InOrOfInsOf;
+        var InOrOf = tables.InOrOf;
+        var propKeys = tables.propKeys;
+        var BindingIdentifiers = tables.BindingIdentifiers;
+        var ExprNoneOfs = tables.ExprNoneOfs;
+        var StartBinding = tables.StartBinding;
+        var WhiteSpaces = tables.WhiteSpaces;
+        var LineTerminators = tables.LineTerminators;
+        var Keywords = tables.Keywords;
+        var IsAnyLiteral = tables.IsAnyLiteral;
+        var PunctToExprName = tables.PunctToExprName;
+        var BinaryOperators = tables.BinaryOperators;
+        var AssignmentOperators = tables.AssignmentOperators;
+        var UnaryOperators = tables.UnaryOperators;
+        var UpdateOperators = tables.UpdateOperators;
+        var ExprEndOfs = tables.ExprEndOfs;
+        var OperatorPrecedence = tables.OperatorPrecedence;
+        var isDirective = tables.isDirective;
+        var isStrictDirective = tables.isStrictDirective;
+        var isAsmDirective = tables.isAsmDirective;
+        var ForbiddenArgumentsInStrict = tables.ForbiddenArgumentsInStrict;
+        var ReservedWordsInStrictMode = tables.ReservedWordsInStrictMode;
+        var ExprEndOfs = tables.ExprEndOfs;
         var ast;
         var ltNext;
         var gotSemi;
@@ -4091,9 +4088,7 @@ define("parser", function () {
         var v; // current token value
         var i; // tokens[i] pointer     (array version)
         var j; // tokens.length;        (array version)
-
         var parser = Object.create(null);
-
         var noInStack = [];
         var isNoIn = false;
         var yieldStack = [];
@@ -4104,51 +4099,37 @@ define("parser", function () {
         var generatorParameterStack = [];
         var strictStack = [];
         var isStrict = false;
-        function pushStrict(v) {
-            strictStack.push(isStrict);
-            isStrict = v;
-        }
-        function popStrict() {
-            isStrict = strictStack.pop();
-        }
-        var varNames = [], lexNames = [];
-        var varDecls = [], lexDecls = [];
-        var varNamesStack = [], lexNamesStack = [],
-            varDeclsStack = [], lexDeclsStack = [];
-        function pushVarNames () {varNamesStack.push(varNames);varNames=[];}
-        function popVarNames() {varNames = varNamesStack.pop();}
-        function pushLexNames () {lexNamesStack.push(lexNames);lexNames=[];}
-        function popLexNames() {lexNames = lexNamesStack.pop();}
-        function pushVarDecls () {varDeclsStack.push(varDecls);varDecls=[];}
-        function popVarDecls() {varDecls = varDeclsStack.pop();}
-        function pushLexDecls () {lexDeclsStack.push(lexDecls);lexDecls=[];}
-        function popLexDecls() {lexDecls = lexDeclsStack.pop();}
-        function pushDecls() {
-            pushVarDecls();
-            pushVarNames();
-            pushLexNames();
-            pushLexDecls();
-        }
-        function pushLexOnly() {
-            pushLexNames();
-            pushLexDecls();
-        }
-        function popLexOnly(node) {
-            node.lexNames = lexNames;
-            node.lexDecls = lexDecls;
-            popLexNames();
-            popLexDecls();
-        }
-        function popDecls(node) {
-            node.varNames = varNames;
-            node.lexNames = lexNames;
-            node.varDecls = varDecls;
-            node.lexDecls = lexDecls;
-            popVarDecls();
-            popVarNames();
-            popLexDecls();
-            popLexNames();
-        }
+        var currentNode;
+        var nodeStack = [];
+        var currentModule;
+        var moduleStack = [];
+        var loc = makeLoc();
+        var text;
+        var compile = false;
+        var builder = null;
+        var cb;
+        var notify = false;
+        var stateStack = [];
+        var state = "";
+        var ContainNoSuperIn = {
+            "Program" : true,
+            "ModuleDeclaration": true,
+            "Module" : true
+        };
+        var PatternName = {
+            __proto__: null,
+            "{": "ObjectPattern",
+            "[": "ArrayPattern"
+        };
+        var LetOrConst = {
+            __proto__: null,
+            "let": true,
+            "const": true
+        };
+        var debugmode = false;
+        var hasConsole = typeof console === "object" && console != null && typeof console.log === "function";
+        var BoundNames = require("slower-static-semantics").BoundNames;
+        var nodeId = 1;
         var captureExtraTypes = {
             __proto__:null,
             "WhiteSpace":true,
@@ -4203,39 +4184,6 @@ define("parser", function () {
             var l2 = loc && loc.end;
             node.loc = makeLoc(l1, l2);
         }
-        var currentNode;
-        var nodeStack = [];
-        var currentModule;
-        var moduleStack = [];
-        var loc = makeLoc();
-        var text;
-        var compile = false;
-        var builder = null;
-        var cb;
-        var notify = false;
-
-        var stateStack = [];
-        var state = "";
-
-
-        var ContainNoSuperIn = {
-            "Program" : true,
-            "ModuleDeclaration": true,
-            "Module" : true
-        };
-        var PatternName = {
-            __proto__: null,
-            "{": "ObjectPattern",
-            "[": "ArrayPattern"
-        };
-        var LetOrConst = {
-            __proto__: null,
-            "let": true,
-            "const": true
-        };
-        var debugmode = false;
-        var hasConsole = typeof console === "object" && console != null && typeof console.log === "function";
-        var BoundNames = require("slower-static-semantics").BoundNames;
         function Assert(test, message) {
             if (!test) throw new Error(message);
         }
@@ -4248,6 +4196,13 @@ define("parser", function () {
         }
         function debugdir() {
             if (debugmode && hasConsole) console.dir.apply(console, arguments);
+        }
+        function pushStrict(v) {
+            strictStack.push(isStrict);
+            isStrict = v;
+        }
+        function popStrict() {
+            isStrict = strictStack.pop();
         }
         function pushState(newState) {
             stateStack.push(state);
@@ -4263,8 +4218,44 @@ define("parser", function () {
         function popNoIn() {
             isNoIn = noInStack.pop();
         }
-
-        var nodeId = 1;
+        var varNames = [], lexNames = [];
+        var varDecls = [], lexDecls = [];
+        var varNamesStack = [], lexNamesStack = [],
+            varDeclsStack = [], lexDeclsStack = [];
+        function pushVarNames () {varNamesStack.push(varNames);varNames=[];}
+        function popVarNames() {varNames = varNamesStack.pop();}
+        function pushLexNames () {lexNamesStack.push(lexNames);lexNames=[];}
+        function popLexNames() {lexNames = lexNamesStack.pop();}
+        function pushVarDecls () {varDeclsStack.push(varDecls);varDecls=[];}
+        function popVarDecls() {varDecls = varDeclsStack.pop();}
+        function pushLexDecls () {lexDeclsStack.push(lexDecls);lexDecls=[];}
+        function popLexDecls() {lexDecls = lexDeclsStack.pop();}
+        function pushDecls() {
+            pushVarDecls();
+            pushVarNames();
+            pushLexNames();
+            pushLexDecls();
+        }
+        function pushLexOnly() {
+            pushLexNames();
+            pushLexDecls();
+        }
+        function popLexOnly(node) {
+            node.lexNames = lexNames;
+            node.lexDecls = lexDecls;
+            popLexNames();
+            popLexDecls();
+        }
+        function popDecls(node) {
+            node.varNames = varNames;
+            node.lexNames = lexNames;
+            node.varDecls = varDecls;
+            node.lexDecls = lexDecls;
+            popVarDecls();
+            popVarNames();
+            popLexDecls();
+            popLexNames();
+        }
         function resetVariables(t) {
             ast = null;
             lexDecls = [];
@@ -4397,7 +4388,7 @@ define("parser", function () {
         }
         function enableExtras () {
             Object.keys(parser).forEach(function (k) {
-        	var f = parser[k];
+                var f = parser[k];
                 if (typeof f === "function" && !f.wrapped) {
                     if (k.indexOf("JSON")===0) return;
                     var originalFunction = f;
@@ -4417,7 +4408,7 @@ define("parser", function () {
         }
         function disableExtras () {
             Object.keys(parser).forEach(function (k) {
-        	var f = parser[k];
+                var f = parser[k];
                 if (typeof f === "function" && f.wrapped)
                     parser[k] = f.wrapped;
             });
@@ -4428,7 +4419,6 @@ define("parser", function () {
         function isWithExtras() {
             return !!withExtras;
         }
-
         function consume(i) {
             // debug("consuming "+i+" tokens");
             while (i > 0) { next(); i--; }
@@ -4528,7 +4518,6 @@ define("parser", function () {
             node.type = type;
             return node;
         }
-
         var positions = [];
         function saveTheDot() {
             var o = {
@@ -4573,7 +4562,6 @@ define("parser", function () {
         function dropPositions() {
             return positions.pop();
         }
-
         function Literal() {
             var node;
             if (IsAnyLiteral[t]) {
@@ -4907,7 +4895,7 @@ define("parser", function () {
         }
         function MemberExpression(obj) {
             var node, l1, l2;
-             obj = obj || this.PrimaryExpression();
+            obj = obj || this.PrimaryExpression();
             if (obj) {
                 l1 = obj.loc && obj.loc.start;
                 var node = Node("MemberExpression");
@@ -5259,7 +5247,7 @@ define("parser", function () {
                 if (hasStop && v === stop) break;
                 if (ae = this.AssignmentExpression()) list.push(ae);
                 if (hasStop && v === stop) break;
-            	if (v === ",") {
+                if (v === ",") {
                     match(",");
                     continue;
                 } else if (ltNext) {
@@ -5267,7 +5255,7 @@ define("parser", function () {
                 } else if (ExprEndOfs[v]) {
                     break;
                 } else if (v === undefined) {
-            	    break;
+                    break;
                 }
                 throw new SyntaxError("invalid expression statement");
             } while (v !== undefined);
@@ -5319,7 +5307,7 @@ define("parser", function () {
             }
             return null;
         }
-        function Initialiser() {
+        function Initializer() {
             if (v === "=") {
                 match("=");
                 var expr = this.AssignmentExpression();
@@ -5348,7 +5336,7 @@ define("parser", function () {
                         }
                         list.push(bindEl);
                         if (v === "=") {
-                            bindEl.init = this.Initialiser();
+                            bindEl.init = this.Initializer();
                         }
                     } else {
                         if (isStrict && ForbiddenArgumentsInStrict[id.name]) {
@@ -5356,7 +5344,7 @@ define("parser", function () {
                         }
                         list.push(id);
                         if (v === "=") {
-                            id.init = this.Initialiser();
+                            id.init = this.Initializer();
                         }
                     }
                     if (v === ",") {
@@ -5376,7 +5364,7 @@ define("parser", function () {
                     else id = this.Identifier();
                     if (id) list.push(id);
                     if (v === "=") {
-                        id.init = this.Initialiser();
+                        id.init = this.Initializer();
                     }
                     if (v === ",") {
                         match(",");
@@ -5396,7 +5384,7 @@ define("parser", function () {
                 l1 = loc && loc.start;
                 node = Node(PatternName[v]);
                 node.elements = this.BindingElementList();
-                if (v === "=") node.init = this.Initialiser();
+                if (v === "=") node.init = this.Initializer();
                 l2 = loc && loc.end;
                 node.loc = makeLoc(l1, l2);
                 EarlyErrors(node);
@@ -5419,22 +5407,19 @@ define("parser", function () {
                 if (isStrict && (ReservedWordsInStrictMode[id.name] || ForbiddenArgumentsInStrict[id.name])) {
                     throw new SyntaxError(id.name + " is not a valid identifier in strict mode");
                 }
-                if (v === "=") node.init = this.Initialiser();
+                if (v === "=") node.init = this.Initializer();
                 else node.init = null;
                 return node;
             }
-
             return null;
         }
         function VariableDeclarationList(kind) {
             var list = [];
             var decl;
             for (;;) {
-
                 decl = this.VariableDeclaration(kind);
                 if (decl) list.push(decl);
                 if (isNoIn && InOrOf[v]) break;
-
                 if (v === ",") {
                     match(",");
                     continue;
@@ -5455,7 +5440,6 @@ define("parser", function () {
         function VariableStatement() {
             var node, decl, l1, l2;
             if (v === "var" || v === "let" || v === "const") {
-                // debug("VariableStatement (" + t + ", " + v + ")");
                 l1 = loc && loc.start;
                 node = Node("VariableDeclaration");
                 node.declarations = [];
@@ -5478,14 +5462,13 @@ define("parser", function () {
             isNoIn = noInStack.pop();
             return node;
         }
-
         function ClassDeclaration(isExpr) {
             var node, m;
-            if (v === "class") {                
+            if (v === "class") {
                 pushDecls();
                 node = Node("ClassDeclaration");
                 node.id = null;
-                node.strict = true;                
+                node.strict = true;
                 node.expression = !! isExpr;
                 node.extends = null;
                 node.elements = [];
@@ -5620,8 +5603,8 @@ define("parser", function () {
         }
         function FormalParameterList() {
             var list = [];
-            list.type = "FormalParameterList";            
-            var id;            
+            list.type = "FormalParameterList";
+            var id;
             if (v && v != ")")
                 do {
                     if (v === "...") {
@@ -5725,7 +5708,7 @@ define("parser", function () {
             var body = [];
             body.type = "FunctionStatementList";
             if (v === "}") return body;
-            pushStrict(this.DirectivePrologue(parent, body) || isStrict); 
+            pushStrict(this.DirectivePrologue(parent, body) || isStrict);
             while (v !== undefined && v !== "}") {
                 if (node = this.FunctionDeclaration() || this.ModuleDeclaration() || this.ClassDeclaration() || this.Statement()) {
                     if (!contains[node.type]) body.push(node);
@@ -5868,7 +5851,6 @@ define("parser", function () {
             }
             return null;
         }
-
         function ThrowStatement() {
             if (v === "throw") {
                 var node, l1, l2;
@@ -6186,9 +6168,9 @@ define("parser", function () {
             list.switch = true;
             var s;
             if (v)
-            do {
-                if (s = this.Statement()) list.push(s);
-            } while (!FinishSwitchStatementList[v] && v != undefined );
+                do {
+                    if (s = this.Statement()) list.push(s);
+                } while (!FinishSwitchStatementList[v] && v != undefined );
             return list;
         }
         function StatementList() {
@@ -6196,9 +6178,9 @@ define("parser", function () {
             list.type = "StatementList";
             var s;
             if (v)
-            do {
-                if (s = this.Statement()) list.push(s);
-            } while (!FinishStatementList[v] && v != undefined);
+                do {
+                    if (s = this.Statement()) list.push(s);
+                } while (!FinishStatementList[v] && v != undefined);
             return list;
         }
         function Statement(a, b, c, d) {
@@ -6232,7 +6214,6 @@ define("parser", function () {
             var node = this.BindingPattern() || this.Identifier();
             return node;
         }
-
         function ForStatement() {
             var node;
             var left;
@@ -6246,18 +6227,14 @@ define("parser", function () {
             var numSemi = 0;
             var hasInOf = false;
             var l1, l2;
-
             if (v === "for") {
                 l1 = loc && loc.start;
                 match("for");
                 match("(");
-
-                /* predict
-                 */
+                /* predict                 */
                 parens.push("(");
                 for (var y = i; y < j; y++) {
                     peek = (peek = tokens[y]) && peek.value;
-
                     if (peek === ";") {
                         numSemi += 1;
                     } else if (peek === "in" || peek === "of") {
@@ -6510,7 +6487,6 @@ define("parser", function () {
             }
             return null;
         }
-
         function Program() {
             var node = Node("Program");
             node.loc = loc = makeLoc();
@@ -6661,38 +6637,26 @@ define("parser", function () {
         function parse(sourceCodeOrTokens) {
             resetVariables(sourceCodeOrTokens);
             try {
-
                 ast = parser.Program();
-
             } catch (ex) {
-
                 //  throw ex;
-
                 console.log("[Parser Exception]: " + ex.name);
                 console.log(ex.message);
                 console.log(ex.stack);
                 ast = ex;
-
                 // if ((x = parse(y)) instanceof Error) idea to return if abrupt later
             }
-
-
             return ast;
         }
         function parseGoal(goal, source) {
-
             if (!withError) {
                 var api = require("api");
                 withError = api && api.withError;
                 ifAbrupt = api && api.ifAbrupt;
                 isAbrupt = api && api.isAbrupt;
-
                 // use the (x instanceof Error) better in runtime to remove dependency
-
             }
-
             saveTheDot();
-
             resetVariables();
             if (Array.isArray(source)) {
                 tokens = source;
@@ -6700,12 +6664,10 @@ define("parser", function () {
                 text = source;
                 tokens = tokenize(text);
             }
-
             lookahead = lookaheadt = token = v = t = undefined;
             i = -1;
             j = tokens.length;
             next();
-
             var fn = parser[goal];
             if (!fn) throw "Sorry, got no parser for " + goal;
             try {
@@ -6747,7 +6709,7 @@ define("parser", function () {
         parser.AssignmentExpression = AssignmentExpression;
         parser.SuperExpression = SuperExpression;
         parser.ThisExpression = ThisExpression;
-        parser.Initialiser = Initialiser;
+        parser.Initializer = Initializer;
         parser.BindingElementList = BindingElementList;
         parser.BindingPattern = BindingPattern;
         parser.VariableDeclaration = VariableDeclaration;
@@ -7543,12 +7505,12 @@ define("js-codegen", function (require, exports, module) {
         return src;
     };
 
-    builder.bindingElement = function (name, as, initialiser, loc, extras) {
+    builder.bindingElement = function (name, as, initializer, loc, extras) {
         var src = "";
         src += name;
         src += ":";
         src += as;
-        if (initialiser) src += " = " + callBuilder(initialiser);
+        if (initializer) src += " = " + callBuilder(initializer);
         return src;
     };
     builder.objectPattern = function (elements, loc, extras) {
@@ -9171,7 +9133,7 @@ function PutValue(V, W) {
 
 function IsPropertyReference(V) {
     var base = GetBase(V);
-    return Type(base) === "object" || HasPrimitiveBase(V);
+    return Type(base) === OBJECT || HasPrimitiveBase(V);
 
 }
 
@@ -9315,7 +9277,7 @@ function ObjectDefineProperty(O, P, Desc) {
 
 function ObjectDefineProperties(O, Properties) {
     var pendingException;
-    if (Type(O) !== "object") return withError("Type", "first argument is not an object");
+    if (Type(O) !== OBJECT) return withError("Type", "first argument is not an object");
     var props = ToObject(Properties);
     var names = OwnPropertyKeysAsList(props);
     var P, descriptors = [];
@@ -9384,30 +9346,30 @@ DeclarativeEnvironment.prototype = {
         else createIdentifierBinding(envRec, N, undefined, configValue, false);
         return NormalCompletion();
     },
-    InitialiseBinding: function (N, V) {
-        debug("declenv initialise: " + N);
+    InitializeBinding: function (N, V) {
+        debug("declenv initialize: " + N);
         var b, outerEnv;
         if (this.HasBinding(N)) {
             b = this.Bindings[N];
-            if (!b.initialised) {
+            if (!b.initialized) {
                 b.value = V;
-                b.initialised = true;
+                b.initialized = true;
                 return true;
             }
             return false;
-        } else if (outerEnv = this.outer) return outerEnv.InitialiseBinding(N, V);
+        } else if (outerEnv = this.outer) return outerEnv.InitializeBinding(N, V);
         return false;
     },
     SetMutableBinding: function (N, V, S) {
         var b, o;
         if (this.HasBinding(N)) {
             b = this.Bindings[N];
-            if (b.writable || !b.initialised) {
+            if (b.writable || !b.initialized) {
                 b.value = V;
-                if (!b.initialised) b.initialised = true;
+                if (!b.initialized) b.initialized = true;
             }
             //          else if (!b.writable) return withError("Reference", "Trying to set immutable binding.");
-            //          else if (!b.initialised) return withError("Reference", "Trying to set uninitialised binding.");
+            //          else if (!b.initialized) return withError("Reference", "Trying to set uninitialized binding.");
             return NormalCompletion(b.value);
         } else if (o = this.outer) return o.SetMutableBinding(N, V, S);
     },
@@ -9415,7 +9377,7 @@ DeclarativeEnvironment.prototype = {
         var b;
         if (this.HasBinding(N)) {
             b = this.Bindings[N];
-            if (!b.initialised) return NormalCompletion(undefined);
+            if (!b.initialized) return NormalCompletion(undefined);
             return NormalCompletion(b.value);
         } else if (this.outer) return this.outer.GetBindingValue(N, S);
         return withError("Reference", "GetBindingValue: Can not find " + N);
@@ -9453,7 +9415,7 @@ function IdentifierBinding(N, V, D, W) {
     ib.name = N;
     ib.value = V;
     ib.writable = W === undefined ? true : W;
-    ib.initialised = false;
+    ib.initialized = false;
     ib.configurable = !!D;
     return ib;
 }
@@ -9582,7 +9544,7 @@ ObjectEnvironment.prototype = {
         if (this.withEnvironment) {
             var unscopables = bindings.Get($$unscopables, bindings);
             if (isAbrupt(unscopables = ifAbrupt(unscopables))) return unscopables;
-            if (Type(unscopables) === "object") {
+            if (Type(unscopables) === OBJECT) {
                 var found = HasOwnProperty(unscopables, N);
                 if (isAbrupt(found = ifAbrupt(found))) return found;
                 if (found === true) return false;
@@ -9616,7 +9578,7 @@ ObjectEnvironment.prototype = {
         return O.Get(N, O);
     },
 
-    InitialiseBinding: function (N, V) {
+    InitializeBinding: function (N, V) {
         var O = this.BoundObject;
         return O.Set(N, V, O);
     },
@@ -9707,9 +9669,9 @@ GlobalEnvironment.prototype = {
         if (this.LexEnv.HasBinding(N)) return this.LexEnv.GetBindingValue(N, S);
         else if (this.objEnv.HasBinding(N)) return this.objEnv.GetBindingValue(N, S);
     },
-    InitialiseBinding: function (N, V, S) {
-        if (this.LexEnv.HasBinding(N)) return this.LexEnv.InitialiseBinding(N, V, S);
-        else if (this.objEnv.HasBinding(N)) return this.objEnv.InitialiseBinding(N, V, S);
+    InitializeBinding: function (N, V, S) {
+        if (this.LexEnv.HasBinding(N)) return this.LexEnv.InitializeBinding(N, V, S);
+        else if (this.objEnv.HasBinding(N)) return this.objEnv.InitializeBinding(N, V, S);
         return false;
     },
     SetMutableBinding: function (N, V, S) {
@@ -9771,7 +9733,7 @@ GlobalEnvironment.prototype = {
         debug("createglobalvar");
         var cpl = this.objEnv.CreateMutableBinding(N, D);
         if (isAbrupt(cpl = ifAbrupt(cpl))) return cpl;
-        cpl = this.objEnv.InitialiseBinding(N, undefined);
+        cpl = this.objEnv.InitializeBinding(N, undefined);
         if (isAbrupt(cpl = ifAbrupt(cpl))) return cpl;
         this.VarNames[N] = true;
     },
@@ -9779,7 +9741,7 @@ GlobalEnvironment.prototype = {
         debug("createglobalfunction");
         var cpl = this.objEnv.CreateMutableBinding(N, D);
         if (isAbrupt(cpl = ifAbrupt(cpl))) return cpl;
-        cpl = this.objEnv.InitialiseBinding(N, V);
+        cpl = this.objEnv.InitializeBinding(N, V);
         if (isAbrupt(cpl = ifAbrupt(cpl))) return cpl;
         this.VarNames[N] = true;
     }
@@ -9789,27 +9751,37 @@ function NewGlobalEnvironment(global) {
     return GlobalEnvironment(global);
 }
 
+var OBJECT = "object",
+    NUMBER = "number",
+    STRING = "string",
+    SYMBOL = "symbol",
+    BOOLEAN = "boolean",
+    REFERENCE = "reference",
+    ENVIRONMENT = "environment",
+    COMPLETION = "completion",
+    UNDEFINED = "undefined",
+    NULL = "null";
 
 var object_tostring_to_type_table = {
-    "[object Reference]": "reference",
-    "[object CompletionRecord]": "completion",
-    "[object GlobalEnvironment]": "environment",
-    "[object GlobalVariableEnvironment]": "environment",
-    "[object GlobalLexicalEnvironment]": "environment",
-    "[object ObjectEnvironment]": "environment",
-    "[object FunctionEnvironment]": "environment",
-    "[object DeclarativeEnvironment]": "environment",
-    "[object OrdinaryObject]": "object",
-    "[object OrdinaryFunction]": "object",
-    "[object ProxyExoticObject]": "object",
-    "[object PromiseExoticObject]": "object",
-    "[object IntegerIndexedExoticObject]": "object",
-    "[object StringExoticObject]": "object",
-    "[object ArrayExoticObject]": "object",
-    "[object ArgumentsExoticObject]": "object",
-    "[object SymbolPrimitiveType]": "symbol",
-    "[object TypeDescriptorExoticObject]": "object",
-    "[object TypeExoticObject]": "object"
+    "[object Reference]": REFERENCE,
+    "[object CompletionRecord]": COMPLETION,
+    "[object GlobalEnvironment]": ENVIRONMENT,
+    "[object GlobalVariableEnvironment]": ENVIRONMENT,
+    "[object GlobalLexicalEnvironment]": ENVIRONMENT,
+    "[object ObjectEnvironment]": ENVIRONMENT,
+    "[object FunctionEnvironment]": ENVIRONMENT,
+    "[object DeclarativeEnvironment]": ENVIRONMENT,
+    "[object OrdinaryObject]": OBJECT,
+    "[object OrdinaryFunction]": OBJECT,
+    "[object ProxyExoticObject]": OBJECT,
+    "[object PromiseExoticObject]": OBJECT,
+    "[object IntegerIndexedExoticObject]": OBJECT,
+    "[object StringExoticObject]": OBJECT,
+    "[object ArrayExoticObject]": OBJECT,
+    "[object ArgumentsExoticObject]": OBJECT,
+    "[object SymbolPrimitiveType]": SYMBOL,
+    "[object TypeDescriptorExoticObject]": OBJECT,
+    "[object TypeExoticObject]": OBJECT
 };
 
 var primitive_type_string_table = {
@@ -9890,7 +9862,7 @@ function ToPrimitive(V, prefType) {
         if (!IsCallable(exoticToPrim)) return withError("Type", "exotic ToPrimitive of object is not a function");
         result = exoticToPrim.Call(V, [hint]);
         if (isAbrupt(result = ifAbrupt(result))) return result;
-        if (result !== undefined && Type(result) !== "object") return result;
+        if (result !== undefined && Type(result) !== OBJECT) return result;
         else return withError("Type", "Can not convert the object to a primitive with exotic ToPrimitive")
     }
     if (hint === "default") hint = "number";
@@ -9898,8 +9870,8 @@ function ToPrimitive(V, prefType) {
 }
 
 function OrdinaryToPrimitive(O, hint) {
-    Assert(Type(O) === "object", "o must be an object");
-    Assert(Type(hint) === "string" && (hint === "string" || hint === "number"), "hint must be a string equal to the letters string or number");
+    Assert(Type(O) === OBJECT, "o must be an object");
+    Assert(Type(hint) === STRING && (hint === "string" || hint === "number"), "hint must be a string equal to the letters string or number");
     var tryFirst;
     var trySecond;
 
@@ -9913,7 +9885,7 @@ function OrdinaryToPrimitive(O, hint) {
         if (IsCallable(func)) {
             result = func.Call(O, []);
             if (isAbrupt(result = ifAbrupt(result))) return result;
-            if (result !== undefined && Type(result) !== "object") return result;
+            if (result !== undefined && Type(result) !== OBJECT) return result;
             else return withError("Type", "Can not convert the object to a primitive with OrdinaryToPrimitive by calling " + list[i]);
         }
     }
@@ -10028,27 +10000,21 @@ function ToBoolean(V) {
     }
 
     if (V instanceof SymbolPrimitiveType) return true;
-    return Type(V) === "object";
+    return Type(V) === OBJECT;
 
 }
 
 function ToNumber(V) {
     var T;
-
     if (isAbrupt(V)) return V;
-    
     if (V instanceof CompletionRecord) return ToNumber(V.value);
-
     if (V === undefined) return NaN;
     if (V === null) return +0;
     if (V === true) return 1;
     if (V === false) return 0;
-
-    if ((T = Type(V)) === "number") return V;
-
-    if (T === "string") return +V;
-
-    if (T === "object") {
+    if ((T = Type(V)) === NUMBER) return V;
+    if (T === STRING) return +V;
+    if (T === STRING) {
         var primVal = ToPrimitive(V, "number");
         return ToNumber(primVal);
     }
@@ -10064,19 +10030,17 @@ function ToString(V) {
     if (V === false) return "false";
     if (V === true) return "true";
     if (V !== V) return "NaN";
-    if ((t = Type(V)) === "number" || typeof v === "number") {
+    if ((t = Type(V)) === NUMBER || typeof v === "number") {
         if (V == 0) return "0";
         if (V < 0) return "-" + ToString(-V);
         if (V === Infinity) return "Infinity";
         return "" + V;
     }
-    if (t === "symbol") {
+    if (t === SYMBOL) {
         return withError("Type", "Can not convert symbol to string");
     }
-    if (t === "object") {
-        if (hasInternalSlot(V, "SymbolData"))
-            return withError("Type", "Can not convert symbol to string");
-
+    if (t === OBJECT) {
+        if (hasInternalSlot(V, "SymbolData")) return withError("Type", "Can not convert symbol to string");
         var primVal = ToPrimitive(V, "string");
         return ToString(primVal);
     }
@@ -10088,9 +10052,7 @@ function ToObject(V) {
     if (V instanceof CompletionRecord) return ToObject(V.value);
     if (V === undefined) return withError("Type", "ToObject: can not convert undefined to object");
     if (V === null) return withError("Type", "ToObject: can not convert null to object");
-
-    if (Type(V) === "object") return V;
-
+    if (Type(V) === OBJECT) return V;
     if (V instanceof SymbolPrimitiveType) {
         var s = SymbolPrimitiveType();
         setInternalSlot(s, "Prototype", getIntrinsic("%SymbolPrototype%"));
@@ -10121,11 +10083,11 @@ function CheckObjectCoercible(argument) {
 
     var type = Type(argument);
     switch (type) {
-        case "boolean":
-        case "number":
-        case "string":
-        case "symbol":
-        case "object":
+        case BOOLEAN:
+        case NUMBER:
+        case STRING:
+        case SYMBOL:
+        case OBJECT:
             return argument;
             break;
         default:
@@ -10137,7 +10099,7 @@ function CheckObjectCoercible(argument) {
 
 // 7.4.2014
 function CanonicalNumericString (argument) {
-    Assert(Type(argument) === "string", "CanonicalNumericString: arguments has to be a string");
+    Assert(Type(argument) === STRING, "CanonicalNumericString: arguments has to be a string");
     var n = ToNumber(argument);
     if (n === -0) return +0;
     if (SameValue(ToString(n), argument) === false) return undefined;
@@ -10152,20 +10114,20 @@ function SameValue(x, y) {
     if (isAbrupt(x = ifAbrupt(x))) return x;
     if (isAbrupt(y = ifAbrupt(y))) return y;
     if (Type(x) !== Type(y)) return false;
-    if (Type(x) === "null") return true;
-    if (Type(x) === "undefined") return true;
-    if (Type(x) === "number") {
+    if (Type(x) === NULL) return true;
+    if (Type(x) === UNDEFINED) return true;
+    if (Type(x) === NUMBER) {
         if (x === y) return true;
         if (x === "NaN" && y === "NaN") return true;
         if (x === +0 && y === -0) return false;
         if (x === -0 && y === +0) return false;
         return false;
     }
-    if (Type(x) === "string") {
+    if (Type(x) === STRING) {
         return (x.length === y.length) && x === y;
 
     }
-    if (Type(x) === "boolean") {
+    if (Type(x) === BOOLEAN) {
         return (x && y) || (!x && !y);
 
     }
@@ -10192,20 +10154,20 @@ function SameValueZero(x, y) {
 
     }
 
-    if (Type(x) === "null") return true;
-    if (Type(x) === "undefined") return true;
-    if (Type(x) === "number") {
+    if (Type(x) === NULL) return true;
+    if (Type(x) === UNDEFINED) return true;
+    if (Type(x) === NUMBER) {
         if (x === y) return true;
         if (x === "NaN" && y === "NaN") return true;
         if (x === +0 && y === -0) return true;
         return x === -0 && y === +0;
 
     }
-    if (Type(x) === "string") {
+    if (Type(x) === STRING) {
         return (x.length === y.length) && x === y;
 
     }
-    if (Type(x) === "boolean") {
+    if (Type(x) === BOOLEAN) {
         return (x && y) || (!x && !y);
 
     }
@@ -10267,7 +10229,7 @@ exports.AbstractRelationalComparison = AbstractRelationalComparison;
     // ===========================================================================================================
 
 function CreateOwnAccessorProperty(O, P, G, S) {
-    Assert(Type(O) === "object", "CreateAccessorProperty: first argument has to be an object.");
+    Assert(Type(O) === OBJECT, "CreateAccessorProperty: first argument has to be an object.");
     Assert(IsPropertyKey(P), "CreateAccessorProperty: second argument has to be a valid property key.");
     var D = Object.create(null);
     D.get = G;
@@ -10278,7 +10240,7 @@ function CreateOwnAccessorProperty(O, P, G, S) {
 }
 
 function CreateDataProperty(O, P, V) {
-    Assert(Type(O) === "object", "CreateDataProperty: first argument has to be an object.");
+    Assert(Type(O) === OBJECT, "CreateDataProperty: first argument has to be an object.");
     Assert(IsPropertyKey(P), "CreateDataProperty: second argument has to be a valid property key.");
     var newDesc = Object.create(null);
     newDesc.value = V;
@@ -10289,7 +10251,7 @@ function CreateDataProperty(O, P, V) {
 }
 
 function CreateDataPropertyOrThrow(O, P, V) {
-    Assert(Type(O) === "object", "CreateDataPropertyOrThrow: first argument has to be an object.");
+    Assert(Type(O) === OBJECT, "CreateDataPropertyOrThrow: first argument has to be an object.");
     Assert(IsPropertyKey(P), "CreateDataPropertyOrThrow: second argument has to be a valid property key.");
     var success = CreateDataProperty(O, P, V);
     if (isAbrupt(success = ifAbrupt(success))) return success;
@@ -10349,7 +10311,7 @@ function FromPropertyDescriptor(desc) {
 
 function ToPropertyDescriptor(O) {
     if (isAbrupt(O = ifAbrupt(O))) return O;
-    if (Type(O) !== "object") return withError("Type", "ToPropertyDescriptor: argument is not an object");
+    if (Type(O) !== OBJECT) return withError("Type", "ToPropertyDescriptor: argument is not an object");
     var desc = Object.create(null);
 
     if (HasProperty(O, "enumerable")) {
@@ -10549,7 +10511,7 @@ function GetMethod(O, P) {
  * Created by root on 30.03.14.
  */
 function Put(O, P, V, Throw) {
-    Assert(Type(O) === "object", "o has to be an object");
+    Assert(Type(O) === OBJECT, "o has to be an object");
     Assert(IsPropertyKey(P), "property key p expected");
     Assert(Throw === true || Throw === false, "throw has to be false or true");
     var success = callInternalSlot("Set", O, P, V, O);
@@ -10559,7 +10521,7 @@ function Put(O, P, V, Throw) {
 }
 
 function DefineOwnPropertyOrThrow(O, P, D) {
-    Assert(Type(O) === "object", "object expected");
+    Assert(Type(O) === OBJECT, "object expected");
     Assert(IsPropertyKey(P), "P has to be a valid property key");
     var success = callInternalSlot("DefineOwnProperty", O, P, D);
     if (isAbrupt(success = ifAbrupt(success))) return success;
@@ -10568,7 +10530,7 @@ function DefineOwnPropertyOrThrow(O, P, D) {
 }
 
 function DeletePropertyOrThrow(O, P) {
-    Assert(Type(O) === "object", "object expected");
+    Assert(Type(O) === OBJECT, "object expected");
     Assert(IsPropertyKey(P), "P has to be a valid property key");
     var success = Delete(O, P);
     if (isAbrupt(success = ifAbrupt(success))) return success;
@@ -10691,7 +10653,7 @@ function OwnPropertySymbols(O) {
  */
 
 function SetIntegrityLevel(O, level) {
-    Assert(Type(O) === "object", "object expected");
+    Assert(Type(O) === OBJECT, "object expected");
     Assert(level === "sealed" || level === "frozen", "level must be sealed or frozen");
     var desc;
     if (level === "sealed" || level === "frozen") {
@@ -10752,7 +10714,7 @@ function SetIntegrityLevel(O, level) {
 }
 
 function TestIntegrityLevel(O, level) {
-    Assert(Type(O) === "object", "object expected");
+    Assert(TyType(O) === OBJECT,"object expected");
     Assert(level === "sealed" || level === "frozen", "level must be sealed or frozen");
     var status = IsExtensible(O);
     if (isAbrupt(status = ifAbrupt(status))) return status;
@@ -10791,12 +10753,12 @@ function TestIntegrityLevel(O, level) {
 // ===========================================================================================================
 
 function GetPrototypeOf(V) {
-    if (Type(V) !== "object") return withError("Type", "argument is not an object");
+    if (Type(V) !== OBJECT) return withError("Type", "argument is not an object");
     return getInternalSlot(V, "Prototype") || null;
 }
 
 function SetPrototypeOf(O, V) {
-    if (Type(V) !== "object" && V !== null) return withError("Type", "Assertion: argument is either object or null, but it is not.");
+    if (Type(V) !== OBJECT && V !== null) return withError("Type", "Assertion: argument is either object or null, but it is not.");
     var extensible = getInternalSlot(O, "Extensible");
     var current = getInternalSlot(O, "Prototype");
     if (SameValue(V, current)) return true;
@@ -10834,7 +10796,7 @@ function Delete(O, P) {
 }
 
 function Get(O, P) {
-    Assert(Type(O) === "object", "Get(O,P): expecting object");
+    Assert(Type(O) === OBJECT, "Get(O,P): expecting object");
     Assert(IsPropertyKey(P));
     return callInternalSlot("Get", O, P, O);
     //var func = getFunction(O, "Get");
@@ -10890,7 +10852,7 @@ function Set(O, P, V, R) {
     };
     if (IsDataDescriptor(ownDesc)) {
         if (ownDesc.writable == false) return false;
-        if (Type(R) !== "object") return false;
+        if (Type(R) !== OBJECT) return false;
         var existingDescriptor = R.GetOwnProperty(P);
         if (isAbrupt(existingDescriptor = ifAbrupt(existingDescriptor))) return existingDescriptor;
 
@@ -10924,7 +10886,7 @@ function OrdinaryObjectInvoke(O, P, A, R) {
     Assert(Array.isArray(A), "expecting arguments list");
     var method = O.Get(P, R);
     if (isAbrupt(method = ifAbrupt(method))) return method;
-    if (Type(method) !== "object") return withError("Type", "Invoke: method " + P + " is not an object");
+    if (Type(method) !== OBJECT) return withError("Type", "Invoke: method " + P + " is not an object");
     if (!IsCallable(method)) return withError("Type", "Invoke: method " + P + " is not callable");
     return method.Call(R, A);
 }
@@ -10934,7 +10896,7 @@ function DefineOwnProperty(O, P, Desc) {
 }
 
 function HasOwnProperty(O, P) {
-    Assert(Type(O) === "object", "HasOwnProperty: first argument has to be an object");
+    Assert(Type(O) === OBJECT, "GetOwnProperty: first argument has to be an object");
     Assert(IsPropertyKey(P), "HasOwnProperty: second argument has to be a valid property key, got " + P);
     var desc = callInternalSlot("GetOwnProperty", O, P);
     return desc !== undefined;
@@ -10967,7 +10929,7 @@ function Enumerate(O) {
         bindings = obj.Bindings;
 
         for (name in bindings) {
-            if (Type(name) === "string") {
+            if (Type(name) === STRING) {
 
                 desc = OrdinaryGetOwnProperty(obj, name);
                 if (desc.enumerable === true) {
@@ -11074,7 +11036,7 @@ function BoundFunctionCreate(B, T, argList) {
 
 function IsCallable(O) {
     if (O instanceof CompletionRecord) return IsCallable(O.value);
-    return Type(O) === "object" && O.Call;
+    return Type(O) === OBJECT && O.Call;
 }
 
 function IsConstructor(F) {
@@ -11121,18 +11083,18 @@ function SetFunctionName(F, name, prefix) {
 function GeneratorFunctionCreate(kind, paramList, body, scope, strict, fProto, homeObject, methodName) {
     if (!fProto) fProto = Get(getIntrinsics(), "%Generator%");
     var F = FunctionAllocate(fProto, "generator");
-    return FunctionInitialise(F, kind, paramList, body, scope, strict, homeObject, methodName);
+    return FunctionInitialize(F, kind, paramList, body, scope, strict, homeObject, methodName);
 }
 
 function FunctionCreate(kind, paramList, body, scope, strict, fProto, homeObject, methodName) {
     if (!fProto) fProto = Get(getIntrinsics(), "%FunctionPrototype%");
     var F = FunctionAllocate(fProto);
-    return FunctionInitialise(F, kind, paramList, body, scope, strict, homeObject, methodName);
+    return FunctionInitialize(F, kind, paramList, body, scope, strict, homeObject, methodName);
 }
 
 function FunctionAllocate(fProto, kind) {
     var F;
-    Assert(Type(fProto) === "object", "fproto has to be an object");
+    Assert(Type(fProto) === OBJECT, "fproto has to be an object");
     if (kind) {
         Assert((kind === "generator" || kind === "normal"), "kind must be generator or normal");
     } else {
@@ -11147,7 +11109,7 @@ function FunctionAllocate(fProto, kind) {
     return F;
 }
 
-function FunctionInitialise(F, kind, paramList, body, scope, strict, homeObject, methodName) {
+function FunctionInitialize(F, kind, paramList, body, scope, strict, homeObject, methodName) {
     setInternalSlot(F, "FunctionKind", kind);
     setInternalSlot(F, "FormalParameters", paramList);
     setInternalSlot(F, "Code", body);
@@ -11169,7 +11131,7 @@ function GetPrototypeFromConstructor(C, intrinsicDefaultProto) {
     if (!IsConstructor(C)) return withError("Type", "GetPrototypeFromConstructor: C is no constructor");
     var proto = Get(C, "prototype");
     if (isAbrupt(proto = ifAbrupt(proto))) return proto;
-    if (Type(proto) !== "object") {
+    if (Type(proto) !== OBJECT) {
         var realm = getInternalSlot(C, "Realm");
         if (realm) intrinsics = realm.intrinsics;
         else intrinsics = getIntrinsics();
@@ -11195,22 +11157,22 @@ function CreateFromConstructor(F) {
     if (IsCallable(creator) === false) return withError("Type", "CreateFromConstructor: creator has to be callable");
     var obj = callInternalSlot("Call", creator, F, []);
     if (isAbrupt(obj = ifAbrupt(obj))) return obj;
-    if (Type(obj) !== "object") return withError("Type", "CreateFromConstructor: obj has to be an object");
+    if (Type(obj) !== OBJECT) return withError("Type", "CreateFromConstructor: obj has to be an object");
     return obj;
 }
 
 function Construct(F, argList) {
-    Assert(Type(F) === "object", "essential Construct: F is not an object");
+    Assert(Type(F) === OBJECT, "essential Construct: F is not an object");
     var obj = CreateFromConstructor(F);
     if (isAbrupt(obj = ifAbrupt(obj))) return obj;
     if (obj === undefined) {
         obj = OrdinaryCreateFromConstructor(F, "%ObjectPrototype%");
         if (isAbrupt(obj = ifAbrupt(obj))) return obj;
-        if (Type(obj) !== "object") return withError("Type", "essential Construct: obj is not an object");
+        if (Type(obj) !== OBJECT) return withError("Type", "essential Construct: obj is not an object");
     }
     var result = callInternalSlot("Call", F, obj, argList);
     if (isAbrupt(result = ifAbrupt(result))) return result;
-    if (Type(result) === "object") return result;
+    if (Type(result) === OBJECT) return result;
     return obj;
 }
 
@@ -11225,10 +11187,10 @@ function OrdinaryConstruct(F, argList) {
         obj = OrdinaryCreateFromConstructor(F, "%ObjectPrototype%");
     }
     if (isAbrupt(obj = ifAbrupt(obj))) return obj;
-    if (Type(obj) !== "object") return withError("Type", "OrdinaryConstruct: Type(obj) is not object");
+    if (Type(obj) !== OBJECT) return withError("Type", "OrdinaryConstruct: Type(obj) is not object");
     var result = callInternalSlot("Call", F, obj, argList);
     if (isAbrupt(result = ifAbrupt(result))) return result;
-    if (Type(result) === "object") return result;
+    if (Type(result) === OBJECT) return result;
     return obj;
 }
 
@@ -11264,10 +11226,10 @@ function OrdinaryHasInstance(C, O) {
     if (BC = getInternalSlot(C, "BoundTargetFunction")) {
         return OrdinaryHasInstance(BC, O);
     }
-    if (Type(O) !== "object") return false;
+    if (Type(O) !== OBJECT) return false;
     P = Get(C, "prototype");
     if (isAbrupt(P = ifAbrupt(P))) return P;
-    if (Type(P) !== "object") return withError("Type", "OrdinaryHasInstance: P not object");
+    if (Type(P) !== OBJECT) return withError("Type", "OrdinaryHasInstance: P not object");
     while (O = GetPrototypeOf(O)) {
         if (isAbrupt(O = ifAbrupt(O))) return O;
         if (O === null) return false;
@@ -11373,7 +11335,7 @@ function MakeSuperReference(propertyKey, strict) {
 }
 
 function GetSuperBinding(obj) {
-    if (Type(obj) !== "object") return undefined;
+    if (Type(obj) !== OBJECT) return undefined;
     if (getInternalSlot(obj, "NeedsSuper") !== true) return undefined;
     if (!hasInternalSlot(obj, "HomeObject")) return undefined;
     return getInternalSlot(obj, "HomeObject");
@@ -11392,8 +11354,8 @@ function cloneFunction (func) {
 
 function CloneMethod(func, newHome, newName) {
     Assert(IsCallable(func), "CloneMethod: function has to be callable");
-    Assert(Type(newHome) == "object", "CloneMethod: newHome has to be an object");
-    Assert(Type(newName) === "undefined" || IsPropertyKey(newName), "CloneMethod: newName has to be undefined or object");
+    Assert(Type(newHome) === OBJECT, "CloneMethod: newHome has to be an object");
+    Assert(Type(newName) === UNDEFINED || IsPropertyKey(newName), "CloneMethod: newName has to be undefined or object");
     var newFunc = cloneFunction(func);
     if (getInternalSlot(func, "NeedsSuper") === true) {
         setInternalSlot(newFunc, "HomeObject", newHome);
@@ -11409,7 +11371,7 @@ function CloneMethod(func, newHome, newName) {
 
 function RebindSuper(func, newHome) {
     Assert(IsCallable(func) && func.HomeObject, "func got to be callable and have a homeobject");
-    Assert(Type(newHome) === "object", "newhome has to be an object");
+    Assert(Type(newHome) === OBJECT, "newhome has to be an object");
     var nu = OrdinaryFunction();
     setInternalSlot(nu, "FunctionKind", getInternalSlot(func, "FunctionKind"));
     setInternalSlot(nu, "Environment", getInternalSlot(func, "Environment"));
@@ -11559,7 +11521,7 @@ function UTC() {
 
 function thisTimeValue(value) {
     if (value instanceof CompletionRecord) return thisTimeValue(value);
-    if (Type(value) === "object" && hasInternalSlot(value, "DateValue")) {
+    if (Type(value) === OBJECT && hasInternalSlot(value, "DateValue")) {
         var b = getInternalSlot(value, "DateValue");
         if (b !== undefined) return b;
     }
@@ -11737,7 +11699,7 @@ function GeneratorStart(generator, body) {
 function GeneratorResume(generator, value) {
     if (hasConsole) console.log("##GeneratorResume()##");
 
-    if (Type(generator) !== "object") return withError("Type", "resume: Generator is not an object");
+    if (Type(generator) !== OBJECT) return withError("Type", "resume: Generator is not an object");
     if (!hasInternalSlot(generator, "GeneratorState")) return withError("Type", "resume: Generator has no GeneratorState property");
     var state = getInternalSlot(generator, "GeneratorState");
     if (state !== "suspendedStart" && state !== "suspendedYield") return withError("Type", "Generator is neither in suspendedStart nor suspendedYield state");
@@ -11786,7 +11748,7 @@ function IsIterable (obj) {
 }
 
 function CreateItrResultObject(value, done) {
-    Assert(Type(done) === "boolean");
+    Assert(Type(done) === BOOLEAN);
     var R = ObjectCreate();
     CreateDataProperty(R, "value", value);
     CreateDataProperty(R, "done", done);
@@ -11796,7 +11758,7 @@ function CreateItrResultObject(value, done) {
 function GetIterator(obj) {
     var iterator = Invoke(obj, $$iterator, []);
     if (isAbrupt(iterator = ifAbrupt(iterator))) return iterator;
-    if (Type(iterator) !== "object") return withError("Type", "iterator is not an object");
+    if (Type(iterator) !== OBJECT) return withError("Type", "iterator is not an object");
     return iterator;
 }
 
@@ -11805,18 +11767,18 @@ function IteratorNext(itr, val) {
     if (arguments.length === 1) result = Invoke(itr, "next", []);
     else result = Invoke(itr, "next", [val]);
     if (isAbrupt(result = ifAbrupt(result))) return result;
-    if (Type(result) !== "object") return withError("Type", "IteratorNext: result is not an object");
+    if (Type(result) !== OBJECT) return withError("Type", "IteratorNext: result is not an object");
     return result;
 }
 
 function IteratorComplete(itrResult) {
-    Assert(Type(itrResult) === "object");
+    Assert(Type(itrResult) === OBJECT);
     var done = Get(itrResult, "done");
     return ToBoolean(done);
 }
 
 function IteratorValue(itrResult) {
-    Assert(Type(itrResult) === "object");
+    Assert(Type(itrResult) === OBJECT);
     return Get(itrResult, "value");
 }
 
@@ -11914,7 +11876,7 @@ function AllocateArrayBuffer(F) {
 function GetValueFromBuffer(arrayBuffer, byteIndex, type, isLittleEndian) {
     var length = getInternalSlot(arrayBuffer, "ArrayBufferByteLength");
     var block = getInternalSlot(arrayBuffer, "ArrayBufferData");
-    if (block === undefined || block === null) return withError("Type", "[[ArrayBufferData]] is not initialised or available.");
+    if (block === undefined || block === null) return withError("Type", "[[ArrayBufferData]] is not initialized or available.");
     var elementSize = arrayType2elementSize[type];
     var rawValue, intValue;
     var help;
@@ -11929,7 +11891,7 @@ function SetValueInBuffer(arrayBuffer, byteIndex, type, value, isLittleEndian) {
 
     var length = getInternalSlot(arrayBuffer, "ArrayBufferByteLength");
     var block = getInternalSlot(arrayBuffer, "ArrayBufferData");
-    if (block === undefined || block === null) return withError("Type", "[[ArrayBufferData]] is not initialised or available.");
+    if (block === undefined || block === null) return withError("Type", "[[ArrayBufferData]] is not initialized or available.");
     var elementSize = arrayType2elementSize[type];
     var rawValue, intValue;
     var help;
@@ -12034,7 +11996,7 @@ IntegerIndexedExoticObject.prototype = assign(IntegerIndexedExoticObject.prototy
         var O = this;
         Assert(IsPropertyKey(P), "P has to be a valid property key");
         Assert(O.ArrayBufferData !== undefined, "arraybufferdata must not be undefined");
-        if (Type(P) === "string") {
+        if (Type(P) === STRING) {
             var intIndex = ToInteger(P);
             if (isAbrupt(intIndex = ifAbrupt(intIndex))) return intIndex;
             if (SameValue(ToString(intIndex), P)) {
@@ -12073,7 +12035,7 @@ IntegerIndexedExoticObject.prototype = assign(IntegerIndexedExoticObject.prototy
     Get: function (P, R) {
         var O = this;
         Assert(IsPropertyKey(P), "P has to be a valid property key");
-        if ((Type(P) === "string") && SameValue(O, R)) {
+        if ((Type(P) === STRING) && SameValue(O, R)) {
             var intIndex = ToInteger(P);
             if (isAbrupt(intIndex = ifAbrupt(intIndex))) return intIndex;
             if (SameValue(ToString(intIndex), P)) return IntegerIndexedElementGet(O, intIndex);
@@ -12083,7 +12045,7 @@ IntegerIndexedExoticObject.prototype = assign(IntegerIndexedExoticObject.prototy
     Set: function (P, V, R) {
         var O = this;
         Assert(IsPropertyKey(P), "P has to be a valid property key");
-        if ((Type(P) === "string") && SameValue(O, R)) {
+        if ((Type(P) === STRING) && SameValue(O, R)) {
             var intIndex = ToInteger(P);
             if (isAbrupt(intIndex = ifAbrupt(intIndex))) return intIndex;
             if (SameValue(ToString(intIndex), P)) return ToBoolean(IntegerIndexedElementSet(O, intIndex, V));
@@ -12095,7 +12057,7 @@ IntegerIndexedExoticObject.prototype = assign(IntegerIndexedExoticObject.prototy
         var O = this;
         Assert(IsPropertyKey(P), "P has to be a valid property key");
         Assert(O.ArrayBufferData !== undefined, "arraybufferdata must not be undefined");
-        if (Type(P) === "string") {
+        if (Type(P) === STRING) {
             var intIndex = ToInteger(P);
             if (isAbrupt(intIndex = ifAbrupt(intIndex))) return intIndex;
             if (SameValue(ToString(intIndex), P)) {
@@ -12118,7 +12080,7 @@ IntegerIndexedExoticObject.prototype = assign(IntegerIndexedExoticObject.prototy
         var O = this;
         Assert(IsPropertyKey(P), "P has to be a valid property key");
         Assert(O.ArrayBufferData !== undefined, "arraybufferdata must not be undefined");
-        if (Type(P) === "string") {
+        if (Type(P) === STRING) {
             var intIndex = ToInteger(P);
             if (isAbrupt(intIndex = ifAbrupt(intIndex))) return intIndex;
             if (SameValue(ToString(intIndex), P)) {
@@ -12145,7 +12107,7 @@ IntegerIndexedExoticObject.prototype = assign(IntegerIndexedExoticObject.prototy
 addMissingProperties(IntegerIndexedExoticObject.prototype, OrdinaryObject.prototype);
 
 function IntegerIndexedElementGet(O, index) {
-    Assert(Type(index) === "number", "index type has to be number");
+    Assert(Type(index) === NUMBER, "index type has to be number");
     Assert(index === ToInteger(index), "index has to be tointeger of index");
     var buffer = getInternalSlot(O, "ViewedArrayBuffer");
     var length = getInternalSlot(O, "ArrayLength");
@@ -12159,7 +12121,7 @@ function IntegerIndexedElementGet(O, index) {
 }
 
 function IntegerIndexedElementSet(O, index, value) {
-    Assert(Type(index) === "number", "index type has to be number");
+    Assert(Type(index) === NUMBER, "index type has to be number");
     Assert(index === ToInteger(index), "index has to be tointeger of index");
     var O = ToObject(ThisResolution());
     if (isAbrupt(O = ifAbrupt(O))) return O;
@@ -12423,7 +12385,7 @@ StringExoticObject.prototype = assign(StringExoticObject.prototype, {
         var has = HasOwnProperty(O, P);
         if (isAbrupt(has = ifAbrupt(has))) return has;
         if (has) return has;
-        if (Type(P) !== "string") return false;
+        if (Type(P) !== STRING) return false;
         var index = ToInteger(P);
         if (isAbrupt(index = ifAbrupt(index))) return index;
         var absIndex = ToString(abs(index));
@@ -12438,7 +12400,7 @@ StringExoticObject.prototype = assign(StringExoticObject.prototype, {
         var desc = OrdinaryGetOwnProperty(this, P);
         if (isAbrupt(desc = ifAbrupt(desc))) return desc;
         if (desc !== undefined) return desc;
-        if (Type(P) !== "string") return undefined;
+        if (Type(P) !== STRING) return undefined;
         var index = ToInteger(P);
         if (isAbrupt(index = ifAbrupt(index))) return index;
         var absIndex = ToString(abs(index));
@@ -12482,8 +12444,8 @@ function StringCreate(StringData) {
 function thisStringValue(value) {
     if (value instanceof CompletionRecord) return thisStringValue(value.value);
     if (typeof value === "string") return value;
-    if (Type(value) === "string") return value;
-    if (Type(value) === "object" && hasInternalSlot(value, "StringData")) {
+    if (Type(value) === STRING) return value;
+    if (Type(value) === OBJECT && hasInternalSlot(value, "StringData")) {
         var b = getInternalSlot(value, "StringData");
         if (typeof b === "string") return b;
     }
@@ -12496,8 +12458,8 @@ function thisStringValue(value) {
 function thisNumberValue(value) {
     if (value instanceof CompletionRecord) return thisNumberValue(value.value);
     if (typeof value === "number") return value;
-    if (Type(value) === "number") return value;
-    if (Type(value) === "object" && hasInternalSlot(value, "NumberData")) {
+    if (Type(value) === NUMBER) return value;
+    if (Type(value) === OBJECT && hasInternalSlot(value, "NumberData")) {
         var b = getInternalSlot(value, "NumberData");
         if (typeof b === "number") return b;
     }
@@ -12517,8 +12479,8 @@ function thisNumberValue(value) {
 function thisBooleanValue(value) {
     if (value instanceof CompletionRecord) return thisBooleanValue(value.value);
     if (typeof value === "boolean") return value;
-    if (Type(value) === "boolean") return value;
-    if (Type(value) === "object" && hasInternalSlot(value, "BooleanData")) {
+    if (Type(value) === BOOLEAN) return value;
+    if (Type(value) === OBJECT && hasInternalSlot(value, "BooleanData")) {
         var b = getInternalSlot(value, "BooleanData");
         if (typeof b === "boolean") return b;
     }
@@ -12670,9 +12632,7 @@ function ArgumentsExoticObject() {
 
     return O;
 }
-ArgumentsExoticObject.prototype = assign(ArgumentsExoticObject.prototype, {
-
-    type: "object",
+ArgumentsExoticObject.prototype = {
 
     toString: function () {
         return "[object ArgumentsExoticObject]";
@@ -12685,7 +12645,7 @@ ArgumentsExoticObject.prototype = assign(ArgumentsExoticObject.prototype, {
         if (!isMapped) {
             var v = OrdinaryGetOwnProperty(ao, P);
             if (v !== undefined) v = v.value;
-            if (P === "caller" && (Type(v) === "object" && (IsCallable(v) || IsConstructor(v))) && getInternalSlot(v, "Strict")) {
+            if (P === "caller" && (Type(v) === OBJECT && (IsCallable(v) || IsConstructor(v))) && getInternalSlot(v, "Strict")) {
                 return withError("Type", "Arguments.Get: Can not access 'caller' in strict mode");
             }
             return v;
@@ -12738,7 +12698,7 @@ ArgumentsExoticObject.prototype = assign(ArgumentsExoticObject.prototype, {
     },
 
     constructor: ArgumentsExoticObject
-});
+};
 
 addMissingProperties(ArgumentsExoticObject.prototype, OrdinaryObject.prototype);
 
@@ -12867,11 +12827,11 @@ ProxyExoticObject.prototype = {
         if (trap === undefined) return GetOwnProperty(T, P);
         var trapResultObj = callInternalSlot("Call", trap, H, [T, P]);
         if (isAbrupt(trapResultObj = ifAbrupt(trapResultObj))) return trapResultObj;
-        if (Type(trapResultObj) !== "object" && Type(trapResultObj) !== "undefined") return withError("Type", "getown - neither object nor undefined");
+        if (Type(trapResultObj) !== OBJECT && Type(trapResultObj) !== UNDEFINED) return withError("Type", "getown - neither object nor undefined");
         var targetDesc = GetOwnProperty(T, P);
         if (isAbrupt(targetDesc = ifAbrupt(targetDesc))) return targetDesc;
         var extensibleTarget;
-        if (Type(trapResultObj) === "undefined") {
+        if (Type(trapResultObj) === UNDEFINED) {
             if (targetDesc === undefined) return undefined;
             if (targetDesc.configurable === false) return withError("Type", "inconfigurable target problem");
             extensibleTarget = IsExtensible(T);
@@ -13019,7 +12979,7 @@ ProxyExoticObject.prototype = {
         if (trap === undefined) return Enumerate(T);
         var trapResult = callInternalSlot("Call", trap, H, [T]);
         if (isAbrupt(trapResult = ifAbrupt(trapResult))) return trapResult;
-        if (Type(trapResult) !== "object") return withError("Type", "trapResult is not an object");
+        if (Type(trapResult) !== OBJECT) return withError("Type", "trapResult is not an object");
         return trapResult;
     },
     OwnPropertyKeys: function () {
@@ -13030,7 +12990,7 @@ ProxyExoticObject.prototype = {
         if (trap === undefined) return OwnPropertyKeys(T);
         var trapResult = callInternalSlot("Call", trap, H, [T]);
         if (isAbrupt(trapResult = ifAbrupt(trapResult))) return trapResult;
-        if (Type(trapResult) !== "object") return withError("Type", "trapResult is not an object");
+        if (Type(trapResult) !== OBJECT) return withError("Type", "trapResult is not an object");
         return trapResult;
     },
 
@@ -13053,7 +13013,7 @@ ProxyExoticObject.prototype = {
         var argArray = CreateArrayFromList(argList);
         var newObj = callInternalSlot("Call", trap, H, [T, argArray]);
         if (isAbrupt(newObj = ifAbrupt(newObj))) return newObj;
-        if (Type(newObj) !== "object") return withError("Type", "returned value is not an object");
+        if (Type(newObj) !== OBJECT) return withError("Type", "returned value is not an object");
         return newObj;
     }
 };
@@ -13099,7 +13059,7 @@ var queueNames = {
 };
 
 function EnqueueTask(queueName, task, args) {
-    Assert(Type(queueName) === "string" && queueNames[queueName], "EnqueueTask: queueName has to be valid");
+    Assert(Type(queueName) === STRING && queueNames[queueName], "EnqueueTask: queueName has to be valid");
     // Assert(isTaskName[task])
     Assert(Array.isArray(args), "arguments have to be a list and to be equal in the number of arguments of task");
     var callerContext = getContext();
@@ -13219,7 +13179,7 @@ ModuleExoticObject.prototype = {
         return null;
     },
     SetPrototypeOf: function (O) {
-        Assert(Type(O) == "object" || Type(O) == "null", "Module.SetPrototypeOf: Expecting object or null before returning false anyways");
+        Assert(Type(O) === OBJECT || Type(O) == "null", "Module.SetPrototypeOf: Expecting object or null before returning false anyways");
         return false;
     },
     IsExtensible: function () {
@@ -13412,8 +13372,8 @@ function RegExpAllocate(constructor) {
 
 function RegExpExec (R, S, ignore) {
     Assert(getInternalSlot(R, "RegExpMatcher") != undefined, "RegExpExec: R must be a initialized RegExp instance");
-    Assert(Type(S) === "string");
-    Assert(ignore !== undefined ? Type(ignore) === "boolean" : true, "ignore has to be a bool if ignore is provided");
+    Assert(Type(S) === STRING);
+    Assert(ignore !== undefined ? Type(ignore) === BOOLEAN : true, "ignore has to be a bool if ignore is provided");
     var length = S.length;
     var global, sticky, matcher, flags, matchSucceeded, e, fullUnicode, putStatus, eUTF;
     if (ignore === undefined) ignore = false;
@@ -13694,7 +13654,7 @@ function InternalStructuredClone (input, memory, targetRealm) {
         return withError("Range", "DataCloneError: Can not clone a function.");
     } else if (hasInternalSlot(input, "ErrorData")) {
         return withError("Range", "DataCloneError: Can not clone error object.");
-    } else if (Type(input) === "object" && input.toString() !== "[object OrdinaryObject]") {
+    } else if (Type(input) === OBJECT && input.toString() !== "[object OrdinaryObject]") {
         return withError("Range", "DataCloneError: Can only copy ordinary objects, no exotic objects");
     } else {
         // setRealm() img.
@@ -13707,7 +13667,7 @@ function InternalStructuredClone (input, memory, targetRealm) {
         var keys = OwnPropertyKeysAsList(output);
         var outputKey;
         for (var i = 0, j = keys.length; i < j; i++) {
-            if (Type(key) === "string") outputKey = key;
+            if (Type(key) === STRING) outputKey = key;
             // if (Type(key) === "symbol") outputKey = key;
             var sourceValue = Get(input, key);
             if (isAbrupt(sourceValue = ifAbrupt(sourceValue))) return sourceValue;
@@ -14469,11 +14429,11 @@ var RealmConstructor_Call = function (thisArg, argList) {
     var RealmConstructor = thisArg;
     var options = argList[0];
     var initializer = argList[1];
-    if (Type(RealmConstructor) !== "object") return withError("Type", "The this value is not an object");
+    if (Type(RealmConstructor) !== OBJECT) return withError("Type", "The this value is not an object");
     if (!hasInternalSlot(RealmConstructor, "Realm")) return withError("Type", "The this value has not the required properties.");
     if (getInternalSlot(RealmConstructor, "Realm") !== undefined) return withError("Type", "the realm property has to be undefined");
     if (options === undefined) options = ObjectCreate(null);
-    else if (Type(options) !== "object") return withError("Type", "options is not an object");
+    else if (Type(options) !== OBJECT) return withError("Type", "options is not an object");
     var realm = CreateRealm();
     var evalHooks = Get(options, "eval");
     if (isAbrupt(evalHooks = ifAbrupt(evalHooks))) return evalHooks;
@@ -14481,7 +14441,7 @@ var RealmConstructor_Call = function (thisArg, argList) {
     var directEval = Get(evalHooks, "directEval");
     if (isAbrupt(directEval = ifAbrupt(directEval))) return directEval;
     if (directEval === undefined) directEval = ObjectCreate();
-    else if (Type(directEval) !== "object") return withError("Type", "directEval is not an object");
+    else if (Type(directEval) !== OBJECT) return withError("Type", "directEval is not an object");
     var translate = Get(directEval, "translate");
     if (isAbrupt(translate = ifAbrupt(translate))) return translate;
     if ((translate !== undefined) && !IsCallable(translate)) return withError("Type", "translate has to be a function");
@@ -15124,7 +15084,7 @@ LinkSet.prototype.toString = function () { return "[object LinkSet]"; };
 // 27.1.
 function CreateLinkSet(loader, startingLoad) {
     debug2("createlinkset");
-    if (Type(loader) !== "object") return withError("Type", "CreateLinkSet: loader has to be an object");
+    if (Type(loader) !== OBJECT) return withError("Type", "CreateLinkSet: loader has to be an object");
     if (!hasInternalSlot(loader, "Load")) return withError("Type", "CreateLinkSet: loader is missing internal properties");
     var promiseCapability = PromiseBuiltinCapability();
     if (isAbrupt(promiseCapability = ifAbrupt(promiseCapability))) return promiseCapability;
@@ -15344,7 +15304,7 @@ function LinkImports(M) {
         var def = defs[i];
         if (def.ImportName === "module") {
             envRec.CreateImmutableBinding(def.LocalName);
-            envRec.InitialiseBinding(def.LocalName, def.Module);
+            envRec.InitializeBinding(def.LocalName, def.Module);
         } else {
             var binding = ResolveExport(def.Module, def.ImportName);
             if (binding === undefined) {
@@ -15629,7 +15589,7 @@ function IterableToList(iterable) {
 function GetOption(options, name) {
     debug2("get options");
     if (options == undefined) return undefined;
-    if (Type(options) !== "object") return withError("Type", "options is not an object");
+    if (Type(options) !== OBJECT) return withError("Type", "options is not an object");
     return Get(options, name);
 }
 
@@ -15643,7 +15603,7 @@ function OrdinaryModule() {
     return mod;
 }
 function Module(obj) {
-    if (Type(obj) !== "object") return withError("Type", "module obj is not an object");
+    if (Type(obj) !== OBJECT) return withError("Type", "module obj is not an object");
     var mod = OrdinaryModule();
     var keys = OwnPropertyKeysAsList(obj);
     for (var k in keys) {
@@ -15673,10 +15633,10 @@ var LoaderConstructor_Call = function (thisArg, argList) {
     var loader = thisArg;
 
     if (options === undefined) options = ObjectCreate();
-    if (Type(loader) !== "object") return withError("Type", "Loader is not an object");
+    if (Type(loader) !== OBJECT) return withError("Type", "Loader is not an object");
 
     if (getInternalSlot(loader, "LoaderRecord") !== undefined) return withError("Type", "loader.[[LoaderRecord]] isnt undefined");
-    if (Type(options) !== "object") return withError("Type", "the Loader constructors´ options argument is not an object");
+    if (Type(options) !== OBJECT) return withError("Type", "the Loader constructors´ options argument is not an object");
 
     var realmObject = Get(options, "realm");
     if (isAbrupt(realmObject = ifAbrupt(realmObject))) return realmObject;
@@ -15684,7 +15644,7 @@ var LoaderConstructor_Call = function (thisArg, argList) {
     var realm;
     if (realmObject === undefined) realm = getRealm();
     else {
-        if ((Type(realmObject) !== "object") || !hasInternalSlot(realmObject, "Realm")) {
+        if ((Type(realmObject) !== OBJECT) || !hasInternalSlot(realmObject, "Realm")) {
             return withError("Type", "realmObject has to be an object and to have a [[RealmRecord]] internal slot");
         }
         var realm = getInternalSlot(realmObject, "Realm");
@@ -15738,7 +15698,7 @@ var LoaderConstructor_$$create = function (thisArg, argList) {
 // 31.1.
 var LoaderPrototype_get_realm = function (thisArg, argList) {
     var loader = thisArg;
-    if (Type(loader) !== "object" || !hasInternalSlot(loader, "Realm")) {
+    if (Type(loader) !== OBJECT || !hasInternalSlot(loader, "Realm")) {
         return withError("Type", "the this value is not a valid loader object");
     }
     var loaderRecord = getInternalSlot(loader, "LoaderRecord");
@@ -15749,7 +15709,7 @@ var LoaderPrototype_get_realm = function (thisArg, argList) {
 // 31.1.
 var LoaderPrototype_get_global = function (thisArg, argList) {
     var loader = thisArg;
-    if (Type(loader) !== "object" || !hasInternalSlot(loader, "Realm")) {
+    if (Type(loader) !== OBJECT || !hasInternalSlot(loader, "Realm")) {
         return withError("Type", "the this value is not a valid loader object");
     }
     var loaderRecord = getInternalSlot(loader, "LoaderRecord");
@@ -15917,7 +15877,7 @@ var LoaderPrototype_set = function (thisArg, argList) {
     var loaderRecord = getInternalSlot(loader, "LoaderRecord");
     var name = ToString(name);
     if (isAbrupt(name = ifAbrupt(name))) return name;
-    if (Type(module) !== "object") return withError("Type", "module is not an object");
+    if (Type(module) !== OBJECT) return withError("Type", "module is not an object");
     var modules = loaderRecord.Modules;
     var p;
     if (p=getRecordFromList(modules, "Key", name)) {
@@ -16006,7 +15966,7 @@ LazyDefineProperty(LoaderPrototype, $$toStringTag, "Loader");
 
 // 31.1.
 function newModule (obj) {
-    if (Type(obj) !== "object") return withError("Type", "newModule: obj is not an object");
+    if (Type(obj) !== OBJECT) return withError("Type", "newModule: obj is not an object");
     var mod = CreateLinkedModuleInstance();
     var keys = OwnPropertyKeysAsList(obj);
     if (isAbrupt(keys = ifAbrupt(keys))) return keys;
@@ -16075,7 +16035,7 @@ DefineOwnProperty(ConsoleObject, "html", {
     value: CreateBuiltinFunction(realm, function html(thisArg, argList) {
         var selector = argList[0];
         var html = "";
-        if (Type(selector) !== "string") return withError("Type", "First argument of console.html should be a valid css selector string.");
+        if (Type(selector) !== STRING) return withError("Type", "First argument of console.html should be a valid css selector string.");
         if (typeof document !== "undefined") {
             var element = document.querySelector(selector);
         } else {
@@ -16224,7 +16184,7 @@ var ArrayConstructor_construct = function (argList) {
 DefineOwnProperty(ArrayConstructor, "isArray", {
     value: CreateBuiltinFunction(realm, function isArray(thisArg, argList) {
         var arg = GetValue(argList[0]);
-        // if (Type(arg) !== "object") return false;
+        // if (Type(arg) !== OBJECT) return false;
         return arg instanceof ArrayExoticObject;
 
     }),
@@ -16411,7 +16371,7 @@ DefineOwnProperty(ArrayPrototype, "toString", {
 
 
 function IsConcatSpreadable(O) {
-    if (Type(O) !== "object") return false;
+    if (Type(O) !== OBJECT) return false;
     if (isAbrupt(O)) return O;
     var spreadable = Get(O, $$isConcatSpreadable);
     if (isAbrupt(spreadable = ifAbrupt(spreadable))) return spreadable;
@@ -17420,7 +17380,7 @@ DefineOwnProperty(ArrayIteratorPrototype, $$toStringTag, {
 DefineOwnProperty(ArrayIteratorPrototype, "next", {
     value: CreateBuiltinFunction(realm, function next(thisArg, argList) {
         var O = thisArg;
-        if (Type(O) !== "object") return withError("Type", "ArrayIterator.prototype.next: O is not an object. ");
+        if (Type(O) !== OBJECT) return withError("Type", "ArrayIterator.prototype.next: O is not an object. ");
 
         if (!hasInternalSlot(O, "IteratedObject") || !hasInternalSlot(O, "ArrayIterationNextIndex") || !hasInternalSlot(O, "ArrayIterationKind")) {
             return withError("Type", "Object has not all ArrayIterator properties.");
@@ -17592,9 +17552,9 @@ DefineOwnProperty(StringConstructor, "fromCodePoint", {
 
 
 function GetReplaceSubstitution (matched, string, postion, captures) {
-    Assert(Type(matched) === "string", "matched has to be a string");
+    Assert(Type(matched) === STRING, "matched has to be a string");
     var matchLength = matched.length;
-    Assert(Type(string) === "string");
+    Assert(Type(string) === STRING);
     var stringLength = string.length;
     Assert(position >= 0, "position isnt a non negative integer");
     Assert(position <= stringLength);
@@ -18129,7 +18089,7 @@ DefineOwnProperty(StringPrototype, "entries", {
 DefineOwnProperty(StringIteratorPrototype, "next", {
     value: CreateBuiltinFunction(realm, function next(thisArg, argList) {
         var O = thisArg;
-        if (Type(O) !== "object")
+        if (Type(O) !== OBJECT)
             return withError("Type", "the this value is not an object");
 
         if (!hasInternalSlot(O, "IteratedString") || !hasInternalSlot(O, "IteratorNextIndex") || !hasInternalSlot(O, "IterationKind"))
@@ -18270,7 +18230,7 @@ var SymbolPrototype_toString = function toString(thisArg, argList) {
     var sym = getInternalSlot(s, "SymbolData");
     var desc = getInternalSlot(sym, "Description");
     if (desc === undefined) desc = "";
-    Assert(Type(desc) === "string", "The [[Description]] field of the symbol of the this argument is not a string");
+    Assert(Type(desc) === STRING, "The [[Description]] field of the symbol of the this argument is not a string");
     var result = "Symbol(" + desc + ")";
     return NormalCompletion(result);
 };
@@ -18407,7 +18367,7 @@ DefineOwnProperty(ErrorConstructor, $$create, {
 DefineOwnProperty(ErrorPrototype, "toString", {
     value: CreateBuiltinFunction(realm, function (thisArg, argList) {
         var O = thisArg;
-        if (Type(O) !== "object") return withError("Type", "Error.prototype.toString: O is not an object.");
+        if (Type(O) !== OBJECT) return withError("Type", "Error.prototype.toString: O is not an object.");
         var name = Get(O, "name");
         if (isAbrupt(name)) return name;
         name = ifAbrupt(name);
@@ -18434,13 +18394,13 @@ function createNativeError(nativeType, ctor, proto) {
         var func = this;
         var O = thisArg;
         var message = argList[0];
-        if (Type(O) !== "object" ||
-            (Type(O) == "object" && getInternalSlot(O, "ErrorData") == undefined)) {
+        if (Type(O) !== OBJECT ||
+            (Type(O) === OBJECT && getInternalSlot(O, "ErrorData") == undefined)) {
             O = OrdinaryCreateFromConstructor(func, intrProtoName);
             if (isAbrupt(O)) return O;
             O = ifAbrupt(O);
         }
-        if (Type(O) !== "object") return withError("Assert: NativeError: O is an object: failed");
+        if (Type(O) !== OBJECT) return withError("Assert: NativeError: O is an object: failed");
         setInternalSlot(O, "ErrorData", name);
         if (message !== undefined) {
             var msg = ToString(message);
@@ -18520,7 +18480,7 @@ setInternalSlot(EvalFunction, "Call", function (thisArg, argList) {
     input = GetValue(argList[0]);
     if (isAbrupt(input=ifAbrupt(input))) return input;
 
-    if (Type(input) !== "string") return input;
+    if (Type(input) !== STRING) return input;
     try {
         script = parse(input);
     } catch (ex) {
@@ -18622,7 +18582,7 @@ setInternalSlot(DateConstructor, "Call", function (thisArg, argList) {
             if (Type(value) === "object" && hasInternalSlot(value, "DateValue")) tv = thisTimeValue(value);
             else {
                 v = ToPrimitive(value);
-                if (Type(v) === "string") {
+                if (Type(v) === STRING) {
                     tv = Invoke(DateConstructor, "parse", [v])
                 } else {
                     tv = ToNumber(v);
@@ -19415,7 +19375,7 @@ var ReflectObject_parse = function (thisArg, argList) {
     var source = argList[0];
     var options = argList[1];
     var jsAst, newAst, message;
-    if (Type(source) !== "string") return withError("Type", "String to parse expected");
+    if (Type(source) !== STRING) return withError("Type", "String to parse expected");
     try {
         jsAst = parse(source);
     } catch (ex) {
@@ -19434,8 +19394,8 @@ var ReflectObject_parseGoal = function (thisArg, argList) {
     var goal = argList[0];
     var jsAst, newAst, message;
 
-    if (Type(goal) !== "string") return withError("Type", "Goal to parse expected");
-    if (Type(source) !== "string") return withError("Type", "String to parse expected");
+    if (Type(goal) !== STRING) return withError("Type", "Goal to parse expected");
+    if (Type(source) !== STRING) return withError("Type", "String to parse expected");
     try {
         jsAst = parseGoal(goal, source);
     } catch (ex) {
@@ -19460,7 +19420,7 @@ var ReflectObject_setPrototypeOf = function (thisArg, argList) {
     var proto = argList[1];
     var obj = ToObject(target);
     if (isAbrupt(obj = ifAbrupt(obj))) return obj;
-    if (Type(proto) !== "object" && proto !== null) return withError("Type", "Reflect.setPrototypeOf: proto is neither an object nor null!");
+    if (Type(proto) !== OBJECT && proto !== null) return withError("Type", "Reflect.setPrototypeOf: proto is neither an object nor null!");
     return SetPrototypeOf(obj, proto);
 };
 
@@ -19660,7 +19620,7 @@ var ObjectConstructor_assign = function (thisArg, argList) {
 var ObjectConstructor_create = function (thisArg, argList) {
     var O = argList[0];
     var Properties = argList[1];
-    if (Type(O) !== "object" && Type(O) !== "null") return withError("Type", "create: argument is not an object or null");
+    if (Type(O) !== OBJECT && Type(O) !== NULL) return withError("Type", "create: argument is not an object or null");
     var obj = ObjectCreate(O);
     if (Properties !== undefined) {
         return ObjectDefineProperties(obj, Properties);
@@ -19671,7 +19631,7 @@ var ObjectConstructor_defineProperty = function (thisArg, argList) {
     var O = argList[0];
     var P = argList[1];
     var Attributes = argList[2];
-    if (Type(O) !== "object") return withError("Type", "defineProperty: argument 1 is not an object");
+    if (Type(O) !== OBJECT) return withError("Type", "defineProperty: argument 1 is not an object");
     var key = ToPropertyKey(P);
     var desc = ToPropertyDescriptor(Attributes);
     if (isAbrupt(desc = ifAbrupt(desc))) return desc;
@@ -19717,7 +19677,7 @@ setInternalSlot(ObjectConstructor, "Construct", ObjectConstructor_construct);
 var ObjectConstructor_seal = function (thisArg, argList) {
         var O;
         O = argList[0];
-        if (Type(O) !== "object") return withError("Type", "First argument is object");
+        if (Type(O) !== OBJECT) return withError("Type", "First argument is object");
         var status = SetIntegrityLevel(O, "sealed");
         if (isAbrupt(status = ifAbrupt(status))) return status;
         if (status === false) return withError("Type", "seal: can not seal object");
@@ -19728,7 +19688,7 @@ var ObjectConstructor_seal = function (thisArg, argList) {
 var ObjectConstructor_freeze =function (thisArg, argList) {
     var O;
     O = argList[0];
-    if (Type(O) !== "object") return withError("Type", "First argument is object");
+    if (Type(O) !== OBJECT) return withError("Type", "First argument is object");
     var status = SetIntegrityLevel(O, "frozen");
     if (isAbrupt(status = ifAbrupt(status))) return status;
     if (status === false) return withError("Type", "freeze: can not freeze object");
@@ -19767,26 +19727,26 @@ var ObjectConstructor_is = function (thisArg, argList) {
 };
 var ObjectConstructor_isExtensible = function (thisArg, argList) {
         var O = argList[0];
-        if (Type(O) !== "object") return false;
+        if (Type(O) !== OBJECT) return false;
         return IsExtensible(O);
 };
 
 var ObjectConstructor_isSealed = function (thisArg, argList) {
         var O = argList[0];
-        if (Type(O) !== "object") return true;
+        if (Type(O) !== OBJECT) return true;
         return TestIntegrityLevel(O, "sealed");
 };
 
 var ObjectConstructor_isFrozen = function (thisArg, argList) {
         var O = argList[0];
-        if (Type(O) !== "object") return true;
+        if (Type(O) !== OBJECT) return true;
         return TestIntegrityLevel(O, "frozen");
 };
 
 
 var ObjectConstructor_preventExtensions = function (thisArg, argList) {
     var O = argList[0];
-    if (Type(O) !== "object") return withError("Type", "argument is not an object");
+    if (Type(O) !== OBJECT) return withError("Type", "argument is not an object");
     var status = PreventExtensions(O);
     if (isAbrupt(status = ifAbrupt(status))) return status;
     if (status === false) return withError("Type", "can not prevent extensions");
@@ -19809,7 +19769,7 @@ var ObjectConstructor_keys = function (thisArg, argList) {
         if (isAbrupt(next = ifAbrupt(next))) return next;
         nextKey = IteratorValue(next);
         if (isAbrupt(nextKey = ifAbrupt(nextKey))) return nextKey;
-        if (Type(nextKey) === "string") {
+        if (Type(nextKey) === STRING) {
             desc = GetOwnProperty(O, nextKey);
             if (isAbrupt(desc = ifAbrupt(desc))) return desc;
             if (desc !== undefined && desc.enumerable === true) {
@@ -19967,7 +19927,7 @@ var ObjectPrototype_hasOwnProperty = function (thisArg, argList) {
 
 var ObjectPrototype_isPrototypeOf = function (thisArg, argList) {
     var V = argList[0];
-    if (Type(O) !== "object") return false;
+    if (Type(O) !== OBJECT) return false;
     var O = ToObject(thisArg);
     if (isAbrupt(O = ifAbrupt(O))) return O;
     for (;;) {
@@ -20043,7 +20003,7 @@ var ObjectPrototype_toString = function toString(thisArg, argList) {
         tag = Get(O, $$toStringTag);
         if (isAbrupt(tag)) tag = NormalCompletion("???");
         tag = unwrap(tag);
-        if (Type(tag) !== "string") tag = "???";
+        if (Type(tag) !== STRING) tag = "???";
         if (OneOfTheseTags[tag] && (!SameValue(tag, builtinTag))) tag = "~" + tag;
     }
     return "[object " + tag + "]";
@@ -20067,7 +20027,7 @@ var ObjectPrototype_set_proto = function (thisArg, argList) {
     if (isAbrupt(O = ifAbrupt(O))) return O;
     var protoType = Type(proto);
     if (protoType !== "object" && protoType !== null) return proto;
-    if (Type(O) !== "object") return proto;
+    if (Type(O) !== OBJECT) return proto;
     var status = callInternalSlot("SetPrototypeOf", O, proto);
     if (isAbrupt(status = ifAbrupt(status))) return status;
     if (status === false) return withError("Type", "__proto__: SetPrototypeOf failed.");
@@ -20103,7 +20063,7 @@ DefineOwnProperty(NotifierPrototype, "notify", {
     value: CreateBuiltinFunction(realm, function notify(thisArg, argList) {
         var changeRecord = argList[0];
         var notifier = thisArg;
-        if (Type(notifier) !== "object") return withError("Type", "Notifier is not an object.");
+        if (Type(notifier) !== OBJECT) return withError("Type", "Notifier is not an object.");
         var target = getInternalSlot(notifier, "Target");
         var newRecord = ObjectCreate();
         var status = callInternalSlot("DefineOwnProperty", newRecord, "object", {
@@ -20148,10 +20108,10 @@ DefineOwnProperty(NotifierPrototype, "performChange", {
         var changeFn = argList[1];
         var notifier = thisArg;
         var status;
-        if (Type(notifier) !== "object") return withError("Type", "notifier is not an object");
+        if (Type(notifier) !== OBJECT) return withError("Type", "notifier is not an object");
         var target = getInternalSlot(notifier, "Target");
         if (target === undefined) return NormalCompletion(undefined);
-        if (Type(changeType) !== "string") return withError("Type", "changeType has to be a string");
+        if (Type(changeType) !== STRING) return withError("Type", "changeType has to be a string");
         if (!IsCallable(changeFn)) return withError("Type", "changeFn is not a callable");
         status = BeginChange(target, changeType);
         var changeRecord = callInternalSlot("Call", changeFn, undefined, []);
@@ -20308,7 +20268,7 @@ function CreateChangeRecord(type, object, name, oldDesc, newDesc) {
         enumerable: true,
         configurable: false
     });
-    if (Type(name) === "string") {
+    if (Type(name) === STRING) {
         status = callInternalSlot("DefineOwnProperty", changeRecord, "name", {
             value: name,
             writable: false,
@@ -20369,7 +20329,7 @@ DefineOwnProperty(ObjectConstructor, "observe", {
         var O = argList[0];
         var callback = argList[1];
         var accept = argList[2];
-        if (Type(O) !== "object") return withError("Type", "first argument is not an object");
+        if (Type(O) !== OBJECT) return withError("Type", "first argument is not an object");
         if (!IsCallable(callback)) return withError("Type", "second argument is not callable");
         if (TestIntegrityLevel(callback, "frozen")) return withError("Type", "second argument is frozen");
         if (accept === undefined) {
@@ -20406,7 +20366,7 @@ DefineOwnProperty(ObjectConstructor, "unobserve", {
     value: CreateBuiltinFunction(realm, function (thisArg, argList) {
         var O = argList[0];
         var callback = argList[1];
-        if (Type(O) !== "object") return withError("Type", "first argument is not an object");
+        if (Type(O) !== OBJECT) return withError("Type", "first argument is not an object");
         if (!IsCallable(callback)) return withError("Type", "second argument is not callable");
         var notifier = GetNotifier(O);
         var changeObservers = getInternalSlot(notifier, "ChangeObservers");
@@ -20441,7 +20401,7 @@ DefineOwnProperty(ObjectConstructor, "deliverChangeRecords", {
 DefineOwnProperty(ObjectConstructor, "getNotifier", {
     value: CreateBuiltinFunction(realm, function (thisArg, argList) {
         var O = argList[0];
-        if (Type(O) !== "object") return withError("Type", "first argument is not an object");
+        if (Type(O) !== OBJECT) return withError("Type", "first argument is not an object");
         if (TestIntegrityLevel(O, "frozen")) return NormalCompletion(null);
         return GetNotifier(O);
     }),
@@ -20515,7 +20475,7 @@ setInternalSlot(FunctionConstructor, "Call", function (thisArg, argList) {
     }
 
     if (getInternalSlot(F, "FunctionKind") !== "normal") return withError("Type", "function object not a 'normal' function");
-    FunctionInitialise(F, "normal", parameters, funcBody, scope, true);
+    FunctionInitialize(F, "normal", parameters, funcBody, scope, true);
     var proto = ObjectCreate();
     var status = MakeConstructor(F);
     if (isAbrupt(status)) return status;
@@ -20650,7 +20610,7 @@ var FunctionPrototype_toMethod = function (thisArg, argList) {
     var superBinding = argList[0];
     var methodName = argList[1];
     if (!IsCallable(thisArg)) return withError("Type", "this value is not callable");
-    if (Type(superBinding) !== "object") return withError("Type", "superBinding is not an object");
+    if (Type(superBinding) !== OBJECT) return withError("Type", "superBinding is not an object");
     if (methodName !== undefined) {
         methodName = ToPropertyKey(methodName);
         if (isAbrupt(methodName = ifAbrupt(methodName))) return methodName;
@@ -20701,7 +20661,7 @@ LazyDefineProperty(GeneratorPrototype, "next", CreateBuiltinFunction(realm, func
 LazyDefineProperty(GeneratorPrototype, "throw", CreateBuiltinFunction(realm, function (thisArg, argList) {
     var g = thisArg;
     var exception = argList[0];
-    if (Type(g) !== "object") return withError("Type", "throw: Generator is not an object");
+    if (Type(g) !== OBJECT) return withError("Type", "throw: Generator is not an object");
     if (!hasInternalSlot(g, "GeneratorState")) return withError("Type", "throw: generator has no GeneratorState property");
     var state = getInternalSlot(g, "GeneratorState");
     Assert(hasInternalSlot(g, "GeneratorContext"), "generator has to have a GeneratorContext property");
@@ -20769,7 +20729,7 @@ setInternalSlot(GeneratorFunction, "Call", function Call(thisArg, argList) {
         F = FunctionAllocate(GeneratorFunction, "generator");
     }
     if (getInternalSlot(F, "FunctionKind") !== "generator") return withError("Type", "function object not a generator");
-    FunctionInitialise(F, "generator", parameters, funcBody, scope, true);
+    FunctionInitialize(F, "generator", parameters, funcBody, scope, true);
     var proto = ObjectCreate(GeneratorPrototype);
     MakeConstructor(F, true, proto);
     SetFunctionLength(F, ExpectedArgumentCount(F.FormalParameters));
@@ -20833,7 +20793,7 @@ function Str(key, holder, _state) {
     if (value === null) return "null";
     if (value === true) return "true";
     if (value === false) return "false";
-    if (Type(value) === "string") return Quote(value);
+    if (Type(value) === STRING) return Quote(value);
     if (Type(value) === "number") {
         if (value <= Math.pow(2, 53) - 1) return ToString(value);
         else return "null";
@@ -21067,7 +21027,7 @@ DefineOwnProperty(JSONObject, "stringify", {
                 for (i = 0; i < len; i++) {
                     item = undefined;
                     v = Get(replacer, ToString(i));
-                    if (Type(v) === "string") item = v;
+                    if (Type(v) === STRING) item = v;
                     else if (Type(v) === "number") item = ToString(v);
                     else if (Type(v) === "object") {
                         if (hasInternalSlot(v, "NumberData") || hasInternalSlot(v, "StringData")) item = ToString(v);
@@ -21089,7 +21049,7 @@ DefineOwnProperty(JSONObject, "stringify", {
             for (i = 0; i < space; i++) {
                 gap += " ";
             }
-        } else if (Type(space) === "string") {
+        } else if (Type(space) === STRING) {
             if (space.length < 11) gap = space;
             else {
                 for (i = 0; i < 10; i++) {
@@ -21127,7 +21087,7 @@ var PromiseConstructor_Call = function (thisArg, argList) {
     var executor = argList[0];
     var promise = thisArg;
     if (!IsCallable(executor)) return withError("Type", "executor argument is not a callable");
-    if (Type(promise) !== "object") return withError("Type", "promise is not an object");
+    if (Type(promise) !== OBJECT) return withError("Type", "promise is not an object");
     if (!hasInternalSlot(promise, "PromiseStatus")) return withError("Type", "promise has no PromiseStatus Property");
     if (getInternalSlot(promise, "PromiseStatus") !== undefined) return withError("Type", "promise´s PromiseStatus is not undefined");
     return InitializePromise(promise, executor);
@@ -21371,7 +21331,7 @@ PromiseReaction.prototype.toString = function () { return "[object PromiseReacti
 
 
 function UpdatePromiseFromPotentialThenable(x, promiseCapability) {
-    if (Type(x) !== "object") return NormalCompletion("not a thenable");
+    if (Type(x) !== OBJECT) return NormalCompletion("not a thenable");
     var then = Get(x, "then");
     if (isAbrupt(then = ifAbrupt(then))) {
         var rejectResult = callInternalSlot("Call", promiseCapability.Reject, undefined, [then.value]);
@@ -21518,7 +21478,7 @@ function AllocatePromise(constructor) {
 
 
 function IsPromise(x) {
-    if (Type(x) !== "object") return false;
+    if (Type(x) !== OBJECT) return false;
     if (!hasInternalSlot(x, "PromiseStatus")) return false;
     return getInternalSlot(x, "PromiseStatus") !== undefined;
 
@@ -21701,7 +21661,7 @@ var RegExpPrototype_exec = function (thisArg, argList) {
     var R = thisArg;
     var string = argList[0];
     var S;
-    if (Type(R) !== "object") return withError("Type", "this value is not an object");
+    if (Type(R) !== OBJECT) return withError("Type", "this value is not an object");
     if (!hasInternalSlot(R, "RegExpMatcher")) return withError("Type", "this value has not [[RegExpMatcher]] internal slot");
     if (getInternalSlot(R, "RegExpMatcher") === undefined) return withError("Type", "this value has not [[RegExpMatcher]] internal slot defined");
     S = ToString(string);
@@ -21712,7 +21672,7 @@ var RegExpPrototype_exec = function (thisArg, argList) {
 var RegExpPrototype_search = function (thisArg, argList) {
     var rx = thisArg;
     var S = argList[0];
-    if (Type(rx) !== "object") return withError("Type", "this value is not an obect");
+    if (Type(rx) !== OBJECT) return withError("Type", "this value is not an obect");
     if (!hasInternalSlot(rx, "RegExpMatcher")) return withError("Type", "this value has no [[RegExpMatcher]] internal slot");
     var matcher = getInternalSlot(rx, "RegExpMatcher");
     var string = ToString(S);
@@ -21726,7 +21686,7 @@ var RegExpPrototype_match = function (thisArg, argList) {
     var rx = thisArg;
     var string = argList[0];
     var S;
-    if (Type(rx) !== "object") return withError("Type", "this value is not an object");
+    if (Type(rx) !== OBJECT) return withError("Type", "this value is not an object");
     if (!hasInternalSlot(rx, "RegExpMatcher")) return withError("Type", "this value has not [[RegExpMatcher]] internal slot");
     if (getInternalSlot(rx, "RegExpMatcher") === undefined) return withError("Type", "this value has not [[RegExpMatcher]] internal slot defined");
     S = ToString(string);
@@ -21770,7 +21730,7 @@ var RegExpPrototype_match = function (thisArg, argList) {
 var RegExpPrototype_test = function (thisArg, argList) {
     var R = thisArg;
     var string = argList[0];
-    if (Type(R) !== "object") return withError("Type", "this value is no object");
+    if (Type(R) !== OBJECT) return withError("Type", "this value is no object");
     var match = Invoke(R, "exec", [string]);
     if (isAbrupt(match=ifAbrupt(match))) return match;
     return NormalCompletion(match !== null);
@@ -21791,7 +21751,7 @@ var RegExpPrototype_replace = function (thisArg, argList) {
     var replaceValue = argList[1];
     var rx = thisArg;
     var S;
-    if (Type(rx) !== "object") return withError("Type", "this value is not an object");
+    if (Type(rx) !== OBJECT) return withError("Type", "this value is not an object");
     if (!hasInternalSlot(rx, "RegExpMatcher")) return withError("Type", "this value has not [[RegExpMatcher]] internal slot");
     if (getInternalSlot(rx, "RegExpMatcher") === undefined) return withError("Type", "this value has not [[RegExpMatcher]] internal slot defined");
 
@@ -21882,7 +21842,7 @@ var RegExpPrototype_replace = function (thisArg, argList) {
 
 var RegExpPrototype_toString = function (thisArg, argList) {
     var R = thisArg;
-    if (Type(R) !== "object") return withError("Type", "this value is not an object");
+    if (Type(R) !== OBJECT) return withError("Type", "this value is not an object");
     if (!hasInternalSlot(R, "RegExpMatcher")) return withError("Type", "this value has not [[RegExpMatcher]] internal slot");
     if (getInternalSlot(R, "RegExpMatcher") === undefined) return withError("Type", "this value has not [[RegExpMatcher]] internal slot defined");
     var pattern = ToString(Get(R, "source"));
@@ -21950,10 +21910,10 @@ LazyDefineBuiltinFunction(RegExpPrototype, "toString", 1, RegExpPrototype_toStri
 setInternalSlot(ArrayBufferConstructor, "Call", function (thisArg, argList) {
     var length = argList[0];
     var O = thisArg;
-    if (Type(O) !== "object" || (!hasInternalSlot(O, "ArrayBufferData")) || (getInternalSlot(O, "ArrayBufferData") !== undefined)) {
-        return withError("Type", "Can not initialise the this argument as an ArrayBuffer or it is already initialised!");
+    if (Type(O) !== OBJECT || (!hasInternalSlot(O, "ArrayBufferData")) || (getInternalSlot(O, "ArrayBufferData") !== undefined)) {
+        return withError("Type", "Can not initialize the this argument as an ArrayBuffer or it is already initialized!");
     }
-    Assert(getInternalSlot(O, "ArrayBufferData") === undefined, "ArrayBuffer has already to be initialised here but it is not.");
+    Assert(getInternalSlot(O, "ArrayBufferData") === undefined, "ArrayBuffer has already to be initialized here but it is not.");
     var numberLength = ToNumber(length);
     var byteLength = ToInteger(numberLength);
     if (isAbrupt(byteLength = ifAbrupt(byteLength))) return byteLength;
@@ -21978,7 +21938,7 @@ DefineOwnProperty(ArrayBufferConstructor, "prototype", {
 DefineOwnProperty(ArrayBufferConstructor, "isView", {
     value: CreateBuiltinFunction(realm, function (thisArg, argList) {
         var arg = argList[0];
-        if (Type(arg) !== "object") return false;
+        if (Type(arg) !== OBJECT) return false;
         return hasInternalSlot(arg, "ViewedArrayBuffer");
 
     }),
@@ -22012,7 +21972,7 @@ DefineOwnProperty(ArrayBufferPrototype, "byteLength", {
     get: CreateBuiltinFunction(realm, function (thisArg, argList) {
         var O = thisArg;
         if (!hasInternalSlot(O, "ArrayBufferData")) return withError("Type", "The this argument hasnÂ´t [[ArrayBufferData]]");
-        if (getInternalSlot(O, "ArrayBufferData") === undefined) return withError("Type", "The this arguments [[ArrayBufferData]] is not initialised");
+        if (getInternalSlot(O, "ArrayBufferData") === undefined) return withError("Type", "The this arguments [[ArrayBufferData]] is not initialized");
         var length = getInternalSlot(O, "ArrayBufferByteLength");
         return length;
     }),
@@ -22037,11 +21997,11 @@ var DataViewConstructor_Call= function (thisArg, argList) {
     var byteOffset = argList[1];
     var byteLength = argList[2];
     if (byteOffset === undefined) byteOffset = 0;
-    if (Type(O) !== "object" || !hasInternalSlot(O, "DataView")) return withError("Type", "DataView object expected");
+    if (Type(O) !== OBJECT || !hasInternalSlot(O, "DataView")) return withError("Type", "DataView object expected");
     Assert(hasInternalSlot(O, "ViewedArrayBuffer"), "O has to have a ViewedArrayBuffer slot.");
     var viewedArrayBuffer = getInternalSlot(O, "ViewedArrayBuffer");
     if (viewedArrayBuffer !== undefined) return withError("Type", "ViewedArrayBuffer of DataView has to be undefined.");
-    if (Type(buffer) !== "object") return withError("Type", "buffer has to be an arraybuffer object");
+    if (Type(buffer) !== OBJECT) return withError("Type", "buffer has to be an arraybuffer object");
     var arrayBufferData;
     if (!hasInternalSlot(buffer, "ArrayBufferData")) return withError("Type", "In DataView(buffer), buffer has to have ArrayBufferData slot");
     arrayBufferData = getInternalSlot(buffer, "ArrayBufferData");
@@ -22087,7 +22047,7 @@ var DataViewConstructor_$$create = function (thisArg, argList) {
 
 var DataViewPrototype_get_buffer = function (thisArg, argList) {
     var O = thisArg;
-    if (Type(O) !== "object") return withError("Type", "O is not an object");
+    if (Type(O) !== OBJECT) return withError("Type", "O is not an object");
     if (!hasInternalSlot(O, "ViewedArrayBuffer")) return withError("Type", "O has no ViewedArrayBuffer slot");
     var buffer = getInternalSlot(O, "ViewedArrayBuffer");
     if (buffer === undefined) return withError("Type", "buffer is undefined but must not");
@@ -22096,7 +22056,7 @@ var DataViewPrototype_get_buffer = function (thisArg, argList) {
 
 var DataViewPrototype_get_byteLength = function (thisArg, argList) {
     var O = thisArg;
-    if (Type(O) !== "object") return withError("Type", "O is not an object");
+    if (Type(O) !== OBJECT) return withError("Type", "O is not an object");
     if (!hasInternalSlot(O, "ViewedArrayBuffer")) return withError("Type", "O has no ViewedArrayBuffer property");
     var buffer = getInternalSlot(O, "ViewedArrayBuffer");
     if (buffer === undefined) return withError("Type", "buffer is undefined");
@@ -22106,7 +22066,7 @@ var DataViewPrototype_get_byteLength = function (thisArg, argList) {
 
 var DataViewPrototype_get_byteOffset = function (thisArg, argList) {
     var O = thisArg;
-    if (Type(O) !== "object") return withError("Type", "O is not an object");
+    if (Type(O) !== OBJECT) return withError("Type", "O is not an object");
     if (!hasInternalSlot(O, "ViewedArrayBuffer")) return withError("Type", "O has no ViewedArrayBuffer property");
     var buffer = getInternalSlot(O, "ViewedArrayBuffer");
     if (buffer === undefined) return withError("Type", "buffer is undefined");
@@ -22298,7 +22258,7 @@ var TypedArrayConstructor_Call = function (thisArg, argList) {
         }
     } else if (typeof (length = array) == "number") {
         O = thisArg;
-        if (Type(O) !== "object") return withError("Type", "this value is not an object");
+        if (Type(O) !== OBJECT) return withError("Type", "this value is not an object");
         if (!hasInternalSlot(O, "TypedArrayName")) return withError("Type", "object has no TypedArrayName property");
         Assert(hasInternalSlot(O, "ViewedArrayBuffer"), "object has to have a ViewedArrayBuffer property");
         if (getInternalSlot(O, "ViewedArrayBuffer") === undefined) return withError("Type", "object has to have a well defined ViewedArrayBuffer property");
@@ -22329,7 +22289,7 @@ var TypedArrayConstructor_Call = function (thisArg, argList) {
         O = thisArg;
         var arrayBufferData = getInternalSlot(buffer, "ArrayBufferData");
         if (arrayBufferData === undefined) return withError("Type", "[[ArrayBufferData]] is undefined");
-        if (Type(O) !== "object" || !hasInternalSlot(O, "TypedArrayName")) return withError("Type", "O has to be object and to have [[TypedArrayName]]");
+        if (Type(O) !== OBJECT || !hasInternalSlot(O, "TypedArrayName")) return withError("Type", "O has to be object and to have [[TypedArrayName]]");
         var viewedArrayBuffer = getInternalSlot(O, "ViewedArrayBuffer");
         var typedArrayName = getInternalSlot(O, "TypedArrayName");
         if (typedArrayName === undefined) return withError("Type", "O has to have a well defined [[TypedArrayName]]");
@@ -22376,7 +22336,7 @@ var typedArrayPrototypeNames = {
 
 var TypedArrayConstructor_$$create = function $$create(thisArg, argList) {
     var F = thisArg;
-    if (Type(F) !== "object") return withError("Type", "the this value is not an object");
+    if (Type(F) !== OBJECT) return withError("Type", "the this value is not an object");
     if (!hasInternalSlot(F, "TypedArrayConstructor")) return withError("Type", "The this value has no [[TypedArrayConstructor]] property");
     var proto = GetPrototypeFromConstructor(F, typedArrayPrototypeNames[getInternalSlot(F, "TypedArrayConstructor")]);
     if (isAbrupt(proto = ifAbrupt(proto))) return proto;
@@ -22551,7 +22511,7 @@ var TypedArrayPrototype_$$iterator = function iterator(thisArg, argList) {
 // $$toStringTag
 var TypedArrayPrototype_get_$$toStringTag = function get_toStringTag(thisArg, argList) {
     var O = thisArg;
-    if (Type(O) !== "object") return withError("Type", "the this value is not an object");
+    if (Type(O) !== OBJECT) return withError("Type", "the this value is not an object");
     if (!hasInternalSlot(O, "TypedArrayName")) return withError("Type", "the this value has no [[TypedArrayName]] slot");
     var name = getInternalSlot(O, "TypedArrayName");
     Assert(Type(name) == "string", "name has to be a string value");
@@ -22578,7 +22538,7 @@ function createTypedArrayVariant(_type, _bpe, _ctor, _proto) {
 
     setInternalSlot(_ctor, "Call", function (thisArg, argList) {
         var O = thisArg;
-        if (Type(O) !== "object") return withError("Type", "O is not an object");
+        if (Type(O) !== OBJECT) return withError("Type", "O is not an object");
         if (!hasInternalSlot(O, "TypedArrayName")) return withError("Type", "[[TypedArrayName]] is missing");
         if (getInternalSlot(O, "TypedArrayName") != undefined) return withError("Type", "[[TypedArrayName]] isnt undefined");
         setInternalSlot(O, "TypedArrayName", _type + "Array");
@@ -22659,9 +22619,9 @@ setInternalSlot(MapConstructor, "Call", function Call(thisArg, argList) {
     var comparator = argList[1];
     var map = thisArg;
 
-    if (Type(map) !== "object") return withError("Type", "map is not an object");
+    if (Type(map) !== OBJECT) return withError("Type", "map is not an object");
     if (!hasInternalSlot(map, "MapData")) return withError("Type", "MapData property missing on object");
-    if (getInternalSlot(map, "MapData") !== undefined) return withError("Type", "MapData property already initialised");
+    if (getInternalSlot(map, "MapData") !== undefined) return withError("Type", "MapData property already initialized");
 
     var iter;
     var hasValues, adder;
@@ -22728,7 +22688,7 @@ DefineOwnProperty(MapPrototype, "has", {
         var key = argList[0];
         var M = thisArg;
 
-        if (Type(M) !== "object") return withError("Type", "this argument is not an object");
+        if (Type(M) !== OBJECT) return withError("Type", "this argument is not an object");
         if (!hasInternalSlot(M, "MapData")) return withError("Type", "this argument has no map data internal slot");
 
         var entries = getInternalSlot(M, "MapData");
@@ -22756,7 +22716,7 @@ DefineOwnProperty(MapPrototype, "get", {
         var key = argList[0];
         var M = thisArg;
         var same;
-        if (Type(M) !== "object") return withError("Type", "this argument is not an object");
+        if (Type(M) !== OBJECT) return withError("Type", "this argument is not an object");
         if (!hasInternalSlot(M, "MapData")) return withError("Type", "this argument has no map data internal slot");
         var entries = getInternalSlot(M, "MapData");
         var comparator = getInternalSlot(M, "MapComparator");
@@ -22786,7 +22746,7 @@ DefineOwnProperty(MapPrototype, "set", {
         var value = argList[1];
         var M = thisArg;
         var same;
-        if (Type(M) !== "object") return withError("Type", "this argument is not an object");
+        if (Type(M) !== OBJECT) return withError("Type", "this argument is not an object");
         if (!hasInternalSlot(M, "MapData")) return withError("Type", "this argument has no map data internal slot");
 
         var entries = getInternalSlot(M, "MapData");
@@ -22821,7 +22781,7 @@ DefineOwnProperty(MapPrototype, "delete", {
         var key = argList[0];
         var M = thisArg;
         var same;
-        if (Type(M) !== "object") return withError("Type", "this argument is not an object");
+        if (Type(M) !== OBJECT) return withError("Type", "this argument is not an object");
         if (!hasInternalSlot(M, "MapData")) return withError("Type", "this argument has no map data internal slot");
         var entries = getInternalSlot(M, "MapData");
         var comparator = getInternalSlot(M, "MapComparator");
@@ -22966,7 +22926,7 @@ DefineOwnProperty(MapIteratorPrototype, $$iterator, {
 DefineOwnProperty(MapIteratorPrototype, "next", {
     value: CreateBuiltinFunction(realm, function next(thisArg, argList) {
         var O = thisArg;
-        if (Type(O) !== "object") return withError("Type", "the this value is not an object");
+        if (Type(O) !== OBJECT) return withError("Type", "the this value is not an object");
         if (!hasInternalSlot(O, "Map") || !hasInternalSlot(O, "MapNextIndex") || !hasInternalSlot(O, "MapIterationKind")) return withError("Type", "iterator has not all of the required internal properties");
         var entries = getInternalSlot(O, "Map");
         var kind = getInternalSlot(O, "MapIterationKind");
@@ -23013,9 +22973,9 @@ setInternalSlot(SetConstructor, "Call", function Call(thisArg, argList) {
     var comparator = argList[1];
     var set = thisArg;
 
-    if (Type(set) !== "object") return withError("Type", "set is not an object");
+    if (Type(set) !== OBJECT) return withError("Type", "set is not an object");
     if (!hasInternalSlot(set, "SetData")) return withError("Type", "SetData property missing on object");
-    if (getInternalSlot(set, "SetData") !== undefined) return withError("Type", "SetData property already initialised");
+    if (getInternalSlot(set, "SetData") !== undefined) return withError("Type", "SetData property already initialized");
 
     var iter;
     var hasValues, adder;
@@ -23095,7 +23055,7 @@ DefineOwnProperty(SetPrototype, "set", {
         var value = argList[0];
         var S = thisArg;
         var same;
-        if (Type(S) !== "object") return withError("Type", "this argument is not an object");
+        if (Type(S) !== OBJECT) return withError("Type", "this argument is not an object");
         if (!hasInternalSlot(S, "SetData")) return withError("Type", "this argument has no set data internal slot");
 
         var entries = getInternalSlot(S, "SetData");
@@ -23124,7 +23084,7 @@ DefineOwnProperty(SetPrototype, "has", {
         var value = argList[0];
         var S = thisArg;
         var same;
-        if (Type(S) !== "object") return withError("Type", "this argument is not an object");
+        if (Type(S) !== OBJECT) return withError("Type", "this argument is not an object");
         if (!hasInternalSlot(S, "SetData")) return withError("Type", "this argument has no map data internal slot");
 
         var entries = getInternalSlot(S, "SetData");
@@ -23152,7 +23112,7 @@ DefineOwnProperty(SetPrototype, "delete", {
         var value = argList[0];
         var S = thisArg;
         var same;
-        if (Type(S) !== "object") return withError("Type", "this argument is not an object");
+        if (Type(S) !== OBJECT) return withError("Type", "this argument is not an object");
         if (!hasInternalSlot(S, "SetData")) return withError("Type", "this argument has no map data internal slot");
 
         var entries = getInternalSlot(S, "SetData");
@@ -23248,7 +23208,7 @@ DefineOwnProperty(SetIteratorPrototype, $$iterator, {
 DefineOwnProperty(SetIteratorPrototype, "next", {
     value: CreateBuiltinFunction(realm, function next(thisArg, argList) {
         var O = thisArg;
-        if (Type(O) !== "object") return withError("Type", "the this value is not an object");
+        if (Type(O) !== OBJECT) return withError("Type", "the this value is not an object");
         if (!hasInternalSlot(O, "IteratedSet") || !hasInternalSlot(O, "SetNextIndex") || !hasInternalSlot(O, "SetIterationKind")) return withError("Type", "iterator has not all of the required internal properties");
         var entries = getInternalSlot(O, "IteratedSet");
         var kind = getInternalSlot(O, "SetIterationKind");
@@ -23343,14 +23303,14 @@ DefineOwnProperty(EmitterPrototype, "on", {
         var E = thisArg,
             listeners, callback, event;
 
-        if (Type(E) !== "object") return withError("Type", "this argument is not an object");
+        if (Type(E) !== OBJECT) return withError("Type", "this argument is not an object");
 
         if (!hasInternalSlot(E, "EventListeners")) return withError("Type", "[[Listeners]] missing on this argument");
         else listeners = getInternalSlot(E, "EventListeners");
 
         var event = argList[0];
         var callback = argList[1];
-        if (Type(event) !== "string") return withError("Type", "Your argument 1 is not a event name string.");
+        if (Type(event) !== STRING) return withError("Type", "Your argument 1 is not a event name string.");
         if (!IsCallable(callback)) return withError("Type", "Your argument 2 is not a callback function");
 
         var list = listeners[event];
@@ -23369,14 +23329,14 @@ DefineOwnProperty(EmitterPrototype, "once", {
         var E = thisArg,
             listeners, callback, event;
 
-        if (Type(E) !== "object") return withError("Type", "this argument is not an object");
+        if (Type(E) !== OBJECT) return withError("Type", "this argument is not an object");
 
         if (!hasInternalSlot(E, "EventListeners")) return withError("Type", "[[Listeners]] missing on this argument");
         else listeners = getInternalSlot(E, "EventListeners");
 
         var event = argList[0];
         var callback = argList[1];
-        if (Type(event) !== "string") return withError("Type", "Your argument 1 is not a event name string.");
+        if (Type(event) !== STRING) return withError("Type", "Your argument 1 is not a event name string.");
         if (!IsCallable(callback)) return withError("Type", "Your argument 2 is not a callback function");
 
         var list = listeners[event];
@@ -23408,7 +23368,7 @@ DefineOwnProperty(EmitterPrototype, "remove", {
         var E = thisArg,
             listeners, callback, event, values;
 
-        if (Type(E) !== "object") return withError("Type", "this argument is not an object");
+        if (Type(E) !== OBJECT) return withError("Type", "this argument is not an object");
 
         if (!hasInternalSlot(E, "EventListeners")) return withError("Type", "[[Listeners]] missing on this argument");
         else listeners = getInternalSlot(E, "EventListeners");
@@ -23416,7 +23376,7 @@ DefineOwnProperty(EmitterPrototype, "remove", {
         event = argList[0];
         callback = argList[1];
 
-        if (Type(event) !== "string") return withError("Type", "Your argument 1 is not a event name string.");
+        if (Type(event) !== STRING) return withError("Type", "Your argument 1 is not a event name string.");
         if (!IsCallable(callback)) return withError("Type", "Your argument 2 is not a function.");
 
         var list = listeners[event];
@@ -23445,14 +23405,14 @@ DefineOwnProperty(EmitterPrototype, "removeAll", {
         var E = thisArg,
             listeners, event;
 
-        if (Type(E) !== "object") return withError("Type", "this argument is not an object");
+        if (Type(E) !== OBJECT) return withError("Type", "this argument is not an object");
 
         if (!hasInternalSlot(E, "EventListeners")) return withError("Type", "[[Listeners]] missing on this argument");
         else listeners = getInternalSlot(E, "EventListeners");
 
         event = argList[0];
 
-        if (Type(event) !== "string") return withError("Type", "Your argument 1 is not a event name string.");
+        if (Type(event) !== STRING) return withError("Type", "Your argument 1 is not a event name string.");
 
         var list = listeners[event];
         if (list == undefined) return NormalCompletion(undefined);
@@ -23471,13 +23431,13 @@ DefineOwnProperty(EmitterPrototype, "emit", {
         var E = thisArg,
             listeners, callback, event, values;
 
-        if (Type(E) !== "object") return withError("Type", "this argument is not an object");
+        if (Type(E) !== OBJECT) return withError("Type", "this argument is not an object");
 
         if (!hasInternalSlot(E, "EventListeners")) return withError("Type", "[[Listeners]] missing on this argument");
         else listeners = getInternalSlot(E, "EventListeners");
         event = argList[0];
         values = argList.slice(1);
-        if (Type(event) !== "string") return withError("Type", "Your argument 1 is not a event name string.");
+        if (Type(event) !== STRING) return withError("Type", "Your argument 1 is not a event name string.");
         var list = listeners[event];
         if (list == undefined) return NormalCompletion(undefined);
 
@@ -23585,7 +23545,7 @@ var TypePrototype_opaqueType = function (thisArg, argList) {
 
 var StructType_Call = function (thisArg, argList) {
     var object = argList[0];
-    if (Type(object) !== "object") return withError("Type", "");
+    if (Type(object) !== OBJECT) return withError("Type", "");
     var O = thisArg;
     if (!IsTypeObject(O)) return withError("Type", "");
     var currentOffset = 0;
@@ -23756,7 +23716,15 @@ LazyDefineBuiltinFunction(TypePrototype, "opaqueType", 1, TypePrototype_opaqueTy
         return intrinsics;
     };
 
-
+    exports.OBJECT = OBJECT;
+    exports.NUMBER = NUMBER;
+    exports.STRING = STRING;
+    exports.BOOLEAN = BOOLEAN;
+    exports.REFERENCE = REFERENCE;
+    exports.ENVIRONMENT = ENVIRONMENT;
+    exports.COMPLETION = COMPLETION;
+    exports.UNDEFINED = UNDEFINED;
+    exports.NULL = NULL;
 
     exports.$$unscopables        = $$unscopables;
     exports.$$create             = $$create;
@@ -23809,7 +23777,7 @@ LazyDefineBuiltinFunction(TypePrototype, "opaqueType", 1, TypePrototype_opaqueTy
     exports.GetIdentifierReference = GetIdentifierReference;
     exports.FunctionCreate = FunctionCreate;
     exports.FunctionAllocate = FunctionAllocate;
-    exports.FunctionInitialise = FunctionInitialise;
+    exports.FunctionInitialize = FunctionInitialize;
     exports.GeneratorFunctionCreate = GeneratorFunctionCreate;
     exports.OrdinaryHasInstance = OrdinaryHasInstance;
     exports.GetPrototypeFromConstructor = GetPrototypeFromConstructor;
@@ -24020,51 +23988,12 @@ define("runtime", function () {
 
 
 function makeRuntime() {
-
-
-
-        /*
-
-            create new lexer and parser
-            here
-
-            and remove the "shared state"
-
-            from the realm.
-
-        */
-
-
-
-
-
-
-
-
-
-    //-----------------------------------------------------------
-    // assignment!!! setze Call Funktion im anderen Modul zu Call fuer ASTNode:
-    // ----------------------------------------------------------
-
+    // Assignment, backrefs
     ecma.OrdinaryFunction.prototype.Call = Call;
-
-    // Hey this is not once per realm.
-    /****************************************************/
-    // more assignments
-
     ecma.EvaluateBody = EvaluateBody;
     ecma.Evaluate = Evaluate;
     ecma.CreateGeneratorInstance = CreateGeneratorInstance;
 
-    /****************************************************/
-
-
-    /*
-     The interfaces for refactoring the runtime for the Bytecode
-     I don´t care for the difference beetween a stack machine and
-     a tree evaluation? I do, but the only way to make this here
-     usable for both is to go this way.
-     */
 
     // CURRENTLY NOT IN USE,
     var Push = ecma.Push;
@@ -24095,7 +24024,7 @@ function makeRuntime() {
     var ConstructorMethod = statics.ConstructorMethod;
     var PrototypeMethodDefinitions = statics.PrototypeMethodDefinitions;
     var StaticMethodDefinitions = statics.StaticMethodDefinitions;
-    var HasInitialiser = statics.HasInitialiser;
+    var HasInitializer = statics.HasInitializer;
     var IsSimpleParameterList = statics.IsSimpleParameterList;
     var ExpectedArgumentCount = statics.ExpectedArgumentCount;
     var IsValidSimpleAssignmentTarget = statics.IsValidSimpleAssignmentTarget;
@@ -24108,15 +24037,18 @@ function makeRuntime() {
     var StringValue = statics.StringValue;
     var IsIdentifierRef = statics.IsIdentifierRef;
 
+    var OBJECT = ecma.OBJECT;
+    var NUMBER = ecma.NUMBER;
+    var STRING = ecma.STRING;
+    var BOOLEAN = ecma.BOOLEAN;
+    var REFERENCE = ecma.REFERENCE;
+    var ENVIRONMENT = ecma.ENVIRONMENT;
+    var COMPLETION = ecma.COMPLETION;
+    var UNDEFINED = ecma.UNDEFINED;
+    var NULL = ecma.NULL;
 
-    //
-    // essential-api (essential internals)
-    //
 
     var RegExpCreate = ecma.RegExpCreate;
-
-
-//    var List = ecma.List;
     var Assert = ecma.Assert;
     var assert = ecma.assert;
     var CreateRealm = ecma.CreateRealm;
@@ -24133,7 +24065,6 @@ function makeRuntime() {
     var CompletePropertyDescriptor = ecma.CompletePropertyDescriptor;
     var ValidateAndApplyPropertyDescriptor = ecma.ValidateAndApplyPropertyDescriptor;
     var ThrowTypeError = ecma.ThrowTypeError;
-
 
     var $$unscopables = ecma.$$unscopables;
     var $$create = ecma.$$create;
@@ -24158,7 +24089,7 @@ function makeRuntime() {
     var OrdinaryCreateFromConstructor = ecma.OrdinaryCreateFromConstructor;
     var FunctionCreate = ecma.FunctionCreate;
     var FunctionAllocate = ecma.FunctionAllocate;
-    var FunctionInitialise = ecma.FunctionInitialise;
+    var FunctionInitialize = ecma.FunctionInitialize;
     var GeneratorFunctionCreate = ecma.GeneratorFunctionCreate;
     var OrdinaryFunction = ecma.OrdinaryFunction;
     var FunctionEnvironment = ecma.FunctionEnvironment;
@@ -24272,13 +24203,7 @@ function makeRuntime() {
     var printException = ecma.printException;
     var makeMyExceptionText = ecma.makeMyExceptionText;
 
-
-
-
-    function setCodeRealm(r) {  // IN THE RUNTIME, 
-        // before evaluate accepts a realm
-        // and public evalute is only defined on each realm
-
+    function setCodeRealm(r) {  
         if (r) {
             realm = r;
             stack = realm.stack;
@@ -24287,14 +24212,7 @@ function makeRuntime() {
             globalThis = realm.globalThis;
             eventQueue = realm.eventQueue;
         }
-
     }
-
-    // ^ replacen mit realm und module system
-    //
-    //
-    //
-
     function inStrict (node) {
         if (node && node.strict) return true;
         return getLexEnv().strict;
@@ -24302,17 +24220,14 @@ function makeRuntime() {
     }
 
     var CheckObjectCoercible = ecma.CheckObjectCoercible;
-
-
     var line, column;
-
-    var cx; // der aktive Context? use getContext()
+//    var cx;
     var realm, intrinsics, globalEnv, globalThis;
     var stack, eventQueue;
 
     var scriptLocation;
 
-    var initialisedTheRuntime = false;
+    var initializedTheRuntime = false;
     var shellMode; // keep strict mode turned on
     var keepStrict; // idea for legacy shell mode (until i remove whole syntaxjs.eval for syntaxjs.createRealm().eval() and kick shared state with factories)
     var evaluation = Object.create(null);
@@ -24603,7 +24518,7 @@ function makeRuntime() {
                 fo = InstantiateFunctionObject(d, env);
                 status = env.CreateMutableBinding(fn);
                 if (isAbrupt(status)) return status;
-                status = env.InitialiseBinding(fn, fo, false);
+                status = env.InitializeBinding(fn, fo, false);
                 if (isAbrupt(status)) return status;
                 //status = SetFunctionName(fo, fn);
                 //if (isAbrupt(status)) return status;
@@ -24710,7 +24625,7 @@ function makeRuntime() {
         var d;
         var fn;
         var fo;
-        var functionsToInitialise = [];
+        var functionsToInitialize = [];
         var alreadyDeclared;
         var status;
         for (var j = 0, i = varDeclarations.length; i >= j; i--) {
@@ -24722,7 +24637,7 @@ function makeRuntime() {
                     if (isAbrupt(alreadyDeclared)) return alreadyDeclared;
                     if (!alreadyDeclared) {
                         env.CreateMutableBinding(fn);
-                        functionsToInitialise.push(d);
+                        functionsToInitialize.push(d);
                     }
                 }
 
@@ -24768,7 +24683,7 @@ function makeRuntime() {
                 for (var y = 0, z = bn.length; y < z; y++) {
                     dn = bn[y];
                     if (IsGeneratorDeclaration(d)) {
-                        functionsToInitialise.push(d);
+                        functionsToInitialize.push(d);
                     } else if (IsConstantDeclaration(d)) {
                         env.CreateImmutableBinding(dn);
                     } else {
@@ -24777,11 +24692,11 @@ function makeRuntime() {
                 }
             }
         }
-        for (i = 0, j = functionsToInitialise.length; i < j; i++) {
-            if (d = functionsToInitialise[i]) {
+        for (i = 0, j = functionsToInitialize.length; i < j; i++) {
+            if (d = functionsToInitialize[i]) {
                 fn = BoundNames(d)[0];
                 fo = InstantiateFunctionObject(d, env);
-                env.InitialiseBinding(fn, fo, false);
+                env.InitializeBinding(fn, fo, false);
             }
         }
 
@@ -24798,7 +24713,7 @@ function makeRuntime() {
             } else {
                 CompleteMappedArgumentsObject(ao, F, formals, env);
             }
-            env.InitialiseBinding("arguments", ao);
+            env.InitializeBinding("arguments", ao);
         }
         return F;
     }
@@ -24978,7 +24893,7 @@ function makeRuntime() {
     /********************************************************************** continuing with the ast ********************************************************************************/
 
     function isTemplateCallSite(O) {
-        return (Type(O) === "object" && HasProperty(O, "raw"));
+        return (Type(O) === OBJECT && HasProperty(O, "raw"));
     }
 
     function getTemplateArgumentList(siteObj, args) {
@@ -25057,7 +24972,7 @@ function makeRuntime() {
         var argList = ArgumentListEvaluation(args);
 
         if (isAbrupt(argList = ifAbrupt(argList))) return argList;
-        if (Type(func) !== "object") return withError("Type", "EvaluateCall: func is not an object");
+        if (Type(func) !== OBJECT) return withError("Type", "EvaluateCall: func is not an object");
         if (!IsCallable(func)) return withError("Type", "EvaluateCall: func is not callable");
 
         if (Type(ref) === "reference") {
@@ -25128,11 +25043,11 @@ function makeRuntime() {
 
                     this.thisValue = getGlobalThis();
 
-                } else if (Type(thisArg) !== "object") {
+                } else if (Type(thisArg) !== OBJECT) {
 
                     this.thisValue = ToObject(thisArg);
 
-                } else if (Type(thisArg) === "object") {
+                } else if (Type(thisArg) === OBJECT) {
                 
                     this.thisValue = thisArg;
                 } else {
@@ -25259,7 +25174,7 @@ function makeRuntime() {
     function CreateGeneratorInstance(F) {
         var env = GetThisEnvironment();
         var G = env.GetThisBinding();
-        if (Type(G) !== "object" || (Type(G) === "object" && getInternalSlot(G, "GeneratorState") === undefined)) {
+        if (Type(G) !== OBJECT || (Type(G) === OBJECT && getInternalSlot(G, "GeneratorState") === undefined)) {
             var newG = OrdinaryCreateFromConstructor(F, "%GeneratorPrototype%", {
                 "GeneratorState": undefined,
                 "GeneratorContext": undefined
@@ -25389,7 +25304,7 @@ function makeRuntime() {
             MakeConstructor(closure, true, prototype);
             if (id) {
                 scope.CreateMutableBinding(id);
-                scope.InitialiseBinding(id, closure);
+                scope.InitializeBinding(id, closure);
                 SetFunctionName(closure, id);
             }
             return closure;
@@ -25439,7 +25354,7 @@ function makeRuntime() {
                 var status;
                 status = SetFunctionName(F, id);
                 if (isAbrupt(status)) return status;
-                status = scope.InitialiseBinding(id, F);
+                status = scope.InitializeBinding(id, F);
                 if (isAbrupt(status)) return status;
             }
             return NormalCompletion(F);
@@ -25554,7 +25469,7 @@ function makeRuntime() {
     evaluation.VariableDeclaration = VariableDeclaration;
 
     function VariableDeclaration(node) {
-        var decl, decl2, init, arr, initialiser, status;
+        var decl, decl2, init, arr, initializer, status;
 
         // console.log("decl for "+node.type);
         var env = isCodeType(node, "VariableDeclaration") ? (node.kind === "var" ? getVarEnv() : getLexEnv()) : getLexEnv();
@@ -25570,15 +25485,15 @@ function makeRuntime() {
 
             // wird von binding intialisation vorher initialisiert,
 
-            // hier wird das initialiser assignment durchgefuehrt, wenn
+            // hier wird das initializer assignment durchgefuehrt, wenn
             // der code evaluiert wird.
 
 
             if (IsBindingPattern[type]) {
-                if (decl.init) initialiser = GetValue(Evaluate(decl.init));
-                else return withError("Type", "Destructuring Patterns must have some = Initialiser.");
-                if (isAbrupt(initialiser=ifAbrupt(initialiser))) return initialiser;
-                status = BindingInitialisation(decl, initialiser, env);
+                if (decl.init) initializer = GetValue(Evaluate(decl.init));
+                else return withError("Type", "Destructuring Patterns must have some = Initializer.");
+                if (isAbrupt(initializer=ifAbrupt(initializer))) return initializer;
+                status = BindingInitialisation(decl, initializer, env);
                 if (isAbrupt(status = ifAbrupt(status))) return status;
             } else {
                 
@@ -25586,14 +25501,14 @@ function makeRuntime() {
                     
                     name = decl.id.name;
                     
-                    initialiser = GetValue(Evaluate(decl.init));
-                    if (isAbrupt(initialiser=ifAbrupt(initialiser))) return initialiser;
-                    if (IsCallable(initialiser)) {
-                        if (!HasOwnProperty(initialiser, "name")) {
-                            SetFunctionName(initialiser, name);
+                    initializer = GetValue(Evaluate(decl.init));
+                    if (isAbrupt(initializer=ifAbrupt(initializer))) return initializer;
+                    if (IsCallable(initializer)) {
+                        if (!HasOwnProperty(initializer, "name")) {
+                            SetFunctionName(initializer, name);
                         }
                     }
-                    status = BindingInitialisation(name, initialiser, env);
+                    status = BindingInitialisation(name, initializer, env);
                     if (isAbrupt(status = ifAbrupt(status))) return status;
                 }
             }
@@ -25621,10 +25536,10 @@ function makeRuntime() {
                         newName = undefined;
                     }
 
-                    /* default initialiser */
+                    /* default initializer */
                     if (elem.init) {
-                        var initialiser = GetValue(Evaluate(elem.init));
-                        if (isAbrupt(initialiser = ifAbrupt(initialiser))) return initialiser;
+                        var initializer = GetValue(Evaluate(elem.init));
+                        if (isAbrupt(initializer = ifAbrupt(initializer))) return initializer;
                     }
 
 
@@ -25638,13 +25553,13 @@ function makeRuntime() {
                     if (isAbrupt(val)) return val;
 
                     /* intiialiser */
-                    if (val === undefined && initialiser != undefined) {
-                        val = initialiser;
+                    if (val === undefined && initializer != undefined) {
+                        val = initializer;
                     }
 
                     if (env !== undefined) {
-                        if (newName) env.InitialiseBinding(newName, val);
-                        else env.InitialiseBinding(identName, val);
+                        if (newName) env.InitializeBinding(newName, val);
+                        else env.InitializeBinding(identName, val);
                     } else {
                         var lref = Evaluate(elem);
                         if (isAbrupt(lref = ifAbrupt(lref))) return lref;
@@ -25697,10 +25612,10 @@ function makeRuntime() {
                     }
 
 
-                    /* default initialiser */
+                    /* default initializer */
                     if (elem.init) {
-                        var initialiser = GetValue(Evaluate(elem.init));
-                        if (isAbrupt(initialiser = ifAbrupt(initialiser))) return initialiser;
+                        var initializer = GetValue(Evaluate(elem.init));
+                        if (isAbrupt(initializer = ifAbrupt(initializer))) return initializer;
                     }
 
                     val = Get(value, ToString(i));
@@ -25708,15 +25623,15 @@ function makeRuntime() {
                     if (isAbrupt(val)) return val;
 
                     /* intiialiser*/
-                    if (val === undefined && initialiser != undefined) {
-                        val = initialiser;
+                    if (val === undefined && initializer != undefined) {
+                        val = initializer;
                     }
 
 
                     // nextIndex = nextIndex + 1;
                     if (env !== undefined) {
-                        if (newName) env.InitialiseBinding(newName, val);
-                        else env.InitialiseBinding(identName, val);
+                        if (newName) env.InitializeBinding(newName, val);
+                        else env.InitializeBinding(identName, val);
                     } else {
 
                         var lref = Evaluate(elem);
@@ -25744,7 +25659,7 @@ function makeRuntime() {
             }
 
             if (env !== undefined) {
-                env.InitialiseBinding(name, array);
+                env.InitializeBinding(name, array);
             } else {
                 var lref = Reference(name, getLexEnv(), getContext().strict);
                 if (isAbrupt(lref = ifAbrupt(lref))) return lref;
@@ -25791,7 +25706,7 @@ function makeRuntime() {
             name = node.id;
 
             if (value === undefined) value = GetValue(Evaluate(node.init));
-            if (env !== undefined) env.InitialiseBinding(name, value, strict);
+            if (env !== undefined) env.InitializeBinding(name, value, strict);
             else {
                 //env = getLexEnv();
                 //lhs = Reference(name, env, strict);
@@ -25803,7 +25718,7 @@ function makeRuntime() {
         if (type === "Identifier") {
             name = node.name;
             if (env !== undefined) {
-                ex = env.InitialiseBinding(name, value, strict);
+                ex = env.InitializeBinding(name, value, strict);
                 if (isAbrupt(ex)) return ex;
                 return NormalCompletion(undefined);
             } else {
@@ -25839,8 +25754,8 @@ function makeRuntime() {
                 	 */
                     
                 	if (decl.init) {
-                    	    var initialiser = GetValue(Evaluate(decl.init));
-                    	    if (isAbrupt(initialiser = ifAbrupt(initialiser))) return initialiser;
+                    	    var initializer = GetValue(Evaluate(decl.init));
+                    	    if (isAbrupt(initializer = ifAbrupt(initializer))) return initializer;
                 	}
                     
                         if (env) {
@@ -25848,14 +25763,14 @@ function makeRuntime() {
                             if (decl.id) { // is not an identifier, is a "BindingElement"
                                 val = Get(value, decl.id.name, value);
                                 if (isAbrupt(val = ifAbrupt(val))) return val;
-                                if (val == undefined && initialiser != undefined) val = initialiser;
+                                if (val == undefined && initializer != undefined) val = initializer;
                                 
-                                env.InitialiseBinding(decl.as.name, val);
+                                env.InitializeBinding(decl.as.name, val);
                             } else {    // is not a bindingelement, is an "Identifier"
                         	val =  Get(value, ToString(p), value);
                         	if (isAbrupt(val = ifAbrupt(val))) return val;
-                                if (val == undefined && initialiser != undefined) val = initialiser;
-                                env.InitialiseBinding(decl.name, val);
+                                if (val == undefined && initializer != undefined) val = initializer;
+                                env.InitializeBinding(decl.name, val);
                             }
                             
                         } else {
@@ -25865,7 +25780,7 @@ function makeRuntime() {
                                 
                                 val = Get(value, decl.id.name);
                         	if (isAbrupt(val = ifAbrupt(val))) return val;
-                                if (val == undefined && initialiser != undefined) val = initialiser;
+                                if (val == undefined && initializer != undefined) val = initializer;
 
                                 PutValue(lhs, val);
                             } else { // Identifier has el.name
@@ -25874,7 +25789,7 @@ function makeRuntime() {
                                 
                                 val = Get(value, ToString(p));
                                 if (isAbrupt(val = ifAbrupt(val))) return val;
-                                if (val == undefined && initialiser != undefined) val = initialiser;
+                                if (val == undefined && initializer != undefined) val = initializer;
                                 
                                 PutValue(lhs, val);
                             }
@@ -25901,8 +25816,8 @@ function makeRuntime() {
                 
                 
                 	if (decl.init) {
-                    	    var initialiser = GetValue(Evaluate(decl.init));
-                    	    if (isAbrupt(initialiser = ifAbrupt(initialiser))) return initialiser;
+                    	    var initializer = GetValue(Evaluate(decl.init));
+                    	    if (isAbrupt(initializer = ifAbrupt(initializer))) return initializer;
                 	}
                     
                 
@@ -25911,14 +25826,14 @@ function makeRuntime() {
                         if (decl.id) {
                     	    val =  Get(value, decl.id.name, value);
                     	    if (isAbrupt(val=ifAbrupt(val))) return val;
-                    	    if (val === undefined && initialiser != undefined) val = initialiser;
+                    	    if (val === undefined && initializer != undefined) val = initializer;
                     	    
-                    	    env.InitialiseBinding(decl.as.name, val);
+                    	    env.InitializeBinding(decl.as.name, val);
                     	} else {
                     	    val = Get(value, decl.name, value);
                     	    if (isAbrupt(val=ifAbrupt(val))) return val;
-                    	    if (val === undefined && initialiser != undefined) val = initialiser;
-                	    env.InitialiseBinding(decl.name, val);
+                    	    if (val === undefined && initializer != undefined) val = initializer;
+                	    env.InitializeBinding(decl.name, val);
                         }
                     } else {
 
@@ -25926,13 +25841,13 @@ function makeRuntime() {
                             lhs = Evaluate(decl.id);
                             val = Get(value, decl.id.name);
                             if (isAbrupt(val=ifAbrupt(val))) return val;
-                    	    if (val === undefined && initialiser != undefined) val = initialiser;
+                    	    if (val === undefined && initializer != undefined) val = initializer;
                             PutValue(lhs, val);
                         } else {
                             lhs = Evaluate(decl.name);
                             val =  Get(value, decl.name);
                             if (isAbrupt(val=ifAbrupt(val))) return val;
-                    	    if (val === undefined && initialiser != undefined) val = initialiser;
+                    	    if (val === undefined && initializer != undefined) val = initializer;
                             PutValue(lhs, val);
                         }
                     }
@@ -25943,7 +25858,7 @@ function makeRuntime() {
         } else if (typeof node === "string") {
             // Assume Identifier Name
             if (env) {
-                env.InitialiseBinding(node, value, strict);
+                env.InitializeBinding(node, value, strict);
             } else {
                 //env = getLexEnv();
                 lhs = ResolveBinding(node);
@@ -26234,7 +26149,7 @@ function makeRuntime() {
                 // B 3.
                 // DOESNT WORK
                 if (!computed && (propName === "__proto__")) {
-                    if (Type(propValue) === "object" || propValue === null) {
+                    if (Type(propValue) === OBJECT || propValue === null) {
                         return callInternalSlot("SetPrototypeOf", newObj, propValue);
                     }
                     return NormalCompletion(empty);
@@ -26299,7 +26214,7 @@ function makeRuntime() {
         if (generator) propValue = GeneratorFunctionCreate("method", formals, body, scope, strict, fproto, home, methodName);
         else propValue = FunctionCreate("method", formals, body, scope, strict, fproto, home, methodName);
 
-        if (id) scope.InitialiseBinding(id, propValue);
+        if (id) scope.InitializeBinding(id, propValue);
 
         MakeConstructor(propValue);
         SetFunctionName(propValue, propName);
@@ -26406,7 +26321,7 @@ function makeRuntime() {
             obj = rval;
             var identName, newName;
 
-            if (Type(rval) !== "object") return withError("Type", "can not desctructure a non-object into some object");
+            if (Type(rval) !== OBJECT) return withError("Type", "can not desctructure a non-object into some object");
 
             for (i = 0, j = leftElems.length; i < j; i++) {
                 if (leftElems[i].id) identName = leftElems[i].id.name;
@@ -26430,7 +26345,7 @@ function makeRuntime() {
         } else if (type === "ArrayPattern" || type === "ArrayExpression") {
 
             array = rval;
-            if (Type(array) !== "object") return withError("Type", "can not desctructure a non-object into some object");
+            if (Type(array) !== OBJECT) return withError("Type", "can not desctructure a non-object into some object");
             var width;
             var index = 0;
             var len = Get(array, "length");
@@ -26746,7 +26661,7 @@ function makeRuntime() {
     evaluation.BinaryExpression = BinaryExpression;
 
     function instanceOfOperator(O, C) {
-        if (Type(C) !== "object") return withError("Type", "instanceOfOperator: C is not an object.");
+        if (Type(C) !== OBJECT) return withError("Type", "instanceOfOperator: C is not an object.");
         var instHandler = GetMethod(C, $$hasInstance);
         if (isAbrupt(instHandler)) return instHandler;
         if (instHandler) {
@@ -27094,7 +27009,7 @@ function makeRuntime() {
         for (;;) {
             nextResult = Invoke(keys, "next", noArgs);
             if (isAbrupt(nextResult = ifAbrupt(nextResult))) return nextResult;
-            if (Type(nextResult) !== "object") return withError("Type", "ForInOfBodyEvaluation: nextResult is not an object");
+            if (Type(nextResult) !== OBJECT) return withError("Type", "ForInOfBodyEvaluation: nextResult is not an object");
             done = IteratorComplete(nextResult);
             if (isAbrupt(done = ifAbrupt(done))) return done;
             if (done === true) return NormalCompletion(V);
@@ -27322,7 +27237,7 @@ function makeRuntime() {
                 Assert(!isAbrupt(status), "status may not be an abrupt completion");
                 var lastValue = lastIterationEnv.GetBindingValue(bn);
                 if (isAbrupt(lastValue = ifAbrupt(lastValue))) return lastValue;
-                thisIterationEnv.InitialiseBinding(bn, lastValue);
+                thisIterationEnv.InitializeBinding(bn, lastValue);
             }
             getContext().LexEnv = thisIterationEnv;
         }
@@ -27612,11 +27527,11 @@ function makeRuntime() {
             // protoParent = ObjectPrototype;
             constructorParent = FunctionPrototype;
         } else {
-            if (Type(superclass) !== "object") return withError("Type", "superclass is no object");
+            if (Type(superclass) !== OBJECT) return withError("Type", "superclass is no object");
             if (!IsConstructor(superclass)) return withError("Type", "superclass is no constructor");
             protoParent = Get(superclass, "prototype");
             if (isAbrupt(protoParent=ifAbrupt(protoParent))) return protoParent;
-            if (Type(protoParent) !== "object" && Type(protoParent) !== "null") return withError("Type", "prototype of superclass is not object, not null");
+            if (Type(protoParent) !== OBJECT && Type(protoParent) !== NULL) return withError("Type", "prototype of superclass is not object, not null");
             constructorParent = superclass;
         }
         Proto = ObjectCreate(protoParent);
@@ -27673,7 +27588,7 @@ function makeRuntime() {
         if (className) {
             var status = SetFunctionName(F, className);
             if (isAbrupt(status)) return status;
-            lex.InitialiseBinding(className, F);
+            lex.InitializeBinding(className, F);
         }
         getContext().LexEnv = lex;
         return NormalCompletion(F);
@@ -27800,7 +27715,7 @@ function makeRuntime() {
 
             var nextResult = Invoke(keys, "next", noArgs);
             if (isAbrupt(nextResult = ifAbrupt(nextResult))) return nextResult;
-            if (Type(nextResult) !== "object") return withError("Type", "QualifierEvaluation: nextResult is not an object");
+            if (Type(nextResult) !== OBJECT) return withError("Type", "QualifierEvaluation: nextResult is not an object");
             var done = IteratorComplete(nextResult);
             if (isAbrupt(done = ifAbrupt(done))) return done;
             if (done === true) return true;
@@ -28002,7 +27917,7 @@ function makeRuntime() {
 
     /************************************************************ end of ast evaluation section ***************************************************************/
 
-    function HandleEventQueue(shellmode, initialised) {
+    function HandleEventQueue(shellmode, initialized) {
         var task, val;
         var func, timeout, time, result;
 
@@ -28018,7 +27933,7 @@ function makeRuntime() {
                 } else eventQueue.push(task);
             }
             if (eventQueue.length) setTimeout(handler, 0);
-            else if (!shellmode && initialised) endRuntime();
+            else if (!shellmode && initialized) endRuntime();
         }
         setTimeout(handler, 0);
     }
@@ -28052,10 +27967,10 @@ function makeRuntime() {
     }
 
     function initializeTheRuntime() {
-        initialisedTheRuntime = true;
+        initializedTheRuntime = true;
     }
     function endRuntime() {
-        initialisedTheRuntime = false;
+        initializedTheRuntime = false;
     }
 
     function execute(source, shellModeBool, resetEnvNowBool) {
@@ -28066,7 +27981,7 @@ function makeRuntime() {
         var node = typeof source === "string" ? parse(source) : source;
         if (!node) throw "example: Call execute(parse(source)) or execute(source)";
 
-        if (!initialisedTheRuntime || !shellModeBool || resetEnvNowBool) {
+        if (!initializedTheRuntime || !shellModeBool || resetEnvNowBool) {
             var realm = CreateRealm();
             ecma.setCodeRealm(realm);
             keepStrict = false;
@@ -28098,7 +28013,7 @@ function makeRuntime() {
 
                 error = exprValue.value;
 
-                if (Type(error) === "object") {
+                if (Type(error) === OBJECT) {
                     throw makeNativeException(error);
                 } else {
                     error = new Error(error);
@@ -28110,8 +28025,8 @@ function makeRuntime() {
         }
         // now process my eventQueue (which will be replaced by ES6 concurrency and task queues)
         // the conditions are not chosen by experience, just added quickly to tackle the thing
-        if (!shellModeBool && initialisedTheRuntime && !eventQueue.length) endRuntime();
-        else if (eventQueue.length) setTimeout(function () {HandleEventQueue(shellModeBool, initialisedTheRuntime);}, 0);
+        if (!shellModeBool && initializedTheRuntime && !eventQueue.length) endRuntime();
+        else if (eventQueue.length) setTimeout(function () {HandleEventQueue(shellModeBool, initializedTheRuntime);}, 0);
         return exprValue;
     }
 
@@ -28191,18 +28106,18 @@ function makeRuntime() {
             } else {
                 var value = desc.value;
                 var newValue;
-                if (Type(value) === "object") {
+                if (Type(value) === OBJECT) {
                     if (IsCallable(value)) {
                         newValue = function () {
                             var c = callInternalSlot("Call", value, value, arguments);
                             c = unwrap(c);
-                            if (Type(c) === "object") return TransformObjectToJSObject(c);
+                            if (Type(c) === OBJECT) return TransformObjectToJSObject(c);
                             return c;
                         };
-                    } else {
+                } else {
                         newValue = TransformObjectToJSObject(value);
                     }
-                } else if (Type(value) === "symbol") {
+                } else if (Type(value) === SYMBOL) {
                     newValue = {
                         type: "symbol",
                         description: value.Description
