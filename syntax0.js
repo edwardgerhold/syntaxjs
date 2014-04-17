@@ -23740,6 +23740,7 @@ LazyDefineBuiltinFunction(TypePrototype, "opaqueType", 1, TypePrototype_opaqueTy
     exports.OBJECT = OBJECT;
     exports.NUMBER = NUMBER;
     exports.STRING = STRING;
+    exports.SYMBOL = SYMBOL;
     exports.BOOLEAN = BOOLEAN;
     exports.REFERENCE = REFERENCE;
     exports.ENVIRONMENT = ENVIRONMENT;
@@ -24040,6 +24041,7 @@ define("runtime", function () {
         var OBJECT = ecma.OBJECT;
         var NUMBER = ecma.NUMBER;
         var STRING = ecma.STRING;
+        var SYMBOL = ecma.SYMBOL;
         var BOOLEAN = ecma.BOOLEAN;
         var REFERENCE = ecma.REFERENCE;
         var ENVIRONMENT = ecma.ENVIRONMENT;
