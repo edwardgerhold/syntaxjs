@@ -38,3 +38,13 @@ for (let x of ['E','d','w','a','r','d']) {
     name += x
 }
 print(name);
+
+str = "name='';\
+let s = [for (x of ['E','d','w','a','r','d']) name+=x];\
+print(name);";
+
+print(str);
+
+name='';
+let s = [for (x of ['E','d','w','a','r','d']) name+=x];
+print(name);
