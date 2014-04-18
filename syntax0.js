@@ -588,7 +588,7 @@ define("tables", function (require, exports, module) {
     var PrimaryExpressionByValue = {
         __proto__: null,
         "(": "CoverParenthesizedExpressionAndArrowParameterList",
-        "[": "ArrayExpression",
+        "[": "ArrayExpression",	
         "{": "ObjectExpression",
         "class": "ClassExpression",
         "function": "FunctionExpression",
@@ -2056,25 +2056,75 @@ define("tables", function (require, exports, module) {
 
 /* // #include "lib/intl/i18n.js"; */
 
-
-
-
-define("slower-static-semantics", function (require, exports, modules) {
-
+define("slower-static-semantics", function (require, exports) {
+    "use strict";
     var debugmode = false;
     var hasConsole = typeof console === "object" && console && typeof console.log === "function";
-
+    var isStrictDirective = {
+        "'use strict'": true,
+        '"use strict"': true
+    };
+    var IsIteration = {
+        "ForStatement": true,
+        "ForInStatement": true,
+        "ForOfStatement": true,
+        "WhileStatement": true,
+        "DoWhileStatement": true
+    };
+    var BreakableStatement = {
+        "BreakStatement":true,
+        "ContinueStatement":true,
+        "ThrowStatement":true
+    };
+    var IterationStatement = {
+        "ForStatement": true,
+        "WhileStatement": true,
+        "DoWhileStatement": true,
+        "ForInStatement": true,
+        "ForOfStatement": true
+    };
+    var MVHexDecimal = {
+        __proto__: null,
+        0: 0,
+        1: 1,
+        2: 2,
+        3: 3,
+        4: 4,
+        5: 5,
+        6: 6,
+        7: 7,
+        8: 8,
+        9: 9,
+        A: 10,
+        B: 11,
+        C: 12,
+        D: 13,
+        E: 14,
+        F: 15,
+        a: 10,
+        b: 11,
+        c: 12,
+        d: 13,
+        e: 14,
+        f: 15
+    };
+    var LetOrConst = {
+        __proto__: null,
+        "let": true,
+        "const": true
+    };
+    var isComplexParameter = {
+        "RestParameter": true,
+        "ObjectPattern": true,
+        "ArrayPattern": true,
+        "Identifier": false
+    };
     function debug() {
         if (debugmode && hasConsole) console.log.apply(console, arguments);
     }
-
     function debugdir() {
         if (debugmode && hasConsole) console.dir.apply(console, arguments);
     }
-
-    exports.UTF16Encode = UTF16Encode;
-    exports.UTF16Decode = UTF16Decode;
-
     function UTF16Encode(cp) {
         Assert(0 <= cp <= 0x10FFFF, "utf16encode: cp has to be beetween 0 and 0x10FFFF");
         if (cp <= 65535) return cp;
@@ -2101,10 +2151,6 @@ define("slower-static-semantics", function (require, exports, modules) {
             if (node.type === "ReturnStatement" && node.argument === nonTerminal) return true;
         }
     }
-    exports.TailPosition = TailPosition;
-    exports.HasProductionInTailPosition = HasProductionInTailPosition;
-    exports.IsAnonymousFunctionDefinition = IsAnonymousFunctionDefinition;
-
     function IsAnonymousFunctionDefinition(node) {
         var type = node.type;
         var id = node.id;
@@ -2116,9 +2162,6 @@ define("slower-static-semantics", function (require, exports, modules) {
         }
         return false;
     }
-
-    exports.IsIdentifierRef = IsIdentifierRef;
-
     function IsIdentifierRef(node) {
         var type = node.type;
         if (type === "Identifier") return true;
@@ -2167,21 +2210,6 @@ define("slower-static-semantics", function (require, exports, modules) {
     function ModuleRequests(node) {}
     function ImportedNames(node) {}
     function ExportedNames(node) {}
-
-    exports.ModuleRequests = ModuleRequests;
-    exports.ImportEntriesForModule = ImportEntriesForModule;
-    exports.ExportEntriesForModule = ExportEntriesForModule;
-    exports.ImportedEntries = ImportedEntries;
-    exports.ImportedBindings = ImportedBindings;
-    exports.ExportedEntries = ExportedEntries;
-    exports.ExportedBindings = ExportedBindings;
-
-    exports.IsFunctionDeclaration = IsFunctionDeclaration;
-    exports.IsFunctionExpression = IsFunctionExpression;
-    exports.IsGeneratorDeclaration = IsGeneratorDeclaration;
-    exports.IsGeneratorExpression = IsGeneratorExpression;
-    exports.IsVarDeclaration = IsVarDeclaration;
-
     function IsFunctionDeclaration(node) {
         return node.type === "FunctionDeclaration";
     }
@@ -2201,15 +2229,6 @@ define("slower-static-semantics", function (require, exports, modules) {
         return node.kind === "var" && node.type === "VariableDeclaration";
 
     }
-
-    var isStrictDirective = {
-        "'use strict'": true,
-        '"use strict"': true
-    };
-    exports.isStrictDirective = isStrictDirective;
-
-    exports.IsStrict = IsStrict;
-
     function IsStrict(node) {
 
         if (!Array.isArray(node)) {
@@ -2232,16 +2251,6 @@ define("slower-static-semantics", function (require, exports, modules) {
         }
         return false;
     }
-
-    var IsIteration = {
-        "ForStatement": true,
-        "ForInStatement": true,
-        "ForOfStatement": true,
-        "WhileStatement": true,
-        "DoWhileStatement": true
-
-    };
-
     function Contains(R, S) {
 
         var contains = false;
@@ -2288,7 +2297,7 @@ define("slower-static-semantics", function (require, exports, modules) {
 
         if (typeof list === "string") {
             names.push(list);
-            debug("BoundNames: " + names.join(","));
+            //debug("BoundNames: " + names.join(","));
             return names;
 
         } else if (!Array.isArray(list)) {
@@ -2318,7 +2327,7 @@ define("slower-static-semantics", function (require, exports, modules) {
                 else if (type === "RestParameter") names.push(node.id);
 
             }
-            debug("BoundNames: " + names.join(","));
+            //debug("BoundNames: " + names.join(","));
             return names;
 
         } else {
@@ -2346,23 +2355,11 @@ define("slower-static-semantics", function (require, exports, modules) {
                 }
             }
 
-            debug("BoundNames: " + names.join(","));
+            //debug("BoundNames: " + names.join(","));
             return names;
 
         }
     }
-
-    var BreakableStatement = {
-
-    };
-    var IterationStatement = {
-        "ForStatement": true,
-        "WhileStatement": true,
-        "DoWhileStatement": true,
-        "ForInStatement": true,
-        "ForOfStatement": true
-    };
-
     function VarDeclaredNames(body, names) {
 
         var node, decl, i, j, k, l;
@@ -2388,7 +2385,7 @@ define("slower-static-semantics", function (require, exports, modules) {
                 } else if (type === "IfStatement") {
                     names = VarDeclaredNames(node.consequent, names);
                     names = VarDeclaredNames(node.alternate, names);
-	        } else if (type === "WhileStatement") {
+	            } else if (type === "WhileStatement") {
                     VarDeclaredNames(node.body, names);
                 } else if (type === "DoWhileStatement") {
                     VarDeclaredNames(node.body, names);
@@ -2421,9 +2418,7 @@ define("slower-static-semantics", function (require, exports, modules) {
                 }
             }
         }
-
-        debug("VarDeclaresNames: " + names.join(","));
-
+        //debug("VarDeclaresNames: " + names.join(","));
         return names;
     }
     function VarScopedDeclarations(body, list) {
@@ -2433,7 +2428,6 @@ define("slower-static-semantics", function (require, exports, modules) {
         if (!Array.isArray(body)) body = [body];
         for (i = 0, j = body.length; i < j; i++) {
             if (node = body[i]) {
-
                 var type = node.type;
                 if (type === "VariableDeclaration" && node.kind === "var") {
                     var decls = node.declarations;
@@ -2483,7 +2477,7 @@ define("slower-static-semantics", function (require, exports, modules) {
             }
         }
 
-        debug("VarScopedDeclarations: " + list.length);
+        //debug("VarScopedDeclarations: " + list.length);
 
         return list;
     }
@@ -2508,7 +2502,7 @@ define("slower-static-semantics", function (require, exports, modules) {
             }
         }
 
-        debug("LexicallyDeclaresNames: " + names.join(","));
+        //debug("LexicallyDeclaresNames: " + names.join(","));
 
         return names;
     }
@@ -2535,7 +2529,7 @@ define("slower-static-semantics", function (require, exports, modules) {
                 }
             }
         }
-        debug("LexicallyScopedDeclarations: " + list.length);
+        //debug("LexicallyScopedDeclarations: " + list.length);
 
         return list;
     }
@@ -2568,22 +2562,17 @@ define("slower-static-semantics", function (require, exports, modules) {
             }
         }
 
-        debug("LexicalDeclarations: " + list.length);
+        //debug("LexicalDeclarations: " + list.length);
         //debug(list.map(function (x) { return x.id; }).join());
 
         return list;
     }
-
-    exports.DeclaredNames = DeclaredNames;
     function DeclaredNames (node) {
         var lexNames = LexicallyDeclaredNames(node);
         var varNames = VarDeclaredNames(node);
         var names = lexNames.concat(varNames);
         return names;
     }
-
-
-
     function ReferencesSuper(node) {
         var type;
         var stmt, contains = false;
@@ -2618,7 +2607,6 @@ define("slower-static-semantics", function (require, exports, modules) {
         }
         return false;
     }
-
     function ConstructorMethod(defs) {
         var C, def;
         if (Array.isArray(defs)) {
@@ -2638,7 +2626,6 @@ define("slower-static-semantics", function (require, exports, modules) {
         }
         return null;
     }
-
     function PrototypeMethodDefinitions(defs, checkList) {
         var def, list = [];
         for (var i = 0, j = defs.length; i < j; i++) {
@@ -2650,7 +2637,6 @@ define("slower-static-semantics", function (require, exports, modules) {
         }
         return list;
     }
-
     function StaticMethodDefinitions(defs, checkList) {
         var def, list = [],
             checkList = Object.create(null);
@@ -2669,11 +2655,9 @@ define("slower-static-semantics", function (require, exports, modules) {
         }
         return list;
     }
-
     function SpecialMethod() {
         if (node.kind === "get" || node.kind === "set") return true;
     }
-
     function HasInitializer(node) {
         var type = node.type;
         if (node.id && node.init) return true;
@@ -2681,14 +2665,6 @@ define("slower-static-semantics", function (require, exports, modules) {
         else if (type === "VariableDeclarator" && node.init) return true;
         else if (type === "DefaultParameter") return true;
     }
-
-    var isComplexParameter = {
-        "RestParameter": true,
-        "ObjectPattern": true,
-        "ArrayPattern": true,
-        "Identifier": false,
-    };
-
     function IsSimpleParameterList(list) {
         var p;
         for (var i = 0, j = list.length; i < j; i++) {
@@ -2698,7 +2674,6 @@ define("slower-static-semantics", function (require, exports, modules) {
         }
         return true;
     }
-
     function ExpectedArgumentCount(list) {
         var p;
         for (var i = 0, j = list.length; i < j; i++) {
@@ -2708,7 +2683,6 @@ define("slower-static-semantics", function (require, exports, modules) {
         }
         return j;
     }
-
     function IsValidSimpleAssignmentTarget(node) {
         var type = node.type;
         if (type === "Identifier") return true;
@@ -2717,9 +2691,6 @@ define("slower-static-semantics", function (require, exports, modules) {
         if (type === "BinaryExpression") return false;
         return false;
     }
-
-    exports.StringValue = StringValue;
-
     function StringValue(node) {
         if (!node) return;
         switch (node.type) {
@@ -2739,7 +2710,6 @@ define("slower-static-semantics", function (require, exports, modules) {
                 return node.id
         }
     }
-
     function PropName(node) {
         if (typeof node === "string") return node;
         var type = node.type;
@@ -2750,7 +2720,6 @@ define("slower-static-semantics", function (require, exports, modules) {
         if (type === "MethodDefinition") return PropName(id);
         if (typeof id === "object") return StringValue(id);
     }
-
     function PropNameList(node, checkList) {
         var list, body;
         if (body = node.properties) {
@@ -2761,21 +2730,13 @@ define("slower-static-semantics", function (require, exports, modules) {
 
         }
     }
-
     function ElisionWidth(E) {
         return (E && E.width)|0;
     }
-
     function IsConstantDeclaration(node) {
         return node.kind === "const";
 
     }
-    var LetOrConst = {
-        __proto__: null,
-        "let": true,
-        "const": true
-    };
-
     function IsLexicalDeclaration(node) {
         var type = node.type;
         var kind = node.kind;
@@ -2786,7 +2747,6 @@ define("slower-static-semantics", function (require, exports, modules) {
         }
         return false;
     }
-
     function dupesInTheTwoLists(list1, list2, memo) {
         var hasDupe = false;
         var memo = memo || Object.create(null);
@@ -2795,7 +2755,6 @@ define("slower-static-semantics", function (require, exports, modules) {
             if (memo[list2[i]]) hasDupe = true;
             else memo[list2[i]] = true;
     }
-
     function dupesInTheList(list, memo) {
         var hasDupe = false;
         var memo = memo || Object.create(null);
@@ -2805,157 +2764,45 @@ define("slower-static-semantics", function (require, exports, modules) {
         }
         return hasDupe;
     }
-
     function TV(t) {}
-
     function TRV(t) {}
-
     function CV(lit) {
         return lit.name || lit.value;
     }
-
-    var MVHexDecimal = {
-        __proto__: null,
-        0: 0,
-        1: 1,
-        2: 2,
-        3: 3,
-        4: 4,
-        5: 5,
-        6: 6,
-        7: 7,
-        8: 8,
-        9: 9,
-        A: 10,
-        B: 11,
-        C: 12,
-        D: 13,
-        E: 14,
-        F: 15,
-        a: 10,
-        b: 11,
-        c: 12,
-        d: 13,
-        e: 14,
-        f: 15
-    };
-
     function MV(value) {
         return +value;
     }
-
-    var numberSplitter = /([0-9]+)(?:\.)?([0-9]*)?(?:([+-])?(?:[eE])([0-9]+))?/;
-
-    function _MV(value) {
-        var number = 0;
-        var ch;
-        var mv;
-        var vlen = value.length;
-        var len;
-        var pos;
-        if (typeof value === "string") {
-            mv = 0;
-            var first = value[0];
-            var second = value[1];
-            var i, j;
-            var n;
-            if (first == "0") {
-                if (second === "x") {
-
-                    for (i = 2, j = vlen; i < j; i++) {
-                        ch = value[i];
-                        pos = vlen - (i - 2);
-                        n = MVHexDecimal[ch];
-                        if (pos > 0) n = n * (pos * 15);
-                        mv += n;
-                    }
-                    return mv;
-
-                } else if (second === "b") {
-                    len = vlen - 2;
-                    for (i = 2, j = vlen; i < j; i++) {
-                        ch = value[i];
-                        pos = vlen - (i - 2);
-                        if (ch == 1) {
-                            n += Math.pow(2, pos);
-                        }
-                        mv += n;
-                    }
-                    return mv;
-
-                } else if (second === "o") {
-                    len = vlen - 2;
-
-                    return mv;
-                }
-            } else if (first === ".") {
-                for (i = 1, j = value.length; i < j; i++) {
-                    ch = value[i];
-                    pos = i;
-                    n = MVHexDecimal[ch];
-                    n = n / (10 * pos);
-                    mv += n;
-                }
-                return mv;
-
-            }
-
-            var parts = numberSplitter.exec(value);
-            var intg = parts[1];
-            var fp = parts[2];
-            var sgn = parts[3];
-            var exp = parts[4];
-
-            mv = 0;
-            if (intg) {
-
-                for (i = 0, j = intg.length; i < j; i++) {
-                    ch = intg[i];
-                    pos = j - i;
-                    n = MVHexDecimal[ch];
-                    if (pos > 0) n = n * (pos * 10);
-                    mv += n;
-                }
-
-            }
-            if (fp) {
-                for (i = 0, j = fp.length; i < j; i++) {
-                    ch = fp[i];
-                    pos = i + 1;
-                    n = MVHexDecimal[ch];
-                    n = n / (10 * pos);
-                    mv += n;
-                }
-            }
-            if (exp) {
-                for (i = 0, j = exp.length; i < j; i++) {
-                    ch = exp[i];
-                    pos = j - i;
-                    n = MVHexDecimal[ch];
-                    if (pos > 0) n = n * (Math.pow(10, -pos));
-                    mv += n;
-                }
-                if (sgn == "-") {
-                    mv = -mv;
-                }
-            }
-
-            return mv;
-        }
-
-        return +value;
-    }
-
     function SV(value) {
         return "" + value;
     }
-
     function isDuplicateProperty(id, checkList) {
         if (checkList[id]) {
             return withError("Type", "duplicate property or method definition: " + id);
         } else return false;
     }
 
+    exports.ModuleRequests = ModuleRequests;
+    exports.ImportEntriesForModule = ImportEntriesForModule;
+    exports.ExportEntriesForModule = ExportEntriesForModule;
+    exports.ImportedEntries = ImportedEntries;
+    exports.ImportedBindings = ImportedBindings;
+    exports.ExportedEntries = ExportedEntries;
+    exports.ExportedBindings = ExportedBindings;
+    exports.IsFunctionDeclaration = IsFunctionDeclaration;
+    exports.IsFunctionExpression = IsFunctionExpression;
+    exports.IsGeneratorDeclaration = IsGeneratorDeclaration;
+    exports.IsGeneratorExpression = IsGeneratorExpression;
+    exports.IsVarDeclaration = IsVarDeclaration;
+    exports.IsIdentifierRef = IsIdentifierRef;
+    exports.TailPosition = TailPosition;
+    exports.HasProductionInTailPosition = HasProductionInTailPosition;
+    exports.IsAnonymousFunctionDefinition = IsAnonymousFunctionDefinition;
+    exports.UTF16Encode = UTF16Encode;
+    exports.UTF16Decode = UTF16Decode;
+    exports.isStrictDirective = isStrictDirective;
+    exports.IsStrict = IsStrict;
+    exports.DeclaredNames = DeclaredNames;
+    exports.StringValue = StringValue;
     exports.Contains = Contains;
     exports.BoundNames = BoundNames;
     exports.VarDeclaredNames = VarDeclaredNames;
@@ -2977,14 +2824,10 @@ define("slower-static-semantics", function (require, exports, modules) {
     exports.IsConstantDeclaration = IsConstantDeclaration;
     exports.IsLexicalDeclaration = IsLexicalDeclaration;
     exports.ElisionWidth = ElisionWidth;
-
-    exports.ImportedNames = ImportedNames;
     exports.ExportedNames = ExportedNames;
-
     exports.dupesInTheTwoLists = dupesInTheTwoLists;
     exports.dupesInTheList = dupesInTheList;
     exports.isDuplicateProperty = isDuplicateProperty;
-
     exports.TV = TV;
     exports.TRV = TRV;
     exports.CV = CV;
@@ -2993,22 +2836,15 @@ define("slower-static-semantics", function (require, exports, modules) {
 
 });
 
-
 define("tokenizer", function () { // should use this factory to create one each realm again
     // and rename "define" to not collide with "AMD" as the
     // module system is anyways only for internal purposes.
-
-
-
     function makeTokenizer () {
         "use strict";
-        var
-            exports = {};
+        var exports = {};
         var tables = require("tables");
-
         var Punctuators = tables.Punctuators;
         var StartOfThreeFourPunctuators = tables.StartOfThreeFourPunctuators;
-
         var WhiteSpaces = tables.WhiteSpaces;
         var LineTerminators = tables.LineTerminators;
         var HexDigits = tables.HexDigits;
@@ -3045,6 +2881,7 @@ define("tokenizer", function () { // should use this factory to create one each 
         var i, j;
         var token;
         var tokenType; // is set at makeToken, until next token. asked for at standalone regexp
+        var lastToken;
         var ch, lookahead;	// lookahead0 and lookahead1
         var cb;
         var tokens = [];
@@ -3067,21 +2904,17 @@ define("tokenizer", function () { // should use this factory to create one each 
                 } else console.log.apply(console, arguments);
             }
         }
-
         function match(c) {
             if (c == ch) next();
             else throw new SyntaxError("tokenizer: "+ c + " expected, saw "+ch)
         }
-
         function Assert(test, message) {
             if (!test) throw new SyntaxError("assertion failed in tokenizer: "+message);
         }
-
         function updateStack(se) {
             var oldstack = se.stack;
             se.stack = "syntax.js tokenizer,\nfunction tokenize,\n does not recognize actual input. ch=" + ch + ", lookahead=" + lookahead + ", line=" + line + ", col=" + column + ", offset=" + offset + ", i="+i+" " +sourceCode+" \n" + oldstack;
         }
-
         function setCustomTokenMaker (func) {
             if (typeof func === null) {
                 createCustomToken = null;
@@ -3092,8 +2925,16 @@ define("tokenizer", function () { // should use this factory to create one each 
         function unsetCustomTokenMaker () {
             createCustomToken = null;
         }
-
-
+        function setWithExtras(bool) {
+            withExtras = !!bool;
+        }
+        var extraBuffer = [];
+        function exchangeExtraBuffer() {
+            var b = extraBuffer;
+            extraBuffer = [];
+            tokenize.extraBuffer = b; // available in the parser.
+            return b;
+        }
         var saved = [];
         function saveState() {
             saved.push({
@@ -3111,7 +2952,7 @@ define("tokenizer", function () { // should use this factory to create one each 
             var memento;
             if (memento = saved.pop()) {
                 sourceCode = memento.sourceCode,
-                    i = memento.i;
+                i = memento.i;
                 j = memento.j;
                 token = memento.token;
                 tokenType = memento.tokenType;
@@ -3120,8 +2961,6 @@ define("tokenizer", function () { // should use this factory to create one each 
                 inputElementGoal = memento.inputElementGoal;
             }
         }
-
-
         function LineTerminator() {
             if (LineTerminators[ch]) {
                 makeToken("LineTerminator", ch);
@@ -3131,7 +2970,6 @@ define("tokenizer", function () { // should use this factory to create one each 
             }
             return false;
         }
-
         function WhiteSpace() {
             var spaces = "";
             var spc;
@@ -3142,15 +2980,12 @@ define("tokenizer", function () { // should use this factory to create one each 
                     next();
                     spaces += ch;
                 }
-
                 makeToken("WhiteSpace", spaces);
-
                 next();
                 return token;
             }
             return false;
         }
-
         function StringLiteral() {
             // please collect: raw string
             // and value string
@@ -3216,7 +3051,6 @@ define("tokenizer", function () { // should use this factory to create one each 
 
             return false;
         }
-
         function TemplateLiteral () {
             // `edward ${ ""+ist+y } toll ${ oder } nicht?`
             // [ "edward ", " \""+ist+y ", " toll ", " oder ", " nicht" ]
@@ -3265,7 +3099,6 @@ define("tokenizer", function () { // should use this factory to create one each 
             }
             return false;
         }
-
         function Comments() {
             var comment = "";
             var type;
@@ -3307,8 +3140,6 @@ define("tokenizer", function () { // should use this factory to create one each 
             }
             return false;
         }
-
-
         function RegularExpressionLiteral() {
 
             if (ch === "/" && !NotBeforeRegExp[tokenType]) {
@@ -3376,7 +3207,6 @@ define("tokenizer", function () { // should use this factory to create one each 
             }
             return false;
         }
-
         function DivPunctuator() {
 
             /*
@@ -3411,9 +3241,6 @@ define("tokenizer", function () { // should use this factory to create one each 
             }
             return false;
         }
-
-
-
         function Punctuation() {
 
 
@@ -3466,7 +3293,6 @@ define("tokenizer", function () { // should use this factory to create one each 
 
             return false;
         }
-
         function getDecimalDigits(number) {
             var dot = 0;
             if (DecimalDigits[ch] || (ch === "." && DecimalDigits[lookahead] && (++dot))) {
@@ -3498,14 +3324,11 @@ define("tokenizer", function () { // should use this factory to create one each 
             }
             return false;
         }
-
-
         function NumericLiteral() {
             var number = "",
                 longName, computed = 0;
 
             if (ch === "0" && NumericLiteralLetters[lookahead]) {
-
                 number += ch;
                 next();
                 if ((ch === "x" || ch === "X") && HexDigits[lookahead]) {
@@ -3515,6 +3338,7 @@ define("tokenizer", function () { // should use this factory to create one each 
                         number += ch;
                     }
                     longName = "HexLiteral";
+                    // code for MV function
                     computed = +number;
                 } else if ((ch === "b" || ch === "B") && BinaryDigits[lookahead]) {
                     number += ch;
@@ -3524,8 +3348,10 @@ define("tokenizer", function () { // should use this factory to create one each 
                     }
                     longName = "BinaryLiteral";
                     computed = 0;
+                    // optimal code for MV function:
                     for (var a = 2, b = number.length - 1; a <= b; a++)
-                        computed += (+(number[a]) << (b - a));
+                        computed += (+(number[a]) << (b - a)); // that´s from me.
+
                 } else if ((ch === "o" || ch == "O") && OctalDigits[lookahead]) {
                     number += ch;
                     while (OctalDigits[lookahead]) {
@@ -3533,32 +3359,30 @@ define("tokenizer", function () { // should use this factory to create one each 
                         number += ch;
                     }
                     longName = "OctalLiteral";
+                    // code for MV(value) function
                     computed = +(parseInt(number.substr(2), 8).toString(10));
                 }
                 makeToken("NumericLiteral", number, computed, longName);
+                // syntax error works for all three above
                 if (!(WhiteSpaces[lookahead]||Punctuators[lookahead]||LineTerminators[lookahead]) && lookahead != undefined) {
-                    throw new SyntaxError("unexpected token illegal");
+                    throw new SyntaxError("unexpected token illegal in "+longName);
                 }
                 next();
                 return token;
             } else if (DecimalDigits[ch] || (ch === "." && DecimalDigits[lookahead])) {
                 number = getDecimalDigits(number);
-                makeToken("NumericLiteral", number, +number, "DecimalLiteral");
+                // if (number === false) throw new SyntaxError("Error parsing decimal digit")
 
-
-
+                computed = +number; // code for MV function
+                makeToken("NumericLiteral", number, computed, "DecimalLiteral");
                 if (!(WhiteSpaces[lookahead]||Punctuators[lookahead]||LineTerminators[lookahead]) && lookahead != undefined) {
-                    throw new SyntaxError("unexpected token illegal");
+                    throw new SyntaxError("unexpected token illegal in "+longName);
                 }
-
-
                 next();
                 return token;
             }
             return false;
         }
-
-
         function getUnicodeBody() {
             var max, now = 0, raw = "";
             if (lookahead == "1") max = 5;
@@ -3575,7 +3399,6 @@ define("tokenizer", function () { // should use this factory to create one each 
 
             return raw;
         }
-
         function EscapeSequence() {
             var raw = "";
             var value = "";
@@ -3585,19 +3408,13 @@ define("tokenizer", function () { // should use this factory to create one each 
                 var longName = "EscapeSequence";
 
                 raw += ch;
-
-
                 if (lookahead === "u") {
                     next();
                     raw += ch;
                     if (lookahead == "{") {
-
                         next();
                         raw += ch;
-
-
                         raw += getUnicodeBody();
-
                         if (lookahead === "}") {
                             next();
                             raw += ch;
@@ -3605,23 +3422,15 @@ define("tokenizer", function () { // should use this factory to create one each 
                         } else {
                             throw new SyntaxError("expecting } to close unicode seq.");
                         }
-
                     } else {
-
                         raw += getUnicodeBody();
-
                         // value = String.fromCharCode(+(raw.substr(2, raw.length-1)));
-
                         value = eval("\'" + raw + "\'");
-
                     }
                 } else if (SingleEscapeCharacter[lookahead]) {
-
                     next();
                     raw = SingleEscapeCharacter[ch];
-
                 } else if (OctalDigits[lookahead]) {
-
                     next();
                     raw += ch;
                     while (OctalDigits[lookahead]) {
@@ -3642,12 +3451,12 @@ define("tokenizer", function () { // should use this factory to create one each 
                 else {
                     throw new SyntaxError("invalid escape sequence "+ch+ " "+lookahead);
                 }
+
+                /* this does not advance, it is called from within such a function
+                * could, maybe should, maybe not, someday */
+
                 return value;
-                /*
-                 makeToken("Literal", value, undefined, longName); // remove computed and go with esprimas raw and value
-                 next();
-                 return token;
-                 */
+
             }
             return false;
         }
@@ -3694,16 +3503,13 @@ define("tokenizer", function () { // should use this factory to create one each 
          */
         function KeywordOrIdentifier() {
             var token = "", e;
-            var raw = "";
             var escaped = false;
-            // defer raw and value to parser stage? or not?
-            // when unpacking the literal and the keywords
-            // then convert unicode and stuff.
-            // that a parser literal has raw and value and
-            // a tokenizer one is just raw.
-            // directly coming issue: for the new
-            // not native ""+ of \u{sdf} should be some translation
-            // into a surrogate first. Or shouldn´t
+            var raw = "";
+
+            // to have an escaped and unescaped version
+            // i saved it twice already in the very first version very early
+            // (removed but should return)
+
             if (!IdentifierStart[ch] && !UnicodeIDStart[ch]) return false;
 //    	    !String.isIdentifierStart(ch.codePointAt(0))) return false;
             if (ch !== "\\") {
@@ -3735,14 +3541,12 @@ define("tokenizer", function () { // should use this factory to create one each 
             next();
             return token;
         }
-
         function nextLine() {
             lines[line] = column;
             ++line;
             column = 1;
             return line;
         }
-
         function next(k) {
             if (i < j) {
                 i += 1;
@@ -3754,7 +3558,7 @@ define("tokenizer", function () { // should use this factory to create one each 
             return !!(ch = lookahead = undefined);
         }
         function makeToken(type, value, computed, longName) {
-            if (!SkipableToken[type]) tokenType = type;
+            lastToken = token;
             token = {}; //Object.create(null);
             token.type = type;
             token.longName = longName;
@@ -3762,8 +3566,7 @@ define("tokenizer", function () { // should use this factory to create one each 
             token.computed =  computed;
             if ((FewUnaryKeywords[value] || PunctOrLT[type]) && !OneOfThesePunctuators[value]) {
                 inputElementGoal = inputElementRegExp;
-            } /*else
-             inputElementGoal = inputElementDiv;*/
+            } /*else inputElementGoal = inputElementDiv;*/
             token.loc = {
                 source: filename,
                 start: {
@@ -3779,43 +3582,22 @@ define("tokenizer", function () { // should use this factory to create one each 
             token.offset = offset;
             token.loc.range = [offset, offset + (((value&&value.length)-1)|0) ]
             if (createCustomToken) token = createCustomToken(token);
-            tokens.push(token); //
+            if (!SkipableToken[type]) {
+                tokenType = type;
+                tokens.push(token);
+            } else {
+                if (withExtras) extraBuffer.push(token);
+            }
             // emit("token", token);
             return token;
         }
 
-        function tokenizeArray(jstext, callback) {
-            saveState();
-            if (jstext) sourceCode = jstext;
-            if (callback) cb = callback;
-            inputElementGoal = inputElementRegExp;
-            tokens = [];
-            line = 1;
-            column = 1;
-            i = -1;
-            j = sourceCode.length;
-            ch = undefined;
-            lookahead = sourceCode[0];
-            next();
-            var tokenTest;
-            do {
-                offset = i;
-                tokenTest = WhiteSpace()
-                    || LineTerminator()
-                    || DivPunctuator()
-                    || NumericLiteral()
-                    || Punctuation()
-                    || KeywordOrIdentifier()
-                    || StringLiteral()
-                    || TemplateLiteral()
-                if (!tokenTest && i < j) {
-                    throw new SyntaxError("Unknown Character: "+ch+" at offset "+i+" at line "+line+" at column "+column);
-                }
-            } while (ch !== undefined);
-            restoreState();
-            return tokens;
+        function exchangeToken() {
+            tokenize.lastToken = tokenize.token;
+            tokenize.lastTokenType = tokenize.tokenType;
+            tokenize.token = token;
+            tokenize.tokenType = tokenType;
         }
-
 
         function nextToken() {
             offset = i;
@@ -3824,16 +3606,27 @@ define("tokenizer", function () { // should use this factory to create one each 
                 throw new SyntaxError("Unknown Character: " + ch + " at offset " + i + " at line " + line + " at column " + column);
             }
             // if (token.type === "LineTerminator") tokenize.ltNext = true;
-            if (SkipableToken[token.type]) return nextToken();
-            // change tokenize. to some dedicated object
-            tokenize.lastToken = tokenize.token;
-            tokenize.lastTokenType = tokenize.tokenType;
-            tokenize.token = token;
-            tokenize.tokenType = tokenType;
+            if (SkipableToken[token.type]) {
+                if (withExtras) {
+                    extraBuffer.push(token);
+                }
+                return nextToken();
+            }
+            exchangeToken();
+            exchangeExtraBuffer();
             return token;
         }
-
         function tokenize(jstext, callback) {
+            // stepwise = true;
+            initTokenizer(jstext, callback);
+            next(); // FIRST CHAR
+            return nextToken(); // FIRST token.
+            // this variant returns only the first token and is continued with nextToken();
+            // saveState() and restoreState() are called by the parser at invocation
+            // as the parser runs through and can not be interrupted.
+            // the restoreState is in the finally {} block to make sure it´s called.
+        }
+        function initTokenizer(jstext, callback) {
             if (jstext) sourceCode = jstext;
             if (callback) cb = callback;
             inputElementGoal = inputElementRegExp;
@@ -3844,10 +3637,29 @@ define("tokenizer", function () { // should use this factory to create one each 
             j = sourceCode.length;
             ch = undefined;
             lookahead = sourceCode[0];
-            next(); // next char
-            return nextToken(); // next token
+            next();
         }
+        function tokenizeIntoArray(jstext, callback) {
+            // the old tokenize() operation returning an array of tokens. (from my 99 line syntaxhighlighter x-mas12, 3 weeks later with tokens and few nodes) (8kb of legacy code, eh?) (8kb)
+            saveState();
+            initTokenizer(jstext, callback);
+            var tokenTest; // if i call this token, the thing returns undefined values.
+            do {
+                offset = i;
+                tokenTest = WhiteSpace()|| LineTerminator()|| DivPunctuator()|| NumericLiteral()|| Punctuation()|| KeywordOrIdentifier()|| StringLiteral()|| TemplateLiteral();
+                if (!tokenTest && i < j) {
+                    var errorMsg = "Unknown Character: "+ch+" at offset "+i+" at line "+line+" at column "+column;
+                    restoreState();
+                    throw new SyntaxError(errorMsg);
+                }
+                if (withExtras) {
+                    exchangeExtraBuffer();
+                }
+            } while (ch !== undefined);
+            restoreState();
 
+            return tokens;
+        }
         var tokenizer = {};
         tokenizer.LineTerminator = LineTerminator;
         tokenizer.KeywordOrIdentifier = KeywordOrIdentifier;
@@ -3860,12 +3672,11 @@ define("tokenizer", function () { // should use this factory to create one each 
         tokenizer.Punctuation = Punctuation;
         tokenizer.TemplateLiteral = TemplateLiteral;
 
-        tokenizeArray.tokenize = tokenize;
-        tokenizeArray.makeTokenizer = makeTokenizer;
-        tokenizeArray.saveState = saveState;
-        tokenizeArray.restoreState = restoreState;
-
-        tokenize.tokenizeArray = tokenizeArray;
+        tokenizeIntoArray.tokenize = tokenize;
+        tokenizeIntoArray.makeTokenizer = makeTokenizer;
+        tokenizeIntoArray.saveState = saveState;
+        tokenizeIntoArray.restoreState = restoreState;
+        tokenize.tokenizeIntoArray = tokenizeIntoArray;
         tokenize.tokenizer = tokenizer;
         tokenize.nextToken = nextToken;
         tokenize.saveState = saveState;
@@ -3873,9 +3684,9 @@ define("tokenizer", function () { // should use this factory to create one each 
         tokenize.setCustomTokenMaker = setCustomTokenMaker;
         tokenize.unsetCustomTokenMaker = unsetCustomTokenMaker;
         tokenize.makeTokenizer = makeTokenizer;
-
+        tokenize.exchangeExtraBuffer = exchangeExtraBuffer;
+        tokenize.setWithExtras = setWithExtras;
         return tokenize;
-
     }
     return makeTokenizer();
 });
@@ -4011,7 +3822,7 @@ define("parser", function () {
         "use strict";
 //    var i18n = require("i18n-messages");
         var tables = require("tables");
-        var tokenize = require("tokenizer").tokenizeArray;
+        var tokenize = require("tokenizer").tokenizeIntoArray;
         var arrayParser = true;
         var EarlyErrors = require("earlyerrors").EarlyErrors;
         var Contains = require("earlyerrors").Contains;
@@ -4912,79 +4723,6 @@ define("parser", function () {
             }
             return null;
         }
-        function MemberExpression(obj) {
-            var node, l1, l2;
-            obj = obj || this.PrimaryExpression();
-            if (obj) {
-                l1 = obj.loc && obj.loc.start;
-                var node = Node("MemberExpression");
-                node.object = obj;
-                if (t === "TemplateLiteral") return this.CallExpression(obj);
-                else if (v === "[") {
-                    match("[");
-                    node.computed = true;
-                    node.property = this.AssignmentExpression();
-                    match("]");
-                } else if (v === ".") {
-                    match(".");
-                    node.computed = false;
-                    if (t === "Identifier" || t === "Keyword" || propKeys[v] || t === "NumericLiteral") {
-                        var property = Object.create(null);
-                        property.type = "Identifier";
-                        property.name = v;
-                        property.loc = token.loc;
-                        node.property = property;
-                    } else if (v === "!") {
-                        // http://wiki.ecmascript.org/doku.php?id=strawman:concurrency
-                        // MemberExpression ! [Expression]
-                        // MemberExpression ! Arguments
-                        // MemberExpression ! Identifier
-                        // setzt .eventual auf true
-                    } else {
-                        throw new SyntaxError("MemberExpression . Identifier expects a valid IdentifierString or an IntegerString as PropertyKey"+atLineCol());
-                    }
-                    match(v);
-                } else return node.object;
-                // recur toString().toString().toString().valueOf().toString()
-                if (v == "[" || v == ".") return this.MemberExpression(node);
-                else if (v == "(") return this.CallExpression(node);
-                else if (IsTemplateToken[t]) return this.CallExpression(node);
-                // strawman:concurrency addition
-                // else if (v == "!") return this.MemberExpression(node);
-                EarlyErrors(node);
-                if (compile) return builder["memberExpression"](node.object, node.property, node.computed, node.loc);
-                l2 = loc && loc.end;
-
-                node.loc = makeLoc(l1, l2);
-                return node;
-            }
-            return null;
-        }
-        function Arguments() {
-            var args, arg;
-            if (v === "(") {
-                match("(");
-                args = [];
-                if (v !== ")") {
-                    do {
-                        if (v === ")") break;
-                        if (arg = this.SpreadExpression() || this.AssignmentExpression()) {
-                            args.push(arg);
-                        } else {
-                            throw new SyntaxError("illegal argument list"+atLineCol());
-                        }
-                        if (v === ",") {
-                            match(",");
-                        } else if (v != ")" && v != undefined) {
-                            throw new SyntaxError("illegal argument list"+atLineCol());
-                        }
-                    } while (v !== undefined);
-                }
-                match(")");
-                return args;
-            }
-            return null;
-        }
         function ExpressionNoIn() {
             noInStack.push(isNoIn);
             isNoIn = true;
@@ -5069,6 +4807,90 @@ define("parser", function () {
             }
             return null;
         }
+        
+        
+
+        function MemberExpression(obj) {
+            var node, l1, l2;
+            obj = obj || this.PrimaryExpression();
+            if (obj) {
+                l1 = obj.loc && obj.loc.start;
+                var node = Node("MemberExpression");
+                node.object = obj;
+            
+                if (t === "TemplateLiteral") return this.CallExpression(obj);
+                else if (v === "[") {
+                    match("[");
+                    node.computed = true;
+                    node.property = this.AssignmentExpression();
+                    match("]");
+            
+                } else if (v === ".") {
+                    match(".");
+                    node.computed = false;
+                    if (t === "Identifier" || t === "Keyword" || propKeys[v] || t === "NumericLiteral") {
+                        var property = Object.create(null);
+                        property.type = "Identifier";
+                        property.name = v;
+                        property.loc = token.loc;
+                        node.property = property;
+                    } else if (v === "!") {
+                        // http://wiki.ecmascript.org/doku.php?id=strawman:concurrency
+                        // MemberExpression ! [Expression]
+                        // MemberExpression ! Arguments
+                        // MemberExpression ! Identifier
+                        // setzt .eventual auf true
+                    } else {
+                        throw new SyntaxError("MemberExpression . Identifier expects a valid IdentifierString or an IntegerString as PropertyKey"+atLineCol());
+                    }
+                    match(v);
+
+                } else {
+                
+            	    return obj;
+            	    
+            	}
+            
+                // recur toString().toString().toString().valueOf().toString()
+                if (v == "[" || v == ".") return this.MemberExpression(node);
+                else if (v == "(") return this.CallExpression(node);
+                else if (IsTemplateToken[t]) return this.CallExpression(node);
+                // strawman:concurrency addition
+                // else if (v == "!") return this.MemberExpression(node);
+                EarlyErrors(node);
+                if (compile) return builder["memberExpression"](node.object, node.property, node.computed, node.loc);
+                l2 = loc && loc.end;
+                node.loc = makeLoc(l1, l2);
+                return node;
+            }
+            return null;
+        }
+        function Arguments() {
+            var args, arg;
+            if (v === "(") {
+                match("(");
+                args = [];
+                if (v !== ")") {
+                    do {
+                        if (v === ")") break;
+                        if (arg = this.SpreadExpression() || this.AssignmentExpression()) {
+                            args.push(arg);
+                        } else {
+                            throw new SyntaxError("illegal argument list"+atLineCol());
+                        }
+                        if (v === ",") {
+                            match(",");
+                        } else if (v != ")" && v != undefined) {
+                            throw new SyntaxError("illegal argument list"+atLineCol());
+                        }
+                    } while (v !== undefined);
+                }
+                match(")");
+                return args;
+            }
+            return null;
+        }
+
         function PrimaryExpression() {
             var fn, node;
             fn = this[PrimaryExpressionByValue[v]];
@@ -5179,31 +5001,23 @@ define("parser", function () {
                 memberexpression
                 callexpression
                 newexpression
-
                 is a little bit out of order here
-
              */
 
-
-            if (!yieldIsId && v === "yield") node = this.YieldExpression();
-            if (!node) node = this.CoverParenthesisedExpressionAndArrowParameterList();
-            leftHand = node || this.UnaryExpression();
+            if (!yieldIsId && v === "yield") leftHand = this.YieldExpression();
+            if (!leftHand) leftHand = this.CoverParenthesisedExpressionAndArrowParameterList();
+            leftHand = leftHand || this.UnaryExpression();
             if (!leftHand) return null;
             if (v === undefined) return leftHand;
             if ((isNoIn && InOrOf[v])) return leftHand;
             if (v === "," || ExprEndOfs[v] || ltNext) return leftHand;
             if (t !== "Punctuator" && !InOrOfInsOf[v]) return leftHand;
-            if (v === "?") return this.ConditionalExpressionNoIn(leftHand);
+            if (v === "." || v === "[") leftHand = this.MemberExpression(leftHand);
 
-            leftHand = this.LeftHandSideExpression(leftHand);
-            if (v == "++" || v == "--") leftHand = this.PostfixExpression(leftHand) || leftHand;
-
-            if (v === "?") return this.ConditionalExpressionNoIn(leftHand);
-            /*if (v === "." || v === "[") leftHand = this.MemberExpression(leftHand) || leftHand;
-            else if (v === "(" || v === "`") leftHand = this.CallExpression(leftHand) || leftHand;
-            else if (v == "++" || v == "--") leftHand = this.PostfixExpression(leftHand) || leftHand; */
-
-
+            
+            else if (v === "(" || v === "`") leftHand = this.CallExpression(leftHand);
+            else if (v == "++" || v == "--") leftHand = this.PostfixExpression(leftHand);
+	    else if (v === "?") return this.ConditionalExpressionNoIn(leftHand);
 
             /*
                     and this will be transformed into a loop
@@ -5214,9 +5028,8 @@ define("parser", function () {
                     in this tree)
 
              */
-
-
-            if (AssignmentOperators[v] && (!isNoIn || (isNoIn && v != "in"))) {
+             
+            else if (AssignmentOperators[v] && (!isNoIn || (isNoIn && v != "in"))) {
                 node = Node("AssignmentExpression");
 
                 node.longName = PunctToExprName[v];
@@ -5254,6 +5067,7 @@ define("parser", function () {
                 soon this function is history ;-)
 
              */
+             
 
         }
         function CallExpression(callee) {
@@ -29145,7 +28959,7 @@ define("syntaxjs", function () {
     // essential functions
         version: pdmacro(VERSION),			
 
-        tokenizeArray: pdmacro(require("tokenizer").tokenizeArray),				// <-- needs exports fixed
+        tokenizeIntoArray: pdmacro(require("tokenizer").tokenizeIntoArray),				// <-- needs exports fixed
 	    tokenize: pdmacro(require("tokenizer")),
 
 	    //@Deprecated
