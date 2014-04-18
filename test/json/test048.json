@@ -1,0 +1,14 @@
+{
+	"repaired unaryExpression´s recusion":
+	{
+	    "init": 		
+		"let a = 1",
+	    "tests": 
+	    [
+		["!!+a", true],
+		["+-1", -1],
+		["-+1", -1],
+		["-+1-+-+-a", -2]
+	    ]
+	}
+}
