@@ -1,0 +1,16 @@
+{
+	"had to reenable binary and octal literals":
+	{
+	    "init": 		
+		"let x = 0b1001, y = 0o334, z = 0xff",
+	    "tests": 
+	    [
+		["x", 9],
+		["y", 220],
+		["z", 255],
+		["0b11", 3],
+		["0B11", 3],
+		["0b10000",16]
+	    ]
+	}
+}

@@ -3536,13 +3536,10 @@ define("tokenizer", function () { // should use this factory to create one each 
                     computed = +(parseInt(number.substr(2), 8).toString(10));
                 }
                 makeToken("NumericLiteral", number, computed, longName);
-
                 if (!(WhiteSpaces[lookahead]||Punctuators[lookahead]||LineTerminators[lookahead]) && lookahead != undefined) {
                     throw new SyntaxError("unexpected token illegal");
                 }
-
                 next();
-
                 return token;
             } else if (DecimalDigits[ch] || (ch === "." && DecimalDigits[lookahead])) {
                 number = getDecimalDigits(number);
@@ -4015,7 +4012,7 @@ define("parser", function () {
 //    var i18n = require("i18n-messages");
         var tables = require("tables");
         var tokenize = require("tokenizer").tokenizeArray;
-
+        var arrayParser = true;
         var EarlyErrors = require("earlyerrors").EarlyErrors;
         var Contains = require("earlyerrors").Contains;
         var withError, ifAbrupt, isAbrupt;
@@ -4079,8 +4076,6 @@ define("parser", function () {
         var moduleStack = [];
         var loc = makeLoc();
         var text;
-        var arrayParser = true;
-
         var compile = false;
         var builder = null;
         var cb;
@@ -4197,10 +4192,41 @@ define("parser", function () {
 
         function resetVariables(t) {
             ast = null;
-            
+
+
+            /*
+
+                this is dirty now (the adaption/bridge
+                for a short while
+
+                the result shall be
+                a) tokenizing stepwise on each call to tokenizer.nextToken()
+                b) tokenizing from a collection of tokens (from prediction, cover grammar, etc)
+
+                both are needed.
+                the default tokenizer is currently also array
+                and the preserved whitespaces have formed a
+                next() logic which is skipping whitespace twice
+                to get rid off, i do this and look forward to
+                improve both.
+
+                for improving b)
+
+
+                for the CST commentary collection: move extraBuffer to lexer´s next
+                and forget about ws in the parser.
+                the tokenizer should collect the whitespaces and keep the buffer
+                and the parser fetches the buffer whenever needed.
+
+             */
+
             if (!arrayParser) {
 
-                next = new_next;
+                /*
+                    parseFromStream = true;
+                 */
+
+                next = next_from_stream; // with one token lookahead
                 lookaheadToken = tokenize(t);
                 if (lookaheadToken) {
                     lookahead = lookaheadToken.value;
@@ -4208,19 +4234,20 @@ define("parser", function () {
                 }
                 token = v = t = undefined;
 
-
             } else {
 
-                next = old_next;
+                /*
+                    parseFromArray = true
+                 */
+
+                next = next_from_array;
                 if (typeof t === "string") t = tokenize(t);
                 tokens = t || [];
                 i = -1;
                 j = tokens && tokens.length;
                 token = v = t = undefined;
                 lookahead = lookaheadt = undefined;
-
             }
-
         }
 
         function build(node) {
@@ -4229,13 +4256,13 @@ define("parser", function () {
             var work = builder[type];
             return work(node);
         }
+
         function rotate_binexps(node) {
             var op = node.operator,
                 right = node.right,     // the next node bouncing of
                 rightOp = right && right.operator,  // the node right has it a higher or lower operator?
                 tmp;
             if (right.type !== "UnaryExpression" && rightOp) {
-
                 if ((OperatorPrecedence[rightOp] || Infinity) < (OperatorPrecedence[op] || Infinity)) {
                     tmp = node;
                     node = node.right;
@@ -4245,6 +4272,17 @@ define("parser", function () {
             }
             return node;
         }
+        /*
+            the other variant to use and parse with precedence is
+            to collect in a loop while the precedence is
+            equal and the move through the other operators
+            like in the grammar there is a long list to go upwards
+            (with a while each)
+            each time a new node is made and hung into the tree,
+            if the precedence is higher, the nodes are rotated
+
+         */
+
         function makeLoc(start, end, filename, source) {
             return {
                 start: start || {},
@@ -4294,6 +4332,11 @@ define("parser", function () {
             var line = loc && loc.start.line;
             var column = loc && loc.start.column;
             return C + " expected at line " + line + ", column " + column;
+        }
+        function atLineCol() {
+            var line = loc && loc.start.line;
+            var column = loc && loc.start.column;
+            return " at line "+line+", column "+column;
         }
         function unquote(str) {
             return ("" + str).replace(/^("|')|("|')$/g, ""); //'
@@ -4398,8 +4441,8 @@ define("parser", function () {
         /*
             soon
          */
-        var next = new_next;
-        function new_next() {
+        var next = next_from_stream;
+        function next_from_stream() {
             if (lookahead) {
                 token = lookaheadToken;
                 if (token) {
@@ -4441,7 +4484,7 @@ define("parser", function () {
             }
             return lookahead;
         }
-        function old_next() {
+        function next_from_array() {
             if (i < j) { // array version
                 i += 1;
                 token = tokens[i];
@@ -4541,8 +4584,9 @@ define("parser", function () {
             var node;
             if (IsAnyLiteral[t]) {
                 node = Node(t);
-                node.details = token.details;
+                node.longNAme = token.longName;
                 node.value = v;
+                node.computed = token.computed;
                 node.loc = makeLoc(loc && loc.start, loc && loc.end);
                 match(v);
                 if (compile) return builder[node.type](node.value, loc);
@@ -4751,7 +4795,7 @@ define("parser", function () {
             }
             if (node) return node;
 
-            throw new SyntaxError("invalid property key in definition");
+            throw new SyntaxError("invalid property key in definition"+atLineCol());
 
         }
         function PropertyDefinitionList(parent) {
@@ -4794,7 +4838,7 @@ define("parser", function () {
 
                             node.kind = "init";
                             id = this.PropertyKey();
-                            if (!id) throw new SyntaxError("error parsing objectliteral shorthand");
+                            if (!id) throw new SyntaxError("error parsing objectliteral shorthand"+atLineCol());
                             node.key = id;
                             node.value = id;
                             list.push(node);
@@ -4806,7 +4850,7 @@ define("parser", function () {
                             node.computed = true;
                             match(":");
                             node.value = this.AssignmentExpression();
-                            if (!node.value) throw new SyntaxError("error parsing objectliteral := [symbol_expr]: assignmentexpression");
+                            if (!node.value) throw new SyntaxError("error parsing objectliteral := [symbol_expr]: assignmentexpression"+atLineCol());
                             list.push(node);
 
                         } else if (lookahead === ":") { // key: AssignmentExpression
@@ -4822,7 +4866,7 @@ define("parser", function () {
 
                             node.kind = "method";
                             method = this.MethodDefinition(parent, true, computedPropertyName);
-                            if (!method) throw new SyntaxError("Error parsing method definition in ObjectExpression.");
+                            if (!method) throw new SyntaxError("Error parsing method definition in ObjectExpression"+atLineCol());
                             node.key = method.id;
                             node.computed = method.computed;
                             node.value = method;
@@ -4832,7 +4876,7 @@ define("parser", function () {
 
                             node.kind = "method";
                             method = this.MethodDefinition(parent, true);
-                            if (!method) throw new SyntaxError("Error parsing method definition in ObjectExpression.");
+                            if (!method) throw new SyntaxError("Error parsing method definition in ObjectExpression"+atLineCol());
                             node.key = method.id;
                             node.computed = method.computed;
                             node.value = method;
@@ -4897,7 +4941,7 @@ define("parser", function () {
                         // MemberExpression ! Identifier
                         // setzt .eventual auf true
                     } else {
-                        throw new SyntaxError("MemberExpression . Identifier expects a valid IdentifierString or an IntegerString as PropertyKey.");
+                        throw new SyntaxError("MemberExpression . Identifier expects a valid IdentifierString or an IntegerString as PropertyKey"+atLineCol());
                     }
                     match(v);
                 } else return node.object;
@@ -4927,12 +4971,12 @@ define("parser", function () {
                         if (arg = this.SpreadExpression() || this.AssignmentExpression()) {
                             args.push(arg);
                         } else {
-                            throw new SyntaxError("illegal argument list");
+                            throw new SyntaxError("illegal argument list"+atLineCol());
                         }
                         if (v === ",") {
                             match(",");
                         } else if (v != ")" && v != undefined) {
-                            throw new SyntaxError("illegal argument list");
+                            throw new SyntaxError("illegal argument list"+atLineCol());
                         }
                     } while (v !== undefined);
                 }
@@ -4999,7 +5043,7 @@ define("parser", function () {
                         }
                     }
                     covered.push(token);
-                    if (v === undefined) throw new SyntaxError("no tokens left over covering expression");
+                    if (v === undefined) throw new SyntaxError("no tokens left over covering expression"+atLineCol());
                 }
                 match(")");
             }
@@ -5089,6 +5133,10 @@ define("parser", function () {
         }
 
         /*
+
+        at the bus station...
+
+
         function newAssignmentExpression () {
             var node = null, leftHand, l1, l2;
             l1 = loc && loc.start;
@@ -5125,7 +5173,16 @@ define("parser", function () {
             var node = null, leftHand, l1, l2;
             l1 = loc && loc.start;
 
+            /*
+                the
+                primaryexpression
+                memberexpression
+                callexpression
+                newexpression
 
+                is a little bit out of order here
+
+             */
 
 
             if (!yieldIsId && v === "yield") node = this.YieldExpression();
@@ -5146,16 +5203,29 @@ define("parser", function () {
             else if (v === "(" || v === "`") leftHand = this.CallExpression(leftHand) || leftHand;
             else if (v == "++" || v == "--") leftHand = this.PostfixExpression(leftHand) || leftHand; */
 
+
+
+            /*
+                    and this will be transformed into a loop
+                    so i can do a while (precedence is eq) add to the right,
+                    else change top node, put the current top node to it´s left.
+                    (it´s a different place than hanging of the tops nodes right.
+                    or the other precedence. or the parent (whose pointer is missing
+                    in this tree)
+
+             */
+
+
             if (AssignmentOperators[v] && (!isNoIn || (isNoIn && v != "in"))) {
                 node = Node("AssignmentExpression");
-                // debug("AssignmentExpression found (" + t + ", " + v + ")");
+
                 node.longName = PunctToExprName[v];
                 node.operator = v;
                 node.left = leftHand;
                 // debug(v);
                 match(v);
                 node.right = this.AssignmentExpressionNoIn(node);
-                if (!node.right) throw new SyntaxError("can not parse a valid righthandside for this assignment expression");
+                if (!node.right) throw new SyntaxError("can not parse a valid righthandside for this assignment expression"+atLineCol());
                 l2 = loc && loc.end;
                 node.loc = makeLoc(l1, l2);
                 node = rotate_binexps(node);
@@ -5169,7 +5239,7 @@ define("parser", function () {
                 match(v);
                 node.right = this.AssignmentExpression();
                 if (!node.right) {
-                    throw new SyntaxError("can not parse a valid righthandside for this binary expression");
+                    throw new SyntaxError("can not parse a valid righthandside for this binary expression "+atLineCol());
                 }
                 l2 = loc && loc.end;
                 node.loc = makeLoc(l1, l2);
@@ -5179,6 +5249,12 @@ define("parser", function () {
             } else {
                 return leftHand;
             }
+
+            /*
+                soon this function is history ;-)
+
+             */
+
         }
         function CallExpression(callee) {
             var node, tmp, l1, l2;
@@ -5279,7 +5355,7 @@ define("parser", function () {
                 } else if (v === undefined) {
                     break;
                 }
-                throw new SyntaxError("invalid expression statement");
+                throw new SyntaxError("invalid expression statement "+atLineCol());
             } while (v !== undefined);
 
             l2 = loc && loc.end;
@@ -6224,10 +6300,17 @@ define("parser", function () {
         function ForDeclaration() {
             var node;
             if (LetOrConst[v]) {
+                var l1 = loc && loc.start;
+                var l2;
                 node = Node("ForDeclaration");
                 node.kind = v;
                 match(v);
                 node.id = this.ForBinding();
+                l2 = loc && loc.end;
+                node.loc = makeLoc(l1,l2);
+                if (v != "in" && v != "of") {
+                    throw new SyntaxError("invalid token '"+v+"' after let or const declaration at the for statement "+atLineCol() );
+                }
                 return node;
             }
             return null;
@@ -6254,6 +6337,16 @@ define("parser", function () {
                 match("for");
                 match("(");
                 /* predict                 */
+                /*
+
+                   using the later inline lexer, this won´t work anymore,
+                   then the parseGoal(symbol, tokens) function has to do it´s work.
+
+                   just being serious by just creating a function each for header.
+                   parseGoal("ForStatementHead", );
+                   parseGoal("ForInOFStatementHead", tokens);
+
+                */
                 parens.push("(");
                 for (var y = i; y < j; y++) {
                     peek = (peek = tokens[y]) && peek.value;
@@ -6288,11 +6381,11 @@ define("parser", function () {
                         node.test = null;
                         match(";");
                     } else {
-                        node.test = this.Expression(";");
+                        node.test = this.Expression();
                         match(";");
                     }
                     if (v === ")") node.update = null;
-                    else node.update = this.Expression(")");
+                    else node.update = this.Expression();
                     match(")");
                 } else if (numSemi === 0 && hasInOf) {
                     node = Node("ForStatement");
@@ -6305,7 +6398,6 @@ define("parser", function () {
                         node.left = this.LeftHandSideExpression();
                     }
                     if (!node.left) throw new SyntaxError("can not parse a valid lefthandside expression for for statement");
-                    if (lookahead === "in" || lookahead === "of") next();
                     if (v === "in") {
                         node.type = "ForInStatement";
                         match("in");
@@ -6314,6 +6406,8 @@ define("parser", function () {
                         node.type = "ForOfStatement";
                         match("of");
                         node.right = this.AssignmentExpression();
+                    } else {
+                        throw new SyntaxError("in or of expected "+atLineCol());
                     }
                     if (!node.right) throw new SyntaxError("can not parse a valid righthandside expression for for statement");
                     match(")");
@@ -6691,14 +6785,14 @@ define("parser", function () {
             //if (Array.isArray(source)) {
             if (!Array.isArray(source)) source = tokenize(source);
                 arrayParser = true;
-                next = old_next;
+                next = next_from_array;
                 tokens = source;
                 lookahead = lookaheadt = token = v = t = undefined;
                 i = -1;
                 j = tokens.length;
             /*} else {
                 arrayParser = false;
-                next = new_next;
+                next = next_from_stream;
                 text = source;
                 lookaheadToken = tokenize(text);
                 if (lookaheadToken) {
@@ -9786,6 +9880,11 @@ GlobalEnvironment.prototype = {
 function NewGlobalEnvironment(global) {
     return GlobalEnvironment(global);
 }
+
+
+
+
+    // Results of Type(X) now constants
 
 var OBJECT = 1, // "object"
     NUMBER = 2, // "number"
@@ -14200,7 +14299,7 @@ exports.float64 = float64;
 setInternalSlot(PrintFunction, "Call", function (thisArg, argList) {
    var str = "";
    var j = argList.length-1;
-   if (j == 1) str = argList[0];
+   if (j === 0) str = argList[0];
    else {
        for (var i = 0; i < j; i++) {
            str += argList[i] + " ";
@@ -25547,6 +25646,7 @@ define("runtime", function () {
         }
         evaluation.NumericLiteral = NumericLiteral;
         function NumericLiteral(node) {
+            if (node && node.computed) return MV(node.computed);
             return MV(node.value);
             // return +node.value;
         }
@@ -26484,8 +26584,8 @@ define("runtime", function () {
             var id = node.id;
             return Evaluate(node.id);
         }
-        function ForInOfExpressionEvaluation(expr, iterationKind, labelSet) {
 
+        function ForInOfExpressionEvaluation(expr, iterationKind, labelSet) {
             var exprRef = Evaluate(expr);
             var exprValue = GetValue(exprRef);
             var iterator, obj, keys;
@@ -26624,7 +26724,7 @@ define("runtime", function () {
             var type = node.type;
             var fn = evaluation[type];
             if (fn) result = fn(node, labelSet);
-            else throw new SyntaxError("can not evaluate " + type);
+            else throw new SyntaxError("can not evaluate " + type + atLineCol());
             return NormalCompletion(result);
         }
         evaluation.LabelledStatement = LabelledStatement;

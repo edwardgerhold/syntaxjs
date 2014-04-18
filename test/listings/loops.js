@@ -48,3 +48,9 @@ print(str);
 name='';
 let s = [for (x of ['E','d','w','a','r','d']) name+=x];
 print(name);
+
+str = "for (let [k,v] of [10,20,30,40].entries()) print(k, v);";
+print(str);
+
+for (let [k,v] of [10,20,30,40].entries()) print(k, v);
+
