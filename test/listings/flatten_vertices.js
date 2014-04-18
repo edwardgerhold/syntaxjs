@@ -6,7 +6,7 @@ function matrix(v1,v2,v3,v4) {
 }
 
 function flatten(array) {
-    var a, b, i;
+    let a, b, i;
     for (i=0; i < array.length; i++) {
 	a = array[i];
 	if (Array.isArray(a)) {
@@ -16,7 +16,7 @@ function flatten(array) {
     return array;
 }
 
-var matze = [
+let matze = [
 [    [1,2,3], [1,2,3], [1,2,3], [1,2,3]],
 [    [1,2,3], [1,2,3], [1,2,3], [1,2,3]],
 [    [1,2,3], [1,2,3], [1,2,3], [1,2,3]],    

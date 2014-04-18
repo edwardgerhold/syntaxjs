@@ -9,10 +9,10 @@ let obj1 = {
 };
 
 debug(obj1);
-
+ 
 let obj2 = {
-    __proto__: obj1
-};
+     __proto__: obj1
+};                
 
 debug(obj2);
 

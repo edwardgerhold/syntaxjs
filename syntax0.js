@@ -1744,14 +1744,12 @@ define("tables", function (require, exports, module) {
         "StringLiteral": true,
         "RegularExpressionLiteral": true
     };
-
     var UnicodeIDStart = {
         __proto__: null
     };
     var UnicodeIDContinue = {
         __proto__: null
     };
-
     var IsIteration = {
         "ForStatement": true,
         "ForInStatement": true,
@@ -1759,7 +1757,6 @@ define("tables", function (require, exports, module) {
         "WhileStatement": true,
         "DoWhileStatement": true
     };
-
     var DeclarationKind = {
         "var": true,
         "let": true,
@@ -1772,16 +1769,6 @@ define("tables", function (require, exports, module) {
         "function": true,
         "class": true
     };
-
-    var Continuations = {
-        __proto__: null,
-        "throw": true,
-        "break": true,
-        "continue": true,
-        "return": true,
-        "yield": true
-    };
-
     var AbruptCompletion = {
         "break": true,
         "continue": true,
@@ -1804,8 +1791,6 @@ define("tables", function (require, exports, module) {
         "IfStatement": true,
         "SwitchStatement": true
     };
-
-
     var isDirective = {
         __proto__:null,
         "\"use strict\"":true,
@@ -1823,35 +1808,29 @@ define("tables", function (require, exports, module) {
         "\"use asm\"":true,
         "\'use asm\'":true
     };
-
-
     var AllowedLastChars = {
+        __proto__:true,
         "}": true,
         ";": true,
         ":": true,
         "--": true,
         "++": true
     };
-
     var OneOfThesePunctuators = {
+        __proto__:true,
         ")": true,
         "]": true,
         "--": true,
         "++": true
     };
-
-
     var PunctOrLT = {
+        __proto__:null,
         "Punctuator": true,
         "LineTerminator": true
     };
-    
-
     exports.isDirective = isDirective;
     exports.isStrictDirective = isStrictDirective;
     exports.isAsmDirective = isAsmDirective;
-
-
     exports.FinishStatementList = FinishStatementList;
     exports.FinishSwitchStatementList = FinishSwitchStatementList;
     exports.PrimaryValues = PrimaryValues;
@@ -1870,8 +1849,6 @@ define("tables", function (require, exports, module) {
     exports.MethodKeyByType = MethodKeyByType;
     exports.MethodKeyByValue = MethodKeyByValue;
     exports.StartBinding = StartBinding;
-
-
     exports.uriAlpha = uriAlpha;
     exports.uriMark = uriMark;
     exports.uriReserved = uriReserved;
@@ -1931,7 +1908,6 @@ define("tables", function (require, exports, module) {
     exports.IsIteration = IsIteration;
     exports.NotExpressionStatement = NotExpressionStatement;
     exports.DeclarationKind = DeclarationKind;
-    exports.Continuations = Continuations;
     exports.LPAREN = LPAREN;
     exports.RPAREN = RPAREN;
     exports.LPARENOF = LPARENOF;
@@ -1942,47 +1918,145 @@ define("tables", function (require, exports, module) {
     exports.ForbiddenArgumentsInStrict = ForbiddenArgumentsInStrict;
     exports.ReservedWordsInStrictMode = ReservedWordsInStrictMode;
     exports.IsTemplateToken = IsTemplateToken;
-
     exports.OneOfThesePunctuators = OneOfThesePunctuators;
     exports.AllowedLastChars = AllowedLastChars;
     exports.PunctOrLT = PunctOrLT;
-
     exports.StartOfThreeFourPunctuators = StartOfThreeFourPunctuators;
-
     return exports;
 
+    /*
+        need for the node.type replacements
+
+        have to look into the ide if i can
+        replace and convert to upper on e.g. regexp,
+        or if i have to do it manually
+        ctrl-shift-arrow mark + 2x strg-shift-u sucks
+
+    exports.JSONTEXT = "JSONText";
+    exports.JSONVALUE = "JSONValue";
+    exports.JSONSTRING = "JSONString";
+    exports.JSONNUMBER = "JSONNumber";
+    exports.JSONFRACTION = "JSONFraction";
+    exports.JSONNULLLITERAL = "JSONNullLiteral";
+    exports.JSONBOOLEANLITERAL = "JSONBooleanLiteral";
+    exports.JSONARRAY = "JSONArray";
+    exports.JSONELEMENTLIST = "JSONElementList";
+    exports.JSONOBJECT = "JSONObject";
+    exports.JSONMember = "JSONMember";
+    exports.JSONMemberList = "JSONMemberList";
+    exports.ConditionalExpressionNoIn = "ConditionalExpressionNoIn";
+    exports.ConditionalExpression = "ConditionalExpression";
+    exports.LeftHandSideExpression = "LeftHandSideExpression";
+    exports.ExpressionStatement = "ExpressionStatement";
+    exports.Expression = "Expression";
+    exports.PrimaryExpression = "PrimaryExpression";
+    exports.PostfixExpression = "PostfixExpression";
+    exports.UnaryExpression = "UnaryExpression";
+    exports.YieldExpression = "YieldExpression";
+    exports.YieldStatement = "YieldStatement";
+    exports.DefaultAsIdentifier = "DefaultAsIdentifier";
+    exports.YieldAsIdentifier = "YieldAsIdentifier";
+    exports.AssignmentExpression = "AssignmentExpression";
+    exports.SuperExpression = "SuperExpression";
+    exports.ThisExpression = "ThisExpression";
+    exports.Initializer = "Initializer";
+    exports.BindingElementList = "BindingElementList";
+    exports.BindingPattern = "BindingPattern";
+    exports.VariableDeclaration = "VariableDeclaration";
+    exports.VariableDeclarationList = "VariableDeclarationList";
+    exports.VariableStatement = "VariableStatement";
+    exports.Expression = "Expression";
+    exports.ExpressionNoIn = "ExpressionNoIn";
+    exports.AssignmentExpressionNoIn = "AssignmentExpressionNoIn";
+    exports.ParenthesizedExpression = "ParenthesizedExpression";
+    exports.ParenthesizedExpressionNode = "ParenthesizedExpressionNode";
+    exports.ArrowParameterList = "ArrowParameterList";
+    exports.CoverParenthesisedExpressionAndArrowParameterList = "CoverParenthesisedExpressionAndArrowParameterList";
+    exports.ConciseBody = "ConciseBody";
+    exports.CoverParenthesizedExpression = "CoverParenthesizedExpression";
+    exports.Literal = "Literal";
+    exports.Identifier = "Identifier";
+    exports.ClassExpression = "ClassExpression";
+    exports.TemplateLiteral = "TemplateLiteral";
+    exports.Elision = "Elision";
+    exports.ElementList = "ElementList";
+    exports.ArrayExpression = "ArrayExpression";
+    exports.StrictFormalParameters = "StrictFormalParameters";
+    exports.PropertyDefinitionList = "PropertyDefinitionList";
+    exports.ComputedPropertyName = "ComputedPropertyName";
+    exports.PropertyKey = "PropertyKey";
+    exports.ObjectExpression = "ObjectExpression";
+    exports.MemberExpression = "MemberExpression";
+    exports.Arguments = "Arguments";
+    exports.CallExpression = "CallExpression";
+    exports.NewExpression = "NewExpression";
+    exports.ComprehensionForList = "ComprehensionForList";
+    exports.ComprehensionFilters = "ComprehensionFilters";
+    exports.ArrayComprehension = "ArrayComprehension";
+    exports.GeneratorComprehension = "GeneratorComprehension";
+    exports.ExpressionStatement = "ExpressionStatement";
+    exports.SequenceExpression = "SequenceExpression";
+    exports.GeneratorBody = "GeneratorBody";
+    exports.FunctionBody = "FunctionBody";
+    exports.MethodDefinition = "MethodDefinition";
+    exports.ClassDeclaration = "ClassDeclaration";
+    exports.RestParameter = "RestParameter";
+    exports.SpreadExpression = "SpreadExpression";
+    exports.DefaultParameter = "DefaultParameter";
+    exports.FormalParameterList = "FormalParameterList";
+    exports.FunctionExpression = "FunctionExpression";
+    exports.FunctionDeclaration = "FunctionDeclaration";
+    exports.BlockStatement = "BlockStatement";
+    exports.ContinueStatement = "ContinueStatement";
+    exports.BreakStatement = "BreakStatement";
+    exports.ReturnStatement = "ReturnStatement";
+    exports.WithStatement = "WithStatement";
+    exports.ThrowStatement = "ThrowStatement";
+    exports.LabelledStatement = "LabelledStatement";
+    exports.TryStatement = "TryStatement";
+    exports.Catch = "Catch";
+    exports.Finally = "Finally";
+    exports.DebuggerStatement = "DebuggerStatement";
+    exports.ModuleDeclaration = "ModuleDeclaration";
+    exports.ModuleSpecifier = "ModuleSpecifier";
+    exports.ModuleBody = "ModuleBody";
+    exports.FromClause = "FromClause";
+    exports.ImportClause = "ImportClause";
+    exports.NamedImports = "NamedImports";
+    exports.ImportStatement = "ImportStatement";
+    exports.ExportsClause = "ExportsClause";
+    exports.DeclarationDefault = "DeclarationDefault";
+    exports.ExportStatement = "ExportStatement";
+    exports.StatementList = "StatementList";
+    exports.SwitchStatementList = "SwitchStatementList";
+    exports.Statement = "Statement";
+    exports.IterationStatement = "IterationStatement";
+    exports.ForStatement = "ForStatement";
+    exports.ForDeclaration = "ForDeclaration";
+    exports.ForBinding = "ForBinding";
+    exports.VARIABLESTATEMENTNOIN = "VariableStatementNoIn";
+    exports.SOURCEELEMENTS = "SourceElements";
+    exports.EMPTYSTATEMENT = "EmptyStatement";
+    exports.DIRECTIVEPROLOGUE = "DirectivePrologue";
+    exports.MODULE = "Module";
+    exports.PROGRAM = "Program";
+    exports.REGULAREXPRESSIONLITERAL = "RegularExpressionLiteral";
+    exports.FORSTATEMENT = "ForStatement";
+    exports.WHILESTATEMENT = "WhileStatement";
+    exports.IFSTATEMENT = "IfStatement";
+    exports.DOWHILESTATEMENT = "DoWhileStatement";
+    exports.SWITCHSTATEMENT = "SwitchStatement";
+    exports.DEFAULTCASE = "DefaultCase";
+    exports.SWITCHCASE = "SwitchCase";
+    */
 });
 
 
-/*// #include "lib/intl/identifier-module.js"; // disabled */
+/* // #include "lib/intl/identifier-module.js"; // disabled */
 
 /* // #include "lib/intl/i18n.js"; */
 
 
-/*
-
- BIG FAT MISINTERPRETATION OF ECMA-262
-
- Static Semantics: Name of a Production equals
- a Property of the Production collected at parse time.
-
- For the first try i used the "Contains" algorithm
- or a second recursion on the node to determine the
- static semantics values.
-
-
- This requires a SOLID and not "dirty" augmentation
- of the used parser api AST, making sure, all extra
- properties exist on the right objects.
-
- This will be handimplemented in the parser.js by
- going from production to production with the draft text.
-
-
- Currently these slow algorithms are still running.
-
-
- */
 
 
 define("slower-static-semantics", function (require, exports, modules) {
@@ -2008,18 +2082,15 @@ define("slower-static-semantics", function (require, exports, modules) {
         var cu2 = ((cp - 65536) % 1024) + 56320;
         return [cu1, cu2];
     }
-
     function UTF16Decode(lead, trail) {
         Assert(0xD800 <= lead <= 0xD8FF, "utf16decode: lead has to be beetween 0xD800 and 0xD8FF");
         Assert(0xDC00 <= trail <= 0xDFFF, "utf16decode: trail has to be beetween 0xDC00 and 0xDFFF");
         var cp = (lead - 55296) * 1024 + (trail - 564320);
         return cp;
     }
-
     function TailPosition(node, nonTerminal) {
         // Assert(nonTerminal is a parsed grammar production)
     }
-
     function HasProductionInTailPosition(node, nonTerminal) {
         if (Array.isArray(node)) {
             for (var i = 0, j = node.length; i < j; i++) {
@@ -2032,7 +2103,6 @@ define("slower-static-semantics", function (require, exports, modules) {
     }
     exports.TailPosition = TailPosition;
     exports.HasProductionInTailPosition = HasProductionInTailPosition;
-
     exports.IsAnonymousFunctionDefinition = IsAnonymousFunctionDefinition;
 
     function IsAnonymousFunctionDefinition(node) {
@@ -2056,15 +2126,12 @@ define("slower-static-semantics", function (require, exports, modules) {
         else if (type === "DefaultParameter") return true;
         return false;
     }
-
     function ImportEntriesForModule(module, importClause) {
 
     }
-
     function ExportEntriesForModule(module, exportClause) {
 
     }
-
     function UnknownExportEntries(node, list) {
         var nodetype = node.type;
         list = list || [];
@@ -2079,7 +2146,6 @@ define("slower-static-semantics", function (require, exports, modules) {
         }
         return list;
     }
-
     function KnownExportEntries(node) {
         var nodetype = node.type;
         list = list || [];
@@ -2094,19 +2160,12 @@ define("slower-static-semantics", function (require, exports, modules) {
         }
         return list;
     }
-
     function ExportedBindings(node) {}
-
     function ExportedEntries(node) {}
-
     function ImportedBindings(node) {}
-
     function ImportedEntries(node) {}
-
     function ModuleRequests(node) {}
-
     function ImportedNames(node) {}
-
     function ExportedNames(node) {}
 
     exports.ModuleRequests = ModuleRequests;
@@ -2126,22 +2185,18 @@ define("slower-static-semantics", function (require, exports, modules) {
     function IsFunctionDeclaration(node) {
         return node.type === "FunctionDeclaration";
     }
-
     function IsFunctionExpression(node) {
         var type = node.type;
         return (type === "FunctionDeclaration" && node.expression) || type === "FunctionExpression";
     }
-
     function IsGeneratorDeclaration(node) {
         var type = node.type;
         return (type === "FunctionDeclaration" && node.generator) || type === "GeneratorDeclaration";
     }
-
     function IsGeneratorExpression(node) {
         var type = node.type;
         return (type === "FunctionDeclaration" && node.expression && node.generator) || type === "GeneratorExpression";
     }
-
     function IsVarDeclaration(node) {
         return node.kind === "var" && node.type === "VariableDeclaration";
 
@@ -2223,7 +2278,6 @@ define("slower-static-semantics", function (require, exports, modules) {
         }
         return contains;
     }
-
     function BoundNames(list, names) {
         var item;
         names = names || [];
@@ -2372,7 +2426,6 @@ define("slower-static-semantics", function (require, exports, modules) {
 
         return names;
     }
-
     function VarScopedDeclarations(body, list) {
         var node, decl, i, j, k, l;
         var top;
@@ -2434,7 +2487,6 @@ define("slower-static-semantics", function (require, exports, modules) {
 
         return list;
     }
-
     function LexicallyDeclaredNames(body, names) {
         var node, decl, i, j, k, l;
         if (!names) names = [];
@@ -2460,7 +2512,6 @@ define("slower-static-semantics", function (require, exports, modules) {
 
         return names;
     }
-
     function LexicallyScopedDeclarations(body, list) {
         if (!body) return;
         var node, decl, i, j, k, l;
@@ -2488,7 +2539,6 @@ define("slower-static-semantics", function (require, exports, modules) {
 
         return list;
     }
-
     function LexicalDeclarations(body, list) {
         if (!body) return;
         var node, decl, i, j, k, l;
@@ -2795,7 +2845,7 @@ define("slower-static-semantics", function (require, exports, modules) {
     }
 
     var numberSplitter = /([0-9]+)(?:\.)?([0-9]*)?(?:([+-])?(?:[eE])([0-9]+))?/;
-    // 1               2          3               4
+
     function _MV(value) {
         var number = 0;
         var ch;
@@ -2945,972 +2995,892 @@ define("slower-static-semantics", function (require, exports, modules) {
 
 
 define("tokenizer", function () { // should use this factory to create one each realm again
-                                    // and rename "define" to not collide with "AMD" as the
-                            // module system is anyways only for internal purposes.
+    // and rename "define" to not collide with "AMD" as the
+    // module system is anyways only for internal purposes.
 
 
-    "use strict";
-    var exports = {};
-    var tables = require("tables");
 
-    var Punctuators = tables.Punctuators;
-    var StartOfThreeFourPunctuators = tables.StartOfThreeFourPunctuators;
+    function makeTokenizer () {
+        "use strict";
+        var
+            exports = {};
+        var tables = require("tables");
 
-    var WhiteSpaces = tables.WhiteSpaces;
-    var LineTerminators = tables.LineTerminators;
-    var HexDigits = tables.HexDigits;
-    var BinaryDigits = tables.BinaryDigits;
-    var SingleEscapeCharacter = tables.SingleEscapeCharacter;
-    var OctalDigits = tables.OctalDigits;
-    var DecimalDigits = tables.DecimalDigits;
-    var ExponentIndicator = tables.ExponentIndicator;
-    var SignedInteger = tables.SignedInteger;
-    var ParensSemicolonComma = tables.ParensSemicolonComma;
-    var NumericLiteralLetters = tables.NumericLiteralLetters;
-    var IdentifierStart = tables.IdentifierStart;
-    var IdentifierPart = tables.IdentifierPart;
-    var RegExpFlags = tables.RegExpFlags;
-    var RegExpNoneOfs = tables.RegExpNoneOfs;
-    var NotBeforeRegExp = tables.NotBeforeRegExp;
-    var UnicodeIDStart = tables.UnicodeIDStart;
-    var UnicodeIDContinue = tables.UnicodeIDContinue;
-    var Quotes = tables.Quotes;
-    var PunctToExprName = tables.PunctToExprName;
-    var TypeOfToken = tables.TypeOfToken;
+        var Punctuators = tables.Punctuators;
+        var StartOfThreeFourPunctuators = tables.StartOfThreeFourPunctuators;
 
-    var PunctOrLT = tables.PunctOrLT;
-    var FewUnaryKeywords = tables.FewUnaryKeywords;
-    var AllowedLastChars = tables.AllowedLastChars;
-    var OneOfThesePunctuators = tables.OneOfThesePunctuators;
-    var SkipableToken = tables.SkipableToken;
+        var WhiteSpaces = tables.WhiteSpaces;
+        var LineTerminators = tables.LineTerminators;
+        var HexDigits = tables.HexDigits;
+        var BinaryDigits = tables.BinaryDigits;
+        var SingleEscapeCharacter = tables.SingleEscapeCharacter;
+        var OctalDigits = tables.OctalDigits;
+        var DecimalDigits = tables.DecimalDigits;
+        var ExponentIndicator = tables.ExponentIndicator;
+        var SignedInteger = tables.SignedInteger;
+        var ParensSemicolonComma = tables.ParensSemicolonComma;
+        var NumericLiteralLetters = tables.NumericLiteralLetters;
+        var IdentifierStart = tables.IdentifierStart;
+        var IdentifierPart = tables.IdentifierPart;
+        var RegExpFlags = tables.RegExpFlags;
+        var RegExpNoneOfs = tables.RegExpNoneOfs;
+        var NotBeforeRegExp = tables.NotBeforeRegExp;
+        var UnicodeIDStart = tables.UnicodeIDStart;
+        var UnicodeIDContinue = tables.UnicodeIDContinue;
+        var Quotes = tables.Quotes;
+        var PunctToExprName = tables.PunctToExprName;
+        var TypeOfToken = tables.TypeOfToken;
+        var PunctOrLT = tables.PunctOrLT;
+        var FewUnaryKeywords = tables.FewUnaryKeywords;
+        var AllowedLastChars = tables.AllowedLastChars;
+        var OneOfThesePunctuators = tables.OneOfThesePunctuators;
+        var SkipableToken = tables.SkipableToken;
+        /*
+         var unicode = require("unicode-support");
+         var isIdentifierStart = unicode.isIdentifierStart || function () {};
+         var isIdentifierPart = unicode.isIdentifierPart || function () {};
+         */
+        var createCustomToken = null;
+        var sourceCode;
+        var i, j;
+        var token;
+        var tokenType; // is set at makeToken, until next token. asked for at standalone regexp
+        var ch, lookahead;	// lookahead0 and lookahead1
+        var cb;
+        var tokens = [];
+        var line = 1, column = 1;
+        var lines = [];
+        var offset = 0;
+        var filename = null;
+        var inputElementDiv = 1;
+        var inputElementRegExp = 2;
+        var inputElementTemplateTail = 3;
+        var inputElementGoal = inputElementRegExp;
+        var withExtras = false;
+        var debugmode = false;
+        var hasConsole = typeof console === "object" && console && typeof console.log === "function";
 
-    /*
-     var unicode = require("unicode-support");
-     var isIdentifierStart = unicode.isIdentifierStart || function () {};
-     var isIdentifierPart = unicode.isIdentifierPart || function () {};
-     */
-
-    var createCustomToken = null;
-
-function makeTokenizer () {
-
-    var sourceCode;
-    var i, j;
-    var token;
-    var tokenType; // is set at makeToken, until next token. asked for at standalone regexp
-    var ch, lookahead;	// lookahead0 and lookahead1
-    var cb;
-    var tokens = [];
-    var line = 1, column = 1;
-    var lines = [];
-    var offset = 0;
-    var filename = null;
-    var inputElementDiv = 1;
-    var inputElementRegExp = 2;
-    var inputElementTemplateTail = 3;
-    var inputElementGoal = inputElementRegExp;
-    var withExtras = false;
-    var debugmode = false;
-    var hasConsole = typeof console === "object" && console && typeof console.log === "function";
-
-    function debug() {
-        if (debugmode && hasConsole) {
-            if (typeof arguments[0] == "object") {
-                console.dir(arguments[0]);
-            } else console.log.apply(console, arguments);
-        }
-    }
-
-    function match(c) {
-        if (c == ch) next();
-        else throw new SyntaxError("tokenizer: "+ c + " expected, saw "+ch)
-    }
-
-    function Assert(test, message) {
-        if (!test) throw new SyntaxError("assertion failed in tokenizer: "+message);
-    }
-
-    function updateStack(se) {
-        var oldstack = se.stack;
-        se.stack = "syntax.js tokenizer,\nfunction tokenize,\n does not recognize actual input. ch=" + ch + ", lookahead=" + lookahead + ", line=" + line + ", col=" + column + ", offset=" + offset + ", i="+i+" " +sourceCode+" \n" + oldstack;
-    }
-
-    function LineTerminator() {
-        if (LineTerminators[ch]) {
-            makeToken("LineTerminator", ch);
-            if (!(ch  === "\r" && lookahead === "\n")) nextLine();
-            next();
-            return token;
-        }
-        return false;
-    }
-
-    function WhiteSpace() {
-        var spaces = "";
-        var spc;
-        if (WhiteSpaces[ch]) {
-            spaces += ch;
-            spc = ch;
-            while (lookahead === spc) {
-                next();
-                spaces += ch;
+        function debug() {
+            if (debugmode && hasConsole) {
+                if (typeof arguments[0] == "object") {
+                    console.dir(arguments[0]);
+                } else console.log.apply(console, arguments);
             }
-
-            makeToken("WhiteSpace", spaces);
-
-            next();
-            return token;
         }
-        return false;
-    }
 
-    function StringLiteral() {
-        // please collect: raw string
-        // and value string
-        var quotecharacter;
-        var string = "";
-        var raw = "";
-        var multiline = false;
-        var n;
-        if (Quotes[ch]) {
-            quotecharacter = ch;
-            string += ch;
+        function match(c) {
+            if (c == ch) next();
+            else throw new SyntaxError("tokenizer: "+ c + " expected, saw "+ch)
+        }
 
-            big: while (next()) {
+        function Assert(test, message) {
+            if (!test) throw new SyntaxError("assertion failed in tokenizer: "+message);
+        }
 
+        function updateStack(se) {
+            var oldstack = se.stack;
+            se.stack = "syntax.js tokenizer,\nfunction tokenize,\n does not recognize actual input. ch=" + ch + ", lookahead=" + lookahead + ", line=" + line + ", col=" + column + ", offset=" + offset + ", i="+i+" " +sourceCode+" \n" + oldstack;
+        }
+
+        function setCustomTokenMaker (func) {
+            if (typeof func === null) {
+                createCustomToken = null;
+            } else if (typeof func === "function") {
+                createCustomToken = func;
+            } else throw new TypeError("tokenmaker must be a 'function token_maker(my_token) returns your_token' to return a custom token. Please fix that and try again.");
+        }
+        function unsetCustomTokenMaker () {
+            createCustomToken = null;
+        }
+
+
+        var saved = [];
+        function saveState() {
+            saved.push({
+                sourceCode: sourceCode,
+                i: i,
+                j: j,
+                token: token,
+                tokenType: tokenType,
+                ch: ch,
+                lookahead: lookahead,
+                inputElementGoal: inputElementGoal
+            });
+        }
+        function restoreState() {
+            var memento;
+            if (memento = saved.pop()) {
+                sourceCode = memento.sourceCode,
+                    i = memento.i;
+                j = memento.j;
+                token = memento.token;
+                tokenType = memento.tokenType;
+                ch = memento.ch;
+                lookahead = memento.lookeahead;
+                inputElementGoal = memento.inputElementGoal;
+            }
+        }
+
+
+        function LineTerminator() {
+            if (LineTerminators[ch]) {
+                makeToken("LineTerminator", ch);
+                if (!(ch  === "\r" && lookahead === "\n")) nextLine();
+                next();
+                return token;
+            }
+            return false;
+        }
+
+        function WhiteSpace() {
+            var spaces = "";
+            var spc;
+            if (WhiteSpaces[ch]) {
+                spaces += ch;
+                spc = ch;
+                while (lookahead === spc) {
+                    next();
+                    spaces += ch;
+                }
+
+                makeToken("WhiteSpace", spaces);
+
+                next();
+                return token;
+            }
+            return false;
+        }
+
+        function StringLiteral() {
+            // please collect: raw string
+            // and value string
+            var quotecharacter;
+            var string = "";
+            var raw = "";
+            var multiline = false;
+            var n;
+            if (Quotes[ch]) {
+                quotecharacter = ch;
                 string += ch;
 
-                if (ch === quotecharacter) {
-                    n = string.length - 2;
-                    do {
-                        if (string[n] !== "\\") break big;
-                        else if (string[n - 1] === "\\" && string[n - 2] !== "\\") break big;
-                    } while (string[n -= 2] === "\\");
-                }
+                big: while (next()) {
 
-                if (LineTerminators[lookahead]) {
+                    string += ch;
 
-                    n = string.length - 1;
+                    if (ch === quotecharacter) {
+                        n = string.length - 2;
+                        do {
+                            if (string[n] !== "\\") break big;
+                            else if (string[n - 1] === "\\" && string[n - 2] !== "\\") break big;
+                        } while (string[n -= 2] === "\\");
+                    }
 
-                    while (string[n] === "\\") {
-                        if (string[n - 1] === "\\") {
-                            multiline = false;
-                            n -= 2;
-                        } else {
-                            multiline = true;
+                    if (LineTerminators[lookahead]) {
 
-                            // damn that strings are immutable.
-                            // a new line costs a copy here
-                            // coz the dull "\" is applied already.
-                            // got to rewrite multiline part. by flipping this if´s multiline bool and putting string+=ch below.
+                        n = string.length - 1;
 
-                            string = string.substr(0, string.length-1);
+                        while (string[n] === "\\") {
+                            if (string[n - 1] === "\\") {
+                                multiline = false;
+                                n -= 2;
+                            } else {
+                                multiline = true;
 
-                            // forgetting bout \ is expensive this versions
+                                // damn that strings are immutable.
+                                // a new line costs a copy here
+                                // coz the dull "\" is applied already.
+                                // got to rewrite multiline part. by flipping this if´s multiline bool and putting string+=ch below.
+
+                                string = string.substr(0, string.length-1);
+
+                                // forgetting bout \ is expensive this versions
 
 
-                            nextLine();
-                            break;
+                                nextLine();
+                                break;
+                            }
                         }
                     }
-                }
 
 
 
-                if (LineTerminators[ch]) {
-                    if (!multiline) throw new SyntaxError("Unexpected token ILLEGAL");
-                    else multiline = false;
-                }
-            }
-            makeToken("StringLiteral", string, string.substr(1, string.length - 2));
-            next();
-            return token;
-        }
-
-        return false;
-    }
-
-    function TemplateLiteral () {
-        // `edward ${ ""+ist+y } toll ${ oder } nicht?`
-        // [ "edward ", " \""+ist+y ", " toll ", " oder ", " nicht" ]
-
-        if (ch === "`") {
-            var template, cooked;
-            var spans = [];
-            var braces;
-            match("`");
-            while (ch != undefined) {
-                template = "";
-                while ((ch === "$" && lookahead === "{") === false) {
-                    if (ch === "`") {
-                        spans.push(template);
-                        makeToken("TemplateLiteral", spans);
-                        match("`");
-                        return token;
+                    if (LineTerminators[ch]) {
+                        if (!multiline) throw new SyntaxError("Unexpected token ILLEGAL");
+                        else multiline = false;
                     }
-                    template += ch;
-                    next();
                 }
-                spans.push(template);
-                match("$");
-                match("{");
-                cooked = "";
-                braces = ["{"];
-                while (ch != "}") {
-                    if (ch == "{") braces.push("{");
-                    cooked += ch;
-                    next();
-                    // addition: block nesting ${ (function(){return 10; }()) }
-                    if (ch == "}") {
-                        braces.pop();
-                        if (!braces.length) {
-                            break;
-                        } else {
-                            cooked += ch;
-                            next();
-                        }
-                    }
-                    // block nesting end
-                }
-                spans.push(cooked);
-                match("}");
-            }
-        }
-        return false;
-    }
-
-    function Comments() {
-        var comment = "";
-        var type;
-        if ((ch + lookahead) === "//") {
-            type = "LineComment";
-            comment = "//";
-            next();
-            while (ch && !LineTerminators[lookahead]) {
+                makeToken("StringLiteral", string, string.substr(1, string.length - 2));
                 next();
-                comment += ch;
+                return token;
             }
 
-            makeToken(type, comment);
-
-            next();
-            return token;
-        } else if (ch + lookahead === "/*") {
-            type = "MultiLineComment";
-            comment = "/*";
-            next();	// fix /*/ funny experience
-            next();	// i bet i find some more here.
-            while (ch + lookahead !== "*/") {
-
-                if (ch == "\n") nextLine();
-
-                if (ch === undefined) {
-                    throw new SyntaxError("Unexpected end of file");
-                }
-                comment += ch;
-                next();
-            }
-            comment += "*/";    // ch + lookahead
-            next();
-
-            makeToken(type, comment);
-
-            next();
-            return token;
+            return false;
         }
-        return false;
-    }
 
+        function TemplateLiteral () {
+            // `edward ${ ""+ist+y } toll ${ oder } nicht?`
+            // [ "edward ", " \""+ist+y ", " toll ", " oder ", " nicht" ]
 
-    function RegularExpressionLiteral() {
-
-        if (ch === "/" && !NotBeforeRegExp[tokenType]) {
-
-            var expr = "";
-            var flags = "";
-            var n;
-
-            if (!RegExpNoneOfs[lookahead] && !LineTerminators[lookahead]) {
-
-                next(); // first char after /
-
-                big:
-                    while (ch != undefined) {
-
-                        if (ch === "/") {
-                            // reached last character of regex
-                            // here is my old algorithm to backtrack if / is escaped or not
-                            // i check for \ and before for \\ and look as far as it goes.
-
-                            // the new algo: will prolly have a "escaped" state variable switching at \ on and off after testing next
-                            // being if (escaped and ch == "\") its and escaped \ and escape is off again, if the thirf
-                            // is \ escape is on again and if the next is " it is escaped. and then turned off.
-                            // (no backtracking)
-                            n = expr.length - 1;
-                            do {
-                                // if not escaped or escaped and character before !=
-                                if ((expr[n] !== "\\") || (expr[n - 1] === "\\" && expr[n - 2] !== "\\")) {
-                                    break big;
-                                }
-                            } while (expr[n -= 2] === "\\");
-                            // then i break out;
-                        } else if (LineTerminators[ch] || ch == undefined) {
-                            throw new SyntaxError("Unexpected end of line, while parsing RegularExpressionLiteral at line " + line + ", column " + column);
+            if (ch === "`") {
+                var template, cooked;
+                var spans = [];
+                var braces;
+                match("`");
+                while (ch != undefined) {
+                    template = "";
+                    while ((ch === "$" && lookahead === "{") === false) {
+                        if (ch === "`") {
+                            spans.push(template);
+                            makeToken("TemplateLiteral", spans);
+                            match("`");
+                            return token;
                         }
-                        expr += ch;
+                        template += ch;
                         next();
                     }
-            } else {
-                return false;
+                    spans.push(template);
+                    match("$");
+                    match("{");
+                    cooked = "";
+                    braces = ["{"];
+                    while (ch != "}") {
+                        if (ch == "{") braces.push("{");
+                        cooked += ch;
+                        next();
+                        // addition: block nesting ${ (function(){return 10; }()) }
+                        if (ch == "}") {
+                            braces.pop();
+                            if (!braces.length) {
+                                break;
+                            } else {
+                                cooked += ch;
+                                next();
+                            }
+                        }
+                        // block nesting end
+                    }
+                    spans.push(cooked);
+                    match("}");
+                }
             }
+            return false;
+        }
 
-            if (ch === "/") { // is the second / which closes the regexp.
-                match("/");
+        function Comments() {
+            var comment = "";
+            var type;
+            if ((ch + lookahead) === "//") {
+                type = "LineComment";
+                comment = "//";
+                next();
+                while (ch && !LineTerminators[lookahead]) {
+                    next();
+                    comment += ch;
+                }
 
-                var hasFlags = {};
-                while (RegExpFlags[ch]) { // besorge noch die flags, collect flags
-                    if (hasFlags[ch]) throw new SyntaxError("duplicate flags not allowed in regular expressions");
-                    flags += ch;
-                    hasFlags[ch] = true;
+                makeToken(type, comment);
+
+                next();
+                return token;
+            } else if (ch + lookahead === "/*") {
+                type = "MultiLineComment";
+                comment = "/*";
+                next();	// fix /*/ funny experience
+                next();	// i bet i find some more here.
+                while (ch + lookahead !== "*/") {
+
+                    if (ch == "\n") nextLine();
+
+                    if (ch === undefined) {
+                        throw new SyntaxError("Unexpected end of file");
+                    }
+                    comment += ch;
                     next();
                 }
-                if (!(WhiteSpaces[ch]||Punctuators[ch]||LineTerminators[ch]) && ch != undefined) {
-                    // let flags be /geg/gimuyfff then lexer is now at fff and that´s a syntaxerror
+                comment += "*/";    // ch + lookahead
+                next();
+
+                makeToken(type, comment);
+
+                next();
+                return token;
+            }
+            return false;
+        }
+
+
+        function RegularExpressionLiteral() {
+
+            if (ch === "/" && !NotBeforeRegExp[tokenType]) {
+
+                var expr = "";
+                var flags = "";
+                var n;
+
+                if (!RegExpNoneOfs[lookahead] && !LineTerminators[lookahead]) {
+
+                    next(); // first char after /
+
+                    big:
+                        while (ch != undefined) {
+
+                            if (ch === "/") {
+                                // reached last character of regex
+                                // here is my old algorithm to backtrack if / is escaped or not
+                                // i check for \ and before for \\ and look as far as it goes.
+
+                                // the new algo: will prolly have a "escaped" state variable switching at \ on and off after testing next
+                                // being if (escaped and ch == "\") its and escaped \ and escape is off again, if the thirf
+                                // is \ escape is on again and if the next is " it is escaped. and then turned off.
+                                // (no backtracking)
+                                n = expr.length - 1;
+                                do {
+                                    // if not escaped or escaped and character before !=
+                                    if ((expr[n] !== "\\") || (expr[n - 1] === "\\" && expr[n - 2] !== "\\")) {
+                                        break big;
+                                    }
+                                } while (expr[n -= 2] === "\\");
+                                // then i break out;
+                            } else if (LineTerminators[ch] || ch == undefined) {
+                                throw new SyntaxError("Unexpected end of line, while parsing RegularExpressionLiteral at line " + line + ", column " + column);
+                            }
+                            expr += ch;
+                            next();
+                        }
+                } else {
+                    return false;
+                }
+
+                if (ch === "/") { // is the second / which closes the regexp.
+                    match("/");
+
+                    var hasFlags = {};
+                    while (RegExpFlags[ch]) { // besorge noch die flags, collect flags
+                        if (hasFlags[ch]) throw new SyntaxError("duplicate flags not allowed in regular expressions");
+                        flags += ch;
+                        hasFlags[ch] = true;
+                        next();
+                    }
+                    if (!(WhiteSpaces[ch]||Punctuators[ch]||LineTerminators[ch]) && ch != undefined) {
+                        // let flags be /geg/gimuyfff then lexer is now at fff and that´s a syntaxerror
+                        throw new SyntaxError("unexpected token illegal");
+                    }
+
+                    makeToken("RegularExpressionLiteral", [expr, flags]);
+                    // "/"+expr+"/"+flags
+                    inputElementGoal = inputElementDiv;
+                    // next() is already done with the collection of flags.
+                    return token;
+                }
+
+            }
+            return false;
+        }
+
+        function DivPunctuator() {
+
+            /*
+             this is old */
+
+            var tok;
+            if (ch === "/") {
+
+                if (tok = Comments()) return token = tok;
+
+                if (inputElementGoal === inputElementRegExp) {
+                    if (tok = RegularExpressionLiteral()) {
+                        inputElementGoal = inputElementDiv;
+                        return token = tok;
+                    }
+                    inputElementGoal = inputElementDiv;
+                }
+
+                if (inputElementGoal !== inputElementRegExp) {
+                    if (ch + lookahead === "/=") {
+                        next();
+                        makeToken("Punctuator", "/=", undefined, PunctToExprName["/="]);
+                        next();
+                        return token;
+                    } else {
+                        makeToken("Punctuator", ch, undefined, PunctToExprName[ch]);
+                        next();
+                        return token;
+                    }
+
+                }
+            }
+            return false;
+        }
+
+
+
+        function Punctuation() {
+
+
+            // {}() [ ] ?:; , ~
+            if (ParensSemicolonComma[ch]) {
+                makeToken("Punctuator", ch, undefined, PunctToExprName[ch]);
+                next();
+                return token;
+            }
+
+            /*
+             hardcode the rest forward next
+             */
+            var punct;
+            if (!StartOfThreeFourPunctuators[ch]) {
+                punct = ch + lookahead;
+            } else {
+                punct = sourceCode[i] + sourceCode[i + 1] + sourceCode[i + 2] + sourceCode[i + 3];
+                if (punct === ">>>=") {
+                    next();next();next();
+                    makeToken("Punctuator", punct, undefined, PunctToExprName[punct]);
+                    next();
+                    return token;
+                }
+
+                punct = punct[0] + punct[1] + punct[2];
+                if (Punctuators[punct]) {
+                    next();next();
+                    makeToken("Punctuator", punct, undefined, PunctToExprName[punct]);
+                    next();
+                    return token;
+                }
+
+                punct = punct[0] + punct[1];
+            }
+            // only if one or two
+            if (Punctuators[punct]) {
+                next();
+                makeToken("Punctuator", punct, undefined, PunctToExprName[punct]);
+                next();
+                return token;
+            }
+
+            punct = punct[0];
+            if (Punctuators[punct]) {
+                makeToken("Punctuator", punct, undefined, PunctToExprName[punct]);
+                next();
+                return token;
+            }
+
+            return false;
+        }
+
+        function getDecimalDigits(number) {
+            var dot = 0;
+            if (DecimalDigits[ch] || (ch === "." && DecimalDigits[lookahead] && (++dot))) {
+                number += ch;
+                for (;;) {
+                    if (DecimalDigits[lookahead] || (lookahead === "." && !dot)) {
+                        next();
+                        number += ch;
+                        if (ExponentIndicator[lookahead]) {
+                            next();
+                            number += ch;
+                            if (SignedInteger[lookahead]) {
+                                next();
+                                number += ch;
+                            }
+                            while (DecimalDigits[lookahead]) {
+                                next();
+                                number += ch;
+                            }
+                            return number;
+                        }
+                    } else if (lookahead === "." && dot) {
+                        throw new SyntaxError("unexpected number");
+                    } else {
+                        break;
+                    }
+                }
+                return number;
+            }
+            return false;
+        }
+
+
+        function NumericLiteral() {
+            var number = "",
+                longName, computed = 0;
+
+            if (ch === "0" && NumericLiteralLetters[lookahead]) {
+
+                number += ch;
+                next();
+                if ((ch === "x" || ch === "X") && HexDigits[lookahead]) {
+                    number += ch;
+                    while (HexDigits[lookahead]) {
+                        next();
+                        number += ch;
+                    }
+                    longName = "HexLiteral";
+                    computed = +number;
+                } else if ((ch === "b" || ch === "B") && BinaryDigits[lookahead]) {
+                    number += ch;
+                    while (BinaryDigits[lookahead]) {
+                        next();
+                        number += ch;
+                    }
+                    longName = "BinaryLiteral";
+                    computed = 0;
+                    for (var a = 2, b = number.length - 1; a <= b; a++)
+                        computed += (+(number[a]) << (b - a));
+                } else if ((ch === "o" || ch == "O") && OctalDigits[lookahead]) {
+                    number += ch;
+                    while (OctalDigits[lookahead]) {
+                        next();
+                        number += ch;
+                    }
+                    longName = "OctalLiteral";
+                    computed = +(parseInt(number.substr(2), 8).toString(10));
+                }
+                makeToken("NumericLiteral", number, computed, longName);
+
+                if (!(WhiteSpaces[lookahead]||Punctuators[lookahead]||LineTerminators[lookahead]) && lookahead != undefined) {
                     throw new SyntaxError("unexpected token illegal");
                 }
 
-                makeToken("RegularExpressionLiteral", [expr, flags]);
-                                                    // "/"+expr+"/"+flags
-                inputElementGoal = inputElementDiv;
-                // next() is already done with the collection of flags.
+                next();
+
                 return token;
-            }
+            } else if (DecimalDigits[ch] || (ch === "." && DecimalDigits[lookahead])) {
+                number = getDecimalDigits(number);
+                makeToken("NumericLiteral", number, +number, "DecimalLiteral");
 
-        }
-        return false;
-    }
 
-    function DivPunctuator() {
 
-        /*
-         this is old */
-
-        var tok;
-        if (ch === "/") {
-
-            if (tok = Comments()) return token = tok;
-
-            if (inputElementGoal === inputElementRegExp) {
-                if (tok = RegularExpressionLiteral()) {
-                    inputElementGoal = inputElementDiv;
-                    return token = tok;
-                }
-                inputElementGoal = inputElementDiv;
-            }
-
-            if (inputElementGoal !== inputElementRegExp) {
-                if (ch + lookahead === "/=") {
-                    next();
-                    makeToken("Punctuator", "/=", undefined, PunctToExprName["/="]);
-                    next();
-                    return token;
-                } else {
-                    makeToken("Punctuator", ch, undefined, PunctToExprName[ch]);
-                    next();
-                    return token;
+                if (!(WhiteSpaces[lookahead]||Punctuators[lookahead]||LineTerminators[lookahead]) && lookahead != undefined) {
+                    throw new SyntaxError("unexpected token illegal");
                 }
 
-            }
-        }
-        return false;
-    }
 
-
-
-    function Punctuation() {
-
-        /*
-
-         better is a hardcoded path and nested switch each char,
-         that´s forward parsing, and here it´s capture 4, go down to 1.
-
-         switch (ch) {
-
-         }
-
-         I´ll add these to ParensSemicolonComma in tables:
-         {}() [ ] ?:; , ~
-
-         .
-         ...
-
-         |
-         ||
-
-         +
-         +=
-         ++
-
-         -
-         -=
-         --
-
-         *
-         *=
-
-         %
-         %=
-
-         &
-         &=
-         &&
-
-         |
-         |=
-         ||
-
-         ^
-         ^=
-
-         /
-         /=
-
-
-
-         // one or three
-         // just
-         // = ! < >
-
-         =
-         =>
-         ==
-         ===
-
-         !
-         !=
-         !==
-
-
-         <
-         <=
-         <<
-         <<=
-
-         >
-         >=
-         >>
-         >>=
-         >>>
-         >>>=
-
-         */
-
-
-        // {}() [ ] ?:; , ~
-        if (ParensSemicolonComma[ch]) {
-            makeToken("Punctuator", ch, undefined, PunctToExprName[ch]);
-            next();
-            return token;
-        }
-
-        /*
-         hardcode the rest forward next
-         */
-        var punct;
-        if (!StartOfThreeFourPunctuators[ch]) {
-            punct = ch + lookahead;
-        } else {
-            punct = sourceCode[i] + sourceCode[i + 1] + sourceCode[i + 2] + sourceCode[i + 3];
-            if (punct === ">>>=") {
-                next();next();next();
-                makeToken("Punctuator", punct, undefined, PunctToExprName[punct]);
                 next();
                 return token;
             }
-
-            punct = punct[0] + punct[1] + punct[2];
-            if (Punctuators[punct]) {
-                next();next();
-                makeToken("Punctuator", punct, undefined, PunctToExprName[punct]);
-                next();
-                return token;
-            }
-
-            punct = punct[0] + punct[1];
-        }
-        // only if one or two
-        if (Punctuators[punct]) {
-            next();
-            makeToken("Punctuator", punct, undefined, PunctToExprName[punct]);
-            next();
-            return token;
+            return false;
         }
 
-        punct = punct[0];
-        if (Punctuators[punct]) {
-            makeToken("Punctuator", punct, undefined, PunctToExprName[punct]);
-            next();
-            return token;
-        }
 
-        return false;
-    }
-
-    function getDecimalDigits(number) {
-        var dot = 0;
-        if (DecimalDigits[ch] || (ch === "." && DecimalDigits[lookahead] && (++dot))) {
-            number += ch;
-            for (;;) {
-                if (DecimalDigits[lookahead] || (lookahead === "." && !dot)) {
-                    next();
-                    number += ch;
-                    if (ExponentIndicator[lookahead]) {
-                        next();
-                        number += ch;
-                        if (SignedInteger[lookahead]) {
-                            next();
-                            number += ch;
-                        }
-                        while (DecimalDigits[lookahead]) {
-                            next();
-                            number += ch;
-                        }
-                        return number;
-                    }
-                } else if (lookahead === "." && dot) {
-                    throw new SyntaxError("unexpected number");
-                } else {
-                    break;
-                }
-            }
-            return number;
-        }
-        return false;
-    }
-
-
-    function NumericLiteral() {
-        var number = "",
-            longName, computed = 0;
-
-        if (ch === "0" && NumericLiteralLetters[lookahead]) {
-
-            number += ch;
-            next();
-            if ((ch === "x" || ch === "X") && HexDigits[lookahead]) {
-                number += ch;
-                while (HexDigits[lookahead]) {
-                    next();
-                    number += ch;
-                }
-                longName = "HexLiteral";
-                computed = +number;
-            } else if ((ch === "b" || ch === "B") && BinaryDigits[lookahead]) {
-                number += ch;
-                while (BinaryDigits[lookahead]) {
-                    next();
-                    number += ch;
-                }
-                longName = "BinaryLiteral";
-                computed = 0;
-                for (var a = 2, b = number.length - 1; a <= b; a++)
-                    computed += (+(number[a]) << (b - a));
-            } else if ((ch === "o" || ch == "O") && OctalDigits[lookahead]) {
-                number += ch;
-                while (OctalDigits[lookahead]) {
-                    next();
-                    number += ch;
-                }
-                longName = "OctalLiteral";
-                computed = +(parseInt(number.substr(2), 8).toString(10));
-            }
-            makeToken("NumericLiteral", number, computed, longName);
-
-	    if (!(WhiteSpaces[lookahead]||Punctuators[lookahead]||LineTerminators[lookahead]) && lookahead != undefined) {
-        	throw new SyntaxError("unexpected token illegal");
-            }
-
-            next();
-            
-            return token;
-        } else if (DecimalDigits[ch] || (ch === "." && DecimalDigits[lookahead])) {
-            number = getDecimalDigits(number);
-            makeToken("NumericLiteral", number, +number, "DecimalLiteral");
-            
-
-
-	    if (!(WhiteSpaces[lookahead]||Punctuators[lookahead]||LineTerminators[lookahead]) && lookahead != undefined) {
-        	throw new SyntaxError("unexpected token illegal");
-            }
-
-
-            next();
-            return token;
-        }
-        return false;
-    }
-    
-    
         function getUnicodeBody() {
+            var max, now = 0, raw = "";
+            if (lookahead == "1") max = 5;
+            else if (lookahead == "0") max = 4;
+            else throw new SyntaxError("unexpected kind of unicode literal");
+            while (HexDigits[lookahead]) {
+                next();
+                ++now;
+                raw += ch;
+                if (now === max) break;
+            }
 
-                    var max, now = 0, raw = "";
-                    
-                    if (lookahead == "1") max = 5;
-                    else if (lookahead == "0") max = 4;
-                    else throw new SyntaxError("unexpected kind of unicode literal");
-                    
-                    
+            if (now < max) throw new SyntaxError("unexpected kind of unicode literal "+max+" digits expected");
+
+            return raw;
+        }
+
+        function EscapeSequence() {
+            var raw = "";
+            var value = "";
+
+
+            if (ch == "\\") {
+                var longName = "EscapeSequence";
+
+                raw += ch;
+
+
+                if (lookahead === "u") {
+                    next();
+                    raw += ch;
+                    if (lookahead == "{") {
+
+                        next();
+                        raw += ch;
+
+
+                        raw += getUnicodeBody();
+
+                        if (lookahead === "}") {
+                            next();
+                            raw += ch;
+                            value = eval("\'" + raw + "\'");
+                        } else {
+                            throw new SyntaxError("expecting } to close unicode seq.");
+                        }
+
+                    } else {
+
+                        raw += getUnicodeBody();
+
+                        // value = String.fromCharCode(+(raw.substr(2, raw.length-1)));
+
+                        value = eval("\'" + raw + "\'");
+
+                    }
+                } else if (SingleEscapeCharacter[lookahead]) {
+
+                    next();
+                    raw = SingleEscapeCharacter[ch];
+
+                } else if (OctalDigits[lookahead]) {
+
+                    next();
+                    raw += ch;
+                    while (OctalDigits[lookahead]) {
+                        next();
+                        raw += ch;
+                    }
+                    value = parseInt(raw.substr(1, raw.length), 8);
+
+                } else if (lookahead === "x") {
+                    next();
+                    raw += ch;
                     while (HexDigits[lookahead]) {
                         next();
-                        ++now;
                         raw += ch;
-                        if (now === max) break;
                     }
-                    
-                    if (now < max) throw new SyntaxError("unexpected kind of unicode literal "+max+" digits expected");
-
-		    return raw;
-    }
-
-    function EscapeSequence() {
-        var raw = "";
-        var value = "";
-
- 
-        if (ch == "\\") {
-        var longName = "EscapeSequence";
-            
-            raw += ch;
-            
-            
-            if (lookahead === "u") {
-                next();
-                raw += ch;
-                if (lookahead == "{") {
-                    
-                    next();
-                    raw += ch;
-                    
-                    
-                    raw += getUnicodeBody();
-                    
-                    if (lookahead === "}") {
-                        next();
-                        raw += ch;
-                        value = eval("\'" + raw + "\'");
-                    } else {
-                	throw new SyntaxError("expecting } to close unicode seq.");
-                    }
-                    
-                } else {
-                    
-                    raw += getUnicodeBody();
-
-                    // value = String.fromCharCode(+(raw.substr(2, raw.length-1)));
-                
                     value = eval("\'" + raw + "\'");
-                
                 }
-            } else if (SingleEscapeCharacter[lookahead]) {
-                
-                next();
-                raw = SingleEscapeCharacter[ch];
-                
-            } else if (OctalDigits[lookahead]) {
-    
-		next();
-		raw += ch;
-		while (OctalDigits[lookahead]) {
-		    next();
-        	    raw += ch;
-        	} 
-                value = parseInt(raw.substr(1, raw.length), 8);
-                
-            } else if (lookahead === "x") {
-                next();
-                raw += ch;
-                while (HexDigits[lookahead]) {
-                    next();
-                    raw += ch;
+                else {
+                    throw new SyntaxError("invalid escape sequence "+ch+ " "+lookahead);
                 }
-                value = eval("\'" + raw + "\'");
-        
+                return value;
+                /*
+                 makeToken("Literal", value, undefined, longName); // remove computed and go with esprimas raw and value
+                 next();
+                 return token;
+                 */
             }
-             else {
-        	throw new SyntaxError("invalid escape sequence "+ch+ " "+lookahead);
-            }
-            
-            
-            
-            return value;
-            
-            
-	    /*
-            makeToken("Literal", value, undefined, longName); // remove computed and go with esprimas raw and value
-
-            next();
-            
-            return token;
-            */
-            
+            return false;
         }
-        
-        return false;
-    }
-/*
-    function UnicodeEscape() {
-        var raw = "",
-            value = "",
-            unit, cp1, cp2;
-        raw += ch;
-        next();
-        raw += ch;
-        if (lookahead == "{") {
-            next();
-            raw += ch;
-            while (HexDigits[lookahead]) {
-                next();
-                raw += ch;
-            }
-            if (lookahead === "}") {
-                next();
-                raw += ch;
-                value = eval("\'" + raw + "\'");
-                // String.fromCharCode((+(raw.substr(3, raw.length-2))).toFixed(4));
-            }
-        } else {
-            while (HexDigits[lookahead]) {
-                next();
-                raw += ch;
-            }
-            unit = 0;
-            for (var a = 0, b = raw.length - 1; a <= b; a++) {
-                unit += (1 << (b - a) * 4) * + raw[a];
-            }
-            if (unit > 0x10000) {
-                cp1 = Math.floor((unit - 0x10000) / 0x0400 + 0xD800);
-                cp2 = (unit - 0x10000) % 0x0400 + 0xD800;
-                value = String.fromCharCode(cp1, cp2);
-            } else
-                value = eval("\'" + raw + "\'");
-            // String.fromCharCode(+(raw.substr(2, raw.length-1)));
-        }
-        return [ raw, value ];
-    }
-*/
-    function KeywordOrIdentifier() {
-        var token = "", e;
-        var raw = "";
-        var escaped = false;
-        // defer raw and value to parser stage? or not?
-        // when unpacking the literal and the keywords
-        // then convert unicode and stuff.
-        // that a parser literal has raw and value and
-        // a tokenizer one is just raw.
-        // directly coming issue: for the new
-        // not native ""+ of \u{sdf} should be some translation
-        // into a surrogate first. Or shouldn´t
-
-
-        if (!IdentifierStart[ch] && !UnicodeIDStart[ch]) return false;
+        /*
+         function UnicodeEscape() {
+         var raw = "",
+         value = "",
+         unit, cp1, cp2;
+         raw += ch;
+         next();
+         raw += ch;
+         if (lookahead == "{") {
+         next();
+         raw += ch;
+         while (HexDigits[lookahead]) {
+         next();
+         raw += ch;
+         }
+         if (lookahead === "}") {
+         next();
+         raw += ch;
+         value = eval("\'" + raw + "\'");
+         // String.fromCharCode((+(raw.substr(3, raw.length-2))).toFixed(4));
+         }
+         } else {
+         while (HexDigits[lookahead]) {
+         next();
+         raw += ch;
+         }
+         unit = 0;
+         for (var a = 0, b = raw.length - 1; a <= b; a++) {
+         unit += (1 << (b - a) * 4) * + raw[a];
+         }
+         if (unit > 0x10000) {
+         cp1 = Math.floor((unit - 0x10000) / 0x0400 + 0xD800);
+         cp2 = (unit - 0x10000) % 0x0400 + 0xD800;
+         value = String.fromCharCode(cp1, cp2);
+         } else
+         value = eval("\'" + raw + "\'");
+         // String.fromCharCode(+(raw.substr(2, raw.length-1)));
+         }
+         return [ raw, value ];
+         }
+         */
+        function KeywordOrIdentifier() {
+            var token = "", e;
+            var raw = "";
+            var escaped = false;
+            // defer raw and value to parser stage? or not?
+            // when unpacking the literal and the keywords
+            // then convert unicode and stuff.
+            // that a parser literal has raw and value and
+            // a tokenizer one is just raw.
+            // directly coming issue: for the new
+            // not native ""+ of \u{sdf} should be some translation
+            // into a surrogate first. Or shouldn´t
+            if (!IdentifierStart[ch] && !UnicodeIDStart[ch]) return false;
 //    	    !String.isIdentifierStart(ch.codePointAt(0))) return false;
-
-
-        if (ch !== "\\") {
-            token += ch;
-
-        } else {
-
-    	    token = EscapeSequence();
-
-    	    escaped = true;
-    	    
-    	    
-    	    if (!IdentifierPart[lookahead] && (lookahead != "\\")) {
-
-		if (IdentifierStart[token]) makeToken("Identifier", token);
-    		else throw new SyntaxError("unexpected escape sequence");
-    		
-    		next();
-    		return token;
-    		
-    	    } 
-    	    
-        }
-
-
-        while (IdentifierPart[lookahead] || lookahead == "\\" ||
-
-            // (lookahead && String.isIdentifierPart(lookahead.codePointAt(0)))
-            // move table to unicodeIDcontinue
-
-            UnicodeIDContinue[lookahead]) {
-            
-            next();
-            if (ch === "\\") {
-        	escaped = true;
-                token += EscapeSequence();
-            } else {
+            if (ch !== "\\") {
                 token += ch;
+            } else {
+                token = EscapeSequence();
+                escaped = true;
+
+                if (!IdentifierPart[lookahead] && (lookahead != "\\")) {
+                    if (IdentifierStart[token]) makeToken("Identifier", token);
+                    else throw new SyntaxError("unexpected escape sequence");
+                    next();
+                    return token;
+                }
             }
+            while (IdentifierPart[lookahead] || lookahead == "\\" ||
+                // (lookahead && String.isIdentifierPart(lookahead.codePointAt(0)))
+                // move table to unicodeIDcontinue
+                UnicodeIDContinue[lookahead]) {
+                next();
+                if (ch === "\\") {
+                    escaped = true;
+                    token += EscapeSequence();
+                } else {
+                    token += ch;
+                }
+            }
+            makeToken((escaped ? "Identifier" : (TypeOfToken[token] || "Identifier")), token, token);
+            next();
+            return token;
         }
-        
-        makeToken((escaped ? "Identifier" : (TypeOfToken[token] || "Identifier")), token, token);
-        
-        next();
 
-        return token;
-    }
-
-    function nextLine() {
-        lines[line] = column;
-        ++line;
-        column = 1;
-        return line;
-    }
-
-    function next(k) {
-        if (i < j) {
-            i += 1;
-            ch = lookahead;
-            lookahead = sourceCode[i + 1];
-            if (k) { return next(--k); }
-            return ch;
+        function nextLine() {
+            lines[line] = column;
+            ++line;
+            column = 1;
+            return line;
         }
-        return !!(ch = lookahead = undefined);
-    }
 
-
-    function makeToken(type, value, computed, longName) {
-
-        if (!SkipableToken[type]) tokenType = type;
-
-        token = Object.create(null);
-        token.type = type;
-        token.longName = longName;
-        token.value = value;
-        token.computed =  computed;
-
-        if ((FewUnaryKeywords[value] || PunctOrLT[type]) && !OneOfThesePunctuators[value]) {
-            inputElementGoal = inputElementRegExp;
-        } /*else
-            inputElementGoal = inputElementDiv;*/
-        
-
-        // produce loc information
-
-
-        token.loc = {
-            source: filename,
-            start: {
+        function next(k) {
+            if (i < j) {
+                i += 1;
+                ch = lookahead;
+                lookahead = sourceCode[i + 1];
+                if (k) { return next(--k); }
+                return ch;
+            }
+            return !!(ch = lookahead = undefined);
+        }
+        function makeToken(type, value, computed, longName) {
+            if (!SkipableToken[type]) tokenType = type;
+            token = {}; //Object.create(null);
+            token.type = type;
+            token.longName = longName;
+            token.value = value;
+            token.computed =  computed;
+            if ((FewUnaryKeywords[value] || PunctOrLT[type]) && !OneOfThesePunctuators[value]) {
+                inputElementGoal = inputElementRegExp;
+            } /*else
+             inputElementGoal = inputElementDiv;*/
+            token.loc = {
+                source: filename,
+                start: {
+                    line: line,
+                    column: column
+                }
+            };
+            if (value != undefined) column += value.length;
+            token.loc.end = {
                 line: line,
-                column: column
-            }
-        };
+                column: column - 1
+            };
+            token.offset = offset;
+            token.loc.range = [offset, offset + (((value&&value.length)-1)|0) ]
+            if (createCustomToken) token = createCustomToken(token);
+            tokens.push(token); //
+            // emit("token", token);
+            return token;
+        }
 
-        if (value != undefined) column += value.length;
+        function tokenizeArray(jstext, callback) {
+            saveState();
+            if (jstext) sourceCode = jstext;
+            if (callback) cb = callback;
+            inputElementGoal = inputElementRegExp;
+            tokens = [];
+            line = 1;
+            column = 1;
+            i = -1;
+            j = sourceCode.length;
+            ch = undefined;
+            lookahead = sourceCode[0];
+            next();
+            var tokenTest;
+            do {
+                offset = i;
+                tokenTest = WhiteSpace()
+                    || LineTerminator()
+                    || DivPunctuator()
+                    || NumericLiteral()
+                    || Punctuation()
+                    || KeywordOrIdentifier()
+                    || StringLiteral()
+                    || TemplateLiteral()
+                if (!tokenTest && i < j) {
+                    throw new SyntaxError("Unknown Character: "+ch+" at offset "+i+" at line "+line+" at column "+column);
+                }
+            } while (ch !== undefined);
+            restoreState();
+            return tokens;
+        }
 
-        token.loc.end = {
-            line: line,
-            column: column - 1
-        };
 
-        token.offset = offset;
-
-        // range is common in esprima. will soon fix this parser for es.
-        token.loc.range = [offset, offset + (((value&&value.length)-1)|0) ]
-
-        if (createCustomToken) token = createCustomToken(token);
-        tokens.push(token); //
-
-        // if (cb) cb(token);
-        // emit("token", token);
-        return token;
-    }
-
-
-    function tokenize(jstext, callback) {
-        if (jstext) sourceCode = jstext;
-        if (callback) cb = callback;
-
-        inputElementGoal = inputElementRegExp;
-        tokens = [];
-        line = 1;
-        column = 1;
-        i = -1;
-        j = sourceCode.length;
-        ch = undefined;
-        lookahead = sourceCode[0];
-        next();
-
-        var tokenTest;
-        do {
+        function nextToken() {
             offset = i;
-
-            tokenTest = WhiteSpace()
-            || LineTerminator()
-            || DivPunctuator()
-            || NumericLiteral()            
-            || Punctuation()
-            || KeywordOrIdentifier()
-            || StringLiteral()
-            || TemplateLiteral()
-
-            if (!tokenTest && i < j) {
-                throw new SyntaxError("Unknown Character: "+ch+" at offset "+i+" at line "+line+" at column "+column);
+            WhiteSpace() || LineTerminator() || DivPunctuator() || NumericLiteral() || Punctuation() || KeywordOrIdentifier() || StringLiteral() || TemplateLiteral();
+            if (!token && i < j) {
+                throw new SyntaxError("Unknown Character: " + ch + " at offset " + i + " at line " + line + " at column " + column);
             }
+            // if (token.type === "LineTerminator") tokenize.ltNext = true;
+            if (SkipableToken[token.type]) return nextToken();
+            // change tokenize. to some dedicated object
+            tokenize.lastToken = tokenize.token;
+            tokenize.lastTokenType = tokenize.tokenType;
+            tokenize.token = token;
+            tokenize.tokenType = tokenType;
+            return token;
+        }
 
-        } while (ch !== undefined);
+        function tokenize(jstext, callback) {
+            if (jstext) sourceCode = jstext;
+            if (callback) cb = callback;
+            inputElementGoal = inputElementRegExp;
+            tokens = tokenize.tokens = [];
+            line = 1;
+            column = 1;
+            i = -1;
+            j = sourceCode.length;
+            ch = undefined;
+            lookahead = sourceCode[0];
+            next(); // next char
+            return nextToken(); // next token
+        }
 
-	//console.log("tokenizer returns");
+        var tokenizer = {};
+        tokenizer.LineTerminator = LineTerminator;
+        tokenizer.KeywordOrIdentifier = KeywordOrIdentifier;
+        tokenizer.StringLiteral = StringLiteral;
+        tokenizer.Comments = Comments;
+        tokenizer.DivPunctuator = DivPunctuator;
+        tokenizer.RegularExpressionLiteral = RegularExpressionLiteral;
+        tokenizer.EscapeSequence = EscapeSequence;
+        tokenizer.NumericLiteral = NumericLiteral;
+        tokenizer.Punctuation = Punctuation;
+        tokenizer.TemplateLiteral = TemplateLiteral;
 
-	// relative, the next version will do the standard again.
-        return tokens;
+        tokenizeArray.tokenize = tokenize;
+        tokenizeArray.makeTokenizer = makeTokenizer;
+        tokenizeArray.saveState = saveState;
+        tokenizeArray.restoreState = restoreState;
+
+        tokenize.tokenizeArray = tokenizeArray;
+        tokenize.tokenizer = tokenizer;
+        tokenize.nextToken = nextToken;
+        tokenize.saveState = saveState;
+        tokenize.restoreState = restoreState;
+        tokenize.setCustomTokenMaker = setCustomTokenMaker;
+        tokenize.unsetCustomTokenMaker = unsetCustomTokenMaker;
+        tokenize.makeTokenizer = makeTokenizer;
+
+        return tokenize;
+
     }
-
-    var tokenizer = {};
-    tokenizer.LineTerminator = LineTerminator;
-    tokenizer.KeywordOrIdentifier = KeywordOrIdentifier;
-    tokenizer.StringLiteral = StringLiteral;
-    tokenizer.Comments = Comments;
-    tokenizer.DivPunctuator = DivPunctuator;
-    tokenizer.RegularExpressionLiteral = RegularExpressionLiteral;
-    tokenizer.EscapeSequence = EscapeSequence;
-    tokenizer.NumericLiteral = NumericLiteral;
-    tokenizer.Punctuation = Punctuation;
-    tokenizer.TemplateLiteral = TemplateLiteral;
-
-
-
-    tokenize.tokenizer = tokenizer;
-    tokenize.setCustomTokenMaker = setCustomTokenMaker;
-    tokenize.unsetCustomTokenMaker = unsetCustomTokenMaker;
-    tokenize.makeTokenizer = makeTokenizer;
-
-
-
-    function setCustomTokenMaker (func) {
-        if (typeof func === null) {
-            createCustomToken = null;
-        } else if (typeof func === "function") {
-            createCustomToken = func;
-        } else throw new TypeError("tokenmaker must be a 'function token_maker(my_token) returns your_token' to return a custom token. Please fix that and try again.");
-    }
-
-    function unsetCustomTokenMaker () {
-        createCustomToken = null;
-    }   
-
-    return tokenize;
-
-}
-    //console.dir(tokenize("... args;...args"));
-    //process.exit(0);
-
-    // return tokenize;
-
     return makeTokenizer();
-
 });
 
 
@@ -4036,6 +4006,7 @@ define("earlyerrors", function () {
 });
 
 
+
 define("parser", function () {
 
 
@@ -4043,7 +4014,8 @@ define("parser", function () {
         "use strict";
 //    var i18n = require("i18n-messages");
         var tables = require("tables");
-        var tokenize = require("tokenizer");
+        var tokenize = require("tokenizer").tokenizeArray;
+
         var EarlyErrors = require("earlyerrors").EarlyErrors;
         var Contains = require("earlyerrors").Contains;
         var withError, ifAbrupt, isAbrupt;
@@ -4080,10 +4052,12 @@ define("parser", function () {
         var ExprEndOfs = tables.ExprEndOfs;
         var ast;
         var ltNext;
+        var lookltNext; // while redefining array and inline lexers
         var gotSemi;
-        var lookahead, lookaheadt;
         var tokens;
         var token = Object.create(null);
+        var lookaheadToken;
+        var lookahead, lookaheadt;
         var t; // current token type
         var v; // current token value
         var i; // tokens[i] pointer     (array version)
@@ -4105,6 +4079,8 @@ define("parser", function () {
         var moduleStack = [];
         var loc = makeLoc();
         var text;
+        var arrayParser = true;
+
         var compile = false;
         var builder = null;
         var cb;
@@ -4218,61 +4194,35 @@ define("parser", function () {
         function popNoIn() {
             isNoIn = noInStack.pop();
         }
-        var varNames = [], lexNames = [];
-        var varDecls = [], lexDecls = [];
-        var varNamesStack = [], lexNamesStack = [],
-            varDeclsStack = [], lexDeclsStack = [];
-        function pushVarNames () {varNamesStack.push(varNames);varNames=[];}
-        function popVarNames() {varNames = varNamesStack.pop();}
-        function pushLexNames () {lexNamesStack.push(lexNames);lexNames=[];}
-        function popLexNames() {lexNames = lexNamesStack.pop();}
-        function pushVarDecls () {varDeclsStack.push(varDecls);varDecls=[];}
-        function popVarDecls() {varDecls = varDeclsStack.pop();}
-        function pushLexDecls () {lexDeclsStack.push(lexDecls);lexDecls=[];}
-        function popLexDecls() {lexDecls = lexDeclsStack.pop();}
-        function pushDecls() {
-            pushVarDecls();
-            pushVarNames();
-            pushLexNames();
-            pushLexDecls();
-        }
-        function pushLexOnly() {
-            pushLexNames();
-            pushLexDecls();
-        }
-        function popLexOnly(node) {
-            node.lexNames = lexNames;
-            node.lexDecls = lexDecls;
-            popLexNames();
-            popLexDecls();
-        }
-        function popDecls(node) {
-            node.varNames = varNames;
-            node.lexNames = lexNames;
-            node.varDecls = varDecls;
-            node.lexDecls = lexDecls;
-            popVarDecls();
-            popVarNames();
-            popLexDecls();
-            popLexNames();
-        }
+
         function resetVariables(t) {
             ast = null;
-            lexDecls = [];
-            varDecls = [];
-            lexNames = [];
-            varNames = [];
-            lexDeclsStack = [];
-            varDeclsStack = [];
-            lexNamesStack = [];
-            varNamesStack = [];
-            if (typeof t === "string") t = tokenize(t);
-            tokens = t || [];
-            i = -1;
-            j = tokens.length;
-            token = v = t = undefined;
-            lookahead = lookaheadt = undefined;
+            
+            if (!arrayParser) {
+
+                next = new_next;
+                lookaheadToken = tokenize(t);
+                if (lookaheadToken) {
+                    lookahead = lookaheadToken.value;
+                    lookaheadt = lookaheadToken.type;
+                }
+                token = v = t = undefined;
+
+
+            } else {
+
+                next = old_next;
+                if (typeof t === "string") t = tokenize(t);
+                tokens = t || [];
+                i = -1;
+                j = tokens && tokens.length;
+                token = v = t = undefined;
+                lookahead = lookaheadt = undefined;
+
+            }
+
         }
+
         function build(node) {
             if (!compile) return node;
             var type = node.type;
@@ -4443,25 +4393,68 @@ define("parser", function () {
             }
         }
         function eos() {
-            return i >= j;
+            return lookahead === undefined;
         }
-        function next() {
-            if (i < j) {
+        /*
+            soon
+         */
+        var next = new_next;
+        function new_next() {
+            if (lookahead) {
+                token = lookaheadToken;
+                if (token) {
+                    t = token.type;
+                    v = token.value;
+                }
+                ltNext = lookltNext;
+                lookaheadToken = tokenize.nextToken();
+                if (lookaheadToken) {
+                    lookahead = lookaheadToken.value;
+                    lookaheadt = lookaheadToken.type;
+                    lookltNext = tokenize.ltNext;
+                } else {
+                    lookaheadToken = lookahead = lookaheadt = undefined;
+                    ltNext = false;
+                }
+
+                return token;
+            }
+            token = t = v = lookahead = lookaheadt = lookaheadToken = undefined;
+            return undefined;
+        }
+        function nextTokenFromArray() {
+            var lookahead;
+            var b = 0;
+            var t;
+            ltNext = false;
+            for(;;) {
+                b++;
+                t = tokens[i + b];
+                if (t === undefined) return undefined;
+                lookahead = t.value;
+                lookaheadt = t.type;
+                if (lookaheadt === "LineTerminator") {
+                    ltNext = true;
+                }
+                if (SkipableToken[lookaheadt]) continue;
+                break;
+            }
+            return lookahead;
+        }
+        function old_next() {
+            if (i < j) { // array version
                 i += 1;
-                token = tokens[i];  // this function really works on an array
-                // later it is "token = lookahead; lookahead = next(); not more, not less"
+                token = tokens[i];
                 if (token) {
                     t = token.type;
                     if (withExtras && captureExtraTypes[t]) extraBuffer.push(token);
-                    if (SkipableToken[t]) return next();
                     v = token.value;
                     if (withExtras && captureExtraValues[v]) extraBuffer.push(token);
+                    if (SkipableToken[t]) return next();
                     loc = token.loc;
-                } else {
-                    t = v = undefined;
+                    lookahead = nextTokenFromArray(); // origin: formerly the tokenizer tokenized html for my syntax highlighter
+                    return token;
                 }
-                lookahead = righthand(tokens, i);	// i see, i have to update that. it just picks them off the array.
-                return token;				// origin: formerly the tokenizer tokenized html for my syntax highlighter
             }
             return token = v = t = undefined;
         }
@@ -4490,25 +4483,6 @@ define("parser", function () {
                 return str;
             }
         }
-        function righthand(tokens, i) {
-            var lookahead; // = " ";
-            var b = 0;
-            var t;
-            ltNext = false;
-            for(;;) {
-                b++;
-                t = tokens[i + b];
-                if (t === undefined) return undefined;
-                lookahead = t.value;
-                lookaheadt = t.type;
-                if (lookaheadt === "LineTerminator") {
-                    ltNext = true;
-                }
-                if (SkipableToken[lookaheadt]) continue;
-                break;
-            }
-            return lookahead;
-        }
         function Node(type /*, linkToken*/ ) {
             var node = Object.create(null);
             //nodeTable[
@@ -4529,11 +4503,12 @@ define("parser", function () {
                 t: t,
                 v: v,
                 lookahead: lookahead,
+                lookaheadt: lookaheadt,
                 isNoIn: isNoIn,
                 yieldIsId: yieldIsId,
                 defaultIsId: defaultIsId,
                 yieldStack: yieldStack,
-                defaultStack: defaultStack,
+                defaultStack: defaultStack
                 //           nodeTable: nodeTable
             };
             positions.push(o);
@@ -5104,7 +5079,7 @@ define("parser", function () {
                 node.operator = v;
                 node.prefix = true;
                 match(v);
-                node.argument = this.PostfixExpression();
+                node.argument = this.UnaryExpression();
                 var l2 = loc && loc.end;
                 if (node.argument == null) throw new SyntaxError("invalid unary expression "+node.operator+", operand missing " + stringifyLoc(loc));
                 node.loc = makeLoc(l1, l2);
@@ -5112,9 +5087,47 @@ define("parser", function () {
             }
             return this.PostfixExpression();
         }
+
+        /*
+        function newAssignmentExpression () {
+            var node = null, leftHand, l1, l2;
+            l1 = loc && loc.start;
+            var prec, lastPrec;
+
+            left = LeftHandSideExpression(PrimaryExpression());
+            if (v == "?") {
+                return ConditionalExpression(left);
+            }
+
+            if (AssignmentOperators[v]) {
+
+            } else if (BinaryOperators[v]) {
+                node = BinaryExpression(left);
+            }
+
+        }
+
+         function BinaryExpression (left) {
+            var prec = OperatorPrecedence[v];
+            while (BinaryOperators[v] && prec == lastPrec) {
+                var node = Node("BinaryExpression");
+                node.operator = v;
+                node.left = left
+                node.right =
+                lastPrec = prec;
+            }
+         }
+
+        */
+
+
         function AssignmentExpression() {
             var node = null, leftHand, l1, l2;
             l1 = loc && loc.start;
+
+
+
+
             if (!yieldIsId && v === "yield") node = this.YieldExpression();
             if (!node) node = this.CoverParenthesisedExpressionAndArrowParameterList();
             leftHand = node || this.UnaryExpression();
@@ -5124,9 +5137,15 @@ define("parser", function () {
             if (v === "," || ExprEndOfs[v] || ltNext) return leftHand;
             if (t !== "Punctuator" && !InOrOfInsOf[v]) return leftHand;
             if (v === "?") return this.ConditionalExpressionNoIn(leftHand);
-            if (v === "." || v === "[") leftHand = this.MemberExpression(leftHand) || leftHand;
+
+            leftHand = this.LeftHandSideExpression(leftHand);
+            if (v == "++" || v == "--") leftHand = this.PostfixExpression(leftHand) || leftHand;
+
+            if (v === "?") return this.ConditionalExpressionNoIn(leftHand);
+            /*if (v === "." || v === "[") leftHand = this.MemberExpression(leftHand) || leftHand;
             else if (v === "(" || v === "`") leftHand = this.CallExpression(leftHand) || leftHand;
-            else if (v == "++" || v == "--") leftHand = this.PostfixExpression(leftHand) || leftHand;
+            else if (v == "++" || v == "--") leftHand = this.PostfixExpression(leftHand) || leftHand; */
+
             if (AssignmentOperators[v] && (!isNoIn || (isNoIn && v != "in"))) {
                 node = Node("AssignmentExpression");
                 // debug("AssignmentExpression found (" + t + ", " + v + ")");
@@ -5139,7 +5158,9 @@ define("parser", function () {
                 if (!node.right) throw new SyntaxError("can not parse a valid righthandside for this assignment expression");
                 l2 = loc && loc.end;
                 node.loc = makeLoc(l1, l2);
-                return rotate_binexps(node);
+                node = rotate_binexps(node);
+                if (v == "?") return this.ConditionalExpressionNoIn(node);
+                return node;
             } else if (BinaryOperators[v] && (!isNoIn || (isNoIn && v != "in"))) {
                 node = Node("BinaryExpression");
                 node.longName = PunctToExprName[v];
@@ -5153,6 +5174,7 @@ define("parser", function () {
                 l2 = loc && loc.end;
                 node.loc = makeLoc(l1, l2);
                 node = rotate_binexps(node);
+                if (v == "?") return this.ConditionalExpressionNoIn(node);
                 return node;
             } else {
                 return leftHand;
@@ -5220,8 +5242,8 @@ define("parser", function () {
             }
             return null;
         }
-        function LeftHandSideExpression() {
-            return this.NewExpression() || this.CallExpression();
+        function LeftHandSideExpression(callee) {
+            return this.NewExpression(callee) || this.CallExpression(callee);
         }
         function ExpressionStatement(expr, l1, l2) {
             var node = Node("ExpressionStatement");
@@ -5465,7 +5487,7 @@ define("parser", function () {
         function ClassDeclaration(isExpr) {
             var node, m;
             if (v === "class") {
-                pushDecls();
+                //pushDecls();
                 node = Node("ClassDeclaration");
                 node.id = null;
                 node.strict = true;
@@ -5487,7 +5509,7 @@ define("parser", function () {
                 }
                 match("}");
                 popStrict();
-                popDecls(node);
+                //popDecls(node);
                 if (compile) return builder["classExpression"](node.id, node.extends, node.elements, node.loc);
                 return node;
             }
@@ -5673,11 +5695,11 @@ define("parser", function () {
                     yieldStack.push(yieldIsId);
                     yieldIsId = false;
                 }
-                pushDecls();
+                //pushDecls();
                 match("{");
                 node.body = this.FunctionBody(node);
                 match("}");
-                popDecls(node);
+                //popDecls(node);
                 yieldIsId = yieldStack.pop();
                 end = loc && loc.end;
                 node.loc = makeLoc(start, end);
@@ -5776,14 +5798,14 @@ define("parser", function () {
                 var node = Node("BlockStatement");
                 defaultStack.push(defaultIsId);
                 defaultIsId = true;
-                pushLexOnly();
+                //pushLexOnly();
                 match("{");
                 node.body = this.StatementList();
                 l2 = loc && loc.end;
                 node.loc = makeLoc(l1, l2);
                 defaultIsId = defaultStack.pop();
                 match("}");
-                popLexOnly(node);
+                //popLexOnly(node);
                 return node;
             }
             return null;
@@ -5975,7 +5997,7 @@ define("parser", function () {
                 // staticSemantics.newVarEnv();
 
 
-                pushDecls();
+                //pushDecls();
 
                 node = Node("ModuleDeclaration");
                 node.strict = true;
@@ -5995,7 +6017,7 @@ define("parser", function () {
                 node.body = this.ModuleBody(node);
                 l2 = loc && loc.end;
                 node.loc = makeLoc(l1, l2);
-                popDecls(node);
+                //popDecls(node);
                 EarlyErrors(node);
                 currentNode = nodeStack.pop();
                 currentModule =  moduleStack.pop();
@@ -6493,15 +6515,14 @@ define("parser", function () {
             loc.start.line = 1;
             loc.start.column = 1;
             var l1 = loc && loc.start;
-            next();
-            pushDecls();
+            //pushDecls();
             currentNode = node;
             node.body = this.SourceElements(node);
             var l2;
             l2 = loc && loc.end;
             node.loc = makeLoc(l1, l2);
             EarlyErrors(node);
-            popDecls(node);
+            ////popDecls(node);
             if (compile) return builder["program"](node.body, loc);
             return node;
         }
@@ -6634,8 +6655,15 @@ define("parser", function () {
             }
             return list;
         }
+        function debugging() {
+            console.dir(token);
+            console.log(v);
+            console.log(t);
+        }
         function parse(sourceCodeOrTokens) {
+            tokenize.saveState();
             resetVariables(sourceCodeOrTokens);
+            next();
             try {
                 ast = parser.Program();
             } catch (ex) {
@@ -6644,7 +6672,8 @@ define("parser", function () {
                 console.log(ex.message);
                 console.log(ex.stack);
                 ast = ex;
-                // if ((x = parse(y)) instanceof Error) idea to return if abrupt later
+            } finally {
+                tokenize.restoreState();
             }
             return ast;
         }
@@ -6656,17 +6685,30 @@ define("parser", function () {
                 isAbrupt = api && api.isAbrupt;
                 // use the (x instanceof Error) better in runtime to remove dependency
             }
+            tokenize.saveState();
             saveTheDot();
             resetVariables();
-            if (Array.isArray(source)) {
+            //if (Array.isArray(source)) {
+            if (!Array.isArray(source)) source = tokenize(source);
+                arrayParser = true;
+                next = old_next;
                 tokens = source;
-            } else {
+                lookahead = lookaheadt = token = v = t = undefined;
+                i = -1;
+                j = tokens.length;
+            /*} else {
+                arrayParser = false;
+                next = new_next;
                 text = source;
-                tokens = tokenize(text);
-            }
-            lookahead = lookaheadt = token = v = t = undefined;
-            i = -1;
-            j = tokens.length;
+                lookaheadToken = tokenize(text);
+                if (lookaheadToken) {
+                    lookahead = lookaheadToken.value;
+                    lookaheadt = lookaheadToken.type;
+                } else {
+                    lookahead = lookaheadt = undefined;
+                }
+                t = v = token = undefined;
+            }*/
             next();
             var fn = parser[goal];
             if (!fn) throw "Sorry, got no parser for " + goal;
@@ -6678,8 +6720,10 @@ define("parser", function () {
                 console.log(ex.message);
                 console.log(ex.stack);
                 node = ex;
+            } finally {
+                restoreTheDot();
+                tokenize.restoreState();
             }
-            restoreTheDot();
             return node;
         }
         parser.JSONText = JSONText;
@@ -8074,20 +8118,6 @@ define("api", function (require, exports) {
     }
 
 
-/**
- * Created by root on 31.03.14.
- */
-
-
-
-
-/*
-    these interfaces
-    replace member and arrays
-    for replacement with typed array memory
- */
-
-
 function Push(array, data) {
     return array.push(data);
 }
@@ -8106,7 +8136,6 @@ function getRec(obj, key) {
 function setRec(obj, key, value) {
     return obj[key] = value;
 }
-
 function genericArray(arr) {
     return arr;
 }
@@ -9771,6 +9800,7 @@ var OBJECT = 1, // "object"
 
 var object_tostring_to_type_table = {
     __proto__: null,
+    "[object SymbolPrimitiveType]": SYMBOL,
     "[object Reference]": REFERENCE,
     "[object CompletionRecord]": COMPLETION,
     "[object GlobalEnvironment]": ENVIRONMENT,
@@ -9787,11 +9817,9 @@ var object_tostring_to_type_table = {
     "[object StringExoticObject]": OBJECT,
     "[object ArrayExoticObject]": OBJECT,
     "[object ArgumentsExoticObject]": OBJECT,
-    "[object SymbolPrimitiveType]": SYMBOL,
     "[object TypeDescriptorExoticObject]": OBJECT,
     "[object TypeExoticObject]": OBJECT
 };
-
 var primitive_type_string_table = {
     __proto__:null,
     "[object SymbolPrimitiveType]": "symbol",
@@ -9801,18 +9829,12 @@ var primitive_type_string_table = {
     "undefined": "undefined"
 };
 
-// ===========================================================================================================
-// Type Conversions
-// ===========================================================================================================
-
 function Type(O) {
     var type = typeof O;
-    var tostring;
     if (type === "object") {
         if (O === null) return NULL;
-        tostring = O.toString && O.toString();
-        if (tostring === "[object CompletionRecord]") return Type(O.value);
-        return object_tostring_to_type_table[tostring] || OBJECT;
+        if (O instanceof CompletionRecord) return Type(O.value);
+        return object_tostring_to_type_table[O.toString && O.toString()] || OBJECT;
     }
     switch(type) {
         case "number":
@@ -9823,8 +9845,6 @@ function Type(O) {
             return STRING;
         case "symbol":
             return SYMBOL;
-        case "null":
-            return NULL;
         case "undefined":
             return UNDEFINED;
     }
@@ -9839,38 +9859,28 @@ function ToPrimitive(V, prefType) {
 
         var s = V.toString();
         if (s === "[object CompletionRecord]") {
-
             return ToPrimitive(V.value, prefType);
-
         }
         /* else if (s === "[object OrdinaryObject]") {*/
-
         else if (hasInternalSlot(V, "NumberData")) return thisNumberValue(V);
         else if (hasInternalSlot(V, "StringData")) return thisStringValue(V);
         else if (hasInternalSlot(V, "BooleanData")) return thisBooleanValue(V);
-        else if (hasInternalSlot(V, "SymbolData")) return getInternalSlot(V, "SymbolData");
-
+        else if (hasInternalSlot(V, "SymbolData")) return getInternalSlot(V, "SymbolData"); // thisSymbolValue(V);
         else if (s === "[object SymbolPrimitiveType]") {
-
             return V;
-
         } else if ((/Environment/).test(s)) {
             throw "Can not convert an environment to a primitive";
         }
-
         var v = V.valueOf();
         if (v === false) return false;
         if (v === true) return true;
         if (typeof v === "string") return v;
         if (typeof v === "number") return v;
-
     } else {
-
         if (type === "boolean") return !!V;
         if (type === "string") return "" + V;
         if (type === "number") return +V;
     }
-
     if (Type(V) === SYMBOL) return V;
     var hint;
     var exoticToPrim;
@@ -9896,11 +9906,8 @@ function OrdinaryToPrimitive(O, hint) {
     Assert(Type(hint) === STRING && (hint === "string" || hint === "number"), "hint must be a string equal to the letters string or number");
     var tryFirst;
     var trySecond;
-
     var list = (hint === "string") ? ["toString", "valueOf"] : ["valueOf", "toString"];
-
     var func, result;
-
     for (var i = 0; i < 2; i++) {
         func = Get(O, list[i]);
         if (isAbrupt(func = ifAbrupt(func))) return func;
@@ -9913,42 +9920,35 @@ function OrdinaryToPrimitive(O, hint) {
     }
     return withError("Type", "Can not convert object to primitive with OrdinaryToPrimitive (end)");
 }
-
 var ReturnZero = {
     "NaN": true,
     "Infinity": true,
     "-Infinity": true,
     "0": true
 };
-
 var ReturnNaN = {
     "NaN": true
 };
-
 var ReturnNum = {
     "Infinity": true,
     "-Infinity": true,
     "0": true
 };
-
 function ToInt8(V) {
     var view = Int8Array(1);
     view[0] = V;
     return view[0];
 }
-
 function ToUint8(V) {
     var view = Uint8Array(1);
-    view[0] = V;
+    view[0] = V & 0xFF;
     return view[0];
 }
-
 function ToUint8Clamp(V) {
     var view = Uint8ClampedArray(1);
-    view[0] = V;
+    view[0] = V & 0xFF;
     return view[0];
 }
-
 function ToUint16(V) {
     var number = ToNumber(V);
     if (isAbrupt(number = ifAbrupt(number))) return number;
@@ -9957,7 +9957,6 @@ function ToUint16(V) {
     var int16bit = int % (Math.pow(2, 16));
     return int16Bit;
 }
-
 function ToInt32(V) {
     var number = ToNumber(V);
     if (isAbrupt(number = ifAbrupt(number))) return number;
@@ -9967,10 +9966,9 @@ function ToInt32(V) {
     if (int >= (Math.pow(2, 31))) return int32bit - (Math.pow(2, 32));
     else return int32bit;
 }
-
 function ToUint32(V) {
     /*
-     var view = new Uint32Array(1);
+     var view = new Uint32Array(1); // one for each realm. doing fast conversions O(1) in and O(1) out
      view[0] = ToNumber(V);
      return view[0];
      */
@@ -9981,7 +9979,6 @@ function ToUint32(V) {
     var int32bit = int % (Math.pow(2, 32));
     return int32bit;
 }
-
 function ToInteger(V) {
     var number = ToNumber(V);
     if (isAbrupt(number = ifAbrupt(number))) return number;
@@ -9990,22 +9987,17 @@ function ToInteger(V) {
     // return sign(number) * floor(abs(number));
     return number|0;
 }
-
 function ToLength(V) {
     var len = ToInteger(V);
     if (isAbrupt(len = ifAbrupt(len))) return len;
     if (len <= 0) return Completion("normal", 0, "");
     return Completion("normal", min(len, (Math.pow(2, 53)) - 1), "");
 }
-
 function ToBoolean(V) {
     var type = Type(V);
-
     if (V instanceof CompletionRecord) return ToBoolean(V.value);
-
     if (V === undefined) return false;
     if (V === null) return false;
-
     if (type === BOOLEAN) V = thisBooleanValue(V);
     if (typeof V === "boolean") {
         return V;
@@ -10020,12 +10012,9 @@ function ToBoolean(V) {
         return !(V === "" || V.length === 0);
 
     }
-
     if (V instanceof SymbolPrimitiveType) return true;
     return Type(V) === OBJECT;
-
 }
-
 function ToNumber(V) {
     var T;
     if (isAbrupt(V)) return V;
@@ -10040,10 +10029,8 @@ function ToNumber(V) {
         var primVal = ToPrimitive(V, "number");
         return ToNumber(primVal);
     }
-
     return +V;
 }
-
 function ToString(V) {
     var t;
     var n, k, s;
@@ -10081,7 +10068,6 @@ function ToObject(V) {
         setInternalSlot(s, "SymbolData", V);
         return s;
     }
-
     if (typeof V === "number") {
         return OrdinaryConstruct(getIntrinsic("%Number%"), [V]);
     }
@@ -10091,12 +10077,8 @@ function ToObject(V) {
     if (typeof V === "boolean") {
         return OrdinaryConstruct(getIntrinsic("%Boolean%"), [V]);
     }
-
     // return V;
 }
-
-
-
 function CheckObjectCoercible(argument) {
 
     if (argument instanceof CompletionRecord) return CheckObjectCoercible(argument.value);
@@ -10117,8 +10099,6 @@ function CheckObjectCoercible(argument) {
     }
     return argument;
 }
-
-
 // 7.4.2014
 function CanonicalNumericString (argument) {
     Assert(Type(argument) === STRING, "CanonicalNumericString: arguments has to be a string");
@@ -18227,13 +18207,6 @@ DefineOwnProperty(BooleanPrototype, "valueOf", {
     writable: true,
     configurable: true
 });
-
-// ===========================================================================================================
-// Symbol Constructor and Prototype
-// ===========================================================================================================
-
-
-
 var SymbolFunction_Call = function Call(thisArg, argList) {
     var descString;
     var description = argList[0];
@@ -18246,7 +18219,6 @@ var SymbolFunction_Call = function Call(thisArg, argList) {
 var SymbolFunction_Construct = function Construct(argList) {
     return OrdinaryConstruct(this, argList);
 };
-
 var SymbolPrototype_toString = function toString(thisArg, argList) {
     var s = thisArg;
     if (hasInternalSlot(s, "SymbolData")) return withError("Type", "The this argument has got no [[SymbolData]] property.");
@@ -18264,11 +18236,9 @@ var SymbolPrototype_valueOf = function valueOf(thisArg, argList) {
     var sym = getInternalSlot(s, "SymbolData");
     return NormalCompletion(sym);
 };
-
 var SymbolPrototype_$$toPrimitive = function (thisArg, argList) {
     return withError("Type", "Symbol.prototype[@@toPrimitive] is supposed to throw a Type Error!");
 };
-
 var SymbolFunction_keyFor = function (thisArg, argList) {
     var sym = argList[0];
     if (Type(sym) !== SYMBOL) return withError("Type", "keyFor: sym is not a symbol");
@@ -18278,8 +18248,6 @@ var SymbolFunction_keyFor = function (thisArg, argList) {
     Assert(getRealm().GlobalSymbolRegistry[key] === undefined, "GlobalSymbolRegistry must not contain an entry for sym");
     return NormalCompletion(undefined);
 };
-
-
 var SymbolFunction_for = function (thisArg, argList) {
     var key = argList[0];
     var stringKey = ToString(key);
@@ -18292,13 +18260,10 @@ var SymbolFunction_for = function (thisArg, argList) {
     getRealm().GlobalSymbolRegistry[stringKey] = { Key: stringKey, Symbol: newSymbol };
     return NormalCompletion(newSymbol); // There is a Typo newSumbol in the Spec.
 };
-
 var SymbolFunction_$$create = function (thisArg, argList) {
     return withError("Type", "The Symbol[@@create] method of the Symbol function is supposed to throw a Type Error");
 };
-
 MakeConstructor(SymbolFunction, true, SymbolPrototype);
-
 setInternalSlot(SymbolFunction, "Call", SymbolFunction_Call);
 setInternalSlot(SymbolFunction, "Construct", SymbolFunction_Construct);
 setInternalSlot(SymbolPrototype, "Prototype", ObjectPrototype);
@@ -18320,8 +18285,6 @@ LazyDefineBuiltinConstant(SymbolPrototype, $$toPrimitive, CreateBuiltinFunction(
 LazyDefineBuiltinFunction(SymbolPrototype, "toString", 0, SymbolPrototype_toString);
 LazyDefineBuiltinConstant(SymbolPrototype, $$toStringTag, "Symbol");
 LazyDefineBuiltinFunction(SymbolPrototype, "valueOf", 0, SymbolPrototype_valueOf);
-
-
 
 // ===========================================================================================================
 // Error
@@ -25669,9 +25632,7 @@ define("runtime", function () {
 
                     nextIndex = nextIndex + 1;
                 }
-
             }
-
             return nextIndex;
         }
         evaluation.ArrayExpression = ArrayExpression;
@@ -25762,7 +25723,6 @@ define("runtime", function () {
                     if (isAbrupt(propRef = ifAbrupt(propRef))) return propRef;
                     propValue = GetValue(propRef);
                     if (isAbrupt(propValue = ifAbrupt(propValue))) return propValue;
-
                     // B 3.
                     // DOESNT WORK
                     if (!computed && (propName === "__proto__")) {
@@ -25772,8 +25732,6 @@ define("runtime", function () {
                         return NormalCompletion(empty);
                     }
                     // FOR NOW
-
-
                     status = CreateDataProperty(newObj, propName, propValue);
                     if (isAbrupt(status)) return status;
                 }
@@ -25796,7 +25754,6 @@ define("runtime", function () {
                 }
                 defineGetterOrSetterOnObject(node, newObj, propName, kind);
             }
-
         }
         function defineFunctionOnObject (node, newObj, propName) {
             var cx = getContext();
@@ -25808,15 +25765,11 @@ define("runtime", function () {
             var id = node.id;
             var generator = node.generator;
             var propValue;
-
             var methodName = propName;
-
-
             if (id) {
                 scope = NewDeclarativeEnvironment(scope);
                 scope.CreateMutableBinding(id);
             }
-
             if (ReferencesSuper(node)) {
                 var home = getLexEnv().GetSuperBase();
                 //getInternalSlot(object, "HomeObject");
@@ -25845,8 +25798,6 @@ define("runtime", function () {
             var methodName;
             var propValue;
             var status;
-
-
             if (ReferencesSuper(node)) {
                 var home = getLexEnv().GetSuperBase();
                 methodName = propName;
@@ -29093,7 +29044,10 @@ define("syntaxjs", function () {
     
     // essential functions
         version: pdmacro(VERSION),			
-        tokenize: pdmacro(require("tokenizer")),				// <-- needs exports fixed
+
+        tokenizeArray: pdmacro(require("tokenizer").tokenizeArray),				// <-- needs exports fixed
+	    tokenize: pdmacro(require("tokenizer")),
+
 	    //@Deprecated
             createAst: pdmacro(require("parser")),					// <-- needs exports fixed
         parse: pdmacro(require("parser")),

@@ -31,7 +31,7 @@
 
 //#include "lib/parsenodes/tables.js";
 
-/*// #include "lib/intl/identifier-module.js"; // disabled */
+/* // #include "lib/intl/identifier-module.js"; // disabled */
 
 /* // #include "lib/intl/i18n.js"; */
 
