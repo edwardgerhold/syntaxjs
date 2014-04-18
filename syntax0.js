@@ -5012,9 +5012,9 @@ define("parser", function () {
             if ((isNoIn && InOrOf[v])) return leftHand;
             if (v === "," || ExprEndOfs[v] || ltNext) return leftHand;
             if (t !== "Punctuator" && !InOrOfInsOf[v]) return leftHand;
-            if (v === "." || v === "[") leftHand = this.MemberExpression(leftHand);
 
-            
+
+            if (v === "." || v === "[") leftHand = this.MemberExpression(leftHand);
             else if (v === "(" || v === "`") leftHand = this.CallExpression(leftHand);
             else if (v == "++" || v == "--") leftHand = this.PostfixExpression(leftHand);
 	    else if (v === "?") return this.ConditionalExpressionNoIn(leftHand);
@@ -5029,7 +5029,7 @@ define("parser", function () {
 
              */
              
-            else if (AssignmentOperators[v] && (!isNoIn || (isNoIn && v != "in"))) {
+            if (AssignmentOperators[v] && (!isNoIn || (isNoIn && v != "in"))) {
                 node = Node("AssignmentExpression");
 
                 node.longName = PunctToExprName[v];
