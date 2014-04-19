@@ -3544,23 +3544,34 @@ define("tokenizer", function () {
             tokenize.lastToken = tokenize.token;
             tokenize.lastTokenType = tokenize.tokenType;
             tokenize.lastLtNext = tokenize.ltNext;
+
             tokenize.token = token;
             tokenize.tokenType = tokenType;
             tokenize.ltNext = ltNext;
         }
 
+        function finishToken() {
+            token = undefined;
+            tokenType = undefined;
+            exchangeToken();
+            return token;
+        }
         function nextToken() {
+            if (pos >= length) return finishToken();
             offset = pos;
             WhiteSpace() || LineTerminator() || DivPunctuator() || NumericLiteral() || Punctuation() || KeywordOrIdentifier() || StringLiteral() || TemplateLiteral();
             if (!token && pos < length) {
                 throw new SyntaxError("Unknown Character: " + ch + " at offset " + pos + " at line " + line + " at column " + column);
-            }
-            if (token.type === "LineTerminator") ltNext = true;
-            if (SkipableToken[token.type]) {
-                if (withExtras) {
-                    extraBuffer.push(token);
+            } else if (token === false) {
+                return finishToken();
+            } else {
+                if (token.type === "LineTerminator") ltNext = true;
+                if (SkipableToken[token.type]) {
+                    if (withExtras) {
+                        extraBuffer.push(token);
+                    }
+                    return nextToken();
                 }
-                return nextToken();
             }
             exchangeToken();
             exchangeExtraBuffer();
@@ -3769,7 +3780,7 @@ define("parser", function () {
         "use strict";
 //    var i18n = require("i18n-messages");
         var tables = require("tables");
-        var tokenize = require("tokenizer").tokenizeIntoArray;
+        var tokenize = require("tokenizer"); //.tokenizeIntoArray;
         var EarlyErrors = require("earlyerrors").EarlyErrors;
         var Contains = require("earlyerrors").Contains;
         var withError, ifAbrupt, isAbrupt;
@@ -4138,6 +4149,7 @@ define("parser", function () {
 
         var next = next_from_array; // stepwise_next;
         function stepwise_next() {
+
             if (lookahead) {
                 token = lookaheadToken;
                 if (token) {
@@ -4146,6 +4158,7 @@ define("parser", function () {
                 }
                 ltNext = lookltNext;
                 lookaheadToken = tokenize.nextToken();
+                console.dir(lookaheadToken)
                 if (lookaheadToken) {
                     lookahead = lookaheadToken.value;
                     lookaheadType = lookaheadToken.type;
@@ -4842,48 +4855,9 @@ define("parser", function () {
             }
             return this.PostfixExpression();
         }
-
-        /*
-
-        at the bus station...
-
-
-        function newAssignmentExpression () {
-            var node = null, leftHand, l1, l2;
-            l1 = loc && loc.start;
-            var prec, lastPrec;
-
-            left = LeftHandSideExpression(PrimaryExpression());
-            if (v == "?") {
-                return ConditionalExpression(left);
-            }
-
-            if (AssignmentOperators[v]) {
-
-            } else if (BinaryOperators[v]) {
-                node = BinaryExpression(left);
-            }
-
-        }
-
-         function BinaryExpression (left) {
-            var prec = OperatorPrecedence[v];
-            while (BinaryOperators[v] && prec == lastPrec) {
-                var node = Node("BinaryExpression");
-                node.operator = v;
-                node.left = left
-                node.right =
-                lastPrec = prec;
-            }
-         }
-
-        */
-
-
         function AssignmentExpression() {
             var node = null, leftHand, l1, l2;
             l1 = loc && loc.start;
-
             /*
                 the
                 primaryexpression
@@ -4892,7 +4866,6 @@ define("parser", function () {
                 newexpression
                 is a little bit out of order here
              */
-
             if (!yieldIsId && v === "yield") leftHand = this.YieldExpression();
             if (!leftHand) leftHand = this.CoverParenthesisedExpressionAndArrowParameterList();
             leftHand = leftHand || this.UnaryExpression();
@@ -4902,22 +4875,11 @@ define("parser", function () {
             if (v === "," || ExprEndOfs[v] || ltNext) return leftHand;
             if (t !== "Punctuator" && !InOrOfInsOf[v]) return leftHand;
 
-
             if (v === "." || v === "[") leftHand = this.MemberExpression(leftHand);
             else if (v === "(" || v === "`") leftHand = this.CallExpression(leftHand);
             else if (v == "++" || v == "--") leftHand = this.PostfixExpression(leftHand);
-	    else if (v === "?") return this.ConditionalExpressionNoIn(leftHand);
+    	    else if (v === "?") return this.ConditionalExpressionNoIn(leftHand);
 
-            /*
-                    and this will be transformed into a loop
-                    so i can do a while (precedence is eq) add to the right,
-                    else change top node, put the current top node to it´s left.
-                    (it´s a different place than hanging of the tops nodes right.
-                    or the other precedence. or the parent (whose pointer is missing
-                    in this tree)
-
-             */
-             
             if (AssignmentOperators[v] && (!isNoIn || (isNoIn && v != "in"))) {
                 node = Node("AssignmentExpression");
 
@@ -4951,13 +4913,6 @@ define("parser", function () {
             } else {
                 return leftHand;
             }
-
-            /*
-                soon this function is history ;-)
-
-             */
-             
-
         }
         function CallExpression(callee) {
             var node, tmp, l1, l2;
@@ -5089,7 +5044,6 @@ define("parser", function () {
                     }
                     currentNode.needsSuper = true;
                 }
-                //if (currentNode === ast) throw new SyntaxError("contains: super Expression is not allowed in program")
                 if (compile) return builder.superExpression(node.loc);
                 return node;
             }
@@ -5771,20 +5725,12 @@ define("parser", function () {
             if (v === "module") {
                 var node, l1, l2;
                 l1 = loc && loc.start;
-
-                // staticSemantics.newContainer();
-                // staticSemantics.newVarEnv();
-
-
                 //pushDecls();
-
                 node = Node("ModuleDeclaration");
                 node.strict = true;
-
                 nodeStack.push(currentNode);
                 moduleStack.push(currentModule);
                 currentNode = currentModule = node;
-
                 node.exportEntries = [];
                 node.knownExports = [];
                 node.unknownExports = [];
@@ -5840,7 +5786,6 @@ define("parser", function () {
                 if (v === ",") {
                     match(v);
                     var node2 = this.NamedImports();
-
                     node.named = node2;
                 }
             }
@@ -6077,11 +6022,6 @@ define("parser", function () {
         }
         function ForStatement() {
             var node;
-            var left;
-            var right;
-            var init;
-            var test;
-            var update;
             var statement;
             var parens = [];
             var peek;
@@ -6108,6 +6048,8 @@ define("parser", function () {
                         if (!parens.length) {
                             break;
                         }
+                    } else if (peek === undefined) {
+                        throw new SyntaxError("unexpected end of token stream");
                     }
                     collected.push(token);
                     next();
@@ -6471,6 +6413,8 @@ define("parser", function () {
             pos = -1;
             token = t = v = undefined;
             tokenArrayLength = tokens.length;
+            ast = null;
+            currentNode = undefined;
             if (lookaheadToken = tokens[0]) {
                 lookahead = lookaheadToken.value;
                 lookaheadType = lookaheadToken.type;
@@ -6479,7 +6423,8 @@ define("parser", function () {
         }
 
         function initNewLexer(sourceOrTokens) {
-            pos = ast = t = v = token = lookaheadToken = lookahead = lookaheadType = undefined;
+            currentNode = pos = t = v = token = lookaheadToken = lookahead = lookaheadType = undefined;
+            ast = null;
             if (sourceOrTokens != undefined) {
                 if (Array.isArray(sourceOrTokens)) {
                     tokens = sourceOrTokens;
