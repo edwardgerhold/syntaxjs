@@ -3780,7 +3780,7 @@ define("parser", function () {
         "use strict";
 //    var i18n = require("i18n-messages");
         var tables = require("tables");
-        var tokenize = require("tokenizer"); //.tokenizeIntoArray;
+        var tokenize = require("tokenizer").tokenizeIntoArray;
         var EarlyErrors = require("earlyerrors").EarlyErrors;
         var Contains = require("earlyerrors").Contains;
         var withError, ifAbrupt, isAbrupt;
@@ -4158,7 +4158,7 @@ define("parser", function () {
                 }
                 ltNext = lookltNext;
                 lookaheadToken = tokenize.nextToken();
-                console.dir(lookaheadToken)
+
                 if (lookaheadToken) {
                     lookahead = lookaheadToken.value;
                     lookaheadType = lookaheadToken.type;
@@ -5690,7 +5690,7 @@ define("parser", function () {
         function WithStatement() {
             if (v === "with") {
                 if (isStrict) {
-                    throw new SyntaxError("with not allowed in strict mode");
+                    throw new SyntaxError("with not allowed in strict mode" + atLineCol());
                 }
                 var node = Node("WithStatement");
                 var l1 = loc && loc.start;
@@ -5766,7 +5766,7 @@ define("parser", function () {
                 if (item = this.ExportStatement() || this.ModuleDeclaration() || this.ImportStatement() || this.Statement()) {
 
                     if (!Contains.ModuleDeclaration[item.type]) list.push(item);
-                    else throw new SyntaxError("contains: "+item.type+" not allowed in ModuleDeclarations");
+                    else throw new SyntaxError("contains: "+item.type+" not allowed in ModuleDeclarations" + atLineCol());
 
                 }
             }
@@ -5806,7 +5806,7 @@ define("parser", function () {
                         match(",");
 
                     } else {
-                        throw new SyntaxError("BindingElement did not terminate with a , or }");
+                        throw new SyntaxError("BindingElement did not terminate with a , or }" + atLineCol());
                     }
                 }
                 return list;
@@ -5836,7 +5836,7 @@ define("parser", function () {
                         } else if (v === ",") {
                             match(",");
                         } else if (v !== "from") {
-                            throw new SyntaxError("invalid import statement");
+                            throw new SyntaxError("invalid import statement" + atLineCol());
                         }
                     }
                 }
@@ -5862,7 +5862,7 @@ define("parser", function () {
                     if (v === ",") {
                         match(",");
                     } else {
-                        throw new SyntaxError("BindingElement did not terminate with a , or }");
+                        throw new SyntaxError("BindingElement did not terminate with a , or }" + atLineCol());
                     }
                 }
                 return list;
