@@ -4298,7 +4298,7 @@ define("parser", function () {
             var node;
             if (IsAnyLiteral[t]) {
                 node = Node(t);
-                node.longNAme = token.longName;
+                node.longName = token.longName;
                 node.value = v;
                 node.computed = token.computed;
                 node.loc = makeLoc(loc && loc.start, loc && loc.end);
@@ -10373,8 +10373,7 @@ function OwnPropertyKeysAsList(O) {
 
 /*
     trying to fix es5id and Object.getOwnPropertySymbols
-
- */
+*/
 
 function OwnPropertySymbols(O) {
     var keys = [];
@@ -12034,22 +12033,15 @@ function IsSymbol(P) {
     return P instanceof SymbolPrimitiveType;
 }
 
-// ===========================================================================================================
-// Symbol PrimitiveType / Exotic Object
-// ===========================================================================================================
-
 var es5id = Math.floor(Math.random() * (1 << 16));
 
 function SymbolPrimitiveType(id, desc) {
     var O = Object.create(SymbolPrimitiveType.prototype);
     setInternalSlot(O, "Description", desc);
-    setInternalSlot(O, "Bindings", Object.create(null));
-    setInternalSlot(O, "Symbols", Object.create(null));
     setInternalSlot(O, "Prototype", null);
     setInternalSlot(O, "Extensible", false);
     setInternalSlot(O, "Integrity", "frozen");
     setInternalSlot(O, "es5id", id || (++es5id + Math.random()));
-    //setInternalSlot(O, "Private", false);
     return O;
 }
 
@@ -12094,11 +12086,6 @@ SymbolPrimitiveType.prototype = {
     }
 };
 
-
-// ===========================================================================================================
-// exports
-// ===========================================================================================================
-
 var $$unscopables        = SymbolPrimitiveType("@@unscopables",         "Symbol.unscopables");
 var $$create             = SymbolPrimitiveType("@@create",              "Symbol.create");
 var $$toPrimitive        = SymbolPrimitiveType("@@toPrimitive",         "Symbol.toPrimitive");
@@ -12108,9 +12095,7 @@ var $$iterator           = SymbolPrimitiveType("@@iterator",            "Symbol.
 var $$isRegExp           = SymbolPrimitiveType("@@isRegExp",            "Symbol.isRegExp");
 var $$isConcatSpreadable = SymbolPrimitiveType("@@isConcatSpreadable",  "Symbol.isConcatSpreadable");
 
-/**
- * Created by root on 31.03.14.
- */
+
 function thisSymbolValue(value) {
     if (value instanceof CompletionRecord) return thisSymbolValue(value.value);
     if (Type(value) === SYMBOL) return value;
@@ -20502,10 +20487,6 @@ LazyDefineProperty(GeneratorPrototype, $$create, CreateBuiltinFunction(realm, fu
 
 function Str(key, holder, _state) {
     var replacer = _state.ReplaceFunction;
-    var stack = _state.stack;
-    var indent = _state.indent;
-    var gap = _state.gap;
-
     var value = Get(holder, key);
     if (isAbrupt(value = ifAbrupt(value))) return value;
     if (Type(value) === OBJECT) {
@@ -20518,7 +20499,6 @@ function Str(key, holder, _state) {
         value = callInternalSlot("Call", replacer, holder, [key, value]);
     }
     if (Type(value) === OBJECT) {
-
         if (hasInternalSlot(value, "NumberData")) {
             value = ToNumber(value);
         } else if (hasInternalSlot(value, "StringData")) {
@@ -20526,7 +20506,6 @@ function Str(key, holder, _state) {
         } else if (hasInternalSlot(value, "BooleanData")) {
             value = ToBoolean(value);
         }
-
     }
     if (value === null) return "null";
     if (value === true) return "true";
@@ -20544,29 +20523,26 @@ function Str(key, holder, _state) {
 }
 
 function Quote(value) {
-    var ch, la;
+    var ch;
     var product = "\"";
     for (var i = 0, j = value.length; i < j; i++) {
         ch = value[i];
-        la = value[i + 1];
         product += ch;
     }
     return product + "\"";
 }
 
 function JA(value, _state) {
-    var replacer = _state.ReplacerFunction;
     var stack = _state.stack;
     var indent = _state.indent;
     var gap = _state.gap;
-    var PropertyList = _state.PropertyList;
     if (stack.indexOf(value) > -1) {
         return withError("Type", "Because the structure is cyclical!");
     }
-
     stack.push(value);
     var stepback = indent;
     var len = Get(value, "length");
+    if (isAbrupt(len=ifAbrupt(len))) return len;
     var index = 0;
     var partial = [];
 
@@ -20600,7 +20576,6 @@ function JA(value, _state) {
 }
 
 function JO(value, _state) {
-    var replacer = _state.ReplacerFunction;
     var stack = _state.stack;
     var indent = _state.indent;
     var gap = _state.gap;
@@ -20608,20 +20583,16 @@ function JO(value, _state) {
     if (stack.indexOf(value) > -1) {
         return withError("Type", "Because the structure is cyclical!");
     }
-
     stack.push(value);
     var stepback = indent;
     var K;
-
     if (PropertyList && PropertyList.length) {
         K = MakeListIterator(PropertyList);
     } else {
         K = OwnPropertyKeys(value);
     }
-
     var partial = [];
     var done, nextResult, P;
-
     while (!done) {
         nextResult = IteratorNext(K);
         if (isAbrupt(nextResult = ifAbrupt(nextResult))) return nextResult;
@@ -20662,8 +20633,6 @@ function JO(value, _state) {
 function Walk(holder, name) {
     var val = Get(holder, name);
     var done;
-    var nextResult;
-    var nextValue;
     var status;
     var newElement;
     if (isAbrupt(val = ifAbrupt(val))) return val;
@@ -20675,9 +20644,9 @@ function Walk(holder, name) {
             while (I < len) {
                 newElement = Walk(val, ToString(I));
                 if (newElement === undefined) {
-                    status = Delete(val, P);
+                    status = Delete(val, I);
                 } else {
-                    status = val.DefineOwnProperty(ToString(I), {
+                    status = callInternalSlot("DefineOwnProperty", val, ToString(I), {
                         value: newElement,
                         writable: true,
                         enumerable: true,
@@ -20697,7 +20666,7 @@ function Walk(holder, name) {
                 if (newElement === undefined) {
                     status = Delete(val, P);
                 } else {
-                    status = val.DefineOwnProperty(P, {
+                    status = callInternalSlot("DefineOwnProperty", val, P, {
                         value: newElement,
                         writable: true,
                         enumerable: true,
@@ -20714,27 +20683,21 @@ function Walk(holder, name) {
 
 DefineOwnProperty(JSONObject, "parse", {
     value: CreateBuiltinFunction(realm, function (thisArg, argList) {
-        var text = GetValue(argList[0]);
+        var text = argList[0];
         var reviver = argList[1];
         var JText = ToString(text);
-
-        var tree = parseGoal("JSONText", text);
-
+        var tree = parseGoal("JSONText", JText);
         if (isAbrupt(tree = ifAbrupt(tree))) return tree;
-
-        var scriptText = parseGoal("ParenthesizedExpression", text);
+        var scriptText = parseGoal("ParenthesizedExpression", JText);
         var exprRef = require("runtime").Evaluate(scriptText);
-        if (isAbrupt(exprRef = ifAbrupt(exprRef))) return exprRef;
-
         var unfiltered = GetValue(exprRef);
+        if (isAbrupt(unfiltered = ifAbrupt(unfiltered))) return unfiltered;
         if (IsCallable(reviver) === true) {
-            var cx = getContext();
-            var proto = Get(getIntrinsics(), "%ObjectPrototype%");
+            var proto = getIntrinsic("%ObjectPrototype%");
             var root = ObjectCreate(proto);
             CreateDataProperty(root, "", unfiltered);
             return Walk(root, "");
         }
-
         return unfiltered;
     }, 2),
     enumerable: false,
@@ -20748,7 +20711,7 @@ DefineOwnProperty(JSONObject, "stringify", {
         var space = argList[2];
         var stack = [];
         var indent = "";
-        var ReplacerFunction, PropertyList = []; // slow arrays
+        var ReplacerFunction, PropertyList = [];
         var _state = {
             stack: stack,
             indent: indent,
@@ -20761,10 +20724,12 @@ DefineOwnProperty(JSONObject, "stringify", {
                 _state.ReplacerFunction = ReplacerFunction = replacer;
             } else if (replacer instanceof ArrayExoticObject) {
                 var len = Get(replacer, "length");
+                if (isAbrupt(len=ifAbrupt(len))) return len;
                 var item, v;
                 for (i = 0; i < len; i++) {
                     item = undefined;
                     v = Get(replacer, ToString(i));
+                    if (isAbrupt(v=ifAbrupt(v))) return v;
                     if (Type(v) === STRING) item = v;
                     else if (Type(v) === NUMBER) item = ToString(v);
                     else if (Type(v) === OBJECT) {
@@ -20795,8 +20760,7 @@ DefineOwnProperty(JSONObject, "stringify", {
                 }
             }
         } else gap = "";
-        var cx = getContext();
-        var proto = Get(getIntrinsics(), "%ObjectPrototype%");
+        var proto = getIntrinsic("%ObjectPrototype%");
         var wrapper = ObjectCreate(proto);
         CreateDataProperty(wrapper, "", value);
         return Str("", wrapper, _state);
@@ -20805,6 +20769,7 @@ DefineOwnProperty(JSONObject, "stringify", {
     configurable: false,
     writable: false
 });
+
 DefineOwnProperty(JSONObject, $$toStringTag, {
     value: "JSON",
     enumerable: false,
@@ -28602,7 +28567,7 @@ define("syntaxjs-shell", function (require, exports) {
                     if (/^(\.print)/.test(code)) {
                         code = code.substr(7);
                         try {
-                    	    console.log(JSON.stringify(syntaxjs.createAst(code), null, 4));
+                    	    console.log(JSON.stringify(syntaxjs.parse(code), null, 4));
                         } catch (ex) {
                     	    console.log(ex.message);
                     	    console.log(ex.stack);
