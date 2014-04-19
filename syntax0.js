@@ -2836,9 +2836,7 @@ define("slower-static-semantics", function (require, exports) {
 
 });
 
-define("tokenizer", function () { // should use this factory to create one each realm again
-    // and rename "define" to not collide with "AMD" as the
-    // module system is anyways only for internal purposes.
+define("tokenizer", function () {
     function makeTokenizer () {
         "use strict";
         var exports = {};
@@ -2897,7 +2895,6 @@ define("tokenizer", function () { // should use this factory to create one each 
         var withExtras = false;
         var debugmode = false;
         var hasConsole = typeof console === "object" && console && typeof console.log === "function";
-
         function debug() {
             if (debugmode && hasConsole) {
                 if (typeof arguments[0] == "object") {
@@ -2988,8 +2985,6 @@ define("tokenizer", function () { // should use this factory to create one each 
             return false;
         }
         function StringLiteral() {
-            // please collect: raw string
-            // and value string
             var quotecharacter;
             var string = "";
             var raw = "";
@@ -2998,11 +2993,8 @@ define("tokenizer", function () { // should use this factory to create one each 
             if (Quotes[ch]) {
                 quotecharacter = ch;
                 string += ch;
-
                 big: while (next()) {
-
                     string += ch;
-
                     if (ch === quotecharacter) {
                         n = string.length - 2;
                         do {
@@ -3010,28 +3002,20 @@ define("tokenizer", function () { // should use this factory to create one each 
                             else if (string[n - 1] === "\\" && string[n - 2] !== "\\") break big;
                         } while (string[n -= 2] === "\\");
                     }
-
                     if (LineTerminators[lookahead]) {
-
                         n = string.length - 1;
-
                         while (string[n] === "\\") {
                             if (string[n - 1] === "\\") {
                                 multiline = false;
                                 n -= 2;
                             } else {
                                 multiline = true;
-
                                 // damn that strings are immutable.
                                 // a new line costs a copy here
                                 // coz the dull "\" is applied already.
                                 // got to rewrite multiline part. by flipping this if´s multiline bool and putting string+=ch below.
-
                                 string = string.substr(0, string.length-1);
-
                                 // forgetting bout \ is expensive this versions
-
-
                                 nextLine();
                                 break;
                             }
@@ -3111,20 +3095,16 @@ define("tokenizer", function () { // should use this factory to create one each 
                     next();
                     comment += ch;
                 }
-
                 makeToken(type, comment);
-
                 next();
                 return token;
             } else if (ch + lookahead === "/*") {
                 type = "MultiLineComment";
                 comment = "/*";
                 next();	// fix /*/ funny experience
-                next();	// pos bet pos find some more here.
+                next();
                 while (ch + lookahead !== "*/") {
-
                     if (ch == "\n") nextLine();
-
                     if (ch === undefined) {
                         throw new SyntaxError("Unexpected end of file");
                     }
@@ -3133,34 +3113,25 @@ define("tokenizer", function () { // should use this factory to create one each 
                 }
                 comment += "*/";    // ch + lookahead
                 next();
-
                 makeToken(type, comment);
-
                 next();
                 return token;
             }
             return false;
         }
         function RegularExpressionLiteral() {
-
             if (ch === "/" && !NotBeforeRegExp[tokenType]) {
-
                 var expr = "";
                 var flags = "";
                 var n;
-
                 if (!RegExpNoneOfs[lookahead] && !LineTerminators[lookahead]) {
-
                     next(); // first char after /
-
                     big:
                         while (ch != undefined) {
-
                             if (ch === "/") {
                                 // reached last character of regex
                                 // here is my old algorithm to backtrack if / is escaped or not
                                 // i check for \ and before for \\ and look as far as it goes.
-
                                 // the new algo: will prolly have a "escaped" state variable switching at \ on and off after testing next
                                 // being if (escaped and ch == "\") its and escaped \ and escape is off again, if the thirf
                                 // is \ escape is on again and if the next is " it is escaped. and then turned off.
@@ -3182,26 +3153,20 @@ define("tokenizer", function () { // should use this factory to create one each 
                 } else {
                     return false;
                 }
-
-                if (ch === "/") { // is the second / which closes the regexp.
+                if (ch === "/") {
                     match("/");
-
                     var hasFlags = {};
-                    while (RegExpFlags[ch]) { // besorge noch die flags, collect flags
+                    while (RegExpFlags[ch]) {
                         if (hasFlags[ch]) throw new SyntaxError("duplicate flags not allowed in regular expressions");
                         flags += ch;
                         hasFlags[ch] = true;
                         next();
                     }
                     if (!(WhiteSpaces[ch]||Punctuators[ch]||LineTerminators[ch]) && ch != undefined) {
-                        // let flags be /geg/gimuyfff then lexer is now at fff and that´s a syntaxerror
                         throw new SyntaxError("unexpected token illegal");
                     }
-
                     makeToken("RegularExpressionLiteral", [expr, flags]);
-                    // "/"+expr+"/"+flags
                     inputElementGoal = inputElementDiv;
-                    // next() is already done with the collection of flags.
                     return token;
                 }
 
@@ -3209,15 +3174,9 @@ define("tokenizer", function () { // should use this factory to create one each 
             return false;
         }
         function DivPunctuator() {
-
-            /*
-             this is old */
-
             var tok;
             if (ch === "/") {
-
                 if (tok = Comments()) return token = tok;
-
                 if (inputElementGoal === inputElementRegExp) {
                     if (tok = RegularExpressionLiteral()) {
                         inputElementGoal = inputElementDiv;
@@ -3225,7 +3184,6 @@ define("tokenizer", function () { // should use this factory to create one each 
                     }
                     inputElementGoal = inputElementDiv;
                 }
-
                 if (inputElementGoal !== inputElementRegExp) {
                     if (ch + lookahead === "/=") {
                         next();
@@ -3237,24 +3195,16 @@ define("tokenizer", function () { // should use this factory to create one each 
                         next();
                         return token;
                     }
-
                 }
             }
             return false;
         }
         function Punctuation() {
-
-
-            // {}() [ ] ?:; , ~
             if (ParensSemicolonComma[ch]) {
                 makeToken("Punctuator", ch, undefined, PunctToExprName[ch]);
                 next();
                 return token;
             }
-
-            /*
-             hardcode the rest forward next
-             */
             var punct;
             if (!StartOfThreeFourPunctuators[ch]) {
                 punct = ch + lookahead;
@@ -3266,7 +3216,6 @@ define("tokenizer", function () { // should use this factory to create one each 
                     next();
                     return token;
                 }
-
                 punct = punct[0] + punct[1] + punct[2];
                 if (Punctuators[punct]) {
                     next();next();
@@ -3277,21 +3226,18 @@ define("tokenizer", function () { // should use this factory to create one each 
 
                 punct = punct[0] + punct[1];
             }
-            // only if one or two
             if (Punctuators[punct]) {
                 next();
                 makeToken("Punctuator", punct, undefined, PunctToExprName[punct]);
                 next();
                 return token;
             }
-
             punct = punct[0];
             if (Punctuators[punct]) {
                 makeToken("Punctuator", punct, undefined, PunctToExprName[punct]);
                 next();
                 return token;
             }
-
             return false;
         }
         function getDecimalDigits(number) {
@@ -3539,12 +3485,14 @@ define("tokenizer", function () { // should use this factory to create one each 
             next();
             return token;
         }
+
         function nextLine() {
             lines[line] = column;
             ++line;
             column = 1;
             return line;
         }
+
         function next(k) {
             if (pos < length) {
                 pos += 1;
@@ -3555,6 +3503,7 @@ define("tokenizer", function () { // should use this factory to create one each 
             }
             return !!(ch = lookahead = undefined);
         }
+
         function makeToken(type, value, computed, longName) {
             lastToken = token;
             token = {}; //Object.create(null);
@@ -3617,17 +3566,12 @@ define("tokenizer", function () { // should use this factory to create one each 
             exchangeExtraBuffer();
             return token;
         }
+
         function tokenize(jsSourceText, callback) {
-            // stepwise = true;
             initTokenizer(jsSourceText, callback);
-            next(); // FIRST CHAR
-            return nextToken(); // FIRST token.
-            // this variant returns only the first token and is continued with nextToken();
-            // saveState() and restoreState() are called by the parser at invocation
-            // as the parser runs through and can not be interrupted,
-            // except for the predictive parts, where the saved State applies
-            // the restoreState is in the finally {} block to make sure it´s called.
+            return nextToken();
         }
+
         function initTokenizer(jsSourceText, callback) {
             if (jsSourceText) sourceCode = jsSourceText;
             if (callback) cb = callback;
@@ -3641,8 +3585,8 @@ define("tokenizer", function () { // should use this factory to create one each 
             lookahead = sourceCode[0];
             next();
         }
+
         function tokenizeIntoArray(jsSourceText, callback) {
-            // the old tokenize() operation returning an array of tokens. (from my 99 line syntaxhighlighter x-mas12, 3 weeks later with tokens and few nodes) (8kb of legacy code, eh?) (8kb)
             saveState();
             initTokenizer(jsSourceText, callback);
             var tokenTest; // if pos call this token, the thing returns undefined values.
@@ -3661,6 +3605,7 @@ define("tokenizer", function () { // should use this factory to create one each 
             restoreState();
             return tokens;
         }
+
         var tokenizer = {};
         tokenizer.LineTerminator = LineTerminator;
         tokenizer.KeywordOrIdentifier = KeywordOrIdentifier;
@@ -3674,6 +3619,7 @@ define("tokenizer", function () { // should use this factory to create one each 
         tokenizer.TemplateLiteral = TemplateLiteral;
 
         tokenizeIntoArray.tokenize = tokenize;
+        tokenizeIntoArray.tokenizeIntoArray = tokenizeIntoArray;
         tokenizeIntoArray.makeTokenizer = makeTokenizer;
         tokenizeIntoArray.saveState = saveState;
         tokenizeIntoArray.restoreState = restoreState;
@@ -3824,7 +3770,6 @@ define("parser", function () {
 //    var i18n = require("i18n-messages");
         var tables = require("tables");
         var tokenize = require("tokenizer").tokenizeIntoArray;
-        var arrayParser = true;
         var EarlyErrors = require("earlyerrors").EarlyErrors;
         var Contains = require("earlyerrors").Contains;
         var withError, ifAbrupt, isAbrupt;
@@ -3866,7 +3811,7 @@ define("parser", function () {
         var tokens;
         var token = Object.create(null);
         var lookaheadToken;
-        var lookahead, lookaheadt;
+        var lookahead, lookaheadType;
         var t; // current token type
         var v; // current token value
         var pos; // tokens[pos] pointer     (array version)
@@ -4000,66 +3945,6 @@ define("parser", function () {
         }
         function popNoIn() {
             isNoIn = noInStack.pop();
-        }
-
-        function resetVariables(t) {
-            ast = null;
-
-
-            /*
-
-                this is dirty now (the adaption/bridge
-                for a short while
-
-                the result shall be
-                a) tokenizing stepwise on each call to tokenizer.nextToken()
-                b) tokenizing from a collection of tokens (from prediction, cover grammar, etc)
-
-                both are needed.
-                the default tokenizer is currently also array
-                and the preserved whitespaces have formed a
-                next() logic which is skipping whitespace twice
-                to get rid off, i do this and look forward to
-                improve both.
-
-                for improving b)
-
-
-                for the CST commentary collection: move extraBuffer to lexer´s next
-                and forget about ws in the parser.
-                the tokenizer should collect the whitespaces and keep the buffer
-                and the parser fetches the buffer whenever needed.
-
-             */
-
-            if (!arrayParser) {
-
-                /*
-                    parseFromStream = true;
-                 */
-
-                next = next_from_stream; // with one token lookahead
-                lookaheadToken = tokenize(t);
-                if (lookaheadToken) {
-                    lookahead = lookaheadToken.value;
-                    lookaheadt = lookaheadToken.type;
-                }
-                token = v = t = undefined;
-
-            } else {
-
-                /*
-                    parseFromArray = true
-                 */
-
-                next = next_from_array;
-                if (typeof t === "string") t = tokenize(t);
-                tokens = t || [];
-                pos = -1;
-                tokenArrayLength = tokens && tokens.length;
-                token = v = t = undefined;
-                lookahead = lookaheadt = undefined;
-            }
         }
 
         function build(node) {
@@ -4250,11 +4135,9 @@ define("parser", function () {
         function eos() {
             return lookahead === undefined;
         }
-        /*
-            soon
-         */
-        var next = next_from_stream;
-        function next_from_stream() {
+
+        var next = next_from_array; // stepwise_next;
+        function stepwise_next() {
             if (lookahead) {
                 token = lookaheadToken;
                 if (token) {
@@ -4265,24 +4148,21 @@ define("parser", function () {
                 lookaheadToken = tokenize.nextToken();
                 if (lookaheadToken) {
                     lookahead = lookaheadToken.value;
-                    lookaheadt = lookaheadToken.type;
+                    lookaheadType = lookaheadToken.type;
                     lookltNext = tokenize.ltNext;
                 } else {
-                    lookaheadToken = lookahead = lookaheadt = undefined;
+                    lookaheadToken = lookahead = lookaheadType = undefined;
                     ltNext = false;
                 }
 
                 return token;
             }
-            token = t = v = lookahead = lookaheadt = lookaheadToken = undefined;
+            token = t = v = lookahead = lookaheadType = lookaheadToken = undefined;
             return undefined;
         }
 
-
-
-
         function next_from_array() {
-            if (pos < tokenArrayLength) { // array version
+            if (pos < tokenArrayLength) {
                 pos += 1;
                 token = tokens[pos];
                 if (token) {
@@ -4292,7 +4172,7 @@ define("parser", function () {
                     if (withExtras && captureExtraValues[v]) extraBuffer.push(token);
                     if (SkipableToken[t]) return next();
                     loc = token.loc;
-                    lookahead = nextTokenFromArray(); // origin: formerly the tokenizer tokenized html for my syntax highlighter
+                    lookahead = nextTokenFromArray();
                     return token;
                 }
             }
@@ -4308,11 +4188,11 @@ define("parser", function () {
                 t = tokens[pos + b];
                 if (t === undefined) return undefined;
                 lookahead = t.value;
-                lookaheadt = t.type;
-                if (lookaheadt === "LineTerminator") {
+                lookaheadType = t.type;
+                if (lookaheadType === "LineTerminator") {
                     ltNext = true;
                 }
-                if (SkipableToken[lookaheadt]) continue;
+                if (SkipableToken[lookaheadType]) continue;
                 break;
             }
             return lookahead;
@@ -4353,7 +4233,8 @@ define("parser", function () {
         }
         var positions = [];
         function saveTheDot() {
-            var o = {
+            var memento = {
+                ast: ast,
                 loc: loc,
                 tokens: tokens,
                 pos: pos,
@@ -4361,8 +4242,9 @@ define("parser", function () {
                 token: token,
                 t: t,
                 v: v,
+                next: next,
                 lookahead: lookahead,
-                lookaheadt: lookaheadt,
+                lookaheadType: lookaheadType,
                 isNoIn: isNoIn,
                 yieldIsId: yieldIsId,
                 defaultIsId: defaultIsId,
@@ -4370,27 +4252,29 @@ define("parser", function () {
                 defaultStack: defaultStack
                 //           nodeTable: nodeTable
             };
-            positions.push(o);
-            return o;
+            positions.push(memento);
+            return memento;
         }
-        function restoreTheDot(o) {
-            o = o || positions.pop();
-            if (o) {
-                loc = o.loc;
-                tokens = o.tokens;
-                pos = o.pos;
-                tokenArrayLength = o.tokenArrayLength;
-                token = o.token;
-                t = o.t;
-                v = o.v;
-                lookahead = o.lookahead;
-                lookaheadt = o.lookaheadt;
-                isNoIn = o.isNoIn;
-                yieldIsId = o.yieldIsId;
-                defaultIsId = o.defaultIsId;
-                yieldStack = o.yieldStack;
-                defaultStack = o.defaultStack;
-                //         nodeTable = o.nodeTable;
+        function restoreTheDot(memento) {
+            memento = memento || positions.pop();
+            if (memento) {
+                loc = memento.loc;
+                tokens = memento.tokens;
+                pos = memento.pos;
+                tokenArrayLength = memento.tokenArrayLength;
+                token = memento.token;
+                ast = memento.ast;
+                t = memento.t;
+                v = memento.v;
+                next = memento.next;
+                lookahead = memento.lookahead;
+                lookaheadType = memento.lookaheadType;
+                isNoIn = memento.isNoIn;
+                yieldIsId = memento.yieldIsId;
+                defaultIsId = memento.defaultIsId;
+                yieldStack = memento.yieldStack;
+                defaultStack = memento.defaultStack;
+                //         nodeTable = memento.nodeTable;
             }
         }
         function dropPositions() {
@@ -4688,7 +4572,7 @@ define("parser", function () {
                             node.value = method;
                             list.push(node);
 
-                        } else if (((v == "[" || BindingIdentifiers[t] || v === "constructor") && lookahead === "(") || (v === "*" && (lookahead == "[" || BindingIdentifiers[lookaheadt] || lookahead === "constructor"))) {
+                        } else if (((v == "[" || BindingIdentifiers[t] || v === "constructor") && lookahead === "(") || (v === "*" && (lookahead == "[" || BindingIdentifiers[lookaheadType] || lookahead === "constructor"))) {
 
                             node.kind = "method";
                             method = this.MethodDefinition(parent, true);
@@ -4768,7 +4652,7 @@ define("parser", function () {
             if (t === "Identifier" && lookahead === "=>") {
                 expr = this.Identifier();
                 cover = true;
-            } else if (v === "..." && lookaheadt === "Identifier") {
+            } else if (v === "..." && lookaheadType === "Identifier") {
                 expr = this.RestParameter();
                 cover = true;
             } else if (v === "(") {
@@ -5205,7 +5089,7 @@ define("parser", function () {
                     }
                     currentNode.needsSuper = true;
                 }
-                if (currentNode === ast) throw new SyntaxError("contains: super Expression is not allowed in program")
+                //if (currentNode === ast) throw new SyntaxError("contains: super Expression is not allowed in program")
                 if (compile) return builder.superExpression(node.loc);
                 return node;
             }
@@ -6577,10 +6461,51 @@ define("parser", function () {
             console.log(v);
             console.log(t);
         }
-        function parse(sourceCodeOrTokens) {
-            tokenize.saveState();
-            resetVariables(sourceCodeOrTokens);
+
+        function initOldLexer(sourceOrTokens) {
+            if (!Array.isArray(sourceOrTokens))
+                tokens = tokenize.tokenizeIntoArray(sourceOrTokens);
+            else
+                tokens = sourceOrTokens;
+            next = next_from_array;
+            pos = -1;
+            token = t = v = undefined;
+            tokenArrayLength = tokens.length;
+            if (lookaheadToken = tokens[0]) {
+                lookahead = lookaheadToken.value;
+                lookaheadType = lookaheadToken.type;
+            }
             next();
+        }
+
+        function initNewLexer(sourceOrTokens) {
+            pos = ast = t = v = token = lookaheadToken = lookahead = lookaheadType = undefined;
+            if (sourceOrTokens != undefined) {
+                if (Array.isArray(sourceOrTokens)) {
+                    tokens = sourceOrTokens;
+                    next = next_from_array;
+                    pos = -1;
+                    tokenArrayLength = tokens.length;
+                    lookaheadToken = tokens[0];
+                } else {
+                    next = stepwise_next;
+                    lookaheadToken = tokenize(sourceOrTokens);
+                }
+            }
+            if (lookaheadToken) {
+                lookahead = lookaheadToken.value;
+                lookaheadType = lookaheadToken.type;
+            }
+            next();
+        }
+
+        function parse(sourceOrTokens) {
+            tokenize.saveState();
+            if (tokenize === tokenize.tokenizeIntoArray) {
+                initOldLexer(sourceOrTokens);
+            } else {
+                initNewLexer(sourceOrTokens);
+            }
             try {
                 ast = parser.Program();
             } catch (ex) {
@@ -6594,39 +6519,26 @@ define("parser", function () {
             }
             return ast;
         }
+
+        function initParseGoal(source) {
+            ast = t = v = token = lookaheadToken = lookahead = lookaheadType = undefined;
+            if (!Array.isArray(source)) tokens = tokenize.tokenizeIntoArray(source);
+            else tokens = source;
+            next = next_from_array;
+            pos = -1;
+            tokenArrayLength = tokens.length;
+            next();
+        }
         function parseGoal(goal, source) {
             if (!withError) {
                 var api = require("api");
-                withError = api && api.withError;
-                ifAbrupt = api && api.ifAbrupt;
-                isAbrupt = api && api.isAbrupt;
-                // use the (x instanceof Error) better in runtime to remove dependency
+                withError = api.withError;
+                ifAbrupt = api.ifAbrupt;
+                isAbrupt = api.isAbrupt;
             }
             tokenize.saveState();
             saveTheDot();
-            resetVariables();
-            //if (Array.isArray(source)) {
-            if (!Array.isArray(source)) source = tokenize(source);
-                arrayParser = true;
-                next = next_from_array;
-                tokens = source;
-                lookahead = lookaheadt = token = v = t = undefined;
-                pos = -1;
-                tokenArrayLength = tokens.length;
-            /*} else {
-                arrayParser = false;
-                next = next_from_stream;
-                text = source;
-                lookaheadToken = tokenize(text);
-                if (lookaheadToken) {
-                    lookahead = lookaheadToken.value;
-                    lookaheadt = lookaheadToken.type;
-                } else {
-                    lookahead = lookaheadt = undefined;
-                }
-                t = v = token = undefined;
-            }*/
-            next();
+            initParseGoal(source);
             var fn = parser[goal];
             if (!fn) throw "Sorry, got no parser for " + goal;
             try {
@@ -8605,28 +8517,14 @@ function Assert(act, message) {
     }
 }
 
-
-// ===========================================================================================================
-// CodeRealm Object
-//
-// assignIntrinsics
-// createGlobalThis
-// createGlobalEnv
-// sollten zu diesem Objekt gebracht werden
-// wenn ich das erzeuge,
-// erzeuge ich intrinsics, global, env, loader....
-//
-// ===========================================================================================================
-
 function createPublicCodeRealm () {
     var realm = CreateRealm();
-
     return {
         eval: function toValue() {
-            return realm.toValue.apply(realm, arguments);
+            return realm.eval.apply(realm, arguments);
         },
         evalFile: function fileToValue() {
-            return realm.fileToValue.apply(realm, arguments);
+            return realm.evalFile.apply(realm, arguments);
         },
         evalAsync: function evalAsync() {
             return realm.evalAsync.apply(realm, arguments);
@@ -8645,9 +8543,7 @@ function CodeRealm(intrinsics, gthis, genv, ldr) {
     cr.indirectEval = undefined;
     cr.Function = undefined;
     cr.loader = ldr;
-
-    // self defined
-
+    // self defined:
     cr.stack = [];
     cr.eventQueue = [];
     cr.xs = Object.create(null);
@@ -8672,21 +8568,15 @@ CodeRealm.prototype.eval =
         // overhead save realm
         saveCodeRealm();
         setCodeRealm(this);
-
-        // evaluate code
-        // 1st stage parser
         if (typeof code === "string") code = parse(code);
-        // 2nd stage evaluation
-        var result = exports.Evaluate(code);    // here the realm argument...hmm. already in use all over
+        var result = exports.Evaluate(code);
+        result = GetValue(result);
         if (isAbrupt(result=ifAbrupt(result))) {
             var error = result.value;
             var ex = new Error(Get(error, "message"));
             ex.name = Get(error, "name");
             throw ex;
-        } else {
-            result = GetValue(result);
         }
-        // overhead restore realm
         restoreCodeRealm();
         return result;
     };
@@ -8768,20 +8658,8 @@ function CreateRealm () {
     realmRec.indirectEval = undefined;
     realmRec.Function = undefined;
     realmRec.GlobalSymbolRegistry = Object.create(null);
-
     makeTaskQueues(realmRec);
-
-    // my programming mistakes fixed.
-    // there are variables realm, intrinsics, stack, ..
-    // in the other module
-    // i think hiding behind ONE function will help
-    // or adding it to it´s modules exports and let
-    // them use exports would be another. I favor
-    // the function. but from my p3/933mhz i know i kill
-    // the program with
-
     restoreCodeRealm();
-
     return realmRec;
 }
 
@@ -8794,7 +8672,6 @@ function restoreCodeRealm() {
     setCodeRealm(realms.pop());
 }
 function setCodeRealm(r) {  // CREATE REALM (API)
-
     if (r) {
         realm = r;
         stack = realm.stack;
@@ -8813,7 +8690,6 @@ function setCodeRealm(r) {  // CREATE REALM (API)
     }
     require("runtime").setCodeRealm(r);
 }
-
 
 function GetGlobalObject() {
     var realm = getRealm();
@@ -28710,7 +28586,7 @@ define("syntaxjs-shell", function (require, exports) {
         evaluate = function evaluate(code, continuation) {
                 var val;
                 try {
-                    val = syntaxjs.toValue(code, true);
+                    val = syntaxjs.eval(code, true);
                 } catch (ex) {
                     val = ex.message + "\n" + ("" + ex.stack).split("\n").join("\r\n");
                 } finally {
