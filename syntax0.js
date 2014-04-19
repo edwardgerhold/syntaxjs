@@ -3553,6 +3553,7 @@ define("tokenizer", function () {
         function finishToken() {
             token = undefined;
             tokenType = undefined;
+            ltNext = false;
             exchangeToken();
             return token;
         }
@@ -6635,7 +6636,6 @@ define("parser", function () {
     }
     return makeParser();
 });
-
 /*
 
     The tokenizer is different from the remaining tokenization.
@@ -7840,24 +7840,19 @@ define("api", function (require, exports) {
     var stack;
     var eventQueue;
     var cx;
-
-
     // ===========================================================================================================
     // all and empty are special objects
     // ===========================================================================================================
-
     var all = {
         toString: function () {
             return "[all imports/exports value]";
         }
     };
-
     var empty = {
         toString: function () {
             return "[empty completion value]";
         }
     };
-
     exports.all = all;
     exports.empty = empty;
 
@@ -7867,33 +7862,24 @@ define("api", function (require, exports) {
     var IsSimpleParameterList = statics.IsSimpleParameterList;
     var VarDeclaredNames = statics.VarDeclaredNames;
     var LexicallyDeclaredNames = statics.LexicallyDeclaredNames;
-
     var ExpectedArgumentCount = statics.ExpectedArgumentCount;
     var ModuleRequests = statics.ModuleRequests;
-    
         var dupesInTheTwoLists = statics.dupesInTheTwoLists; // self defined
     
     var parse = require("parser");
     var parseGoal = parse.parseGoal;
-
     var debugmode = false;
-
     var hasConsole = typeof console !== "undefined" && typeof console == "object" && console && typeof console.log == "function";
 
     function debug() {
         if (debugmode && hasConsole) console.log.apply(console, arguments);
     }
-
     function debug2() {
         if (hasConsole) console.log.apply(console, arguments);
     }
-
-
     function debugdir() {
         if (debugmode && typeof importScripts !== "function") console.dir.apply(console, arguments);
     }
-
-
 function Push(array, data) {
     return array.push(data);
 }
@@ -9595,9 +9581,16 @@ function Type(O) {
     }
 }
 
+var EnvironmentType = {
+  "[object ObjectEnvironment]":true,
+  "[object DeclarativeEnvironment]": true,
+  "[object FunctionEnvironment]": true,
+  "[object GlobalLexicalEnvironment]": true,
+  "[object GlobalVariableEnvironment]":true,
+  "[object GlobalEnvironment]": true
+};
 function ToPrimitive(V, prefType) {
     var type = typeof V;
-
     if (V === null) return V;
     if (V === undefined) return V;
     if (type === "object") {
@@ -9610,10 +9603,10 @@ function ToPrimitive(V, prefType) {
         else if (hasInternalSlot(V, "NumberData")) return thisNumberValue(V);
         else if (hasInternalSlot(V, "StringData")) return thisStringValue(V);
         else if (hasInternalSlot(V, "BooleanData")) return thisBooleanValue(V);
-        else if (hasInternalSlot(V, "SymbolData")) return getInternalSlot(V, "SymbolData"); // thisSymbolValue(V);
+        else if (hasInternalSlot(V, "SymbolData")) return thisSymbolValue(V);
         else if (s === "[object SymbolPrimitiveType]") {
             return V;
-        } else if ((/Environment/).test(s)) {
+        } else if (EnvironmentType[s]) {
             throw "Can not convert an environment to a primitive";
         }
         var v = V.valueOf();
@@ -9844,9 +9837,10 @@ function CheckObjectCoercible(argument) {
     }
     return argument;
 }
+
 // 7.4.2014
 function CanonicalNumericString (argument) {
-    Assert(Type(argument) === STRING, "CanonicalNumericString: arguments has to be a string");
+    Assert(Type(argument) === STRING, "CanonicalNumericString: argument has to be a string");
     var n = ToNumber(argument);
     if (n === -0) return +0;
     if (SameValue(ToString(n), argument) === false) return undefined;
@@ -12113,6 +12107,21 @@ var $$hasInstance        = SymbolPrimitiveType("@@hasInstance",         "Symbol.
 var $$iterator           = SymbolPrimitiveType("@@iterator",            "Symbol.iterator");
 var $$isRegExp           = SymbolPrimitiveType("@@isRegExp",            "Symbol.isRegExp");
 var $$isConcatSpreadable = SymbolPrimitiveType("@@isConcatSpreadable",  "Symbol.isConcatSpreadable");
+
+/**
+ * Created by root on 31.03.14.
+ */
+function thisSymbolValue(value) {
+    if (value instanceof CompletionRecord) return thisSymbolValue(value.value);
+    if (Type(value) === SYMBOL) return value;
+    if (Type(value) === OBJECT && hasInternalSlot(value, "SymbolData")) {
+        var b = getInternalSlot(value, "SymbolData");
+        if (Type(b) === SYMBOL) return b;
+    }
+    return withError("Type", "thisSymbolValue: value is not a Symbol");
+}
+
+
 
 // ===========================================================================================================
 // String Exotic Object
@@ -23416,13 +23425,8 @@ LazyDefineBuiltinFunction(TypePrototype, "opaqueType", 1, TypePrototype_opaqueTy
 /*
 
         if (typeof Java !== "function" && typeof load !== "function" && typeof print !== "function") {
-
-	    LazyDefineProperty(intrinsics, "%DOMWrapper%", ExoticDOMObjectWrapper(
-    		typeof importScripts === "function" ? self : typeof window === "object" ? window : process)
-    	    );
+	        LazyDefineProperty(intrinsics, "%DOMWrapper%", ExoticDOMObjectWrapper(typeof importScripts === "function" ? self : typeof window === "object" ? window : process));
         }
-        
-        
             if (typeof importScripts === "function") {
                 DefineOwnProperty(globalThis, "self", GetOwnProperty(intrinsics, "%DOMWrapper%"));
             } else if (typeof window === "object") {
@@ -23466,8 +23470,6 @@ LazyDefineBuiltinFunction(TypePrototype, "opaqueType", 1, TypePrototype_opaqueTy
     exports.$$isConcatSpreadable = $$isConcatSpreadable;
 
     exports.IndirectEval = IndirectEval;
-
-    
     exports.CreateBuiltinFunction = CreateBuiltinFunction;
     exports.AddRestrictedFunctionProperties = AddRestrictedFunctionProperties;
     exports.uriReserved = uriReserved;
@@ -23479,8 +23481,6 @@ LazyDefineBuiltinFunction(TypePrototype, "opaqueType", 1, TypePrototype_opaqueTy
     exports.HasOwnProperty = HasOwnProperty;
     exports.Put = Put;
     exports.Invoke = Invoke;
-
-
     exports.CreateArrayIterator = CreateArrayIterator;
     exports.CreateByteDataBlock = CreateByteDataBlock;
     exports.CopyDataBlockBytes = CopyDataBlockBytes;
@@ -23495,10 +23495,7 @@ LazyDefineBuiltinFunction(TypePrototype, "opaqueType", 1, TypePrototype_opaqueTy
     exports.GetIterator = GetIterator;
     exports.CreateDataProperty = CreateDataProperty;
     exports.CreateOwnAccessorProperty = CreateOwnAccessorProperty;
-    exports.stringifyErrorStack = stringifyErrorStack;
-    exports.addMissingProperties = addMissingProperties;
     exports.NormalCompletion = NormalCompletion;
-
     exports.Completion = Completion;
     exports.NewDeclarativeEnvironment = NewDeclarativeEnvironment;
     exports.NewObjectEnvironment = NewObjectEnvironment;
@@ -23628,18 +23625,14 @@ LazyDefineBuiltinFunction(TypePrototype, "opaqueType", 1, TypePrototype_opaqueTy
     exports.thisNumberValue = thisNumberValue;
     exports.thisBooleanValue = thisBooleanValue;
     exports.thisStringValue = thisStringValue;
+    exports.thisSymbolValue = thisSymbolValue;
     exports.MakeMethod = MakeMethod;
     exports.CloneMethod = CloneMethod;
 
-
-
-    exports.withError = withError; // This Function returns the Errors, say the spec says "Throw a TypeError", then return withError("Type", message);
-    
-    
+    exports.withError = withError;
     // my own definitions between the ecma stuff
     exports.SetFunctionLength = SetFunctionLength;
     exports.LazyDefineProperty = LazyDefineProperty;
-
     exports.createIntrinsics = createIntrinsics;
     exports.setCodeRealm = setCodeRealm;
     exports.saveCodeRealm = saveCodeRealm;
@@ -23653,7 +23646,6 @@ LazyDefineBuiltinFunction(TypePrototype, "opaqueType", 1, TypePrototype_opaqueTy
     exports.genericArray = genericArray;
     exports.genericRecord = genericRecord;
     exports.getEventQueue = getEventQueue;
-
     exports.getContext = getContext;
     exports.getRealm = getRealm;
     exports.getLexEnv = getLexEnv;
@@ -23663,18 +23655,15 @@ LazyDefineBuiltinFunction(TypePrototype, "opaqueType", 1, TypePrototype_opaqueTy
     exports.getGlobalEnv = getGlobalEnv;
     exports.getGlobalThis = getGlobalThis;
     exports.getStack = getStack;
-
     exports.getInternalSlot = getInternalSlot;
     exports.setInternalSlot = setInternalSlot;
     exports.hasInternalSlot = hasInternalSlot;
     exports.callInternalSlot = callInternalSlot;
-
     exports.printException = printException;
     exports.makeMyExceptionText = makeMyExceptionText;
+    exports.stringifyErrorStack = stringifyErrorStack;
+    exports.addMissingProperties = addMissingProperties;
 //    exports.List = List; // never used (should be removed from code base)
-
-
-
     return exports;
 });
 
@@ -27523,13 +27512,13 @@ if (typeof window != "undefined") {
 
 
     define("highlight-gui", function (require, exports) {
-
         "use strict";
         var tables = require("tables");
         var tokenize = require("tokenizer").tokenizeIntoArray;
         var parse = require("parser");
         var Evaluate = require("runtime");
         var highlight = require("highlight");
+
         var Builtins = tables.Builtins;
         var Punctuators = tables.Punctuators;
         var WhiteSpaces = tables.WhiteSpaces;
