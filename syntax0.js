@@ -2949,7 +2949,7 @@ define("tokenizer", function () {
         function restoreState() {
             var memento;
             if (memento = saved.pop()) {
-                sourceCode = memento.sourceCode,
+                sourceCode = memento.sourceCode;
                     pos = memento.pos;
                 length = memento.length;
                 token = memento.token;
@@ -5492,7 +5492,7 @@ define("parser", function () {
                 return body;
             }
             return this.AssignmentExpression();
-        };
+        }
         function CreateTablePlusAddParentPointerIds (node, parent, nodeTable) {
             nodeTable = nodeTable || Object.create(null);
             if (Array.isArray(node)) {
@@ -9958,7 +9958,7 @@ function AbstractEqualityComparison(x, y) {
 
 }
 
-function AbstractRelationalComparison(leftFirst) {
+function AbstractRelationalComparison(x,y,leftFirst) {
     var tx = Type(x);
     var ty = Type(y);
 
@@ -11476,7 +11476,7 @@ function GeneratorYield(itrNextObj) {
     var x = getStack().pop();
     if (x !== genContext) {
         if (hasConsole) console.log("GENERATOR ACHTUNG 1: CONTEXT MISMATCH TEST NICHT BESTANDEN - yield");
-    };
+    }
     // compl = yield smth;
     genContext.callback = function (compl) {
         if (hasConsole) console.log("##callback() return compl to left of = yield##");
@@ -11929,13 +11929,14 @@ function IntegerIndexedObjectCreate(prototype) {
  */
 
 function ExoticDOMObjectWrapper(object) {
-    var O = Object.create(ExoticDOMObjectWrapper.prototype);
 
+    var O = Object.create(ExoticDOMObjectWrapper.prototype);
     setInternalSlot(O, "Target", object);
     setInternalSlot(O, "Symbols", Object.create(null));
     setInternalSlot(O, "Prototype", getIntrinsic("%ObjectPrototype%"));
     setInternalSlot(O, "Extensible", true);
     return O;
+
 }
 ExoticDOMObjectWrapper.prototype = {
     constructor: ExoticDOMObjectWrapper,
@@ -11958,9 +11959,8 @@ ExoticDOMObjectWrapper.prototype = {
         return o[P] = V;
     },
     Invoke: function (P, argList, Rcv) {
-        var f = this.Target;
+        var f;
         var o = this.Target;
-
         if ((f = this.Get(P)) && (typeof f === "function")) {
             var result = f.apply(o, argList);
             if (typeof result === "object" && result) {
@@ -11970,7 +11970,7 @@ ExoticDOMObjectWrapper.prototype = {
             }
             return result;
         } else if (IsCallable(f)) {
-            callInternalSlot("Call", f, o, argList);
+            return callInternalSlot("Call", f, o, argList);
         }
     },
     Delete: function (P) {
@@ -12006,7 +12006,7 @@ ExoticDOMObjectWrapper.prototype = {
 
 function ExoticDOMFunctionWrapper(func, that) {
     var F = Object.create(ExoticDOMFunctionWrapper.prototype);
-    setInternalSlot(F, "NativeThat", that);
+    setInternalSlot(F, "NativeThis", that);
     setInternalSlot(F, "Symbols", Object.create(null));
     setInternalSlot(F, "Prototype", getIntrinsic("%FunctionPrototype%"));
     setInternalSlot(F, "Extensible", true);
@@ -12021,14 +12021,14 @@ ExoticDOMFunctionWrapper.prototype = {
     },
     Call: function (thisArg, argList) {
         var f = this.Target;
-        var that = this.NativeThat;
+        var that = this.NativeThis;
         var result = f.apply(that, argList);
         if (typeof result === "object" && result) {
             result = ExoticDOMObjectWrapper(result);
         } else if (typeof result === "function") {
             result = ExoticDOMFunctionWrapper(result, that);
         }
-        return result;
+        return NormalCompletion(result);
     }
 };
 
@@ -13081,7 +13081,7 @@ function EscapeRegExpPattern(P, F) {
 
 function RegExpInitialize(obj, pattern, flags) {
 
-    var P, F, BMP;;
+    var P, F, BMP;
     if (pattern === undefined) P = "";
     else P = ToString(pattern);
     if (isAbrupt(P=ifAbrupt(P))) return P;
@@ -14536,6 +14536,7 @@ function CallFetch() {
         var F = this;
         var address = argList[0];
         var loader = getInternalSlot(F, "Loader");
+        var load = getInternalSlot(F, "Load");
         if (load.LinkSets.length === 0) return NormalCompletion(undefined);
         load.Address = address;
         var loaderObj = loader.LoaderObj;
@@ -14679,8 +14680,8 @@ function ProcessLoadDependencies(load, loader, depsList) {
         p = PromiseThen(p, F);
         loadPromises.push(p);
     }
-    var p = PromiseAll(loadPromises);
-    var F = LoadSucceeded();
+    p = PromiseAll(loadPromises);
+    F = LoadSucceeded();
     setInternalSlot(F, "Load", load);
     return PromiseThen(p, F);
 }
@@ -17656,7 +17657,7 @@ var StringPrototype_concat = function (thisArg, argList) {
     var R = S;
     var next;
     for (var i = 0, j = argList.length; i < j; i++ ) {
-        var next = argList[i];
+        next = argList[i];
         var nextString = ToString(next);
         if (isAbrupt(nextString = ifAbrupt(nextString))) return nextString;
         R = R + next;
@@ -20153,14 +20154,14 @@ setInternalSlot(FunctionConstructor, "Call", function (thisArg, argList) {
     var parameters = parseGoal("FormalParameterList", P); // () sind fehlerhaft bei
     var funcBody = parseGoal("FunctionBody", bodyText);
 
-    //if (Contains(funcBody, "YieldExpression")) return withError("Syntax", "regular function may not contain a yield expression");
 
+    /* old and from july draf */
     var boundNames = BoundNames(parameters);
-
     if (!IsSimpleParameterList(parameters)) {
         if (dupesInTheTwoLists(boundNames, VarDeclaredNames(funcBody))) return withError("Syntax", "Duplicate Identifier in Parameters and VarDeclaredNames of funcBody");
     }
     if (dupesInTheTwoLists(boundNames, LexicallyDeclaredNames(funcBody))) return withError("Syntax", "Duplicate Identifier in Parameters and LexicallyDeclaredNames of funcBody");
+    /* one of the few edge cases to recall static semantics */
 
     var scope = getRealm().globalEnv;
     var F = thisArg;
@@ -20173,7 +20174,7 @@ setInternalSlot(FunctionConstructor, "Call", function (thisArg, argList) {
 
     if (getInternalSlot(F, "FunctionKind") !== "normal") return withError("Type", "function object not a 'normal' function");
     FunctionInitialize(F, "normal", parameters, funcBody, scope, true);
-    var proto = ObjectCreate();
+    proto = ObjectCreate();
     var status = MakeConstructor(F);
     if (isAbrupt(status)) return status;
     SetFunctionName(F, "anonymous");
@@ -20236,7 +20237,6 @@ CreateDataProperty(FunctionPrototype, "toString", CreateBuiltinFunction(realm, f
         return code;
     }
     var paramString, bodyString;
-    var p, c, t;
     paramString = codegen.builder.formalParameters(P);
     if (kind === "arrow") {
         if (Array.isArray(C)) {
@@ -21012,7 +21012,7 @@ function UpdatePromiseFromPotentialThenable(x, promiseCapability) {
     if (!IsCallable(then)) return NormalCompletion("not a thenable");
     var thenCallResult = callInternalSlot("Call", then, x, [promiseCapability.Resolve, promiseCapability.Reject]);
     if (isAbrupt(thenCallResult = ifAbrupt(thenCallResult))) {
-        var rejectResult = callInternalSlot("Call", promiseCapability.Reject, undefined, [thenCallResult.value]);
+        rejectResult = callInternalSlot("Call", promiseCapability.Reject, undefined, [thenCallResult.value]);
         if (isAbrupt(rejectResult = ifAbrupt(rejectResult))) return rejectResult;
     }
     return NormalCompletion(null);
@@ -21030,6 +21030,7 @@ function PromiseReactionTask(reaction, argument) {
     Assert(reaction instanceof PromiseReaction, "reaction must be a PromiseReaction record");
     var promiseCapability = reaction.Capabilities;
     var handler = reaction.Handler;
+    var PromiseTaskQueue = getTasks(getRealm(),"Promise");
     var handlerResult = callInternalSlot("Call", handler, undefined, [argument]);
     if (isAbrupt(handlerResult = ifAbrupt(handlerResult))) {
         var status = callInternalSlot("Call", promiseCapability.Reject, undefined, [handlerResult.value]);
@@ -21037,14 +21038,14 @@ function PromiseReactionTask(reaction, argument) {
     }
     if (SameValue(handlerResult, promiseCapability.Promise)) {
         var selfResolutionError = withError("Type", "selfResolutionError in PromiseReactionTask");
-        var status = callInternalSlot("Call", promiseCapability.Reject, undefined, [selfResolutionError]);
+        status = callInternalSlot("Call", promiseCapability.Reject, undefined, [selfResolutionError]);
         return NextTask(status, PromiseTaskQueue);
     }
-    var status = UpdatePromiseFromPotentialThenable(handlerResult, promiseCapability);
+    status = UpdatePromiseFromPotentialThenable(handlerResult, promiseCapability);
     if (isAbrupt(status = ifAbrupt(status))) return status;
     var updateResult = status;
     if (updateResult === "not a thenable") {
-        var status = callInternalSlot("Call", promiseCapability.Resolve, undefined, [handlerResult]);
+        status = callInternalSlot("Call", promiseCapability.Resolve, undefined, [handlerResult]);
     }
     return NextTask(status, PromiseTaskQueue);
 }
@@ -21437,11 +21438,11 @@ var RegExpPrototype_replace = function (thisArg, argList) {
         var putStatus = Put(rx, "lastIndex", 0, true);
         if (isAbrupt(putStatus)) return putStatus;
     }
-    var previousLastIndex = 0;
+    previousLastIndex = 0;
     var done = false;
-    var accumulatedResult = "";
-    var nextSrcPosition = 0;
-    var matchLength;
+    accumulatedResult = "";
+    nextSrcPosition = 0;
+    var previousLastIndex;
     while (!done) {
         var result = RegExpExec(rx, S);
         if (isAbrupt(result=ifAbrupt(result))) return result;
@@ -21451,9 +21452,9 @@ var RegExpPrototype_replace = function (thisArg, argList) {
                 var thisIndex = ToInteger(Get(rx, "lastIndex"));
                 if (isAbrupt(thisIndex = ifAbrupt(thisIndex))) return thisIndex;
                 if (thisIndex === previousLastIndex) {
-                    var putStatus = Put(rx, "lastIndex", thisIndex + 1, true);
+                    putStatus = Put(rx, "lastIndex", thisIndex + 1, true);
                     if (isAbrupt(putStatus)) return putStatus;
-                    var previousLastIndex = thisIndex + 1;
+                    previousLastIndex = thisIndex + 1;
                 } else {
                     previousLastIndex = thisIndex;
                 }
@@ -21899,14 +21900,6 @@ LazyDefineBuiltinFunction(DataViewPrototype, "setUint16", 2, DataViewPrototype_s
 LazyDefineBuiltinFunction(DataViewPrototype, "setUint32", 2, DataViewPrototype_setUint32);
 LazyDefineBuiltinConstant(DataViewConstructor, $$toStringTag, "DataView");
 
-// ===========================================================================================================
-// TypedArray
-// ===========================================================================================================
-// ------------------------------------------------------------------------------------------
-// Der %TypedArray% Constructor (Superklasse)
-// ------------------------------------------------------------------------------------------
-
-
 
 var TypedArrayConstructor_Call = function (thisArg, argList) {
     var array, typedArray, length;
@@ -22151,7 +22144,7 @@ var TypedArrayConstructor_from = function from(thisArg, argList) {
     }
     Assert(HasProperty(items, "length"), "items has to be an array like object");
     var lenValue = Get(items, "length");
-    var len = ToLength(lenValue);
+    len = ToLength(lenValue);
     if (isAbrupt(len = ifAbrupt(len))) return len;
     newObj = callInternalSlot("Construct", C, C, [len]);
     if (isAbrupt(newObj = ifAbrupt(newObj))) return newObj;
@@ -22178,6 +22171,8 @@ var TypedArrayConstructor_from = function from(thisArg, argList) {
 var TypedArrayConstructor_of = function of(thisArg, argList) {
     var items = CreateArrayFromList(argList);
     var lenValue = Get(items, "length");
+    var len = ToLength(lenValue);
+    if (isAbrupt(len=ifAbrupt(length))) return length;
     var C = thisArg;
     if (IsConstructor(C)) {
         var newObj = callInternalSlot("Construct", C, C, [len]);
@@ -22268,9 +22263,6 @@ var TypedArrayPrototype_slice = function subarray(thisArg, argList) {
 var TypedArrayPrototype_some = function subarray(thisArg, argList) {
 };
 var TypedArrayPrototype_sort = function subarray(thisArg, argList) {
-};
-
-var TypedArrayPrototype_reverse = function subarray(thisArg, argList) {
 };
 
 var TypedArrayPrototype_subarray = function subarray(thisArg, argList) {
@@ -23313,8 +23305,8 @@ var StructType_Call = function (thisArg, argList) {
         if (isAbrupt(fieldType=ifAbrupt(fieldType))) return fieldType;
         if (!IsTypeObject(fieldType)) return withError("Type", "");
         var alignment = Alignment(fieldType);
-        var maxAlignment = Math.max(alignment, maxAlignment);
-        var currentOffset = AlignTo(currentOffset, alignment);
+        maxAlignment = Math.max(alignment, maxAlignment);
+        currentOffset = AlignTo(currentOffset, alignment);
 
         var r = FieldRecord(fieldName, byteOffset, currentOffset, fieldType);
         structure.push(r);
