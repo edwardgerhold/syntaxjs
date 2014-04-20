@@ -25,7 +25,7 @@
 */
 
 
-"use strict"
+"use strict";
 
 Error.stackTraceLimit = 5;
 
@@ -171,7 +171,7 @@ if (typeof exports !== "undefined") {
 
 
 function Module(id, exports, children, code) {
-    "use strict"
+    "use strict";
     var m = this;
     if (typeof id === "object") {
         exports = id.exports;
@@ -195,7 +195,7 @@ function Module(id, exports, children, code) {
 }
 
 function define(id, deps, factory) {
-    "use strict"
+    "use strict";
     var exports = {};
     var children = [];
     var imports = [];
@@ -236,7 +236,7 @@ function define(id, deps, factory) {
 }
 
 function require(deps, factory) {
-    "use strict"
+    "use strict";
     var m;
     var mods = [];
     var exports;
@@ -3533,7 +3533,7 @@ define("tokenizer", function () {
                 column: column - 1
             };
             token.offset = offset;
-            token.loc.range = [offset, offset + (((value&&value.length)-1)|0) ]
+            token.loc.range = [offset, offset + (((value&&value.length)-1)|0) ];
             if (createCustomToken) token = createCustomToken(token);
             if (!SkipableToken[type]) {
                 tokenType = type;
@@ -5296,7 +5296,7 @@ define("parser", function () {
             currentNode = node;
             if (v =="[") node.computed = true;
             node.id = this.PropertyKey();
-            if (isStrict && ForbiddenArgumentsInStrict[node.id.name]) throw new SyntaxError(node.id.name + " is not a valid method identifier in strict mode")
+            if (isStrict && ForbiddenArgumentsInStrict[node.id.name]) throw new SyntaxError(node.id.name + " is not a valid method identifier in strict mode");
             node.generator = isGenerator;
             if (!isObjectMethod) node.static = isStaticMethod;
             if (isGetter) node.kind = "get";
@@ -6736,7 +6736,7 @@ define("regexp-parser", function (require, exports) {
                 case "^":
                     node.assertion = "^";
                     match("^");
-                    break
+                    break;
                 case "$":
                     node.assertion = "$";
                     match("$");
@@ -6749,7 +6749,7 @@ define("regexp-parser", function (require, exports) {
                     break;
                 case "(":
                     if (lookahead === "?") {
-                        match("(")
+                        match("(");
                         match("?");
                         if (ch == "=") {
                             match("=");
@@ -6777,11 +6777,11 @@ define("regexp-parser", function (require, exports) {
                     node.atom = this.CharacterClass();
                     break;
                 case "(":
-                    match("(")
+                    match("(");;
                     if (ch == "?" && lookhead == ":") {
                         match("?");
                         match(":");
-                        node.atom = "?:"
+                        node.atom = "?:";
                         node.disjunction = this.Disjunction();
                     } else {
                         node.atom = this.Disjunction();
@@ -6959,7 +6959,7 @@ define("regexp-parser", function (require, exports) {
 
     function CharacterClass() {
         var node = Node("CharacterClass");
-        match("[");e
+        match("[");e;
         if (ch == "^") {
             node.negation = true;
             match("^");
@@ -11629,7 +11629,6 @@ function GetValueFromBuffer(arrayBuffer, byteIndex, type, isLittleEndian) {
     var elementSize = arrayType2elementSize[type];
     var rawValue, intValue;
     var help;
-
     help = new(typedConstructors[type])(bock, byteIndex, 1);
     rawValue = help[0];
 
@@ -11654,8 +11653,8 @@ function SetValueInBuffer(arrayBuffer, byteIndex, type, value, isLittleEndian) {
 function SetViewValue(view, requestIndex, isLittleEndian, type, value) {
     var v = ToObject(view);
     if (isAbrupt(v = ifAbrupt(v))) return v;
-    if (!hasInternalSlot(v, "DataArrayBuffer")) return withError("Type", "not a DataArrayBuffer");
-    var buffer = getInternalSlot(v, "DataArrayBuffer");
+    if (!hasInternalSlot(v, "ArrayBufferData")) return withError("Type", "not a ArrayBufferData");
+    var buffer = getInternalSlot(v, "ArrayBufferData");
     if (buffer === undefined) return withError("Type", "buffer is undefined");
     var numberIndex = ToNumber(requestIndex);
     var getIndex = ToInteger(numberIndex);
@@ -11674,8 +11673,8 @@ function SetViewValue(view, requestIndex, isLittleEndian, type, value) {
 function GetViewValue(view, requestIndex, isLittleEndian, type) {
     var v = ToObject(view);
     if (isAbrupt(v = ifAbrupt(v))) return v;
-    if (!hasInternalSlot(v, "DataArrayBuffer")) return withError("Type", "not a DataArrayBuffer");
-    var buffer = getInternalSlot(v, "DataArrayBuffer");
+    if (!hasInternalSlot(v, "ArrayBufferData")) return withError("Type", "not a ArrayBufferData");
+    var buffer = getInternalSlot(v, "ArrayBufferData");
     if (buffer === undefined) return withError("Type", "buffer is undefined");
     var numberIndex = ToNumber(requestIndex);
     var getIndex = ToInteger(numberIndex);
@@ -11748,13 +11747,13 @@ IntegerIndexedExoticObject.prototype = assign(IntegerIndexedExoticObject.prototy
     DefineOwnProperty: function (P, Desc) {
         var O = this;
         Assert(IsPropertyKey(P), "P has to be a valid property key");
-        Assert(O.ArrayBufferData !== undefined, "arraybufferdata must not be undefined");
+        Assert(getInternalSlot(O,"ArrayBufferData") !== undefined, "[[ArrayBufferData]] must not be undefined");
         if (Type(P) === STRING) {
             var intIndex = ToInteger(P);
             if (isAbrupt(intIndex = ifAbrupt(intIndex))) return intIndex;
             if (SameValue(ToString(intIndex), P)) {
                 if (intIndex < 0) return false;
-                var len = O.ArrayLength;
+                var len = getInternalSlot(O,"ArrayLength");
                 if (len === undefined) return withError("Type", "integerindexed: length is undefined");
                 if (intIndex >= len) return false;
                 if (IsAccessorDescriptor(Desc)) return false;
@@ -11809,7 +11808,7 @@ IntegerIndexedExoticObject.prototype = assign(IntegerIndexedExoticObject.prototy
     GetOwnProperty: function (P) {
         var O = this;
         Assert(IsPropertyKey(P), "P has to be a valid property key");
-        Assert(O.ArrayBufferData !== undefined, "arraybufferdata must not be undefined");
+        Assert(getInternalSlot(O,"ArrayBufferData") !== undefined, "[[ArrayBufferData]] must not be undefined");
         if (Type(P) === STRING) {
             var intIndex = ToInteger(P);
             if (isAbrupt(intIndex = ifAbrupt(intIndex))) return intIndex;
@@ -11865,8 +11864,8 @@ function IntegerIndexedElementGet(O, index) {
     var buffer = getInternalSlot(O, "ViewedArrayBuffer");
     var length = getInternalSlot(O, "ArrayLength");
     if (index < 0 || index >= length) return undefined;
-    var offset = O.ByteOffset;
-    var arrayTypeName = O.TypedArrayName;
+    var offset = getInternalSlot(O,"ByteOffset");
+    var arrayTypeName = getInternalSlot(O,"TypedArrayName");
     var elementSize = ToNumber(TypedArrayElementSize[arrayTypeName]);
     var indexedPosition = (index * elementSize) + offset;
     var elementType = TypedArrayElementType[arrayTypeName];
@@ -11884,8 +11883,8 @@ function IntegerIndexedElementSet(O, index, value) {
     var numValue = ToNumber(value);
     if (isAbrupt(numValue = ifAbrupt(numValue))) return numValue;
     if (index < 0 || index >= length) return numValue;
-    var offset = O.ByteOffset;
-    var arrayTypeName = O.TypedArrayName;
+    var offset = getInternalSlot(O,"ByteOffset");
+    var arrayTypeName = getInternalSlot(O,"TypedArrayName");
     var elementSize = ToNumber(TypedArrayElementSize[arrayTypeName]);
     var indexedPosition = (index * elementSize) + offset;
     var elementType = TypedArrayElementType[arrayTypeName];
@@ -11918,13 +11917,10 @@ var TypedArrayElementType = {
     "Uint8ClampedArray": "Uint8C"
 };
 
-
-
 function IntegerIndexedObjectCreate(prototype) {
     var O = IntegerIndexedExoticObject();
     setInternalSlot(O, "Extensible", true);
     setInternalSlot(O, "Prototype", prototype);
-    setInternalSlot(O, "hiddenBuffer", undefined);
     return O;
 }
 
@@ -12245,11 +12241,10 @@ function thisBooleanValue(value) {
 
 function ArrayExoticObject(proto) {
     var A = Object.create(ArrayExoticObject.prototype);
-    A.Bindings = Object.create(null);
-    A.Symbols = Object.create(null);
-    A.Extensible = true;
-    if (proto) A.Prototype = proto;
-    else A.Prototype = ArrayPrototype;
+    setInternalSlot(A, "Bindings",Object.create(null));
+    setInternalSlot(A, "Symbols", Object.create(null));
+    setInternalSlot(A, "Extensible", true);
+    setInternalSlot(A, "Prototype", proto? proto : ArrayPrototype);
     return A;
 }
 ArrayExoticObject.prototype = assign(ArrayExoticObject.prototype, OrdinaryObject.prototype);
@@ -13094,7 +13089,7 @@ function RegExpInitialize(obj, pattern, flags) {
     else F = ToString(flags);
     BMP = F.indexOf("u") === -1;
 
-    var parse = require("regexp-parser").parse
+    var parse = require("regexp-parser").parse;
     var patternCharacters = parse(P);
 
     setInternalSlot(obj, "OriginalFlags", F);
@@ -13240,7 +13235,7 @@ function createRegExpMatcher(pattern) {
     };
     evaluator.evaluate = function (node) {
 	if (node === undefined) return FAILURE;
-        var f = this[node.type];4
+        var f = this[node.type];4;
         if (f) return f.call(evaluator, node);
     };
     patternMatcher = evaluator.evaluate.call(evaluator, pattern);
@@ -14415,7 +14410,7 @@ function CreateLoadRequestObject(name, metadata, address, source) {
 function LoadModule(loader, name, options) {
     ////debug2("loadmodule");
     if (!options) options = ObjectCreate();
-    var name = ToString(name);
+    name = ToString(name);
     if (isAbrupt(name = ifAbrupt(name))) return name;
     var address = GetOption(options, "address");
     if (isAbrupt(address = ifAbrupt(address))) return address;
@@ -14475,7 +14470,7 @@ function GetOrCreateLoad() {
             var p = modules[i];
             if (SameValue(p.key, name)) {
                 var existingModule = p.value;
-                var load = CreateLoad(name);
+                load = CreateLoad(name);
                 load.Status = "linked";
                 load.Module = existingModule;
                 return NormalCompletion(load);
@@ -16417,16 +16412,15 @@ var ArrayPrototype_splice = function splice(thisArg, argList) {
     var putStatus = Put(A, "length", actualDeleteCount, true);
     if (isAbrupt(putStatus)) return putStatus;
     var itemCount = items.length;
-    var k;
     if (itemCount < actualDeleteCount) {
         k = actualStart;
         while (k < (len - actualDeleteCount)) {
-            var from = ToString(k+actualDeleteCount);
+            from = ToString(k+actualDeleteCount);
             var to = ToString(k+itemCount);
-            var fromPresent = HasProperty(O, from);
+            fromPresent = HasProperty(O, from);
             if (isAbrupt(fromPresent = ifAbrupt(fromPresent))) return fromPresent;
             if (fromPresent  === true) {
-                var fromValue = Get(O, from);
+                fromValue = Get(O, from);
                 if (isAbrupt(fromValue = ifAbrupt(fromValue))) return fromValue;
                 putStatus = Put(O, to, fromValue, true);
                 if (isAbrupt(putStatus)) return putStatus;
@@ -16440,11 +16434,11 @@ var ArrayPrototype_splice = function splice(thisArg, argList) {
     } else if (itemCount > actualDeleteCount) {
         k = len - actualDeleteCount;
         while (k < actualStart) {
-            var from = ToStirng(k + actualDeleteCount - 1);
-            var to = ToString(k + itemCount - 1);
-            var fromPresent = HasProperty(O, from);
+            from = ToString(k + actualDeleteCount - 1);
+            to = ToString(k + itemCount - 1);
+            fromPresent = HasProperty(O, from);
             if (fromPresent === true) {
-                var fromValue = Get(O, from);
+                fromValue = Get(O, from);
                 if (isAbrupt(fromValue = ifAbrupt(fromValue))) return fromValue;
                 putStatus = Put(O, to, fromValue, true);
                 if (isAbrupt(putStatus)) return putStatus;
@@ -16898,7 +16892,7 @@ var ArrayPrototype_reduceRight = function reduceRight(thisArg, argList) {
         var kPresent = false;
         while (!kPresent && (k >= 0)) {
             var Pk = ToString(k);
-            var kPresent = HasProperty(O, Pk);
+            kPresent = HasProperty(O, Pk);
             if (isAbrupt(kPresent=ifAbrupt(kPresent))) return kPresent;
             if (kPresent) {
                 accumulator = Get(O, Pk);
@@ -16913,7 +16907,7 @@ var ArrayPrototype_reduceRight = function reduceRight(thisArg, argList) {
         kPresent = HasProperty(O, Pk);
         if (kPresent) {
             var kValue = Get(O, Pk);
-            if (isAbrupt(kPresent = ifAbrupt(kPresent)));
+            if (isAbrupt(kPresent = ifAbrupt(kPresent))) return kPresent;
             accumulator = callInternalSlot("Call", callback, undefined, [accumulator, kValue, k, O]);
             if (isAbrupt(accumulator=ifAbrupt(accumulator))) return accumulator;
         }
@@ -18276,7 +18270,7 @@ setInternalSlot(DateConstructor, "Call", function (thisArg, argList) {
             if (ms) milli = ToNumber(ms);
             else milli = 0;
             if (isAbrupt(milli)) return milli;
-            finalDate = MakeDate(MakeDay(yr, m, dt), MakeTime(h, min, s, milli));
+            finalDate = MakeDate(MakeDay(y, m, dt), MakeTime(h, min, s, milli));
             setInternalSlot(O, "DateValue", TimeClip(UTC(finalDate)));
         }
         return O;
@@ -20607,7 +20601,7 @@ function JO(value, _state) {
     return final;
 }
 
-function Walk(holder, name) {
+function Walk(holder, name, reviver) {
     var val = Get(holder, name);
     var done;
     var status;
@@ -20656,7 +20650,7 @@ function Walk(holder, name) {
             }
         }
     }
-    return callInternalSlot("Call",reviver, holder, [name, val]);
+    return callInternalSlot("Call", reviver, holder, [name, val]);
 }
 
 DefineOwnProperty(JSONObject, "parse", {
@@ -20674,9 +20668,9 @@ DefineOwnProperty(JSONObject, "parse", {
             var proto = getIntrinsic("%ObjectPrototype%");
             var root = ObjectCreate(proto);
             CreateDataProperty(root, "", unfiltered);
-            return Walk(root, "");
+            return Walk(root, "", reviver);
         }
-        return unfiltered;
+        return NormalCompletion(unfiltered);
     }, 2),
     enumerable: false,
     configurable: false,
@@ -20738,10 +20732,11 @@ DefineOwnProperty(JSONObject, "stringify", {
                 }
             }
         } else gap = "";
+        _state.gap = gap;
         var proto = getIntrinsic("%ObjectPrototype%");
         var wrapper = ObjectCreate(proto);
         CreateDataProperty(wrapper, "", value);
-        return Str("", wrapper, _state);
+        return NormalCompletion(Str("", wrapper, _state));
     }),
     enumerable: false,
     configurable: false,
@@ -23010,11 +23005,11 @@ setInternalSlot(EmitterConstructor, "Call", function Call(thisArg, argList) {
     var type = Type(O);
     var has, listeners;
     if (type === OBJECT) {
-        var has = hasInternalSlot(O, "EventListeners");
+        has = hasInternalSlot(O, "EventListeners");
         if (!has) {
             return withError("Type", "this argument has to have a [[Listeners]] Property");
         } else {
-            var listeners = getInternalSlot(O, "EventListeners");
+            listeners = getInternalSlot(O, "EventListeners");
             if (!listeners) {
                 listeners = Object.create(null);
                 setInternalSlot(O, "EventListeners", listeners);
@@ -23096,8 +23091,8 @@ DefineOwnProperty(EmitterPrototype, "once", {
         if (!hasInternalSlot(E, "EventListeners")) return withError("Type", "[[Listeners]] missing on this argument");
         else listeners = getInternalSlot(E, "EventListeners");
 
-        var event = argList[0];
-        var callback = argList[1];
+        event = argList[0];
+        callback = argList[1];
         if (Type(event) !== STRING) return withError("Type", "Your argument 1 is not a event name string.");
         if (!IsCallable(callback)) return withError("Type", "Your argument 2 is not a callback function");
 
@@ -24523,7 +24518,7 @@ define("runtime", function () {
                 } else if (type === "SpreadExpression") {
                     var array = GetValue(Evaluate(arg));
                     if (isAbrupt(array = ifAbrupt(array))) return array;
-                    var l = Get(array, "length")
+                    var l = Get(array, "length");
                     if (isAbrupt(l=ifAbrupt(l))) return l;
                     for (var k = 0; k < l; k++) {
                         value = Get(array, ToString(k));
@@ -25278,13 +25273,13 @@ define("runtime", function () {
             var line = loc && loc.start ? loc.start.line : "bug";
             var column = loc && loc.start ? loc.start.column : "bug";
             banner("DebuggerStatement at line " + (line) + ", " + (column) + "\n");
-            banner("stack")
+            banner("stack");
             if (hasConsole) console.dir(getStack());
             else if (hasPrint) print(getStack());
-            banner("varenv")
+            banner("varenv");
             if (hasConsole) console.dir(getVarEnv());
             else if (hasPrint) print(getVarEnv());
-            banner("lexenv")
+            banner("lexenv");
             if (hasConsole) console.dir(getLexEnv());
             else if (hasPrint) print(getLexEnv());
             banner("realm");
@@ -28491,7 +28486,7 @@ define("syntaxjs-worker", function (require, exports, module) {
                     keepalive = true;
                 case "value":
                     if (Array.isArray(text)) {
-                        result = [];
+                        var result = [];
                         for (var i = 0, j = text.length; i < j; i++) {
                             result.push(interprete(text[i], keepalive));
                         }
@@ -28723,8 +28718,11 @@ define("syntaxjs", function () {
         version: pdmacro(VERSION),			
 
         tokenizeIntoArray: pdmacro(require("tokenizer").tokenizeIntoArray),				// <-- needs exports fixed
-	    tokenize: pdmacro(require("tokenizer")),
+	tokenize: pdmacro(require("tokenizer")),
+	
+	
         parse: pdmacro(require("parser")),
+        parseGoal: pdmacro(require("parser").parseGoal),
         eval: pdmacro(require("runtime")),
         createRealm: pdmacro(require("api").createPublicCodeRealm),
         toJsLang: pdmacro(require("js-codegen")),				// <-- needs exports fixed
@@ -28735,7 +28733,6 @@ define("syntaxjs", function () {
 
         readFile: pdmacro(require("filesystem").readFile),	
         readFileSync: pdmacro(require("filesystem").readFileSync),
-
 
   // put into filesystem.js please
         evalFile: pdmacro(function (name, callback, errback) {
@@ -28784,8 +28781,6 @@ define("syntaxjs", function () {
 
         if (typeof exports !== "undefined") exports.syntaxjs = syntaxjs;
         syntaxjs.system = "node";
-        syntaxjs._require = module.require;
-        syntaxjs._module = module;
 
         syntaxjs_public_api_readonly.nodeShell = pdmacro(require("syntaxjs-shell"));// <-- needs exports fixed
 
