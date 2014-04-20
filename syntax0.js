@@ -3537,10 +3537,11 @@ define("tokenizer", function () {
             if (createCustomToken) token = createCustomToken(token);
             if (!SkipableToken[type]) {
                 tokenType = type;
-                tokens.push(token);
+
             } else {
                 if (withExtras) extraBuffer.push(token);
             }
+    	    tokens.push(token);
             // emit("token", token);
             return token;
         }
@@ -25612,7 +25613,7 @@ define("runtime", function () {
 
             var type = node.left.type;
             var op = node.operator;
-            var leftElems = node.left.elements;
+            var leftElems = node.left.elements || node.left.properties;
 
             var lval, rval;
             var rref, lref;
@@ -27444,11 +27445,6 @@ define("highlight", function (require, exports) {
             rec.tokens = tokens;
         }
 
-        if (withast) {
-            if (!parse) parse = require("parser");
-            rec.ast = parse(tokens);
-        }
-
         for (m = 0, n = tokens.length; m < n; m++) {
             type = tokens[m].type;
             word = tokens[m].value;
@@ -27556,9 +27552,6 @@ if (typeof window != "undefined") {
             "language": "data-syntaxjs-language",
             "shell": "data-syntaxjs-shell"
         };
-        for (var k in ClassNames) {
-            ClassTests[k] = true;
-        }
         var Duties = {
             "true": true,
             "yes": true,
@@ -27597,8 +27590,6 @@ if (typeof window != "undefined") {
         var annotationDiv;
         var annotations = Object.create(null);
         var development_version = "<br><sub>ohne Gew&auml;hr</sub>";
-        var NoOvers = {};
-        NoOvers[ClassNames["info"]] = true;
         var clas = /syntaxjs-/;
         annotationDiv = document.createElement("div");
         annotationDiv.className = "syntaxjs-annotation";
@@ -27701,7 +27692,13 @@ if (typeof window != "undefined") {
             "shell": "syntaxjs-shell-button"
 
         };
-        var ClassTests = {};
+        var ClassTests = {};        
+        for (var k in ClassNames) {
+            ClassTests[k] = true;
+        }
+        var NoOvers = {};
+        NoOvers[ClassNames["info"]] = true;
+
         function addEventListener(element, type, func, capture) {
             if (typeof element.attachEvent === "function" && typeof element.addEventListener !== "function") {
                 if (type == "DOMContentLoaded") type = "load";
