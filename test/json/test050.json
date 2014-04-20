@@ -1,0 +1,11 @@
+{
+	"Creating ArrayBuffer":
+	{
+	    "init": 		
+		"const ab = new ArrayBuffer(1024)",
+	    "tests": 
+	    [
+		["ab.byteLength", 1024]
+	    ]
+	}
+}

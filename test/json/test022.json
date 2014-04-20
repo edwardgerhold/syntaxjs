@@ -45,11 +45,33 @@
 	"JSON.stringify of an object":
 	{
 	    "init":
-		"let x = JSON.stringify({a:1})",
+		"let x = JSON.stringify({a:1,b:2})",
+	    "tests":
+	    [
+		["x[0]", "{"],
+		["x[x.length-1]", "}"],
+		["x.indexOf('a') > -1", true],
+		["x.indexOf('b') > -1", true]
+	    ]	
+	},
+	"JSON.stringify of an empty object":
+	{
+	    "init":
+		"let x = JSON.stringify({})",
 	    "tests":
 	    [
 		["x[0]", "{"],
 		["x[x.length-1]", "}"]
 	    ]	
-	}	
+	},
+	"JSON.stringify of an empty array":
+	{
+	    "init":
+		"let x = JSON.stringify([])",
+	    "tests":
+	    [
+		["x[0]", "["],
+		["x[x.length-1]", "]"]
+	    ]	
+	}
 }

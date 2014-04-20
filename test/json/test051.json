@@ -1,0 +1,13 @@
+{
+	"Creating Typed Arrays.":
+	{
+	    "init": 		
+		"const ab = new ArrayBuffer(1024);",
+	    "tests": 
+	    [
+		["let a = new Uint8Array(ab); a instanceof Uint8Array", true],
+		["let b = new Uint8ClampedArray(ab); b instanceof Uint8ClampedArray", true],
+		["let c = new Int8Array(ab); c instanceof Int8Array", true]
+	    ]
+	}
+}

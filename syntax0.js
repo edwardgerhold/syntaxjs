@@ -2950,7 +2950,7 @@ define("tokenizer", function () {
             var memento;
             if (memento = saved.pop()) {
                 sourceCode = memento.sourceCode,
-                pos = memento.pos;
+                    pos = memento.pos;
                 length = memento.length;
                 token = memento.token;
                 tokenType = memento.tokenType;
@@ -3241,25 +3241,30 @@ define("tokenizer", function () {
             return false;
         }
         function getDecimalDigits(number) {
-            var dot = 0;
-            if (DecimalDigits[ch] || (ch === "." && DecimalDigits[lookahead] && (++dot))) {
+            var dot = false, exp = false;
+            if (DecimalDigits[ch] || (ch === "." && DecimalDigits[lookahead] && (dot=true))) {
                 number += ch;
                 for (;;) {
                     if (DecimalDigits[lookahead] || (lookahead === "." && !dot)) {
                         next();
                         number += ch;
                         if (ExponentIndicator[lookahead]) {
-                            next();
-                            number += ch;
-                            if (SignedInteger[lookahead]) {
+                            if(!exp) {
+                                exp = true;
                                 next();
                                 number += ch;
+                                if (SignedInteger[lookahead]) {
+                                    next();
+                                    number += ch;
+                                }
+                                while (DecimalDigits[lookahead]) {
+                                    next();
+                                    number += ch;
+                                }
+                                return number;
+                            } else {
+                                throw new SyntaxError("duplicate exponent indicator");
                             }
-                            while (DecimalDigits[lookahead]) {
-                                next();
-                                number += ch;
-                            }
-                            return number;
                         }
                     } else if (lookahead === "." && dot) {
                         throw new SyntaxError("unexpected number");
@@ -3397,7 +3402,7 @@ define("tokenizer", function () {
                 }
 
                 /* this does not advance, it is called from within such a function
-                * could, maybe should, maybe not, someday */
+                 * could, maybe should, maybe not, someday */
 
                 return value;
 
@@ -11484,7 +11489,10 @@ function GeneratorYield(itrNextObj) {
 
 
 function IsIterable (obj) {
-    return HasProperty(obj, $$iterator);
+    if (Type(obj) !== OBJECT) return undefined;
+    var iteratorGetter = Get(obj, $$iterator);
+    return iteratorGetter;
+//    return HasProperty(obj, $$iterator);
 }
 
 function CreateItrResultObject(value, done) {
@@ -11729,6 +11737,10 @@ var typedConstructorNames = {
 function IntegerIndexedExoticObject() {
     var O = Object.create(IntegerIndexedExoticObject.prototype);
     setInternalSlot(O, "ArrayBufferData", undefined);
+    setInternalSlot(O, "ViewedArrayBuffer", undefined);
+    setInternalSlot(O, "ArrayLength", undefined);
+    setInternalSlot(O, "ByteOffset", undefined);
+    setInternalSlot(O, "TypedArrayName", undefined);
     return O;
 }
 IntegerIndexedExoticObject.prototype = assign(IntegerIndexedExoticObject.prototype, {
@@ -13384,7 +13396,7 @@ function InternalStructuredClone (input, memory, targetRealm) {
     } else if (hasInternalSlot(input, "SetData")) {
         // hmm missing
         // this can be quite hard to have copy all values, but it would be correct to create them again.
-    } else if (input instanceof ArrayExoticObject) {
+    } else if (isArray(input)) {
         // i need to know when i am in which realm, first. The functions will not work like they are supposed to now.
         output = ArrayCreate(0); // how do i create them in targetRealm?
         // shall i switch with setRealm(targetRealm), setRealm(sourceRealm) for demo? it has no effect in memory anyways for me yet.
@@ -14292,7 +14304,6 @@ LazyDefineProperty(RealmPrototype, "eval", CreateBuiltinFunction(realm,RealmProt
 LazyDefineProperty(RealmConstructor, $$toStringTag, "Reflect.Realm");
 
 
-
 // ##################################################################
 // %Loader% und Loader.prototype
 // ##################################################################
@@ -14401,7 +14412,7 @@ function CreateLoadRequestObject(name, metadata, address, source) {
 
 // 27.1. updated
 function LoadModule(loader, name, options) {
-    debug2("loadmodule");
+    ////debug2("loadmodule");
     if (!options) options = ObjectCreate();
     var name = ToString(name);
     if (isAbrupt(name = ifAbrupt(name))) return name;
@@ -14718,7 +14729,7 @@ function LoadSucceeded() {
 
 // 27.1.
 function PromiseOfStartLoadPartWayThrough(step, loader, name, metadata, source, address) {
-    debug2("PromiseOfStartLoadPartWayThrough: start");
+    //debug2("PromiseOfStartLoadPartWayThrough: start");
     var F = AsyncStartLoadPartwayThrough();
     var state = Object.create(null);
     state.Step = "translate";
@@ -14735,9 +14746,9 @@ function PromiseOfStartLoadPartWayThrough(step, loader, name, metadata, source, 
 // 26.1
 function AsyncStartLoadPartwayThrough() {
     var F = OrdinaryFunction();
-    debug2("AsyncStartLoadPartwayThrough: start");
+    //debug2("AsyncStartLoadPartwayThrough: start");
     var AsyncStartLoadPartwayThrough_Call = function (thisArg, argList) {
-        debug2("AsyncStartLoadPartwayThrough_Call");
+        //debug2("AsyncStartLoadPartwayThrough_Call");
         var resolve = argList[0];
         var reject = argList[1];
         var state = getInternalSlot(F, "StepState");
@@ -14751,7 +14762,7 @@ function AsyncStartLoadPartwayThrough() {
         var load = CreateLoad(name);
         load.Metadata = state.ModuleMetadata;
         var linkSet = CreateLinkSet(loader, load);
-
+        if (!Array.isArray(loader.Loads)) loader.Loads = [];
         loader.Loads.push(load);
         var result = callInternalSlot("Call", resolve, null, [linkSet.done]);
         if (step === "locate") {
@@ -14825,7 +14836,7 @@ LinkSet.prototype.toString = function () { return "[object LinkSet]"; };
 
 // 27.1.
 function CreateLinkSet(loader, startingLoad) {
-    debug2("createlinkset");
+    //debug2("createlinkset");
     if (Type(loader) !== OBJECT) return withError("Type", "CreateLinkSet: loader has to be an object");
     if (!hasInternalSlot(loader, "Load")) return withError("Type", "CreateLinkSet: loader is missing internal properties");
     var promiseCapability = PromiseBuiltinCapability();
@@ -14837,7 +14848,7 @@ function CreateLinkSet(loader, startingLoad) {
 
 // 27.1.
 function AddLoadToLinkSet(linkSet, load) {
-    debug2("add load to linkset");
+    //debug2("add load to linkset");
     Assert(load.Status === "loading" || load.Status === "loaded", "load.Status is either loading or loaded.");
     var loader = linkSet.Loader;
     if (linkSet.indexOf(load) === -1) {     // INDEX-OF (Das ist dieser O(n) den fast jeder bedenkenlos und viel zu oft nimmt)
@@ -14856,11 +14867,9 @@ function AddLoadToLinkSet(linkSet, load) {
         }
     }
 }
-
-
 // 27.1.
 function UpdateLinkSetOnLoad(linkSet, load) {
-    debug2("updatelinksetonload");
+    //debug2("updatelinksetonload");
     var loads = linkSet.Loads;
     Assert(loads.indexOf(loads) > -1, "linkset.Loads has to contain load");
     Assert(load.Status === "loaded" || load.Status === "linked", "load.Status must be one of loaded or linked");
@@ -14881,7 +14890,7 @@ function UpdateLinkSetOnLoad(linkSet, load) {
 
 // 27.1.
 function LinkSetFailed(linkSet, exc) {
-    debug2("linksetfailed");
+    //debug2("linksetfailed");
     var loader = linkSet.Loader;
     var loads = linkSet.Loads;
     for (var i = 0, j = loads.length; i < j; i++) {
@@ -14900,7 +14909,7 @@ function LinkSetFailed(linkSet, exc) {
 
 // 27.1.    USING EXPENSIVE SPLICES to EMPTY the array (and .indexOf Arrays )
 function FinishLoad(loader, load) {
-    debug2("finishload");
+    //debug2("finishload");
     var name = load.Name;
     if (name !== undefined) {
         Assert(!hasRecordInList(loader.Modules, "Key", load.Name), "there may be no duplicate records in loader.Modules");
@@ -14919,49 +14928,11 @@ function FinishLoad(loader, load) {
     }
     load.LinkSets.splice(0, load.linkSets.length);
 }
-
-
-//
-// Module Linking Groups
-//
-
-
-/*
-
-
- 1. Ein load record load hat eine "Verknüpfungsabhängigkeit" auf einem load record "load2 ", wenn load2 in
- load1.UnlinkedDependencies enthalten ist, oder ein load record load1.UnlinkedDependencies existiert, dass
- load eine Verknüpfungsabhängigkeit auf load2 hat.
-
- 2. Ein Verknüpfungsgraph einer Liste "list" aus load records ist die MEnge der Load Records load, so daß
- irgendein load record in "list" eine Verknüpfungsabhängigkeit auf load hat.
-
- 3. eine Abhängigkeitskette von load1 zu load2 ist eine Liste von load records, die die transitive
- Verknüpfungsabhängigkeit von load1 nach load2 beweist.
-
- 4. Ein Abhängigkeitscycle ist eine Abhängigkeitskette deren erstes und letztes Elements [[Name]] Felder
- den gleichen Wert haben.
-
- Eine Abhängigkeitskette ist zyklisch wenn sie eine Subsequence enthält, die ein Abhängigkeitszyklus ist. Eine
- KEtte ist azyklisch wenn sie nicht zyklisch ist.
-
-
- Eine dependency chain ist mixed, wenn sie zwei elemente mit unterschiedlichen Kind Feldern enthält. Eine
- dependency-group-transition mit Kind Kind ist eine Zwei-Element-Subsequence load1 und load2 einer
- Abhängigkeitskette, so daß load1.Kind nicht gleich kind ist und load2.Kind gleich kind ist.
-
- Der dependency group count ist eine dependency kette mit dem ersten element load1 ist die Nummer der unterschiedlichen
- dependencygrouptransitions of kind load1.Kind.
-
- */
-
 // 29.1.
-
-
 
 function LinkageGroups(start) {
     Assert(Array.isArray(start), "start has to be a list of LinkSet Records");
-    debug2("linkage groups starts");
+    //debug2("linkage groups starts");
     var G = start.Loads;
     var kind;
     for (var i = 0, j = G.length; i < j; i++) {
@@ -15107,7 +15078,7 @@ function ResolveExportEntries(M, visited) {
 
 // 28.1.
 function ResolveExports(M) {
-    debug2("resolve exports");
+    //debug2("resolve exports");
     var exportDefinitions = getInternalSlot(M, "ExportDefinitions");
     for (var i = 0, j = exportDefinitions.length; i < j; i++) {
         var def = exportDefinitions[i];
@@ -15117,7 +15088,7 @@ function ResolveExports(M) {
 
 // 29.1
 function ResolveExport(M, exportName, visited) {
-    debug2("resolve export");
+    //debug2("resolve export");
     var exports = getInternalSlot(M,"Exports");
     var exported;
     if (exported=getRecordFromList(exports, "ExportName", exportName)) {
@@ -15278,8 +15249,6 @@ function EvaluateLoadedModule() {
     return F;
 }
 
-
-
 // 29.1.
 function EnsureEvaluated(mod, seen, loader) {
     seen.push(mod);
@@ -15295,7 +15264,7 @@ function EnsureEvaluated(mod, seen, loader) {
     var body;
     if ((body=getInternalSlot(mod, "Body")) === undefined) return NormalCompletion(undefined);
     var env = getInternalSlot(mod, "Environment");
-    var status = ModuleDeclarationInstantiation(body, env);
+    var status = InstantiateModuleDeclaration(body, env);
     var initContext = ExecutionContext(null);
     initContext.realm = getInternalSlot(loader, "Realm");
     initContext.VarEnv = env;
@@ -15314,7 +15283,7 @@ function EnsureEvaluated(mod, seen, loader) {
 
 
 function IterableToList(iterable) {
-    debug2("iterable2list");
+    //debug2("iterable2list");
     //var A = ArrayCreate();
     var A = [];
     var next, status;
@@ -15329,14 +15298,14 @@ function IterableToList(iterable) {
 // Seite 21 von 43
 
 function GetOption(options, name) {
-    debug2("get options");
+    //debug2("get options");
     if (options == undefined) return undefined;
     if (Type(options) !== OBJECT) return withError("Type", "options is not an object");
     return Get(options, name);
 }
 
 function OrdinaryModule() {
-    debug2("ordinarymodule");
+    //debug2("ordinarymodule");
     var mod = ObjectCreate(null, {
         "Environment": undefined,
         "Exports": undefined,
@@ -15487,7 +15456,7 @@ var LoaderPrototype_keys = function (thisArg, argList) {
 };
 // 31.1.
 var LoaderPrototype_define = function (thisArg, argList) {
-    debug2("loaderprotodefine");
+    //debug2("loaderprotodefine");
     var name = argList[0];
     var source =argList[1];
     var options = argList[2];
@@ -15510,7 +15479,7 @@ var LoaderPrototype_define = function (thisArg, argList) {
 
 // 31.1.
 var LoaderPrototype_load = function (thisArg, argList) {
-    debug2("loaderprotoload");
+    //debug2("loaderprotoload");
     var name = argList[0];
     var options = argList[1];
     var loader = thisLoader(thisArg);
@@ -15525,7 +15494,7 @@ var LoaderPrototype_load = function (thisArg, argList) {
 
 // 31.1.
 var LoaderPrototype_module = function (thisArg, argList) {
-    debug2("loaderprotomodule");
+    //debug2("loaderprotomodule");
     var source = argList[0];
     var options = argList[1];
     var loader = thisLoader(thisArg);
@@ -15547,7 +15516,7 @@ var LoaderPrototype_module = function (thisArg, argList) {
 
 // 31.1.
 var LoaderPrototype_import = function (thisArg, argList) {
-    debug2("loaderprototypeimport");
+    //debug2("loaderprototypeimport");
     var name = argList[0];
     var options = argList[1];
     var loader = thisLoader(thisArg);
@@ -15563,7 +15532,7 @@ var LoaderPrototype_import = function (thisArg, argList) {
 
 // 31.1.
 var LoaderPrototype_eval = function (thisArg, argList) {
-    debug2("loaderprototypeeval");
+    //debug2("loaderprototypeeval");
     var source = argList[0];
     var loader = thisLoader(thisArg);
     if (isAbrupt(loader = ifAbrupt(loader))) return loader;
@@ -15573,7 +15542,7 @@ var LoaderPrototype_eval = function (thisArg, argList) {
 
 // 31.1.
 var LoaderPrototype_get = function (thisArg, argList) {
-    debug2("loaderprototypeget");
+    //debug2("loaderprototypeget");
     var loader = thisLoader(thisArg);
     if (isAbrupt(loader = ifAbrupt(loader))) return loader;
     var name = ToString(argList[0]);
@@ -15593,7 +15562,7 @@ var LoaderPrototype_get = function (thisArg, argList) {
 };
 // 31.1.
 var LoaderPrototype_has = function (thisArg, argList) {
-    debug2("loaderprototypehas");
+    //debug2("loaderprototypehas");
     var loader = thisLoader(thisArg);
     if (isAbrupt(loader = ifAbrupt(loader))) return loader;
     var name = ToString(argList[0]);
@@ -15611,7 +15580,7 @@ var LoaderPrototype_has = function (thisArg, argList) {
 };
 // 31.1.
 var LoaderPrototype_set = function (thisArg, argList) {
-    debug2("loaderprototypeset");
+    //debug2("loaderprototypeset");
     var name = argList[0];
     var module = argList[1];
     var loader = thisLoader(thisArg);
@@ -15926,9 +15895,7 @@ var ArrayConstructor_construct = function (argList) {
 DefineOwnProperty(ArrayConstructor, "isArray", {
     value: CreateBuiltinFunction(realm, function isArray(thisArg, argList) {
         var arg = GetValue(argList[0]);
-        // if (Type(arg) !== OBJECT) return false;
-        return arg instanceof ArrayExoticObject;
-
+        return isArray(arg);
     }),
     enumerable: false,
     writable: true,
@@ -16419,7 +16386,7 @@ var ArrayPrototype_splice = function splice(thisArg, argList) {
         actualDeleteCount = min(max(dc, 0), len - actualStart);
     }
     var A = undefined;
-    if (O instanceof ArrayExoticObject) {
+    if (isArray(O)) {
         var C = Get(O, "constructor");
         if (isAbrupt(C = ifAbrupt(C))) return C;
         if (IsConstructor(C) === true) {
@@ -17278,14 +17245,28 @@ DefineOwnProperty(StringConstructor, "raw", {
 });
 
 DefineOwnProperty(StringConstructor, "fromCharCode", {
-    value: CreateBuiltinFunction(realm, function (thisArg, argList) {}),
+    value: CreateBuiltinFunction(realm, function (thisArg, argList) {
+       try {
+           var str = String.fromCharCode.apply(null, argList);
+       } catch (ex) {
+           return withError("Type", "error converting string to charcode");
+       }
+       return NormalCompletion(str);
+    }),
     enumerable: false,
     writable: true,
     configurable: true
 });
 
 DefineOwnProperty(StringConstructor, "fromCodePoint", {
-    value: CreateBuiltinFunction(realm, function (thisArg, argList) {}),
+    value: CreateBuiltinFunction(realm, function (thisArg, argList) {
+        try {
+            var str = String.fromCharCode.apply(null, argList);
+        } catch (ex) {
+            return withError("Type", "error converting string to charcode");
+        }
+        return NormalCompletion(str);
+    }),
     enumerable: false,
     writable: true,
     configurable: true
@@ -17583,7 +17564,6 @@ var StringPrototype_charCodeAt = function (thisArg, argList) {
     if (index >= S.length) return NormalCompletion(NaN);
     var C = S.charCodeAt(index);
     return NormalCompletion(C);
-
 };
 
 var StringPrototype_split = function (thisArg, argList) {
@@ -17767,11 +17747,10 @@ var StringPrototype_at = function (thisArg, argList) {
 
 LazyDefineBuiltinFunction(StringPrototype, "at", 1, StringPrototype_at);
 LazyDefineBuiltinFunction(StringPrototype, "charAt", 1, StringPrototype_charAt);
-LazyDefineBuiltinFunction(StringPrototype, "charCode", 1, StringPrototype_charCodeAt);
+LazyDefineBuiltinFunction(StringPrototype, "charCodeAt", 1, StringPrototype_charCodeAt);
 LazyDefineBuiltinFunction(StringPrototype, "codePointAt", 1, StringPrototype_codePointAt);
 LazyDefineBuiltinFunction(StringPrototype, "concat", 1, StringPrototype_concat);
 LazyDefineBuiltinFunction(StringPrototype, "contains", 1, StringPrototype_contains);
-
 LazyDefineBuiltinFunction(StringPrototype, "endsWith", 1, StringPrototype_endsWith);
 LazyDefineBuiltinFunction(StringPrototype, "indexOf", 1, StringPrototype_indexOf);
 LazyDefineBuiltinFunction(StringPrototype, "lpad", 1, StringPrototype_lpad);
@@ -20481,14 +20460,11 @@ LazyDefineProperty(GeneratorPrototype, $$create, CreateBuiltinFunction(realm, fu
     return obj;
 }));
 
-// ===========================================================================================================
-// JSON
-// ===========================================================================================================
 
 function Str(key, holder, _state) {
     var replacer = _state.ReplaceFunction;
     var value = Get(holder, key);
-    if (isAbrupt(value = ifAbrupt(value))) return value;
+    if (isAbrupt(value=ifAbrupt(value))) return value;
     if (Type(value) === OBJECT) {
         var toJSON = Get(value, "toJSON");
         if (IsCallable(toJSON)) {
@@ -20516,8 +20492,8 @@ function Str(key, holder, _state) {
         else return "null";
     }
     if (Type(value) === OBJECT && !IsCallable(value)) {
-        if (value instanceof ArrayExoticObject) return JA(value, _state);
-        else return JO(value, _state);
+        if (isArray(value)) return JA(value, _state);
+        return JO(value, _state);
     }
     return undefined;
 }
@@ -20559,7 +20535,7 @@ function JA(value, _state) {
     var final = "";
     var properties;
     if (!partial.length) {
-        final = "{}";
+        final = "[]";
     } else {
         if (gap === "") {
             properties = partial.join(",");
@@ -20637,7 +20613,7 @@ function Walk(holder, name) {
     var newElement;
     if (isAbrupt(val = ifAbrupt(val))) return val;
     if (Type(val) === OBJECT) {
-        if (val instanceof ArrayExoticObject) {
+        if (isArray(val)) {
             var I = 0;
             var len = Get(val, "length");
             if (isAbrupt(len = ifAbrupt(len))) return len;
@@ -20662,6 +20638,7 @@ function Walk(holder, name) {
                 var nextResult = IteratorNext(keys);
                 if (isAbrupt(nextResult = ifAbrupt(nextResult))) return nextResult;
                 var P = IteratorResult(nextResult);
+                if (isAbrupt(P=ifAbrupt(P))) return P;
                 newElement = Walk(val, P);
                 if (newElement === undefined) {
                     status = Delete(val, P);
@@ -20722,7 +20699,7 @@ DefineOwnProperty(JSONObject, "stringify", {
         if (Type(replacer) === OBJECT) {
             if (IsCallable(replacer)) {
                 _state.ReplacerFunction = ReplacerFunction = replacer;
-            } else if (replacer instanceof ArrayExoticObject) {
+            } else if (isArray(replacer)) {
                 var len = Get(replacer, "length");
                 if (isAbrupt(len=ifAbrupt(len))) return len;
                 var item, v;
@@ -20982,12 +20959,7 @@ LazyDefineProperty(PromisePrototype, "catch", CreateBuiltinFunction(realm, Promi
 LazyDefineProperty(PromisePrototype, "constructor", PromiseConstructor);
 LazyDefineProperty(PromisePrototype, $$toStringTag, "Promise");
 
-
-// got to be moved outside of the createIntrinsics function
-// createIntrinsics has to become the DefineProperty rows only.
-
 function PromiseNew (executor) {
-    debug2("promisenew");
     var promise = AllocatePromise(getIntrinsic("%Promise%"));
     return InitializePromise(promise, executor);
 }
@@ -21058,7 +21030,6 @@ function TriggerPromiseReactions(reactions, argument) {
     return NormalCompletion(undefined);
 }
 
-
 function PromiseReactionTask(reaction, argument) {
     Assert(reaction instanceof PromiseReaction, "reaction must be a PromiseReaction record");
     var promiseCapability = reaction.Capabilities;
@@ -21105,7 +21076,7 @@ function CreateResolveFunction (promise) {
 }
 
 function NewPromiseCapability(C) {
-    debug2("newpromisecap");
+    //debug2("newpromisecap");
     if (!IsConstructor(C)) return withError("Type", "C is no constructor");
     // Assertion Step 2 missing 25.4.3.1
     var promise = CreateFromConstructor(C);
@@ -21147,7 +21118,7 @@ function GetCapabilitiesExecutor () {
 }
 
 function InitializePromise(promise, executor) {
-    debug2("initializePromise: start");
+    //debug2("initializePromise: start");
     Assert(hasInternalSlot(promise, "PromiseStatus") && (getInternalSlot(promise, "PromiseStatus") === undefined),
         "InitializePromise: PromiseStatus doesnt exist or isnt undefined");
     Assert(IsCallable(executor), "executor has to be callable");
@@ -21165,7 +21136,7 @@ function InitializePromise(promise, executor) {
 }
 
 function AllocatePromise(constructor) {
-    debug2("allocatePromise")
+    //debug2("allocatePromise")
     var obj = OrdinaryCreateFromConstructor(constructor, "%PromisePrototype%", {
         "PromiseStatus": undefined,
         "PromiseConstructor": constructor,
@@ -21249,7 +21220,7 @@ function makeRejectFunction () {
         var reactions = getInternalSlot(promise, "PromiseRejectReactions");
         setInternalSlot(promise, "PromiseResult", reason);
         setInternalSlot(promise, "PromiseResolveReactions", undefined);
-        setInternalSlot(promise, "PromiseRejectReaction", undefined);
+        setInternalSlot(promise, "PromiseRejectReactions", undefined);
         setInternalSlot(promise, "PromiseStatus", "has-rejection");
         return TriggerPromiseReactions(reactions, reason);
     };
@@ -21268,7 +21239,7 @@ function makeResolveFunction () {
         var reactions = getInternalSlot(promise, "PromiseResolveReactions");
         setInternalSlot(promise, "PromiseResult", resolution);
         setInternalSlot(promise, "PromiseResolveReactions", undefined);
-        setInternalSlot(promise, "PromiseRejectReaction", undefined);
+        setInternalSlot(promise, "PromiseRejectReactions", undefined);
         setInternalSlot(promise, "PromiseStatus", "has-resolution");
         return TriggerPromiseReactions(reactions, resolution);
     };
@@ -21939,10 +21910,11 @@ LazyDefineBuiltinConstant(DataViewConstructor, $$toStringTag, "DataView");
 // Der %TypedArray% Constructor (Superklasse)
 // ------------------------------------------------------------------------------------------
 
+
+
 var TypedArrayConstructor_Call = function (thisArg, argList) {
     var array, typedArray, length;
     array = argList[0];
-    var F = thisArg;
     var O;
     var elementType;
     var numberLength;
@@ -21952,12 +21924,87 @@ var TypedArrayConstructor_Call = function (thisArg, argList) {
     var status;
     var data;
     var constructorName;
-
     if (Type(array) === OBJECT) {
-        if (array instanceof ArrayExoticObject) {
-
+        if (isArray(array)) {
+            Assert((Type(array) === OBJECT) && !hasInternalSlot(array, "TypedArrayName") && !hasInternalSlot(array, "ArrayBufferData"),
+                "array has to be an object without [[TypedArrayName]] or [[ArrayBufferData]] slots");
+            O = thisArg;
+            var srcArray = array;
+            if (Type(O) != OBJECT || !hasInternalSlot(O, "TypedArrayName")) return withError(
+                "Type", "this value is no object or has no [[TypedArrayName]] slot"
+            );
+            Assert(hasInternalSlot(O, "ViewedArrayBuffer"), "this value has no [[ViewedArrayBuffer]] slot");
+            var constructorName = getInternalSlot(O, "TypedArrayName");
+            var elementType = TypedArrayElementType[constructorName];
+            var arrayLength = Get(srcArray, "length");
+            if (isAbrupt(arrayLength=ifAbrupt(arrayLength))) return arrayLength;
+            var elementLength = ToLength(arrayLength);
+            if (isAbrupt(elementLength=ifAbrupt(elementLength))) return elementLength;
+            var data = AllocateArrayBuffer(getIntrinsic("%ArrayBuffer%"));
+            if (isAbrupt(data=ifAbrupt(data))) return data;
+            var elementSize = TypedArrayElementSize[elementType];
+            var byteLength = elementSize * elementLength;
+            var status = SetArrayBufferData(data, byteLength);
+            if (isAbrupt(status)) return status;
+            var k = 0;
+            while (k < elementLength) {
+                var Pk = ToString(k);
+                var kValue = Get(srcArray, Pk);
+                var kNumber = ToNumber(k);
+                if (isAbrupt(kNumber=ifAbrupt(kNumber))) return kNumber;
+                SetValueInBuffer(data, k * elementSize, elementType, kNumber);
+                k = k + 1;
+            }
+            if (getInternalSlot(O, "ViewedArrayBuffer") !== undefined) return withError("Type", "the this values [[ViewedArrayBuffer]] may not be initialized here");
+            setInternalSlot(O, "ViewedArrayBuffer", data);
+            setInternalSlot(O, "ByteLength", byteLength);
+            setInternalSlot(O, "ByteOffset", 0);
+            setInternalSlot(O, "ArrayLength", elementLength);
+            return NormalCompletion(O);
         } else if ((typedArray = array) instanceof IntegerIndexedExoticObject) {
-
+            Assert((Type(typedArray) === OBJECT) && hasInternalSlot(typedArray, "TypedArrayName"), "typedArray has to be an object and to have a TypedArrayName slot");
+            var srcArray = typedArray;
+            O = thisArg;
+            if ((Type(O) !== OBJECT) || getInternalSlot(O, "TypedArrayName")===undefined) return withError("Type", "this value has to be object and to have a defined TypedArrayName slot");
+            Assert(hasInternalSlot(O, "ViewedArrayBuffer"), "this value has to have a ViewedArrayBuffer slot");
+            if (getInternalSlot(O, "ViewedArrayBuffer") === undefined) return withError("Type", "ViewedArrayBuffer may not be undefined");
+            var constructorName = getInternalSlot(O, "TypedArrayName");
+            var elementType = TypedArrayElementType[constructorName];
+            var elementLength = getInternalSlot(srcArray, "ArrayLength");
+            var srcName = getInternalSlot(srcArray, "TypedArrayName");
+            var srcType = TypedArrayElementType[srcName];
+            var srcElementSize = TypedArrayElementSize[srcType];
+            var srcData = getInternalSlot(srcArray, "ViewedArrayBuffer");
+            var srcByteOffset = getInternalSlot(srcArray, "ByteOffset");
+            var elementSize = TypedArrayElementSize[constructorName];
+            var byteLength = elementSize * elementLength;
+            if (SameValue(elementType, srcType)) {
+                var data = CloneArrayBuffer(srcData, srcByteOffset);
+                if (isAbrupt(data=ifAbrupt(data))) return data;
+            } else {
+                var bufferConstructor = Get(srcBuffer, "constructor");
+                if (isAbrupt(bufferConstructor=ifAbrupt(bufferConstructor))) return bufferConstructor;
+                if (bufferConstructor === undefined) bufferConstructor = getIntrinsic("%ArrayBuffer%");
+                var data = AllocateArrayBuffer(bufferConstructor);
+                var status = SetArrayBufferData(data, byteLength);
+                if (isAbrupt(status=ifAbrupt(status))) return status;
+                var srcByteIndex = srcByteOffset;
+                var targetByteIndex = 0;
+                var count = elementLength;
+                while (count > 0) {
+                    var value = GetValueFromBuffer(srcData, srcByteIndex, srcType);
+                    status = SetValueInBuffer(data, targetByteIndex, elementType, value);
+                    srcByteIndex = srcByteIndex + srcElementSize;
+                    targetByteIndex = targetByteIndex + elementSize;
+                    count = count - 1;
+                }
+            }
+            if (getInternalSlot(O, "ViewedArrayBuffer") !== undefined) return withError("Type", "ViewedArrayBuffer may not be defined at this point");
+            setInternalSlot(O, "ViewedArrayBuffer", data);
+            setInternalSlot(O, "ByteLength", byteLength);
+            setInternalSlot(O, "ByteOffset", 0);
+            setInternalSlot(O, "ArrayLength", elementLength);
+            return NormalCompletion(O);
         }
     } else if (typeof (length = array) == "number") {
         O = thisArg;
@@ -21971,7 +22018,7 @@ var TypedArrayConstructor_Call = function (thisArg, argList) {
         elementLength = ToLength(numberLength);
         if (isAbrupt(elementLength = ifAbrupt(elementLength))) return elementLength;
         if (SameValueZero(numberLength, elementLength) === false) return withError("Range", "TypedArray: numberLength and elementLength are not equal");
-        data = AllocateArrayBuffer("%ArrayBuffer%");
+        data = AllocateArrayBuffer(getIntrinsic("%ArrayBuffer%"));
         if (isAbrupt(data = ifAbrupt(data))) return data;
         elementSize = TypedArrayElementSize[elementType];
         byteLength = elementSize * elementLength;
@@ -21981,7 +22028,7 @@ var TypedArrayConstructor_Call = function (thisArg, argList) {
         setInternalSlot(O, "ByteLength", byteLength);
         setInternalSlot(O, "ByteOffset", 0);
         setInternalSlot(O, "ArrayLength", elementLength);
-        return O;
+        return NormalCompletion(O);
     } else {
         Assert(hasInternalSlot(O, "ViewedArrayBuffer"), "O has to have [[ViewedArrayBuffer]]");
         var buffer = argList[0];
@@ -22022,7 +22069,7 @@ var TypedArrayConstructor_Call = function (thisArg, argList) {
         setInternalSlot(O, "ByteOffset", offset);
         setInternalSlot(O, "ArrayLength", Math.floor(newByteLength / elementSize));
     }
-    return O;
+    return NormalCompletion(O);
 };
 
 var typedArrayPrototypeNames = {
@@ -22134,17 +22181,14 @@ var TypedArrayConstructor_from = function from(thisArg, argList) {
 };
 var TypedArrayConstructor_of = function of(thisArg, argList) {
     var items = CreateArrayFromList(argList);
-
     var lenValue = Get(items, "length");
     var C = thisArg;
-
     if (IsConstructor(C)) {
         var newObj = callInternalSlot("Construct", C, C, [len]);
         if (isAbrupt(newObj = ifAbrupt(newObj))) return newObj;
     } else {
         return withError("Type", "The thisValue has to be a constructor");
     }
-
     var k = 0;
     var status;
     var Pk, kValue;
@@ -22168,47 +22212,77 @@ LazyDefineProperty(TypedArrayConstructor, "of", CreateBuiltinFunction(realm, Typ
 // 22.2.6. Typed Array Prototype
 // ------------------------------------------------------------------------------------------
 
-var TypedArrayPrototype_get_buffer = function (thisArg, argList) {
-
-};
 var TypedArrayPrototype_get_byteLength = function (thisArg, argList) {
-
+    var O = thisArg;
+    if (Type(O) !== OBJECT) return withError("Type", "this value is not an object");
+    if (!hasInternalSlot(O, "ViewedArrayBuffer")) return withError("Type", "has no ViewedArrayBuffer slot");
+    var buffer = getInternalSlot(O, "ViewedArrayBuffer");
+    if (buffer === undefined) return withError("Type", "slot value for viewed array buffer is undefined");
+    var length = getInternalSlot(O, "ByteLength");
+    return NormalCompletion(length);
 };
 var TypedArrayPrototype_get_byteOffset = function (thisArg, argList) {
-
+    var O = thisArg;
+    if (Type(O) !== OBJECT) return withError("Type", "this value is not an object");
+    if (!hasInternalSlot(O, "ViewedArrayBuffer")) return withError("Type", "has no ViewedArrayBuffer slot");
+    var buffer = getInternalSlot(O, "ViewedArrayBuffer");
+    if (buffer === undefined) return withError("Type", "slot value for viewed array buffer is undefined");
+    var offset = getInternalSlot(O, "ByteOffset");
+    return NormalCompletion(offset);
 };
 var TypedArrayPrototype_get_buffer = function (thisArg, argList) {
-
+    var O = thisArg;
+    if (Type(O) !== OBJECT) return withError("Type", "this value is not an object");
+    if (!hasInternalSlot(O, "ViewedArrayBuffer")) return withError("Type", "has no ViewedArrayBuffer slot");
+    var buffer = getInternalSlot(O, "ViewedArrayBuffer");
+    if (buffer === undefined) return withError("Type", "slot value for viewed array buffer is undefined");
+    return NormalCompletion(buffer);
 };
 
-var tap_subarray = function subarray(thisArg, argList) {
-
+var TypedArrayPrototype_filter = function subarray(thisArg, argList) {
+};
+var TypedArrayPrototype_find = function subarray(thisArg, argList) {
+};
+var TypedArrayPrototype_findIndex = function subarray(thisArg, argList) {
+};
+var TypedArrayPrototype_forEach = function subarray(thisArg, argList) {
+};
+var TypedArrayPrototype_indexOf = function subarray(thisArg, argList) {
+};
+var TypedArrayPrototype_join = function subarray(thisArg, argList) {
+};
+var TypedArrayPrototype_keys = function subarray(thisArg, argList) {
+};
+var TypedArrayPrototype_lastIndexOf = function subarray(thisArg, argList) {
+};
+var TypedArrayPrototype_length = function subarray(thisArg, argList) {
+};
+var TypedArrayPrototype_map = function subarray(thisArg, argList) {
+};
+var TypedArrayPrototype_reduce = function subarray(thisArg, argList) {
+};
+var TypedArrayPrototype_reduceRight = function subarray(thisArg, argList) {
+};
+var TypedArrayPrototype_reverse = function subarray(thisArg, argList) {
+};
+var TypedArrayPrototype_set = function subarray(thisArg, argList) {
+};
+var TypedArrayPrototype_slice = function subarray(thisArg, argList) {
+};
+var TypedArrayPrototype_some = function subarray(thisArg, argList) {
+};
+var TypedArrayPrototype_sort = function subarray(thisArg, argList) {
 };
 
-// filter
-// find
-// findIndex
-// forEach
-// indexOf
-// join
-// keys
-// lastIndexOf
-// length
-// map
-// reduce
-// reduceRight
-// reverse
-// set
-// slice
-// some
-// sort
-// subarray
-// toLocaleString
-// toString
-// values
-// $$iterator
+var TypedArrayPrototype_reverse = function subarray(thisArg, argList) {
+};
+
+var TypedArrayPrototype_subarray = function subarray(thisArg, argList) {
+};
+
+
 var TypedArrayPrototype_$$iterator = function iterator(thisArg, argList) {
-
+    return CreateArrayIterator(thisArg, "value");
 };
 
 // $$toStringTag
@@ -22226,66 +22300,50 @@ function createTypedArrayPrototype(proto) {
     LazyDefineAccessor(proto, "byteLength", CreateBuiltinFunction(realm, TypedArrayPrototype_get_byteLength, 0, "get byteLength"));
     LazyDefineAccessor(proto, "byteOffset", CreateBuiltinFunction(realm, TypedArrayPrototype_get_byteOffset, 0, "get byteOffset"));
     LazyDefineAccessor(proto, $$toStringTag, CreateBuiltinFunction(realm, TypedArrayPrototype_get_$$toStringTag, 0, "get [Symbol.toStringTag]"));
+    LazyDefineBuiltinFunction(proto, "forEach", 1, TypedArrayPrototype_map);
+    LazyDefineBuiltinFunction(proto, "map", 1, TypedArrayPrototype_map);
+    LazyDefineBuiltinFunction(proto, "reduce", 1, TypedArrayPrototype_reduce);
     return proto;
 }
 
-// ===========================================================================================================
-// Create Typed Arrays
-// ===========================================================================================================
-
-function createTypedArrayVariant(_type, _bpe, _ctor, _proto) {
-
-    //    setInternalSlot(_ctor, "TypedArrayConstructor", _type + "Array");
-
+function createTypedArrayVariant(_type, _bpe, _ctor, _proto, ctorName) {
+    setInternalSlot(_ctor, "Realm", getRealm());
+    setInternalSlot(_ctor, "TypedArrayConstructor", ctorName);
     setInternalSlot(_ctor, "Prototype", TypedArrayConstructor);
-
     setInternalSlot(_ctor, "Call", function (thisArg, argList) {
         var O = thisArg;
         if (Type(O) !== OBJECT) return withError("Type", "O is not an object");
         if (!hasInternalSlot(O, "TypedArrayName")) return withError("Type", "[[TypedArrayName]] is missing");
-        if (getInternalSlot(O, "TypedArrayName") != undefined) return withError("Type", "[[TypedArrayName]] isnt undefined");
-        setInternalSlot(O, "TypedArrayName", _type + "Array");
+        //if (getInternalSlot(O, "TypedArrayName") != undefined) return withError("Type", "[[TypedArrayName]] isnt undefined");
+        var suffix = "Array";
+        if (_type === "Uint8C") suffix = "lamped" + suffix;
+        setInternalSlot(O, "TypedArrayName", _type + suffix);
         var F = this;
         var realmF = getInternalSlot(F, "Realm");
         var sup = Get(realmF.intrinsics, "%TypedArray%");
         var args = argList;
         return callInternalSlot("Call", sup, O, args);
     });
-
     setInternalSlot(_ctor, "Construct", function (argList) {
         return OrdinaryConstruct(this, argList);
     });
-    DefineOwnProperty(_ctor, "BYTES_PER_ELEMENT", {
-        value: _bpe,
-        writable: false,
-        enumerable: false,
-        configurable: false
-    });
-    DefineOwnProperty(_ctor, "prototype", {
-        value: _proto,
-        writable: false,
-        enumerable: true,
-        configurable: false
-    });
-    DefineOwnProperty(_proto, "constructor", {
-        value: _ctor,
-        writable: false,
-        enumerable: true,
-        configurable: false
-    });
-
+    LazyDefineBuiltinConstant(_ctor, "BYTES_PER_ELEMENT", _bpe);
+    LazyDefineBuiltinConstant(_ctor, "prototype", _proto);
+    LazyDefineBuiltinConstant(_proto, "constructor", _ctor);
+    createTypedArrayPrototype(_proto);
     return _ctor;
 }
 
-createTypedArrayVariant("Int8", 1, Int8ArrayConstructor, Int8ArrayPrototype);
-createTypedArrayVariant("Uint8", 1, Uint8ArrayConstructor, Int8ArrayPrototype);
-createTypedArrayVariant("Uint8C", 1, Uint8ClampedArrayConstructor, Uint8ClampedArrayPrototype);
-createTypedArrayVariant("Int16", 2, Int16ArrayConstructor, Int16ArrayPrototype);
-createTypedArrayVariant("Uint16", 2, Uint16ArrayConstructor, Uint16ArrayPrototype);
-createTypedArrayVariant("Int32", 4, Int32ArrayConstructor, Int32ArrayPrototype);
-createTypedArrayVariant("Uint32", 4, Uint32ArrayConstructor, Uint32ArrayPrototype);
-createTypedArrayVariant("Float32", 8, Float32ArrayConstructor, Float32ArrayPrototype);
-createTypedArrayVariant("Float64", 8, Float64ArrayConstructor, Float64ArrayPrototype);
+createTypedArrayVariant("Int8", 1, Int8ArrayConstructor, Int8ArrayPrototype, "Int8Array");
+createTypedArrayVariant("Uint8", 1, Uint8ArrayConstructor, Int8ArrayPrototype, "Uint8Array");
+createTypedArrayVariant("Uint8C", 1, Uint8ClampedArrayConstructor, Uint8ClampedArrayPrototype, "Uint8Clamped");
+createTypedArrayVariant("Int16", 2, Int16ArrayConstructor, Int16ArrayPrototype, "Int16Array");
+createTypedArrayVariant("Uint16", 2, Uint16ArrayConstructor, Uint16ArrayPrototype, "Uint16Array");
+createTypedArrayVariant("Int32", 4, Int32ArrayConstructor, Int32ArrayPrototype, "Int32Array");
+createTypedArrayVariant("Uint32", 4, Uint32ArrayConstructor, Uint32ArrayPrototype, "Uint32Array");
+createTypedArrayVariant("Float32", 8, Float32ArrayConstructor, Float32ArrayPrototype, "Float32Array");
+createTypedArrayVariant("Float64", 8, Float64ArrayConstructor, Float64ArrayPrototype, "Float64Array");
+
 
 // ===========================================================================================================
 // set Timeout
@@ -23969,22 +24027,31 @@ define("runtime", function () {
             consoleLog(str);
             consoleLog(repeatch("-", 79));
         }
-        function InstantiateModuleDeclaration(module, env) {
-            var ex, name;
-            var lexNames = LexicallyDeclaredNames(module);
-            var varNames = VarDeclaredNames(module);
-            var boundNames = BoundNames(module);
-
-            for (var i = 0, j = lexNames.length; i < j; i++) {
-                name = lexNames[i];
-                if (env.HasBinding(name)) return withError("Syntax", "Instantiate module: Has var declaration: " + name);
+        function InstantiateModuleDeclaration(code, env) {
+            var declarations = LexicalDeclaration(code);
+            var functionsToInitialize = [];
+            for (var i = 0, j = declarations.length; i < j; i++) {
+                if (d = declarations[i]) {
+                    var boundNames = BoundNames(d);
+                    for (var k = 0, l = boundNames.length; k < l; k++) {
+                        var dn = boundNames[k];
+                        if (IsConstantDeclaration(d)) {
+                            env.CreateImmutableBinding(dn);
+                        } else  {
+                            var status = env.CreateMutableBinding(dn, false);
+                            if (isAbrupt(status)) return status;
+                        }
+                    }
+                    if (IsGeneratorDeclaration(d)) {
+                        functionsToInitialize.push(d);
+                    }
+                }
             }
-
-            for (i = 0, j = varNames.length; i < j; i++) {
-                name = varNames[i];
-                if (env.HasBinding(name)) return withError("Syntax", "Instantiate module: Has lexical declaration: " + name);
+            for (i = 0, j = functionsToInitialize.length; i < j; i++) {
+                var fn = BoundNames(f)[0];
+                var fo = InstantiateFunctionObject(f, env);
+                env.InitializeBinding(fn, fo);
             }
-
         }
         function InstantiateGlobalDeclaration(script, env, deletableBindings) {
             "use strict";
@@ -25210,21 +25277,18 @@ define("runtime", function () {
             var line = loc && loc.start ? loc.start.line : "bug";
             var column = loc && loc.start ? loc.start.column : "bug";
             banner("DebuggerStatement at line " + (line) + ", " + (column) + "\n");
-
-
             banner("stack")
             if (hasConsole) console.dir(getStack());
             else if (hasPrint) print(getStack());
-            banner("lexenv")
-            if (hasConsole) console.dir(getLexEnv());
-            else if (hasPrint) print(getLexEnv());
             banner("varenv")
             if (hasConsole) console.dir(getVarEnv());
             else if (hasPrint) print(getVarEnv());
+            banner("lexenv")
+            if (hasConsole) console.dir(getLexEnv());
+            else if (hasPrint) print(getLexEnv());
             banner("realm");
             if (hasConsole) console.dir(getRealm());
             else if (hasPrint) print(getRealm());
-
             banner("DebuggerStatement end");
             return NormalCompletion(undefined);
         }
@@ -25233,11 +25297,6 @@ define("runtime", function () {
             var source = node.value;
             var flags = node.flags;
             return RegExpCreate(source, flags);
-
-//        var parse = require("regexp-parser").parse;
-//         var pattern = parse(literalSource);
-//         if (hasConsole) console.log(JSON.stringify(pattern, null, 4));
-//         return withError("Syntax", "Can not create Regular Expression from Literal (currently not implemented)");// + literalSource);
         }
         evaluation.RegularExpressionLiteral = RegularExpressionLiteral;
         evaluation.StringLiteral = StringLiteral;
@@ -26854,9 +26913,9 @@ define("runtime", function () {
 
                     var exprRef = Evaluate(expr);
                     var exprValue = GetValue(exprRef);
+                    if (isAbrupt(exprValue=ifAbrupt(exprValue))) return exprValue;
                     var len = Get(accumulator, "length");
                     if (len >= (Math.pow(2, 53) - 1)) return withError("Range", "Range limit exceeded");
-
                     var putStatus = Put(accumulator, ToString(len), exprValue, true);
                     if (isAbrupt(putStatus = ifAbrupt(putStatus))) return putStatus;
                     len = len + 1;
