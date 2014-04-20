@@ -3511,7 +3511,7 @@ define("tokenizer", function () {
 
         function makeToken(type, value, computed, longName) {
             lastToken = token;
-            token = {}; //Object.create(null);
+            token = Object.create(null);
             if (type === "LineTerminator") ltNext = true;
             token.type = type;
             token.longName = longName;
@@ -3537,7 +3537,6 @@ define("tokenizer", function () {
             if (createCustomToken) token = createCustomToken(token);
             if (!SkipableToken[type]) {
                 tokenType = type;
-
             } else {
                 if (withExtras) extraBuffer.push(token);
             }
@@ -4835,6 +4834,7 @@ define("parser", function () {
         }
         function PostfixExpression(lhs) {
             var l1 = loc && loc.start;
+            if (v === "(") lhs = this.ParenthesizedExpression();
             lhs = lhs || this.LeftHandSideExpression();
             if (lhs && UpdateOperators[v]) {
                 var node = Node("UnaryExpression");
