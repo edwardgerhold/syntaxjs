@@ -1615,11 +1615,10 @@ define("tables", function (require, exports, module) {
     ExprEndOfs["}"] = true;
     ExprEndOfs[":"] = true;
     ExprEndOfs[";"] = true;
-    ExprEndOfs["case"] = true;
-    ExprEndOfs["default"] = true;
-    // temp have to rewrite whole lefthandside unary expression recursion up to assignment expression into a good loop.
-    ExprEndOfs["else"] = true;
-    ExprEndOfs["while"] = true;
+//    ExprEndOfs["case"] = true;
+//    ExprEndOfs["default"] = true;
+//    ExprEndOfs["else"] = true;
+//    ExprEndOfs["while"] = true;
     /*
      __proto__: null,
      ")": true,
@@ -3927,7 +3926,7 @@ define("parser", function () {
         var ExprEndOfs = tables.ExprEndOfs;
         var ast;
         var ltNext;
-        var lookltNext; // while redefining array and inline lexers
+        var ltLast;
         var gotSemi;
         var tokens;
         var token = Object.create(null);
@@ -4232,11 +4231,9 @@ define("parser", function () {
             return !!withExtras;
         }
         function consume(i) {
-            // debug("consuming "+i+" tokens");
             while (i > 0) { next(); i--; }
         }
         function match(C) { // match
-            // debug("match this token: " + C);
             if (v === C) next();
             else throw new SyntaxError(charExpectedString(C));
         }
@@ -4249,7 +4246,7 @@ define("parser", function () {
         function semicolon() {
             if (v == ";") {
                 gotSemi = true;
-                skip(";");
+                next();
             } else {
                 gotSemi = false;
             }
@@ -4257,28 +4254,24 @@ define("parser", function () {
         function eos() {
             return lookahead === undefined;
         }
-
         var next = next_from_array; // stepwise_next;
         function stepwise_next() {
-
             if (lookahead) {
                 token = lookaheadToken;
                 if (token) {
                     t = token.type;
                     v = token.value;
                 }
-                ltNext = lookltNext;
                 lookaheadToken = tokenize.nextToken();
-
                 if (lookaheadToken) {
+            	    ltLast = ltNext;
                     lookahead = lookaheadToken.value;
                     lookaheadType = lookaheadToken.type;
-                    lookltNext = tokenize.ltNext;
+                    ltNext = tokenize.ltNext;
                 } else {
                     lookaheadToken = lookahead = lookaheadType = undefined;
                     ltNext = false;
                 }
-
                 return token;
             }
             token = t = v = lookahead = lookaheadType = lookaheadToken = undefined;
@@ -4306,6 +4299,7 @@ define("parser", function () {
             var lookahead;
             var b = 0;
             var t;
+            ltLast = ltNext;
             ltNext = false;
             for(;;) {
                 b++;
@@ -5118,14 +5112,16 @@ define("parser", function () {
                 if (v === ",") {
                     match(",");
                     continue;
-                } else if (ltNext) {
+                } else if (ltLast) {
+            	    // we are already one ahead of ltNext, that worked not
                     break;
                 } else if (ExprEndOfs[v]) {
                     break;
                 } else if (v === undefined) {
                     break;
-                }
-                throw new SyntaxError("invalid expression statement "+atLineCol());
+                } else {
+        	    throw new SyntaxError("invalid expression statement "+atLineCol());
+        	}
             } while (v !== undefined);
 
             l2 = loc && loc.end;
@@ -5292,11 +5288,12 @@ define("parser", function () {
             for (;;) {
                 decl = this.VariableDeclaration(kind);
                 if (decl) list.push(decl);
+                else throw new SyntaxError(kind + " declaration expected");
                 if (isNoIn && InOrOf[v]) break;
                 if (v === ",") {
                     match(",");
                     continue;
-                } else if (ltNext) {
+                } else if (ltLast) {
                     if (v == ";") match(";");
                     break;
                 } else if (v === ";") {
@@ -5304,8 +5301,10 @@ define("parser", function () {
                     break;
                 } else if (v === undefined) {
                     break;
+                } else {
+            	    throw new SyntaxError("illegal token "+v+" after "+kind+" declaration");
                 }
-                throw new SyntaxError("illegal token "+v+" after "+kind+" declaration");
+                
             }
             if (!list.length) throw new SyntaxError("expecting identifier names after "+kind);
             return list;
