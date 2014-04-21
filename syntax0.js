@@ -2064,7 +2064,9 @@ define("symboltable", function (require, exports, module) {
  	}
 	Environment.prototype = {
 		put: function (decl, type) {
-			var name = decl.id.name;		
+
+            var name = getName(decl);
+
 			var thisName = this.names[name];
 			if ((thisName === true) ||
 			    (thisName === "get" && type !== "set") ||
@@ -2075,6 +2077,11 @@ define("symboltable", function (require, exports, module) {
 			this.names[name] = type || true;
 		}
 	};
+
+    function getName(decl) {
+        if (typeof decl.id === "object") return decl.id.name;
+        if (typeof decl.id === "string") return decl.name;
+    }
 
 	function Scope (outer) {
 		var scope = Object.create(null);        
@@ -2972,6 +2979,7 @@ define("tokenizer", function () {
          var isIdentifierStart = unicode.isIdentifierStart || function () {};
          var isIdentifierPart = unicode.isIdentifierPart || function () {};
          */
+        var withWS = false;
         var createCustomToken = null;
         var sourceCode;
         var pos, length;
@@ -3638,10 +3646,11 @@ define("tokenizer", function () {
             if (createCustomToken) token = createCustomToken(token);
             if (!SkipableToken[type]) {
                 tokenType = type;
+                tokens.push(token);
             } else {
                 if (withExtras) extraBuffer.push(token);
             }
-    	    tokens.push(token);
+    	    if (withWS) tokenizeIntoArray.tokensWithWhiteSpaces.push(token);
             // emit("token", token);
             return token;
         }
@@ -3707,6 +3716,7 @@ define("tokenizer", function () {
         function tokenizeIntoArray(jsSourceText, callback) {
             saveState();
             initTokenizer(jsSourceText, callback);
+            tokenizeIntoArray.tokensWithWhiteSpaces = [];
             var tokenTest; // if pos call this token, the thing returns undefined values.
             do {
                 offset = pos;
@@ -3723,6 +3733,15 @@ define("tokenizer", function () {
             restoreState();
             return tokens;
         }
+
+        function tokenizeIntoArrayWithWhiteSpaces(jsSourceText, callback) {
+            withWS = true;
+            tokenizeIntoArray.tokensWithWhiteSpaces = [];
+            var tokens = tokenizeIntoArray(jsSourceText, callback);
+            withWS = false;
+            return tokenizeIntoArray.tokensWithWhiteSpaces;
+        }
+
 
         var tokenizer = {};
         tokenizer.LineTerminator = LineTerminator;
@@ -3742,6 +3761,8 @@ define("tokenizer", function () {
         tokenizeIntoArray.saveState = saveState;
         tokenizeIntoArray.restoreState = restoreState;
         tokenize.tokenizeIntoArray = tokenizeIntoArray;
+        tokenize.tokenizeIntoArrayWithWhiteSpaces = tokenizeIntoArrayWithWhiteSpaces;
+
         tokenize.tokenizer = tokenizer;
         tokenize.nextToken = nextToken;
         tokenize.saveState = saveState;
@@ -27434,7 +27455,7 @@ define("runtime", function () {
 define("highlight", function (require, exports) {
     "use strict";
     var tables = require("tables");
-    var tokenize = require("tokenizer").tokenizeIntoArray;
+    var tokenize = require("tokenizer").tokenizeIntoArrayWithWhiteSpaces;
 
     var HighlighterClassNames = {
         __proto__: null,
@@ -27540,7 +27561,7 @@ define("highlight", function (require, exports) {
 
 });
 
-/*
+
 
 
 
@@ -27600,7 +27621,7 @@ if (typeof window != "undefined") {
     define("highlight-gui", function (require, exports) {
         "use strict";
         var tables = require("tables");
-        var tokenize = require("tokenizer").tokenizeIntoArray;
+        var tokenize = require("tokenizer").tokenizeIntoArrayWithWhiteSpaces;
         var parse = require("parser");
         var Evaluate = require("runtime");
         var highlight = require("highlight");
