@@ -96,6 +96,7 @@ function writeTests(testfile, json, testnames, err, fd) {
         console.log("writing Test: "+testname);
         var current = json[testname];
         writeTest(testfile, current, testname);
+        if (testnames.length) break;
     }
     if (!testnames.length) {
         writeFooterAndClose(testfile);
@@ -133,7 +134,7 @@ function writeTest(testfile, current, testname) {
 
         data += "tester.add(function (test) {\n\tvar code = \""+init+"\";\n";
         if (expected != undefined) {
-            data += "   var expected = "+ (typeof expected === "string" ? "\""+expected+"\"" : expected) + ";\n";
+            data += "        var expected = "+ (typeof expected === "string" ? "\""+expected+"\"" : expected) + ";\n";
         }
         switch (fn) {
             case "throws":
@@ -163,7 +164,6 @@ function writeTest(testfile, current, testname) {
         writeFn();
     });
 }
-
 function writeTestStarter(testfile, json, testnames) {
     writeFn = writeTests.bind(null, testfile, json, testnames);
     writeFn();
@@ -268,7 +268,6 @@ function runTestStarter(json, testnames) {
     }
 
     if (writetests) {
-
         writeTestStarter(testfile, json, testnames);
     } else {
         runTestStarter(json, testnames);
