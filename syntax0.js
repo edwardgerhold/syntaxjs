@@ -22484,7 +22484,7 @@ setInternalSlot(SetTimeoutFunction, "Call", function (thisArg, argList) {
         timeout: timeout,
         func: func
     };
-    eventQueue.push(task);
+    getEventQueue().push(task);
     return task;
 });
 
@@ -27242,16 +27242,18 @@ define("runtime", function () {
             // pendingExceptions = []
 
             function handler() {
+        	var eventQueue = getEventQueue();
                 if (task = eventQueue.shift()) {
                     func = task.func;
                     time = Date.now();
                     if (time >= (task.time + task.timeout)) {
-                        if (IsCallable(func)) result = func.Call(ThisResolution());
-                        // if (isAbrupt(result)) result; // ThrowAbruptThrowCompletion(result);
+                        if (IsCallable(func)) result = callInternalSlot("Call", func, ThisResolution(), []);
                     } else eventQueue.push(task);
                 }
                 if (eventQueue.length) setTimeout(handler, 0);
-                else if (!shellmode && initialized) endRuntime();
+                else { 
+            	    if (!shellmode && initialized) endRuntime();
+            	}
             }
             setTimeout(handler, 0);
         }
@@ -27336,6 +27338,7 @@ define("runtime", function () {
 
                 }
             }
+            var eventQueue = getEventQueue();
             // now process my eventQueue (which will be replaced by ES6 concurrency and task queues)
             // the conditions are not chosen by experience, just added quickly to tackle the thing
             if (!shellModeBool && initializedTheRuntime && !eventQueue.length) endRuntime();

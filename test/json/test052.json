@@ -1,0 +1,13 @@
+{
+	"Controlling Scope. Nested Identifiers with same name shouldn´t throw or get wrong values..":
+	{
+	    "init": 		
+		"var x=1; let y=2;\n function f() { var x=3; let y=4;\n\tfunction g() { var x = 5; let y=6; return x+y; }\n return x+y+g() }\n let z = f()",
+	    "tests": 
+	    [
+		["z", 18],
+		["x", 1],
+		["y", 2]
+	    ]
+	}
+}

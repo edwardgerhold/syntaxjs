@@ -1,0 +1,22 @@
+{
+	"throws - Duplicated Identifer in outer scope":
+	{
+	    "init": 		
+		"var x=1; let x=2;\n function f() { var x=3; let y=4;\n\tfunction g() { var x = 5; let y=6; return x+y; }\n return x+y+g() }\n let z = f()",
+	    "throws": true,
+	    "tests": 
+	    [
+		["x", null, "throws"]
+	    ]
+	},
+	"throws - Duplicated Identifer in inner scope":
+	{
+	    "init": 		
+		"var x=1; let y=2;\n function f() { var x=3; let x=4;\n\tfunction g() { var x = 5; let y=6; return x+y; }\n return x+y+g() }\n let z = f()",
+	    "throws": true,
+	    "tests": 
+	    [
+		["x", null, "throws"]
+	    ]
+	}	
+}
