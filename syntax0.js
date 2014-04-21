@@ -5563,6 +5563,9 @@ define("parser", function () {
                         throw new SyntaxError("Function and Generator Declarations must have a name [only expressions can be anonymous]");
                     }
                 }
+
+                symtab.newScope();
+
                 match("(");
                 node.params = this.FormalParameterList();
                 match(")");
@@ -5584,9 +5587,10 @@ define("parser", function () {
                 if (node.generator) {
                     node.nodesById = CreateTablePlusAddParentPointerIds(node);
                 }
-                EarlyErrors(node);
                 defaultIsId = defaultStack.pop();
                 currentNode = nodeStack.pop();
+                symtab.oldScope();
+                EarlyErrors(node);
                 if (compile) return builder.functionDeclaration(node.id, node.params, node.body, node.strict, node.generator, node.expression, node.loc, node.extras);
                 return node;
             }
@@ -5671,6 +5675,7 @@ define("parser", function () {
         }
         function BlockStatement() {
             if (v === "{") {
+        	symtab.newBlock();
                 var l1, l2;
                 l1 = loc && loc.start;
                 var node = Node("BlockStatement");
@@ -5683,6 +5688,7 @@ define("parser", function () {
                 node.loc = makeLoc(l1, l2);
                 defaultIsId = defaultStack.pop();
                 match("}");
+                symtab.oldBlock();
                 //popLexOnly(node);
                 return node;
             }
@@ -5871,6 +5877,7 @@ define("parser", function () {
                 var node, l1, l2;
                 l1 = loc && loc.start;
                 //pushDecls();
+                symtab.newScope();
                 node = Node("ModuleDeclaration");
                 node.strict = true;
                 nodeStack.push(currentNode);
@@ -5891,6 +5898,7 @@ define("parser", function () {
                 EarlyErrors(node);
                 currentNode = nodeStack.pop();
                 currentModule =  moduleStack.pop();
+                symtab.oldScope();
                 return node;
             }
             return null;
