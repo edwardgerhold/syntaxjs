@@ -16,7 +16,10 @@ is not read in the correct order. There is a conditional Expression without
 parens which isn´t parsed correct, while it´s, if the condition is wrapped 
 in parens. This is possibly the last real bug in the parser, the assignment 
 expression contains the conditional expression, but it affects the whole
-Relational Expression Sequence.)
+Relational Expression Sequence, a few days ago i made the UnaryExpression
+recursive. But ```if (!(true)) {}``` didnt work without fixing for "(", too,
+so i suspect there a bigger mistake. (Don´t need to mention Expression, which
+looks nearly funky, but isn´t)).
 
 (**) contains at last one implemented proposal and more (at and String.prototype.lpad and
 String.prototype.rpad, but i noticed lpad and rpad return incorrect length, they add and 
@@ -29,19 +32,20 @@ few comments left between.
 (****) the files have to be cleaned up inside, that some functions move.
 and maybe two files become one.
 
-
 (*****) typed mem and stack machine is a must for me but it will still take
 a while. But then we´ll also have Weak Maps and Weak Refs. The code itself
 needs some refactoring for member expressions, which get replaced by getter
 functions, and the OrdinaryObject.prototype and the used this value have to
 be replaced by object with methods and a preceding argument of the function,
-but the getFunction(obj, name) interface is already existing, so i´m (almost)
-knowing what i´m doing.
+but the getFunction(obj, name) interface is already existing, and costs for
+toString() "[object OrdinaryObject]" comparison to simulate (for a few ms), 
+so i´m (almost) knowing what i´m doing.
 
 (******) Only serious problems: No parallel processing until ES7, no int64
 until ES7 nativly exists, OR: one writes node modules providing interfaces
 into node.js to check it out under node.js. OR: the browsers prototype the
 same public.
+
 
 New: Multiple Realms
 ======================
@@ -50,7 +54,6 @@ Issue: How to get rid of the shared state and pushing and restoring it?
 A realm creates a fresh set of intrinsics and essential functions and A parser creates a fresh tokenizer. 
 Making an "a fresh parser each realm"-factory out of the old functions with shared state will be fun.
 A few days until i can commit that. I have to work through the code, til i got it in place.
-
 
 ```bash
 npm install -g  #to install syntaxjs from it´s directory
@@ -529,3 +532,38 @@ console.log(f.toString());
         return value;
     };
 ```
+
+New: Old Tokenizer will go
+=========================
+
+Mainly for my old syntax highlighter, the tokenizer pushed the tokens, whitespaces
+inclusive into an array. The parser processes the array, and my first lookahead function,
+i called it righthand wayback, skipped them twice instead of re-assigning the lookahead(1)
+to lookahead(0) (the current token we are exactly on). It was funny reading the code again.
+The Syntaxhighlighter depends on the whitespaces, else it produces spans without
+whitespaces.
+
+```js
+
+// the old tokenizer tokenizes into an array (arrays are also lists in my cases)
+var arrayTokenizer = require("syntaxjs").tokenizeIntoArray;
+var tokens = arrayTokenizer(source); // currently produces whitespaces, will be removed
+
+// instead for whitespaces and tokens in a list, i improve with a new function
+var tokensWithWhiteSpaces = require("syntaxjs").tokenize.tokenizeIntoArrayWithWhiteSpaces(code);
+
+// the new tokenizer is stepwise by default
+var tokenize =  require("syntaxjs").tokenize
+var firstToken = tokenize(code);
+var nextToken;
+var ltNext;
+while (nextToken = tokenize.nextToken()) {
+    nextToken == tokenize.token; // the next token. (assigned to lookahead(1) in the parser)
+    ltNext = tokenize.ltNext;	// lineterminator between token
+}
+
+```
+
+The API is not complete. The exports are not clean yet. The new tokenizer fails
+some tests, for whatever reason of the skipped lineterminators it is. So i have
+still some lines to edit here.
