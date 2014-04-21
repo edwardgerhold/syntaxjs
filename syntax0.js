@@ -2990,6 +2990,7 @@ define("tokenizer", function () {
         var ch, lookahead;	// lookahead0 and lookahead1
         var cb;
         var tokens = [];
+        var tokensWithWhiteSpaces;
         var line = 1, column = 1;
         var lines = [];
         var offset = 0;
@@ -3125,6 +3126,11 @@ define("tokenizer", function () {
                                 // got to rewrite multiline part. by flipping this if´s multiline bool and putting string+=ch below.
                                 string = string.substr(0, string.length-1);
                                 // forgetting bout \ is expensive this versions
+
+                                if (lookahead == "\r") next();// pass \n
+                                if (lookahead == "\n") next();
+                                
+                                
                                 nextLine();
                                 break;
                             }
@@ -3646,11 +3652,12 @@ define("tokenizer", function () {
             if (createCustomToken) token = createCustomToken(token);
             if (!SkipableToken[type]) {
                 tokenType = type;
-                tokens.push(token);
+                
             } else {
                 if (withExtras) extraBuffer.push(token);
             }
-    	    if (withWS) tokenizeIntoArray.tokensWithWhiteSpaces.push(token);
+            tokens.push(token);
+    	    if (withWS) tokensWithWhiteSpaces.push(token);
             // emit("token", token);
             return token;
         }
@@ -3736,10 +3743,10 @@ define("tokenizer", function () {
 
         function tokenizeIntoArrayWithWhiteSpaces(jsSourceText, callback) {
             withWS = true;
-            tokenizeIntoArray.tokensWithWhiteSpaces = [];
+            tokensWithWhiteSpaces = [];
             var tokens = tokenizeIntoArray(jsSourceText, callback);
             withWS = false;
-            return tokenizeIntoArray.tokensWithWhiteSpaces;
+            return tokensWithWhiteSpaces;
         }
 
 
@@ -4305,9 +4312,9 @@ define("parser", function () {
                 token = tokens[pos];
                 if (token) {
                     t = token.type;
-                    if (withExtras && captureExtraTypes[t]) extraBuffer.push(token);
+                    //if (withExtras && captureExtraTypes[t]) extraBuffer.push(token);
                     v = token.value;
-                    if (withExtras && captureExtraValues[v]) extraBuffer.push(token);
+                    //if (withExtras && captureExtraValues[v]) extraBuffer.push(token);
                     if (SkipableToken[t]) return next();
                     loc = token.loc;
                     lookahead = nextTokenFromArray();
@@ -4388,7 +4395,8 @@ define("parser", function () {
                 yieldIsId: yieldIsId,
                 defaultIsId: defaultIsId,
                 yieldStack: yieldStack,
-                defaultStack: defaultStack
+                defaultStack: defaultStack,
+                symtab: symtab
                 //           nodeTable: nodeTable
             };
             positions.push(memento);
@@ -4398,6 +4406,7 @@ define("parser", function () {
             memento = memento || positions.pop();
             if (memento) {
                 loc = memento.loc;
+                symtab = memento.symtab;
                 tokens = memento.tokens;
                 pos = memento.pos;
                 tokenArrayLength = memento.tokenArrayLength;
@@ -5134,7 +5143,6 @@ define("parser", function () {
                     match(",");
                     continue;
                 } else if (ltLast) {
-            	    // we are already one ahead of ltNext, that worked not
                     break;
                 } else if (ExprEndOfs[v]) {
                     break;
@@ -5314,11 +5322,10 @@ define("parser", function () {
                 if (v === ",") {
                     match(",");
                     continue;
-                } else if (ltLast) {
-                    if (v == ";") match(";");
-                    break;
                 } else if (v === ";") {
                     match(";");
+                    break;
+                } else if (ltLast) {
                     break;
                 } else if (v === undefined) {
                     break;
@@ -15946,7 +15953,7 @@ var ArrayConstructor_call =  function (thisArg, argList) {
             array = O;
         } else {
             F = this;
-            proto = OrdinaryCreateFromConstructor(F, "%ArrayPrototype");
+            proto = OrdinaryCreateFromConstructor(F, "%ArrayPrototype%");
             if (isAbrupt(proto)) return proto;
             proto = ifAbrupt(proto);
             array = ArrayCreate(0, proto);
@@ -15977,7 +15984,7 @@ var ArrayConstructor_call =  function (thisArg, argList) {
             array = O;
         } else {
             F = this;
-            proto = OrdinaryCreateFromConstructor(F, "%ArrayPrototype");
+            proto = OrdinaryCreateFromConstructor(F, "%ArrayPrototype%");
             if (isAbrupt(proto)) return proto;
             proto = ifAbrupt(proto);
             array = ArrayCreate(0, proto);
@@ -15985,7 +15992,7 @@ var ArrayConstructor_call =  function (thisArg, argList) {
 
         array = ifAbrupt(array);
         if (isAbrupt(array)) return array;
-        k = 1;
+        k = 0;
         items = argList;
 
         while (k < numberOfArgs) {
@@ -27478,15 +27485,13 @@ define("highlight", function (require, exports) {
         //        return array.join("");
         var string = "";
         for (var i = 0, j = array.length; i < j; i++) {
-            string += array[i].value;
+    	    string += array[i].value;
         }
         return string;
     }
-
+    
     var parse;
-
     function highlight(text, options, rec) {
-
         var highlighted = [];
         var tokens, word, m, n, type;
         var wordcount;
@@ -27532,12 +27537,37 @@ define("highlight", function (require, exports) {
             rec.tokens = tokens;
         }
 
+	var val, val2;
         for (m = 0, n = tokens.length; m < n; m++) {
             type = tokens[m].type;
             word = tokens[m].value;
             //    oid = tokens[m]._oid_;
 
-            if (cln = HighlighterClassNames[type]) word = "<span class='" + cln + "'" + ">" + word + "</span>";
+    	    switch(type) {
+    	    case "RegularExpressionLiteral":
+    		word = ("/"+word[0]+"/"+word[1]);
+    		break;
+	    case "TemplateLiteral":
+		var val = word;
+		
+		word = "`";
+		word += val[0];
+		if (val.length > 1) {
+		    for (var k = 1, l = val.length; k < l; k+=2) {
+			word += "${" + val[k] + "}";
+			val2 = val[k+1];
+			if (val2 != undefined) word += val2;
+		    }
+		}
+		word += "`";
+    		break;
+    	    }
+
+
+            if (cln = HighlighterClassNames[type]) {
+        	word = "<span class='" + cln + "'" + ">" + word + "</span>";
+    	    }
+            
             /*(oid?("data-syntaxjs-oid='"+oid+"'"):"")*/
 
             highlighted.push({
