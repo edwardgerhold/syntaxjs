@@ -30,6 +30,7 @@
 //#include "lib/filesystem.js";
 
 //#include "lib/parsenodes/tables.js";
+//#include "lib/parsenodes/symboltable.js";
 
 /* // #include "lib/intl/identifier-module.js"; // disabled */
 

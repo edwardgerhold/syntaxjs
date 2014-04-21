@@ -2051,6 +2051,92 @@ define("tables", function (require, exports, module) {
     */
 });
 
+/**
+ 
+ */
+define("symboltable", function (require, exports, module) {
+
+	function Environment (outer) {
+		var env = Object.create(Environment.prototype);
+		env.bindings = Object.create(outer ? outer.bindings : null);
+		env.names = Object.create(outer ? outer.names : null);
+		env.outer = outer || null;
+		return env;
+ 	}
+	Environment.prototype = {
+		put: function (decl, type) {
+			var name = decl.id.name;		
+			if (this.names[name] === true) {
+			    throw new SyntaxError("duplicate identifier in environment scope");
+			}
+			this.bindings[name] = decl;
+			this.names[name] = type || true;
+		}
+	};
+
+	function Scope (outer) {
+		var scope = Object.create(null);        
+		scope.varEnv = Environment(scope.varEnv);
+		scope.lexEnv = scope.varEnv;
+		scope.contains = Object.create(null);
+		scope.outer = outer || null;		
+		return scope;		
+	}
+
+    function SymbolTable() {
+        var table = Object.create(SymbolTable.prototype);        
+        table.newScope();
+        return table;
+    }
+    SymbolTable.prototype = {
+    	newScope: function () {
+    		this.scope = Scope(this.scope);            
+    	},
+    	oldScope: function () {
+    		if (this.scope)
+    		this.scope = this.scope.outer;
+    	},    	
+    	newBlock: function () {
+    		this.scope.lexEnv = Environment(this.scope.lexEnv);
+    	},
+    	oldBlock: function () {
+            if (this.scope)
+    		this.scope.lexEnv = this.scope.lexEnv.outer;
+    	},
+    	putVar: function (decl) {
+    		return this.scope.varEnv.put(decl);
+    	},
+    	putLex: function (decl) {
+    		return this.scope.lexEnv.put(decl);
+    	},
+        hasVar: function (name) {
+           return name in this.scope.varEnv.names;
+        },
+        hasLex: function (name) {
+            return name in this.scope.lexEnv.names;
+        },
+        varNames: function () {
+            return getList.call(this, this.scope.varEnv.names);
+        },
+        lexNames: function () {
+            return getList.call(this, this.scope.lexEnv.names);
+        }
+
+    };
+    function getList(names) {
+        var list = [];
+        for (var name in names) {
+            list.push(name);
+        }
+        return list;
+    }
+    return module.exports = {
+        SymbolTable: SymbolTable,
+        Scope: Scope,
+        Environment: Environment
+    };
+
+});
 
 /* // #include "lib/intl/identifier-module.js"; // disabled */
 
@@ -2210,6 +2296,10 @@ define("slower-static-semantics", function (require, exports) {
     function ModuleRequests(node) {}
     function ImportedNames(node) {}
     function ExportedNames(node) {}
+
+    function IsIdentifier(obj) {
+        return obj.type == "Identifier";
+    }
     function IsFunctionDeclaration(node) {
         return node.type === "FunctionDeclaration";
     }
@@ -2833,6 +2923,7 @@ define("slower-static-semantics", function (require, exports) {
     exports.CV = CV;
     exports.MV = MV;
     exports.SV = SV;
+    exports.IsIdentifier = IsIdentifier;
 
 });
 
@@ -2912,6 +3003,9 @@ define("tokenizer", function () {
         function updateStack(se) {
             var oldstack = se.stack;
             se.stack = "syntax.js tokenizer,\nfunction tokenize,\n does not recognize actual input. ch=" + ch + ", lookahead=" + lookahead + ", line=" + line + ", col=" + column + ", offset=" + offset + ", pos="+pos+" " +sourceCode+" \n" + oldstack;
+        }
+        function atLineCol() {
+
         }
         function setCustomTokenMaker (func) {
             if (typeof func === null) {
@@ -3786,9 +3880,11 @@ define("parser", function () {
         "use strict";
 //    var i18n = require("i18n-messages");
         var tables = require("tables");
-        var tokenize = require("tokenizer").tokenizeIntoArray;
+        var tokenize = require("tokenizer").tokenizeIntoArray; // removing fails a couple of tests, but NOT even the half (i´m close)
         var EarlyErrors = require("earlyerrors").EarlyErrors;
         var Contains = require("earlyerrors").Contains;
+        var SymbolTable = require("symboltable").SymbolTable;
+        var symtab;
         var withError, ifAbrupt, isAbrupt;
         var IsIteration = tables.IsIteration;
         var IsTemplateToken = tables.IsTemplateToken;
@@ -3875,6 +3971,7 @@ define("parser", function () {
         var hasConsole = typeof console === "object" && console != null && typeof console.log === "function";
         var BoundNames = require("slower-static-semantics").BoundNames;
         var nodeId = 1;
+
         var captureExtraTypes = {
             __proto__:null,
             "WhiteSpace":true,
@@ -5166,9 +5263,15 @@ define("parser", function () {
                 node.kind = kind;
                 var id = this.Identifier();
                 node.id = id;
-                if (isStrict && (ReservedWordsInStrictMode[id.name] || ForbiddenArgumentsInStrict[id.name])) {
-                    throw new SyntaxError(id.name + " is not a valid identifier in strict mode");
+
+                var name = id.name;
+                if (isStrict && (ReservedWordsInStrictMode[name] || ForbiddenArgumentsInStrict[name])) {
+                    throw new SyntaxError(name + " is not a valid identifier in strict mode");
                 }
+
+                if (kind === "var") symtab.putVar(node);
+                else symtab.putLex(node);
+
                 if (v === "=") node.init = this.Initializer();
                 else node.init = null;
                 return node;
@@ -5837,7 +5940,7 @@ define("parser", function () {
                         if (v === "{") {
                             imp = this.ImportClause();
                             if (imp) list.push(imp);
-                        } else if (t === "Identifier") {
+                        } else if (t ==ru= "Identifier") {
                             imp = this.Identifier();
                             if (imp) list.push(imp);
                         } else if (v === ",") {
@@ -6422,6 +6525,7 @@ define("parser", function () {
             tokenArrayLength = tokens.length;
             ast = null;
             currentNode = undefined;
+            symtab = SymbolTable();
             if (lookaheadToken = tokens[0]) {
                 lookahead = lookaheadToken.value;
                 lookaheadType = lookaheadToken.type;
@@ -6432,6 +6536,7 @@ define("parser", function () {
         function initNewLexer(sourceOrTokens) {
             currentNode = pos = t = v = token = lookaheadToken = lookahead = lookaheadType = undefined;
             ast = null;
+            symtab = SymbolTable();
             if (sourceOrTokens != undefined) {
                 if (Array.isArray(sourceOrTokens)) {
                     tokens = sourceOrTokens;
@@ -6473,6 +6578,7 @@ define("parser", function () {
         }
 
         function initParseGoal(source) {
+            symtab = SymbolTable();
             ast = t = v = token = lookaheadToken = lookahead = lookaheadType = undefined;
             if (!Array.isArray(source)) tokens = tokenize.tokenizeIntoArray(source);
             else tokens = source;
@@ -11402,7 +11508,6 @@ function printCodeEvaluationState() {
     var node = state[0];
     var instructionIndex = state[1];
     var parent = state[2];
-
     var str = "["+(node&&node.type)+" === "+instructionIndex+"] of ["+(parent&&parent.type)+"]";
     if (hasConsole) console.log(str);
 }
@@ -11419,7 +11524,7 @@ function callbackWrong(generator, body) {
         getContext().callback = undefined;
         return CreateItrResultObject(result, true);
     }
-    return result;
+    return NormalCompletion(result);
 }
 
 function GeneratorStart(generator, body) {
@@ -11428,13 +11533,6 @@ function GeneratorStart(generator, body) {
     var cx = getContext();
     cx.generator = generator;
     cx.callback = function () {
-        //
-        // set the state so, that it can be resumed
-        // with a stack machine no problem
-        // with an ast without parent pointers it is
-        // i will return to parent pointers for the ast
-        //
-        //
         return callbackWrong(generator, body);
     };
     setInternalSlot(generator, "GeneratorContext", cx);
@@ -11455,9 +11553,9 @@ function GeneratorResume(generator, value) {
     getStack().push(genContext);
     setInternalSlot(generator, "GeneratorState", "executing");
     var callback = genContext.callback;
+   
     var result = callback(NormalCompletion(value));
-    setInternalSlot(generator, "GeneratorState", "suspendedYield");
-
+    setInternalSlot(generator, "GeneratorState", "suspendedYield");    
     var x = getContext();
     if (x !== methodContext) {
         if (hasConsole) console.log("GENERATOR ACHTUNG 2: CONTEXT MISMATCH TEST NICHT BESTANDEN - resume");
@@ -11478,10 +11576,10 @@ function GeneratorYield(itrNextObj) {
         if (hasConsole) console.log("GENERATOR ACHTUNG 1: CONTEXT MISMATCH TEST NICHT BESTANDEN - yield");
     }
     // compl = yield smth;
-    genContext.callback = function (compl) {
-        if (hasConsole) console.log("##callback() return compl to left of = yield##");
+    genContext.callback = function (compl) {        
         return compl;
     };
+
     return NormalCompletion(itrNextObj);
 }
 // ===========================================================================================================
@@ -13203,7 +13301,7 @@ function RegExpExec (R, S, ignore) {
 
 
 */
-var FAILURE = null;
+var FAILURE = {};
 
 function createRegExpMatcher(pattern) {
     var patternMatcher; // Evaluate(Pattern::Disjunction) returns the [[RegExpMatcher]](x,c) i guess
@@ -20319,10 +20417,6 @@ LazyDefineBuiltinFunction(FunctionPrototype, "toMethod", 1, FunctionPrototype_to
 
 
 
-// ===========================================================================================================
-// Generator Prototype and Function
-// ===========================================================================================================
-
 LazyDefineProperty(GeneratorPrototype, $$iterator, CreateBuiltinFunction(realm, function (thisArg, argList) {
     return thisArg;
 }));
@@ -20331,22 +20425,21 @@ LazyDefineProperty(GeneratorPrototype, $$toStringTag, "Generator");
 
 // GeneratorFunction.[[Prototype]] = FunctionPrototype
 setInternalSlot(GeneratorFunction, "Prototype", FunctionConstructor);
-
-
-// GeneratorFunction.prototype = %Generator%
 MakeConstructor(GeneratorFunction, true, GeneratorObject);
+// GeneratorFunction.prototype = %Generator%
+
 DefineOwnProperty(GeneratorFunction, "prototype", {
-    value: GeneratorObject,
+    value: GeneratorPrototype,
     enumerable: false
 });
-
 // GeneratorFunction.prototype.constructor = GeneratorFunction
+LazyDefineProperty(GeneratorPrototype, "constructor", GeneratorFunction);
 LazyDefineProperty(GeneratorObject, "constructor", GeneratorFunction);
+LazyDefineProperty(GeneratorObject, "prototype", GeneratorPrototype);
 
 // GeneratorFunction.prototype.prototype = GeneratorPrototype
 setInternalSlot(GeneratorObject, "Prototype", GeneratorPrototype);
 
-LazyDefineProperty(GeneratorObject, "prototype", GeneratorPrototype);
 //    LazyDefineProperty(GeneratorPrototype, "constructor", GeneratorObject);
 
 LazyDefineProperty(GeneratorPrototype, "next", CreateBuiltinFunction(realm, function (thisArg, argList) {
@@ -23925,6 +24018,7 @@ define("runtime", function () {
         var IsGeneratorExpression = statics.IsGeneratorExpression;
         var IsVarDeclaration = statics.IsVarDeclaration;
         var isDuplicateProperty = statics.isDuplicateProperty;
+        var IsIdentifier = statics.IsIdentifier;
         var CV = statics.CV;
         var MV = statics.MV;
         var SV = statics.SV;
@@ -23994,14 +24088,7 @@ define("runtime", function () {
             }
             return obj;
         }
-        function ResolveBinding(name) {
-            var lex = getLexEnv();
-            var strict = getContext().strict;
-            return GetIdentifierReference(lex, name, strict);
-        }
-        function IsIdentifier(obj) {
-            return obj.type == "Identifier";
-        }
+
         function unquote(str) {
             return str.replace(/^("|')|("|')$/g, "");  //'
         }
@@ -24010,10 +24097,20 @@ define("runtime", function () {
             for (var i = 0; i < times; i++) str += ch;
             return str;
         }
+        function atLineCol() {
+            var line = loc && loc.start.line;
+            var column = loc && loc.start.column;
+            return " at line "+line+", column "+column;
+        }
         function banner(str) {
             consoleLog(repeatch("-", 79));
             consoleLog(str);
             consoleLog(repeatch("-", 79));
+        }
+        function ResolveBinding(name) {
+            var lex = getLexEnv();
+            var strict = getContext().strict;
+            return GetIdentifierReference(lex, name, strict);
         }
         function InstantiateModuleDeclaration(code, env) {
             var declarations = LexicalDeclaration(code);
@@ -24048,16 +24145,12 @@ define("runtime", function () {
             var boundNamesInPattern;
             var code = getCode(script,"body");
             var strict = !!getCode(script,"strict");
-
             var cx = getContext();
             if (strict) cx.strict = true;
-
-            var ex;
             var lexNames = LexicallyDeclaredNames(code);
             var varNames = VarDeclaredNames(code);
             var i, j, y, z;
-            var status;
-
+            var status, ex;
             for (i = 0, j = lexNames.length; i < j; i++) {
                 if (name = lexNames[i]) {
                     if (env.HasVarDeclaration(name)) return withError("Syntax", "Instantiate global: existing var declaration: " + name);
@@ -24087,7 +24180,6 @@ define("runtime", function () {
                     functionsToInitialize.push(d);
                 }
             }
-
             var vnDefinable;
             var declaredVarNames = Object.create(null);
             var vn;
@@ -24129,8 +24221,7 @@ define("runtime", function () {
                 //status = SetFunctionName(fo, fn);
                 //if (isAbrupt(status)) return status;
             }
-            var ex;
-            for (var d in declaredVarNames) {
+            for (d in declaredVarNames) {
                 status = env.CreateGlobalVarBinding(d, deletableBindings);
                 if (isAbrupt(status)) return status;
             }
@@ -24329,6 +24420,8 @@ define("runtime", function () {
             var ao = InstantiateArgumentsObject(argList);
             if (isAbrupt(ao = ifAbrupt(ao))) return ao;
             var formalStatus = BindingInitialisation(formals, ao, undefined);
+            if (isAbrupt(formalStatus)) return formalStatus;
+
             if (argumentsObjectNeeded) {
                 if (strict) {
                     CompleteStrictArgumentsObject(ao);
@@ -25186,31 +25279,19 @@ define("runtime", function () {
                     }
                 }
                 return NormalCompletion(undefined);
-
             } else if (type === "ObjectPattern" || type === "ObjectExpression") {
-
-
                 var decl;
-
-
                 /* coerce to object addition */
                 value = ToObject(value);
                 if (isAbrupt(value = ifAbrupt(value))) return value;
                 /* read let {length} = "123" on es-discuss, fails at Get() few lines below, that´s why*/
-
-
                 for (var p = 0, q = node.elements.length; p < q; p++) {
                     if (decl = node.elements[p]) {
-
-
                         if (decl.init) {
                             var initializer = GetValue(Evaluate(decl.init));
                             if (isAbrupt(initializer = ifAbrupt(initializer))) return initializer;
                         }
-
-
                         if (env) {
-
                             if (decl.id) {
                                 val =  Get(value, decl.id.name, value);
                                 if (isAbrupt(val=ifAbrupt(val))) return val;
@@ -26864,15 +26945,11 @@ define("runtime", function () {
             var body = getCode(node, "body");
             var object = GetValue(Evaluate(node.object));
             if (isAbrupt(object = ifAbrupt(object))) return object;
-
             var objEnv = ObjectEnvironment(object, getContext().LexEnv);
             objEnv.withEnvironment = true;
-
             var oldEnv = getLexEnv();
             getContext().LexEnv = objEnv;
-
             var result = Evaluate(body);
-
             getContext().LexEnv = oldEnv;
             if (isAbrupt(result)) return result;
             return NormalCompletion(undefined);
@@ -26896,9 +26973,7 @@ define("runtime", function () {
                         }
                     }
                 }
-
                 if (!filter || (ToBoolean(filterValue) === true)) {
-
                     var exprRef = Evaluate(expr);
                     var exprValue = GetValue(exprRef);
                     if (isAbrupt(exprValue=ifAbrupt(exprValue))) return exprValue;
@@ -26909,11 +26984,8 @@ define("runtime", function () {
                     len = len + 1;
                     putStatus = Put(accumulator, "length", len, true);
                     if (isAbrupt(putStatus = ifAbrupt(putStatus))) return putStatus;
-
                 }
-
                 return NormalCompletion(undefined);
-
             } else {
                 var yieldStatus = GeneratorYield(CreateItrResultObject(value, false));
                 if (isAbrupt(yieldStatus = ifAbrupt(yieldStatus))) return yieldStatus;

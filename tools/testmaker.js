@@ -27,19 +27,11 @@
  // each top-level test creates with .init a new realm
 
 
- lacks:
-
- json has no undefined
- tests agains undefined (omit the expected value should result in an undefined passed)
-
- NaN
- the is no expectation to test against nan.
- maybe a third argument in the test array could be such a command
-
  */
 
 var VERSION = "0.0.1";
-var jsonfile, rawjson, json, writetests, testnames, verbose, fn, separator, doubleseparator, realm, testfile;
+var jsonfile, rawjson, json, writetests, testnames, verbose, separator, doubleseparator, realm, testfile;
+var writeFn, data; // lifetime
 var Test = require("../tools/tester0.js").Test;
 var syntaxjs = require("../syntax0.js").syntaxjs;
 var fs = require("fs");
@@ -52,7 +44,7 @@ function usage() {
     console.log("usage:");
     console.log("testmaker.js tests.json (calls tester.js and syntax.js with the testdata at once)");
     console.log("-v = verbose and prints tests.json out each time");
-    console.log("-w = (unimplemented, will write code instead of calling tester)");
+    console.log("-w = writes tester.js code. other target libraries are the reason for the idea");
     console.log("-r = check out a new realm for the test");
 }
 
@@ -61,7 +53,6 @@ function basic_setup (args) {
     for (var i = 0, j = args.length; i < j; i++) {
         if (args[i] == "-w") {
             writetests = true;
-            
             //i += 1;
             //testfile = args[i];
         }
@@ -80,14 +71,6 @@ function basic_setup (args) {
     data = "";
 }
 
-function writeFooterAndClose(fd) {
-//    fs.appendFile(testfile, data, function (err) {
-//        if (err) throw err;
-        console.log(testfile + ": footer");
-//    });
-}
-
-var writeFn, data; // lifetime
 function writeTests(testfile, json, testnames, err, fd) {
     if (err) throw err;
     while (testnames.length) {
@@ -99,7 +82,7 @@ function writeTests(testfile, json, testnames, err, fd) {
         if (testnames.length) break;
     }
     if (!testnames.length) {
-        writeFooterAndClose(testfile);
+        console.log("finished "+testfile);
     }
 }
 
@@ -110,12 +93,11 @@ function writeTest(testfile, current, testname) {
     var throws = current.throws;
     var tests = current.tests;
     // attention multi line string
-
-    data += "var Test = require('../../tools/tester0.js').Test;\n";
-    data += "var syntaxjs = require('../../syntax0.js').syntaxjs\n";
-    data += "var tester = new Test();\n";
-    data += "var realm = syntaxjs.createRealm();\n";
-    data += "var code = \""+init+"\";\n";
+    data += "   var Test = require('../../tools/tester0.js').Test;\n";
+    data += "   var syntaxjs = require('../../syntax0.js').syntaxjs\n";
+    data += "   var tester = new Test();\n";
+    data += "   var realm = syntaxjs.createRealm();\n";
+    data += "   var code = \""+init+"\";\n";
     if (throws) {
         data+="try {\n";
     }
@@ -138,8 +120,8 @@ function writeTest(testfile, current, testname) {
         }
         switch (fn) {
             case "throws":
-                data += "	this.throws(function () {\
-    var result = realm.eval(code);\
+                data += "	this.throws(function () {\n\
+    var result = realm.eval(code);\n\
     }, code);";
                 break;
             case "NaN":
@@ -153,38 +135,32 @@ function writeTest(testfile, current, testname) {
         }
         data += "});\n";
     });
-
     data += "tester.run();\n";
     data += "tester.print();\n";
     data += "}());\n"
-
     console.log(data);
     fs.appendFile(testfile, data, function (err) {
         if (err) throw err;
         writeFn();
     });
 }
+
 function writeTestStarter(testfile, json, testnames) {
     writeFn = writeTests.bind(null, testfile, json, testnames);
     writeFn();
 }
 
-
 function runTest(current, testname) {
     // calling tester.js
-
     var tester = new Test();
     var code = current.init;
     var throws = current.throws;
     var rlm, result;
-
     console.log("TEST: " + testname);
     console.log(code);
-
     if (realm) {
         rlm = syntaxjs.createRealm();
     }
-
     if (throws) {
         try {
             if (realm) result = rlm.eval(code);
@@ -201,7 +177,6 @@ function runTest(current, testname) {
     tests.forEach(function (test, index) {
         ++testnum;
         tester.add(function () {
-
             var code = test[0];
             var expected = test[1];
             var fn = test[2];
@@ -237,7 +212,6 @@ function runTestStarter(json, testnames) {
             try {
                 runTest(current, testname);
                 if (index < (testnames.length - 1)) console.log("\n" + separator);
-
             } catch (ex) {
                 if (!current.throws) {
                     console.log("FAIL: Exception at: "+jsonfile+": "+testname);
@@ -253,25 +227,20 @@ function runTestStarter(json, testnames) {
 }
 
 (function main(args) {
-
     if (!args.length) {
         about();
         usage();
         process.exit(-1);
     }
-
     basic_setup(args);
-
     if (verbose) {
         about();
         console.log(rawjson);
     }
-
     if (writetests) {
         writeTestStarter(testfile, json, testnames);
     } else {
         runTestStarter(json, testnames);
     }
-
 }(process.argv.slice(2)));
 
