@@ -5947,7 +5947,7 @@ define("parser", function () {
                         if (v === "{") {
                             imp = this.ImportClause();
                             if (imp) list.push(imp);
-                        } else if (t ==ru= "Identifier") {
+                        } else if (t = "Identifier") {
                             imp = this.Identifier();
                             if (imp) list.push(imp);
                         } else if (v === ",") {
