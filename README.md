@@ -1,7 +1,7 @@
 syntaxjs
 ========
 
-Not bugfree(*) EcmaScript 6 (7**) Interpreter written in EcmaScript 5.
+Not bugfree(*) EcmaScript 6 (7**) Interpreter(*****) written in EcmaScript 5.
 This project was started on a PIII/933 with mcedit in a dorm and is
 now continued on a notebook with 2 cores still in the dorm.
 It´s a fun project. (***)
@@ -9,10 +9,18 @@ It´s a fun project. (***)
 Hmm, i notice difficulties with writing plain text with myself nowadays.
 I´m working on it.
 
-(*) now working on the lockups, missing errors, and just tokenizer and
-parser, until it runs arbitrary code.
+(*) still doesnt run arbitrary code, but all lockups are removed. I added
+syntax errors everywhere and controlled the loops. (I suspect THE Bug in the
+AssignmentExpression, where the PrimaryExpression/LeftHandSideExpression 
+is not read in the correct order. There is a conditional Expression without
+parens which isn´t parsed correct, while it´s, if the condition is wrapped 
+in parens. This is possibly the last real bug in the parser, the assignment 
+expression contains the conditional expression, but it affects the whole
+Relational Expression Sequence.)
 
-(**) contains at last one implemented proposal and more
+(**) contains at last one implemented proposal and more (at and String.prototype.lpad and
+String.prototype.rpad, but i noticed lpad and rpad return incorrect length, they add and 
+don´t pad and String.prototype.at is returning nothing.)
 
 (***) serious documentation and proper seriously written license will 
 take some weeks and a day more or two. JSDoc will replace the chaotic
@@ -21,6 +29,19 @@ few comments left between.
 (****) the files have to be cleaned up inside, that some functions move.
 and maybe two files become one.
 
+
+(*****) typed mem and stack machine is a must for me but it will still take
+a while. But then we´ll also have Weak Maps and Weak Refs. The code itself
+needs some refactoring for member expressions, which get replaced by getter
+functions, and the OrdinaryObject.prototype and the used this value have to
+be replaced by object with methods and a preceding argument of the function,
+but the getFunction(obj, name) interface is already existing, so i´m (almost)
+knowing what i´m doing.
+
+(******) Only serious problems: No parallel processing until ES7, no int64
+until ES7 nativly exists, OR: one writes node modules providing interfaces
+into node.js to check it out under node.js. OR: the browsers prototype the
+same public.
 
 New: Multiple Realms
 ======================

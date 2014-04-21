@@ -5302,6 +5302,7 @@ define("parser", function () {
                     throw new SyntaxError(name + " is not a valid identifier in strict mode");
                 }
 
+		// throws error on duplicate identifier
                 if (kind === "var") symtab.putVar(node);
                 else symtab.putLex(node);
 
