@@ -1,0 +1,15 @@
+{
+	"Essential DataView get and set Operations":
+	{
+	    "init": 		
+		"let ab = new ArrayBuffer(100); let dv = new DataView(ab);",
+	    "tests": 
+	    [
+		["dv.setInt32(0,255); dv.getInt32(0);", 255],
+		["dv.setInt8(7,127); dv.getInt8(7);", 127],
+		["dv.setUint8(7,254); dv.getUint8(7);", 254],		
+		["dv.setFloat64(40,25.55); dv.getFloat64(40);", 25.55]
+	    ]
+	}
+
+}

@@ -8247,11 +8247,13 @@ exports.LazyDefineAccessorFunction = LazyDefineAccessorFunction;
 function LazyDefineAccessorFunction(O, name, arity, g, s, e, c) { 
     if (e === undefined) e = false;
     if (c === undefined) c = true;
+    var fname = name;
+    if (IsSymbol(name)) fname = "["+(getInternalSlot(name, "Description")||"")+"]";
     return callInternalSlot("DefineOwnProperty", O, name, {
         configurable: c,
         enumerable: e,
-        get: g ? CreateBuiltinFunction(getRealm(), g, arity, name) : undefined,
-        set: s ? CreateBuiltinFunction(getRealm(), s, arity, name) : undefined
+        get: g ? CreateBuiltinFunction(getRealm(), g, arity, "get "+fname) : undefined,
+        set: s ? CreateBuiltinFunction(getRealm(), s, arity, "set "+fname) : undefined
     });
 }
 
@@ -9828,17 +9830,17 @@ var ReturnNum = {
     "0": true
 };
 function ToInt8(V) {
-    var view = Int8Array(1);
+    var view = new Int8Array(1);
     view[0] = V;
     return view[0];
 }
 function ToUint8(V) {
-    var view = Uint8Array(1);
+    var view = new Uint8Array(1);
     view[0] = V & 0xFF;
     return view[0];
 }
 function ToUint8Clamp(V) {
-    var view = Uint8ClampedArray(1);
+    var view = new Uint8ClampedArray(1);
     view[0] = V & 0xFF;
     return view[0];
 }
@@ -11743,7 +11745,6 @@ function CreateByteArrayBlock(bytes) {
 function SetArrayBufferData(arrayBuffer, bytes) {
     Assert(hasInternalSlot(arrayBuffer, "ArrayBufferData"), "[[ArrayBufferData]] has to exist");
     Assert(bytes > 0, "bytes must be a positive integer");
-
     var block = CreateByteArrayBlock(bytes); // hehe
     setInternalSlot(arrayBuffer, "ArrayBufferData", block);
     setInternalSlot(arrayBuffer, "ArrayBufferByteLength", bytes);
@@ -11766,35 +11767,52 @@ function GetValueFromBuffer(arrayBuffer, byteIndex, type, isLittleEndian) {
     var length = getInternalSlot(arrayBuffer, "ArrayBufferByteLength");
     var block = getInternalSlot(arrayBuffer, "ArrayBufferData");
     if (block === undefined || block === null) return withError("Type", "[[ArrayBufferData]] is not initialized or available.");
+    
     var elementSize = arrayType2elementSize[type];
     var rawValue, intValue;
-    var help;
-    help = new(typedConstructors[type])(bock, byteIndex, 1);
-    rawValue = help[0];
+    
+    var dv = new DataView(block);
+    rawValue = dv["get"+type](byteIndex, isLittleEndian);
 
-    return rawValue;
+    return NormalCompletion(rawValue);
 }
 
 function SetValueInBuffer(arrayBuffer, byteIndex, type, value, isLittleEndian) {
-
-    var length = getInternalSlot(arrayBuffer, "ArrayBufferByteLength");
+    var length = getInternalSlot(arrayBuffer, "ByteLength");
     var block = getInternalSlot(arrayBuffer, "ArrayBufferData");
     if (block === undefined || block === null) return withError("Type", "[[ArrayBufferData]] is not initialized or available.");
     var elementSize = arrayType2elementSize[type];
-    var rawValue, intValue;
-    var help;
-
-    help = new(typedConstructors[type])(bock, byteIndex, 1);
-    help[0] = value;
-
+    var numValue;
+    switch(type) {
+	case "Int8":
+	    numValue = ToInt8(value);
+	    break;
+	case "Uint8":
+	    numValue = ToUint8(value);
+	    break;
+	case "Int32":
+	    numValue = ToInt32(value);
+	    break;
+	case "Float32":
+	    numValue = ToNumber(value);
+	    break;
+	case "Float64":
+	    numValue = ToNumber(value);
+	    break;
+	default:
+	    break;
+    }
+    if (isAbrupt(numValue = ifAbrupt(numValue))) return numValue;
+    var dv = new DataView(block);
+    dv["set"+type](byteIndex, numValue, isLittleEndian);
     return NormalCompletion(undefined);
 }
 
 function SetViewValue(view, requestIndex, isLittleEndian, type, value) {
     var v = ToObject(view);
     if (isAbrupt(v = ifAbrupt(v))) return v;
-    if (!hasInternalSlot(v, "ArrayBufferData")) return withError("Type", "not a ArrayBufferData");
-    var buffer = getInternalSlot(v, "ArrayBufferData");
+    if (!hasInternalSlot(v, "DataView")) return withError("Type", "object has no [[ArrayBufferData]]");
+    var buffer = getInternalSlot(v, "ViewedArrayBuffer");
     if (buffer === undefined) return withError("Type", "buffer is undefined");
     var numberIndex = ToNumber(requestIndex);
     var getIndex = ToInteger(numberIndex);
@@ -11807,14 +11825,14 @@ function SetViewValue(view, requestIndex, isLittleEndian, type, value) {
     var elementSize = TypedArrayElementSize[type];
     if (getIndex + elementSize > viewSize) return withError("Range", "out of range larger viewsize");
     var bufferIndex = getIndex + viewOffset;
-    return SetValueInBuffer(buffer, bufferIndex, type, littleEndian);
+    return SetValueInBuffer(buffer, bufferIndex, type, value, littleEndian);
 }
 
 function GetViewValue(view, requestIndex, isLittleEndian, type) {
     var v = ToObject(view);
     if (isAbrupt(v = ifAbrupt(v))) return v;
-    if (!hasInternalSlot(v, "ArrayBufferData")) return withError("Type", "not a ArrayBufferData");
-    var buffer = getInternalSlot(v, "ArrayBufferData");
+    if (!hasInternalSlot(v, "DataView")) return withError("Type", "not a ArrayBufferData");
+    var buffer = getInternalSlot(v, "ViewedArrayBuffer");
     if (buffer === undefined) return withError("Type", "buffer is undefined");
     var numberIndex = ToNumber(requestIndex);
     var getIndex = ToInteger(numberIndex);
@@ -11864,7 +11882,7 @@ var typedConstructorNames = {
     "Uint16": "%Uint16ArrayPrototype%",
     "Int8": "%Int8ArrayPrototype%",
     "Uint8": "%Uint8ArrayPrototype%",
-    "Uint8Clamped": "%Uint8ClampedArrayProtoype%"
+    "Uint8Clamped": "%Uint8ClampedArrayPrototype%"
 };
 
 /**
@@ -21894,7 +21912,6 @@ DefineOwnProperty(ArrayBufferPrototype, "slice", {
     configurable: false
 });
 
-
 var DataViewConstructor_Call= function (thisArg, argList) {
     var O = thisArg;
     var buffer = argList[0];
@@ -21933,7 +21950,7 @@ var DataViewConstructor_Call= function (thisArg, argList) {
     return NormalCompletion(O);
 };
 
-var DataViewConstructor_Construct = function (thisArg, argList) {
+var DataViewConstructor_Construct = function (argList) {
     return OrdinaryConstruct(this, argList);
 };
 
@@ -22112,9 +22129,9 @@ MakeConstructor(DataViewConstructor, true, DataViewPrototype);
 setInternalSlot(DataViewConstructor, "Call", DataViewConstructor_Call);
 setInternalSlot(DataViewConstructor, "Construct", DataViewConstructor_Construct);
 LazyDefineBuiltinFunction(DataViewConstructor, $$create, 1, DataViewConstructor_$$create);
-LazyDefineAccessor(DataViewPrototype, "buffer", CreateBuiltinFunction(realm, DataViewPrototype_get_buffer, 0, "get buffer"));
-LazyDefineAccessor(DataViewPrototype, "byteLength", CreateBuiltinFunction(realm, DataViewPrototype_get_byteLength, 0, "get byteLength"));
-LazyDefineAccessor(DataViewPrototype, "byteOffset", CreateBuiltinFunction(realm, DataViewPrototype_get_byteOffset, 0, "get byteOffset"));
+LazyDefineAccessorFunction(DataViewPrototype, "buffer", 0, DataViewPrototype_get_buffer);
+LazyDefineAccessorFunction(DataViewPrototype, "byteLength", 0, DataViewPrototype_get_byteLength);
+LazyDefineAccessorFunction(DataViewPrototype, "byteOffset", 0, DataViewPrototype_get_byteOffset);
 LazyDefineBuiltinFunction(DataViewPrototype, "getFloat32", 1, DataViewPrototype_getFloat32);
 LazyDefineBuiltinFunction(DataViewPrototype, "getFloat64", 1, DataViewPrototype_getFloat64);
 LazyDefineBuiltinFunction(DataViewPrototype, "getInt8", 1, DataViewPrototype_getInt8);
