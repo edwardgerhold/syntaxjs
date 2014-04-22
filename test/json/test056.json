@@ -11,6 +11,17 @@
 		["f() === f()", false],
 		["f().a === f().a", true]
 	    ]
+	},
+	
+	"return with line terminator ahead":
+	{
+	    "init": 		
+		"function f() { return\n\n[1,2,3,4] }",
+	    "tests": 
+	    [
+		["typeof f()", "undefined"],
+		["f()"]
+	    ]
 	}
 
 }

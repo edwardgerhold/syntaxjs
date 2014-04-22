@@ -5705,7 +5705,12 @@ define("parser", function () {
                 node = Node("BreakStatement");
                 match("break");
                 if (v !== ";") {
-                    if (ltLast) return node;
+                    if (ltLast) {
+                        l2 = loc && loc.start;
+                	node.loc = makeLoc(l1,l2);
+                	return node;
+                	return node;
+            	    }
                     if (t === "Identifier") {
                         var id = this.Identifier();
                         node.label = id.name;
@@ -5725,7 +5730,11 @@ define("parser", function () {
                 l1 = loc && loc.start;
                 match("continue");
                 if (v !== ";") {
-                    if (ltLast) return node;
+                    if (ltLast) {
+                	l2 = loc && loc.start;
+                	node.loc = makeLoc(l1,l2);
+                	return node;
+            	    }
                     if (t === "Identifier") {
                         var id = this.Identifier();
                         node.label = id.name;
@@ -5767,8 +5776,12 @@ define("parser", function () {
                 l1 = loc && loc.start;
                 match("throw");
                 if (v !== ";") {
-                    if (ltLast) if (notify) return notifyObservers(node);
-                    node.argument = this.Expression();
+                    if (ltLast) { 
+                        l2 = loc && loc.end;
+                        node.loc = makeLoc(l1, l2);
+                        return node;
+                    }
+                    else node.argument = this.Expression();
                 } else semicolon();
                 l2 = loc && loc.end;
                 node.loc = makeLoc(l1, l2);
