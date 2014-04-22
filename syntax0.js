@@ -470,7 +470,8 @@ define("tables", function (require, exports, module) {
     ExprNoneOfs["function"] = true;
     ExprNoneOfs["class"] = true;
     ExprNoneOfs["module"] = true;
-    ExprNoneOfs["{"] = true;
+//    ExprNoneOfs["{"] = true;
+    
 
     var MethodKeyByType = {
         __proto__: null,
@@ -595,7 +596,6 @@ define("tables", function (require, exports, module) {
         "this": "ThisExpression",
         "super": "SuperExpression"
     };
-
     var PrimaryExpressionByType = {
         __proto__: null,
         "Identifier": "Identifier",
@@ -5134,7 +5134,10 @@ define("parser", function () {
             var l1 = loc && loc.start;
             var l2;
             var hasStop = typeof stop === "string";
-            if (!parenthesized && (ExprNoneOfs[v] || (v === "let" && lookahead === "["))) return null;
+
+
+            if ((!parenthesized && ExprNoneOfs[v]) || (v === "let" && lookahead === "[")) return null;
+            
             do {
                 if (hasStop && v === stop) break;
                 if (ae = this.AssignmentExpression()) list.push(ae);
@@ -5702,7 +5705,7 @@ define("parser", function () {
                 node = Node("BreakStatement");
                 match("break");
                 if (v !== ";") {
-                    if (ltNext) return node;
+                    if (ltLast) return node;
                     if (t === "Identifier") {
                         var id = this.Identifier();
                         node.label = id.name;
@@ -5722,7 +5725,7 @@ define("parser", function () {
                 l1 = loc && loc.start;
                 match("continue");
                 if (v !== ";") {
-                    if (ltNext) return node;
+                    if (ltLast) return node;
                     if (t === "Identifier") {
                         var id = this.Identifier();
                         node.label = id.name;
@@ -5743,13 +5746,12 @@ define("parser", function () {
                 match("return");
                 if (withExtras && extraBuffer.length) dumpExtras2(node, "after");
                 if (v !== ";") {
-                    if (ltNext) {
+                    if (ltLast) {
                         l2 = loc && loc.end;
                         node.loc = makeLoc(l1, l2);
                         return node;
                     }
                     node.argument = this.Expression();
-
                 }
                 semicolon();
                 l2 = loc && loc.end;
@@ -5765,7 +5767,7 @@ define("parser", function () {
                 l1 = loc && loc.start;
                 match("throw");
                 if (v !== ";") {
-                    if (ltNext) if (notify) return notifyObservers(node);
+                    if (ltLast) if (notify) return notifyObservers(node);
                     node.argument = this.Expression();
                 } else semicolon();
                 l2 = loc && loc.end;
@@ -23691,7 +23693,7 @@ LazyDefineBuiltinFunction(TypePrototype, "opaqueType", 1, TypePrototype_opaqueTy
             DefineOwnProperty(globalThis, "unescape", GetOwnProperty(intrinsics, "%Unescape%"));
             LazyDefineBuiltinConstant(globalThis, $$toStringTag, "syntaxjs");
 
-        if (typeof Java !== "function" && typeof load !== "function" && typeof print !== "function") {
+        if (typeof Java !== "function" && typeof load !== "function" && typeof print !== "function" && typeof window != "object") {
 	
 	        LazyDefineProperty(intrinsics, "%DOMWrapper%", 
 	        ExoticDOMObjectWrapper(
@@ -23700,7 +23702,6 @@ LazyDefineBuiltinFunction(TypePrototype, "opaqueType", 1, TypePrototype_opaqueTy
 	        typeof process === "object" ? process : {}
 	        )
 	        );
-        }
         
             if (typeof importScripts === "function") {
                 DefineOwnProperty(globalThis, "self", GetOwnProperty(intrinsics, "%DOMWrapper%"));
@@ -23716,6 +23717,9 @@ LazyDefineBuiltinFunction(TypePrototype, "opaqueType", 1, TypePrototype_opaqueTy
             } else if (typeof process === "object") {
                 DefineOwnProperty(globalThis, "process", GetOwnProperty(intrinsics, "%DOMWrapper%"));
             }
+
+	}
+        
 
             return globalThis;
         };

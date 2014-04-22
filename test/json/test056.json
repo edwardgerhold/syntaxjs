@@ -1,0 +1,16 @@
+{
+	"my lookahead { restriction made it impossible to return object literals from functions (dunno which bugs may follow)":
+	{
+	    "init": 		
+		"function f() { return { a:1, b: 2 } }",
+	    "tests": 
+	    [
+		["typeof f()", "object"],
+		["f().a", 1],
+		["f().b", 2],
+		["f() === f()", false],
+		["f().a === f().a", true]
+	    ]
+	}
+
+}
