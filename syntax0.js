@@ -9829,20 +9829,20 @@ var ReturnNum = {
     "-Infinity": true,
     "0": true
 };
+
+var toInt8View = new Int8Array(1);
+var toUint8View = new Uint8Array(1);
+var toUint8ClampView = new Uint8ClampedArray(1);
+
 function ToInt8(V) {
     var view = new Int8Array(1);
-    view[0] = V;
-    return view[0];
+    return toInt8View[0] = V;
 }
 function ToUint8(V) {
-    var view = new Uint8Array(1);
-    view[0] = V & 0xFF;
-    return view[0];
+    return toUint8View[0] = V;
 }
 function ToUint8Clamp(V) {
-    var view = new Uint8ClampedArray(1);
-    view[0] = V & 0xFF;
-    return view[0];
+    return toUint8ClampView[0] = V;
 }
 function ToUint16(V) {
     var number = ToNumber(V);
@@ -11782,7 +11782,8 @@ function SetValueInBuffer(arrayBuffer, byteIndex, type, value, isLittleEndian) {
     var block = getInternalSlot(arrayBuffer, "ArrayBufferData");
     if (block === undefined || block === null) return withError("Type", "[[ArrayBufferData]] is not initialized or available.");
     var elementSize = arrayType2elementSize[type];
-    var numValue;
+    var numValue = +value;
+/*
     switch(type) {
 	case "Int8":
 	    numValue = ToInt8(value);
@@ -11802,10 +11803,12 @@ function SetValueInBuffer(arrayBuffer, byteIndex, type, value, isLittleEndian) {
 	default:
 	    break;
     }
+    */
     if (isAbrupt(numValue = ifAbrupt(numValue))) return numValue;
     var dv = new DataView(block);
     dv["set"+type](byteIndex, numValue, isLittleEndian);
     return NormalCompletion(undefined);
+    
 }
 
 function SetViewValue(view, requestIndex, isLittleEndian, type, value) {
