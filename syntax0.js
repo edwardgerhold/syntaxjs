@@ -8099,6 +8099,7 @@ function callInternalSlot(name, object, a, b, c, d) {
 //
 
 var function_table = {
+    __proto__:null,
     "[object OrdinaryObject]": OrdinaryObject.prototype, // rename to ordinaryobjectfunctions and fix (this) parameter and call in callInternalSlot
     "[object ArrayExoticObject]": ArrayExoticObject.prototype,
     "[object OrdinaryFunction]": OrdinaryFunction.prototype,
@@ -8110,14 +8111,13 @@ var function_table = {
     "[object EddiesDOMObjectWrapper]": ExoticDOMObjectWrapper.prototype,
     "[object EddiesDOMFunctionWrapper]": ExoticDOMFunctionWrapper.prototype,
     "[object IntegerIndexedExoticObject]": IntegerIndexedExoticObject.prototype,
-    
     "[object TypeExoticObject]": TypeExoticObject.prototype,
     "[object TypeDescriptorExoticObject]": TypeDescriptorExoticObject.prototype
-    
 };
 
 function getFunction(obj, name) {
     var func;
+    console.log("name="+name);
     var proto = function_table[obj.toString()];
     if (proto && (func = proto[name])) return func;
     proto = OrdinaryObject.prototype;
@@ -10691,11 +10691,9 @@ function Delete(O, P) {
 }
 
 function Get(O, P) {
-    Assert(Type(O) === OBJECT, "Get(O,P): expecting object");
-    Assert(IsPropertyKey(P));
+    Assert(Type(O) === OBJECT, "[[Get]] expecting object");
+    Assert(IsPropertyKey(P), "[[Get]] expecting valid property key, got "+ P);
     return callInternalSlot("Get", O, P, O);
-    //var func = getFunction(O, "Get");
-    //return func.call(O,P,O);
 }
 
 function OrdinaryObjectGet(O, P, R) {
@@ -10748,7 +10746,7 @@ function Set(O, P, V, R) {
     if (IsDataDescriptor(ownDesc)) {
         if (ownDesc.writable == false) return false;
         if (Type(R) !== OBJECT) return false;
-        var existingDescriptor = R.GetOwnProperty(P);
+        var existingDescriptor = callInternalSlot("GetOwnProperty", R, P);
         if (isAbrupt(existingDescriptor = ifAbrupt(existingDescriptor))) return existingDescriptor;
 
         if (existingDescriptor !== undefined) {
@@ -11547,7 +11545,9 @@ function WeekDay (t) {
 
 
 function printCodeEvaluationState() {
-    var state = getContext().state;
+
+    var stack = getContext().state;
+    var state = state[state.length-1];
     var node = state[0];
     var instructionIndex = state[1];
     var parent = state[2];
@@ -11555,16 +11555,15 @@ function printCodeEvaluationState() {
     if (hasConsole) console.log(str);
 }
 
-function callbackWrong(generator, body) {
-    if (hasConsole) console.log("##callbackWrong()##");
-    printCodeEvaluationState(); // temp fn
+function Steps_GeneratorStart(generator, body) {
+    printCodeEvaluationState();
     var result = exports.Evaluate(body);
     if (isAbrupt(result = ifAbrupt(result))) return result;
     if (isAbrupt(result = ifAbrupt(result)) && result.type === "return") {
-        if (hasConsole) console.log("##callbackWrong() Condition##");
+        if (hasConsole) console.log("##resumeGeneratorWrong() Condition##");
         setInternalSlot(generator, "GeneratorState", "completed");
         if (isAbrupt(result = ifAbrupt(result))) return result;
-        getContext().callback = undefined;
+        getContext().resumeGenerator = undefined;
         return CreateItrResultObject(result, true);
     }
     return NormalCompletion(result);
@@ -11575,8 +11574,8 @@ function GeneratorStart(generator, body) {
     Assert(getInternalSlot(generator, "GeneratorState") === undefined, "GeneratorStart: GeneratorState has to be undefined");
     var cx = getContext();
     cx.generator = generator;
-    cx.callback = function () {
-        return callbackWrong(generator, body);
+    cx.resumeGenerator = function () {
+        return Steps_GeneratorStart(generator, body);
     };
     setInternalSlot(generator, "GeneratorContext", cx);
     setInternalSlot(generator, "GeneratorState", "suspendedStart");
@@ -11595,9 +11594,9 @@ function GeneratorResume(generator, value) {
     var methodContext = getContext();
     getStack().push(genContext);
     setInternalSlot(generator, "GeneratorState", "executing");
-    var callback = genContext.callback;
+    var resumeGenerator = genContext.resumeGenerator;
    
-    var result = callback(NormalCompletion(value));
+    var result = resumeGenerator(NormalCompletion(value));
     setInternalSlot(generator, "GeneratorState", "suspendedYield");    
     var x = getContext();
     if (x !== methodContext) {
@@ -11619,7 +11618,7 @@ function GeneratorYield(itrNextObj) {
         if (hasConsole) console.log("GENERATOR ACHTUNG 1: CONTEXT MISMATCH TEST NICHT BESTANDEN - yield");
     }
     // compl = yield smth;
-    genContext.callback = function (compl) {        
+    genContext.resumeGenerator = function (compl) {        
         return compl;
     };
 
@@ -12911,6 +12910,7 @@ ProxyExoticObject.prototype = {
  * Created by root on 31.03.14.
  */
 
+
     // ===========================================================================================================
     // 8.4 Tasks and Task Queues
     // ===========================================================================================================
@@ -12938,8 +12938,9 @@ function makeTaskQueues(realm) {
     realm.LoadingTasks = TaskQueue();
     realm.PromiseTasks = TaskQueue();
 }
+
 function getTasks(realm, name) {
-    return realm[name];
+    if (realm) return realm[name];
 }
 
 var queueNames = {
@@ -12952,9 +12953,12 @@ function EnqueueTask(queueName, task, args) {
     Assert(Type(queueName) === STRING && queueNames[queueName], "EnqueueTask: queueName has to be valid");
     // Assert(isTaskName[task])
     Assert(Array.isArray(args), "arguments have to be a list and to be equal in the number of arguments of task");
+
     var callerContext = getContext();
-    var callerRealm = callerContext.realm;
-    var pending = PendingTaskRecord(task, arguments, callerRealm);
+    var callerRealm = getRealm();
+
+    var pending = PendingTaskRecord(task, args, callerRealm);
+    
     switch(queueName) {
         case "PromiseTasks": realm.PromiseTasks.push(pending);
             break;
@@ -12965,17 +12969,35 @@ function EnqueueTask(queueName, task, args) {
 }
 
 function NextTask (result, nextQueue) {
+    if (!nextQueue || !nextQueue.length) return;
     if (isAbrupt(result = ifAbrupt(result))) {
         // performing implementation defined unhandled exception processing
         console.log("NextTask: Got exception - which will remain unhandled - for debugging, i print them out." );
         printException(result);
     }
-    Assert(getStack().length === 0, "NextTask: The execution context stack has to be empty");
+//    Assert(getStack().length === 0, "NextTask: The execution context stack has to be empty");
     var nextPending = nextQueue.shift();
+    if (!nextPending) return;
     var newContext = ExecutionContext(null, getRealm());
-    newContext.realm = nextPending.realm;
+    newContext.realm = nextPending.Realm;
     getStack().push(newContext);
-    callInternalSlot("Call", nextPending.Task, undefined, nextPending.Arguments);
+    
+//    console.dir(nextPending);
+    var result = callInternalSlot("Call", nextPending.Task, undefined, nextPending.Arguments);
+    
+    if (isAbrupt(result=ifAbrupt(result))) {
+
+        if (hasConsole) {
+            var ex = makeNativeException(ex);
+            console.log("NextTask got abruptly completed on [[Call]] of nextPending.Task");
+            if (typeof ex == "object") {
+                console.log(ex.name);
+                console.log(ex.message);
+                console.log(ex.stack);
+            }
+        }
+    }
+    getStack().pop();
 }
 
 /**
@@ -20883,25 +20905,37 @@ setInternalSlot(JSONObject, "Prototype", ObjectPrototype);
 setInternalSlot(JSONObject, "JSONTag", true);
 
 
-// ===========================================================================================================
-// Promises
-// ===========================================================================================================
+/*
+    still a to do. replacing all slots with constants,
+    that they can be replaced by numbers. have to work
+    every new slot out with constants.
+ */
+var PROMISE_CONST = Object.create(null);
+PROMISE_CONST.PROMISESTATE = "PromiseState";
+PROMISE_CONST.PROMISEREJECTREACTIONS = "PromiseRejectReactions";
+PROMISE_CONST.PROMISERESOLVEREACTIONS = "PromiseResolveReactions";
+PROMISE_CONST.INDEX = "Index";
+PROMISE_CONST.VALUES = "Values";
+PROMISE_CONST.CAPABILITIES = "Capability";
+PROMISE_CONST.REMAININGELEMENTS = "RemainingElements";
+PROMISE_CONST.FULFILLMENTHANDLER = "FulfillmentHandler";
+PROMISE_CONST.REJECTIONHANDLER = "RejectionHandler";
+PROMISE_CONST.FULFILLED = "fulfilled";
+PROMISE_CONST.REJECTED = "rejected";
 
-
-var PromiseConstructor_Call = function (thisArg, argList) {
+var PromiseConstructor_call = function (thisArg, argList) {
     var executor = argList[0];
     var promise = thisArg;
-    if (!IsCallable(executor)) return withError("Type", "executor argument is not a callable");
     if (Type(promise) !== OBJECT) return withError("Type", "promise is not an object");
-    if (!hasInternalSlot(promise, "PromiseStatus")) return withError("Type", "promise has no PromiseStatus Property");
-    if (getInternalSlot(promise, "PromiseStatus") !== undefined) return withError("Type", "promise´s PromiseStatus is not undefined");
+    if (!IsCallable(executor)) return withError("Type", "executor argument is not a callable");
+    if (!hasInternalSlot(promise, "PromiseState")) return withError("Type", "promise has no PromiseState Property");
+    if (getInternalSlot(promise, "PromiseState") !== undefined) return withError("Type", "promise´s PromiseState is not undefined");
     return InitializePromise(promise, executor);
 };
 
 var PromiseConstructor_Construct = function (argList) {
     return Construct(this, argList);
 };
-
 
 var PromiseConstructor_$$create = function (thisArg, argList) {
     return AllocatePromise(thisArg);
@@ -20937,7 +20971,7 @@ var PromiseConstructor_cast = function (thisArg, argList) {
     if (isAbrupt(promiseCapability = ifAbrupt(promiseCapability))) return promiseCapability;
     var resolveResult = callInternalSlot("Call", promiseCapability.Resolve, undefined, [x]);
     if (isAbrupt(resolveResult = ifAbrupt(resolveResult))) return resolveResult;
-    return NormalCompletion(promiseCapability.Promise);
+    return NormalCompletion(promiseCbapability.Promise);
 };
 
 var PromiseConstructor_race = function (thisArg, argList) {
@@ -20964,11 +20998,11 @@ var PromiseConstructor_race = function (thisArg, argList) {
 };
 
 function makePromiseAllResolveElementsFunction () {
-    var PromiseAllResolveElements_Call = function (thisArg, argList) {
+    var PromiseAllResolveElements_call = function (thisArg, argList) {
         var x = argList[0];
         var index = getInternalSlot(F, "Index");
         var values = getInternalSlot(F, "Values");
-        var promiseCapability = getInternalSlot(F, "Capabilities");
+        var promiseCapability = getInternalSlot(F, "Capability");
         var remainingElementsCount = getInternalSlot(F, "RemainingElements");
         var result = CreateDataProperty(values, ToString(index), x);
         if ((result = IfAbruptRejectPromise(result, promiseCapability)) && isAbrupt(result)) return result;
@@ -20978,9 +21012,9 @@ function makePromiseAllResolveElementsFunction () {
         }
         return NormalCompletion(undefined);
     };
-    //var F = CreateBuiltinFunction(getRealm(), "Promise.all Resolve Elements", 1, PromiseAllResolveElements_Call);
+    //var F = CreateBuiltinFunction(getRealm(), "Promise.all Resolve Elements", 1, PromiseAllResolveElements_call);
     var F = OrdinaryFunction();
-    setInternalSlot(F, "Call", PromiseAllResolveElements_Call);
+    setInternalSlot(F, "Call", PromiseAllResolveElements_call);
     return F;
 }
 
@@ -21012,7 +21046,7 @@ var PromiseConstructor_all = function (thisArg, argList) {
         var resolveElement = makePromiseAllResolveElementsFunction();
         setInternalSlot(resolveElement, "Index", index);
         setInternalSlot(resolveElement, "Values", values);
-        setInternalSlot(resolveElement, "Capabilities", resolveElement, promiseCapability);
+        setInternalSlot(resolveElement, "Capability", resolveElement, promiseCapability);
         setInternalSlot(resolveElement, "RemainingElements", remainingElementsCount);
         var result = Invoke(nextPromise, "then", [resolveElement, promiseCapability.Reject]);
         if ((result = IfAbruptRejectPromise(result, promiseCapability)) && isAbrupt(result)) return result;
@@ -21026,38 +21060,25 @@ var PromisePrototype_then = function (thisArg, argList) {
     var onRejected = argList[1];
     var promise = thisArg;
     if (!IsPromise(promise)) return withError("Type", "then: this is not a promise object");
+    if (onFulfilled === undefined || onFulfilled === null) onFulfilled = makeIdentityFunction();
+    if (onRejected === undefined || onRejected === null) onRejected = makeThrowerFunction();
     var C = Get(promise, "constructor");
     if (isAbrupt(C = ifAbrupt(C))) return C;
 
     var promiseCapability = NewPromiseCapability(C);
     if (isAbrupt(promiseCapability = ifAbrupt(promiseCapability))) return promiseCapability;
-    if (IsCallable(onRejected)) {
-        var rejectionHandler = onRejected;
-    } else {
-        rejectionHandler = makeThrowerFunction();
-    }
-    if (IsCallable(onFulfilled)) {
-        var fulfillmentHandler = onFulfilled;
-    } else {
-        fulfillmentHandler = makeIdentityFunction();
-    }
-    var resolutionHandler = makeResolutionHandlerFunction();
-    setInternalSlot(resolutionHandler, "Promise", promise);
-    setInternalSlot(resolutionHandler, "FulfillmentHandler", fulfillmentHandler);
-    setInternalSlot(resolutionHandler, "RejectionHandler", rejectionHandler);
-
-    var resolveReaction = makePromiseReaction(promiseCapability, resolutionHandler);
-    var rejectReaction = makePromiseReaction(promiseCapability, rejectionHandler);
-    var promiseStatus = getInternalSlot(promise, "PromiseStatus");
-    if (promiseStatus === "unresolved") {
+    var resolveReaction = makePromiseReaction(promiseCapability, onFulfilled);
+    var rejectReaction = makePromiseReaction(promiseCapability, onRejected);
+    var PromiseState = getInternalSlot(promise, "PromiseState");
+    if (PromiseState === "pending") {
         getInternalSlot(promise, "PromiseResolveReactions").push(resolveReaction);
         getInternalSlot(promise, "PromiseRejectReactions").push(rejectReaction);
-    } else if (promiseStatus === "has-resolution") {
+    } else if (PromiseState === "fulfilled") {
         var resolution = getInternalSlot(promise, "PromiseResult");
-        EnqueueTask("PromiseTasks", PromiseReactionTask, [resolveReaction, resolution]);
-    } else if (promiseStatus === "has-rejection") {
+        EnqueueTask("PromiseTasks", PromiseReactionTask(), [resolveReaction, resolution]);
+    } else if (PromiseState === "rejected") {
         var reason = getInternalSlot(promise, "PromiseResult");
-        EnqueueTask("PromiseTasks", PromiseReactionTask, [rejectReaction, reason]);
+        EnqueueTask("PromiseTasks", PromiseReactionTask(), [rejectReaction, reason]);
     }
     return NormalCompletion(promiseCapability.Promise);
 };
@@ -21069,7 +21090,7 @@ var PromisePrototype_catch = function (thisArg, argList) {
 
 //SetFunctionName(PromiseConstructor, "Promise");
 MakeConstructor(PromiseConstructor, true, PromisePrototype);
-setInternalSlot(PromiseConstructor, "Call", PromiseConstructor_Call);
+setInternalSlot(PromiseConstructor, "Call", PromiseConstructor_call);
 setInternalSlot(PromiseConstructor, "Construct", PromiseConstructor_Construct);
 LazyDefineProperty(PromiseConstructor, $$create, CreateBuiltinFunction(realm, PromiseConstructor_$$create, 0, "[Symbol.create]"));
 
@@ -21123,7 +21144,7 @@ function makePromiseReaction(capabilites, handler) {
 }
 function PromiseReaction(caps, hdl) {
     var pr = Object.create(PromiseReaction.prototype);
-    pr.Capabilities = caps;
+    pr.Capability = caps;
     pr.Handler = hdl;
     return pr;
 }
@@ -21148,35 +21169,45 @@ function UpdatePromiseFromPotentialThenable(x, promiseCapability) {
 }
 
 function TriggerPromiseReactions(reactions, argument) {
-    for (var i = 0, j = reactions.length; i < j; i++) {
-        var reaction = reactions[i];
-        EnqueueTask("PromiseTasks", PromiseReactionTask, [reaction, argument])
+    if (Array.isArray(reactions)) {
+        for (var i = 0, j = reactions.length; i < j; i++) {
+    	    var reaction = reactions[i];
+    	    EnqueueTask("PromiseTasks", PromiseReactionTask(), [reaction, argument])
+	}
     }
     return NormalCompletion(undefined);
 }
 
-function PromiseReactionTask(reaction, argument) {
-    Assert(reaction instanceof PromiseReaction, "reaction must be a PromiseReaction record");
-    var promiseCapability = reaction.Capabilities;
-    var handler = reaction.Handler;
-    var PromiseTaskQueue = getTasks(getRealm(),"Promise");
-    var handlerResult = callInternalSlot("Call", handler, undefined, [argument]);
-    if (isAbrupt(handlerResult = ifAbrupt(handlerResult))) {
-        var status = callInternalSlot("Call", promiseCapability.Reject, undefined, [handlerResult.value]);
+function PromiseReactionTask() {
+    var F;
+    var PromiseReactionTask_call = function (thisArg, argList) {
+        var reaction = argList[0];
+        var argument = argList[1];
+        Assert(reaction && reaction.Capability && reaction.Handler, "reaction must be a PromiseReaction record");
+        var promiseCapability = reaction.Capability;
+        var handler = reaction.Handler;
+        var PromiseTaskQueue = getTasks(getRealm(), "Promise");
+        var handlerResult = callInternalSlot("Call", handler, undefined, [argument]);
+        if (isAbrupt(handlerResult = ifAbrupt(handlerResult))) {
+            var status = callInternalSlot("Call", promiseCapability.Reject, undefined, [handlerResult.value]);
+            return NextTask(status, PromiseTaskQueue);
+        }
+        if (SameValue(handlerResult, promiseCapability.Promise)) {
+            var selfResolutionError = withError("Type", "selfResolutionError in PromiseReactionTask");
+            status = callInternalSlot("Call", promiseCapability.Reject, undefined, [selfResolutionError]);
+            return NextTask(status, PromiseTaskQueue);
+        }
+        status = UpdatePromiseFromPotentialThenable(handlerResult, promiseCapability);
+        if (isAbrupt(status = ifAbrupt(status))) return status;
+        var updateResult = status;
+        if (updateResult === "not a thenable") {
+            status = callInternalSlot("Call", promiseCapability.Resolve, undefined, [handlerResult]);
+            //if (isAbrupt(status)) return status;
+        }
         return NextTask(status, PromiseTaskQueue);
-    }
-    if (SameValue(handlerResult, promiseCapability.Promise)) {
-        var selfResolutionError = withError("Type", "selfResolutionError in PromiseReactionTask");
-        status = callInternalSlot("Call", promiseCapability.Reject, undefined, [selfResolutionError]);
-        return NextTask(status, PromiseTaskQueue);
-    }
-    status = UpdatePromiseFromPotentialThenable(handlerResult, promiseCapability);
-    if (isAbrupt(status = ifAbrupt(status))) return status;
-    var updateResult = status;
-    if (updateResult === "not a thenable") {
-        status = callInternalSlot("Call", promiseCapability.Resolve, undefined, [handlerResult]);
-    }
-    return NextTask(status, PromiseTaskQueue);
+    };
+    F = CreateBuiltinFunction(getRealm(), PromiseReactionTask_call, "PromiseReactionTask", 2);
+    return F;
 }
 
 
@@ -21189,7 +21220,88 @@ function IfAbruptRejectPromise(value, capability) {
     return ifAbrupt(value);
 }
 
+function makePromiseRejectFunction() {
+    var F = OrdinaryFunction();
+    SetFunctionName(F, "reject");
+    SetFunctionLength(F, 1);
+    var PromiseRejectFunction_call = function (thisArg, argList) {
+        Assert(Type(getInternalSlot(F, "Promise")) === OBJECT, "[[Promise]] has to be an object");
+        var reason = argList[0];
+        var promise = getInternalSlot(F, "Promise");
+        var alreadyResolved = getInternalSlot(F, "AlreadyResolved");
+        if (alreadyResolved.value === true) return NormalCompletion(undefined);
+        alreadyResolved.value = true;
+        return RejectPromise(promise, reason);
+    };
+    setInternalSlot(F, "Call", PromiseRejectFunction_call);
+    return F;
+}
 
+function makePromiseResolveFunction() {
+    var F = OrdinaryFunction();
+    SetFunctionName(F, "resolve");
+    SetFunctionLength(F, 1);
+    var PromiseResolveFunction_call = function (thisArg, argList) {
+        Assert(Type(getInternalSlot(F, "Promise")) === OBJECT, "[[Promise]] has to be an object");
+        var resolution = argList[0];
+        var promise = getInternalSlot(F, "Promise");
+        var alreadyResolved = getInternalSlot(F, "AlreadyResolved");
+        alreadyResolved.value = true;
+        if (SameValue(resolution, promise)) {
+            var selfResolutionError = withError("Type", "self resolution handler");
+            return RejectPromise(promise, selfResolutionError);
+        }
+        if (Type(resolution) !== OBJECT) {
+            return FulfillPromise(promise, resolution);
+        }
+        var then = Get(resolution, "then");
+        if (isAbrupt(then=ifAbrupt(then))) {
+            return RejectPromise(promise, then.value);
+        }
+        if (!IsCallable(then)) {
+            return FulfillPromise(promise, resolution);
+        }
+        var resolvingFunctions = CreateResolvingFunctions(promise);
+        var thenCallResult = callInternalSlot("Call", then, resolution, [resolvingFunctions.Resolve, resolvingFunction.Reject]);
+        if (isAbrupt(thenCallResult=ifAbrupt(thenCallResult))) {
+            return callInternalSlot("Call", resolvingFunctions.Reject, undefined, [thenCallResult.value]);
+        }
+        return NormalCompletion(undefined);
+    };
+    setInternalSlot(F, "Call", PromiseResolveFunction_call);
+    return F;
+}
+function CreateResolvingFunctions (promise) {
+    var alreadyResolved = {value:false};
+    var resolve = makePromiseResolveFunction();
+    setInternalSlot(resolve, "Promise", promise);
+    setInternalSlot(resolve, "AlreadyResolved", alreadyResolved);
+    var reject = makePromiseRejectFunction();
+    setInternalSlot(reject, "Promise", promise);
+    setInternalSlot(reject, "AlreadyResolved", alreadyResolved);
+    return { Resolve: resolve, Reject: reject };
+}
+
+function FulfillPromise (promise, value) {
+    // Assert(getInternalSlot(promise, "PromiseState") === "pending", "[[PromiseState]] may not be pending");
+    var reactions = getInternalSlot(promise, "PromiseFulfillReactions");
+    setInternalSlot(promise, "PromiseResult", value);
+    setInternalSlot(promise, "PromiseFulfillReactions", []);
+    setInternalSlot(promise, "PromiseRejectReactions", []);
+    setInternalSlot(promise, "PromiseState", "fulfilled");
+    return TriggerPromiseReactions(reactions, value);
+}
+
+function RejectPromise (promise, reason) {
+    //Assert(getInternalSlot(promise, "PromiseState") != "pending", "[[PromiseState]] may not be pending");
+    var reactions = getInternalSlot(promise, "PromiseRejectReactions");
+    setInternalSlot(promise, "PromiseResult", reason);
+    setInternalSlot(promise, "PromiseFulfillReactions", []);
+    setInternalSlot(promise, "PromiseRejectReactions", []);
+    setInternalSlot(promise, "PromiseState", "rejected");
+    return TriggerPromiseReactions(reactions, reason);
+}
+/*
 function CreateRejectFunction (promise) {
     var reject = makeRejectFunction();
     setInternalSlot(reject, "Promise", promise);
@@ -21200,9 +21312,8 @@ function CreateResolveFunction (promise) {
     setInternalSlot(resolve, "Promise", promise);
     return resolve;
 }
-
+*/
 function NewPromiseCapability(C) {
-    //debug2("newpromisecap");
     if (!IsConstructor(C)) return withError("Type", "C is no constructor");
     // Assertion Step 2 missing 25.4.3.1
     var promise = CreateFromConstructor(C);
@@ -21216,19 +21327,16 @@ function CreatePromiseCapabilityRecord(promise, constructor) {
     setInternalSlot(executor, "Capability", promiseCapability);
     var constructorResult = callInternalSlot("Call", constructor, promise, [executor]);
     if (isAbrupt(constructorResult = ifAbrupt(constructorResult))) return constructorResult;
-
     if (!IsCallable(promiseCapability.Resolve)) return withError("Type", "capability.[[Resolve]] is not a function");
     if (!IsCallable(promiseCapability.Reject)) return withError("Type", "capability.[[Reject]] is not a function");
     if (Type(constructorResult) === OBJECT && (SameValue(promise, constructorResult) === false)) return withError("Type","constructorResult is not the same as promise");
     return promiseCapability;
-
 }
 
 
 function GetCapabilitiesExecutor () {
-
     var F = OrdinaryFunction();
-    var GetCapabilitiesExecutor_Call = function (thisArg, argList) {
+    var GetCapabilitiesExecutor_call = function (thisArg, argList) {
         var resolve = argList[0];
         var reject = argList[1];
         var promiseCapability = getInternalSlot(F, "Capability");
@@ -21239,67 +21347,60 @@ function GetCapabilitiesExecutor () {
         promiseCapability.Reject = reject;
         return NormalCompletion(undefined);
     };
-    setInternalSlot(F, "Call", GetCapabilitiesExecutor_Call);
+    setInternalSlot(F, "Call", GetCapabilitiesExecutor_call);
     return F;
 }
 
 function InitializePromise(promise, executor) {
-    //debug2("initializePromise: start");
-    Assert(hasInternalSlot(promise, "PromiseStatus") && (getInternalSlot(promise, "PromiseStatus") === undefined),
-        "InitializePromise: PromiseStatus doesnt exist or isnt undefined");
+    Assert(hasInternalSlot(promise, "PromiseState") && (getInternalSlot(promise, "PromiseState") === undefined), "InitializePromise: PromiseState doesnt exist or isnt undefined");
     Assert(IsCallable(executor), "executor has to be callable");
-    setInternalSlot(promise, "PromiseStatus", "unresolved");
+    setInternalSlot(promise, "PromiseState", "pending");
     setInternalSlot(promise, "PromiseResolveReactions", []);
     setInternalSlot(promise, "PromiseRejectReactions", []);
-    var resolve = CreateResolveFunction(promise);
-    var reject = CreateRejectFunction(promise);
-    var completion = callInternalSlot("Call", executor, undefined, [resolve, reject]);
-    if (isAbrupt(completion)) {
-        var status = callInternalSlot("Call", reject, undefined, [completion.value]);
-        if (isAbrupt(status = ifAbrupt(status))) return status;
+    var resolvingFunctions = CreateResolvingFunctions(promise);
+    var completion = callInternalSlot("Call", executor, undefined, [resolvingFunctions.Resolve, resolvingFunctions.Reject]);
+    if (isAbrupt(completion=ifAbrupt(completion))) {
+        var status = callInternalSlot("Call", resolvingFunctions.Reject, undefined, [completion.value]);
+        if (isAbrupt(status)) return status;
     }
     return NormalCompletion(promise);
 }
 
 function AllocatePromise(constructor) {
-    //debug2("allocatePromise")
     var obj = OrdinaryCreateFromConstructor(constructor, "%PromisePrototype%", {
-        "PromiseStatus": undefined,
+        "PromiseState": undefined,
         "PromiseConstructor": constructor,
         "PromiseResult": undefined,
         "PromiseResolveReactions": undefined,
         "PromiseRejectReactions" : undefined,
-        "toString": function () {
+        toString: function () {
             return "[object PromiseExoticObject]";
         }
     });
     return obj;
 }
 
-
 function IsPromise(x) {
     if (Type(x) !== OBJECT) return false;
-    if (!hasInternalSlot(x, "PromiseStatus")) return false;
-    return getInternalSlot(x, "PromiseStatus") !== undefined;
-
+    if (!hasInternalSlot(x, "PromiseState")) return false;
+    return getInternalSlot(x, "PromiseState") !== undefined;
 }
-
 
 function makeIdentityFunction () {
     var F = OrdinaryFunction();
-    var Identity_Call = function (thisArg, argList) {
+    var Identity_call = function (thisArg, argList) {
         var x = argList[0];
         return NormalCompletion(x);
     };
-    setInternalSlot(F, "Call", Identity_Call);
+    setInternalSlot(F, "Call", Identity_call);
     SetFunctionName(F, "IdentityFunction");
-    return NormalCompletion(F);
+    return F;
 }
 
 
 function makeResolutionHandlerFunction () {
     var handler = OrdinaryFunction();
-    var handler_Call = function (thisArg, argList) {
+    var handler_call = function (thisArg, argList) {
         var x = argList[0];
         var promise = getInternalSlot(handler, "Promise");
         var fulfillmentHandler = getInternalSlot(handler, "FulfillmentHandler");
@@ -21318,62 +21419,65 @@ function makeResolutionHandlerFunction () {
         }
         return callInternalSlot("Call", fulfillmentHandler, undefined, [x]);
     };
-    setInternalSlot(handler, "Call", handler_Call);
-    return NormalCompletion(handler);
+    setInternalSlot(handler, "Call", handler_call);
+    return handler;
 }
 
 
 function makeThrowerFunction () {
     var F = OrdinaryFunction();
-    var ThrowerFunction_Call = function (thisArg, argList) {
+    var ThrowerFunction_call = function (thisArg, argList) {
         var e = argList[0];
         return Completion("throw", e, empty);
     };
-    setInternalSlot(F, "Call", ThrowerFunction_Call);
+    setInternalSlot(F, "Call", ThrowerFunction_call);
     SetFunctionName(F, "ThrowerFunction");
     SetFunctionLength(F, 1);
-    return NormalCompletion(F);
+    return F;
 }
+
+/*
+
 
 function makeRejectFunction () {
     var handler = OrdinaryFunction();
-    var handler_Call = function (thisArg, argList) {
+    var handler_call = function (thisArg, argList) {
         var reason = argList[0];
         var promise = getInternalSlot(handler, "Promise");
         Assert(Type(promise) === OBJECT, "reject function has to have a Promise property");
-        var status = getInternalSlot(promise, "PromiseStatus");
-        if (status !== "unresolved") return NormalCompletion(undefined);
+        var status = getInternalSlot(promise, "PromiseState");
+        if (status !== "pending") return NormalCompletion(undefined);
         var reactions = getInternalSlot(promise, "PromiseRejectReactions");
         setInternalSlot(promise, "PromiseResult", reason);
-        setInternalSlot(promise, "PromiseResolveReactions", undefined);
-        setInternalSlot(promise, "PromiseRejectReactions", undefined);
-        setInternalSlot(promise, "PromiseStatus", "has-rejection");
+        setInternalSlot(promise, "PromiseResolveReactions", []);
+        setInternalSlot(promise, "PromiseRejectReactions", []);
+        setInternalSlot(promise, "PromiseState", "has-rejection");
         return TriggerPromiseReactions(reactions, reason);
     };
-    setInternalSlot(handler, "Call", handler_Call);
+    setInternalSlot(handler, "Call", handler_call);
     return handler;
 }
 
 function makeResolveFunction () {
     var handler = OrdinaryFunction();
-    var handler_Call = function (thisArg, argList) {
+    var handler_call = function (thisArg, argList) {
         var resolution = argList[0];
         var promise = getInternalSlot(handler, "Promise");
         Assert(Type(promise) === OBJECT, "reject function has to have a Promise property");
-        var status = getInternalSlot(promise, "PromiseStatus");
-        if (status !== "unresolved") return NormalCompletion(undefined);
+        var status = getInternalSlot(promise, "PromiseState");
+        if (status !== "pending") return NormalCompletion(undefined);
         var reactions = getInternalSlot(promise, "PromiseResolveReactions");
         setInternalSlot(promise, "PromiseResult", resolution);
-        setInternalSlot(promise, "PromiseResolveReactions", undefined);
-        setInternalSlot(promise, "PromiseRejectReactions", undefined);
-        setInternalSlot(promise, "PromiseStatus", "has-resolution");
+        setInternalSlot(promise, "PromiseResolveReactions", []);
+        setInternalSlot(promise, "PromiseRejectReactions", []);
+        setInternalSlot(promise, "PromiseState", "has-resolution");
         return TriggerPromiseReactions(reactions, resolution);
     };
-    setInternalSlot(handler, "Call", handler_Call);
+    setInternalSlot(handler, "Call", handler_call);
     return handler;
 }
 
-
+*/
 // ===========================================================================================================
 // Regular Expressiong	
 // ===========================================================================================================
@@ -23581,6 +23685,10 @@ LazyDefineBuiltinFunction(TypePrototype, "opaqueType", 1, TypePrototype_opaqueTy
 
         return intrinsics;
     };
+    
+    exports.NextTask = NextTask;
+    exports.getTasks = getTasks;
+    
     exports.OBJECT = OBJECT;
     exports.NUMBER = NUMBER;
     exports.STRING = STRING;
@@ -23874,6 +23982,8 @@ define("runtime", function () {
         var COMPLETION = ecma.COMPLETION;
         var UNDEFINED = ecma.UNDEFINED;
         var NULL = ecma.NULL;
+        var NextTask = ecma.NextTask;
+        var getTasks = ecma.getTasks;
         var RegExpCreate = ecma.RegExpCreate;
         var Assert = ecma.Assert;
         var assert = ecma.assert;
@@ -27188,11 +27298,20 @@ define("runtime", function () {
             return R;
         }
         function HandleEventQueue(shellmode, initialized) {
-            var task, val;
-            var func, timeout, time, result;
-
+            var task, func, time, result;
             // pendingExceptions = []
-
+            
+            var LoadingTasks = getRealm().LoadingTasks;
+            var PromiseTasks = getRealm().PromiseTasks;
+            
+            if (hasConsole) console.log("debugging promise. next task follows.");
+            var result = NextTask(undefined, PromiseTasks);
+            if (isAbrupt(result)) {
+                if (hasConsole) console.log("promise nexttask returned abrupt");
+            } else {
+        	if (hasConsole) console.log("next task completed");
+            }
+	    
             function handler() {
         	var eventQueue = getEventQueue();
                 if (task = eventQueue.shift()) {
@@ -27201,7 +27320,16 @@ define("runtime", function () {
                     if (time >= (task.time + task.timeout)) {
                         if (IsCallable(func)) result = callInternalSlot("Call", func, ThisResolution(), []);
                         if (isAbrupt(result)) {
-                    	    
+                            try {
+                                throw makeNativeException(result.value);
+                            } catch (ex) {
+                                if (hasConsole) {
+                                    console.log("this happend asynchronously and is just a print of the exception");
+                                    console.log(ex.name);
+                                    console.log(ex.message);
+                                    console.log(ex.stack);
+                                }
+                            }
                         }
                     } else eventQueue.push(task);
                 }
@@ -27213,6 +27341,7 @@ define("runtime", function () {
             setTimeout(handler, 0);
         }
         function makeNativeException (error) {
+            if (Type(error) != OBJECT) return error;
             var name = unwrap(Get(error, "name"));
             var message = unwrap(Get(error, "message"));
             var callstack = unwrap(Get(error, "stack"));
@@ -27287,8 +27416,10 @@ define("runtime", function () {
             var eventQueue = getEventQueue();
             // now process my eventQueue (which will be replaced by ES6 concurrency and task queues)
             // the conditions are not chosen by experience, just added quickly to tackle the thing
-            if (!shellModeBool && initializedTheRuntime && !eventQueue.length) endRuntime();
-            else if (eventQueue.length) setTimeout(function () {HandleEventQueue(shellModeBool, initializedTheRuntime);}, 0);
+            var pt = getTasks(getRealm(), "PromiseTasks");
+            
+            if (!shellModeBool && initializedTheRuntime && !eventQueue.length && (!pt || !pt.length)) endRuntime();
+            else if (eventQueue.length || (pt&& pt.length)) setTimeout(function () {HandleEventQueue(shellModeBool, initializedTheRuntime);}, 0);
             return exprValue;
         }
         /*

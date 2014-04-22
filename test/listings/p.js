@@ -1,3 +1,3 @@
-let p = new Promise((res, rej) => res("Hallo"));
+let p = new Promise((res, rej) => rej(new TypeError("Hallo")));
 p.then(value => print(value));
 
