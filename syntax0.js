@@ -12090,14 +12090,14 @@ function IntegerIndexedObjectCreate(prototype) {
  */
 
 function ExoticDOMObjectWrapper(object) {
-
+    if (object instanceof ExoticDOMObjectWrapper || object instanceof ExoticDOMFunctionWrapper) return object;
     var O = Object.create(ExoticDOMObjectWrapper.prototype);
-    setInternalSlot(O, "Target", object);
+    setInternalSlot(O, "Wrapped", object);
+    setInternalSlot(O, "Bindings", Object.create(null));        
     setInternalSlot(O, "Symbols", Object.create(null));
     setInternalSlot(O, "Prototype", getIntrinsic("%ObjectPrototype%"));
     setInternalSlot(O, "Extensible", true);
     return O;
-
 }
 ExoticDOMObjectWrapper.prototype = {
     constructor: ExoticDOMObjectWrapper,
@@ -12106,7 +12106,7 @@ ExoticDOMObjectWrapper.prototype = {
         return "[object EddiesDOMObjectWrapper]";
     },
     Get: function (P) {
-        var o = this.Target;
+        var o = this.Wrapped;
         var p = o[P];
         if (typeof p === "object" && p) {
             return ExoticDOMObjectWrapper(p);
@@ -12116,14 +12116,17 @@ ExoticDOMObjectWrapper.prototype = {
         return p;
     },
     Set: function (P, V, R) {
-        var o = this.Target;
+        var o = this.Wrapped;
         return o[P] = V;
     },
     Invoke: function (P, argList, Rcv) {
         var f;
-        var o = this.Target;
+        var o = this.Wrapped;
+        Rcv = Rcv || this;
+
         if ((f = this.Get(P)) && (typeof f === "function")) {
             var result = f.apply(o, argList);
+
             if (typeof result === "object" && result) {
                 result = ExoticDOMObjectWrapper(result);
             } else if (typeof result === "function") {
@@ -12131,59 +12134,65 @@ ExoticDOMObjectWrapper.prototype = {
             }
             return result;
         } else if (IsCallable(f)) {
-            return callInternalSlot("Call", f, o, argList);
+            return callInternalSlot("Call", f, Rcv, argList);
         }
     },
     Delete: function (P) {
-        var o = this.Target;
+        var o = this.Wrapped;
         return (delete o[P]);
     },
     DefineOwnProperty: function (P, D) {
-        return Object.defineProperty(this.Target, P, D);
+        return Object.defineProperty(this.Wrapped, P, D);
     },
     GetOwnProperty: function (P) {
-        return Object.getOwnPropertyDescriptor(this.Target, P);
+        return Object.getOwnPropertyDescriptor(this.Wrapped, P);
     },
     HasProperty: function (P) {
-        return !!(P in this.Target);
+        return !!(P in this.Wrapped);
     },
     HasOwnProperty: function (P) {
-        var o = this.Target;
+        var o = this.Wrapped;
         return Object.hasOwnProperty.call(o, P);
     },
     GetPrototypeOf: function () {
-        var o = this.Target;
+        var o = this.Wrapped;
         return Object.getPrototypeOf(o);
     },
     SetPrototypeOf: function (P) {
-        var o = this.Target;
+        var o = this.Wrapped;
         return (o.__proto__ = P);
     },
     IsExtensible: function () {
-        var o = this.Target;
+        var o = this.Wrapped;
         return Object.isExtensible(o);
     },
 };
 
 function ExoticDOMFunctionWrapper(func, that) {
     var F = Object.create(ExoticDOMFunctionWrapper.prototype);
+    setInternalSlot(F, "Wrapped", func);
     setInternalSlot(F, "NativeThis", that);
+    setInternalSlot(F, "Bindings", Object.create(null));    
     setInternalSlot(F, "Symbols", Object.create(null));
     setInternalSlot(F, "Prototype", getIntrinsic("%FunctionPrototype%"));
     setInternalSlot(F, "Extensible", true);
     return F;
 }
-ExoticDOMFunctionWrapper.prototype = assign(ExoticDOMFunctionWrapper.prototype, ExoticDOMObjectWrapper.prototype);
-
 ExoticDOMFunctionWrapper.prototype = {
     constructor: ExoticDOMFunctionWrapper,
+
     toString: function () {
         return "[object EddiesDOMFunctionWrapper]";
     },
     Call: function (thisArg, argList) {
-        var f = this.Target;
+
+        var f = this.Wrapped;
         var that = this.NativeThis;
+        console.log("arglist");
+        console.dir(argList);
         var result = f.apply(that, argList);
+        
+        
         if (typeof result === "object" && result) {
             result = ExoticDOMObjectWrapper(result);
         } else if (typeof result === "function") {
@@ -12192,6 +12201,7 @@ ExoticDOMFunctionWrapper.prototype = {
         return NormalCompletion(result);
     }
 };
+addMissingProperties(ExoticDOMFunctionWrapper.prototype, ExoticDOMObjectWrapper.prototype);
 
 
 /**
@@ -16067,7 +16077,7 @@ var ArrayConstructor_construct = function (argList) {
 
 
 DefineOwnProperty(ArrayConstructor, "isArray", {
-    value: CreateBuiltinFunction(realm, function isArray(thisArg, argList) {
+    value: CreateBuiltinFunction(realm, function (thisArg, argList) {
         var arg = GetValue(argList[0]);
         return isArray(arg);
     }),
@@ -23680,10 +23690,18 @@ LazyDefineBuiltinFunction(TypePrototype, "opaqueType", 1, TypePrototype_opaqueTy
             LazyDefineBuiltinConstant(globalThis, "undefined", undefined);
             DefineOwnProperty(globalThis, "unescape", GetOwnProperty(intrinsics, "%Unescape%"));
             LazyDefineBuiltinConstant(globalThis, $$toStringTag, "syntaxjs");
-/*
+
         if (typeof Java !== "function" && typeof load !== "function" && typeof print !== "function") {
-	        LazyDefineProperty(intrinsics, "%DOMWrapper%", ExoticDOMObjectWrapper(typeof importScripts === "function" ? self : typeof window === "object" ? window : process));
+	
+	        LazyDefineProperty(intrinsics, "%DOMWrapper%", 
+	        ExoticDOMObjectWrapper(
+	        typeof importScripts === "function" ? self : 
+	        typeof window === "object" ? window : 
+	        typeof process === "object" ? process : {}
+	        )
+	        );
         }
+        
             if (typeof importScripts === "function") {
                 DefineOwnProperty(globalThis, "self", GetOwnProperty(intrinsics, "%DOMWrapper%"));
             } else if (typeof window === "object") {
@@ -23691,15 +23709,14 @@ LazyDefineBuiltinFunction(TypePrototype, "opaqueType", 1, TypePrototype_opaqueTy
                 DefineOwnProperty(globalThis, "document", {
                     configurable: true,
                     enumerable: true,
-                    value: globalThis.Get("window").Get("document"),
+                    value: Get(Get(globalThis, "window"), "document"),
                     writable: true
 
                 });
             } else if (typeof process === "object") {
                 DefineOwnProperty(globalThis, "process", GetOwnProperty(intrinsics, "%DOMWrapper%"));
             }
-            
-            */
+
             return globalThis;
         };
 
@@ -27324,14 +27341,8 @@ define("runtime", function () {
             var LoadingTasks = getRealm().LoadingTasks;
             var PromiseTasks = getRealm().PromiseTasks;
             
-            if (hasConsole) console.log("debugging promise. next task follows.");
             var result = NextTask(undefined, PromiseTasks);
-            if (isAbrupt(result)) {
-                if (hasConsole) console.log("promise nexttask returned abrupt");
-            } else {
-        	if (hasConsole) console.log("next task completed");
-            }
-	    
+            
             function handler() {
         	var eventQueue = getEventQueue();
                 if (task = eventQueue.shift()) {
@@ -27344,7 +27355,7 @@ define("runtime", function () {
                                 throw makeNativeException(result.value);
                             } catch (ex) {
                                 if (hasConsole) {
-                                    console.log("this happend asynchronously and is just a print of the exception");
+                                    console.log("Exception: happend async and is just a print of the exception´s object");
                                     console.log(ex.name);
                                     console.log(ex.message);
                                     console.log(ex.stack);

@@ -1,0 +1,14 @@
+{
+	"Fixed native JS Wrapper (testing with node.js variables)":
+	{
+	    "init": 		
+		"let version = process.version;",
+	    "tests": 
+	    [
+		["typeof version", "string"],
+		["process.argv.length", 3],
+		["process.exitCode", 0]
+	    ]
+	}
+
+}
