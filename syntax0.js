@@ -4763,7 +4763,7 @@ define("parser", function () {
             return node;
         }
         function ParenthesizedExpression() {
-            return this.Expression(undefined, true);
+            return this.Expression(true);
         }
         function ParenthesizedExpressionNode(exprNode, startLoc, endLoc) {
             var node = Node("ParenthesizedExpression");
@@ -4970,7 +4970,7 @@ define("parser", function () {
         }
         function PostfixExpression(lhs) {
             var l1 = loc && loc.start;
-            if (v === "(") lhs = this.ParenthesizedExpression();
+            if (v === "(") lhs = this.CoverParenthesizedExpression();
             lhs = lhs || this.LeftHandSideExpression();
             if (lhs && UpdateOperators[v]) {
                 var node = Node("UnaryExpression");
@@ -5191,42 +5191,44 @@ define("parser", function () {
         function LeftHandSideExpression(callee) {
             return this.NewExpression(callee) || this.CallExpression(callee);
         }
-        function ExpressionStatement(expr, l1, l2) {
+        
+        
+        function ExpressionStatementNode(expr, l1, l2) {
             var node = Node("ExpressionStatement");
             node.expression = expr;
             node.loc = makeLoc(l1, l2);
             return node;
         }
-        function SequenceExpression(list, l1, l2) {
+
+        function ExpressionStatement() {
+    	    if (!ExprNoneOfs[v] && !(v === "let" && lookahead=="[")) {
+    		    var expr =  this.Expression();
+    		    semicolon();
+    		    return expr;
+    	    }
+    	    return null;
+        }
+
+        function SequenceExpressionNode(list, l1, l2) {
             var node = Node("SequenceExpression");
             node.sequence = list;
             node.loc = makeLoc(l1, l2);
             return node;
         }
-        function Expression(stop, parenthesized) {
+        function Expression(parenthesized) {
             var list = [];
             var node;
             var ae;
             var l1 = loc && loc.start;
             var l2;
-            var hasStop = typeof stop === "string";
 
-
-            if ((!parenthesized && ExprNoneOfs[v]) || (v === "let" && lookahead === "[")) return null;
-            
             do {
-                if (hasStop && v === stop) break;
                 if (ae = this.AssignmentExpression()) list.push(ae);
-
-                if (hasStop && v === stop) break;
                 if (v === ",") {
                     match(",");
                     continue;
-                } else if (ltLast || ExprEndOfs[v] || v == undefined) {                
-                    break;
-                } else {
-        	    throw new SyntaxError("invalid expression statement "+atLineCol());
-        	}
+                } else if (ltLast || ExprEndOfs[v] || v == undefined) break;
+                else throw new SyntaxError("invalid expression "+atLineCol());
             } while (v !== undefined);
 
             l2 = loc && loc.end;
@@ -5236,9 +5238,9 @@ define("parser", function () {
                 case 1:
                     node = list[0];
                     if (parenthesized) return this.ParenthesizedExpressionNode(node, l1, l2);
-                    return this.ExpressionStatement(node, l1, l2);
+                    return this.ExpressionStatementNode(node, l1, l2);
                 default:
-                    node = this.SequenceExpression(list, l1, l2);
+                    node = this.SequenceExpressionNode(list, l1, l2);
                     if (parenthesized) return this.ParenthesizedExpressionNode(node, l1, l2);
                     else return node;
             }
@@ -5717,11 +5719,11 @@ define("parser", function () {
             nodeTable = nodeTable || Object.create(null);
             if (Array.isArray(node)) {
                 for (var i = 0, j = node.length; i < j; i++) {
-                    CreateTablePlusAddParentPointerIds(node[i], node, nodeTable);
+                    CreateTablePlusAddParentPointerIds(node[i], parent, nodeTable);
                 }
                 return nodeTable;
             }
-            if (typeof node === "object" && node != null && node.loc) {
+            else if (typeof node === "object" && node != null && node.loc) {
                 if (parent) {
                     node.parent = parent["_id_"];
                     nodeTable["_id_"] = parent;
@@ -6179,7 +6181,7 @@ define("parser", function () {
             var fn = this[StatementParsers[v]];
             if (fn) node = fn.call(this, a, b, c, d);
             if (!node) {
-                node = this.LabelledStatement(a, b, c, d) || this.Expression(a,b,c,d);
+                node = this.LabelledStatement(a, b, c, d) || this.ExpressionStatement(a,b,c,d);
             }
             if (node) semicolon();
             return node || null;
@@ -6387,7 +6389,7 @@ define("parser", function () {
                 var l2;
                 match("switch");
                 match("(");
-                node.discriminant = this.Expression(")");
+                node.discriminant = this.Expression();
                 match(")");
                 match("{");
                 var cases = node.cases = [];
@@ -6419,7 +6421,7 @@ define("parser", function () {
             if (v === "case") {
                 var node = Node("SwitchCase");
                 match("case");
-                node.test = this.Expression(":");
+                node.test = this.Expression();
                 match(":");
                 node.consequent = this.SwitchStatementList();
                 semicolon();
@@ -6748,6 +6750,7 @@ define("parser", function () {
             }
             return node;
         }
+        parser.ExpressionStatement = ExpressionStatement;
         parser.JSONText = JSONText;
         parser.JSONValue = JSONValue;
         parser.JSONString = JSONString;
@@ -6763,7 +6766,6 @@ define("parser", function () {
         parser.ConditionalExpressionNoIn = ConditionalExpressionNoIn;
         parser.ConditionalExpression = ConditionalExpression;
         parser.LeftHandSideExpression = LeftHandSideExpression;
-        parser.ExpressionStatement = ExpressionStatement;
         parser.Expression = Expression;
         parser.PrimaryExpression = PrimaryExpression;
         parser.PostfixExpression = PostfixExpression;
@@ -6810,8 +6812,8 @@ define("parser", function () {
         parser.ComprehensionFilters = ComprehensionFilters;
         parser.ArrayComprehension = ArrayComprehension;
         parser.GeneratorComprehension = GeneratorComprehension;
-        parser.ExpressionStatement = ExpressionStatement;
-        parser.SequenceExpression = SequenceExpression;
+        parser.ExpressionStatementNode = ExpressionStatementNode;
+        parser.SequenceExpressionNode = SequenceExpressionNode;
         parser.GeneratorBody = GeneratorBody;
         parser.FunctionBody = FunctionBody;
         parser.MethodDefinition = MethodDefinition;
