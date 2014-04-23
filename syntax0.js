@@ -1543,8 +1543,7 @@ define("tables", function (require, exports, module) {
         "^": true,
         "in": true,
         "of": true,
-        "instanceof": true,
-        ".": true
+        "instanceof": true
     };
     var AssignmentOperators = {
         __proto__: null,
@@ -5027,7 +5026,7 @@ define("parser", function () {
         }
 
         function BinaryExpressionRightHandSide(leftHand, l1) {
-				var node = Node("BinaryExpression");
+		var node = Node("BinaryExpression");
                 node.longName = PunctToExprName[v];
                 node.operator = v;
                 node.left = leftHand;
@@ -5046,7 +5045,7 @@ define("parser", function () {
 	    function AssignmentExpression() {
             var node = null, leftHand, l1, l2;
             l1 = loc && loc.start;                       
-            var leftHand = this.UnaryExpression();
+            var leftHand = this.MemberExpression(this.UnaryExpression());
             if (AssignmentOperators[v] && (!isNoIn || (isNoIn && v != "in"))) {
                 return this.AssignmentExpressionRightHandSide(leftHand, l1);
             } else if (BinaryOperators[v] && (!isNoIn || (isNoIn && v != "in"))) {
@@ -8571,6 +8570,62 @@ exports.codeMap = codeMap;
 exports.astCodeMap = astCodeMap;
 exports.byteCodeMap = byteCodeMap;
 
+    
+    /*
+	That was quite unordered, but i make progress
+    */
+
+/**
+* Created by root on 18.04.14.
+*/
+/*
+
+    HOW TO?
+
+    COLLECT IN THE OTHER FILES THE SLOTNAMES IN SOME OBJECT
+    THEN MOVE THE SLOTS HERE
+    (same name on other object gets same slot index for it later)
+
+ */
+
+var SLOTS = Object.create(null);
+SLOTS.GET = "Get";
+SLOTS.SET = "Set";
+SLOTS.DEFINEOWNPROPERTY = "DefineOwnProperty";
+SLOTS.GETOWNPROPERTY = "GetOwnProperty";
+SLOTS.OWNPROPERTYKEYS = "OwnPropertyKeys";
+SLOTS.ENUMERATE = "Enumerate";
+SLOTS.CALL = "Call";
+SLOTS.CONSTRUCT = "Construct";
+SLOTS.INVOKE = "Invoke";
+SLOTS.HASPROPERTY = "HasProperty";
+SLOTS.ISEXTENSIBLE = "IsExtensible";
+SLOTS.BOUNDTHIS = "BoundThis";
+SLOTS.BOUNDTARGETFUNCTION = "BoundTargetFunction";
+SLOTS.BOUNDARGUMENTS = "BoundArguments";
+SLOTS.NUMBERDATA = "NumberData";
+SLOTS.STRINGDATA = "StringData";
+SLOTS.BOOLEANDATA = "BooleanData";
+SLOTS.SYMBOLDATA = "SymbolData";
+SLOTS.DESCRIPTION = "Description";
+SLOTS.ARRAYBUFFERDATA = "ArrayBufferData";
+SLOTS.TYPEDARRAYNAME = "TypedArrayName";
+SLOTS.TYPEDARRAYCONSTRUCTOR = "TypedArrayConstructor";
+SLOTS.BYTELENGTH = "ByteLength";
+SLOTS.BYTEOFFSET = "ByteOffset";
+
+SLOTS.PROXYTARGET = "ProxyTarget";
+SLOTS.PROXYHANDLER = "ProxyHandler";
+
+SLOTS.PROTOTYPE = "Prototype";
+SLOTS.EXTENSIBLE = "Extensible";
+
+SLOTS.BINDINGS = "Bindings";    // Slots for my property tables
+SLOTS.SYMBOLS = "Symbols";      // Will even hold for in typed memory (need a new hash there anyways)
+
+
+
+
 /**
  * Created by root on 31.03.14.
  */
@@ -10326,7 +10381,7 @@ function ValidateAndApplyPropertyDescriptor(O, P, extensible, Desc, current) {
     if (!current) {
 
         if (!extensible) return false;
-
+        
         Assert(extensible, "object has to be extensible");
 
         if (isGenericDesc || isDataDesc || isAccessorDesc) {
@@ -10431,16 +10486,6 @@ function ValidateAndApplyPropertyDescriptor(O, P, extensible, Desc, current) {
         return true;
     }
 }
-
-
-function GetMethod(O, P) {
-    Assert(Type(O) === OBJECT && IsPropertyKey(P) === true, "o has to be object and p be a valid key");
-    var method = callInternalSlot("Get", O, P, O);
-    if (isAbrupt(method = ifAbrupt(method))) return method;
-    if (IsCallable(method)) return method;
-    else return withError("Type", "GetMethod: " + P + " can not be retrieved");
-}
-
 
 /**
  * Created by root on 30.03.14.
@@ -10582,9 +10627,22 @@ function OwnPropertySymbols(O) {
     return MakeListIterator(keys);
 }
 
+
 /**
  * Created by root on 30.03.14.
  */
+
+
+function GetMethod(O, P) {
+    Assert(Type(O) === OBJECT && IsPropertyKey(P) === true, "o has to be object and p be a valid key");
+    var method = callInternalSlot("Get", O, P, O);
+    if (isAbrupt(method = ifAbrupt(method))) return method;
+    if (IsCallable(method)) return method;
+    else return withError("Type", "GetMethod: " + P + " can not be retrieved");
+}
+
+
+
 
 function SetIntegrityLevel(O, level) {
     Assert(Type(O) === OBJECT, "object expected");
@@ -12668,16 +12726,13 @@ ArgumentsExoticObject.prototype = {
 
 addMissingProperties(ArgumentsExoticObject.prototype, OrdinaryObject.prototype);
 
-    // ===========================================================================================================
-    // Proxy TYPE
-    // ===========================================================================================================
-
+    
 function ProxyExoticObject(handler, target) {
     var P = Object.create(ProxyExoticObject.prototype);
-    setInternalSlot(P, "Prototype",getIntrinsic("%ProxyPrototype%"));
-    setInternalSlot(P, "Extensible", true);
-    setInternalSlot(P, "ProxyHandler", handler);
-    setInternalSlot(P, "ProxyTarget", target);
+    setInternalSlot(P, SLOTS.PROTOTYPE, getIntrinsic("%ProxyPrototype%"));
+    setInternalSlot(P, SLOTS.EXTENSIBLE, true);
+    setInternalSlot(P, SLOTS.PROXYHANDLER, handler);
+    setInternalSlot(P, SLOTS.PROXYTARGET, target);
     return P;
 }
 
@@ -12688,12 +12743,12 @@ ProxyExoticObject.prototype = {
         return "[object ProxyExoticObject]";
     },
     GetPrototypeOf: function () {
-        var T = getInternalSlot(this, "ProxyTarget");
-        var H = getInternalSlot(this, "ProxyHandler");
+        var T = getInternalSlot(this, SLOTS.PROXYTARGET);
+        var H = getInternalSlot(this, SLOTS.PROXYHANDLER);
         var trap = GetMethod(H, "getPrototypeOf");
         if (isAbrupt(trap = ifAbrupt(trap))) return trap;
         if (trap === undefined) return GetPrototypeOf(T);
-        var handlerProto = callInternalSlot("Call", trap, handler, [T]);
+        var handlerProto = callInternalSlot(SLOTS.CALL, trap, handler, [T]);
         if (isAbrupt(handlerProto = ifAbrupt(handlerProto))) return handlerProto;
         var targetProto = GetPrototypeOf(T);
         if (isAbrupt(targetProto = ifAbrupt(targetProto))) return targetProto;
@@ -12702,12 +12757,12 @@ ProxyExoticObject.prototype = {
     },
 
     SetPrototypeOf: function (V) {
-        var T = getInternalSlot(this, "ProxyTarget");
-        var H = getInternalSlot(this, "ProxyHandler");
+        var T = getInternalSlot(this, SLOTS.PROXYTARGET);
+        var H = getInternalSlot(this, SLOTS.PROXYHANDLER);
         var trap = GetMethod(H, "setPrototypeOf");
         if (isAbrupt(trap = ifAbrupt(trap))) return trap;
         if (trap === undefined) return SetPrototypeOf(T, V);
-        var trapResult = callInternalSlot("Call", trap, H, [T, V]);
+        var trapResult = callInternalSlot(SLOTS.CALL, trap, H, [T, V]);
         if (isAbrupt(trapResult = ifAbrupt(trapResult))) return trapResult;
         trapResult = ToBoolean(trapResult);
         var extensibleTarget = IsExtensible(T);
@@ -12720,12 +12775,12 @@ ProxyExoticObject.prototype = {
     },
 
     IsExtensible: function () {
-        var T = getInternalSlot(this, "ProxyTarget");
-        var H = getInternalSlot(this, "ProxyHandler");
+        var T = getInternalSlot(this, SLOTS.PROXYTARGET);
+        var H = getInternalSlot(this, SLOTS.PROXYHANDLER);
         var trap = GetMethod(H, "isExtensible");
         if (isAbrupt(trap = ifAbrupt(trap))) return trap;
         if (trap === undefined) return IsExtensible(T);
-        var trapResult = callInternalSlot("Call", trap, H, [T]);
+        var trapResult = callInternalSlot(SLOTS.CALL, trap, H, [T]);
         if (isAbrupt(trapResult = ifAbrupt(trapResult))) return trapResult;
         trapResult = ToBoolean(trapResult);
         var booleanTrapResult = ToBoolean(trapResult);
@@ -12737,12 +12792,12 @@ ProxyExoticObject.prototype = {
     },
 
     PreventExtensions: function () {
-        var T = getInternalSlot(this, "ProxyTarget");
-        var H = getInternalSlot(this, "ProxyHandler");
+        var T = getInternalSlot(this, SLOTS.PROXYTARGET);
+        var H = getInternalSlot(this, SLOTS.PROXYHANDLER);
         var trap = GetMethod(H, "preventExtensions");
         if (isAbrupt(trap = ifAbrupt(trap))) return trap;
         if (trap === undefined) return PreventExtensions(T);
-        var trapResult = callInternalSlot("Call", trap, H, [T]);
+        var trapResult = callInternalSlot(SLOTS.CALL, trap, H, [T]);
         if (isAbrupt(trapResult = ifAbrupt(trapResult))) return trapResult;
         var booleanTrapResult = ToBoolean(trapResult);
         if (isAbrupt(booleanTrapResult = ifAbrupt(booleanTrapResult))) return booleanTrapResult;
@@ -12754,12 +12809,12 @@ ProxyExoticObject.prototype = {
 
     HasOwnProperty: function (P) {
         Assert(IsPropertyKey(P) === true);
-        var T = getInternalSlot(this, "ProxyTarget");
-        var H = getInternalSlot(this, "ProxyHandler");
+        var T = getInternalSlot(this, SLOTS.PROXYTARGET);
+        var H = getInternalSlot(this, SLOTS.PROXYHANDLER);
         var trap = GetMethod(H, "hasOwn");
         if (isAbrupt(trap = ifAbrupt(trap))) return trap;
         if (trap === undefined) return HasOwnProperty(T, P);
-        var trapResult = callInternalSlot("Call", trap, H, [T, P]);
+        var trapResult = callInternalSlot(SLOTS.CALL, trap, H, [T, P]);
         if (isAbrupt(trapResult = ifAbrupt(trapResult))) return trapResult;
         var success = ToBoolean(trapResult);
         var extensibleTarget;
@@ -12786,12 +12841,12 @@ ProxyExoticObject.prototype = {
 
     GetOwnProperty: function (P) {
         Assert(IsPropertyKey(P) === true);
-        var T = getInternalSlot(this, "ProxyTarget");
-        var H = getInternalSlot(this, "ProxyHandler");
+        var T = getInternalSlot(this, SLOTS.PROXYTARGET);
+        var H = getInternalSlot(this, SLOTS.PROXYHANDLER);
         var trap = GetMethod(H, "getOwnPropertyDescriptor");
         if (isAbrupt(trap = ifAbrupt(trap))) return trap;
         if (trap === undefined) return GetOwnProperty(T, P);
-        var trapResultObj = callInternalSlot("Call", trap, H, [T, P]);
+        var trapResultObj = callInternalSlot(SLOTS.CALL, trap, H, [T, P]);
         if (isAbrupt(trapResultObj = ifAbrupt(trapResultObj))) return trapResultObj;
         if (Type(trapResultObj) !== OBJECT && Type(trapResultObj) !== UNDEFINED) return withError("Type", "getown - neither object nor undefined");
         var targetDesc = GetOwnProperty(T, P);
@@ -12820,12 +12875,12 @@ ProxyExoticObject.prototype = {
 
     DefineOwnProperty: function (P, D) {
         Assert(IsPropertyKey(P) === true);
-        var T = getInternalSlot(this, "ProxyTarget");
-        var H = getInternalSlot(this, "ProxyHandler");
+        var T = getInternalSlot(this, SLOTS.PROXYTARGET);
+        var H = getInternalSlot(this, SLOTS.PROXYHANDLER);
         var trap = GetMethod(H, "defineProperty");
         if (isAbrupt(trap = ifAbrupt(trap))) return trap;
         if (trap === undefined) return DefineOwnProperty(T, P, D);
-        var trapResult = callInternalSlot("Call", trap, H, [T, P, D]);
+        var trapResult = callInternalSlot(SLOTS.CALL, trap, H, [T, P, D]);
         if (isAbrupt(trapResult = ifAbrupt(trapResult))) return trapResult;
         var targetDesc = GetOwnProperty(T, P);
         if (isAbrupt(targetDesc = ifAbrupt(targetDesc))) return targetDesc;
@@ -12844,12 +12899,12 @@ ProxyExoticObject.prototype = {
 
     HasProperty: function (P) {
         Assert(IsPropertyKey(P) === true);
-        var T = getInternalSlot(this, "ProxyTarget");
-        var H = getInternalSlot(this, "ProxyHandler");
+        var T = getInternalSlot(this, SLOTS.PROXYTARGET);
+        var H = getInternalSlot(this, SLOTS.PROXYHANDLER);
         var trap = GetMethod(H, "has");
         if (isAbrupt(trap = ifAbrupt(trap))) return trap;
         if (trap === undefined) return HasProperty(T, P);
-        var trapResult = callInternalSlot("Call", trap, H, [T, P]);
+        var trapResult = callInternalSlot(SLOTS.CALL, trap, H, [T, P]);
         if (isAbrupt(trapResult = ifAbrupt(trapResult))) return trapResult;
         var success = ToBoolean(trapResult);
         if (!success) {
@@ -12867,12 +12922,12 @@ ProxyExoticObject.prototype = {
 
     Get: function (P) {
         Assert(IsPropertyKey(P) === true);
-        var T = getInternalSlot(this, "ProxyTarget");
-        var H = getInternalSlot(this, "ProxyHandler");
+        var T = getInternalSlot(this, SLOTS.PROXYTARGET);
+        var H = getInternalSlot(this, SLOTS.PROXYHANDLER);
         var trap = GetMethod(H, "get");
         if (isAbrupt(trap = ifAbrupt(trap))) return trap;
         if (trap === undefined) return Get(T, P);
-        var trapResult = callInternalSlot("Call", trap, H, [T, P]);
+        var trapResult = callInternalSlot(SLOTS.CALL, trap, H, [T, P]);
         if (isAbrupt(trapResult = ifAbrupt(trapResult))) return trapResult;
 
         var targetDesc = GetOwnProperty(T, P);
@@ -12888,12 +12943,12 @@ ProxyExoticObject.prototype = {
     },
     Set: function (P, V, R) {
         Assert(IsPropertyKey(P) === true);
-        var T = getInternalSlot(this, "ProxyTarget");
-        var H = getInternalSlot(this, "ProxyHandler");
+        var T = getInternalSlot(this, SLOTS.PROXYTARGET);
+        var H = getInternalSlot(this, SLOTS.PROXYHANDLER);
         var trap = GetMethod(H, "set");
         if (isAbrupt(trap = ifAbrupt(trap))) return trap;
         if (trap === undefined) return Set(T, P, V, R);
-        var trapResult = callInternalSlot("Call", trap, H, [T, P, V, R]);
+        var trapResult = callInternalSlot(SLOTS.CALL, trap, H, [T, P, V, R]);
         if (isAbrupt(trapResult = ifAbrupt(trapResult))) return trapResult;
         if (ToBoolean(trapResult) === false) return withError("Type", "cant set value with trap");
         var targetDesc = GetOwnProperty(T, P);
@@ -12909,23 +12964,23 @@ ProxyExoticObject.prototype = {
     },
     Invoke: function (P, A, R) {
         Assert(IsPropertyKey(P) === true);
-        var T = getInternalSlot(this, "ProxyTarget");
-        var H = getInternalSlot(this, "ProxyHandler");
+        var T = getInternalSlot(this, SLOTS.PROXYTARGET);
+        var H = getInternalSlot(this, SLOTS.PROXYHANDLER);
         var trap = GetMethod(H, "invoke");
         if (isAbrupt(trap = ifAbrupt(trap))) return trap;
         if (trap === undefined) return Invoke(T, P, A, R);
         var argArray = CreateArrayFromList(A);
-        return callInternalSlot("Call", trap, H, [T, P, argArray, R]);
+        return callInternalSlot(SLOTS.CALL, trap, H, [T, P, argArray, R]);
     },
     Delete: function (P) {
 
         Assert(IsPropertyKey(P) === true);
-        var T = getInternalSlot(this, "ProxyTarget");
-        var H = getInternalSlot(this, "ProxyHandler");
+        var T = getInternalSlot(this, SLOTS.PROXYTARGET);
+        var H = getInternalSlot(this, SLOTS.PROXYHANDLER);
         var trap = GetMethod(H, "deleteProperty");
         if (isAbrupt(trap = ifAbrupt(trap))) return trap;
         if (trap === undefined) return Delete(T, P);
-        var trapResult = callInternalSlot("Call", trap, H, [T, P]);
+        var trapResult = callInternalSlot(SLOTS.CALL, trap, H, [T, P]);
         if (isAbrupt(trapResult = ifAbrupt(trapResult))) return trapResult;
 
         if (ToBoolean(trapResult) === false) return false;
@@ -12938,46 +12993,46 @@ ProxyExoticObject.prototype = {
     },
 
     Enumerate: function () {
-        var T = getInternalSlot(this, "ProxyTarget");
-        var H = getInternalSlot(this, "ProxyHandler");
+        var T = getInternalSlot(this, SLOTS.PROXYTARGET);
+        var H = getInternalSlot(this, SLOTS.PROXYHANDLER);
         var trap = GetMethod(H, "enumerate");
         if (isAbrupt(trap = ifAbrupt(trap))) return trap;
         if (trap === undefined) return Enumerate(T);
-        var trapResult = callInternalSlot("Call", trap, H, [T]);
+        var trapResult = callInternalSlot(SLOTS.CALL, trap, H, [T]);
         if (isAbrupt(trapResult = ifAbrupt(trapResult))) return trapResult;
         if (Type(trapResult) !== OBJECT) return withError("Type", "trapResult is not an object");
         return trapResult;
     },
     OwnPropertyKeys: function () {
-        var T = getInternalSlot(this, "ProxyTarget");
-        var H = getInternalSlot(this, "ProxyHandler");
+        var T = getInternalSlot(this, SLOTS.PROXYTARGET);
+        var H = getInternalSlot(this, SLOTS.PROXYHANDLER);
         var trap = GetMethod(H, "ownKeys");
         if (isAbrupt(trap = ifAbrupt(trap))) return trap;
         if (trap === undefined) return OwnPropertyKeys(T);
-        var trapResult = callInternalSlot("Call", trap, H, [T]);
+        var trapResult = callInternalSlot(SLOTS.CALL, trap, H, [T]);
         if (isAbrupt(trapResult = ifAbrupt(trapResult))) return trapResult;
         if (Type(trapResult) !== OBJECT) return withError("Type", "trapResult is not an object");
         return trapResult;
     },
 
     Call: function (thisArg, argList) {
-        var T = getInternalSlot(this, "ProxyTarget");
-        var H = getInternalSlot(this, "ProxyHandler");
+        var T = getInternalSlot(this, SLOTS.PROXYTARGET);
+        var H = getInternalSlot(this, SLOTS.PROXYHANDLER);
         var trap = GetMethod(H, "apply");
         if (isAbrupt(trap = ifAbrupt(trap))) return trap;
-        if (trap === undefined) return callInternalSlot("Call",T, thisArg, argList);
+        if (trap === undefined) return callInternalSlot(SLOTS.CALL,T, thisArg, argList);
         var argArray = CreateArrayFromList(argList);
-        return callInternalSlot("Call", trap, H, [T, thisArg, argArray]);
+        return callInternalSlot(SLOTS.CALL, trap, H, [T, thisArg, argArray]);
     },
 
     Construct: function (argList) {
-        var T = getInternalSlot(this, "ProxyTarget");
-        var H = getInternalSlot(this, "ProxyHandler");
+        var T = getInternalSlot(this, SLOTS.PROXYTARGET);
+        var H = getInternalSlot(this, SLOTS.PROXYHANDLER);
         var trap = GetMethod(H, "construct");
         if (isAbrupt(trap = ifAbrupt(trap))) return trap;
-        if (trap === undefined) return callInternalSlot("Construct", T, argList);
+        if (trap === undefined) return callInternalSlot(SLOTS.CONSTRUCT, T, argList);
         var argArray = CreateArrayFromList(argList);
-        var newObj = callInternalSlot("Call", trap, H, [T, argArray]);
+        var newObj = callInternalSlot(SLOTS.CALL, trap, H, [T, argArray]);
         if (isAbrupt(newObj = ifAbrupt(newObj))) return newObj;
         if (Type(newObj) !== OBJECT) return withError("Type", "returned value is not an object");
         return newObj;
@@ -13447,6 +13502,7 @@ function RegExpExec (R, S, ignore) {
 
 
 */
+
 var FAILURE = {};
 
 function createRegExpMatcher(pattern) {
@@ -13561,7 +13617,7 @@ function Assertion(node) {
         var r = !!t.call(this, c);
         if (!r) return null;
         return c.call(this, x);
-    }
+    };
 }
 
 
@@ -19480,12 +19536,12 @@ LazyDefineBuiltinFunction(ReflectObject, "getOwnPropertyDescriptor", 2, ReflectO
 LazyDefineBuiltinFunction(ReflectObject, "getPrototypeOf", 1, ReflectObject_getPrototypeOf);
 LazyDefineBuiltinFunction(ReflectObject, "has", 2, ReflectObject_has);
 LazyDefineBuiltinFunction(ReflectObject, "hasOwn", 2, ReflectObject_hasOwn);
-LazyDefineBuiltinFunction(ReflectObject, "Loader", 1, getIntrinsic("%Loader%"));
+LazyDefineProperty(ReflectObject, "Loader", LoaderConstructor);
 LazyDefineBuiltinFunction(ReflectObject, "ownKeys", 1, ReflectObject_ownKeys);
 LazyDefineBuiltinFunction(ReflectObject, "parse", 1, ReflectObject_parse);
 LazyDefineBuiltinFunction(ReflectObject, "parseGoal", 1, ReflectObject_parseGoal);
 LazyDefineBuiltinFunction(ReflectObject, "preventExtensions", 1, ReflectObject_preventExtensions);
-LazyDefineBuiltinFunction(ReflectObject, "Realm", 1, getIntrinsic("%Realm%"));
+LazyDefineProperty(ReflectObject, "Realm", RealmConstructor);
 LazyDefineBuiltinFunction(ReflectObject, "set", 3, ReflectObject_set);
 LazyDefineBuiltinFunction(ReflectObject, "setPrototypeOf", 2, ReflectObject_setPrototypeOf);
 LazyDefineBuiltinConstant(ReflectObject, $$toStringTag, "Reflect");
