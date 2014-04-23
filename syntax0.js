@@ -599,10 +599,26 @@ define("tables", function (require, exports, module) {
         "+": "UnaryExpression",
         "-": "UnaryExpression",
         "~": "UnaryExpression",
+        "++": "UnaryExpression",
+        "--": "UnaryExpression",
         "!!": "UnaryExpression",
-        "!": "UnaryExpression"
+        "!": "UnaryExpression",
+        "void":"UnaryExpression",
+        "typeof":"UnaryExpression",
+        "delete":"UnaryExpression"
         
     };
+    
+    var PrimaryExpressionByTypeAndFollowByValue = {
+        "Identifier": { "=>": "CoverParenthesizedExpressionAndArrowParameterList" }
+    };
+    var PrimaryExpressionByValueAndFollowByType = {
+        "...": { "Identifier": "CoverParenthesizedExpressionAndArrowParameterList" }
+    };
+
+    exports.PrimaryExpressionByValueAndFollowByType = PrimaryExpressionByValueAndFollowByType;
+    exports.PrimaryExpressionByTypeAndFollowByValue = PrimaryExpressionByTypeAndFollowByValue;
+    
     var PrimaryExpressionByType = {
         __proto__: null,
         "Identifier": "Identifier",
@@ -3931,6 +3947,8 @@ define("parser", function () {
         var StatementParsers = tables.StatementParsers;
         var PrimaryExpressionByValue = tables.PrimaryExpressionByValue;
         var PrimaryExpressionByType = tables.PrimaryExpressionByType;
+        var PrimaryExpressionByTypeAndFollowByValue = tables.PrimaryExpressionByTypeAndFollowByValue;
+        var PrimaryExpressionByValueAndFollowByType = tables.PrimaryExpressionByValueAndFollowByType;
         var SkipableToken = tables.SkipableToken;
         var InOrOfInsOf = tables.InOrOfInsOf;
         var InOrOf = tables.InOrOf;
@@ -4169,7 +4187,7 @@ define("parser", function () {
         function atLineCol() {
             var line = loc && loc.start.line;
             var column = loc && loc.start.column;
-            return " at line "+line+", column "+column;
+            return "value="+v+" type="+t+" lookahead="+lookahead+" at line "+line+", column "+column;
         }
         function unquote(str) {
             return ("" + str).replace(/^("|')|("|')$/g, ""); //'
@@ -4768,24 +4786,24 @@ define("parser", function () {
             isNoIn = noInStack.pop();
             return node;
         }
-        function ParenthesizedExpression() {
-            return this.Expression(true);
-        }
-        function ParenthesizedExpressionNode(exprNode, startLoc, endLoc) {
-            var node = Node("ParenthesizedExpression");
-            node.expression = exprNode;
-            node.loc = makeLoc(startLoc, endLoc);
-            return node;
-        }
+
         function CoverParenthesizedExpression(tokens) {
-            var expression = parseGoal("ParenthesizedExpression", tokens);
-            return expression;
+            return parseGoal("ParenthesizedExpression", tokens);
+        }
+        function ParenthesizedExpression() {
+                var l1 = loc && loc.start;
+                var node = Node("ParenthesizedExpression");
+              // match("(");
+                node.expression = this.Expression();
+              // match(")");
+                var l2 = loc && loc.end;
+                node.loc = makeLoc(l1, l2);
+                return node;
         }
         function ArrowParameterList(tokens) {
-            var formals = parseGoal("FormalParameterList", tokens);
-            return formals;
+            return parseGoal("FormalParameterList", tokens);
         }
-        function CoverParenthesisedExpressionAndArrowParameterList() {
+        function CoverParenthesizedExpressionAndArrowParameterList() {
             var parens = [];
             var covered = [];
             var cover = false;
@@ -4801,13 +4819,14 @@ define("parser", function () {
                 if (lookahead === "for") return this.GeneratorComprehension();
                 cover = true;
                 parens.push(v);
+
                 while (next()) {
                     if (v === "(") {
                         parens.push(v);
                     } else if (v === ")") {
                         parens.pop();
                         if (!parens.length) {
-                            covered.push(token);
+                            // covered.push(token);
                             break;
                         }
                     }
@@ -4841,30 +4860,30 @@ define("parser", function () {
 
         function PrimaryExpression() {
             var fn, node;
-            fn = this[PrimaryExpressionByValue[v]];
-            if (fn) debug("PRIMEXPR: BY VALUE "+v);
+            fn = PrimaryExpressionByTypeAndFollowByValue[t];
+            if (fn) fn = this[fn[lookahead]];
+            else {
+                fn = PrimaryExpressionByValueAndFollowByType[v];
+                if (fn) fn = this[fn[lookaheadType]];
+            }
+            if (!fn) fn = this[PrimaryExpressionByValue[v]];
             if (!fn) fn = this[PrimaryExpressionByType[t]];
-            if (fn) debug("PRIMEXPR: BY TYPE "+t);
             if (!fn && v === "yield") {
             	if (yieldIsId) fn = this.YieldAsIdentifier;
             	else fn = this.YieldExpression;
-            	if (fn) debug("PRIMEXPR: YIELD "+t);
             }
             if (!fn && defaultIsId && v === "default") fn = this.DefaultAsIdentifier;
             if (fn) node = fn.call(this);
-            if (fn) debug("PRIMEXPR: AFTER CALL at "+v+" ("+t+")");
-            if (node) return node;
+            if (node) return this.PostfixExpression(node);
             return null;
         }                
 
         function MemberExpression(obj) {
             var node, l1, l2;                        
             if (obj = obj || this.PrimaryExpression()) {
-
                 l1 = obj.loc && obj.loc.start;
                 var node = Node("MemberExpression");
                 node.object = obj;
-            
                 if (t === "TemplateLiteral") {
                 	return this.CallExpression(obj);
                 } else if (v === "[") {
@@ -4885,19 +4904,14 @@ define("parser", function () {
                     	match("!");
 						if (v == "[") {
 							var 
-
 						} else if (v == "(") {
 							var args = this.Arguments();
-															
-	
 						} else if (t === "Identifier") {
 							property = Object.create(null);
 							property.name = v;
 						}
 						property.eventual = true;
 						node.eventual = true;
-						
-
                         // http://wiki.ecmascript.org/doku.php?id=strawman:concurrency
                         // MemberExpression ! [Expression]
                         // MemberExpression ! Arguments
@@ -4907,15 +4921,9 @@ define("parser", function () {
                         throw new SyntaxError("MemberExpression . Identifier expects a valid IdentifierString or an Integer or null,true,false as PropertyKey"+atLineCol());
                     }
                     node.property = property;
-                    
-
                 } else {
-                
             	    return obj;
-            	    
             	}
-            
-                // recur toString().toString().toString().valueOf().toString()
                 if (v == "[" || v == ".") return this.MemberExpression(node);
                 else if (v == "(") return this.CallExpression(node);
                 else if (IsTemplateToken[t]) return this.CallExpression(node);
@@ -4980,7 +4988,7 @@ define("parser", function () {
         }
         function PostfixExpression(lhs) {
             var l1 = loc && loc.start;
-            lhs = lhs || this.CoverParenthesisedExpressionAndArrowParameterList() || this.LeftHandSideExpression();
+            lhs = lhs || this.LeftHandSideExpression();
             if (lhs && UpdateOperators[v]) {
                 var node = Node("UnaryExpression");
                 node.operator = v;
@@ -5021,12 +5029,12 @@ define("parser", function () {
                 var l2 = loc && loc.end;
                 node.loc = makeLoc(l1, l2);
                 node = rotate_binexps(node);
-                if (v == "?") return this.ConditionalExpressionNoIn(node);
+                if (compile) return builder.assignmentExpression(node.operator, node.left, node.right, node.loc);
                 return node;
         }
 
 	    function BinaryExpressionRightHandSide(leftHand, l1) {
-		var node = Node("BinaryExpression");
+		        var node = Node("BinaryExpression");
                 node.longName = PunctToExprName[v];
                 node.operator = v;
                 node.left = leftHand;
@@ -5038,28 +5046,22 @@ define("parser", function () {
                 var l2 = loc && loc.end;
                 node.loc = makeLoc(l1, l2);
                 node = rotate_binexps(node);
-                if (v == "?") return this.ConditionalExpressionNoIn(node);
+                if (compile) return builder.binaryExpression(node.operator, node.left, node.right, node.loc);
                 return node;
     	}
 
 	    
-	    function AssignmentExpression(leftHand) {
+	    function AssignmentExpression() {
             var node = null, leftHand, l1, l2;
-            l1 = loc && loc.start;                       
-            
-            var leftHand = this.MemberExpression(this.UnaryExpression());
-            if (v === "?") return this.ConditionalExpression(leftHand);
-            
-            if (AssignmentOperators[v] && (!isNoIn || (isNoIn && v != "in"))) {
-                return this.AssignmentExpressionRightHandSide(leftHand, l1);
-            } else if (BinaryOperators[v] && (!isNoIn || (isNoIn && v != "in"))) {
-                return this.BinaryExpressionRightHandSide(leftHand, l1);
-            } else {
-                return leftHand;
-            }
-            return null;
+            l1 = loc && loc.start;
+            leftHand = this.LeftHandSideExpression(); // MemberExpression(this.UnaryExpression());
+            if (v === "?") return this.ConditionalExpressionNoIn(leftHand);
+            if (AssignmentOperators[v]) node = this.AssignmentExpressionRightHandSide(leftHand, l1);
+            else if (BinaryOperators[v] && (!isNoIn || (isNoIn && v != "in"))) node = this.BinaryExpressionRightHandSide(leftHand, l1);
+            else return leftHand;
+            if (v === "?") return this.ConditionalExpressionNoIn(node);
+            return node;
         }
-
         function CallExpression(callee) {
             var node, tmp, l1, l2;
             l1 = l2 = (loc && loc.start);
@@ -5094,7 +5096,7 @@ define("parser", function () {
                         return node;
                     }
                 } else {
-                    return node.callee;
+                    return callee;
                 }
             }
             return null;
@@ -5141,9 +5143,10 @@ define("parser", function () {
         function ExpressionStatement() {
     	    if (!ExprNoneOfs[v] && !(v === "let" && lookahead=="[")) {
     		    var expression = this.Expression();
+                if (!expression) return null;
     		    var node = Node("ExpressionStatement");
     		    node.expression = expression;
-    		    node.loc = node.expression.loc;
+    		    node.loc = expression.loc;
     		    semicolon();
     		    return node;
     	    }
@@ -5158,33 +5161,26 @@ define("parser", function () {
             return node;
         }
 
-        function Expression(parenthesized) {
+        function Expression() {
             var list = [];
             var node;
             var ae;
             var l1 = loc && loc.start;
             var l2;
 
-            do {
+            while (v != undefined) {
                 if (ae = this.AssignmentExpression()) list.push(ae);
-                if (v === ",") {
-                    match(",");
-                    continue;
-                } else if (ltPassedBy || ExprEndOfs[v] || v == undefined) break;
+                else break;
+                if (v === ",") match(",");
+                else if (ltPassedBy || ExprEndOfs[v] || v === undefined) break;
                 else throw new SyntaxError("invalid expression "+atLineCol());
-            } while (v !== undefined);
+            }
 
             l2 = loc && loc.end;
             switch (list.length) {
                 case 0: return null;
-                case 1:
-                    node = list[0];
-                    if (parenthesized) return this.ParenthesizedExpressionNode(node, l1, l2);
-                    return node;
-                default:
-                    node = this.SequenceExpressionNode(list, l1, l2);
-                    if (parenthesized) return this.ParenthesizedExpressionNode(node, l1, l2);
-                    return node;
+                case 1: return list[0];
+                default: return this.SequenceExpressionNode(list, l1, l2);
             }
         }
 
@@ -5347,9 +5343,7 @@ define("parser", function () {
                 } else if (v === ";") {
                     match(";");
                     break;
-                } else if (ltPassedBy) {
-                    break;
-                } else if (v === undefined) {
+                } else if (ltPassedBy || v === undefined) {
                     break;
                 } else {
             	    throw new SyntaxError("illegal token "+v+" after "+kind+" declaration");
@@ -5549,7 +5543,7 @@ define("parser", function () {
                     if (v === ",") {
                         match(",");
                     } else if (v !== undefined && v !== ")") {
-                        throw new SyntaxError("error parsing formal parameter list");
+                        throw new SyntaxError("error parsing formal parameter list "+atLineCol());
                     }
                 } while (v !== undefined && v !== ")");
             return list;
@@ -6731,9 +6725,8 @@ define("parser", function () {
         parser.ExpressionNoIn = ExpressionNoIn;
         parser.AssignmentExpressionNoIn = AssignmentExpressionNoIn;
         parser.ParenthesizedExpression = ParenthesizedExpression;
-        parser.ParenthesizedExpressionNode = ParenthesizedExpressionNode;
         parser.ArrowParameterList = ArrowParameterList;
-        parser.CoverParenthesisedExpressionAndArrowParameterList = CoverParenthesisedExpressionAndArrowParameterList;
+        parser.CoverParenthesizedExpressionAndArrowParameterList = CoverParenthesizedExpressionAndArrowParameterList;
         parser.ConciseBody = ConciseBody;
         parser.CoverParenthesizedExpression = CoverParenthesizedExpression;
         parser.Literal = Literal;
@@ -8618,6 +8611,7 @@ SLOTS.TYPEDARRAYCONSTRUCTOR = "TypedArrayConstructor";
 SLOTS.BYTELENGTH = "ByteLength";
 SLOTS.BYTEOFFSET = "ByteOffset";
 
+// proxyexoticobjects.js the first to use them.
 SLOTS.PROXYTARGET = "ProxyTarget";
 SLOTS.PROXYHANDLER = "ProxyHandler";
 
@@ -20945,7 +20939,7 @@ DefineOwnProperty(JSONObject, "parse", {
         var JText = ToString(text);
         var tree = parseGoal("JSONText", JText);
         if (isAbrupt(tree = ifAbrupt(tree))) return tree;
-        var scriptText = parseGoal("ParenthesizedExpression", JText);
+        var scriptText = parseGoal("ParenthesizedExpression", "("+JText+")");
         var exprRef = require("runtime").Evaluate(scriptText);
         var unfiltered = GetValue(exprRef);
         if (isAbrupt(unfiltered = ifAbrupt(unfiltered))) return unfiltered;
@@ -23529,7 +23523,6 @@ var MessagePortPrototype_postMessage = function (thisArg, argList) {
 LazyDefineBuiltinFunction(MessagePortPrototype, "close", 0, MessagePortPrototype_close);
 LazyDefineBuiltinFunction(MessagePortPrototype, "open", 0, MessagePortPrototype_open);
 LazyDefineBuiltinFunction(MessagePortPrototype, "postMessage", 0, MessagePortPrototype_postMessage);
-
 
 
 /**
