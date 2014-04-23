@@ -1,0 +1,13 @@
+{
+	"Function.prototype.toMethod(super, method)":
+	{
+	    "init": 		
+		"let obj = { f(a) { return 'I am a super '+a+'!'; } }\nfunction x() { return super('Edward'); }",
+	    "tests": 
+	    [
+		["let fn = x.toMethod(obj, 'f')"],
+		["fn('Edward');", "I am a super Edward!"]
+	    ]
+	}
+
+}

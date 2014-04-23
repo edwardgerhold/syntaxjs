@@ -4945,16 +4945,10 @@ define("parser", function () {
                 if (v !== ")") {
                     do {
                         if (v === ")") break;
-                        if (arg = this.SpreadExpression() || this.AssignmentExpression()) {
-                            args.push(arg);
-                        } else {
-                            throw new SyntaxError("illegal argument list"+atLineCol());
-                        }
-                        if (v === ",") {
-                            match(",");
-                        } else if (v != ")" && v != undefined) {
-                            throw new SyntaxError("illegal argument list"+atLineCol());
-                        }
+                        if (arg = this.SpreadExpression() || this.AssignmentExpression()) args.push(arg);
+                        else throw new SyntaxError("illegal argument list"+atLineCol());
+                        if (v === ",") match(",");
+                        else if (v != ")" && v != undefined) throw new SyntaxError("illegal argument list"+atLineCol());
                     } while (v !== undefined);
                 }
                 match(")");
@@ -5011,7 +5005,7 @@ define("parser", function () {
                 if (UnaryOperators[v]) node.argument = this.UnaryExpression();
                 else node.argument = this.PostfixExpression();
                 var l2 = loc && loc.end;
-                if (node.argument == null) throw new SyntaxError("invalid unary expression "+node.operator+", operand missing " + stringifyLoc(loc));
+                if (node.argument == null) throw new SyntaxError("invalid unary expression "+node.operator+", operand missing " + atLineCol());
                 node.loc = makeLoc(l1, l2);
                 return node;
             }
@@ -5019,7 +5013,7 @@ define("parser", function () {
         }
 
         function AssignmentExpressionRightHandSide(leftHand, l1) {
-				var node = Node("AssignmentExpression");
+		var node = Node("AssignmentExpression");
                 node.longName = PunctToExprName[v];
                 node.operator = v;
                 node.left = leftHand;                
@@ -5034,7 +5028,7 @@ define("parser", function () {
         }
 
 	    function BinaryExpressionRightHandSide(leftHand, l1) {
-		        var node = Node("BinaryExpression");
+		var node = Node("BinaryExpression");
                 node.longName = PunctToExprName[v];
                 node.operator = v;
                 node.left = leftHand;
@@ -5049,12 +5043,11 @@ define("parser", function () {
                 if (compile) return builder.binaryExpression(node.operator, node.left, node.right, node.loc);
                 return node;
     	}
-
 	    
-	    function AssignmentExpression() {
+	function AssignmentExpression() {
             var node = null, leftHand, l1, l2;
             l1 = loc && loc.start;
-            leftHand = this.LeftHandSideExpression(); // MemberExpression(this.UnaryExpression());
+            leftHand = this.LeftHandSideExpression();
             if (v === "?") return this.ConditionalExpressionNoIn(leftHand);
             if (AssignmentOperators[v]) node = this.AssignmentExpressionRightHandSide(leftHand, l1);
             else if (BinaryOperators[v] && (!isNoIn || (isNoIn && v != "in"))) node = this.BinaryExpressionRightHandSide(leftHand, l1);
@@ -10767,11 +10760,11 @@ function SetPrototypeOf(O, V) {
 }
 
 function Delete(O, P) {
-    var v;
-    if (IsSymbol(P)) v = O.Symbols[P.es5id];
-    else(v = O.Bindings[P]);
-    if (v) {
-        if (v.configurable) {
+    var desc;
+    if (IsSymbol(P)) desc = O.Symbols[P.es5id];
+    else(desc = O.Bindings[P]);
+    if (desc) {
+        if (desc.configurable) {
             if (IsSymbol(P)) {
                 O.Symbols[P.es5id] = undefined;
                 delete O.Symbols[P.es5id];
@@ -10800,7 +10793,7 @@ function OrdinaryObjectGet(O, P, R) {
         if (isAbrupt(parent)) return parent;
         parent = ifAbrupt(parent);
         if (parent === null) return undefined;
-        return parent.Get(P, R);
+        return callInternalSlot("Get", parent, P, R);
     }
     var getter;
     if (IsDataDescriptor(desc)) return desc.value;
@@ -10821,7 +10814,7 @@ function Set(O, P, V, R) {
         parent = GetPrototypeOf(O);
         if (isAbrupt(parent = ifAbrupt(parent))) return parent;
         if (parent !== null) {
-            return parent.Set(P, V, R);
+            return callInternalSlot("Set", parent,P, V, R);
         }
     }
     // von unter isdata hoch gehoben
@@ -10848,7 +10841,7 @@ function Set(O, P, V, R) {
             var valueDesc = {
                 value: V
             };
-            return R.DefineOwnProperty(P, valueDesc);
+            return callInternalSlot("DefineOwnProperty", R, P, valueDesc);
         } else {
             return CreateDataProperty(R, P, V);
         }
@@ -10872,7 +10865,7 @@ function Invoke(O, P, args) {
 function OrdinaryObjectInvoke(O, P, A, R) {
     Assert(IsPropertyKey(P), "expecting property key");
     Assert(Array.isArray(A), "expecting arguments list");
-    var method = O.Get(P, R);
+    var method = callInternalSlot("Get", O, P, R);
     if (isAbrupt(method = ifAbrupt(method))) return method;
     if (Type(method) !== OBJECT) return withError("Type", "Invoke: method " + P + " is not an object");
     if (!IsCallable(method)) return withError("Type", "Invoke: method " + P + " is not callable");
@@ -14272,6 +14265,7 @@ setInternalSlot(DebugFunction, "Call", function debugfunc (thisArg, argList)  {
     }
 
     if (type == OBJECT) {
+
         var isCallable = IsCallable(O);
 
         if (!isCallable)  {
@@ -14298,10 +14292,12 @@ setInternalSlot(DebugFunction, "Call", function debugfunc (thisArg, argList)  {
         console.log(TAB+"[[Extensible]]: " +isExtensible);
 
         console.log(TAB+"[[Bindings]]:");
-        Object.keys(bindings).forEach(printProps.bind(bindings));
-
-        console.log(TAB+"[[Symbols]]");
-        Object.keys(symbols).forEach(printProps.bind(symbols));
+        var printer = printProps.bind(bindings);
+        Object.keys(bindings).forEach(printer);
+        
+        console.log(TAB+"[[Symbols]]:");
+        printer = printProps.bind(symbols);
+        Object.keys(symbols).forEach(printer);
 
         if (IsCallable(O)) {
             var strict = getInternalSlot(O, "Strict");
@@ -24650,7 +24646,8 @@ define("runtime", function () {
         function CompleteMappedArgumentsObject(obj, F, formals, env) {
 
             var len = Get(obj, "length");
-
+	    formals = formals || []; 
+	    env = env || getLexEnv().outer;
             var mappedNames = Object.create(null);
             var numberOfNonRestFormals;
             var i = 0;
