@@ -470,8 +470,7 @@ define("tables", function (require, exports, module) {
     ExprNoneOfs["function"] = true;
     ExprNoneOfs["class"] = true;
     ExprNoneOfs["module"] = true;
-//    ExprNoneOfs["{"] = true;
-    
+    ExprNoneOfs["{"] = true;
 
     var MethodKeyByType = {
         __proto__: null,
@@ -565,19 +564,23 @@ define("tables", function (require, exports, module) {
     };
 
     var PrimaryExpressionByValue = {
-        __proto__: null,
+        
+        __proto__: null,        
         "(": "CoverParenthesizedExpressionAndArrowParameterList",
+        
         "[": "ArrayExpression",	
         "{": "ObjectExpression",
         "class": "ClassExpression",
         "function": "FunctionExpression",
         "this": "ThisExpression",
         "super": "SuperExpression",
+        
         "+": "UnaryExpression",
         "-": "UnaryExpression",
         "~": "UnaryExpression",
         "!!": "UnaryExpression",
         "!": "UnaryExpression"
+        
     };
     var PrimaryExpressionByType = {
         __proto__: null,
@@ -4836,13 +4839,17 @@ define("parser", function () {
         function PrimaryExpression() {
             var fn, node;
             fn = this[PrimaryExpressionByValue[v]];
+            if (fn) debug("PRIMEXPR: BY VALUE "+v);
             if (!fn) fn = this[PrimaryExpressionByType[t]];
+            if (fn) debug("PRIMEXPR: BY TYPE "+t);
             if (!fn && v === "yield") {
             	if (yieldIsId) fn = this.YieldAsIdentifier;
             	else fn = this.YieldExpression;
+            	if (fn) debug("PRIMEXPR: YIELD "+t);
             }
             if (!fn && defaultIsId && v === "default") fn = this.DefaultAsIdentifier;
             if (fn) node = fn.call(this);
+            if (fn) debug("PRIMEXPR: AFTER CALL at "+v+" ("+t+")");
             if (node) return node;
             return null;
         }                
@@ -4970,7 +4977,6 @@ define("parser", function () {
         }
         function PostfixExpression(lhs) {
             var l1 = loc && loc.start;
-            if (v === "(") lhs = this.CoverParenthesizedExpression();
             lhs = lhs || this.LeftHandSideExpression();
             if (lhs && UpdateOperators[v]) {
                 var node = Node("UnaryExpression");
@@ -4983,6 +4989,7 @@ define("parser", function () {
             }
             return lhs;
         }
+
         function UnaryExpression() {
             if (UnaryOperators[v] || UpdateOperators[v]) {
                 var l1 = loc && loc.start;
@@ -4992,7 +4999,7 @@ define("parser", function () {
                 match(v);
                 node.argument = this.UnaryExpression();
                 var l2 = loc && loc.end;
-                if (node.argument == null) throw new SyntaxEror("invalid unary expression "+node.operator+", operand missing " + stringifyLoc(loc));
+                if (node.argument == null) throw new SyntaxError("invalid unary expression "+node.operator+", operand missing " + stringifyLoc(loc));
                 node.loc = makeLoc(l1, l2);
                 return node;
             }
@@ -5202,9 +5209,14 @@ define("parser", function () {
 
         function ExpressionStatement() {
     	    if (!ExprNoneOfs[v] && !(v === "let" && lookahead=="[")) {
-    		    var expr =  this.Expression();
+    		    var expression = this.Expression();
+//    		    if (!expression) return expression;
+    		    
+    		    var node = Node("ExpressionStatement");
+    		    node.expression = expression;
+    		    node.loc = node.expression.loc;
     		    semicolon();
-    		    return expr;
+    		    return node;
     	    }
     	    return null;
         }
@@ -5215,6 +5227,7 @@ define("parser", function () {
             node.loc = makeLoc(l1, l2);
             return node;
         }
+
         function Expression(parenthesized) {
             var list = [];
             var node;
@@ -5233,16 +5246,15 @@ define("parser", function () {
 
             l2 = loc && loc.end;
             switch (list.length) {
-                case 0:
-                    return null;
+                case 0: return null;
                 case 1:
                     node = list[0];
                     if (parenthesized) return this.ParenthesizedExpressionNode(node, l1, l2);
-                    return this.ExpressionStatementNode(node, l1, l2);
+                    return node;
                 default:
                     node = this.SequenceExpressionNode(list, l1, l2);
                     if (parenthesized) return this.ParenthesizedExpressionNode(node, l1, l2);
-                    else return node;
+                    return node;
             }
         }
 
