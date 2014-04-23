@@ -4977,7 +4977,7 @@ define("parser", function () {
         }
         function PostfixExpression(lhs) {
             var l1 = loc && loc.start;
-            lhs = lhs || this.LeftHandSideExpression();
+            lhs = lhs || this.CoverParenthesisedExpressionAndArrowParameterList() || this.LeftHandSideExpression();
             if (lhs && UpdateOperators[v]) {
                 var node = Node("UnaryExpression");
                 node.operator = v;
@@ -4997,7 +4997,8 @@ define("parser", function () {
                 node.operator = v;
                 node.prefix = true;
                 match(v);
-                node.argument = this.UnaryExpression();
+                if (UnaryOperators[v]) node.argument = this.UnaryExpression();
+                else node.argument = this.PostfixExpression();
                 var l2 = loc && loc.end;
                 if (node.argument == null) throw new SyntaxError("invalid unary expression "+node.operator+", operand missing " + stringifyLoc(loc));
                 node.loc = makeLoc(l1, l2);
@@ -5005,28 +5006,8 @@ define("parser", function () {
             }
             return this.PostfixExpression();
         }
-        function getLeftHandSide(leftHand) {
-           	leftHand = leftHand || this.PrimaryExpression();
-           	if (!leftHand) return null;
-           	if (v === "." || v === "[") {
-           		console.log("member = "+v)
-           		leftHand = this.MemberExpression(leftHand);
-           	} else if (v === "(" || v == "`") {
-           		console.log("call = "+v)
-           		leftHand = this.CallExpression(leftHand);
-           	} else if (v == "++" || v === "--") {
-           		console.log("postfix = "+v)
-           		leftHand = this.PostfixExpression(leftHand);
 
-           	}        	                             
-            else if (!leftHand) return null;
-            else if (v === undefined) return leftHand;
-            else if ((isNoIn && InOrOf[v])) return leftHand;
-            else if (v === "," || ExprEndOfs[v] || ltLast) return leftHand;
-            else if (t !== "Punctuator" && !InOrOfInsOf[v]) return leftHand;            
-            return leftHand;
-        }
-        function getAssignmentRight(leftHand, l1) {
+        function AssignmentExpressionRightHandSide(leftHand, l1) {
 				var node = Node("AssignmentExpression");
                 node.longName = PunctToExprName[v];
                 node.operator = v;
@@ -5040,7 +5021,8 @@ define("parser", function () {
                 if (v == "?") return this.ConditionalExpressionNoIn(node);
                 return node;
         }
-        function getBinaryRight(leftHand, l1) {
+
+        function BinaryExpressionRightHandSide(leftHand, l1) {
 				var node = Node("BinaryExpression");
                 node.longName = PunctToExprName[v];
                 node.operator = v;
@@ -5057,78 +5039,20 @@ define("parser", function () {
                 return node;
         }
 
-		function new_AssignmentExpression() {
+	    function AssignmentExpression() {
             var node = null, leftHand, l1, l2;
             l1 = loc && loc.start;                       
-            var leftHand = getLeftHandSide.call(this) || this.UnaryExpression();
+            var leftHand = this.UnaryExpression();
             if (AssignmentOperators[v] && (!isNoIn || (isNoIn && v != "in"))) {
-                return getAssignmentRight.call(this, leftHand, l1);                
+                return this.AssignmentExpressionRightHandSide(leftHand, l1);
             } else if (BinaryOperators[v] && (!isNoIn || (isNoIn && v != "in"))) {
-                return getBinaryRight.call(this, leftHand, l1);
+                return this.BinaryExpressionRightHandSide(leftHand, l1);
             } else {
                 return leftHand;
             }
             return null;
         }
 
-        function AssignmentExpression() {
-            var node = null, leftHand, l1, l2;
-            l1 = loc && loc.start;
-            /*
-                the
-                primaryexpression
-                memberexpression
-                callexpression
-                newexpression
-                is a little bit out of order here
-             */         
-            //if (!yieldIsId && v === "yield") leftHand = this.YieldExpression();
-            if (!leftHand) leftHand = this.CoverParenthesisedExpressionAndArrowParameterList();
-            leftHand = leftHand || this.UnaryExpression();
-            if (!leftHand) return null;
-            if (v === undefined || ltLast) return leftHand;
-            if ((isNoIn && InOrOf[v])) return leftHand;
-            if (v === "," || ExprEndOfs[v] || ltNext) return leftHand;
-            if (t !== "Punctuator" && !InOrOfInsOf[v]) return leftHand;
-
-            if (v === "." || v === "[") leftHand = this.MemberExpression(leftHand);
-            else if (v === "(" || v === "`") leftHand = this.CallExpression(leftHand);
-            else if (v == "++" || v == "--") leftHand = this.PostfixExpression(leftHand);
-    	    else if (v === "?") return this.ConditionalExpressionNoIn(leftHand);
-
-
-            if (AssignmentOperators[v] && (!isNoIn || (isNoIn && v != "in"))) {
-                node = Node("AssignmentExpression");
-                node.longName = PunctToExprName[v];
-                node.operator = v;
-                node.left = leftHand;                
-                match(v);
-                node.right = this.AssignmentExpressionNoIn(node);
-                if (!node.right) throw new SyntaxError("can not parse a valid righthandside for this assignment expression"+atLineCol());
-                l2 = loc && loc.end;
-                node.loc = makeLoc(l1, l2);
-                node = rotate_binexps(node);
-                if (v == "?") return this.ConditionalExpressionNoIn(node);
-                return node;
-            } else if (BinaryOperators[v] && (!isNoIn || (isNoIn && v != "in"))) {
-                node = Node("BinaryExpression");
-                node.longName = PunctToExprName[v];
-                node.operator = v;
-                node.left = leftHand;
-                match(v);
-                node.right = this.AssignmentExpression();
-                if (!node.right) {
-                    throw new SyntaxError("can not parse a valid righthandside for this binary expression "+atLineCol());
-                }
-                l2 = loc && loc.end;
-                node.loc = makeLoc(l1, l2);
-                node = rotate_binexps(node);
-                if (v == "?") return this.ConditionalExpressionNoIn(node);
-                return node;
-            } else {
-                return leftHand;
-            }
-        }
         function CallExpression(callee) {
             var node, tmp, l1, l2;
             l1 = l2 = (loc && loc.start);
@@ -5210,8 +5134,6 @@ define("parser", function () {
         function ExpressionStatement() {
     	    if (!ExprNoneOfs[v] && !(v === "let" && lookahead=="[")) {
     		    var expression = this.Expression();
-//    		    if (!expression) return expression;
-    		    
     		    var node = Node("ExpressionStatement");
     		    node.expression = expression;
     		    node.loc = node.expression.loc;
@@ -5220,6 +5142,7 @@ define("parser", function () {
     	    }
     	    return null;
         }
+
 
         function SequenceExpressionNode(list, l1, l2) {
             var node = Node("SequenceExpression");
@@ -6763,6 +6686,8 @@ define("parser", function () {
             return node;
         }
         parser.ExpressionStatement = ExpressionStatement;
+        parser.AssignmentExpressionRightHandSide = AssignmentExpressionRightHandSide;
+        parser.BinaryExpressionRightHandSide = BinaryExpressionRightHandSide;
         parser.JSONText = JSONText;
         parser.JSONValue = JSONValue;
         parser.JSONString = JSONString;

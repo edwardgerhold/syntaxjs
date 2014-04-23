@@ -1,0 +1,12 @@
+{
+	"Fixing the BIG BAD BUG: Testing the Expressions":
+	{
+	    "init": 		
+		"let a; if (!(false)) a = true; else a = false; ",
+	    "tests": 
+	    [
+		["a", true]
+	    ]
+	}
+
+}
