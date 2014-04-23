@@ -403,8 +403,29 @@ define("filesystem", function (require, exports) {
 define("tables", function (require, exports, module) {
 
     "use strict";
-    
-    var FewUnaryKeywords = { // for regex in the tokenizer
+
+
+    var captureExtraTypes = {
+        __proto__:null,
+        "WhiteSpace":true,
+        "LineTerminator": true,
+        "MultiLineComment":true,
+        "LineComment":true
+    };
+    var captureExtraValues = {
+        __proto__: null,
+        "(": true,
+        ")": true,
+        "[": true,
+        "]": true,
+        "}": true,
+        "{": true,
+        ";": true,
+        ":": true,
+        ",": true
+    };
+
+    var FewUnaryKeywords = { // for setting input element regex in the standalone version of the tokenizer
 	__proto_:null,
 	"yield":true, // yield inputelement=regexp nolthere assignmentexpr 
 	"void": true,
@@ -1839,7 +1860,6 @@ define("tables", function (require, exports, module) {
     exports.CharacterClassEscape = CharacterClassEscape;
     exports.ControlLetter = ControlLetter;
     exports.ControlEscape = ControlEscape;
-
     exports.DOM = DOM;
     exports.HTML5Objects = HTML5Objects;
     exports.NodeJSObjects = NodeJSObjects;
@@ -3938,7 +3958,7 @@ define("parser", function () {
         var ExprEndOfs = tables.ExprEndOfs;
         var ast;
         var ltNext;
-        var ltLast;
+        var ltPassedBy;
         var gotSemi;
         var tokens;
         var token = Object.create(null);
@@ -3991,27 +4011,10 @@ define("parser", function () {
         var BoundNames = require("slower-static-semantics").BoundNames;
         var nodeId = 1;
 
-        var captureExtraTypes = {
-            __proto__:null,
-            "WhiteSpace":true,
-            "LineTerminator": true,
-            "MultiLineComment":true,
-            "LineComment":true
-        };
-        var captureExtraValues = {
-            __proto__: null,
-            "(": true,
-            ")": true,
-            "[": true,
-            "]": true,
-            "}": true,
-            "{": true,
-            ";": true,
-            ":": true,
-            ",": true
-        };
         var withExtras = false;
         var extraBuffer = [];
+        var captureExtrasByValue = tables.captureExtrasByValue;
+        var captureExtrasByType = tables.captureExtrasByType;
         function newExtrasNode(data) {
             var node = Node("Extras");
             if (data) node.extras = data;
@@ -4038,6 +4041,7 @@ define("parser", function () {
             node.extras[prop] = extraBuffer;
             extraBuffer = [];
         }
+
         function startLoc() {
             return loc && loc.start;
         }
@@ -4276,7 +4280,7 @@ define("parser", function () {
                 }
                 lookaheadToken = tokenize.nextToken();
                 if (lookaheadToken) {
-            	    ltLast = ltNext;
+            	    ltPassedBy = ltNext;
                     lookahead = lookaheadToken.value;
                     lookaheadType = lookaheadToken.type;
                     ltNext = tokenize.ltNext;
@@ -4311,7 +4315,7 @@ define("parser", function () {
             var lookahead;
             var b = 0;
             var t;
-            ltLast = ltNext;
+            ltPassedBy = ltNext;
             ltNext = false;
             for(;;) {
                 b++;
@@ -4901,7 +4905,7 @@ define("parser", function () {
                         // MemberExpression ! Identifier
                         // setzt .eventual auf true
                     } */ else {
-                        throw new SyntaxError("MemberExpression . Identifier expects a valid IdentifierString or an IntegerString as PropertyKey"+atLineCol());
+                        throw new SyntaxError("MemberExpression . Identifier expects a valid IdentifierString or an Integer or null,true,false as PropertyKey"+atLineCol());
                     }
                     node.property = property;
                     
@@ -5163,7 +5167,7 @@ define("parser", function () {
                 if (v === ",") {
                     match(",");
                     continue;
-                } else if (ltLast || ExprEndOfs[v] || v == undefined) break;
+                } else if (ltPassedBy || ExprEndOfs[v] || v == undefined) break;
                 else throw new SyntaxError("invalid expression "+atLineCol());
             } while (v !== undefined);
 
@@ -5340,7 +5344,7 @@ define("parser", function () {
                 } else if (v === ";") {
                     match(";");
                     break;
-                } else if (ltLast) {
+                } else if (ltPassedBy) {
                     break;
                 } else if (v === undefined) {
                     break;
@@ -5716,7 +5720,7 @@ define("parser", function () {
                 node = Node("BreakStatement");
                 match("break");
                 if (v !== ";") {
-                    if (ltLast) {
+                    if (ltPassedBy) {
                         l2 = loc && loc.start;
                 	node.loc = makeLoc(l1,l2);
                 	return node;
@@ -5741,7 +5745,7 @@ define("parser", function () {
                 l1 = loc && loc.start;
                 match("continue");
                 if (v !== ";") {
-                    if (ltLast) {
+                    if (ltPassedBy) {
                 	l2 = loc && loc.start;
                 	node.loc = makeLoc(l1,l2);
                 	return node;
@@ -5766,7 +5770,7 @@ define("parser", function () {
                 match("return");
                 if (withExtras && extraBuffer.length) dumpExtras2(node, "after");
                 if (v !== ";") {
-                    if (ltLast) {
+                    if (ltPassedBy) {
                         l2 = loc && loc.end;
                         node.loc = makeLoc(l1, l2);
                         return node;
@@ -5787,7 +5791,7 @@ define("parser", function () {
                 l1 = loc && loc.start;
                 match("throw");
                 if (v !== ";") {
-                    if (ltLast) { 
+                    if (ltPassedBy) { 
                         l2 = loc && loc.end;
                         node.loc = makeLoc(l1, l2);
                         return node;
@@ -14986,7 +14990,6 @@ function AsyncStartLoadPartwayThrough() {
         var name = state.ModuleName;
         var step = state.Step;
         var source = state.ModuleSource;
-
         if (hasRecordInList(loader.Modules, "Name", name)) return withError("Type", "Got name in loader.Modules");
         if (hasRecordInList(loader.Loads, "Name", name)) return withError("Type", "loader.Loads contains another entry with name '"+name+"'");
         var load = CreateLoad(name);
@@ -15059,7 +15062,6 @@ function LinkSet(loader, loads, done, resolve, reject) {
     ls.Done = done;
     ls.Resolve = resolve;
     ls.Reject = reject;
-    ls.constructor = LinkSet;
     return ls;
 }
 LinkSet.prototype.toString = function () { return "[object LinkSet]"; };
@@ -15509,8 +15511,25 @@ function EnsureEvaluated(mod, seen, loader) {
 
 
 
-// remaining
+var ReturnUndefined_Call = function (thisArg, argList) {
+    return NormalCompletion(undefined);
+};
 
+var ConstantFunction_Call = function (thisArg, argList) {
+    return getInternalSlot(this, "ConstantValue");
+};
+
+function CreateConstantGetter(key, value) {
+    var getter = CreateBuiltinFunction(getRealm(), ConstantFunction_Call, 0, "get " + key);
+    setInternalSlot(getter, "ConstantValue", value);
+    return getter;
+}
+
+function ReturnUndefined() {
+    var F = OrdinaryFunction();
+    setInternalSlot(F, "Call", ReturnUndefined_Call);
+    return F;
+}
 
 function IterableToList(iterable) {
     //debug2("iterable2list");
@@ -15658,16 +15677,6 @@ var LoaderPrototype_get_global = function (thisArg, argList) {
     var global = realm.globalThis;
     return NormalCompletion(global);
 };
-
-var ReturnUndefined_Call = function (thisArg, argList) {
-    return NormalCompletion(undefined);
-};
-
-function ReturnUndefined() {
-    var F = OrdinaryFunction();
-    setInternalSlot(F, "Call", ReturnUndefined_Call);
-    return F;
-}
 
 // 31.1.
 var LoaderPrototype_entries = function (thisArg, argList) {
@@ -15928,18 +15937,6 @@ function newModule (obj) {
     callInternalSlot("PreventExtensions", mod);
     return NormalCompletion(mod);
 }
-
-var ConstantFunction_Call = function (thisArg, argList) {
-    return getInternalSlot(this, "ConstantValue");
-};
-
-function CreateConstantGetter(key, value) {
-    var getter = CreateBuiltinFunction(getRealm(), ConstantFunction_Call, 0, "get " + key);
-    setInternalSlot(getter, "ConstantValue", value);
-    return getter;
-}
-
-
 
 // ===========================================================================================================
 // Console (add-on, with console.log);

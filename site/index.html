@@ -68,7 +68,7 @@ window.addEventListener("load", function (e) {
     evaluate.addEventListener("click", function (e) {
 	var text = input.value;
 	try {
-	    var result = syntaxjs.toValue(text);
+	    var result = syntaxjs.eval(text);
 	    output.innerHTML = "<pre>"+result+"</pre>";
 	} catch (ex) {
     	    output.innerHTML = "<pre>"+ex.message+ex.stack+"</pre>;
@@ -77,7 +77,7 @@ window.addEventListener("load", function (e) {
     shelleval.addEventListener("click", function (e) {
 	var text = input.value;
 	try {
-	    var result = syntaxjs.toValue(text);
+	    var result = syntaxjs.eval(text);
 	    output.innerHTML += "<pre class='normal-result'>"+result+"</pre>";
 	} catch (ex) {
     	    output.innerHTML += "<pre class='abrupt-result'>"+ex.message+ex.stack+"</pre>;
@@ -85,7 +85,7 @@ window.addEventListener("load", function (e) {
     }, false);    
     ast.addEventListener("click", function (e) {
     	var text = input.value;
-	var result = syntaxjs.createAst(text);
+	var result = syntaxjs.parse(text);
 	output.innerHTML = "<pre>"+syntaxjs.highlight(JSON.stringify(result, null, 4))+"</pre>";
     }, false);
     tokens.addEventListener("click", function (e) {
