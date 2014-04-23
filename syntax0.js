@@ -535,28 +535,6 @@ define("tables", function (require, exports, module) {
         "default": true
     };
 
-    var PrimaryValues = {
-        __proto__: null,
-        "function": "FunctionExpression",
-        "this": "ThisExpression",
-        "class": "ClassExpression",
-        "super": "SuperExpression"
-    };
-
-    var PrimaryTypes = {
-        __proto__: null,
-        "TemplateLiteral": "TemplateLiteral",
-        "Identifier": "Identifier",
-        "StringLiteral": "Literal",
-        "NumericLiteral": "Literal",
-        "BooleanLiteral": "Literal",
-        "NullLiteral": "Literal",
-        "Literal": "Literal",
-        "ArrayExpression": "ArrayExpression",
-        "ObjectExpression": "ObjectExpression",
-        "ArrayComprehension": "ArrayComprehension"
-    };
-
     var varKinds = {
         "var": true,
         "let": true,
@@ -594,7 +572,12 @@ define("tables", function (require, exports, module) {
         "class": "ClassExpression",
         "function": "FunctionExpression",
         "this": "ThisExpression",
-        "super": "SuperExpression"
+        "super": "SuperExpression",
+        "+": "UnaryExpression",
+        "-": "UnaryExpression",
+        "~": "UnaryExpression",
+        "!!": "UnaryExpression",
+        "!": "UnaryExpression"
     };
     var PrimaryExpressionByType = {
         __proto__: null,
@@ -1831,9 +1814,7 @@ define("tables", function (require, exports, module) {
     exports.isStrictDirective = isStrictDirective;
     exports.isAsmDirective = isAsmDirective;
     exports.FinishStatementList = FinishStatementList;
-    exports.FinishSwitchStatementList = FinishSwitchStatementList;
-    exports.PrimaryValues = PrimaryValues;
-    exports.PrimaryTypes = PrimaryTypes;
+    exports.FinishSwitchStatementList = FinishSwitchStatementList;    
     exports.varKinds = varKinds;
     exports.StatementParsers = StatementParsers;
     exports.PrimaryExpressionByValue = PrimaryExpressionByValue;
@@ -4347,8 +4328,9 @@ define("parser", function () {
             return lookahead != undefined;
         }
         function nextToken () {
-            return tokenizer.next();
+            return tokenize.nextToken();
         }
+        
         function stringifyLoc(loc) {
             var str = "";
             if (!loc) return str;
@@ -4537,8 +4519,14 @@ define("parser", function () {
             }
             return null;
         }
+        /*function isGeneratorNode(node) {
+    	    return node.generator || node.type == "GeneratorDeclaration" || node.type == "GeneratorExpression";
+        }*/
         function YieldExpression() {
-            if (v === "yield" && !yieldIsId) {
+            if (v === "yield" && !yieldIsId) {            
+                /*if (!isGeneratorNode(currentNode)) {
+            	    throw new SyntaxError("yield expressions are not allowed outside of generators");
+                }*/
                 match("yield");
                 var node = Node("YieldExpression");
                 node.argument = this.Expression();
@@ -4844,43 +4832,72 @@ define("parser", function () {
             }
             return null;
         }
-        
-        
+
+        function PrimaryExpression() {
+            var fn, node;
+            fn = this[PrimaryExpressionByValue[v]];
+            if (!fn) fn = this[PrimaryExpressionByType[t]];
+            if (!fn && v === "yield") {
+            	if (yieldIsId) fn = this.YieldAsIdentifier;
+            	else fn = this.YieldExpression;
+            }
+            if (!fn && defaultIsId && v === "default") fn = this.DefaultAsIdentifier;
+            if (fn) node = fn.call(this);
+            if (node) return node;
+            return null;
+        }                
 
         function MemberExpression(obj) {
-            var node, l1, l2;
-            obj = obj || this.PrimaryExpression();
-            if (obj) {
+            var node, l1, l2;                        
+            if (obj = obj || this.PrimaryExpression()) {
+
                 l1 = obj.loc && obj.loc.start;
                 var node = Node("MemberExpression");
                 node.object = obj;
             
-                if (t === "TemplateLiteral") return this.CallExpression(obj);
-                else if (v === "[") {
+                if (t === "TemplateLiteral") {
+                	return this.CallExpression(obj);
+                } else if (v === "[") {
                     match("[");
                     node.computed = true;
                     node.property = this.AssignmentExpression();
-                    match("]");
-            
+                    match("]");               
                 } else if (v === ".") {
                     match(".");
                     node.computed = false;
-                    if (t === "Identifier" || t === "Keyword" || propKeys[v] || t === "NumericLiteral") {
-                        var property = Object.create(null);
+                    var property = Object.create(null);
+                    if (t === "Identifier" || t === "Keyword" || propKeys[v] || t === "NumericLiteral") {                        
                         property.type = "Identifier";
                         property.name = v;
-                        property.loc = token.loc;
-                        node.property = property;
-                    } else if (v === "!") {
+                        property.loc = token.loc;                        
+                        match(v);
+                    } /*else if (v === "!") {
+                    	match("!");
+						if (v == "[") {
+							var 
+
+						} else if (v == "(") {
+							var args = this.Arguments();
+															
+	
+						} else if (t === "Identifier") {
+							property = Object.create(null);
+							property.name = v;
+						}
+						property.eventual = true;
+						node.eventual = true;
+						
+
                         // http://wiki.ecmascript.org/doku.php?id=strawman:concurrency
                         // MemberExpression ! [Expression]
                         // MemberExpression ! Arguments
                         // MemberExpression ! Identifier
                         // setzt .eventual auf true
-                    } else {
+                    } */ else {
                         throw new SyntaxError("MemberExpression . Identifier expects a valid IdentifierString or an IntegerString as PropertyKey"+atLineCol());
                     }
-                    match(v);
+                    node.property = property;
+                    
 
                 } else {
                 
@@ -4928,16 +4945,6 @@ define("parser", function () {
             return null;
         }
 
-        function PrimaryExpression() {
-            var fn, node;
-            fn = this[PrimaryExpressionByValue[v]];
-            if (!fn) fn = this[PrimaryExpressionByType[t]];
-            if (!fn && yieldIsId && v === "yield") fn = this.YieldAsIdentifier;
-            if (!fn && defaultIsId && v === "default") fn = this.DefaultAsIdentifier;
-            if (fn) node = fn.call(this);
-            if (node) return node;
-            return null;
-        }
         function ConditionalExpressionNoIn(left) {
             noInStack.push(isNoIn);
             isNoIn = true;
@@ -4985,12 +4992,78 @@ define("parser", function () {
                 match(v);
                 node.argument = this.UnaryExpression();
                 var l2 = loc && loc.end;
-                if (node.argument == null) throw new SyntaxError("invalid unary expression "+node.operator+", operand missing " + stringifyLoc(loc));
+                if (node.argument == null) throw new SyntaxEror("invalid unary expression "+node.operator+", operand missing " + stringifyLoc(loc));
                 node.loc = makeLoc(l1, l2);
                 return node;
             }
             return this.PostfixExpression();
         }
+        function getLeftHandSide(leftHand) {
+           	leftHand = leftHand || this.PrimaryExpression();
+           	if (!leftHand) return null;
+           	if (v === "." || v === "[") {
+           		console.log("member = "+v)
+           		leftHand = this.MemberExpression(leftHand);
+           	} else if (v === "(" || v == "`") {
+           		console.log("call = "+v)
+           		leftHand = this.CallExpression(leftHand);
+           	} else if (v == "++" || v === "--") {
+           		console.log("postfix = "+v)
+           		leftHand = this.PostfixExpression(leftHand);
+
+           	}        	                             
+            else if (!leftHand) return null;
+            else if (v === undefined) return leftHand;
+            else if ((isNoIn && InOrOf[v])) return leftHand;
+            else if (v === "," || ExprEndOfs[v] || ltLast) return leftHand;
+            else if (t !== "Punctuator" && !InOrOfInsOf[v]) return leftHand;            
+            return leftHand;
+        }
+        function getAssignmentRight(leftHand, l1) {
+				var node = Node("AssignmentExpression");
+                node.longName = PunctToExprName[v];
+                node.operator = v;
+                node.left = leftHand;                
+                match(v);
+                node.right = this.AssignmentExpressionNoIn(node);
+                if (!node.right) throw new SyntaxError("can not parse a valid righthandside for this assignment expression"+atLineCol());
+                var l2 = loc && loc.end;
+                node.loc = makeLoc(l1, l2);
+                node = rotate_binexps(node);
+                if (v == "?") return this.ConditionalExpressionNoIn(node);
+                return node;
+        }
+        function getBinaryRight(leftHand, l1) {
+				var node = Node("BinaryExpression");
+                node.longName = PunctToExprName[v];
+                node.operator = v;
+                node.left = leftHand;
+                match(v);
+                node.right = this.AssignmentExpression();
+                if (!node.right) {
+                    throw new SyntaxError("can not parse a valid righthandside for this binary expression "+atLineCol());
+                }
+                var l2 = loc && loc.end;
+                node.loc = makeLoc(l1, l2);
+                node = rotate_binexps(node);
+                if (v == "?") return this.ConditionalExpressionNoIn(node);
+                return node;
+        }
+
+		function new_AssignmentExpression() {
+            var node = null, leftHand, l1, l2;
+            l1 = loc && loc.start;                       
+            var leftHand = getLeftHandSide.call(this) || this.UnaryExpression();
+            if (AssignmentOperators[v] && (!isNoIn || (isNoIn && v != "in"))) {
+                return getAssignmentRight.call(this, leftHand, l1);                
+            } else if (BinaryOperators[v] && (!isNoIn || (isNoIn && v != "in"))) {
+                return getBinaryRight.call(this, leftHand, l1);
+            } else {
+                return leftHand;
+            }
+            return null;
+        }
+
         function AssignmentExpression() {
             var node = null, leftHand, l1, l2;
             l1 = loc && loc.start;
@@ -5001,12 +5074,12 @@ define("parser", function () {
                 callexpression
                 newexpression
                 is a little bit out of order here
-             */
-            if (!yieldIsId && v === "yield") leftHand = this.YieldExpression();
+             */         
+            //if (!yieldIsId && v === "yield") leftHand = this.YieldExpression();
             if (!leftHand) leftHand = this.CoverParenthesisedExpressionAndArrowParameterList();
             leftHand = leftHand || this.UnaryExpression();
             if (!leftHand) return null;
-            if (v === undefined) return leftHand;
+            if (v === undefined || ltLast) return leftHand;
             if ((isNoIn && InOrOf[v])) return leftHand;
             if (v === "," || ExprEndOfs[v] || ltNext) return leftHand;
             if (t !== "Punctuator" && !InOrOfInsOf[v]) return leftHand;
@@ -5016,13 +5089,12 @@ define("parser", function () {
             else if (v == "++" || v == "--") leftHand = this.PostfixExpression(leftHand);
     	    else if (v === "?") return this.ConditionalExpressionNoIn(leftHand);
 
+
             if (AssignmentOperators[v] && (!isNoIn || (isNoIn && v != "in"))) {
                 node = Node("AssignmentExpression");
-
                 node.longName = PunctToExprName[v];
                 node.operator = v;
-                node.left = leftHand;
-                // debug(v);
+                node.left = leftHand;                
                 match(v);
                 node.right = this.AssignmentExpressionNoIn(node);
                 if (!node.right) throw new SyntaxError("can not parse a valid righthandside for this assignment expression"+atLineCol());
@@ -5058,13 +5130,13 @@ define("parser", function () {
                 node = Node("CallExpression");
                 node.callee = callee;
                 node.arguments = null;
-                if (t === "TemplateLiteral") {
+                if (t === "TemplateLiteral") {                
                     var template = this.TemplateLiteral();
                     node.arguments = [ template ];
                     l2 = loc && loc.end;
                     node.loc = makeLoc(l1, l2);
                     if (compile) return builder.callExpression(node.callee, node.arguments, node.loc);
-                    return node;
+                    return node;                
                 } else if (v === "(") {
                     node.arguments = this.Arguments();
                     if (v === "(") {
@@ -5102,7 +5174,11 @@ define("parser", function () {
                     if (callee && callee.type === "CallExpression") {
                         node = callee;
                         node.type = "NewExpression";
-                    } else node.callee = callee;
+                    } else if (callee === null || callee === undefined) {
+                    	throw new SyntaxError("NewExpression: can not identify callee");
+                    } else {
+                    	node.callee = callee;
+                   	}
                 }
                 l2 = loc && loc.end;
                 node.loc = makeLoc(l1, l2);
@@ -5141,15 +5217,12 @@ define("parser", function () {
             do {
                 if (hasStop && v === stop) break;
                 if (ae = this.AssignmentExpression()) list.push(ae);
+
                 if (hasStop && v === stop) break;
                 if (v === ",") {
                     match(",");
                     continue;
-                } else if (ltLast) {
-                    break;
-                } else if (ExprEndOfs[v]) {
-                    break;
-                } else if (v === undefined) {
+                } else if (ltLast || ExprEndOfs[v] || v == undefined) {                
                     break;
                 } else {
         	    throw new SyntaxError("invalid expression statement "+atLineCol());
@@ -5170,6 +5243,7 @@ define("parser", function () {
                     else return node;
             }
         }
+
         function SuperExpression() {
             if (v === "super") {
                 var l1 = loc && loc.start;
@@ -5709,7 +5783,7 @@ define("parser", function () {
                         l2 = loc && loc.start;
                 	node.loc = makeLoc(l1,l2);
                 	return node;
-                	return node;
+
             	    }
                     if (t === "Identifier") {
                         var id = this.Identifier();
@@ -5937,6 +6011,8 @@ define("parser", function () {
                     if (!Contains.ModuleDeclaration[item.type]) list.push(item);
                     else throw new SyntaxError("contains: "+item.type+" not allowed in ModuleDeclarations" + atLineCol());
 
+                } else {
+            	
                 }
             }
             match("}");
@@ -6942,7 +7018,7 @@ define("regexp-parser", function (require, exports) {
                     node.atom = this.CharacterClass();
                     break;
                 case "(":
-                    match("(");;
+                    match("(");
                     if (ch == "?" && lookhead == ":") {
                         match("?");
                         match(":");
@@ -8673,6 +8749,7 @@ CodeRealm.prototype.fileToValue =
         }
     };
 
+
 CodeRealm.prototype.eval =
     CodeRealm.prototype.toValue = function (code) {
         // overhead save realm
@@ -8685,9 +8762,11 @@ CodeRealm.prototype.eval =
             var error = result.value;
             var ex = new Error(Get(error, "message"));
             ex.name = Get(error, "name");
+            ex.stack = Get(error,"stack");
             throw ex;
         }
         restoreCodeRealm();
+	var taskResults = NextTask(undefined, getTasks(getRealm(), "PromiseTasks"));
         return result;
     };
 
@@ -11560,6 +11639,16 @@ function WeekDay (t) {
     return ((Day(t) + 4) % 7);
 }
 
+function BetterComplicatedResumableEvaluationAlgorithmForASTVisitorsWithoutStack(generator, body) {
+    /*
+	Here is Space to handle all relevant nodes
+	to reenter, where to restore pointer, what
+	to pop of the code eval stack getContext().state    
+    */
+    
+    return exports.Evaluate(body);
+}
+
 
 function printCodeEvaluationState() {
 
@@ -11573,16 +11662,15 @@ function printCodeEvaluationState() {
 }
 
 function Steps_GeneratorStart(generator, body) {
-    printCodeEvaluationState();
-    var result = exports.Evaluate(body);
+    var result = BetterComplicatedResumableEvaluationAlgorithmForASTVisitorsWithoutStack(generator, body);
+    
     if (isAbrupt(result = ifAbrupt(result))) return result;
     if (isAbrupt(result = ifAbrupt(result)) && result.type === "return") {
-        if (hasConsole) console.log("##resumeGeneratorWrong() Condition##");
         setInternalSlot(generator, "GeneratorState", "completed");
         if (isAbrupt(result = ifAbrupt(result))) return result;
         getContext().resumeGenerator = undefined;
         return CreateItrResultObject(result, true);
-    }
+    }    
     return NormalCompletion(result);
 }
 
@@ -12983,6 +13071,7 @@ function TaskQueue() {
 function makeTaskQueues(realm) {
     realm.LoadingTasks = TaskQueue();
     realm.PromiseTasks = TaskQueue();
+    realm.TimerTasks = TaskQueue();
 }
 
 function getTasks(realm, name) {
@@ -12992,7 +13081,8 @@ function getTasks(realm, name) {
 var queueNames = {
     __proto__:null,
     "LoadingTasks": true,
-    "PromiseTasks": true
+    "PromiseTasks": true,
+    "TimerTasks": true      // added for setTimeout
 };
 
 function EnqueueTask(queueName, task, args) {
@@ -13002,13 +13092,13 @@ function EnqueueTask(queueName, task, args) {
 
     var callerContext = getContext();
     var callerRealm = getRealm();
-
     var pending = PendingTaskRecord(task, args, callerRealm);
-    
     switch(queueName) {
-        case "PromiseTasks": realm.PromiseTasks.push(pending);
+        case "PromiseTasks": callerRealm.PromiseTasks.push(pending);
             break;
-        case "LoadingTasks": realm.LoadingTasks.push(pending);
+        case "LoadingTasks": callerRealm.LoadingTasks.push(pending);
+            break;
+        case "TimerTasks": callerRealm.TimerTasks.push(pending);
             break;
     }
     return NormalCompletion(empty);
@@ -13029,6 +13119,7 @@ function NextTask (result, nextQueue) {
     getStack().push(newContext);
     
 //    console.dir(nextPending);
+
     var result = callInternalSlot("Call", nextPending.Task, undefined, nextPending.Arguments);
     
     if (isAbrupt(result=ifAbrupt(result))) {
@@ -13043,6 +13134,7 @@ function NextTask (result, nextQueue) {
             }
         }
     }
+
     getStack().pop();
 }
 
@@ -15843,8 +15935,9 @@ var LoaderPrototype_instantiate = function (thisArg, argList) {
 };
 var LoaderPrototype_$$iterator = LoaderPrototype_entries;
 
-// Loader
 
+
+// Loader
 setInternalSlot(LoaderConstructor, "Prototype", FunctionPrototype);
 setInternalSlot(LoaderConstructor, "Call", LoaderConstructor_Call);
 setInternalSlot(LoaderConstructor, "Construct", LoaderConstructor_Construct);
@@ -15906,6 +15999,8 @@ function CreateConstantGetter(key, value) {
     setInternalSlot(getter, "ConstantValue", value);
     return getter;
 }
+
+
 
 // ===========================================================================================================
 // Console (add-on, with console.log);
@@ -17070,7 +17165,7 @@ var ArrayPrototype_reduce = function reduce(thisArg, argList) {
         kPresent = HasProperty(O, Pk);
         if (kPresent) {
             var kValue = Get(O, Pk);
-            if (isAbrupt(kPresent = ifAbrupt(kPresent)));
+            if (isAbrupt(kPresent = ifAbrupt(kPresent))) return kPresent;
             accumulator = callInternalSlot("Call", callback, undefined, [accumulator, kValue, k, O]);
             if (isAbrupt(accumulator=ifAbrupt(accumulator))) return accumulator;
         }
@@ -18978,7 +19073,7 @@ setInternalSlot(NumberConstructor, "Call", function (thisArg, argList) {
     if (argList.length === 0) n = +0;
     else n = ToNumber(value);
     if (isAbrupt(n = ifAbrupt(n))) return n;
-    if (Type(O) === OBJECT /*&& hasInternalSlot(O, "NumberData")*/ && getInternalSlot(O, "NumberData") === undefined) {
+    if (Type(O) === OBJECT && hasInternalSlot(O, "NumberData") && getInternalSlot(O, "NumberData") === undefined) {
         setInternalSlot(O, "NumberData", n);
         return O;
     }
@@ -19017,6 +19112,7 @@ var NumberConstructor_isInteger = function (thisArg, argList) {
         number === +Infinity || number === -Infinity) return NormalCompletion(false);
     return NormalCompletion(true);
 };
+
 var NumberPrototype_clz = function (thisArg, argList) {
     var x = thisNumberValue(thisArg);
     if (isAbrupt(x = ifAbrupt(x))) return x;
@@ -19055,13 +19151,10 @@ var NumberPrototype_toPrecision = function (thisArg, argList) {
     }
     if (x === +Infinity || x === -Infinity) {
         return NormalCompletion(s + "Infinity");
-
     }
 
 };
 
-
-// -->
 function repeatString (str, times) {
     var concat = "";
     for (var i = 0; i < times; i++) {
@@ -19069,8 +19162,6 @@ function repeatString (str, times) {
     }
     return concat;
 }
-
-// -->
 
 var NumberPrototype_toFixed = function (thisArg, argList) {
     var fractionDigits = argList[0];
@@ -20844,6 +20935,7 @@ function Walk(holder, name, reviver) {
                 }
                 if (isAbrupt(status = ifAbrupt(status))) return status;
                 done = IteratorComplete(nextResult);
+                if (isAbrupt(done=ifAbrupt(done))) return done;
             }
         }
     }
@@ -20978,15 +21070,12 @@ var PromiseConstructor_call = function (thisArg, argList) {
     if (getInternalSlot(promise, "PromiseState") !== undefined) return withError("Type", "promise´s PromiseState is not undefined");
     return InitializePromise(promise, executor);
 };
-
 var PromiseConstructor_Construct = function (argList) {
     return Construct(this, argList);
 };
-
 var PromiseConstructor_$$create = function (thisArg, argList) {
     return AllocatePromise(thisArg);
 };
-
 var PromiseConstructor_resolve = function (thisArg, argList) {
     var x = argList[0];
     var C = thisArg;
@@ -21005,7 +21094,6 @@ var PromiseConstructor_reject = function (thisArg, argList) {
     if (isAbrupt(rejectResult = ifAbrupt(rejectResult))) return rejectResult;
     return NormalCompletion(promiseCapability.Promise)
 };
-
 var PromiseConstructor_cast = function (thisArg, argList) {
     var x = argList[0];
     var C = thisArg;
@@ -21017,9 +21105,8 @@ var PromiseConstructor_cast = function (thisArg, argList) {
     if (isAbrupt(promiseCapability = ifAbrupt(promiseCapability))) return promiseCapability;
     var resolveResult = callInternalSlot("Call", promiseCapability.Resolve, undefined, [x]);
     if (isAbrupt(resolveResult = ifAbrupt(resolveResult))) return resolveResult;
-    return NormalCompletion(promiseCbapability.Promise);
+    return NormalCompletion(promiseCapability.Promise);
 };
-
 var PromiseConstructor_race = function (thisArg, argList) {
     var iterable = argList[0];
     var C = thisArg;
@@ -21042,7 +21129,6 @@ var PromiseConstructor_race = function (thisArg, argList) {
     }
 
 };
-
 function makePromiseAllResolveElementsFunction () {
     var PromiseAllResolveElements_call = function (thisArg, argList) {
         var x = argList[0];
@@ -21063,7 +21149,6 @@ function makePromiseAllResolveElementsFunction () {
     setInternalSlot(F, "Call", PromiseAllResolveElements_call);
     return F;
 }
-
 var PromiseConstructor_all = function (thisArg, argList) {
     var iterable = argList[0];
     var C = thisArg;
@@ -21100,7 +21185,6 @@ var PromiseConstructor_all = function (thisArg, argList) {
         remainingElementsCount.value += 1;
     }
 };
-
 var PromisePrototype_then = function (thisArg, argList) {
     var onFulfilled = argList[0];
     var onRejected = argList[1];
@@ -21128,39 +21212,38 @@ var PromisePrototype_then = function (thisArg, argList) {
     }
     return NormalCompletion(promiseCapability.Promise);
 };
-
 var PromisePrototype_catch = function (thisArg, argList) {
     var onRejected = argList[0];
     return Invoke(thisArg, "then", [undefined, onRejected]);
 };
-
 //SetFunctionName(PromiseConstructor, "Promise");
 MakeConstructor(PromiseConstructor, true, PromisePrototype);
 setInternalSlot(PromiseConstructor, "Call", PromiseConstructor_call);
 setInternalSlot(PromiseConstructor, "Construct", PromiseConstructor_Construct);
 LazyDefineProperty(PromiseConstructor, $$create, CreateBuiltinFunction(realm, PromiseConstructor_$$create, 0, "[Symbol.create]"));
-
 LazyDefineBuiltinFunction(PromiseConstructor, "resolve", 1, PromiseConstructor_resolve);
 LazyDefineBuiltinFunction(PromiseConstructor, "reject", 1, PromiseConstructor_reject);
 LazyDefineBuiltinFunction(PromiseConstructor, "cast", 1, PromiseConstructor_cast);
 LazyDefineBuiltinFunction(PromiseConstructor, "race", 1, PromiseConstructor_race);
-
 LazyDefineProperty(PromiseConstructor, "all", CreateBuiltinFunction(realm, PromiseConstructor_all, 0, "all"));
 LazyDefineProperty(PromisePrototype, "then", CreateBuiltinFunction(realm, PromisePrototype_then, 2, "then"));
 LazyDefineProperty(PromisePrototype, "catch", CreateBuiltinFunction(realm, PromisePrototype_catch, 1, "catch"));
 LazyDefineProperty(PromisePrototype, "constructor", PromiseConstructor);
 LazyDefineProperty(PromisePrototype, $$toStringTag, "Promise");
 
+
+/*
+    move into lib/api/promise.js
+ */
+
 function PromiseNew (executor) {
     var promise = AllocatePromise(getIntrinsic("%Promise%"));
     return InitializePromise(promise, executor);
 }
-
 function PromiseBuiltinCapability() {
     var promise = AllocatePromise(getIntrinsic("%Promise%"));
     return CreatePromiseCapabilityRecord(promise, getIntrinsic("%Promise%"));
 }
-
 function PromiseOf(value) {
     var capability = NewPromiseCapability();
     if (isAbrupt(capability = ifAbrupt(capability))) return capability;
@@ -21168,14 +21251,6 @@ function PromiseOf(value) {
     if (isAbrupt(resolveResult = ifAbrupt(resolveResult))) return resolveResult;
     return NormalCompletion(capability.Promise);
 }
-
-function PromiseAll(promiseList) {
-}
-function PromiseCatch(promise, rejectedAction) {
-}
-function PromiseThen(promise, resolvedAction, rejectedAction) {
-}
-
 function PromiseCapability(promise, resolve, reject) {
     var pc = Object.create(PromiseCapability.prototype);
     pc.Promise = promise;
@@ -21183,8 +21258,9 @@ function PromiseCapability(promise, resolve, reject) {
     pc.Reject = reject;
     return pc;
 }
-PromiseCapability.prototype.toString = function () { return "[object PromiseCapability]"; };
-
+PromiseCapability.prototype.toString = function () {
+    return "[object PromiseCapability]";
+};
 function makePromiseReaction(capabilites, handler) {
     return PromiseReaction(capabilites, handler);
 }
@@ -21194,9 +21270,9 @@ function PromiseReaction(caps, hdl) {
     pr.Handler = hdl;
     return pr;
 }
-PromiseReaction.prototype.toString = function () { return "[object PromiseReaction]"; };
-
-
+PromiseReaction.prototype.toString = function () {
+    return "[object PromiseReaction]";
+};
 function UpdatePromiseFromPotentialThenable(x, promiseCapability) {
     if (Type(x) !== OBJECT) return NormalCompletion("not a thenable");
     var then = Get(x, "then");
@@ -21213,17 +21289,15 @@ function UpdatePromiseFromPotentialThenable(x, promiseCapability) {
     }
     return NormalCompletion(null);
 }
-
 function TriggerPromiseReactions(reactions, argument) {
     if (Array.isArray(reactions)) {
         for (var i = 0, j = reactions.length; i < j; i++) {
-    	    var reaction = reactions[i];
-    	    EnqueueTask("PromiseTasks", PromiseReactionTask(), [reaction, argument])
+            var reaction = reactions[i];
+            EnqueueTask("PromiseTasks", PromiseReactionTask(), [reaction, argument])
+        }
 	}
-    }
     return NormalCompletion(undefined);
 }
-
 function PromiseReactionTask() {
     var F;
     var PromiseReactionTask_call = function (thisArg, argList) {
@@ -21255,8 +21329,6 @@ function PromiseReactionTask() {
     F = CreateBuiltinFunction(getRealm(), PromiseReactionTask_call, "PromiseReactionTask", 2);
     return F;
 }
-
-
 function IfAbruptRejectPromise(value, capability) {
     if (isAbrupt(value)) {
         var rejectedResult = callInternalSlot("Call", capability.Reject, undefined, [value.value]);
@@ -21265,7 +21337,6 @@ function IfAbruptRejectPromise(value, capability) {
     }
     return ifAbrupt(value);
 }
-
 function makePromiseRejectFunction() {
     var F = OrdinaryFunction();
     SetFunctionName(F, "reject");
@@ -21282,7 +21353,6 @@ function makePromiseRejectFunction() {
     setInternalSlot(F, "Call", PromiseRejectFunction_call);
     return F;
 }
-
 function makePromiseResolveFunction() {
     var F = OrdinaryFunction();
     SetFunctionName(F, "resolve");
@@ -21327,7 +21397,6 @@ function CreateResolvingFunctions (promise) {
     setInternalSlot(reject, "AlreadyResolved", alreadyResolved);
     return { Resolve: resolve, Reject: reject };
 }
-
 function FulfillPromise (promise, value) {
     // Assert(getInternalSlot(promise, "PromiseState") === "pending", "[[PromiseState]] may not be pending");
     var reactions = getInternalSlot(promise, "PromiseFulfillReactions");
@@ -21337,7 +21406,6 @@ function FulfillPromise (promise, value) {
     setInternalSlot(promise, "PromiseState", "fulfilled");
     return TriggerPromiseReactions(reactions, value);
 }
-
 function RejectPromise (promise, reason) {
     //Assert(getInternalSlot(promise, "PromiseState") != "pending", "[[PromiseState]] may not be pending");
     var reactions = getInternalSlot(promise, "PromiseRejectReactions");
@@ -21347,18 +21415,6 @@ function RejectPromise (promise, reason) {
     setInternalSlot(promise, "PromiseState", "rejected");
     return TriggerPromiseReactions(reactions, reason);
 }
-/*
-function CreateRejectFunction (promise) {
-    var reject = makeRejectFunction();
-    setInternalSlot(reject, "Promise", promise);
-    return reject;
-}
-function CreateResolveFunction (promise) {
-    var resolve = makeResolveFunction();
-    setInternalSlot(resolve, "Promise", promise);
-    return resolve;
-}
-*/
 function NewPromiseCapability(C) {
     if (!IsConstructor(C)) return withError("Type", "C is no constructor");
     // Assertion Step 2 missing 25.4.3.1
@@ -21366,7 +21422,6 @@ function NewPromiseCapability(C) {
     if (isAbrupt(promise = ifAbrupt(promise))) return promise;
     return CreatePromiseCapabilityRecord(promise, C);
 }
-
 function CreatePromiseCapabilityRecord(promise, constructor) {
     var promiseCapability = PromiseCapability(promise, undefined, undefined);
     var executor = GetCapabilitiesExecutor();
@@ -21378,8 +21433,6 @@ function CreatePromiseCapabilityRecord(promise, constructor) {
     if (Type(constructorResult) === OBJECT && (SameValue(promise, constructorResult) === false)) return withError("Type","constructorResult is not the same as promise");
     return promiseCapability;
 }
-
-
 function GetCapabilitiesExecutor () {
     var F = OrdinaryFunction();
     var GetCapabilitiesExecutor_call = function (thisArg, argList) {
@@ -21396,7 +21449,6 @@ function GetCapabilitiesExecutor () {
     setInternalSlot(F, "Call", GetCapabilitiesExecutor_call);
     return F;
 }
-
 function InitializePromise(promise, executor) {
     Assert(hasInternalSlot(promise, "PromiseState") && (getInternalSlot(promise, "PromiseState") === undefined), "InitializePromise: PromiseState doesnt exist or isnt undefined");
     Assert(IsCallable(executor), "executor has to be callable");
@@ -21411,7 +21463,6 @@ function InitializePromise(promise, executor) {
     }
     return NormalCompletion(promise);
 }
-
 function AllocatePromise(constructor) {
     var obj = OrdinaryCreateFromConstructor(constructor, "%PromisePrototype%", {
         "PromiseState": undefined,
@@ -21425,13 +21476,11 @@ function AllocatePromise(constructor) {
     });
     return obj;
 }
-
 function IsPromise(x) {
     if (Type(x) !== OBJECT) return false;
     if (!hasInternalSlot(x, "PromiseState")) return false;
     return getInternalSlot(x, "PromiseState") !== undefined;
 }
-
 function makeIdentityFunction () {
     var F = OrdinaryFunction();
     var Identity_call = function (thisArg, argList) {
@@ -21442,8 +21491,6 @@ function makeIdentityFunction () {
     SetFunctionName(F, "IdentityFunction");
     return F;
 }
-
-
 function makeResolutionHandlerFunction () {
     var handler = OrdinaryFunction();
     var handler_call = function (thisArg, argList) {
@@ -21468,8 +21515,6 @@ function makeResolutionHandlerFunction () {
     setInternalSlot(handler, "Call", handler_call);
     return handler;
 }
-
-
 function makeThrowerFunction () {
     var F = OrdinaryFunction();
     var ThrowerFunction_call = function (thisArg, argList) {
@@ -21481,49 +21526,12 @@ function makeThrowerFunction () {
     SetFunctionLength(F, 1);
     return F;
 }
-
-/*
-
-
-function makeRejectFunction () {
-    var handler = OrdinaryFunction();
-    var handler_call = function (thisArg, argList) {
-        var reason = argList[0];
-        var promise = getInternalSlot(handler, "Promise");
-        Assert(Type(promise) === OBJECT, "reject function has to have a Promise property");
-        var status = getInternalSlot(promise, "PromiseState");
-        if (status !== "pending") return NormalCompletion(undefined);
-        var reactions = getInternalSlot(promise, "PromiseRejectReactions");
-        setInternalSlot(promise, "PromiseResult", reason);
-        setInternalSlot(promise, "PromiseResolveReactions", []);
-        setInternalSlot(promise, "PromiseRejectReactions", []);
-        setInternalSlot(promise, "PromiseState", "has-rejection");
-        return TriggerPromiseReactions(reactions, reason);
-    };
-    setInternalSlot(handler, "Call", handler_call);
-    return handler;
+function PromiseAll(promiseList) {
 }
-
-function makeResolveFunction () {
-    var handler = OrdinaryFunction();
-    var handler_call = function (thisArg, argList) {
-        var resolution = argList[0];
-        var promise = getInternalSlot(handler, "Promise");
-        Assert(Type(promise) === OBJECT, "reject function has to have a Promise property");
-        var status = getInternalSlot(promise, "PromiseState");
-        if (status !== "pending") return NormalCompletion(undefined);
-        var reactions = getInternalSlot(promise, "PromiseResolveReactions");
-        setInternalSlot(promise, "PromiseResult", resolution);
-        setInternalSlot(promise, "PromiseResolveReactions", []);
-        setInternalSlot(promise, "PromiseRejectReactions", []);
-        setInternalSlot(promise, "PromiseState", "has-resolution");
-        return TriggerPromiseReactions(reactions, resolution);
-    };
-    setInternalSlot(handler, "Call", handler_call);
-    return handler;
+function PromiseCatch(promise, rejectedAction) {
 }
-
-*/
+function PromiseThen(promise, resolvedAction, rejectedAction) {
+}
 // ===========================================================================================================
 // Regular Expressiong	
 // ===========================================================================================================
@@ -27386,7 +27394,7 @@ define("runtime", function () {
             	    if (!shellmode && initialized) endRuntime();
             	}
             }
-            setTimeout(handler, 0);
+	    setTimeout(handler, 0);
         }
         function makeNativeException (error) {
             if (Type(error) != OBJECT) return error;
@@ -27461,13 +27469,23 @@ define("runtime", function () {
                     if (error) throw error;
                 }
             }
+
+            /*
+                my self-defined event queue shall become realm.TimerTasks, mainly
+                for SetTimeout.
+
+                Now i should consider reworking this part and intrinsics/settimeout.js
+                to use getRealm().TimerTasks instead of realm.eventQueue and schedule
+                in the MicroTask Format supplied with ES6 Promises.
+
+             */
+
             var eventQueue = getEventQueue();
-            // now process my eventQueue (which will be replaced by ES6 concurrency and task queues)
-            // the conditions are not chosen by experience, just added quickly to tackle the thing
             var pt = getTasks(getRealm(), "PromiseTasks");
             
             if (!shellModeBool && initializedTheRuntime && !eventQueue.length && (!pt || !pt.length)) endRuntime();
             else if (eventQueue.length || (pt&& pt.length)) setTimeout(function () {HandleEventQueue(shellModeBool, initializedTheRuntime);}, 0);
+
             return exprValue;
         }
         /*
@@ -27898,7 +27916,8 @@ if (typeof window != "undefined") {
         annotations["!=="] = "Ein strict-not-equal. Keine Umwandlung des Typs der rechten Seite zum Typ der linken Seite. Der Typ muss gleich sein. Hier muess 5 === 5 sein und nicht 5 === '5' (was Number 5 !== String '5' waere, was mit == wiederum gleich waere)";
         annotations["!!"] = "!! (Bangbang) wandelt eine Variable in ihren Booleanwert um. Aus !![1] (ein Array mit einer 1 als Index Element 0) wird zum Beispiel true und aus !!undefined und !!null wird jeweils false";
         annotations[":"] = "Ein Doppelpunkt steht in einem Objekt { a: 1, b: 2 } zwischen Propertyname und Wert.<br>\nBeim conditional Operator ?: (ConditionalExpression) steht er zwischen der linken (true) und rechten (false) Seite nach dem ?.<br>\nBei LabeledStatenebts steht er nach dem Identifier fuer das Label -> loop: while(1) { break loop; }";
-        annotations[";"] = "Mit dem Komma-Operator kann man 1.) Befehle nacheinander als ein Statement ausf&uuml;hren. Das letzte Ergebnis bleibt stehen. Bei einem if braucht man beispielsweise keine geschweiften Klammern nach der Kondition oder fuer den else-Teil, nimmt man Kommas. 2.) Das Komma trennt Eigenschaften im Objekt, trennt 3.) Elemente im Array. -- Der Komma Operator -- Ein Komma trennt im Array [a,b,c] die Elemente  voneinander. Im Objekt die Properties { a: 1, b: c }. Ein Komma kann zum trennen von Befehlen genommen werden, a(),b(),c(). Ergebnis ist der letzte Aufruf.";
+        annotations[","] = "Mit dem Komma-Operator kann man 1.) Befehle nacheinander als ein Statement ausf&uuml;hren. Das letzte Ergebnis bleibt stehen. Bei einem if braucht man beispielsweise keine geschweiften Klammern nach der Kondition oder fuer den else-Teil, nimmt man Kommas. 2.) Das Komma trennt Eigenschaften im Objekt, trennt 3.) Elemente im Array. -- Der Komma Operator -- Ein Komma trennt im Array [a,b,c] die Elemente  voneinander. Im Objekt die Properties { a: 1, b: c }. Ein Komma kann zum trennen von Befehlen genommen werden, a(),b(),c(). Ergebnis ist der letzte Aufruf.";
+        annotations[";"] = "Das Semikolon ist der Befehlstrenner. Ein Zeilenumbruch kann eine automatische Semikoloneinf&uuml;gung ausl&ouml;sen.";
         annotations["("] = "Oeffnende runde Klammer. Wenn etwas in runden Klammern steht wird es zuerst berechnet, alles in der Klammer zusammen ist eine Expression,  und das Ergebnis tritt an deren Stelle.\n Beispiel: ((cx = vx()) == 12) vergleicht cx == 12, nachdem das Resultat von vx() der cx zugewiesen wurde.<br>Ausserdem: Runde Klammern leiten Funktionsargumente ein function f (a, b, c), oder gruppieren die Argumente bei Invokationen f(a,b,c).<br>\nUnd um die Kondition des IfStatements, ForStatements, WhileStatements, SwitchStatements sind runde Klammern Pflicht.";
         annotations[")"] = "Schliessende runde Klammer. Wenn etwas in runden Klammern steht wird es zuerst berechnet, alles in der Klammer zusammen ist eine Expression,  und das Ergebnis tritt an deren Stelle.\n Beispiel: ((cx = vx()) == 12) vergleicht cx == 12,  nachdem das Resultat von vx() der cx zugewiesen wurde.<br>Ausserdem: Runde Klammern leiten Funktionsargumente ein function f (a, b, c), oder gruppieren die Argumente bei Invokationen f(a,b,c).<br>\nUnd um die Kondition des IfStatements, ForStatements, WhileStatements, SwitchStatements sind runde Klammern Pflicht. ";
         annotations["{"] = "Oeffnende geschweifte Klammern klammern Statements als BlockStatement ein. (if (x) {Statements} else {Statements}. FunctionBodies function f() {body} ebenso wie Objekte { a: 1, b:2 } ein.<br>\n Neu ist in EcmaScript 6 das Destructuring. let {first, last} = {first:'Vorname', last:'Nachname'} erzeugt die Variablen first und last mit den Inhalten der Objektproperties.";

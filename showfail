@@ -1,2 +1,2 @@
 echo "testall´s stdout is piped into grep - showing all FAIL lines"
-./testall $1 | grep FAIL
+./testall $1 | grep -P "TEST|FAIL"
