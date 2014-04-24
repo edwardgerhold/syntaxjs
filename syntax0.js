@@ -27,7 +27,7 @@
 
 "use strict";
 
-Error.stackTraceLimit = 5;
+Error.stackTraceLimit = 25;
 
 function makePromise (resolver) {
 
@@ -48,7 +48,7 @@ function makePromise (resolver) {
 
     function makeFn(type, set, data) {
         return function __resolve__() {
-            
+
             var newValue, newReason;
             var deferred = set.deferred;
             var callback = set.onFulfilled;
@@ -56,8 +56,8 @@ function makePromise (resolver) {
             try {
                 if (isPromise(data)) {
                     data
-                    .then(callback, errback)
-                    .then(deferred.resolve, deferred.reject);
+                        .then(callback, errback)
+                        .then(deferred.resolve, deferred.reject);
                 } else if (type === "resolve") {
                     if (isFunction(callback)) newValue = callback(data);
                     deferred.resolve(newValue);
@@ -92,37 +92,37 @@ function makePromise (resolver) {
 
     function then (onFulfilled, onRejected) {
 
-            if (isPromise(onFulfilled)) {
-                return onFulfilled.then(resolve, reject);
-            } 
+        if (isPromise(onFulfilled)) {
+            return onFulfilled.then(resolve, reject);
+        }
 
-            var deferred = makePromise();
-            var set = {
-                    onFulfilled: onFulfilled,
-                    onRejected: onRejected,
-                    deferred: deferred
-            };
-            
-            if (state === "resolved") {
-                setTimeout(function () {
-                    try {
-                        if (isFunction(onFulfilled)) deferred.resolve(onFulfilled(value));
-                        else deferred.resolve(value);
-                    } catch (ex) {
-                        deferred.reject(ex);
-                    }
-                }, 0);
-            } else if (state == "rejected") {
-                setTimeout(function () {
-                    if (isFunction(onRejected)) onRejected(reason);
-                    deferred.reject(reason);
-                }, 0);
-            } else if (state === "pending") {
-                handlers.push(set);
-            }
-            return deferred.promise;
+        var deferred = makePromise();
+        var set = {
+            onFulfilled: onFulfilled,
+            onRejected: onRejected,
+            deferred: deferred
+        };
+
+        if (state === "resolved") {
+            setTimeout(function () {
+                try {
+                    if (isFunction(onFulfilled)) deferred.resolve(onFulfilled(value));
+                    else deferred.resolve(value);
+                } catch (ex) {
+                    deferred.reject(ex);
+                }
+            }, 0);
+        } else if (state == "rejected") {
+            setTimeout(function () {
+                if (isFunction(onRejected)) onRejected(reason);
+                deferred.reject(reason);
+            }, 0);
+        } else if (state === "pending") {
+            handlers.push(set);
+        }
+        return deferred.promise;
     }
-    
+
     if (resolver !== undefined) {
 
         if (isFunction(resolver)) {
@@ -136,9 +136,9 @@ function makePromise (resolver) {
             } catch (ex) {
                 return makePromise(function (resolve, reject) { reject(ex) });
             }
-        } 
-    } 
-    
+        }
+    }
+
     promise = Object.freeze({
         then: then,
         get value () { return value; },
@@ -150,7 +150,7 @@ function makePromise (resolver) {
 
     // makePromise(function (resolve, reject)) returnt das promise und hat die function async scheduled.
     if (isFunction(resolver)) return promise;
-    
+
     // makePromise() mit no args returnt das deferred object 
     var deferred = Object.freeze({
         promise: promise,
@@ -240,7 +240,7 @@ function require(deps, factory) {
     var m;
     var mods = [];
     var exports;
-    
+
     if (!require.cache) require.cache = Object.create(null);
     if (arguments.length === 1) {
         if (typeof deps === "function") return deps();
@@ -595,7 +595,6 @@ define("tables", function (require, exports, module) {
         "function": "FunctionExpression",
         "this": "ThisExpression",
         "super": "SuperExpression",
-        
         "+": "UnaryExpression",
         "-": "UnaryExpression",
         "~": "UnaryExpression",
@@ -606,12 +605,12 @@ define("tables", function (require, exports, module) {
         "void":"UnaryExpression",
         "typeof":"UnaryExpression",
         "delete":"UnaryExpression"
-        
     };
     
     var PrimaryExpressionByTypeAndFollowByValue = {
         "Identifier": { "=>": "CoverParenthesizedExpressionAndArrowParameterList" }
     };
+
     var PrimaryExpressionByValueAndFollowByType = {
         "...": { "Identifier": "CoverParenthesizedExpressionAndArrowParameterList" }
     };
@@ -701,12 +700,12 @@ define("tables", function (require, exports, module) {
         "(": true,
         ")": true
     };
+
     var uriReserved = {
         __proto__: null,
         ";": true,
         "/": true,
         "?": true,
-
         ":": true,
         "@": true,
         "&": true,
@@ -901,7 +900,15 @@ define("tables", function (require, exports, module) {
     };
     var NodeJSObjects = {
         "process": true,
-        "global": true,
+        "global": true
+    };
+
+    var StandardBuiltinNames = {
+        __proto__:null,
+        "Infinity": true,
+        "NaN":true,
+        "undefined":true,
+
     };
 
 
@@ -927,8 +934,6 @@ define("tables", function (require, exports, module) {
 
     var Builtins = {
         __proto__: null,
-        "{}": true,
-        "[]": true,
         "Object": true,
         "Function": true,
         "Array": true,
@@ -943,7 +948,7 @@ define("tables", function (require, exports, module) {
         "EvalError": true,
         "RangeError": true,
         "ReferenceError": true,
-        "syntaxerror": true,
+        "SyntaxError": true,
         "TypeError": true,
         "URIError": true,
         "setTimeout": true,
@@ -954,8 +959,6 @@ define("tables", function (require, exports, module) {
         "DataView": true,
         "isNaN": true,
         "isFinite": true,
-        "isArray": true,
-        "forEach": true,
         "Int8Array": true,
         "Int16Array": true,
         "Int32Array": true,
@@ -965,6 +968,7 @@ define("tables", function (require, exports, module) {
         "Float32Array": true,
         "Float64Array": true,
         "Uint8ClampedArray": true,
+
         "escape": true,
         "unescape": true,
         "encodeURI": true,
@@ -1431,11 +1435,12 @@ define("tables", function (require, exports, module) {
         "NaN": "NumericLiteral",
         "Infinity": "NumericLiteral",
         "undefined": "Identifier",
-        "async": "Keyword"
+        //"async": "Keyword",
+        //"await": "Keyword",
     };
     var Keywords = {
         __proto__: null,
-        "async":true,
+        //"async":true,
         "case": true,
         "catch": true,
         "class": true,
@@ -1476,8 +1481,8 @@ define("tables", function (require, exports, module) {
         "var": true,
         "void": true,
         "while": true,
-        "with": true,
-        "yield": true
+        "with": true
+        //"yield": true
     };
 
     var IsAnyLiteral = {
@@ -1488,11 +1493,9 @@ define("tables", function (require, exports, module) {
         "StringLiteral": true,
         "TemplateLiteral": true,
         "RegularExpressionLiteral": true,
-
         "Literal":true // with escape sequence.
-        
-        
     };
+
     var PunctToExprName = {
         __proto__: null,
         "delete": "UnaryExpression",
@@ -3669,10 +3672,8 @@ define("tokenizer", function () {
             token.offset = offset;
             token.loc.range = [offset, offset + (((value&&value.length)-1)|0) ];
             if (createCustomToken) token = createCustomToken(token);
-            if (!SkipableToken[type]) {
-                tokenType = type;
-                
-            } else {
+            if (!SkipableToken[type]) tokenType = type;
+            else {
                 if (withExtras) extraBuffer.push(token);
             }
             tokens.push(token);
@@ -10522,9 +10523,7 @@ function GetOwnProperty(O, P) {
 function OrdinaryGetOwnProperty(O, P) {
     Assert(IsPropertyKey(P), "P has to be a valid property key");
     var D = Object.create(null); // value: undefined, writable: true, enumerable: true, configurable: true };
-
     var X = readPropertyDescriptor(O, P);
-
     if (X === undefined) return;
 
     if (IsDataDescriptor(X)) {
@@ -15212,36 +15211,51 @@ function FinishLoad(loader, load) {
 }
 // 29.1.
 
+
+
+/*
+
+    this one is still incomplete.
+
+*/
+
 function LinkageGroups(start) {
+    // 1.
     Assert(Array.isArray(start), "start has to be a list of LinkSet Records");
-    //debug2("linkage groups starts");
+    // 2.
     var G = start.Loads;
     var kind;
+    // 3.
     for (var i = 0, j = G.length; i < j; i++) {
         var load = G[i];
         if (load.Kind != kind) {
-            if (kind === undefined)
-                kind = G[i].Kind;
+            if (kind === undefined) kind = G[i].Kind;
             else return withError("Syntax", "all loads must be of the same kind");
         }
     }
     var n = 0;
+    
+    // 4.
     for (i = 0, j = G.length; i < j; i++) {
         load = G[i];
         n = max(n, load.UnlinkedDependencies.length);
+        load.GroupIndex = n;
     }
-
-
+    
     var declarativeGroupCount = n;
     var declarativeGroups = [];
-    var dynamicGroupCount = 0;
-    var declarativeGroups = [];
-    var visited = [];
+    // 8.
+    for (i = 0; i < j; i++) declarativeGroups.push([]);
+    
 
+    var dynamicGroupCount = 0;
+    var dynamicGroups = [];
+    var visited = [];
     for (var i = 0, j = G.length; i < j; i++) {
         var load = G[i];
         BuildLinkageGroups(load, declarativeGroups, dynamicGroups, visited);
     }
+    
     var first = declarativeGroups[0];
     if (hasRecordInList(first, "Kind", "dynamic")) {
         var groups = interleaveLists(dynamicGroups, declarativeGroups);
@@ -15449,7 +15463,7 @@ function LinkDynamicModules(loads, loader) {
         load.Module = module;
         load.Status = "linked";
         var r = FinishLoad(loader, load);
-        if (isAbrupt(r)) return r;
+        if (isAbrupt(r=ifAbrupt(r))) return r;
     }
 }
 
@@ -15860,10 +15874,14 @@ var LoaderPrototype_has = function (thisArg, argList) {
     var loaderRecord = getInternalSlot(loader, "LoaderRecord");
     var modules = loaderRecord.Modules;
     if (hasRecordInList(modules, "Key", name)) return NormalCompletion(true);
-    /*  refactoring hasRecord in list. must result in this:
+
+    /*  
+     refactoring hasRecord in list. must result in this:
      if (modules[name]) {
-     return NormalCompletion(true);
-     }*/
+        return NormalCompletion(true);
+     }
+    */
+     
     return NormalCompletion(false);
 
 };
@@ -15917,23 +15935,26 @@ var LoaderPrototype_normalize = function (thisArg, argList) {
 };
 var LoaderPrototype_locate = function (thisArg, argList) {
     var loadRequest = argList[0];
-    return Get(loadRequest, "name");
+    var r = Get(loadRequest, "name");
+    if (isAbrupt(r=ifAbrupt(r))) return r;
+    return NormalCompletion(r);
 };
 var LoaderPrototype_fetch = function (thisArg, argList) {
     return withError("Type", "The Loader.prototype.fetch function is supposed to throw a type error.");
 };
 var LoaderPrototype_translate = function (thisArg, argList) {
     var load = argList[0];
-    return Get(load, "source");
+    var r = Get(load, "source");
+    if (isAbrupt(r=ifAbrupt(r))) return r;
+    return NormalCompletion(r);
 };
 
 var LoaderPrototype_instantiate = function (thisArg, argList) {
     var loadRequest = argList[0];
     return NormalCompletion(undefined);
 };
+
 var LoaderPrototype_$$iterator = LoaderPrototype_entries;
-
-
 
 // Loader
 setInternalSlot(LoaderConstructor, "Prototype", FunctionPrototype);
@@ -15965,10 +15986,19 @@ LazyDefineProperty(LoaderPrototype, "instantiate", CreateBuiltinFunction(realm,L
 LazyDefineProperty(LoaderPrototype, $$iterator, CreateBuiltinFunction(realm,LoaderPrototype_$$iterator, 0, "[Symbol.iterator]"));
 LazyDefineProperty(LoaderPrototype, $$toStringTag, "Loader");
 
+function CreateLinkedModuleInstance (loader) {
+    var mod = OrdinaryModule();
+//    var lr = getInternalSlot(loader, "LoaderRecord");
+//    lr.Modules.push({ Name: name, Module: mod });
+    return mod;
+}
+
 // 31.1.
-function newModule (obj) {
+var LoaderPrototype_newModule = function(thisArg, argList) {
+    var obj = argList[0];
     if (Type(obj) !== OBJECT) return withError("Type", "newModule: obj is not an object");
-    var mod = CreateLinkedModuleInstance();
+
+    var mod = CreateLinkedModuleInstance(thisArg);
     var keys = OwnPropertyKeysAsList(obj);
     if (isAbrupt(keys = ifAbrupt(keys))) return keys;
     for (var i = 0, j = keys.length; i < j; i++) {
@@ -15982,11 +16012,66 @@ function newModule (obj) {
             get: F,
             set: undefined
         };
-        var status = DefinePropertyOrThrow(mod, key, desc);
+        var status = DefineOwnPropertyOrThrow(mod, key, desc);
     }
     callInternalSlot("PreventExtensions", mod);
     return NormalCompletion(mod);
 }
+
+LazyDefineBuiltinFunction(LoaderPrototype, "newModule", 1, LoaderPrototype_newModule);
+// ##################################################################
+// Der Loader Iterator
+// ##################################################################
+
+// 31.1.
+function CreateLoaderIterator(loader, kind) {
+    var loaderIterator = ObjectCreate(LoaderIteratorPrototype, {
+        "Loader": loader,
+        "LoaderNextIndex": 0,
+        "LoaderIterationKind": kind
+    });
+    return loaderIterator;
+}
+exports.CreateLoaderIterator = CreateLoaderIterator;
+// 31.1.
+var LoaderIteratorPrototype_next = function next(thisArg, argList) {
+    var iterator = thisArg;
+    var m = getInternalSlot(iterator, "Loader");
+    var loaderRecord = getInternalSlot(m, "LoaderRecord");
+    var index = getInternalSlot(iterator, "LoaderNextIndex");
+    var itemKind = getInternalSlot(iterator, "LoaderIterationKind");
+    if (m === undefined) return CreateItrResultObject(undefined, true);
+    var result;
+    var entries = loaderRecord.Modules;
+    while (index < entries.length) {
+        var e = entries[index];
+        index = index + 1;
+        setInternalSlot(iterator, "LoaderNextIndex", index);
+        if (e.Key !== empty) {
+            if (itemKind === "key") result = e.Key;
+            else if (itemKind === "value") result = e.Value;
+            else {
+                Assert(itemKind==="key+value", "itemKind has to be key+value here");
+                result = ArrayCreate(2);
+                CreateDataProperty(result, "0", e.Key);
+                CreateDataProperty(result, "1", e.Value);
+            }
+            return CreateItrResultObject(result, false);
+        }
+    }
+    setInternalSlot(iterator, "Loader", undefined);
+    return CreateItrResultObject(undefined, true);
+};
+
+// 31.1.
+var LoaderIteratorPrototype_$$iterator = function $$iterator(thisArg, argList) {
+    return thisArg;
+};
+
+LazyDefineProperty(LoaderIteratorPrototype, $$iterator, CreateBuiltinFunction(realm, LoaderIteratorPrototype_$$iterator, 0, "[Symbol.iterator]"));
+LazyDefineProperty(LoaderIteratorPrototype, "next", CreateBuiltinFunction(realm, LoaderIteratorPrototype_next, 0, "next"));
+LazyDefineProperty(LoaderIteratorPrototype, $$toStringTag, "Loader Iterator");
+
 
 // ===========================================================================================================
 // Console (add-on, with console.log);
@@ -20882,6 +20967,7 @@ function Walk(holder, name, reviver) {
     var newElement;
     if (isAbrupt(val = ifAbrupt(val))) return val;
     if (Type(val) === OBJECT) {
+    
         if (isArray(val)) {
             var I = 0;
             var len = Get(val, "length");
@@ -20935,7 +21021,7 @@ DefineOwnProperty(JSONObject, "parse", {
         var JText = ToString(text);
         var tree = parseGoal("JSONText", JText);
         if (isAbrupt(tree = ifAbrupt(tree))) return tree;
-        var scriptText = parseGoal("ParenthesizedExpression", "("+JText+")");
+        var scriptText = parseGoal("ParenthesizedExpression", JText);
         var exprRef = require("runtime").Evaluate(scriptText);
         var unfiltered = GetValue(exprRef);
         if (isAbrupt(unfiltered = ifAbrupt(unfiltered))) return unfiltered;
@@ -20965,7 +21051,7 @@ DefineOwnProperty(JSONObject, "stringify", {
             ReplacerFunction: undefined,
             PropertyList: undefined
         };
-        var gap, i;
+        var gap = "", i;
         if (Type(replacer) === OBJECT) {
             if (IsCallable(replacer)) {
                 _state.ReplacerFunction = ReplacerFunction = replacer;
@@ -20981,6 +21067,7 @@ DefineOwnProperty(JSONObject, "stringify", {
                     else if (Type(v) === NUMBER) item = ToString(v);
                     else if (Type(v) === OBJECT) {
                         if (hasInternalSlot(v, "NumberData") || hasInternalSlot(v, "StringData")) item = ToString(v);
+
                         if (item != undefined && PropertyList.indexOf(item) < 0) {
                             _state.PropertyList = PropertyList;
                             PropertyList.push(item);
@@ -21010,8 +21097,12 @@ DefineOwnProperty(JSONObject, "stringify", {
         _state.gap = gap;
         var proto = getIntrinsic("%ObjectPrototype%");
         var wrapper = ObjectCreate(proto);
-        CreateDataProperty(wrapper, "", value);
-        return NormalCompletion(Str("", wrapper, _state));
+        var status = CreateDataProperty(wrapper, "", value);
+        if (isAbrupt(status=ifAbrupt(status))) return status;
+        if (status === false) return withError("Type", "status may not be wrong here");
+        var result = Str("", wrapper, _state);
+        if (isAbrupt(result=ifAbrupt(result))) return result;
+        return NormalCompletion(result);
     }),
     enumerable: false,
     configurable: false,
@@ -23687,7 +23778,7 @@ LazyDefineBuiltinFunction(TypePrototype, "opaqueType", 1, TypePrototype_opaqueTy
             DefineOwnProperty(globalThis, "eval", GetOwnProperty(intrinsics, "%Eval%"));
             LazyDefineFalseTrueFalse(globalThis, "global", globalThis);
             DefineOwnProperty(globalThis, "isFinite", GetOwnProperty(intrinsics, "%IsFinite%"));
-            DefineOwnProperty(globalThis, "isNaN", GetOwnProperty(intrinsics, "%IsNaN%"));
+        DefineOwnProperty(globalThis, "isNaN", GetOwnProperty(intrinsics, "%IsNaN%"));
             DefineOwnProperty(globalThis, "load", GetOwnProperty(intrinsics, "%Load%"));
 //            LazyDefineBuiltinConstant(globalThis, "null", null);
             DefineOwnProperty(globalThis, "parseInt", GetOwnProperty(intrinsics, "%ParseInt%"));
