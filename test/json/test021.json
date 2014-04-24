@@ -58,12 +58,23 @@
 	"more nested conditionals":
 	{
 	    "init": 
-		"let y = !1 ? !!2 ? !!3 ? true : false : false : false",
+		"let y = !!1 ? !2 ? !!3 ? 7 : 9 : 8 : false",
 	    "tests": 
 	    [
-		["y", false ]
+		["y", 8 ]
+	    ]
+	},
+	"more nested conditionals":
+	{
+	    "init": 
+		"let y; if (y = (!!1 ? !!2 ? !!3 ? 7 : 9 : 8 : false)) ;",
+	    "tests": 
+	    [
+		["y", 7 ]
 	    ]
 	}
+	
+
 		
 	
 }

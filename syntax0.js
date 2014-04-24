@@ -34,6 +34,7 @@ function makePromise (resolver) {
     "use strict";
     var state = "pending";
     var value;
+
     var reason;
     var handlers = [];
     var promise;
@@ -1717,12 +1718,6 @@ define("tables", function (require, exports, module) {
         "%": 60,
 
 
-        "!": 70,
-        "~": 70,
-
-        //"-":70,   <- unary - dupl key (hey! fix me!)
-        //"+":70,   <- unary + dupl key 
-        "!!": 70,
 
         ".": 80,
         "[": 80,
@@ -1733,7 +1728,7 @@ define("tables", function (require, exports, module) {
     exports.UnaryOperatorPrecedence = UnaryOperatorPrecedence;
     var UnaryOperatorPrecedence = {
 	__proto__: null,
-	"-":70,   
+	    "-":70,   
         "+":70,   
         "!!": 70,
         "~": 70,
@@ -3968,6 +3963,7 @@ define("parser", function () {
         var UpdateOperators = tables.UpdateOperators;
         var ExprEndOfs = tables.ExprEndOfs;
         var OperatorPrecedence = tables.OperatorPrecedence;
+        var UnaryOperatorPrecedence = tables.UnaryOperatorPrecedence;
         var isDirective = tables.isDirective;
         var isStrictDirective = tables.isStrictDirective;
         var isAsmDirective = tables.isAsmDirective;
@@ -4111,11 +4107,13 @@ define("parser", function () {
 
         function rotate_binexps(node) {
             var op = node.operator,
-                right = node.right,     // the next node bouncing of
-                rightOp = right && right.operator,  // the node right has it a higher or lower operator?
+                rightNode = node.right,
+                rightOp = rightNode && rightNode.operator,
+                prec = OperatorPrecedence[op],
+                rPrec = OperatorPrecedence[rightOp],
                 tmp;
-            if (right.type !== "UnaryExpression" && rightOp) {
-                if ((OperatorPrecedence[rightOp] || Infinity) < (OperatorPrecedence[op] || Infinity)) {
+            if (rightNode) {
+                if (prec > (rPrec || Infinity)) {
                     tmp = node;
                     node = node.right;
                     tmp.right = node.left;
@@ -4125,13 +4123,13 @@ define("parser", function () {
             return node;
         }
         /*
-            the other variant to use and parse with precedence is
-            to collect in a loop while the precedence is
-            equal and the move through the other operators
-            like in the grammar there is a long list to go upwards
-            (with a while each)
-            each time a new node is made and hung into the tree,
-            if the precedence is higher, the nodes are rotated
+         the other variant to use and parse with precedence is
+         to collect in a loop while the precedence is
+         equal and the move through the other operators
+         like in the grammar there is a long list to go upwards
+         (with a while each)
+         each time a new node is made and hung into the tree,
+         if the precedence is higher, the nodes are rotated
 
          */
 
@@ -4298,7 +4296,7 @@ define("parser", function () {
                 }
                 lookaheadToken = tokenize.nextToken();
                 if (lookaheadToken) {
-            	    ltPassedBy = ltNext;
+                    ltPassedBy = ltNext;
                     lookahead = lookaheadToken.value;
                     lookaheadType = lookaheadToken.type;
                     ltNext = tokenize.ltNext;
@@ -4311,7 +4309,6 @@ define("parser", function () {
             token = t = v = lookahead = lookaheadType = lookaheadToken = undefined;
             return undefined;
         }
-
         function next_from_array() {
             if (pos < tokenArrayLength) {
                 pos += 1;
@@ -4349,13 +4346,6 @@ define("parser", function () {
             }
             return lookahead;
         }
-        function hasNext() {
-            return lookahead != undefined;
-        }
-        function nextToken () {
-            return tokenize.nextToken();
-        }
-        
         function stringifyLoc(loc) {
             var str = "";
             if (!loc) return str;
@@ -4431,9 +4421,6 @@ define("parser", function () {
                 defaultStack = memento.defaultStack;
                 //         nodeTable = memento.nodeTable;
             }
-        }
-        function dropPositions() {
-            return positions.pop();
         }
         function Literal() {
             var node;
@@ -4544,14 +4531,11 @@ define("parser", function () {
             }
             return null;
         }
-        /*function isGeneratorNode(node) {
-    	    return node.generator || node.type == "GeneratorDeclaration" || node.type == "GeneratorExpression";
-        }*/
         function YieldExpression() {
-            if (v === "yield" && !yieldIsId) {            
+            if (v === "yield" && !yieldIsId) {
                 /*if (!isGeneratorNode(currentNode)) {
-            	    throw new SyntaxError("yield expressions are not allowed outside of generators");
-                }*/
+                 throw new SyntaxError("yield expressions are not allowed outside of generators");
+                 }*/
                 match("yield");
                 var node = Node("YieldExpression");
                 node.argument = this.Expression();
@@ -4787,19 +4771,18 @@ define("parser", function () {
             isNoIn = noInStack.pop();
             return node;
         }
-
         function CoverParenthesizedExpression(tokens) {
             return parseGoal("ParenthesizedExpression", tokens);
         }
         function ParenthesizedExpression() {
-                var l1 = loc && loc.start;
-                var node = Node("ParenthesizedExpression");
-              // match("(");
-                node.expression = this.Expression();
-              // match(")");
-                var l2 = loc && loc.end;
-                node.loc = makeLoc(l1, l2);
-                return node;
+            var l1 = loc && loc.start;
+            var node = Node("ParenthesizedExpression");
+            // match("(");
+            node.expression = this.Expression();
+            // match(")");
+            var l2 = loc && loc.end;
+            node.loc = makeLoc(l1, l2);
+            return node;
         }
         function ArrowParameterList(tokens) {
             return parseGoal("FormalParameterList", tokens);
@@ -4858,7 +4841,6 @@ define("parser", function () {
             }
             return null;
         }
-
         function PrimaryExpression() {
             var fn, node;
             fn = PrimaryExpressionByTypeAndFollowByValue[t];
@@ -4870,61 +4852,60 @@ define("parser", function () {
             if (!fn) fn = this[PrimaryExpressionByValue[v]];
             if (!fn) fn = this[PrimaryExpressionByType[t]];
             if (!fn && v === "yield") {
-            	if (yieldIsId) fn = this.YieldAsIdentifier;
-            	else fn = this.YieldExpression;
+                if (yieldIsId) fn = this.YieldAsIdentifier;
+                else fn = this.YieldExpression;
             }
             if (!fn && defaultIsId && v === "default") fn = this.DefaultAsIdentifier;
             if (fn) node = fn.call(this);
             if (node) return this.PostfixExpression(node);
             return null;
-        }                
-
+        }
         function MemberExpression(obj) {
-            var node, l1, l2;                        
+            var node, l1, l2;
             if (obj = obj || this.PrimaryExpression()) {
                 l1 = obj.loc && obj.loc.start;
                 var node = Node("MemberExpression");
                 node.object = obj;
                 if (t === "TemplateLiteral") {
-                	return this.CallExpression(obj);
+                    return this.CallExpression(obj);
                 } else if (v === "[") {
                     match("[");
                     node.computed = true;
                     node.property = this.AssignmentExpression();
-                    match("]");               
+                    match("]");
                 } else if (v === ".") {
                     match(".");
                     node.computed = false;
                     var property = Object.create(null);
-                    if (t === "Identifier" || t === "Keyword" || propKeys[v] || t === "NumericLiteral") {                        
+                    if (t === "Identifier" || t === "Keyword" || propKeys[v] || t === "NumericLiteral") {
                         property.type = "Identifier";
                         property.name = v;
-                        property.loc = token.loc;                        
+                        property.loc = token.loc;
                         match(v);
                     } /*else if (v === "!") {
-                    	match("!");
-						if (v == "[") {
-							var 
-						} else if (v == "(") {
-							var args = this.Arguments();
-						} else if (t === "Identifier") {
-							property = Object.create(null);
-							property.name = v;
-						}
-						property.eventual = true;
-						node.eventual = true;
-                        // http://wiki.ecmascript.org/doku.php?id=strawman:concurrency
-                        // MemberExpression ! [Expression]
-                        // MemberExpression ! Arguments
-                        // MemberExpression ! Identifier
-                        // setzt .eventual auf true
-                    } */ else {
+                     match("!");
+                     if (v == "[") {
+                     var
+                     } else if (v == "(") {
+                     var args = this.Arguments();
+                     } else if (t === "Identifier") {
+                     property = Object.create(null);
+                     property.name = v;
+                     }
+                     property.eventual = true;
+                     node.eventual = true;
+                     // http://wiki.ecmascript.org/doku.php?id=strawman:concurrency
+                     // MemberExpression ! [Expression]
+                     // MemberExpression ! Arguments
+                     // MemberExpression ! Identifier
+                     // setzt .eventual auf true
+                     } */ else {
                         throw new SyntaxError("MemberExpression . Identifier expects a valid IdentifierString or an Integer or null,true,false as PropertyKey"+atLineCol());
                     }
                     node.property = property;
                 } else {
-            	    return obj;
-            	}
+                    return obj;
+                }
                 if (v == "[" || v == ".") return this.MemberExpression(node);
                 else if (v == "(") return this.CallExpression(node);
                 else if (IsTemplateToken[t]) return this.CallExpression(node);
@@ -4957,7 +4938,6 @@ define("parser", function () {
             }
             return null;
         }
-
         function ConditionalExpressionNoIn(test) {
             noInStack.push(isNoIn);
             isNoIn = true;
@@ -4997,7 +4977,6 @@ define("parser", function () {
             }
             return lhs;
         }
-
         function UnaryExpression() {
             if (UnaryOperators[v] || UpdateOperators[v]) {
                 var l1 = loc && loc.start;
@@ -5014,48 +4993,46 @@ define("parser", function () {
             }
             return this.PostfixExpression();
         }
-
         function AssignmentExpressionRightHandSide(leftHand, l1) {
-		var node = Node("AssignmentExpression");
-                node.longName = PunctToExprName[v];
-                node.operator = v;
-                node.left = leftHand;                
-                match(v);
-                node.right = this.AssignmentExpressionNoIn(node);
-                if (!node.right) throw new SyntaxError("can not parse a valid righthandside for this assignment expression"+atLineCol());
-                var l2 = loc && loc.end;
-                node.loc = makeLoc(l1, l2);
-                node = rotate_binexps(node);
-                if (compile) node = builder.assignmentExpression(node.operator, node.left, node.right, node.loc);
-            
-                return node;
-    }
+            var node = Node("AssignmentExpression");
+            node.longName = PunctToExprName[v];
+            node.operator = v;
+            node.left = leftHand;
+            match(v);
+            node.right = this.AssignmentExpressionNoIn(node);
+            if (!node.right) throw new SyntaxError("can not parse a valid righthandside for this assignment expression"+atLineCol());
+            var l2 = loc && loc.end;
+            node.loc = makeLoc(l1, l2);
+            node = rotate_binexps(node);
+            if (compile) node = builder.assignmentExpression(node.operator, node.left, node.right, node.loc);
 
-	function BinaryExpressionRightHandSide(leftHand, l1) {
-			var node = Node("BinaryExpression");
-                node.longName = PunctToExprName[v];
-                node.operator = v;
-                node.left = leftHand;
-                match(v);
-                node.right = this.AssignmentExpression();
-                if (!node.right) {
-                    throw new SyntaxError("can not parse a valid righthandside for this binary expression "+atLineCol());
-                }
-                var l2 = loc && loc.end;
-                node.loc = makeLoc(l1, l2);
-                node = rotate_binexps(node);                
-                if (compile) node = builder.binaryExpression(node.operator, node.left, node.right, node.loc);                
-                return node;
-    	}
-	    
-	function AssignmentExpression() {
+            return node;
+        }
+        function BinaryExpressionRightHandSide(leftHand, l1) {
+            var node = Node("BinaryExpression");
+            node.longName = PunctToExprName[v];
+            node.operator = v;
+            node.left = leftHand;
+            match(v);
+            node.right = this.AssignmentExpression();
+            if (!node.right) {
+                throw new SyntaxError("can not parse a valid righthandside for this binary expression "+atLineCol());
+            }
+            var l2 = loc && loc.end;
+            node.loc = makeLoc(l1, l2);
+            node = rotate_binexps(node);
+            if (compile) node = builder.binaryExpression(node.operator, node.left, node.right, node.loc);
+            return node;
+        }
+        function AssignmentExpression() {
             var node = null, leftHand, l1, l2;
             l1 = loc && loc.start;
 
-            leftHand = this.LeftHandSideExpression();            
+            leftHand = this.LeftHandSideExpression();
             if (AssignmentOperators[v]) node = this.AssignmentExpressionRightHandSide(leftHand, l1);
             else if (BinaryOperators[v] && (!isNoIn || (isNoIn && v != "in"))) node = this.BinaryExpressionRightHandSide(leftHand, l1);
-            else return leftHand;            
+            else return leftHand;
+            //if (v == "?") return this.ConditionalExpressionNoIn(node);
             return node;
         }
         function CallExpression(callee) {
@@ -5066,13 +5043,13 @@ define("parser", function () {
                 node = Node("CallExpression");
                 node.callee = callee;
                 node.arguments = null;
-                if (t === "TemplateLiteral") {                
+                if (t === "TemplateLiteral") {
                     var template = this.TemplateLiteral();
                     node.arguments = [ template ];
                     l2 = loc && loc.end;
                     node.loc = makeLoc(l1, l2);
                     if (compile) return builder.callExpression(node.callee, node.arguments, node.loc);
-                    return node;                
+                    return node;
                 } else if (v === "(") {
                     node.arguments = this.Arguments();
                     if (v === "(") {
@@ -5111,10 +5088,10 @@ define("parser", function () {
                         node = callee;
                         node.type = "NewExpression";
                     } else if (callee === null || callee === undefined) {
-                    	throw new SyntaxError("NewExpression: can not identify callee");
+                        throw new SyntaxError("NewExpression: can not identify callee");
                     } else {
-                    	node.callee = callee;
-                   	}
+                        node.callee = callee;
+                    }
                 }
                 l2 = loc && loc.end;
                 node.loc = makeLoc(l1, l2);
@@ -5127,36 +5104,30 @@ define("parser", function () {
         function LeftHandSideExpression(callee) {
             return this.NewExpression(callee) || this.CallExpression(callee);
         }
-        
-        
         function ExpressionStatementNode(expr, l1, l2) {
             var node = Node("ExpressionStatement");
             node.expression = expr;
             node.loc = makeLoc(l1, l2);
             return node;
         }
-
         function ExpressionStatement() {
-    	    if (!ExprNoneOfs[v] && !(v === "let" && lookahead=="[")) {
-    		    var expression = this.Expression();
+            if (!ExprNoneOfs[v] && !(v === "let" && lookahead=="[")) {
+                var expression = this.Expression();
                 if (!expression) return null;
-    		    var node = Node("ExpressionStatement");
-    		    node.expression = expression;
-    		    node.loc = expression.loc;
-    		    semicolon();
-    		    return node;
-    	    }
-    	    return null;
+                var node = Node("ExpressionStatement");
+                node.expression = expression;
+                node.loc = expression.loc;
+                semicolon();
+                return node;
+            }
+            return null;
         }
-
-
         function SequenceExpressionNode(list, l1, l2) {
             var node = Node("SequenceExpression");
             node.sequence = list;
             node.loc = makeLoc(l1, l2);
             return node;
         }
-
         function Expression() {
             var list = [];
             var node;
@@ -5165,10 +5136,11 @@ define("parser", function () {
             var l2;
 
             while (v != undefined) {
-                if (ae = this.AssignmentExpression()) {                                
-                    if (v == "?") ae = this.ConditionalExpressionNoIn(ae);
-                    list.push(ae);
-                } else break;                
+
+                ae = this.AssignmentExpression();
+                if (v == "?") ae = this.ConditionalExpressionNoIn(ae);
+                list.push(ae);
+
                 if (v === ",") match(",");
                 else if (ltPassedBy || ExprEndOfs[v] || v === undefined) break;
                 else throw new SyntaxError("invalid expression "+atLineCol());
@@ -5181,7 +5153,6 @@ define("parser", function () {
                 default: return this.SequenceExpressionNode(list, l1, l2);
             }
         }
-
         function SuperExpression() {
             if (v === "super") {
                 var l1 = loc && loc.start;
@@ -5318,7 +5289,7 @@ define("parser", function () {
                     throw new SyntaxError(name + " is not a valid identifier in strict mode");
                 }
 
-		// throws error on duplicate identifier
+                // throws error on duplicate identifier
                 if (kind === "var") symtab.putVar(node);
                 else symtab.putLex(node);
 
@@ -5345,9 +5316,9 @@ define("parser", function () {
                 } else if (ltPassedBy || v === undefined) {
                     break;
                 } else {
-            	    throw new SyntaxError("illegal token "+v+" after "+kind+" declaration");
+                    throw new SyntaxError("illegal token "+v+" after "+kind+" declaration");
                 }
-                
+
             }
             if (!list.length) throw new SyntaxError("expecting identifier names after "+kind);
             return list;
@@ -5413,12 +5384,11 @@ define("parser", function () {
             var node;
             var isStaticMethod = false;
             var isGenerator = false;
-            var init = false;
             var isGetter = false;
             var isSetter = false;
-            var isComputedPropertyKey = false;
             var specialMethod = false;
             if (v === "}") return null;
+
             l1 = loc && loc.start;
             if (v === ";") {
                 if (!isObjectMethod) match(";");
@@ -5428,9 +5398,7 @@ define("parser", function () {
                 if (!isObjectMethod) {
                     isStaticMethod = true;
                     match(v);
-                } else {
-                    throw new SyntaxError("static is not allowed in objects");
-                }
+                } else throw new SyntaxError("static is not allowed in objects");
             }
             if (v === "*") {
                 isGenerator = true;
@@ -5690,7 +5658,7 @@ define("parser", function () {
         }
         function BlockStatement() {
             if (v === "{") {
-        	symtab.newBlock();
+                symtab.newBlock();
                 var l1, l2;
                 l1 = loc && loc.start;
                 var node = Node("BlockStatement");
@@ -5718,10 +5686,10 @@ define("parser", function () {
                 if (v !== ";") {
                     if (ltPassedBy) {
                         l2 = loc && loc.start;
-                	node.loc = makeLoc(l1,l2);
-                	return node;
+                        node.loc = makeLoc(l1,l2);
+                        return node;
 
-            	    }
+                    }
                     if (t === "Identifier") {
                         var id = this.Identifier();
                         node.label = id.name;
@@ -5742,10 +5710,10 @@ define("parser", function () {
                 match("continue");
                 if (v !== ";") {
                     if (ltPassedBy) {
-                	l2 = loc && loc.start;
-                	node.loc = makeLoc(l1,l2);
-                	return node;
-            	    }
+                        l2 = loc && loc.start;
+                        node.loc = makeLoc(l1,l2);
+                        return node;
+                    }
                     if (t === "Identifier") {
                         var id = this.Identifier();
                         node.label = id.name;
@@ -5787,7 +5755,7 @@ define("parser", function () {
                 l1 = loc && loc.start;
                 match("throw");
                 if (v !== ";") {
-                    if (ltPassedBy) { 
+                    if (ltPassedBy) {
                         l2 = loc && loc.end;
                         node.loc = makeLoc(l1, l2);
                         return node;
@@ -5949,7 +5917,7 @@ define("parser", function () {
                     else throw new SyntaxError("contains: "+item.type+" not allowed in ModuleDeclarations" + atLineCol());
 
                 } else {
-            	
+
                 }
             }
             match("}");
@@ -6149,7 +6117,6 @@ define("parser", function () {
             var node = this.BindingPattern() || this.Identifier();
             return node;
         }
-
         function ForStatementHead() {
             var node = Node("ForStatement");
             if (v === ";") {
@@ -6176,7 +6143,6 @@ define("parser", function () {
             else node.update = this.Expression();
             return node;
         }
-
         function ForInOfStatementHead() {
             var node = Node("ForInOfStatement");
             if (v === "var") {
@@ -6217,21 +6183,26 @@ define("parser", function () {
                 /* predict */
                 parens.push("(");
                 var collected = [];
+                loop:
                 for (;;) {
                     peek = token && token.value;
-                    if (peek === ";") {
-                        numSemi += 1;
-                    } else if (peek === "in" || peek === "of") {
-                        hasInOf = peek;
-                    } else if (peek === "(") {
-                        parens.push("(");
-                    } else if (peek === ")") {
-                        parens.pop();
-                        if (!parens.length) {
+                    switch(peek) {
+                        case ";": numSemi += 1;
                             break;
-                        }
-                    } else if (peek === undefined) {
-                        throw new SyntaxError("unexpected end of token stream");
+                        case "in":
+                        case "of":
+                            hasInOf = peek;
+                            break;
+                        case "(":
+                            parens.push("(");
+                            break;
+                        case ")":
+                            parens.pop();
+                            if (!parens.length) break loop;
+                            break;
+                        case undefined:
+                            throw new SyntaxError("unexpeceted end of token stream");
+                            break;
                     }
                     collected.push(token);
                     next();
@@ -6580,12 +6551,6 @@ define("parser", function () {
             }
             return list;
         }
-        function debugging() {
-            console.dir(token);
-            console.log(v);
-            console.log(t);
-        }
-
         function initOldLexer(sourceOrTokens) {
             if (!Array.isArray(sourceOrTokens))
                 tokens = tokenize.tokenizeIntoArray(sourceOrTokens);
@@ -6604,7 +6569,6 @@ define("parser", function () {
             }
             next();
         }
-
         function initNewLexer(sourceOrTokens) {
             currentNode = pos = t = v = token = lookaheadToken = lookahead = lookaheadType = undefined;
             ast = null;
@@ -6627,7 +6591,6 @@ define("parser", function () {
             }
             next();
         }
-
         function parse(sourceOrTokens) {
             tokenize.saveState();
             if (tokenize === tokenize.tokenizeIntoArray) {
@@ -6648,7 +6611,6 @@ define("parser", function () {
             }
             return ast;
         }
-
         function initParseGoal(source) {
             symtab = SymbolTable();
             ast = t = v = token = lookaheadToken = lookahead = lookaheadType = undefined;
@@ -7299,7 +7261,7 @@ define("js-codegen", function (require, exports, module) {
 
         if (!node) return "";
 
-        if (Array.isArray(node)) {
+        if (Array.IsArray(node)) {
 
             var src = "";
             var stm;
@@ -8760,14 +8722,24 @@ CodeRealm.prototype.eval =
             ex.stack = Get(error,"stack");
             throw ex;
         }
+        var taskResults = NextTask(undefined, getTasks(getRealm(), "PromiseTasks"));
         restoreCodeRealm();
-	var taskResults = NextTask(undefined, getTasks(getRealm(), "PromiseTasks"));
         return result;
     };
 
-// change name with eval
-
 CodeRealm.prototype.evalAsync =
+    function (code) {
+        var realm = this;
+        return makePromise(function (resolve, reject) {
+            try {
+                var result = realm.eval(code);
+                resolve(result);
+            } catch (ex) {
+                reject(ex);
+            }
+        });
+    };
+
     CodeRealm.prototype.evalFileAsync = function (file) {
         var realm = this;
         return require("filesystem").readFileP(name).then(function (code) {
@@ -8781,15 +8753,7 @@ function CodeRealm_toString() {
     return "[object CodeRealm]";
 }
 
-/**
- * Created by root on 30.03.14.
- */
 
-
-
-    //
-    // Realm und Loader
-    //
 function IndirectEval(realm, source) {
     saveCodeRealm();
     setCodeRealm(realm);
@@ -12571,11 +12535,11 @@ ArrayExoticObject.prototype = assign(ArrayExoticObject.prototype, {
 function ArrayCreate(len, proto) {
     var p = proto || getIntrinsic("%ArrayPrototype%");
     var array = ArrayExoticObject(p);
-    array.Extensible = true;
+    setInternalSlot(array, "Extensible", true);
     if (len !== undefined) {
-        array.ArrayInitialisationState = true;
+        setInternalSlot(array , "ArrayInitialisationState", true);
     } else {
-        array.ArrayInitialisationState = false;
+        setInternalSlot(array , "ArrayInitialisationState",  false);
         len = 0;
     }
     OrdinaryDefineOwnProperty(array, "length", {
@@ -12591,11 +12555,12 @@ function ArraySetLength(A, Desc) {
     if (Desc.value === undefined) {
         return OrdinaryDefineOwnProperty(A, "length", Desc);
     }
-    var newLenDesc = assign({}, Desc);
+    var newLenDesc = assign(Object.create(null), Desc);
     var newLen = ToUint32(Desc.value);
     if (newLen != ToNumber(Desc.value)) return withError("Range", "Array length index out of range");
+    if (isAbrupt(newLen=ifAbrupt(newLen))) return newLen;
     newLenDesc.value = newLen;
-    var oldLenDesc = A.GetOwnProperty("length");
+    var oldLenDesc = callInternalSlot("GetOwnProperty", A, "length");
     if (!oldLenDesc) oldLenDesc = Object.create(null);
     var oldLen = Desc.value;
     if (newLen >= oldLen) return OrdinaryDefineOwnProperty(A, "length", newLenDesc);
@@ -12611,7 +12576,7 @@ function ArraySetLength(A, Desc) {
     if (succeeded === false) return false;
     while (newLen < oldLen) {
         oldLen = oldLen - 1;
-        succeeded = A.Delete(ToString(oldLen));
+        succeeded = callInternalSlot("Delete", A, (ToString(oldLen)));
         if (isAbrupt(succeeded = ifAbrupt(succeeded))) return succeeded;
         if (succeeded === false) {
             newLenDesc.value = oldLen + 1;
@@ -12622,6 +12587,7 @@ function ArraySetLength(A, Desc) {
         }
     }
     if (newWritable === false) {
+        newLenDesc.writable = false
         OrdinaryDefineOwnProperty(A, "length", {
             writable: false
         });
@@ -13687,7 +13653,7 @@ function InternalStructuredClone (input, memory, targetRealm) {
     } else if (hasInternalSlot(input, "SetData")) {
         // hmm missing
         // this can be quite hard to have copy all values, but it would be correct to create them again.
-    } else if (isArray(input)) {
+    } else if (IsArray(input)) {
         // i need to know when i am in which realm, first. The functions will not work like they are supposed to now.
         output = ArrayCreate(0); // how do i create them in targetRealm?
         // shall i switch with setRealm(targetRealm), setRealm(sourceRealm) for demo? it has no effect in memory anyways for me yet.
@@ -16154,7 +16120,7 @@ function IsSparseArray(A) {
     return false;
 }
 
-function isArray(A) {
+function IsArray(A) {
     return A instanceof ArrayExoticObject;
 }
 
@@ -16265,7 +16231,7 @@ var ArrayConstructor_construct = function (argList) {
 DefineOwnProperty(ArrayConstructor, "isArray", {
     value: CreateBuiltinFunction(realm, function (thisArg, argList) {
         var arg = GetValue(argList[0]);
-        return isArray(arg);
+        return IsArray(arg);
     }),
     enumerable: false,
     writable: true,
@@ -16462,7 +16428,7 @@ var ArrayPrototype_concat = function (thisArg, argList) {
     var O = ToObject(thisArg);
     if (isAbrupt(O=ifAbrupt(O))) return O;
     var A = undefined;
-    if (isArray(O)) {
+    if (IsArray(O)) {
         var C = Get(O, "constructor");
         if (isAbrupt(C=isAbrupt(C))) return C;
         if (IsConstructor(C)) {
@@ -16756,7 +16722,7 @@ var ArrayPrototype_splice = function splice(thisArg, argList) {
         actualDeleteCount = min(max(dc, 0), len - actualStart);
     }
     var A = undefined;
-    if (isArray(O)) {
+    if (IsArray(O)) {
         var C = Get(O, "constructor");
         if (isAbrupt(C = ifAbrupt(C))) return C;
         if (IsConstructor(C) === true) {
@@ -17526,6 +17492,9 @@ DefineOwnProperty(ArrayIteratorPrototype, "next", {
     configurable: false
 });
 
+// ===========================================================================================================
+// String Constructor and Prototype
+// ===========================================================================================================
 // ===========================================================================================================
 // String Constructor and Prototype
 // ===========================================================================================================
@@ -20851,7 +20820,7 @@ function Str(key, holder, _state) {
         else return "null";
     }
     if (Type(value) === OBJECT && !IsCallable(value)) {
-        if (isArray(value)) return JA(value, _state);
+        if (IsArray(value)) return JA(value, _state);
         return JO(value, _state);
     }
     return undefined;
@@ -20973,7 +20942,7 @@ function Walk(holder, name, reviver) {
     if (isAbrupt(val = ifAbrupt(val))) return val;
     if (Type(val) === OBJECT) {
     
-        if (isArray(val)) {
+        if (IsArray(val)) {
             var I = 0;
             var len = Get(val, "length");
             if (isAbrupt(len = ifAbrupt(len))) return len;
@@ -21060,7 +21029,7 @@ DefineOwnProperty(JSONObject, "stringify", {
         if (Type(replacer) === OBJECT) {
             if (IsCallable(replacer)) {
                 _state.ReplacerFunction = ReplacerFunction = replacer;
-            } else if (isArray(replacer)) {
+            } else if (IsArray(replacer)) {
                 var len = Get(replacer, "length");
                 if (isAbrupt(len=ifAbrupt(len))) return len;
                 var item, v;
@@ -22282,7 +22251,7 @@ var TypedArrayConstructor_Call = function (thisArg, argList) {
     var data;
     var constructorName;
     if (Type(array) === OBJECT) {
-        if (isArray(array)) {
+        if (IsArray(array)) {
             Assert((Type(array) === OBJECT) && !hasInternalSlot(array, "TypedArrayName") && !hasInternalSlot(array, "ArrayBufferData"),
                 "array has to be an object without [[TypedArrayName]] or [[ArrayBufferData]] slots");
             O = thisArg;
@@ -25762,12 +25731,15 @@ define("runtime", function () {
             nextIndex = ArrayAccumulation(node.elements, array, nextIndex);
             if (isAbrupt(nextIndex = ifAbrupt(nextIndex))) return nextIndex;
 
-            array.Bindings["length"] = {
+            // array.Bindings["length"] =
+            ArraySetLength(array, {
                 value: nextIndex,
                 writable: true,
                 enumerable: false,
                 configurable: false
-            };
+            });
+
+            //ArraySetLength(array, nextIndex);
 
             return NormalCompletion(array);
         }
@@ -25779,10 +25751,10 @@ define("runtime", function () {
             var key =  propertyDefinition.key;
             var node = propertyDefinition.value;
             var computed = propertyDefinition.computed;
-            var strict = node.strict;
             var status;
-
+            var strict = node.strict;
             var propRef, propName, propValue;
+
             /* I refactored it today, but resetted it tonight, i rewrite it tomorrow */
 
             // TOMORROW ? (FOUR DAYS AGO)
