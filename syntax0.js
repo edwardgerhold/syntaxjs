@@ -2098,7 +2098,7 @@ define("symboltable", function (require, exports, module) {
             var name = getName(decl);
 			var thisName = this.names[name];
 			if ((thisName === true && type != "static") ||
-                (thisName === "static" && type != true)
+                (thisName === "static" && type != true) ||
 			    (thisName === "get" && type !== "set") ||
 			    (thisName === "set" && type !== "get")) { 			    
 				throw new SyntaxError("Duplicate identifier in environment scope: "+name);
@@ -4701,7 +4701,7 @@ define("parser", function () {
                             node.key = computedPropertyName;
                             node.computed = true;
                             match(":");
-                            node.value = this.AssignmentExpressionNoIn();
+                            node.value = this.AssignmentExpression();
                             if (!node.value) throw new SyntaxError("error parsing objectliteral := [symbol_expr]: assignmentexpression"+atLineCol());
                             list.push(node);
 
@@ -4710,7 +4710,7 @@ define("parser", function () {
                             node.kind = "init";
                             node.key = this.PropertyKey();
                             match(":");
-                            node.value = this.AssignmentExpressionNoIn();
+                            node.value = this.AssignmentExpression();
                             if (!node.value) throw new SyntaxError("error parsing objectliteral := propertykey : assignmentexpression");
                             list.push(node);
 
