@@ -1,59 +1,30 @@
 syntaxjs
 ========
 
-Not bugfree(*) EcmaScript 6 (7**) Interpreter(*****) written in EcmaScript 5.
-This project was started on a PIII/933 with mcedit in a dorm and is
-now continued on a notebook with 2 cores still in the dorm.
-It´s a fun project. (***)
+Not bugfree(*) but compliant EcmaScript 6 (7**) Interpreter(*****) written 
+in EcmaScript 5. This project was started on a PIII/933 with mcedit in a dorm 
+and is now continued on a notebook with 2 cores still in the dorm. It´s a fun 
+project. And pretty soon able to run itself. (***)
 
 Hmm, i notice difficulties with writing plain text with myself nowadays.
 I´m working on it.
 
-(*) still doesnt run arbitrary code, but all lockups are removed. I added
-syntax errors everywhere and controlled the loops. (I suspect THE Bug in the
-AssignmentExpression, where the PrimaryExpression/LeftHandSideExpression 
-is not read in the correct order. There is a conditional Expression without
-parens which isn´t parsed correct, while it´s, if the condition is wrapped 
-in parens. This is possibly the last real bug in the parser, the assignment 
-expression contains the conditional expression, but it affects the whole
-Relational Expression Sequence, a few days ago i made the UnaryExpression
-recursive. But ```if (!(true)) {}``` didnt work without fixing for "(", too,
-so i suspect there a bigger mistake. (Don´t need to mention Expression, which
-looks nearly funky, but isn´t)).
+(*) still doesn´t run arbitrary JavaScript code, but all lockups are removed.
 
-(**) contains at last one implemented proposal and more (at and String.prototype.lpad and
-String.prototype.rpad, but i noticed lpad and rpad return incorrect length, they add and 
-don´t pad and String.prototype.at is returning nothing.)
+(**) contains at last one implemented ES7 proposal and stubs for the other
 
-(***) serious documentation and proper seriously written license will 
-take some weeks and a day more or two. JSDoc will replace the chaotic
-few comments left between.
+(***) serious documentation and proper seriously written license (with
+the same meaning) will take a while and a day more or two. 
+A few JSDoc comments will replace the chaotic few comments left between.
 
-(****) the files have to be cleaned up inside, that some functions move.
-and maybe two files become one.
-
-(*****) typed mem and stack machine is a must for me but it will still take
-a while. But then we´ll also have Weak Maps and Weak Refs. The code itself
-needs some refactoring for member expressions, which get replaced by getter
-functions, and the OrdinaryObject.prototype and the used this value have to
-be replaced by object with methods and a preceding argument of the function,
-but the getFunction(obj, name) interface is already existing, and costs for
-toString() "[object OrdinaryObject]" comparison to simulate (for a few ms), 
-so i´m (almost) knowing what i´m doing.
-
-(******) Only serious problems: No parallel processing until ES7, no int64
-until ES7 nativly exists, OR: one writes node modules providing interfaces
-into node.js to check it out under node.js. OR: the browsers prototype the
-same public.
+(****) typed mem and stack machine is a must for me but it will still take
+a while. But then we´ll also have Weak Maps and Weak Refs. 
 
 
 New: Multiple Realms
 ======================
 
-Issue: How to get rid of the shared state and pushing and restoring it?
-A realm creates a fresh set of intrinsics and essential functions and A parser creates a fresh tokenizer. 
-Making an "a fresh parser each realm"-factory out of the old functions with shared state will be fun.
-A few days until i can commit that. I have to work through the code, til i got it in place.
+
 
 ```bash
 npm install -g  #to install syntaxjs from it´s directory
@@ -76,19 +47,6 @@ realm2.eval("x");
 realm.eval("x");
 // 10
 ```
-
-
-Again, the Realms are working independently, but they share parser,
-tokenizer, runtime on each invocation, which makes a save and restore
-of the last state, which could be interrupted necessary, unless i get
-rid of the shared state.
-
-A set of factories will return tokenizer objects, parser objects, 
-runtime objects.
-
-Probably in some days, or say weeks, i do not know what happens between.
-(This is not a business work, but a homework, which can be interrupted easily.)
-
 
 Regular Usage
 =============
@@ -173,21 +131,9 @@ es5> var obj2 = realm.evalXform("{ a:1, b:2 }");
 es5> var obj2 = realm.evalXform("{ a:1, b:2 }");
 { a:1, b:2 }
 es5> obj2.a;
-
 ```
 
-Solution:
-The solution will be not to create a living model of the object, which i suspect my transform function
-to create, but to create a snapshot of the current state of the object. That needs no getters and setters
-and returns recursivly objects and arrays with object and array prototypes.
-
-The other thing is, others want active object. With PROXIES, we could do it easily and i should test for
-proxy and fall back to getters and setters (little more limited to get and set invoking the conversion hook).
-The non-Proxy should be a fallback. Later in an ES6 engine it makes a lot of fun, to use this code. And in 
-ES7 with new NATIVE types, it´s easy to continue with ES8-10 (while we learned from and compile a binary one).
-
-
-* got a new debug function added to global scope.
+debug(param)
 
 
 ```js
@@ -207,18 +153,18 @@ Type() results in object
 undefined
 ```
 
-
 The async versions
+
 ```
 realm.evalAsync("let x = 10; x").then(function (value) { console.log(value); }, function (err) { throw err; });
-
 ```
+
+This one works i tested it recently.
 
 Parser_API
 ==========
 
 It´s using Mozilla Parser_API for AST representation.
-With a couple of differences. It´s not perfect. It´s a work.
 
 
 ```

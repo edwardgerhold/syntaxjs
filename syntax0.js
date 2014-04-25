@@ -2094,7 +2094,6 @@ define("symboltable", function (require, exports, module) {
             this.names[name] = type || true;
         },
 		put: function (decl, type) {
-
             var name = getName(decl);
 			var thisName = this.names[name];
 			if ((thisName === true && type != "static") ||
@@ -3954,6 +3953,7 @@ define("parser", function () {
         var EarlyErrors = require("earlyerrors").EarlyErrors;
         var Contains = require("earlyerrors").Contains;
         var SymbolTable = require("symboltable").SymbolTable;
+        var BoundNames = require("slower-static-semantics").BoundNames;
         var symtab;
         var withError, ifAbrupt, isAbrupt;
         var IsIteration = tables.IsIteration;
@@ -4042,7 +4042,6 @@ define("parser", function () {
         };
         var debugmode = false;
         var hasConsole = typeof console === "object" && console != null && typeof console.log === "function";
-        var BoundNames = require("slower-static-semantics").BoundNames;
         var nodeId = 1;
         var withExtras = false;
         var extraBuffer = [];
@@ -5005,10 +5004,10 @@ define("parser", function () {
             isNoIn = noInStack.pop();
             return node;
         }  
-        function ParseAssignmentExpressionNoIn() {
+        function StartAssignmentExpressionNoIn() {
             noInStack.push(isNoIn);
             isNoIn = true;
-            var node = this.ParseAssignmentExpression();
+            var node = this.StartAssignmentExpression();
             isNoIn = noInStack.pop();
             return node;
         }
@@ -5018,7 +5017,7 @@ define("parser", function () {
             node.operator = v;
             node.left = leftHand;
             match(v);
-            node.right = this.ParseAssignmentExpressionNoIn();
+            node.right = this.StartAssignmentExpressionNoIn();
             if (!node.right) throw new SyntaxError("can not parse a valid righthandside for this assignment expression"+atLineCol());
             var l2 = loc && loc.end;
             node.loc = makeLoc(l1, l2);
@@ -5031,7 +5030,7 @@ define("parser", function () {
             node.operator = v;
             node.left = leftHand;
             match(v);
-            node.right = this.ParseAssignmentExpression();
+            node.right = this.StartAssignmentExpression();
             if (!node.right) {
                 throw new SyntaxError("can not parse a valid righthandside for this binary expression "+atLineCol());
             }
@@ -5040,17 +5039,21 @@ define("parser", function () {
             node = rotate_binexps(node);
             return node;
         }
-        function ParseAssignmentExpression() {
+        function StartAssignmentExpression() {
             var node = null, leftHand, l1, l2;
             l1 = loc && loc.start;
             leftHand = this.LeftHandSideExpression();
-            if (AssignmentOperators[v]) node = this.AssignmentExpressionRightHandSide(leftHand, l1);
-            else if (BinaryOperators[v] && (!isNoIn || (isNoIn && v != "in"))) node = this.BinaryExpressionRightHandSide(leftHand, l1);
+            if (AssignmentOperators[v]) {
+                node = this.AssignmentExpressionRightHandSide(leftHand, l1);
+            }
+            else if (BinaryOperators[v] && (!isNoIn || (isNoIn && v != "in"))) {
+                node = this.BinaryExpressionRightHandSide(leftHand, l1);
+            }
             else return leftHand;            
             return node;
         }
         function AssignmentExpression() {
-            var node = this.ParseAssignmentExpression();
+            var node = this.StartAssignmentExpression();
             if (v == "?") return this.ConditionalExpressionNoIn(node);
             return node;
         }
@@ -5440,6 +5443,7 @@ define("parser", function () {
             if (!isObjectMethod) node.static = isStaticMethod;
             if (isGetter) node.kind = "get";
             if (isSetter) node.kind = "set";
+            node.strict = true;
             match("(");
             node.params = this.FormalParameterList();
             match(")");
@@ -5574,9 +5578,11 @@ define("parser", function () {
                 if (!node.generator) {
                     yieldStack.push(yieldIsId);
                     yieldIsId = true;
-                } else {
+                } else
+                {
                     yieldStack.push(yieldIsId);
                     yieldIsId = false;
+                    node.strict = true;
                 }
                 //pushDecls();
                 match("{");
@@ -6669,8 +6675,8 @@ define("parser", function () {
 
         parser.AssignmentExpressionRightHandSide = AssignmentExpressionRightHandSide;
         parser.BinaryExpressionRightHandSide = BinaryExpressionRightHandSide;
-        parser.ParseAssignmentExpression = ParseAssignmentExpression;
-        parser.ParseAssignmentExpressionNoIn = ParseAssignmentExpressionNoIn;
+        parser.StartAssignmentExpression = StartAssignmentExpression;
+        parser.StartAssignmentExpressionNoIn = StartAssignmentExpressionNoIn;
 
 
 
@@ -11239,7 +11245,7 @@ function AddRestrictedFunctionProperties(F) {
 // Create Builtin (Intrinsic Module)
 // ===========================================================================================================
 
-function CreateBuiltinFunction(realm, steps, len, name) {
+function CreateBuiltinFunction(realm, steps, len, name, internalSlots) {
 
     var tmp;
     var realm = getRealm();
@@ -11279,6 +11285,11 @@ function CreateBuiltinFunction(realm, steps, len, name) {
     if (name) SetFunctionName(F, name);
     if (typeof len !== "number") len = 0;
     SetFunctionLength(F, len);
+    if (typeof internalSlots === "object" && internalSlots) {
+	Object.keys(internalSlots).forEach(function (slot) {
+	    setInternalSlot(F, slot, undefined);
+	});
+    }    
     return F;
 }
 
