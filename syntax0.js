@@ -5011,42 +5011,38 @@ define("parser", function () {
             isNoIn = noInStack.pop();
             return node;
         }
-        function AssignmentExpressionNodeAndRightHandSide(leftHand, l1) {
-            var node = Node("AssignmentExpression");
-            node.longName = PunctToExprName[v];
-            node.operator = v;
-            node.left = leftHand;
-            match(v);
-            node.right = this.StartAssignmentExpression();
-            if (!node.right) throw new SyntaxError("can not parse a valid righthandside for this assignment expression"+atLineCol());
-            var l2 = loc && loc.end;
-            node.loc = makeLoc(l1, l2);
-            node = rotate_binexps(node);
-            return node;
-        }
+
         function BinaryExpressionNodeAndRightHandSide(leftHand, l1) {
-            var node = Node("BinaryExpression");
-            node.longName = PunctToExprName[v];
-            node.operator = v;
-            node.left = leftHand;
-            match(v);
-            node.right = this.StartAssignmentExpression();
-            if (!node.right) {
-                throw new SyntaxError("can not parse a valid righthandside for this binary expression "+atLineCol());
-            }
-            var l2 = loc && loc.end;
-            node.loc = makeLoc(l1, l2);
-            node = rotate_binexps(node);
-            return node;
+
         }
         function StartAssignmentExpression() {
             var node = null, leftHand, l1, l2;
             l1 = loc && loc.start;
             leftHand = this.LeftHandSideExpression();
             if (AssignmentOperators[v] && (!isNoIn || (isNoIn && v != "in"))) {
-                node = this.AssignmentExpressionNodeAndRightHandSide(leftHand, l1);
+                var node = Node("AssignmentExpression");
+                node.longName = PunctToExprName[v];
+                node.operator = v;
+                node.left = leftHand;
+                match(v);
+                node.right = this.StartAssignmentExpression();
+                if (!node.right) throw new SyntaxError("can not parse a valid righthandside for this assignment expression"+atLineCol());
+                var l2 = loc && loc.end;
+                node.loc = makeLoc(l1, l2);
+                node = rotate_binexps(node);
             } else if (BinaryOperators[v] && (!isNoIn || (isNoIn && v != "in"))) {
-                node = this.BinaryExpressionNodeAndRightHandSide(leftHand, l1);
+                var node = Node("BinaryExpression");
+                node.longName = PunctToExprName[v];
+                node.operator = v;
+                node.left = leftHand;
+                match(v);
+                node.right = this.StartAssignmentExpression();
+                if (!node.right) {
+                    throw new SyntaxError("can not parse a valid righthandside for this binary expression "+atLineCol());
+                }
+                var l2 = loc && loc.end;
+                node.loc = makeLoc(l1, l2);
+                node = rotate_binexps(node);
             }
             else return leftHand;            
             return node;
@@ -5125,7 +5121,6 @@ define("parser", function () {
         function LeftHandSideExpression(callee) {
             return this.NewExpression(callee) || this.CallExpression(callee);
         }
-        
         function ExpressionStatement() {
             if (!ExprNoneOfs[v] && !(v === "let" && lookahead=="[")) {
                 var expression = this.Expression();
@@ -6669,15 +6664,8 @@ define("parser", function () {
             return node;
         }
         parser.ExpressionStatement = ExpressionStatement;
-
-        
-
-        parser.AssignmentExpressionNodeAndRightHandSide = AssignmentExpressionNodeAndRightHandSide;
-        parser.BinaryExpressionNodeAndRightHandSide = BinaryExpressionNodeAndRightHandSide;
         parser.StartAssignmentExpression = StartAssignmentExpression;
         parser.StartAssignmentExpressionNoIn = StartAssignmentExpressionNoIn;
-
-
 
         parser.JSONText = JSONText;
         parser.JSONValue = JSONValue;
@@ -7195,50 +7183,6 @@ define("regexp-parser", function (require, exports) {
     return exports;
 });
 
-
-/*
- ############################################################################################################################################################################################################
- A Simple JavaScript Codegenerator - This module transforms the AST back into ES6 Source Code.
- This shall become a prototype to support generating Code from a "Concrete Syntax Tree"
-
- This means, it regenerates Comments, WhiteSpaces, LineTerminators
-
- How it works?
- The build(node) function calls callBuilder(node) which is a big switch
- for all kinds of nodes. Inside that switch the arguments array is defined.
- This is passed to the builder interface of the mozilla parser api.
- The first node calls callBuilder(body) and each body node will be called with
- it´s appropriate builder, the whole tree down.
-
-
- this one takes the extras after the loc to change no signature but extend them by ", extras"
-
-
- additional builder functions
- for es6
-
- directive
- arrayComprehension
- objectPattern
- arrayPattern
- templateLiteral
- generatorDeclaration
- generatorExpression
- generatorComprehension
- and more
-
- for concrete syntax tree
-
- builder.whiteSpace
- builder.lineTerminator
- builder.multiLineComment
- builder.lineComment
-
-
-
- ############################################################################################################################################################################################################
- */
-
 define("js-codegen", function (require, exports, module) {
     "use strict";
 
@@ -7289,7 +7233,7 @@ define("js-codegen", function (require, exports, module) {
 
         if (!node) return "";
 
-        if (Array.IsArray(node)) {
+        if (Array.isArray(node)) {
 
             var src = "";
             var stm;
@@ -7301,7 +7245,9 @@ define("js-codegen", function (require, exports, module) {
             return src;
 
         } else if (typeof node === "string") {
+
             return node;
+
         } else {
 
             name = node.type;
@@ -7420,7 +7366,6 @@ define("js-codegen", function (require, exports, module) {
                 case "ThrowStatement":
                     args = [node.argument, node.loc, node.extras];
                     break;
-
                 case "BreakStatement":
                 case "ContinueStatement":
                     args = [node.argument, node.label, node.loc, node.extras];
@@ -7445,15 +7390,20 @@ define("js-codegen", function (require, exports, module) {
                 case "LineTerminator":
                     args = [node.value, node.loc];
                     break;
+                case "ConditionalExpression":
+                    args = [node.test, node.consequent, node.alternate, node.loc, node.extras];
+                    break;
             }
-
+            var fn;
             name = name[0].toLowerCase() + name.slice(1);
-            return builder[/*names[*/name/*]*/].apply(builder, args);
+            if (name) fn = builder[/*names[*/name/*]*/];
+
+            if (fn) return fn.apply(builder, args);
+            else throw new TypeError("can not generate code for " + name);
         }
     }
 
     builder.spreadExpression = function (argument, loc, extras) {
-        //noinspection UnnecessaryLocalVariableJS
         var src = "..." + callBuilder(argument);
         return src;
     };
@@ -7475,6 +7425,7 @@ define("js-codegen", function (require, exports, module) {
     builder.classExpression =
         builder.classDeclaration = function (id, extend, elements, expression, loc, extras) {
             var src = "class ";
+            var e;
             src += id;
             if (extend) src += " extends " + callBuilder(extend);
             src += "{";
@@ -7509,7 +7460,7 @@ define("js-codegen", function (require, exports, module) {
         return src;
     };
     builder.objectPattern = function (elements, loc, extras) {
-        var src, e;
+        var src = "", e;
         src += "{";
         for (var i = 0, j = elements.length; i < j; i++) {
             if (e = elements[i]) {
@@ -7542,6 +7493,7 @@ define("js-codegen", function (require, exports, module) {
         builder.stringLiteral =
             builder.numericLiteral =
                 builder.booleanLiteral =
+                    builder.nullLiteral =
                     builder.literal = function (literal, loc, extras) {
                         var src = "";
                         src += literal;
@@ -7615,7 +7567,7 @@ define("js-codegen", function (require, exports, module) {
                 src += this.functionBody(body);
             else
                 src += callBuilder(body);
-            return s
+            return src;
 
         };
 
@@ -7623,9 +7575,8 @@ define("js-codegen", function (require, exports, module) {
         builder.functionExpression =
             builder.generatorDeclaration =
                 builder.generatorExpression = function (id, params, body, strict, generator, expression, loc, extras) {
-                    var src = "";
 
-                    src = "function";
+                    var src = "function";
                     if (generator) src += "*";
                     src += " ";
 
@@ -7778,7 +7729,7 @@ define("js-codegen", function (require, exports, module) {
         return src;
     };
     builder.labelledStatement = function labelledStatement(label, body, loc, extras) {
-        var src;
+        var src = "";
         src += label + ": ";
         src += nl();
         src += tabs(indent);
@@ -7800,7 +7751,7 @@ define("js-codegen", function (require, exports, module) {
     };
     builder.ifStatement = function ifStatement(test, condition, alternate, loc, extras) {
         var src = tabs(indent) + "if (" + callBuilder(test) + ") " + callBuilder(condition);
-        if (alternate) src += " else " + callBuilder(alternate);
+        if (alternate) src += tabs(indent) + " else " + callBuilder(alternate);
         return src;
     };
     builder.switchStatement = function (discriminant, cases, isLexical, loc, extras) {
@@ -7910,9 +7861,10 @@ define("js-codegen", function (require, exports, module) {
     };
     builder.returnStatement = function (expression, loc, extras) {
         var src = "";
-        if (extras) src += callBuilder(extras.before);
+        if (extras && extras.before) src += callBuilder(extras.before);
+
         src += "return";
-        if (extras) src += callBuilder(extras.after);
+        if (extras && extras.after) src += callBuilder(extras.after);
         if (expression) {
             src += " " + callBuilder(expression);
         }
@@ -7933,10 +7885,15 @@ define("js-codegen", function (require, exports, module) {
         return src;
     };
 
-    /*
-     the concrete syntax tree needs these
-     plus additions in callbuilder
-     */
+    builder.conditionalExpression = function (test, consequent, alternate, loc, extras) {
+       var src = "";
+       src += callBuilder(test);
+       src += " ? ";
+       src += callBuilder(consequent);
+        src += " : ";
+        src += callBuilder(alternate);
+        return src;
+    };
 
     builder.whiteSpace = function (value, loc) {
         return value;
@@ -7950,10 +7907,6 @@ define("js-codegen", function (require, exports, module) {
     builder.lineTerminator = function (value, loc) {
         return value;
     };
-
-    /*
-
-     */
 
     function buildFromSrc(src) {
         setBuilder(builder, true);
@@ -8265,7 +8218,7 @@ function LazyDefineBuiltinFunction(O, name, arity, fproto, e, w, c) {
 }
 
 exports.LazyDefineAccessorFunction = LazyDefineAccessorFunction;
-function LazyDefineAccessorFunction(O, name, arity, g, s, e, c) { 
+function LazyDefineAccessorFunction(O, name, arity, g, s, e, c) {
     if (e === undefined) e = false;
     if (c === undefined) c = true;
     var fname = name;
@@ -8521,7 +8474,7 @@ function isWorker() {
 
 /*
 
-    moved up from runtime
+ moved up from runtime
  */
 
 var byteCodeMap = {
@@ -8575,6 +8528,37 @@ function makeNativeException (error) {
 }
 
 exports.makeNativeException = makeNativeException;
+
+
+function CreateSelfHostingFunction(realm, name, arity, source) {
+    var parseGoal = require("parser").parseGoal;
+
+    var fn = parseGoal("FunctionDeclaration", source);
+    var F = OrdinaryFunction();
+    setInternalSlot("Code", fn.body);
+    setInternalSlot("FormalParameters", fn.params);
+    setInternalSlot("Realm", realm);
+    SetFunctionName(F, name);
+    SetFunctionLength(F, arity);
+    return F;
+}
+
+
+function LazyDefineSelfHostingFunction(O, name, arity, fproto, e, w, c) {
+    if (e === undefined) e = false;
+    if (w === undefined) w = true;
+    if (c === undefined) c = true;
+    return callInternalSlot("DefineOwnProperty", O, name, {
+        configurable: c,
+        enumerable: e,
+        value: CreateSelfHostingFunction(getRealm(), name, arity, fproto),
+        writable: w
+    });
+}
+
+exports.CreateSelfHostingFunction = CreateSelfHostingFunction;
+exports.LazyDefineSelfHostingFunction = LazyDefineSelfHostingFunction;
+
     
     /*
 	That was quite unordered, but i make progress
@@ -8948,22 +8932,23 @@ function NormalCompletion(argument, label) {
         completion.type = "normal";
         completion.target = label;
     }
-    realm.completion = completion; // i removed saving them and just using one. why is that here again?
+//    realm.completion = completion; // i removed saving them and just using one. why is that here again?
     return completion;
 }
 
 function Completion(type, argument, target) {
-    var completion = CompletionRecord();
+    var completion;
     if (argument instanceof CompletionRecord) {
         completion = argument;
-    } else completion.value = argument;
+    } else {
+        completion = CompletionRecord();
+        completion.value = argument;
+    }
     completion.type = type || "normal";
     completion.target = target;
-    realm.completion = completion;
+//    realm.completion = completion;
     return completion;
 }
-
-
 
 // ===========================================================================================================
 // ReturnIfAbrupt(argument) ==> if (isAbrupt(value = ifAbrupt(value)))return value;
@@ -8975,16 +8960,13 @@ function unwrap(arg) {
 }
 
 // unwrap the argument, if it not abrupt
-
 function ifAbrupt(argument) {
     if (!(argument instanceof CompletionRecord) || argument.type !== "normal") return argument;
     return argument.value;
 }
 //if (argument && (typeof argument === "object") && (argument.toString() === "[object CompletionRecord]") && argument.type === "normal") return argument.value;
-
 //if (typeof argument !== "object" || !argument) return argument;
 //if (argument.toString() === "[object CompletionRecord]" && argument.type !== "normal") return argument;
-
 //return argument.value;
 
 // return finally true, if abrupt
@@ -8996,11 +8978,9 @@ function isAbrupt(completion) {
 //if (completion instanceof CompletionRecord && completion.type !== "normal") return true;
 
 
-
 // ===========================================================================================================
 // return withError
 // ===========================================================================================================
-
 // This Function returns the Errors, say the spec says "Throw a TypeError", then return withError("Type", message);
 
 function withReferenceError(message) {
@@ -11393,10 +11373,6 @@ function RebindSuper(func, newHome) {
 /**
  * Created by root on 31.03.14.
  */
-
-
-
-
 function CreateArrayFromList(list) {
     var array = ArrayCreate(list.length);
     for (var i = 0, j = list.length; i < j; i++) {
@@ -11404,7 +11380,6 @@ function CreateArrayFromList(list) {
     }
     return array;
 }
-
 function CreateListFromArrayLike(arrayLike) {
     var list = [];
     for (var i = 0, j = arrayLike.length; i < j; i++) {
@@ -11412,12 +11387,9 @@ function CreateListFromArrayLike(arrayLike) {
     }
     return list;
 }
-
-
-
-
 function CreateArrayIterator(array, kind) {
     var O = ToObject(array);
+    if (isAbrupt(O=ifAbrupt(O))) return O;
     var proto = getIntrinsic("%ArrayIteratorPrototype%");
     var iterator = ObjectCreate(proto);
     setInternalSlot(iterator, "IteratedObject", O);
@@ -19650,6 +19622,32 @@ LazyDefineBuiltinFunction(ReflectObject, "setPrototypeOf", 2, ReflectObject_setP
 LazyDefineBuiltinConstant(ReflectObject, $$toStringTag, "Reflect");
 
 
+/*
+
+    tHIS iS just for playing with the parser
+
+ */
+
+var ReflectObject_createSelfHostingFunction = function(thisArg, argList) {
+   var parseGoal = require("parser").parseGoal;
+   var source = argList[0];
+   var realm = argList[1];
+   try {
+       var fn = parseGoal("FunctionDeclaration", source);
+   } catch (ex) {
+       return withError("Syntax", ex.message);
+   }
+   var realmObject = realm === undefined ? getRealm() : getInternalSlot(realm, "RealmObject");
+   var F = OrdinaryFunction();
+   setInternalSlot(F, "Code", fn.body)
+   setInternalSlot(F, "FormalParameters", fn.params);
+   setInternalSlot(F, "Strict", !!fn.strict);
+   setInternalSlot(F, "Realm", realmObject);
+   return NormalCompletion(F);
+};
+LazyDefineBuiltinFunction(ReflectObject, "createSelfHostingFunction", 2, ReflectObject_createSelfHostingFunction);
+
+
 // ===========================================================================================================
 // IsNaN
 // ===========================================================================================================
@@ -23866,8 +23864,6 @@ LazyDefineBuiltinFunction(VMObject, "eval", 1, VMObject_eval);
             }
 
 	}
-        
-
             return globalThis;
         };
 
@@ -24058,6 +24054,7 @@ LazyDefineBuiltinFunction(VMObject, "eval", 1, VMObject_eval);
     // my own definitions between the ecma stuff
     exports.SetFunctionLength = SetFunctionLength;
     exports.LazyDefineProperty = LazyDefineProperty;
+    exports.LazyDefineSelfHostingFunction = LazyDefineSelfHostingFunction;
     exports.createIntrinsics = createIntrinsics;
     exports.setCodeRealm = setCodeRealm;
     exports.saveCodeRealm = saveCodeRealm;
@@ -29250,20 +29247,14 @@ define("syntaxjs", function () {
             writable: false
         };
     }
-    
     var syntaxjs = Object.create(null);
     var VERSION = "0.0.1";
-    
-
 				    
     var syntaxjs_public_api_readonly = {
-    
     // essential functions
         version: pdmacro(VERSION),			
-
         tokenizeIntoArray: pdmacro(require("tokenizer").tokenizeIntoArray),				// <-- needs exports fixed
 	tokenize: pdmacro(require("tokenizer")),
-	
 	
         parse: pdmacro(require("parser")),
         parseGoal: pdmacro(require("parser").parseGoal),
@@ -29291,7 +29282,6 @@ define("syntaxjs", function () {
             return this.eval(this.readFileSync(name));
         }),
 
-
         evalStaticXform: pdmacro(require("runtime").ExecuteAsyncStaticXform),
         evalAsync: pdmacro(require("runtime").ExecuteAsync),
         evalAsyncXform: pdmacro(require("runtime").ExecuteAsyncTransform),
@@ -29315,7 +29305,6 @@ define("syntaxjs", function () {
     } else if (typeof window !== "undefined") {
     // browser export
         syntaxjs.system = "browser";
-
         syntaxjs_public_api_readonly.subscribeWorker = pdmacro(require("syntaxjs-worker").subscribeWorker);
         syntaxjs_highlighter_api.highlightElements = pdmacro(require("highlight-gui").highlightElements);
         syntaxjs_highlighter_api.startHighlighterOnLoad = pdmacro(require("highlight-gui").startHighlighterOnLoad);
@@ -29334,6 +29323,10 @@ define("syntaxjs", function () {
         if (typeof version === "function") syntaxjs.system = "spidermonkey";
         if (typeof Java === "object") syntaxjs.system = "nashorn";
         if (typeof exports !== "undefined") exports.syntaxjs = syntaxjs;
+    } else {
+
+
+
     }
     // ASSIGN properties to a SYNTAXJS object (all platforms)
     Object.defineProperties(syntaxjs, syntaxjs_public_api_readonly);
