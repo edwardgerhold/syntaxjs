@@ -1,0 +1,15 @@
+{
+	"in expressions":
+	{
+	    "init": 		
+		"let obj = { a: 1, b: 2, c() { return this; } };",
+	    "tests": 
+	    [
+		["'a' in obj", true],
+		["'b' in obj", true],
+		["'c' in obj", true],
+		["'d' in obj", false],
+		["'e' in obj", false]
+	    ]
+	}
+}
