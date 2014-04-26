@@ -1405,7 +1405,7 @@ define("tables", function (require, exports, module) {
         "if": "Keyword",
         "import": "Keyword",
         "in": "Keyword",
-        "of": "Keyword",
+//        "of": "Keyword",
         "instanceof": "Keyword",
         "let": "Keyword",
         "new": "Keyword",
@@ -5011,20 +5011,20 @@ define("parser", function () {
             isNoIn = noInStack.pop();
             return node;
         }
-        function AssignmentExpressionRightHandSide(leftHand, l1) {
+        function AssignmentExpressionNodeAndRightHandSide(leftHand, l1) {
             var node = Node("AssignmentExpression");
             node.longName = PunctToExprName[v];
             node.operator = v;
             node.left = leftHand;
             match(v);
-            node.right = this.StartAssignmentExpressionNoIn();
+            node.right = this.StartAssignmentExpression();
             if (!node.right) throw new SyntaxError("can not parse a valid righthandside for this assignment expression"+atLineCol());
             var l2 = loc && loc.end;
             node.loc = makeLoc(l1, l2);
             node = rotate_binexps(node);
             return node;
         }
-        function BinaryExpressionRightHandSide(leftHand, l1) {
+        function BinaryExpressionNodeAndRightHandSide(leftHand, l1) {
             var node = Node("BinaryExpression");
             node.longName = PunctToExprName[v];
             node.operator = v;
@@ -5043,11 +5043,10 @@ define("parser", function () {
             var node = null, leftHand, l1, l2;
             l1 = loc && loc.start;
             leftHand = this.LeftHandSideExpression();
-            if (AssignmentOperators[v]) {
-                node = this.AssignmentExpressionRightHandSide(leftHand, l1);
-            }
-            else if (BinaryOperators[v] && (!isNoIn || (isNoIn && v != "in"))) {
-                node = this.BinaryExpressionRightHandSide(leftHand, l1);
+            if (AssignmentOperators[v] && (!isNoIn || (isNoIn && v != "in"))) {
+                node = this.AssignmentExpressionNodeAndRightHandSide(leftHand, l1);
+            } else if (BinaryOperators[v] && (!isNoIn || (isNoIn && v != "in"))) {
+                node = this.BinaryExpressionNodeAndRightHandSide(leftHand, l1);
             }
             else return leftHand;            
             return node;
@@ -6624,7 +6623,7 @@ define("parser", function () {
                 ast = parser.Program();
             } catch (ex) {
                 //  throw ex;
-                console.log("[Parser Exception]: " + ex.name);
+                console.log("[Parser Exception]: " + ex.name + " "+atLineCol());
                 console.log(ex.message);
                 console.log(ex.stack);
                 ast = ex;
@@ -6673,8 +6672,8 @@ define("parser", function () {
 
         
 
-        parser.AssignmentExpressionRightHandSide = AssignmentExpressionRightHandSide;
-        parser.BinaryExpressionRightHandSide = BinaryExpressionRightHandSide;
+        parser.AssignmentExpressionNodeAndRightHandSide = AssignmentExpressionNodeAndRightHandSide;
+        parser.BinaryExpressionNodeAndRightHandSide = BinaryExpressionNodeAndRightHandSide;
         parser.StartAssignmentExpression = StartAssignmentExpression;
         parser.StartAssignmentExpressionNoIn = StartAssignmentExpressionNoIn;
 
@@ -8559,6 +8558,23 @@ exports.codeMap = codeMap;
 exports.astCodeMap = astCodeMap;
 exports.byteCodeMap = byteCodeMap;
 
+
+
+function makeNativeException (error) {
+    if (Type(error) != OBJECT) return error;
+    var name = unwrap(Get(error, "name"));
+    var message = unwrap(Get(error, "message"));
+    var callstack = unwrap(Get(error, "stack"));
+    var text = makeMyExceptionText(name, message, callstack);
+
+    var nativeError = new Error(name);
+    nativeError.name = name;
+    nativeError.message = message;
+    nativeError.stack = text;
+    return nativeError;
+}
+
+exports.makeNativeException = makeNativeException;
     
     /*
 	That was quite unordered, but i make progress
@@ -8760,7 +8776,9 @@ CodeRealm.prototype.eval =
             ex.stack = Get(error,"stack");
             throw ex;
         }
-        var taskResults = NextTask(undefined, getTasks(getRealm(), "PromiseTasks"));
+        var PromiseTasks = getTasks(getRealm(), "PromiseTasks")
+        var taskResults = NextTask(undefined, PromiseTasks);
+
         restoreCodeRealm();
         return result;
     };
@@ -13083,12 +13101,11 @@ var queueNames = {
 
 function EnqueueTask(queueName, task, args) {
     Assert(Type(queueName) === STRING && queueNames[queueName], "EnqueueTask: queueName has to be valid");
-    // Assert(isTaskName[task])
     Assert(Array.isArray(args), "arguments have to be a list and to be equal in the number of arguments of task");
 
-    var callerContext = getContext();
     var callerRealm = getRealm();
     var pending = PendingTaskRecord(task, args, callerRealm);
+
     switch(queueName) {
         case "PromiseTasks": callerRealm.PromiseTasks.push(pending);
             break;
@@ -13107,21 +13124,17 @@ function NextTask (result, nextQueue) {
         console.log("NextTask: Got exception - which will remain unhandled - for debugging, i print them out." );
         printException(result);
     }
-//    Assert(getStack().length === 0, "NextTask: The execution context stack has to be empty");
+
+//  Assert(getStack().length === 0, "NextTask: The execution context stack has to be empty");
     var nextPending = nextQueue.shift();
     if (!nextPending) return;
     var newContext = ExecutionContext(null, getRealm());
     newContext.realm = nextPending.Realm;
     getStack().push(newContext);
-    
-//    console.dir(nextPending);
-
     var result = callInternalSlot("Call", nextPending.Task, undefined, nextPending.Arguments);
-    
     if (isAbrupt(result=ifAbrupt(result))) {
-
         if (hasConsole) {
-            var ex = makeNativeException(ex);
+            var ex = exports.makeNativeException(ex);
             console.log("NextTask got abruptly completed on [[Call]] of nextPending.Task");
             if (typeof ex == "object") {
                 console.log(ex.name);
@@ -13130,8 +13143,8 @@ function NextTask (result, nextQueue) {
             }
         }
     }
-
     getStack().pop();
+    return NextTask(result, nextQueue);
 }
 
 /**
@@ -16276,7 +16289,7 @@ DefineOwnProperty(ArrayConstructor, "isArray", {
 });
 
 DefineOwnProperty(ArrayConstructor, "of", {
-    value: CreateBuiltinFunction(realm, function of(thisArg, argList) {
+    value: CreateBuiltinFunction(realm, function (thisArg, argList) {
         var items = CreateArrayFromList(argList);
         var lenValue = Get(items, "length");
         var C = thisArg;
@@ -21132,9 +21145,7 @@ setInternalSlot(JSONObject, "JSONTag", true);
 
 
 /*
-    still a to do. replacing all slots with constants,
-    that they can be replaced by numbers. have to work
-    every new slot out with constants.
+    move to SLOTS.*
  */
 var PROMISE_CONST = Object.create(null);
 PROMISE_CONST.PROMISESTATE = "PromiseState";
@@ -21167,6 +21178,10 @@ var PromiseConstructor_$$create = function (thisArg, argList) {
 var PromiseConstructor_resolve = function (thisArg, argList) {
     var x = argList[0];
     var C = thisArg;
+    if (IsPromise(x)) {
+        var constructor = getInternalSlot(x, "PromiseConstructor");
+        if (SameValue(x, C)) return x;
+    }
     var promiseCapability = NewPromiseCapability(C);
     if (isAbrupt(promiseCapability = ifAbrupt(promiseCapability))) return promiseCapability;
     var resolveResult = callInternalSlot("Call", promiseCapability.Resolve, undefined, [x]);
@@ -21259,16 +21274,16 @@ var PromiseConstructor_all = function (thisArg, argList) {
             return NormalCompletion(promiseCapability.Promise)
         }
         var nextValue = IteratorValue(next);
-        if ((nextValue = IfAbruptRejectPromise(nextValue, promiseCapability)) && isAbrupt(nextValue)) return nextValue;
+        if (isAbrupt(nextValue = IfAbruptRejectPromise(nextValue, promiseCapability)))  return nextValue;
         var nextPromise = Invoke(C, "cast", [nextValue]);
-        if ((nextPromise=IfAbruptRejectPromise(nextPromise, promiseCapability)) && isAbrupt(nextPromise)) return nextPromise;
+        if (isAbrupt(nextPromise=IfAbruptRejectPromise(nextPromise, promiseCapability))) return nextPromise;
         var resolveElement = makePromiseAllResolveElementsFunction();
         setInternalSlot(resolveElement, "Index", index);
         setInternalSlot(resolveElement, "Values", values);
         setInternalSlot(resolveElement, "Capability", resolveElement, promiseCapability);
         setInternalSlot(resolveElement, "RemainingElements", remainingElementsCount);
         var result = Invoke(nextPromise, "then", [resolveElement, promiseCapability.Reject]);
-        if ((result = IfAbruptRejectPromise(result, promiseCapability)) && isAbrupt(result)) return result;
+        if (isAbrupt(result = IfAbruptRejectPromise(result, promiseCapability))) return result;
         index = index + 1;
         remainingElementsCount.value += 1;
     }
@@ -21285,12 +21300,15 @@ var PromisePrototype_then = function (thisArg, argList) {
 
     var promiseCapability = NewPromiseCapability(C);
     if (isAbrupt(promiseCapability = ifAbrupt(promiseCapability))) return promiseCapability;
-    var resolveReaction = makePromiseReaction(promiseCapability, onFulfilled);
-    var rejectReaction = makePromiseReaction(promiseCapability, onRejected);
+
+    var resolveReaction = PromiseReaction(promiseCapability, onFulfilled);
+    var rejectReaction = PromiseReaction(promiseCapability, onRejected);
+
     var PromiseState = getInternalSlot(promise, "PromiseState");
     if (PromiseState === "pending") {
         getInternalSlot(promise, "PromiseResolveReactions").push(resolveReaction);
         getInternalSlot(promise, "PromiseRejectReactions").push(rejectReaction);
+
     } else if (PromiseState === "fulfilled") {
         var resolution = getInternalSlot(promise, "PromiseResult");
         EnqueueTask("PromiseTasks", PromiseReactionTask(), [resolveReaction, resolution]);
@@ -21400,30 +21418,19 @@ function PromiseReactionTask() {
             var status = callInternalSlot("Call", promiseCapability.Reject, undefined, [handlerResult.value]);
             return NextTask(status, PromiseTaskQueue);
         }
-        if (SameValue(handlerResult, promiseCapability.Promise)) {
-            var selfResolutionError = withError("Type", "selfResolutionError in PromiseReactionTask");
-            status = callInternalSlot("Call", promiseCapability.Reject, undefined, [selfResolutionError]);
-            return NextTask(status, PromiseTaskQueue);
-        }
-        status = UpdatePromiseFromPotentialThenable(handlerResult, promiseCapability);
-        if (isAbrupt(status = ifAbrupt(status))) return status;
-        var updateResult = status;
-        if (updateResult === "not a thenable") {
-            status = callInternalSlot("Call", promiseCapability.Resolve, undefined, [handlerResult]);
-            //if (isAbrupt(status)) return status;
-        }
+        status = callInternalSlot("Call", promiseCapability.Resolve, undefined, [handlerResult]);
         return NextTask(status, PromiseTaskQueue);
     };
     F = CreateBuiltinFunction(getRealm(), PromiseReactionTask_call, "PromiseReactionTask", 2);
     return F;
 }
 function IfAbruptRejectPromise(value, capability) {
-    if (isAbrupt(value)) {
+    if (isAbrupt(value=ifAbrupt(value))) {
         var rejectedResult = callInternalSlot("Call", capability.Reject, undefined, [value.value]);
         if (isAbrupt(rejectedResult = ifAbrupt(rejectedResult))) return rejectedResult;
         return NormalCompletion(capability.Promise);
     }
-    return ifAbrupt(value);
+    return value;
 }
 function makePromiseRejectFunction() {
     var F = OrdinaryFunction();
@@ -21445,6 +21452,7 @@ function makePromiseResolveFunction() {
     var F = OrdinaryFunction();
     SetFunctionName(F, "resolve");
     SetFunctionLength(F, 1);
+
     var PromiseResolveFunction_call = function (thisArg, argList) {
         Assert(Type(getInternalSlot(F, "Promise")) === OBJECT, "[[Promise]] has to be an object");
         var resolution = argList[0];
@@ -21466,11 +21474,14 @@ function makePromiseResolveFunction() {
             return FulfillPromise(promise, resolution);
         }
         var resolvingFunctions = CreateResolvingFunctions(promise);
-        var thenCallResult = callInternalSlot("Call", then, resolution, [resolvingFunctions.Resolve, resolvingFunction.Reject]);
+        var thenCallResult = callInternalSlot("Call", then, resolution, [resolvingFunctions.Resolve, resolvingFunctions.Reject]);
+
         if (isAbrupt(thenCallResult=ifAbrupt(thenCallResult))) {
             return callInternalSlot("Call", resolvingFunctions.Reject, undefined, [thenCallResult.value]);
         }
-        return NormalCompletion(undefined);
+
+        return NormalCompletion(thenCallResult);
+
     };
     setInternalSlot(F, "Call", PromiseResolveFunction_call);
     return F;
@@ -21486,7 +21497,7 @@ function CreateResolvingFunctions (promise) {
     return { Resolve: resolve, Reject: reject };
 }
 function FulfillPromise (promise, value) {
-    // Assert(getInternalSlot(promise, "PromiseState") === "pending", "[[PromiseState]] may not be pending");
+    Assert(getInternalSlot(promise, "PromiseState") === "pending", "[[PromiseState]] must be pending");
     var reactions = getInternalSlot(promise, "PromiseFulfillReactions");
     setInternalSlot(promise, "PromiseResult", value);
     setInternalSlot(promise, "PromiseFulfillReactions", []);
@@ -21495,7 +21506,7 @@ function FulfillPromise (promise, value) {
     return TriggerPromiseReactions(reactions, value);
 }
 function RejectPromise (promise, reason) {
-    //Assert(getInternalSlot(promise, "PromiseState") != "pending", "[[PromiseState]] may not be pending");
+    Assert(getInternalSlot(promise, "PromiseState") === "pending", "[[PromiseState]] must not be pending");
     var reactions = getInternalSlot(promise, "PromiseRejectReactions");
     setInternalSlot(promise, "PromiseResult", reason);
     setInternalSlot(promise, "PromiseFulfillReactions", []);
@@ -21577,6 +21588,7 @@ function makeIdentityFunction () {
     };
     setInternalSlot(F, "Call", Identity_call);
     SetFunctionName(F, "IdentityFunction");
+    SetFunctionLength(F, 1);
     return F;
 }
 function makeResolutionHandlerFunction () {
@@ -21595,7 +21607,7 @@ function makeResolutionHandlerFunction () {
         if (isAbrupt(promiseCapability = ifAbrupt(promiseCapability))) return promiseCapability;
         var updateResult = UpdatePromiseFromPotentialThenable(x, promiseCapability);
         if (isAbrupt(updateResult = ifAbrupt(updateResult))) return updateResult;
-        if (!HasProperty(updateResult, "then")) {
+        if (updateResult !== "not a thenable") {
             return Invoke(promiseCapability.Promise, "then", [fulfillmentHandler, rejectionHandler]);
         }
         return callInternalSlot("Call", fulfillmentHandler, undefined, [x]);
@@ -24123,6 +24135,7 @@ define("runtime", function () {
         var codeMap = ecma.codeMap;
         var byteCodeMap = ecma.byteCodeMap;
         var astCodeMap = ecma.astCodeMap;
+        var makeNativeException = ecma.makeNativeException;
         var getCode = ecma.getCode;
         var isCodeType = ecma.isCodeType;
         var DeclaredNames = statics.DeclaredNames;
@@ -27503,19 +27516,8 @@ define("runtime", function () {
             }
 	    setTimeout(handler, 0);
         }
-        function makeNativeException (error) {
-            if (Type(error) != OBJECT) return error;
-            var name = unwrap(Get(error, "name"));
-            var message = unwrap(Get(error, "message"));
-            var callstack = unwrap(Get(error, "stack"));
-            var text = makeMyExceptionText(name, message, callstack);
 
-            var nativeError = new Error(name);
-            nativeError.name = name;
-            nativeError.message = message;
-            nativeError.stack = text;
-            return nativeError;
-        }
+
         function setScriptLocation (loc) {
             scriptLocation = "(syntax.js)";
             if (typeof window !== "undefined") {
