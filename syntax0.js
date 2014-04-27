@@ -3022,7 +3022,7 @@ define("tokenizer", function () {
     var ch, lookahead;	// lookahead0 and lookahead1
     var cb;
     var tokens = [];
-    var tokensWithWhiteSpaces;
+    var tokensWithWhiteSpaces = [];
     var line = 1, column = 1;
     var lines = [];
     var offset = 0;
@@ -3732,13 +3732,22 @@ define("tokenizer", function () {
     function tokenizeIntoArray(jsSourceText, callback) {
         saveState();
         initTokenizer(jsSourceText, callback);
-        tokenizeIntoArray.tokensWithWhiteSpaces = [];
-        var tokenTest;
+        if (withWS) tokenizeIntoArray.tokensWithWhiteSpaces = [];
+
         do {
 
             offset = pos;
             token = undefined;
-
+	    
+	    if (WhiteSpaces[ch]) WhiteSpace();
+	    else if (LineTerminators[ch]) LineTerminator();
+	    else if (DecimalDigits[ch] || ch == ".") NumericLiteral();
+	    else if (Quotes[ch]) StringLiteral();
+	    else if (ch == "`") TemplateLiteral();
+	    else if (IdentifierStart[ch]) KeywordOrIdentifier();
+	    if (!token && Punctuators[ch]) Punctuation();
+	    
+	    /*
             switch (ch) {
                 case " ":
                 case "\t": WhiteSpace(); break;
@@ -3763,20 +3772,31 @@ define("tokenizer", function () {
                     break;
             }
             if (!token && Punctuators[ch]) Punctuation();
+            */
+
+	    /*
+	    
+	    // slowest ist the ORing of Functions() which have to be called,
+	    // which means a whole EvaluateCall Situation. On node it´s 20% more
+	    // just for calling 6 function EACH CHARACTER.
+	    
+	    // The second biggest lost is currently in parser´s OLD next,
+	    // which skips WhiteSpaces and Co. TWICE. Simply removing causes
+	    // in faults, and i didn´t see it, although it´s simple.
+	    
+             WhiteSpace() || LineTerminator() || DivPunctuator() || NumericLiteral() || Punctuation()|| KeywordOrIdentifier() || StringLiteral() || TemplateLiteral();
+
+	    */
 
             if (!token && pos < length) {
                 var errorMsg = "Unknown Character: "+ch+" at offset "+pos+" at line "+line+" at column "+column;
                 restoreState();
                 throw new SyntaxError(errorMsg);
             }
-
-            //  WhiteSpace() || LineTerminator() || DivPunctuator() || NumericLiteral() || Punctuation()|| KeywordOrIdentifier() || StringLiteral() || TemplateLiteral();
-
-
-
             if (withExtras) {
                 exchangeExtraBuffer();
             }
+            
         } while (ch !== undefined);
         restoreState();
         return tokens;
