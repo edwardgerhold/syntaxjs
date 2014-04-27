@@ -3004,6 +3004,7 @@ define("tokenizer", function () {
     var AllowedLastChars = tables.AllowedLastChars;
     var OneOfThesePunctuators = tables.OneOfThesePunctuators;
     var SkipableToken = tables.SkipableToken;
+    var SkipableTokenNoLT = tables.SkipableTokenNoLT;
     /*
      var unicode = require("unicode-support");
      var isIdentifierStart = unicode.isIdentifierStart || function () {};
@@ -3051,9 +3052,8 @@ define("tokenizer", function () {
     function updateStack(se) {
         var oldstack = se.stack;
         se.stack = "syntax.js tokenizer,\nfunction tokenize,\n does not recognize actual input. ch=" + ch + ", lookahead=" + lookahead + ", line=" + line + ", col=" + column + ", offset=" + offset + ", pos="+pos+" " +sourceCode+" \n" + oldstack;
-    }
-    function atLineCol() {
-
+    }    function atLineCol() {
+        return ch + " at offset " + pos + " at line " + line + " at column " + column + ", lookahead="+lookahead;
     }
     function setCustomTokenMaker (func) {
         if (typeof func === null) {
@@ -3657,53 +3657,57 @@ define("tokenizer", function () {
         token.offset = offset;
         //token.loc.range = [offset, offset + (((value&&value.length)-1)|0) ];
         if (createCustomToken) token = createCustomToken(token);
-        if (!SkipableToken[type]) {
+        if (!SkipableTokenNoLT[type]) {
             tokenType = type;
             tokenValue = value;
-
-
+            tokens.push(token);
         } else {
             if (withExtras) extraBuffer.push(token);
         }
         if (withWS) tokensWithWhiteSpaces.push(token);
-        tokens.push(token);
+
         // emit("token", token);
         return token;
     }
 
     function exchangeToken() {
-        tokenize.lastToken = tokenize.token;
-        tokenize.lastTokenType = tokenize.tokenType;
-        tokenize.lastLtNext = tokenize.ltNext;
-
         tokenize.token = token;
         tokenize.tokenType = tokenType;
+        tokenize.tokenValue = tokenValue;
         tokenize.ltNext = ltNext;
     }
 
     function finishToken() {
         token = undefined;
         tokenType = undefined;
+        tokenValue = undefined;
         ltNext = false;
         exchangeToken();
         return token;
     }
+
     function nextToken() {
         if (pos >= length) return finishToken();
         offset = pos;
-        WhiteSpace() || LineTerminator() || DivPunctuator() || NumericLiteral() || Punctuation() || KeywordOrIdentifier() || StringLiteral() || TemplateLiteral();
-        if (!token && pos < length) {
-            throw new SyntaxError("Unknown Character: " + ch + " at offset " + pos + " at line " + line + " at column " + column);
-        } else if (token === false) {
-            return finishToken();
-        } else {
+        token = undefined;
+        if (DecimalDigits[ch] || ch == ".") NumericLiteral();
+        if (!token && Punctuators[ch]) Punctuation();
+        if (IdentifierStart[ch]) KeywordOrIdentifier();
+        else if (Quotes[ch]) StringLiteral();
+        else if (ch == "`") TemplateLiteral();
+        else if (WhiteSpaces[ch]) WhiteSpace();
+        else if (LineTerminators[ch]) LineTerminator();
+
+        if (!token && pos < length) throw new SyntaxError("Unknown Character: "+atLineCol());
+        else if (!token) return finishToken();
+        if (SkipableToken[token.type]) {
             if (token.type === "LineTerminator") ltNext = true;
-            if (SkipableToken[token.type]) {
-                if (withExtras) {
-                    extraBuffer.push(token);
-                }
-                return nextToken();
+            if (withExtras) {
+                extraBuffer.push(token);
             }
+            return nextToken(); // this one overflows the callstack
+        } else {
+            ltNext = false;
         }
         exchangeToken();
         exchangeExtraBuffer();
@@ -3735,18 +3739,15 @@ define("tokenizer", function () {
         if (withWS) tokenizeIntoArray.tokensWithWhiteSpaces = [];
 
         do {
-
             offset = pos;
             token = undefined;
-	    
-	    if (WhiteSpaces[ch]) WhiteSpace();
-	    else if (LineTerminators[ch]) LineTerminator();
-	    else if (DecimalDigits[ch] || ch == ".") NumericLiteral();
-	    else if (Quotes[ch]) StringLiteral();
-	    else if (ch == "`") TemplateLiteral();
-	    else if (IdentifierStart[ch]) KeywordOrIdentifier();
-	    if (!token && Punctuators[ch]) Punctuation();
-	    
+            if (DecimalDigits[ch] || ch == ".") NumericLiteral();
+            if (!token && Punctuators[ch]) Punctuation();
+            if (IdentifierStart[ch]) KeywordOrIdentifier();
+            else if (Quotes[ch]) StringLiteral();
+            else if (ch == "`") TemplateLiteral();
+            else if (WhiteSpaces[ch]) WhiteSpace();
+	        else if (LineTerminators[ch]) LineTerminator();
 	    /*
             switch (ch) {
                 case " ":
@@ -3981,7 +3982,7 @@ define("parser", function () {
     "use strict";
 //    var i18n = require("i18n-messages");
     var tables = require("tables");
-    var tokenize = require("tokenizer").tokenizeIntoArray; // removing fails a couple of tests, but NOT even the half (i´m close)
+    var tokenize = require("tokenizer").tokenizeIntoArray; // around one return nextToken() to go to replace
     // var // EarlyErrors = require("earlyerrors").// EarlyErrors;
     var Contains = require("earlyerrors").Contains;
     var SymbolTable = require("symboltable").SymbolTable;
@@ -3998,6 +3999,7 @@ define("parser", function () {
     var PrimaryExpressionByTypeAndFollowByValue = tables.PrimaryExpressionByTypeAndFollowByValue;
     var PrimaryExpressionByValueAndFollowByType = tables.PrimaryExpressionByValueAndFollowByType;
     var SkipableToken = tables.SkipableToken;
+    var SkipableTokenNoLT = tables.SkipableTokenNoLT;
     var InOrOfInsOf = tables.InOrOfInsOf;
     var InOrOf = tables.InOrOf;
     var propKeys = tables.propKeys;
@@ -4329,85 +4331,83 @@ define("parser", function () {
         return lookaheadValue === undefined;
     }
 
-    var next = next_from_array; //stepwise_next; // stepwise_next;
+    var next = next__array__; //next__step__;
 
-    function stepwise_next() {
+    function next__array__() {
         if (lookaheadToken) {
             token = lookaheadToken;
-            t = lookaheadType;
-            v = lookaheadValue;
-            ltPassedBy = ltNext;
-            lookaheadToken = tokenize.nextToken();
-            if (lookaheadToken) {
-                lookaheadValue = lookaheadToken.value;
-                lookaheadType = lookaheadToken.type;
-                ltNext = tokenize.ltNext;
-            } else {
-                lookaheadToken = lookaheadValue = lookaheadType = undefined;
-                ltNext = false;
-            }
-            return token;
-        }
-        token = t = v = lookaheadValue = lookaheadType = lookaheadToken = undefined;
-        return undefined;
-    }
-
-    function next_from_array() {
-        if (pos < tokenArrayLength) {
-            pos += 1;
-            token = tokens[pos];
-            // token = lookaheadToken;
             if (token) {
                 t = token.type;
-                //if (withExtras && captureExtraTypes[t]) extraBuffer.push(token);
                 v = token.value;
-                //if (withExtras && captureExtraValues[v]) extraBuffer.push(token);
-                if (SkipableToken[t]) return next();
                 lastloc = loc;
                 loc = token.loc;
-                lookaheadValue = nextTokenFromArray();
+                nextLookaheadFromArray();
                 return token;
             }
         }
         return token = v = t = undefined;
     }
-
-    function next_from_array2() {
-        if (pos < tokenArrayLength) {
-            pos = lookPos;
-            token = lookaheadToken;
-            if (token) {
-                t = token.type;
-                v = token.value;
-                if (SkipableToken[t]) return next();
-                lastloc = loc;
-                loc = token.loc;
-                ltPassedBy = ltNext;
-                lookaheadValue = nextTokenFromArray();
-                return token;
-            }
-        }
-        return token = v = t = undefined;
-    }
-
-    function nextTokenFromArray() {
+    function nextLookaheadFromArray() {
         ltPassedBy = ltNext;
         ltNext = false;
-        var t;
         lookPos = pos;
         for(;;) {
-            t = lookaheadToken = tokens[++lookPos];
-            if (t === undefined) return lookaheadToken = undefined;
-            lookaheadValue = t.value;
-            lookaheadType = t.type;
+            lookaheadToken = tokens[++lookPos];
+            if (lookaheadToken === undefined) {
+                lookaheadValue = lookaheadType = undefined;
+                break;
+            }
+            lookaheadType = lookaheadToken.type;
+            lookaheadValue = lookaheadToken.value;
             if (lookaheadType === "LineTerminator") {
                 ltNext = true;
+                continue;
             }
             if (SkipableToken[lookaheadType]) continue;
             break;
         }
-        return lookaheadValue;
+        pos = lookPos;
+        return lookaheadToken;
     }
+    function next__step__() {
+        if (lookaheadToken) {
+            token = lookaheadToken;
+            if (token) {
+                t = token.type;
+                v = token.value;
+                lastloc = loc;
+                loc = token.loc;
+                nextLookaheadFromStep();
+                return token;
+            }
+        }
+        return token = v = t = undefined;
+    }
+    function nextLookaheadFromStep() {
+        ltPassedBy = ltNext;
+        ltNext = false;
+        lookPos = pos;
+        for(;;) {
+            ++lookPos;
+            lookaheadToken = tokenize.nextToken();
+            if (lookaheadToken === undefined) {
+                lookaheadValue = lookaheadType = undefined;
+                break;
+            }
+            lookaheadType = lookaheadToken.type;
+            lookaheadValue = lookaheadToken.value;
+            ltNext = tokenize.ltNext;
+            if (lookaheadType === "LineTerminator") {
+                ltNext = true;
+                continue;
+            }
+            if (SkipableToken[lookaheadType]) continue;
+            break;
+        }
+        pos = lookPos;
+        return lookaheadToken;
+    }
+
 
     function stringifyLoc(loc) {
         var str = "";
@@ -4429,13 +4429,6 @@ define("parser", function () {
         }
     }
     function Node(type) {
-        /*var node = Object.create(null);
-        //nodeTable[
-        node._id_ = ++nodeId;
-        //] = node;
-        // staticSemantics.put(type);
-        node.type = type;
-        return node;*/
         return {
            type: type,
            _id_: ++nodeId
@@ -4454,9 +4447,11 @@ define("parser", function () {
             t: t,
             v: v,
             next: next,
+            lookPos: lookPos,
             lookaheadToken: lookaheadToken,
             lookaheadValue: lookaheadValue,
             lookaheadType: lookaheadType,
+
             isNoIn: isNoIn,
             yieldIsId: yieldIsId,
             defaultIsId: defaultIsId,
@@ -4481,9 +4476,12 @@ define("parser", function () {
             t = memento.t;
             v = memento.v;
             next = memento.next;
+
+            lookPos = memento.lookPos;
             lookaheadToken = memento.lookaheadToken;
             lookaheadValue = memento.lookaheadValue;
             lookaheadType = memento.lookaheadType;
+
             isNoIn = memento.isNoIn;
             yieldIsId = memento.yieldIsId;
             defaultIsId = memento.defaultIsId;
@@ -6658,8 +6656,7 @@ define("parser", function () {
     function initOldLexer(sourceOrTokens) {
         if (!Array.isArray(sourceOrTokens)) tokens = tokenize.tokenizeIntoArray(sourceOrTokens);
         else tokens = sourceOrTokens;
-
-        next = next_from_array;
+        next = next__array__;
         pos = -1;
         lookPos = 0;
         token = t = v = undefined;
@@ -6668,12 +6665,10 @@ define("parser", function () {
         currentNode = undefined;
         symtab = SymbolTable();
 
-        if (lookaheadToken = tokens[lookPos]) {
-            lookaheadValue = lookaheadToken.value;
-            lookaheadType = lookaheadToken.type;
-        }
+        nextLookaheadFromArray();
         next();
     }
+
     function initNewLexer(sourceOrTokens) {
         currentNode = pos = t = v = token = lookaheadToken = lookaheadValue = lookaheadType = undefined;
         ast = null;
@@ -6682,14 +6677,8 @@ define("parser", function () {
             if (Array.isArray(sourceOrTokens)) {
                 initOldLexer(sourceOrTokenes);
             } else {
-                next = stepwise_next;
+                next = next__step__;
                 lookaheadToken = tokenize(sourceOrTokens);
-                ltPassedBy = ltNext;
-                ltNext = tokenize.ltNext;
-                if (lookaheadToken) {
-                    lookaheadValue = lookaheadToken.value;
-                    lookaheadType = lookaheadToken.type;
-                }
                 next();
             }
         }
