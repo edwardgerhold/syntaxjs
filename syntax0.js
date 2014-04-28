@@ -2714,7 +2714,7 @@ define("slower-static-semantics", function (require, exports) {
             type = node.type;
             if (type === "SuperExpression") return true;
             if (type === "MethodDefinition" || type == "FunctionDeclaration" || type == "GeneratorDeclaration") {
-                if (node.needsSuper == true) return true;
+                if (node.super == true) return true;
                 contains = ReferencesSuper(node.params);
                 if (contains) return true;
                 contains = ReferencesSuper(node.body);
@@ -4865,8 +4865,7 @@ define("parser", function () {
                     parens.push(v);
                 } else if (v === ")") {
                     parens.pop();
-                    if (!parens.length) {
-                        // covered.push(token);
+                    if (!parens.length) {                        
                         break;
                     }
                 }
@@ -4886,10 +4885,8 @@ define("parser", function () {
                 node.params = (expr ? [expr] : this.ArrowParameterList(covered));
                 node.body = this.ConciseBody(node);
                 l2 = loc.end;
-                node.loc = makeLoc(l1, l2);
-                // EarlyErrors(node);
-                popStrict();
-                // if (compile) return builder.arrowExpression(node.params, node.body, node.loc);
+                node.loc = makeLoc(l1, l2);                
+                popStrict();                
                 return node;
             } else {
                 return this.CoverParenthesizedExpression(covered);
@@ -4938,37 +4935,41 @@ define("parser", function () {
                     property.name = v;
                     property.loc = token.loc;
                     match(v);
-                } /*else if (v === "!") {
+                } 
+                /*else if (v === "!") {
                  match("!");
                  if (v == "[") {
                  var
                  } else if (v == "(") {
-                 var args = this.Arguments();
+                    var args = this.Arguments();
+
+
                  } else if (t === "Identifier") {
-                 property = Object.create(null);
-                 property.name = v;
+                    property = {};
+                    property.name = v;
                  }
                  property.eventual = true;
                  node.eventual = true;
+
                  // http://wiki.ecmascript.org/doku.php?id=strawman:concurrency
                  // MemberExpression ! [Expression]
                  // MemberExpression ! Arguments
                  // MemberExpression ! Identifier
                  // setzt .eventual auf true
-                 } */ else {
+                 } */ 
+                else {
                     throw new SyntaxError("MemberExpression . Identifier expects a valid IdentifierString or an Integer or null,true,false as PropertyKey"+atLineCol());
                 }
                 node.property = property;
             } else {
                 return obj;
             }
+            
             if (v == "[" || v == ".") return this.MemberExpression(node);
             else if (v == "(") return this.CallExpression(node);
             else if (IsTemplateToken[t]) return this.CallExpression(node);
             // strawman:concurrency addition
-            // else if (v == "!") return this.MemberExpression(node);
-            // EarlyErrors(node);
-            // if (compile) return builder["memberExpression"](node.object, node.property, node.computed, node.loc);
+            else if (v == "!") return this.MemberExpression(node);
             l2 = loc.end;
             node.loc = makeLoc(l1, l2);
             return node;
@@ -5163,16 +5164,14 @@ define("parser", function () {
                 if (callee && callee.type === "CallExpression") {
                     node = callee;
                     node.type = "NewExpression";
-                } else if (callee === null || callee === undefined) {
+                } else if (!callee) {
                     throw new SyntaxError("NewExpression: can not identify callee");
                 } else {
                     node.callee = callee;
                 }
             }
             l2 = loc.end;
-            node.loc = makeLoc(l1, l2);
-            // EarlyErrors(node);
-            // if (compile) return builder.newExpression(node.callee, node.arguments, node.loc);
+            node.loc = makeLoc(l1, l2);            
             return node;
         }
         return null;
@@ -5204,18 +5203,15 @@ define("parser", function () {
         var ae;
         var l1 = loc.start;
         var l2;
+        if (ExprEndOfs[v]) return null;
 
         while (v != undefined) {
-
-            if (ae = this.AssignmentExpression())
-            //if (v == "?") ae = this.ConditionalExpressionNoIn(ae);
-                list.push(ae);
-
+            ae = this.AssignmentExpression()
+            list.push(ae);
             if (v === ",") match(",");
             else if (ltPassedBy || ExprEndOfs[v] || v === undefined) break;
             else throw new SyntaxError("invalid expression "+atLineCol());
         }
-
         l2 = loc.end;
         switch (list.length) {
             case 0: return null;
@@ -5235,9 +5231,8 @@ define("parser", function () {
                 if (ContainNoSuperIn[currentNode.type]) {
                     throw new SyntaxError("contains: super is not allowed in "+currentNode.type);
                 }
-                currentNode.needsSuper = true;
-            }
-            // if (compile) return builder.superExpression(node.loc);
+                currentNode.super = true;
+            }            
             return node;
         }
         return null;
@@ -5249,8 +5244,7 @@ define("parser", function () {
             node.loc = makeLoc(l1, l1);
             if (withExtras && extraBuffer.length) dumpExtras2(node, "before");
             match("this");
-            if (withExtras && extraBuffer.length) dumpExtras2(node, "after");
-            // if (compile) return builder.thisExpression(node.loc);
+            if (withExtras && extraBuffer.length) dumpExtras2(node, "after");            
             return node;
         }
         return null;
@@ -5258,9 +5252,7 @@ define("parser", function () {
     function Initializer() {
         if (v === "=") {
             match("=");
-            var expr = this.AssignmentExpression();
-            // if (v == "?") expr = this.ConditionalExpressionNoIn(expr);
-            return expr;
+            return this.AssignmentExpression();
         }
         return null;
     }
@@ -5282,7 +5274,7 @@ define("parser", function () {
                     bindEl.loc = makeLoc(l1, l2);
                     if (isStrict && ForbiddenArgumentsInStrict[bindEl.as.name]) {
                         throw new SyntaxError(bindEl.as.name + " is not a valid binding identifier in strict mode");
-                    }
+                }
                     list.push(bindEl);
                     if (v === "=") {
                         bindEl.init = this.Initializer();
@@ -5335,9 +5327,7 @@ define("parser", function () {
             node.elements = this.BindingElementList();
             if (v === "=") node.init = this.Initializer();
             l2 = loc.end;
-            node.loc = makeLoc(l1, l2);
-            // EarlyErrors(node);
-            // if (compile) return builder.bindingPattern(node.type, node.elements, node.init, node.loc);
+            node.loc = makeLoc(l1, l2);            
             return node;
         }
         return null;
@@ -5400,13 +5390,11 @@ define("parser", function () {
             node = Node("VariableDeclaration");
             node.declarations = [];
             node.kind = v;
-            if (LetOrConst[v]) node.type = "LexicalDeclaration";
+            if (v !== "var") node.type = "LexicalDeclaration";
             match(v);
             node.declarations = this.VariableDeclarationList(node.kind);
             l2 = loc.end;
-            node.loc = makeLoc(l1, l2);
-            // EarlyErrors(node);
-            // if (compile) return builder["variableStatement"](node.kind, node.declarations, node.loc);
+            node.loc = makeLoc(l1, l2);    
             return node;
         }
         return null;
@@ -5442,9 +5430,7 @@ define("parser", function () {
                 node.elements.push(m);
             }
             match("}");
-            popStrict();
-            //popDecls(node);
-            // if (compile) return builder["classExpression"](node.id, node.extends, node.elements, node.loc);
+            popStrict();            
             return node;
         }
         return null;
@@ -5506,8 +5492,7 @@ define("parser", function () {
         node.specialMethod = specialMethod;
         l2 = loc.end;
         node.loc = makeLoc(l1, l2);
-        // EarlyErrors(node);
-        // if (compile) return builder.methodDefinition(node.id, node.params, node.body, node.strict, node.static, node.generator, node.loc);
+        
         currentNode = nodeStack.pop();
         return node;
 
@@ -5527,7 +5512,6 @@ define("parser", function () {
             match(v);
             var l2 = loc.end;
             node.loc = makeLoc(l1, l2);
-            // if (compile) return builder["restParameter"](node.id, node.loc);
             return node;
         }
         return null;
@@ -5539,8 +5523,7 @@ define("parser", function () {
             var node = Node("SpreadExpression");
             node.argument = this.AssignmentExpression();
             var l2 = node.argument && node.argument.loc && node.argument.loc.end;
-            node.loc = makeLoc(l1, l2);
-            // if (compile) return builder["spreadExpression"](node.argument, node.loc);
+            node.loc = makeLoc(l1, l2);            
             return node;
         }
         return null;
@@ -5548,14 +5531,13 @@ define("parser", function () {
     function DefaultParameter() { // ES6
         var node;
         if (t == "Identifier" && lookaheadValue == "=") {
-            var l1 = loc&&loc.start;
+            var l1 = loc.start;
             node = Node("DefaultParameter");
             var id = this.Identifier();
             node.id = id.name;
             match("=");
             node.init = this.AssignmentExpression();
-            node.loc = makeLoc(l1, loc.end);
-            // if (compile) return builder["defaultParameter"](node.id, node.init, node.loc);
+            node.loc = makeLoc(l1, loc.end);            
             return node;
         }
         return null;
@@ -5651,8 +5633,6 @@ define("parser", function () {
             defaultIsId = defaultStack.pop();
             currentNode = nodeStack.pop();
             symtab.oldScope();
-            // EarlyErrors(node);
-            // if (compile) return builder.functionDeclaration(node.id, node.params, node.body, node.strict, node.generator, node.expression, node.loc, node.extras);
             return node;
         }
         return null;
@@ -9405,19 +9385,19 @@ DeclarativeEnvironment.prototype = {
         return "[object DeclarativeEnvironment]";
     },
     HasBinding: function HasBinding(N) {
-        debug("hasbinding of decl called with " + N);
+        // debug("hasbinding of decl called with " + N);
         return (N in this.Bindings);
     },
     CreateMutableBinding: function CreateMutableBinding(N, D) {
         var envRec = this.Bindings;
-        debug("declenv create mutablebinding: " + N);
+        // debug("declenv create mutablebinding: " + N);
         var configValue = !!(D === true || D === undefined);
         if (N in envRec) return withError("Reference", N + " is bereits deklariert");
         else createIdentifierBinding(envRec, N, undefined, configValue);
         return NormalCompletion();
     },
     CreateImmutableBinding: function CreateImmutableBinding(N) {
-        debug("declenv create immutablebinding: " + N);
+        // debug("declenv create immutablebinding: " + N);
         var envRec = this.Bindings;
         var configValue = false;
         if (N in envRec) return withError("Reference", N + " is bereits deklariert");
@@ -9425,7 +9405,7 @@ DeclarativeEnvironment.prototype = {
         return NormalCompletion();
     },
     InitializeBinding: function (N, V) {
-        debug("declenv initialize: " + N);
+        // debug("declenv initialize: " + N);
         var b, outerEnv;
         if (this.HasBinding(N)) {
             b = this.Bindings[N];
@@ -9456,11 +9436,13 @@ DeclarativeEnvironment.prototype = {
         if (this.HasBinding(N)) {
             b = this.Bindings[N];
             if (!b.initialized) return NormalCompletion(undefined);
+            //return withError("Reference", "unitialized binding '" + N+ "'");
+
             return NormalCompletion(b.value);
         } else if (this.outer) return this.outer.GetBindingValue(N, S);
         return withError("Reference", "GetBindingValue: Can not find " + N);
     },
-    DeleteBinding: function DeleteBinding(N) {
+    DeleteBinding: function (N) {
         if (this.HasBinding[N]) {
             this.Bindings[N] = undefined;
             delete this.Bindings[N];
@@ -11006,6 +10988,7 @@ function Enumerate(O) {
         }
         return MakeListIterator(denseList);
     }
+    
     return MakeListIterator(propList);
 }
 
@@ -11865,8 +11848,10 @@ function CreateListIterator(list) {
 function MakeListIterator(list) {
     var nextPos = 0;
     var len = list.length;
+    var obj = ObjectCreate();
 
     var listIteratorNext = CreateBuiltinFunction(getRealm(),function (thisArg, argList) {
+	var list = getInternalSlot(obj, "List");
         var value, done;
         if (nextPos < len) {
             value = list[nextPos];
@@ -11878,8 +11863,9 @@ function MakeListIterator(list) {
         return CreateItrResultObject(undefined, true);
     });
 
-    var obj = ObjectCreate();
+
     if (isAbrupt(obj = ifAbrupt(obj))) return obj;
+    setInternalSlot(obj, "List", list);
     CreateDataProperty(obj, "next", listIteratorNext);
     return obj;
 }
@@ -12510,10 +12496,44 @@ StringExoticObject.prototype = assign(StringExoticObject.prototype, {
         return ValidateAndApplyPropertyDescriptor(O, P, extensible, D, current);
     },
     Enumerate: function () {
-        return Enumerate(this);
+	var keys = [];
+	var O = this;
+	var str = getInternalSlot(O, "StringData");
+	var len = str.length;
+	for (var i = 0; i < len; i++) keys.push(ToString(i));
+        var iterator = Enumerate(this);
+        var list = getInternalSlot(iterator, "List");
+        list = keys.concat(list);
+        setInternalSlot(iterator, "List", list);
+        return NormalCompletion(keys.concat(list));
     },
     OwnPropertyKeys: function () {
-        return OwnPropertyKeys(this);
+	// just a thrown up
+	var keys = [];
+	var O = this;
+	var str = getInternalSlot(O, "StringData");
+	var len = str.length;
+	for (var i = 0; i < len; i++) keys.push(ToString(i));
+	var bindings = getInternalSlot(O, "Bindings");
+	for (var p in bindings) {
+	    var P = +p;
+	    if (ToInteger(P) >= len) keys.push(P);
+	}
+	for (p in bindings) {
+	    P = +p;
+	    if (P != P)
+	    keys.push(p);	
+	}
+	var symbols = getInternalSlot(O, "Symbols")
+	for (p in symbols) {
+	    var s = symbols[p];
+	    if (s && s.symbol) {	// have to add and
+		keys.push(s.symbol);	// repair
+	    }				// a ES5KEY-SYMBOL-REGISTRY
+					// to remove .symbol backref from desc
+					// (couldnt get from es5id the sym back w/o reggi)
+	}
+        return CreateArrayFromList(keys);
     },
     toString: function () {
         return "[object StringExoticObject]";
@@ -14279,17 +14299,15 @@ exports.float64 = float64;
         var TypeConstructor = createIntrinsicConstructor(intrinsics, "Type", 0, "%Type%");
         var TypePrototype = createIntrinsicPrototype(intrinsics, "%TypePrototype%");
         var ThrowTypeError = createIntrinsicFunction(intrinsics, "ThrowTypeError", 0, "%ThrowTypeError%");
-
+        var ArrayProto_values = createIntrinsicFunction(intrinsics, "values", 0, "%ArrayProto_values%");
+        
         var VMObject = createIntrinsicObject(intrinsics,"%VM%"); // that i can play with from inside the shell, too.
-
+        
         var ThrowTypeError_Call = function (thisArg, argList) {
             return withError("Type", "The system is supposed to throw a Type Error with %ThrowTypeError% here.");
         };
         setInternalSlot(ThrowTypeError, "Call", ThrowTypeError_Call);
         setInternalSlot(ThrowTypeError, "Construct", undefined);
-
-
-
 
 setInternalSlot(PrintFunction, "Call", function (thisArg, argList) {
    var str = "";
@@ -17168,16 +17186,18 @@ DefineOwnProperty(ArrayPrototype, "keys", {
     configurable: true
 });
 
-DefineOwnProperty(ArrayPrototype, "values", {
-    value: CreateBuiltinFunction(realm, function values(thisArg, argList) {
+
+// %ArrayProto_values === Array.prototype.values
+
+var ArrayPrototype_values = function (thisArg, argList) {
         var O = ToObject(thisArg);
         if (isAbrupt(O)) return O;
         return CreateArrayIterator(O, "value");
-    }),
-    enumerable: false,
-    writable: true,
-    configurable: true
-});
+};
+setInternalSlot(ArrayProto_values, "Call", ArrayPrototype_values);
+setInternalSlot(ArrayProto_values, "Construct", undefined);
+LazyDefineProperty(ArrayPrototype, "values", ArrayProto_values);
+
 
 DefineOwnProperty(ArrayPrototype, $$iterator, {
     value: CreateBuiltinFunction(realm, function $$iterator(thisArg, argList) {
@@ -18107,7 +18127,7 @@ var StringPrototype_indexOf = function (thisArg, argList) {
     if (isAbrupt(O = ifAbrupt(O))) return O;
     var S = ToString(O);
     if (isAbrupt(S = ifAbrupt(S))) return S;
-    var searchStr = ToString(searchStr);
+    var searchStr = ToString(searchString);
     var pos = position | 0;
     var len = S.length;
     var start = min(max(pos, 0), len);
@@ -18125,6 +18145,7 @@ var StringPrototype_indexOf = function (thisArg, argList) {
             }
         }
     return NormalCompletion(-1);
+    
 };
 
 
@@ -18135,15 +18156,32 @@ var StringPrototype_lastIndexOf = function (thisArg, argList)   {
     if (isAbrupt(O = ifAbrupt(O))) return O;
     var S = ToString(O);
     if (isAbrupt(S = ifAbrupt(S))) return S;
+    var searchStr = ToString(searchString);
+    if (isAbrupt(searchStr=ifAbrupt(searchStr))) return searchStr;
     var numPos = ToNumber(position);
     if (isAbrupt(numPos = ifAbrupt(numPos))) return numPos;
     var pos;
     if (numPos !== numPos) pos = Infinity;
     else pos = numPos|0;
-    var start = min(max(pos, 0), len);
+    var len = S.length;
+    var start = min(pos, len);
     var searchLen = searchStr.length;
-
-
+    //return S.lastIndexOf(searchStr, position);
+    
+    outer:
+        for (var j = 0, i = start; j >= i; i--) {
+            var ch = S[i];
+            if (ch === searchStr[0]) {
+                var k = 0;
+                while (k < searchLen) {
+                    if (S[i+k] !== searchStr[k]) continue outer;
+                    k = k + 1;
+                }
+                return NormalCompletion(i);
+            }
+        }
+        return NormalCompletion(-1);
+    
 };
 
 var StringPrototype_localeCompare = function (thisArg, argList) {
@@ -18165,7 +18203,7 @@ var StringPrototype_at = function (thisArg, argList) {
     var pos = ToInteger(position);
     if (isAbrupt(pos=ifAbrupt(pos))) return pos;
     var size = S.length;
-    if (pos < size || pos > size) return NormalCompletion("");
+    //if (pos < size || pos > size) return NormalCompletion("");
     var first = S[position];
     var cuFirst = s.charCodeAt(0);
     if (cuFirst < 0xD800 || cuFirst > 0xDBFF || (position + 1 === size)) return NormalCompletion(first);
@@ -18184,6 +18222,7 @@ LazyDefineBuiltinFunction(StringPrototype, "concat", 1, StringPrototype_concat);
 LazyDefineBuiltinFunction(StringPrototype, "contains", 1, StringPrototype_contains);
 LazyDefineBuiltinFunction(StringPrototype, "endsWith", 1, StringPrototype_endsWith);
 LazyDefineBuiltinFunction(StringPrototype, "indexOf", 1, StringPrototype_indexOf);
+LazyDefineBuiltinFunction(StringPrototype, "lastIndexOf", 1, StringPrototype_lastIndexOf);
 LazyDefineBuiltinFunction(StringPrototype, "lpad", 1, StringPrototype_lpad);
 LazyDefineBuiltinFunction(StringPrototype, "rpad", 1, StringPrototype_rpad);
 LazyDefineBuiltinFunction(StringPrototype, "match", 0, StringPrototype_match);
@@ -19693,11 +19732,23 @@ LazyDefineBuiltinFunction(ReflectObject, "setPrototypeOf", 2, ReflectObject_setP
 LazyDefineBuiltinConstant(ReflectObject, $$toStringTag, "Reflect");
 
 
+
+
 /*
 
     tHIS iS just for playing with the parser
 
- */
+*/
+
+var ReflectObject_getIntrinsic = function (thisArg, argList) {
+    var intrinsic = ToString(argList[0]);
+    if (isAbrupt(intrinsic=ifAbrupt(intrinsic))) return intrinsic;
+    return getIntrinsic(intrinsic);
+};
+
+LazyDefineBuiltinFunction(ReflectObject, "getIntrinsic", 1, ReflectObject_getIntrinsic);
+
+
 
 var ReflectObject_createSelfHostingFunction = function(thisArg, argList) {
    var parseGoal = require("parser").parseGoal;
@@ -24357,6 +24408,7 @@ define("runtime", function () {
         var AbstractEqualityComparison = ecma.AbstractEqualityComparison;
         var AbstractRelationalComparion = ecma.AbstractRelationalComparison;
         var ArgumentsExoticObject = ecma.ArgumentsExoticObject;
+
         var AddRestrictedFunctionProperties = ecma.AddRestrictedFunctionProperties;
         var ifAbrupt = ecma.ifAbrupt;
         var isAbrupt = ecma.isAbrupt;
@@ -24822,6 +24874,7 @@ define("runtime", function () {
             var len = args.length;
             var obj = ArgumentsExoticObject();
             /* callInternalSlot("DefineOwnProperty", */
+            
             writePropertyDescriptor(obj, "length", {
                 value: len,
                 writable: true,
@@ -24840,13 +24893,15 @@ define("runtime", function () {
                     configurable: true
                 });
                 indx = indx - 1;
-            }
+            }   
+            
             return obj;
         }
         function CompleteStrictArgumentsObject(obj) {
             AddRestrictedFunctionProperties(obj);
             return obj;
         }
+
         function CompleteMappedArgumentsObject(obj, F, formals, env) {
 
             var len = Get(obj, "length");
@@ -24855,27 +24910,20 @@ define("runtime", function () {
             var mappedNames = Object.create(null);
             var numberOfNonRestFormals;
             var i = 0;
-
             while (i < formals.length) {
                 if (formals[i].type === "RestParameter") break;
                 ++i;
             }
-
             numberOfNonRestFormals = i;
             var map = ObjectCreate();
-
             var name;
             var indx = len - 1;
             var param;
             var g,s;
-
             while (indx >= 0) {
-
                 if (indx < numberOfNonRestFormals) {
                     param = formals[indx];
-
                     if (IsBindingPattern[param.type]) { // extra hack ?
-
                         var elem;
                         for (var x = 0, y = param.elements.length; x < y; x++) {
                             elem = param.elements[i];
@@ -24892,16 +24940,12 @@ define("runtime", function () {
                                 });
                             }
                         }
-
                     } else {
-
                         if (param.type === "Identifier") {
                             name = param.name || param.value;
                         } else if (param.type === "DefaultParameter") {
                             name = param.id;
                         } else name = "";
-
-
                         if (name && !mappedNames[name]) {
                             mappedNames[name] = true;
                             g = MakeArgGetter(name, env);
@@ -24921,13 +24965,23 @@ define("runtime", function () {
             if (Object.keys(mappedNames).length) {
                 setInternalSlot(obj, "ParameterMap", map);
             }
-
-            callInternalSlot("DefineOwnProperty", obj, "callee", {
+            
+            var status = DefineOwnPropertyOrThrow(map, $$iterator, {
+        	value: getIntrinsic("%ArrayProto_values%"),
+        	enumerable: false,
+        	writeable: true,
+        	configurable: true
+            }); 
+            
+            if (isAbrupt(status)) return status;
+            status = DefineOwnPropertyOrThrow(obj, "callee", {
                 value: F,
                 writable: false,
                 configurable: false,
                 enumerable: false
             });
+            if (isAbrupt(status)) return status;
+            
             return obj;
         }
         function makeArgumentsGetter(name) {
@@ -25189,15 +25243,17 @@ define("runtime", function () {
             }
             for (var i = 0, j = code.length; i < j; i++) {
                 if (node = code[i]) {
-                    tellExecutionContext(node, i, code);
+                    // tellExecutionContext(node, i, code);
                     exprRef = Evaluate(node);
                     if (isAbrupt(exprRef)) {
-                        if (exprRef.type === "return") {
+                        // untellExecutionContext()
+                        if (exprRef.type === "return") {                            
                             return NormalCompletion(exprRef.value);
                         } else return exprRef;
                     }
                 }
             }
+            // untellExecutionContext();
             return exprRef;
         }
         function EvaluateBody(F) {
@@ -25214,16 +25270,18 @@ define("runtime", function () {
             }
             for (var i = 0, j = code.length; i < j; i++) {
                 if ((node = code[i])) {
-                    tellExecutionContext(node, i, code);
+                    // tellExecutionContext(node, i, code);
                     exprRef = Evaluate(node);
-                    if (isAbrupt(exprRef)) {
+                    if (isAbrupt(exprRef=ifAbrupt(exprRef))) {
+                        // untellExecutionContext();
                         if (exprRef.type === "return") {
                             return NormalCompletion(exprRef.value);
                         } else return exprRef;
                     }
                 }
             }
-            return exprRef;
+            // untellExecutionContext();
+            return NormalCompletion(exprRef);
         }
         function EvaluateModuleBody(M) {
             "use strict";
@@ -25232,16 +25290,18 @@ define("runtime", function () {
             var code = getCode(M, "body");
             for (var i = 0, j = code.length; i < j; i++) {
                 if ((node = code[i])) {
-                    tellExecutionContext(node, i, code);
+                    // tellExecutionContext(node, i, code);
                     exprRef = Evaluate(node);
-                    if (isAbrupt(exprRef)) {
+                    if (isAbrupt(exprRef=ifAbrupt(exprRef))) {
+                        // untellExecutionContext();
                         if (exprRef.type === "return") {
                             return NormalCompletion(exprRef.value);
                         } else return exprRef;
                     }
                 }
             }
-            return exprRef;
+            // untellExecutionContext();
+            return NormalCompletion(exprRef);            
         }
         evaluation.GeneratorExpression = GeneratorDeclaration;
         evaluation.GeneratorDeclaration = GeneratorDeclaration;
@@ -25303,7 +25363,7 @@ define("runtime", function () {
                     if (isAbrupt(status)) return status;
                 } else scope = getLexEnv();
                 F = FunctionCreate("normal", params, body, scope, strict);
-                if (node.needsSuper) MakeMethod(F, id, undefined);
+                if (node.super) MakeMethod(F, id, undefined);
                 MakeConstructor(F);
                 if (id) {
                     var status;
@@ -26536,14 +26596,21 @@ define("runtime", function () {
             var item;
             for (var i = 0, j = list.length; i < j; i += 1) {
                 if (item = list[i]) {
-                    tellExecutionContext(item, i, list);
+                    // tellExecutionContext(item, i, list);
                     exprRef = Evaluate(item);
-                    if (isAbrupt(exprRef)) return exprRef;
+                    if (isAbrupt(exprRef)) {
+                        // untellExecutionContext();
+                        return exprRef;
+                    }
                     exprValue = GetValue(exprRef);
-                    if (isAbrupt(exprValue)) return exprValue;
+                    if (isAbrupt(exprValue)) {
+                        // untellExecutionContext();
+                        return exprValue;
+                    }
                     if (exprValue !== empty) V = exprValue;
                 }
             }
+            // untellExecutionContext();
             return NormalCompletion(V);
         }
         evaluation.FunctionStatementList = StatementList;
@@ -26563,7 +26630,7 @@ define("runtime", function () {
             for (var i = index, j = stmtList.length; i < j; i++) {
                 if (stmt = stmtList[i]) {
 
-                    tellExecutionContext(stmt, i, stmtList);
+                    // tellExecutionContext(stmt, i, stmtList);
                     stmtRef = Evaluate(stmt);
                     stmtValue = GetValue(stmtRef);
 
@@ -26951,17 +27018,14 @@ define("runtime", function () {
                 }
 
                 result = Evaluate(stmt);
-                // here is a fix if no completion comes out
-
+                // here is a fix if no completion comes out (which is something which may not happen later anymore)
                 if (result instanceof CompletionRecord) {
                     if (result.value !== empty) V = result.value;
                 } else V = result;
-                // hmm, there will be new fresh bindings
+                
                 if (!LoopContinues(result, labelSet)) return result;
-                // new fresh bindings
                 status = CreatePerIterationEnvironment(perIterationBindings);
                 if (isAbrupt(status)) return status;
-                // maybe it just works :)
                 if (incrementExpr) {
                     incrementExprRef = Evaluate(incrementExpr);
                     incrementExprValue = GetValue(incrementExprRef);
@@ -26969,11 +27033,13 @@ define("runtime", function () {
                 }
             }
         }
+        
         function CaseSelectorEvaluation(node) {
             var test = node.test;
             var exprRef = Evaluate(test);
             return GetValue(exprRef);
         }
+        
         function CaseBlockEvaluation(input, caseBlock) {
             var clause;
             var clauseSelector;
@@ -26990,7 +27056,7 @@ define("runtime", function () {
                     defaultClause = clause;
                 } else {
                     clauseSelector = CaseSelectorEvaluation(clause);
-                    if (isAbrupt(clauseSelector)) return clauseSelector;
+                    if (isAbrupt(clauseSelector=ifAbrupt(clauseSelector))) return clauseSelector;
                     if (searching) matched = SameValue(input, clauseSelector);
                     if (matched) {
                         searching = false;
@@ -27473,15 +27539,53 @@ define("runtime", function () {
             }
             return NormalCompletion(empty);
         }
-        function tellExecutionContext(node, instructionIndex, parent) {
+        
+        var nodeWithList = {
+    	    "Program": "body",
+    	    "FunctionDeclaration": "body",
+    	    "FunctionExpression": "body",
+    	    "GeneratorDeclaration": "body",
+    	    "GeneratorExpression": "body",
+    	    "SwitchStatement": "cases",
+    	    "SequenceExpression": "sequence",
+    	    "DoWhileStatement": "body",
+    	    "WhileStatement": "body",
+    	    "ForStatement" :"body",
+    	    "ForInStatement": "body",
+    	    "ForOfStatement": "body"
+        };
+        
+        /* 
+    	    Have to take a pencil an write the stack up,
+    	    to check out which to put onto and what to pop
+    	    off the stack for only one purpose: GENERATOR.
+    	    (The only thing which really needs some memory,
+    	    coz a visitor can´t break and resume a walk)
+        */
+        
+        function tellExecutionContext(node, index, parent) {
             loc = node.loc || loc;
-            var cx = getContext(); // expensive putting such here
-            cx.state.push([node, instructionIndex, parent]); // wrong but close (4 a tree)
-            cx.state.node = node;
+            var state = getContext().state;             
+            var rec;
+
+            if (nodeWithList[node.type]) {
+                state.push({                    
+            	    list: true,
+            	    node: node,
+                    parent: parent,
+                    index: -1
+                });
+            } else {
+                state.push({ 
+            	    list:false, node: node, index: index, parent: parent 
+            	});
+            }
+            
         }
         function untellExecutionContext() {
     	    var cx = getContext();
     	    cx.state.pop();
+    	    
         }
         evaluation.ScriptBody =
             evaluation.Program = Program;
@@ -27494,23 +27598,24 @@ define("runtime", function () {
                 if (shellMode) keepStrict = true;
             }
             var status = InstantiateGlobalDeclaration(program, getGlobalEnv(), []);
-            if (isAbrupt(status)) return status;
-            tellExecutionContext(program, 0, null);
+            if (isAbrupt(status)) return status;            
             cx.callee = "ScriptItemList";
             cx.caller = "Script";
             var node;
             var V = undefined;
             var body = program.body;
-            for (var i = 0, j = program.body.length; i < j; i += 1) {
+            // tellExecutionContext(body, 0, null);
+            for (var i = 0, j = body.length; i < j; i += 1) {
                 if (node = body[i]) {
-                    tellExecutionContext(node, i, program);
+                    // tellExecutionContext(node, i, body);
                     v = GetValue(Evaluate(node));
-                    if (isAbrupt(v)) {
+                    if (isAbrupt(v)) {                        
                         return v;
                     }
                     if (v !== empty) V = v;
                 }
             }
+            // untellExecutionContext();
             return NormalCompletion(V);
         }
         ecma.Evaluate = Evaluate;
@@ -27532,8 +27637,9 @@ define("runtime", function () {
             }
             // debug("Evaluate(" + node.type + ")");
             if (E = evaluation[node.type]) {
-                tellExecutionContext(node, 0);
+                // tellExecutionContext(node, 0);
                 R = E(node, a, b, c);
+                // untellExecutionContext();
             }
             return R;
         }
@@ -27640,11 +27746,9 @@ define("runtime", function () {
             /*
                 my self-defined event queue shall become realm.TimerTasks, mainly
                 for SetTimeout.
-
                 Now i should consider reworking this part and intrinsics/settimeout.js
                 to use getRealm().TimerTasks instead of realm.eventQueue and schedule
                 in the MicroTask Format supplied with ES6 Promises.
-
              */
 
             var eventQueue = getEventQueue();
@@ -27655,6 +27759,8 @@ define("runtime", function () {
 
             return exprValue;
         }
+        
+        
         /*
          * experiment execution block (uncompleted concepts for async/eventual/transformed return values)
          */

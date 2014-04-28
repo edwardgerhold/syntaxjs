@@ -18,7 +18,7 @@ the same meaning) will take a while and a day more or two.
 A few JSDoc comments will replace the chaotic few comments left between.
 
 (****) typed mem and stack machine is a must for me but it will still take
-a while. But then we´ll also have Weak Maps and Weak Refs. 
+a while. But then we´ll also have Weak Maps, Weak Sets, and Weak Refs. 
 
 
 New: Multiple Realms

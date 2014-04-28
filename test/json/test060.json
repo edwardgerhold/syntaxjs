@@ -1,0 +1,17 @@
+{
+	"in expressions":
+	{
+	    "init": 		
+		"let str = 'abcdef';",
+	    "tests": 
+	    [
+		["let s=[]; for (var i=0;i < 8;i++) s.push(str[i]); s.join('')", "abcdef"],
+		["s=[]; for (i=0;i < 7;i++) s.push(str[i]); s.join()", "a,b,c,d,e,f,"],
+		["str[10] === undefined", true],
+		["let x = str[11]; x === undefined;", true],
+		["'abc'.indexOf('b')", 1],
+		["'abc'.lastIndexOf('b')", 1]
+		
+	    ]
+	}
+}

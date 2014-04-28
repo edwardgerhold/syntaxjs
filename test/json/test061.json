@@ -1,0 +1,24 @@
+{
+	"arguments[@@iterator]":
+	{
+	    "init": 		
+		"function f(a,b,c,d,e) { let str = ''; for (let x of arguments[Symbol.iterator]()) str += x; return str; }",
+	    "tests": 
+	    [
+
+		["f(1,2,3,4,5);", "12345"],
+		["f('e','d','d','i','e','g','e','r');", "eddieger"]
+	    ]
+	},
+	"arguments[@@iterator] 2":
+	{
+	    "init": 		
+		"function f(a,b,c,d,e) { let str = ''; for (let x of arguments) str += x; return str; }",
+	    "tests": 
+	    [
+
+		["f(1,2,3,4,5);", "12345"],
+		["f('e','d','d','i','e','g','e','r');", "eddieger"]
+	    ]
+	}
+}
