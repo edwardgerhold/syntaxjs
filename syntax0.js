@@ -2714,7 +2714,7 @@ define("slower-static-semantics", function (require, exports) {
             type = node.type;
             if (type === "SuperExpression") return true;
             if (type === "MethodDefinition" || type == "FunctionDeclaration" || type == "GeneratorDeclaration") {
-                if (node.super == true) return true;
+                if (node.needsSuper == true) return true;
                 contains = ReferencesSuper(node.params);
                 if (contains) return true;
                 contains = ReferencesSuper(node.body);
@@ -5231,7 +5231,7 @@ define("parser", function () {
                 if (ContainNoSuperIn[currentNode.type]) {
                     throw new SyntaxError("contains: super is not allowed in "+currentNode.type);
                 }
-                currentNode.super = true;
+                currentNode.needsSuper = true;
             }            
             return node;
         }
@@ -25363,7 +25363,7 @@ define("runtime", function () {
                     if (isAbrupt(status)) return status;
                 } else scope = getLexEnv();
                 F = FunctionCreate("normal", params, body, scope, strict);
-                if (node.super) MakeMethod(F, id, undefined);
+                if (node.needsSuper) MakeMethod(F, id, undefined);
                 MakeConstructor(F);
                 if (id) {
                     var status;
