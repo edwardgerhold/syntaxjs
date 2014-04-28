@@ -4334,6 +4334,7 @@ define("parser", function () {
         return lookaheadValue === undefined;
     }
 
+
     var nextToken = nextToken__array__;
 
     function next() {
@@ -4344,35 +4345,57 @@ define("parser", function () {
                 v = token.value;
                 lastloc = loc;
                 loc = token.loc;
-                ltPassedBy = ltNext;
-                ltNext = false;
-                lookPos = pos;
-                for(;;) {
-                    lookaheadToken = nextToken();
-                    if (lookaheadValue === undefined) {
-                        lookaheadValue= lookaheadType = undefined;
-                        break;
-                    }
-                    lookaheadType = lookaheadToken.type;
-                    lookaheadValue = lookaheadToken.value;
-                    if (lookaheadType === "LineTerminator") {
-                        ltNext = true;
-                        continue;
-                    }
-                    if (SkipableToken[lookaheadType]) continue;
-                    break;
-                }
-                pos = lookPos;
+                nextToken();
                 return token;
             }
         }
         return token = v = t = undefined;
     }
     function nextToken__array__() {
-        return tokens[++lookPos];
+        ltPassedBy = ltNext;
+        ltNext = false;
+        lookPos = pos;
+        for(;;) {
+            lookaheadToken = tokens[++lookPos];
+            if (lookaheadToken === undefined) {
+                lookaheadValue = lookaheadType = undefined;
+                break;
+            }
+            lookaheadType = lookaheadToken.type;
+            lookaheadValue = lookaheadToken.value;
+            if (lookaheadType === "LineTerminator") {
+                ltNext = true;
+                continue;
+            }
+            if (SkipableToken[lookaheadType]) continue;
+            break;
+        }
+        pos = lookPos;
+        return lookaheadToken;
     }
     function nextToken__step__() {
-        return tokenize.nextToken();
+        ltPassedBy = ltNext;
+        ltNext = false;
+        lookPos = pos;
+        for(;;) {
+            ++lookPos;
+            lookaheadToken = tokenize.nextToken();
+            if (lookaheadToken === undefined) {
+                lookaheadValue = lookaheadType = undefined;
+                break;
+            }
+            lookaheadType = lookaheadToken.type;
+            lookaheadValue = lookaheadToken.value;
+            ltNext = tokenize.ltNext;
+            if (lookaheadType === "LineTerminator") {
+                ltNext = true;
+                continue;
+            }
+            if (SkipableToken[lookaheadType]) continue;
+            break;
+        }
+        pos = lookPos;
+        return lookaheadToken;
     }
 
 
@@ -4568,6 +4591,9 @@ define("parser", function () {
     }
     function YieldExpression() {
         if (v === "yield" && !yieldIsId) {
+            /*if (!isGeneratorNode(currentNode)) {
+             throw new SyntaxError("yield expressions are not allowed outside of generators");
+             }*/
             match("yield");
             var node = Node("YieldExpression");
             node.argument = this.Expression();
@@ -4632,7 +4658,7 @@ define("parser", function () {
             if (v === "]") break;
             if (v === "...") el = this.SpreadExpression()
             else el = this.AssignmentExpression();
-            list.push(el);
+            if (el) list.push(el);
             if (v === "," && lookaheadValue !== ",") match(",");
         } while (v && v !== "]");
         return list;
