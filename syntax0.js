@@ -3737,18 +3737,21 @@ define("tokenizer", function () {
         saveState();
         initTokenizer(jsSourceText, callback);
         if (withWS) tokenizeIntoArray.tokensWithWhiteSpaces = [];
-
         do {
             offset = pos;
             token = undefined;
-            if (DecimalDigits[ch] || ch == ".") NumericLiteral();
-            if (!token && Punctuators[ch]) Punctuation();
-            if (IdentifierStart[ch]) KeywordOrIdentifier();
-            else if (Quotes[ch]) StringLiteral();
-            else if (ch == "`") TemplateLiteral();
-            else if (WhiteSpaces[ch]) WhiteSpace();
-	        else if (LineTerminators[ch]) LineTerminator();
-	    /*
+
+            /*
+                        if (WhiteSpaces[ch]) WhiteSpace();
+                        else if (LineTerminators[ch]) LineTerminator();
+                        else if (DecimalDigits[ch] || ch == ".") NumericLiteral();
+                        if (!token) {
+                            if (Punctuators[ch]) Punctuation();
+                            else if (IdentifierStart[ch]) KeywordOrIdentifier();
+                            else if (Quotes[ch]) StringLiteral();
+                            else if (ch == "`") TemplateLiteral();
+                        }
+                    */
             switch (ch) {
                 case " ":
                 case "\t": WhiteSpace(); break;
@@ -3773,7 +3776,7 @@ define("tokenizer", function () {
                     break;
             }
             if (!token && Punctuators[ch]) Punctuation();
-            */
+
 
 	    /*
 	    
@@ -4331,9 +4334,10 @@ define("parser", function () {
         return lookaheadValue === undefined;
     }
 
-    var next = next__array__; //next__step__;
 
-    function next__array__() {
+    var nextToken = nextToken__array__;
+
+    function next() {
         if (lookaheadToken) {
             token = lookaheadToken;
             if (token) {
@@ -4341,13 +4345,13 @@ define("parser", function () {
                 v = token.value;
                 lastloc = loc;
                 loc = token.loc;
-                nextLookaheadFromArray();
+                nextToken();
                 return token;
             }
         }
         return token = v = t = undefined;
     }
-    function nextLookaheadFromArray() {
+    function nextToken__array__() {
         ltPassedBy = ltNext;
         ltNext = false;
         lookPos = pos;
@@ -4369,21 +4373,7 @@ define("parser", function () {
         pos = lookPos;
         return lookaheadToken;
     }
-    function next__step__() {
-        if (lookaheadToken) {
-            token = lookaheadToken;
-            if (token) {
-                t = token.type;
-                v = token.value;
-                lastloc = loc;
-                loc = token.loc;
-                nextLookaheadFromStep();
-                return token;
-            }
-        }
-        return token = v = t = undefined;
-    }
-    function nextLookaheadFromStep() {
+    function nextToken__step__() {
         ltPassedBy = ltNext;
         ltNext = false;
         lookPos = pos;
@@ -4446,7 +4436,7 @@ define("parser", function () {
             token: token,
             t: t,
             v: v,
-            next: next,
+            nextToken: nextToken,
             lookPos: lookPos,
             lookaheadToken: lookaheadToken,
             lookaheadValue: lookaheadValue,
@@ -4475,8 +4465,8 @@ define("parser", function () {
             ast = memento.ast;
             t = memento.t;
             v = memento.v;
-            next = memento.next;
 
+            nextToken = memento.nextToken;
             lookPos = memento.lookPos;
             lookaheadToken = memento.lookaheadToken;
             lookaheadValue = memento.lookaheadValue;
@@ -5027,6 +5017,17 @@ define("parser", function () {
             //if (v == "?") node.alternate = this.ConditionalExpressionNoIn(node.alternate);
             l2 = loc.end;
             node.loc = makeLoc(l1, l2);
+
+            if (node.test.type === "AssignmentExpression") {
+                // i think it´s impossible to put an assignment without parens into the test...
+                // so this should hold for any assignmentexpression in the test.
+                // maybe i should separate binary and assignment
+                var tmp = node.test;
+                node.test = tmp.right;
+                tmp.right = node;
+                node = tmp;
+            }
+
             return node;
         }
         return null;
@@ -5076,9 +5077,6 @@ define("parser", function () {
         return node;
     }
 
-    function BinaryExpressionNodeAndRightHandSide(leftHand, l1) {
-
-    }
     function StartAssignmentExpression() {
         var node = null, leftHand, l1, l2;
         l1 = loc.start;
@@ -6656,7 +6654,7 @@ define("parser", function () {
     function initOldLexer(sourceOrTokens) {
         if (!Array.isArray(sourceOrTokens)) tokens = tokenize.tokenizeIntoArray(sourceOrTokens);
         else tokens = sourceOrTokens;
-        next = next__array__;
+        nextToken = nextToken__array__;
         pos = -1;
         lookPos = 0;
         token = t = v = undefined;
@@ -6664,9 +6662,8 @@ define("parser", function () {
         ast = null;
         currentNode = undefined;
         symtab = SymbolTable();
-
-        nextLookaheadFromArray();
-        next();
+        nextToken(); // load lookahead
+        next();     // move lookahead and get new
     }
 
     function initNewLexer(sourceOrTokens) {
@@ -6677,19 +6674,16 @@ define("parser", function () {
             if (Array.isArray(sourceOrTokens)) {
                 initOldLexer(sourceOrTokenes);
             } else {
-                next = next__step__;
+                nextToken = nextToken__step__;
                 lookaheadToken = tokenize(sourceOrTokens);
                 next();
             }
         }
     }
-
     function parse(sourceOrTokens) {
         tokenize.saveState();
-
         if (tokenize === tokenize.tokenizeIntoArray) initOldLexer(sourceOrTokens);
         else initNewLexer(sourceOrTokens);
-
         try {
             ast = parser.Program();
         } catch (ex) {
@@ -6700,7 +6694,6 @@ define("parser", function () {
         } finally {
             tokenize.restoreState();
         }
-
         return ast;
     }
     function initParseGoal(source) {
