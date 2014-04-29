@@ -25562,7 +25562,7 @@ define("runtime", function () {
                             status = KeyedBindingInitialisation(target, val, env);
                             if (isAbrupt(status)) return status;
                         } else {
-                            status = InitializeBoundName(env, identName, val);
+                            status = InitializeBoundName(identName, val, env);
                             if (isAbrupt(status)) return status;
                         }
                         target = undefined;
