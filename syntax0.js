@@ -5262,19 +5262,24 @@ define("parser", function () {
         if (v === "{") {
             match("{");
             while (v != "}") {
-                if (StartBinding[v]) id = this.BindingPattern();
-                else id = this.Identifier();
+                // iif (StartBinding[v]) id = this.BindingPattern();
+                
+                id = this.Identifier();
+                
                 if (v === ":") {
                     l1 = id.loc && id.loc.start;
                     bindEl = Node("BindingElement");
                     bindEl.id = id;
                     match(":");
-                    bindEl.as = this.Identifier();
+                    if (StartBinding[v]) bindEl.as = this.BindingPattern();
+                    else bindEl.as = this.LeftHandSideExpression();                    
+                    if (bindEl.as.type === "Identifier") {
+            		if (isStrict && ForbiddenArgumentsInStrict[bindEl.as.name]) {
+                    	    throw new SyntaxError(bindEl.as.name + " is not a valid binding identifier in strict mode");
+                	}
+            	    }
                     l2 = loc.end;
                     bindEl.loc = makeLoc(l1, l2);
-                    if (isStrict && ForbiddenArgumentsInStrict[bindEl.as.name]) {
-                        throw new SyntaxError(bindEl.as.name + " is not a valid binding identifier in strict mode");
-                }
                     list.push(bindEl);
                     if (v === "=") {
                         bindEl.init = this.Initializer();
@@ -5292,6 +5297,7 @@ define("parser", function () {
                     match(",");
                     if (v === "}") break;
                     continue;
+                
                 } else if (v != "}") {
                     throw new SyntaxError("invalid binding property list. csv and terminating }");
                 }
@@ -5301,7 +5307,7 @@ define("parser", function () {
             match("[");
             while (v !== "]") {
                 if (v === "...") id = this.RestParameter();
-                else if (StartBinding[v]) id = this.BindingPattern();
+                // else if (StartBinding[v]) id = this.BindingPattern();
                 else id = this.Identifier();
                 if (id) list.push(id);
                 if (v === "=") {
@@ -7746,9 +7752,15 @@ define("js-codegen", function (require, exports, module) {
         return src;
     };
 
+    var isOneOfThoseUnaryOperators = {
+       "typeof": true,
+        "void": true,
+        "delete": true
+    };
     builder.unaryExpression = function (operator, argument, prefix, loc, extras) {
         var src = "";
         if (prefix) src += operator;
+        if (isOneOfThoseUnaryOperators[operator]) src += " ";
         src += callBuilder(argument);
         if (!prefix) src += operator;
         return src;
@@ -9364,15 +9376,6 @@ function ObjectDefineProperties(O, Properties) {
 
 
 
-/**
- * Created by root on 30.03.14.
- */
-
-
-    // ===========================================================================================================
-    // Declarative Environment
-    // ===========================================================================================================
-
 function DeclarativeEnvironment(outer) {
     var de = Object.create(DeclarativeEnvironment.prototype);
     de.Bindings = Object.create(null);
@@ -9385,27 +9388,23 @@ DeclarativeEnvironment.prototype = {
         return "[object DeclarativeEnvironment]";
     },
     HasBinding: function HasBinding(N) {
-        // debug("hasbinding of decl called with " + N);
         return (N in this.Bindings);
     },
     CreateMutableBinding: function CreateMutableBinding(N, D) {
         var envRec = this.Bindings;
-        // debug("declenv create mutablebinding: " + N);
         var configValue = !!(D === true || D === undefined);
-        if (N in envRec) return withError("Reference", N + " is bereits deklariert");
+        if (N in envRec) return withError("Reference","CreateMutableBinding: "+ N + " is already declared");
         else createIdentifierBinding(envRec, N, undefined, configValue);
         return NormalCompletion();
     },
     CreateImmutableBinding: function CreateImmutableBinding(N) {
-        // debug("declenv create immutablebinding: " + N);
         var envRec = this.Bindings;
         var configValue = false;
-        if (N in envRec) return withError("Reference", N + " is bereits deklariert");
+        if (N in envRec) return withError("Reference", "CreateMutableBinding: " +N + " is already declared");
         else createIdentifierBinding(envRec, N, undefined, configValue, false);
         return NormalCompletion();
     },
     InitializeBinding: function (N, V) {
-        // debug("declenv initialize: " + N);
         var b, outerEnv;
         if (this.HasBinding(N)) {
             b = this.Bindings[N];
@@ -9426,8 +9425,6 @@ DeclarativeEnvironment.prototype = {
                 b.value = V;
                 if (!b.initialized) b.initialized = true;
             }
-            //          else if (!b.writable) return withError("Reference", "Trying to set immutable binding.");
-            //          else if (!b.initialized) return withError("Reference", "Trying to set uninitialized binding.");
             return NormalCompletion(b.value);
         } else if (o = this.outer) return o.SetMutableBinding(N, V, S);
     },
@@ -9437,7 +9434,6 @@ DeclarativeEnvironment.prototype = {
             b = this.Bindings[N];
             if (!b.initialized) return NormalCompletion(undefined);
             //return withError("Reference", "unitialized binding '" + N+ "'");
-
             return NormalCompletion(b.value);
         } else if (this.outer) return this.outer.GetBindingValue(N, S);
         return withError("Reference", "GetBindingValue: Can not find " + N);
@@ -11775,20 +11771,19 @@ function GeneratorYield(itrNextObj) {
 
     return NormalCompletion(itrNextObj);
 }
-// ===========================================================================================================
-// Iterator Algorithms
-// ===========================================================================================================
-
-
-function IsIterable (obj) {
+function GetIterable (obj) {
     if (Type(obj) !== OBJECT) return undefined;
     var iteratorGetter = Get(obj, $$iterator);
+    if (isAbrupt(iteratorGetter=ifAbrupt(iteratorGetter))) return iteratorGetter;
     return iteratorGetter;
-//    return HasProperty(obj, $$iterator);
+}
+
+function IsIterable(obj) {
+    return HasProperty(obj, $$iterator);
 }
 
 function CreateItrResultObject(value, done) {
-    Assert(Type(done) === BOOLEAN);
+    Assert(Type(done) === BOOLEAN, "the second argument to CreateItrResultObject has to be a boolean value");
     var R = ObjectCreate();
     CreateDataProperty(R, "value", value);
     CreateDataProperty(R, "done", done);
@@ -11841,9 +11836,6 @@ function IteratorStep(iterator, value) {
     return result;
 }
 
-function CreateListIterator(list) {
-    return MakeListIterator(list);
-}
 
 function MakeListIterator(list) {
     var nextPos = 0;
@@ -11851,7 +11843,7 @@ function MakeListIterator(list) {
     var obj = ObjectCreate();
 
     var listIteratorNext = CreateBuiltinFunction(getRealm(),function (thisArg, argList) {
-	var list = getInternalSlot(obj, "List");
+	var list = getInternalSlot(obj, "IteratedList");
         var value, done;
         if (nextPos < len) {
             value = list[nextPos];
@@ -11862,15 +11854,36 @@ function MakeListIterator(list) {
         }
         return CreateItrResultObject(undefined, true);
     });
-
-
     if (isAbrupt(obj = ifAbrupt(obj))) return obj;
-    setInternalSlot(obj, "List", list);
+    setInternalSlot(obj, "IteratedList", list);
     CreateDataProperty(obj, "next", listIteratorNext);
     return obj;
 }
 
+var ListIterator_next = function(thisArg, argList) {
+    var O = thisArg;
+    if (!hasInternalSlot(O, "IteratedList") || !hasInternalSlot(O, "IteratedListIndex")) {
+        return withError("Type", "this value is missing the [[IteratedList]] properties");
+    }
+    var list = getInternalSlot(O, "IteratedList");
+    var index = getInternalSlot(O, "IteratedListIndex");
+    var len = list.length;
+    if (index >= len) {
+        return CreateItrResultObject(undefined, true);
+    }
+    var result = CreateItrResultObject(list[index], false);
+    if (isAbrupt(result=ifAbrupt(result)))
+    setInternalSlot(O, "IteratedListIndex", index + 1);
+    return NormalCompletion(result);
+};
 
+function CreateListIterator(list) {
+    var iterator = ObjectCreate(getIntrinsic("%ObjectPrototype%"), { IteratedList: undefined, ListIteratorNextIndex: undefined });
+    setInternalSlot(iterator, "IteratedList", list);
+    setInternalSlot(iterator, "IteratedListIndex", 0);
+    LazyDefineProperty(iterator, "next", ListIterator_next);
+    return iterator;
+}
 
 
 
@@ -12502,10 +12515,10 @@ StringExoticObject.prototype = assign(StringExoticObject.prototype, {
 	var len = str.length;
 	for (var i = 0; i < len; i++) keys.push(ToString(i));
         var iterator = Enumerate(this);
-        var list = getInternalSlot(iterator, "List");
+        var list = getInternalSlot(iterator, "IteratedList");
         list = keys.concat(list);
-        setInternalSlot(iterator, "List", list);
-        return NormalCompletion(keys.concat(list));
+        setInternalSlot(iterator, "IteratedList", list);
+        return NormalCompletion(list);
     },
     OwnPropertyKeys: function () {
 	// just a thrown up
@@ -13278,12 +13291,12 @@ ModuleExoticObject.prototype = {
     Enumerate: function () {
         var O = this;
         var exports = getInternalSlot(O, "Exports");
-        return MakeListIterator(exports);
+        return CreateListIterator(exports);
     },
     OwnPropertyKeys: function () {
         var O = this;
         var exports = getInternalSlot(O, "Exports");
-        return MakeListIterator(exports);
+        return CreateArrayFromList(exports);
     },
     HasProperty: function (P) {
         var O = this;
@@ -14292,6 +14305,7 @@ exports.float64 = float64;
         var EventTargetPrototype = createIntrinsicPrototype(intrinsics, "%EventTargetPrototype%");
         var MessagePortConstructor = createIntrinsicConstructor(intrinsics, "MessagePort", 0, "%MessagePort%");
         var MessagePortPrototype = createIntrinsicPrototype(intrinsics, "%MessagePortPrototype%");
+	// EventTarget and MessagePort are just stubs yet.
         var DebugFunction = createIntrinsicFunction(intrinsics, "debug", 1, "%DebugFunction%");
         var PrintFunction = createIntrinsicFunction(intrinsics, "print", 1, "%PrintFunction%");
         var StructTypeConstructor = createIntrinsicConstructor(intrinsics, "StructType", 0, "%StructType%");
@@ -14302,7 +14316,7 @@ exports.float64 = float64;
         var ArrayProto_values = createIntrinsicFunction(intrinsics, "values", 0, "%ArrayProto_values%");
         
         var VMObject = createIntrinsicObject(intrinsics,"%VM%"); // that i can play with from inside the shell, too.
-        
+                
         var ThrowTypeError_Call = function (thisArg, argList) {
             return withError("Type", "The system is supposed to throw a Type Error with %ThrowTypeError% here.");
         };
@@ -17534,6 +17548,7 @@ DefineOwnProperty(ArrayIteratorPrototype, $$toStringTag, {
     configurable: false,
     writable: false
 });
+
 DefineOwnProperty(ArrayIteratorPrototype, "next", {
     value: CreateBuiltinFunction(realm, function next(thisArg, argList) {
         var O = thisArg;
@@ -17566,36 +17581,36 @@ DefineOwnProperty(ArrayIteratorPrototype, "next", {
         elementKey = ToString(index);
         setInternalSlot(O, "ArrayIterationNextIndex", index + 1);
 
-        if (/key\+value/.test(itemKind)) {
+        if (itemKind === "key+value") {
             elementValue = Get(a, elementKey);
             if (isAbrupt(elementValue = ifAbrupt(elementValue))) return elementValue;
 
             result = ArrayCreate(2);
-
-            result.DefineOwnProperty("0", {
+            callInternalSlot("DefineOwnProperty", result, "0", {
                 value: elementKey,
                 writable: true,
                 enumerable: true,
                 configurable: true
             });
-            result.DefineOwnProperty("1", {
+            callInternalSlot("DefineOwnProperty", result, "1", {
                 value: elementValue,
                 writable: true,
                 enumerable: true,
                 configurable: true
             });
-            result.DefineOwnProperty("length", {
+            callInternalSlot("DefineOwnProperty", result, "length", {
                 value: 2,
                 writable: true,
                 eumerable: false,
                 configurable: false
             });
             return CreateItrResultObject(result, false);
-        } else if ((/value/).test(itemKind)) {
+
+        } else if (itemKind === "value") {
             elementValue = Get(a, elementKey);
             if (isAbrupt(elementValue = ifAbrupt(elementValue))) return elementValue;
             return CreateItrResultObject(elementValue, false);
-        } else if ((/key/).test(itemKind)) {
+        } else if (itemKind === "key") {
             return CreateItrResultObject(elementKey, false);
         }
 
@@ -24005,6 +24020,7 @@ LazyDefineBuiltinFunction(VMObject, "eval", 1, VMObject_eval);
     exports.COMPLETION = COMPLETION;
     exports.UNDEFINED = UNDEFINED;
     exports.NULL = NULL;
+    exports.SLOTS = SLOTS; // replace all string slots with the SLOTS.[[GET]](N)
     exports.$$unscopables        = $$unscopables;
     exports.$$create             = $$create;
     exports.$$toPrimitive        = $$toPrimitive;
@@ -24213,7 +24229,7 @@ LazyDefineBuiltinFunction(VMObject, "eval", 1, VMObject_eval);
 
 
 define("runtime", function () {
-    function makeRuntime() {
+//    function makeRuntime() {
         "use strict";
         var parse = require("parser");// .makeParser(); // soon: CREATE A _NEW_ PARSER (which creates a new tokenizer) HERE (when realm creates a NEW RUNTIME) (creating one now just slows down startup but brings no completly own closure)
         var ecma = require("api");
@@ -25435,10 +25451,13 @@ define("runtime", function () {
                 if (isAbrupt(exprRef = ifAbrupt(exprRef))) return exprRef;
                 callee = GetValue(exprRef);
             } else {
+        	
                 exprRef = MakeSuperReference(undefined, strict);
                 if (isAbrupt(exprRef = ifAbrupt(exprRef))) return exprRef;
                 callee = GetValue(exprRef);
+                
             }
+            
             if (isAbrupt(callee = ifAbrupt(callee))) return callee;
             if (!IsConstructor(callee)) return withError("Type", "expected function is not a constructor");
             if (callee) cx.callee = "new " + (Get(callee, "name") || "(anonymous)");
@@ -25481,9 +25500,11 @@ define("runtime", function () {
                 if (IsBindingPattern[type]) {
                     if (decl.init) initializer = GetValue(Evaluate(decl.init));
                     else return withError("Type", "Destructuring Patterns must have some = Initializer.");
-                    if (isAbrupt(initializer=ifAbrupt(initializer))) return initializer;
+                    if (isAbrupt(initializer=ifAbrupt(initializer))) return initializer;                        
                     status = BindingInitialisation(decl, initializer, env);
                     if (isAbrupt(status = ifAbrupt(status))) return status;
+
+
                 } else {
                     if (decl.init) {
                         name = decl.id.name;
@@ -25505,39 +25526,46 @@ define("runtime", function () {
             var elem;
             var val;
             var cx = getContext();
-            var identName, newName, init;
+            var identName, newName, init, target;
             if (decl.type === "ObjectPattern" || decl.type === "ObjectExpression") {
-                for (var p = 0, q = decl.elements.length; p < q; p++) {
-                    if (elem = decl.elements[p]) {
-                        if (elem.id) {
-                            identName = elem.id.name || elem.id.value;
-                            newName = elem.as.name || elem.as.value;
-                        } else {
+                var elems = decl.elements||decl.properties;
+
+                for (var p = 0, q = elems.length; p < q; p++) {
+                    
+                    if (elem = elems[p]) {
+                        
+                        var type = elem.type;
+                        if (elem.type == "Identifier") {
                             identName = elem.name || elem.value;
-                            newName = undefined;
-                        }
-                        /* default initializer */
+                        } else if (elem.as && IsBindingPattern[as.type]) {
+                            identName = elem.id.name;
+                            target = elem.as;
+                        } 
+                     
                         if (elem.init) {
                             var initializer = GetValue(Evaluate(elem.init));
                             if (isAbrupt(initializer = ifAbrupt(initializer))) return initializer;
                         }
-                        /* coerce to object addition 4/14 (spec invalid) */
+                     
                         obj = ToObject(obj);
                         if (isAbrupt(obj=ifAbrupt(obj))) return obj;
+
                         var val = Get(obj, ToString(identName));
                         val = ifAbrupt(val);
                         if (isAbrupt(val)) return val;
+                        
                         if (val === undefined && initializer != undefined) {
                             val = initializer;
                         }
-                        if (env !== undefined) {
-                            if (newName) env.InitializeBinding(newName, val);
-                            else env.InitializeBinding(identName, val);
+
+                        if (target) {
+                            status = KeyedBindingInitialisation(target, val, env);
+                            if (isAbrupt(status)) return status;
                         } else {
-                            var lref = Evaluate(elem);
-                            if (isAbrupt(lref = ifAbrupt(lref))) return lref;
-                            PutValue(lref, val);
+                            status = InitializeBoundName(env, identName, val);
+                            if (isAbrupt(status)) return status;
                         }
+                        target = undefined;
                     }
                 }
             }
@@ -25620,15 +25648,33 @@ define("runtime", function () {
             }
             return len;
         }
+        
+        function getStrict() {
+    	    return getContext().strict;
+        }
+        
+        function InitializeBoundName(name, value, environment) {
+    	    Assert(Type(name) === STRING, "InitializeBoundName: name has to be a string");
+    	    if (environment != undefined) {
+    		environment.InitializeBinding(name, value, getStrict());
+    		return NormalCompletion(undefined);
+    	    } else {
+    		var lhs = ResolveBinding(name);
+    		return PutValue(lhs, value);
+    	    }
+        }
+        
+        
         function BindingInitialisation(node, value, env) {
             "use strict";
-            var names, name, val, got, len, ex, decl, lhs, strict, type;
+            var names, name, val, got, len, ex, decl, lhs, strict, type, identName;
             var cx = getContext();
             if (!node) return;
             if (Array.isArray(node)) { // F.FormalParameters: formals ist ein Array
                 for (var i = 0, j = node.length; i < j; i++) {
                     decl = node[i];
                     type = decl.type;
+                    
                     if (type === "ObjectPattern") {
                         ex = KeyedBindingInitialisation(decl, Get(value, ToString(i)), env);
                         if (isAbrupt(ex)) return ex;
@@ -25651,14 +25697,19 @@ define("runtime", function () {
                 return BindingInitialisation(node.id, value, env);
             }
             if (type === "DefaultParameter") {
-                name = node.id;
+                
+                name = node.id;                
                 if (value === undefined) value = GetValue(Evaluate(node.init));
+                
+                
                 if (env !== undefined) env.InitializeBinding(name, value, strict);
                 else {
                     lhs = ResolveBinding(name);
                     PutValue(lhs, value);
                 }
                 return NormalCompletion(undefined);
+                
+                
             }
             if (type === "Identifier") {
                 name = node.name;
@@ -25667,15 +25718,12 @@ define("runtime", function () {
                     if (isAbrupt(ex)) return ex;
                     return NormalCompletion(undefined);
                 } else {
-                    //lhs = Reference(name, getLexEnv(), strict);
-                    //if (isAbrupt(lhs = ifAbrupt(lhs))) return lhs;
                     lhs = ResolveBinding(name);
-                    //  console.log("lhs=");
-                    //  console.dir(lhs);
                     ex = PutValue(lhs, value);
                     if (isAbrupt(ex)) return ex;
                     return NormalCompletion(undefined);
                 }
+                
             } else if (type === "ArrayPattern" || type === "ArrayExpression") {
                 var decl;
 
@@ -25697,7 +25745,6 @@ define("runtime", function () {
                                     val = Get(value, decl.id.name, value);
                                     if (isAbrupt(val = ifAbrupt(val))) return val;
                                     if (val == undefined && initializer != undefined) val = initializer;
-
                                     env.InitializeBinding(decl.as.name, val);
                                 } else {    // is not a bindingelement, is an "Identifier"
                                     val =  Get(value, ToString(p), value);
@@ -25727,8 +25774,10 @@ define("runtime", function () {
             } else if (type === "ObjectPattern" || type === "ObjectExpression") {
                 var decl;
                 /* coerce to object addition */
+                
                 value = ToObject(value);
                 if (isAbrupt(value = ifAbrupt(value))) return value;
+
                 /* read let {length} = "123" on es-discuss, fails at Get() few lines below, that´s why*/
                 for (var p = 0, q = node.elements.length; p < q; p++) {
                     if (decl = node.elements[p]) {
@@ -25736,20 +25785,30 @@ define("runtime", function () {
                             var initializer = GetValue(Evaluate(decl.init));
                             if (isAbrupt(initializer = ifAbrupt(initializer))) return initializer;
                         }
+
+
+                        
                         if (env) {
+
+
                             if (decl.id) {
                                 val =  Get(value, decl.id.name, value);
                                 if (isAbrupt(val=ifAbrupt(val))) return val;
                                 if (val === undefined && initializer != undefined) val = initializer;
 
                                 env.InitializeBinding(decl.as.name, val);
-                            } else {
+
+                            } else if (decl.type === "Identifier") {
                                 val = Get(value, decl.name, value);
                                 if (isAbrupt(val=ifAbrupt(val))) return val;
                                 if (val === undefined && initializer != undefined) val = initializer;
                                 env.InitializeBinding(decl.name, val);
+                            } else  {
+
                             }
+
                         } else {
+
 
                             if (decl.id) {
                                 lhs = Evaluate(decl.id);
@@ -25757,28 +25816,22 @@ define("runtime", function () {
                                 if (isAbrupt(val=ifAbrupt(val))) return val;
                                 if (val === undefined && initializer != undefined) val = initializer;
                                 PutValue(lhs, val);
-                            } else {
+                            } else if (decl.type === "Identifier") {
                                 lhs = Evaluate(decl.name);
                                 val =  Get(value, decl.name);
                                 if (isAbrupt(val=ifAbrupt(val))) return val;
                                 if (val === undefined && initializer != undefined) val = initializer;
                                 PutValue(lhs, val);
                             }
+
+
                         }
                     }
                 }
                 return NormalCompletion(undefined);
 
-            } else if (typeof node === "string") {
-                // Assume Identifier Name
-                if (env) {
-                    env.InitializeBinding(node, value, strict);
-                } else {
-                    //env = getLexEnv();
-                    lhs = ResolveBinding(node);
-                    //lhs = Reference(node, env, strict);
-                    PutValue(lhs, value);
-                }
+            } else if (typeof node === "string") {                            
+                return InitializeBoundName(node, value, env);             
             }
             return NormalCompletion(undefined);
         }
@@ -26107,34 +26160,23 @@ define("runtime", function () {
         evaluation.AssignmentExpression = AssignmentExpression;
         evaluation.ObjectPattern = ObjectPattern;
         function ObjectPattern(node) {
-            var n;
-            var init = node.init;
-            node.init = null;
-            n = Node("AssignmentExpression");
-            n.left = node;
-            n.right = init;
-            n.operator = "=";
-            n.loc = node.loc;
-            return DestructuringAssignmentEvaluation(n);
+    	    var rref = Evaluate(node.init);
+    	    var rval = GetValue(rref);
+    	    if (isAbrupt(rval=ifAbrupt(rval))) return rval;
+            return DestructuringAssignmentEvaluation(node, rval, "=");
         }
         function IteratorDestructuringEvaluation() {}
-        function DestructuringAssignmentEvaluation(node) {
+        function DestructuringAssignmentEvaluation(left, rval, op) {
 
-            var type = node.left.type;
-            var op = node.operator;
-            var leftElems = node.left.elements || node.left.properties;
+	        var leftElems = left.elements;
+            var type = left.type;
 
-            var lval, rval;
-            var rref, lref;
+            var lval;
+            var lref;
             var result;
             var l, i, j;
             var obj, array;
-
-            rref = Evaluate(node.right);
-            if (isAbrupt(rref = ifAbrupt(rref))) return rref;
-            rval = GetValue(rref);
-            if (isAbrupt(rval = ifAbrupt(rval))) return rval;
-
+            
             if (type === "ObjectPattern" || type === "ObjectExpression") {
 
                 obj = rval;
@@ -26143,26 +26185,31 @@ define("runtime", function () {
                 if (Type(rval) !== OBJECT) return withError("Type", "can not desctructure a non-object into some object");
 
                 for (i = 0, j = leftElems.length; i < j; i++) {
-                    if (leftElems[i].id) identName = leftElems[i].id.name;
-                    else identName = leftElems[i].name;
-
-                    lval = GetValue(Evaluate(leftElems[i]));
+                    var lel = leftElems[i];                    
+                    if (lel.id) identName = lel.id.name;
+                    else identName = lel.name;
+                    lval = GetValue(Evaluate(lel));
                     rval = Get(obj, identName);
-                    result = applyAssignmentOperator(op, lval, rval);
-
-                    if (leftElems[i].as) newName = leftElems[i].as.name;
-
-                    var LexEnv = getLexEnv();
-
-                    if (newName) LexEnv.SetMutableBinding(newName, result);
-                    else LexEnv.SetMutableBinding(identName, result);
-                    newName = undefined;
+                    result = getAssignmentOperatorResult(op, lval, rval);
+        		    var target;		    
+                    if (lel.as) {
+                         if (IsBindingPattern[lel.as.type]) {
+                            console.log("BINDINGPATTERN")
+                            status = DestructuringAssignmentEvaluation(lel.as, result, op);
+                            if (isAbrupt(status)) return status;
+                         } else {			             
+                            console.log("TARGET")
+                            target = Evaluate(lel.as);
+                            if (isAbrupt(target)) return target;
+                            PutValue(target, result);                    
+		                 }	                    
+            	    } else {            		   
+                	   getLexEnv().SetMutableBinding(identName, result);
+            	    }
+                    target = undefined;
                 }
-
                 return NormalCompletion(result);
-
             } else if (type === "ArrayPattern" || type === "ArrayExpression") {
-
                 array = rval;
                 if (Type(array) !== OBJECT) return withError("Type", "can not desctructure a non-object into some object");
                 var width;
@@ -26171,17 +26218,18 @@ define("runtime", function () {
                 var status;
 
                 for (i = 0, j = leftElems.length; i < j; i++) {
+                    var lel = leftElems[i];
 
-                    var ltype = leftElems[i].type;
+                    var ltype = lel.type;
                     if (ltype === "SpreadExpression") { // === REST! Achtung
 
                         var rest = ArrayCreate(0);
-                        var restName = BoundNames(leftElems[i].argument)[0];
+                        var restName = BoundNames(lel.argument)[0];
                         var index2 = 0;
 
                         while (index < len) {
                             lval = Get(array, ToString(index));
-                            result = applyAssignmentOperator(op, lval, rval);
+                            result = getAssignmentOperatorResult(op, lval, rval);
                             status = callInternalSlot("DefineOwnProperty", rest, ToString(index2), {
                                 value: result,
                                 writable: true,
@@ -26202,12 +26250,12 @@ define("runtime", function () {
 
                     } else {
 
-                        l = leftElems[i].value || leftElems[i].name;
+                        l = lel.value || lel.name;
                         rval = Get(array, ToString(index));
                         if (isAbrupt(rval=ifAbrupt(rval))) return rval;
-                        lval = GetValue(Evaluate(leftElems[i]));
+                        lval = GetValue(Evaluate(lel));
                         if (isAbrupt(lval=ifAbrupt(lval))) return lval;
-                        result = applyAssignmentOperator(op, lval, rval);
+                        result = getAssignmentOperatorResult(op, lval, rval);
                         status = getLexEnv().SetMutableBinding(l, result);
                         if (isAbrupt(status)) return status;
                         index = index + 1;
@@ -26222,15 +26270,10 @@ define("runtime", function () {
             var lref, rref;
             var lval, rval;
             var base, name;
-
             var op = node.operator;
             var result, status;
             var ltype = node.left.type;
-            //var cx = getContext();
-            //if (cx.generator) {}
-
             if (ltype === "Identifier") {
-
                 lref = Evaluate(node.left);
                 rref = Evaluate(node.right);
                 if (isAbrupt(lref = ifAbrupt(lref))) return lref;
@@ -26239,97 +26282,49 @@ define("runtime", function () {
                 rval = GetValue(rref);
                 if (isAbrupt(lval = ifAbrupt(lval))) return lval;
                 if (isAbrupt(rval = ifAbrupt(rval))) return rval;
-                result = applyAssignmentOperator(op, lval, rval);
+                result = getAssignmentOperatorResult(op, lval, rval);
                 status = PutValue(lref, result);
                 if (isAbrupt(status)) return status;
-
             } else if (ltype === "MemberExpression") {
-
                 lref = Evaluate(node.left);
                 if (isAbrupt(lref = ifAbrupt(lref))) return lref;
                 rref = Evaluate(node.right);
                 if (isAbrupt(rref = ifAbrupt(rref))) return rref;
-
                 lval = GetValue(lref);
                 rval = GetValue(rref);
                 if (isAbrupt(lval = ifAbrupt(lval))) return lval;
                 if (isAbrupt(rval = ifAbrupt(rval))) return rval;
-                //console.dir(lref);
-                result = applyAssignmentOperator(op, lval, rval);
-                //    return PutValue(lref, result);
+                result = getAssignmentOperatorResult(op, lval, rval);
                 status = Put(lref.base, lref.name, result, false);
-
                 if (isAbrupt(status)) return status;
-            } else if (isValidSimpleAssignmentTarget[ltype]) {
-                return DestructuringAssignmentEvaluation(node);
+            } else if (isValidSimpleAssignmentTarget[ltype]) {            
+        	rref = Evaluate(node.right);
+                if (isAbrupt(rref = ifAbrupt(rref))) return rref;
+                rval = GetValue(rref);
+                if (isAbrupt(rval = ifAbrupt(rval))) return rval;
+                return DestructuringAssignmentEvaluation(node.left, rval, node.operator);                
             } else {
                 return withError("Reference", "Currently not a valid lefthandside expression for assignment")
             }
             return NormalCompletion(result);
         }
         evaluation.ConditionalExpression = ConditionalExpression;
-        function add(op, left, right) {
-            left = GetValue(left);
-            right = GetValue(right);
+
+        function getAssignmentOperatorResult(op, lval, rval) {
             switch (op) {
-                case "+=":
-                    return left += right;
-                case "%=":
-                    return left %= right;
-                case "/=":
-                    return left /= right;
-                case "*=":
-                    return left *= right;
-                case "-=":
-                    return left -= right;
-                case "^=":
-                    return left ^= right;
-                case "|=":
-                    return left |= right;
-                case "&=":
-                    return left &= right;
-                case ">>>=":
-                    return left >>>= right;
-                case "=":
-                    return left = right;
+        	case "=": return rval;
+                case "+=": return lval + rval;
+                case "%=": return lval % rval;
+                case "/=": return lval / rval;
+                case "*=": return lval * rval;
+                case "-=": return lval - rval;
+                case "^=": return lval ^ rval;
+                case "|=": return lval | rval;
+                case "&=": return lval & rval;
+                case ">>>=": return lval >>> rval;
             }
         }
-        function applyAssignmentOperator(op, lval, rval) {
-            var newValue;
-            switch (op) {
-                case "+=":
-                    newValue = lval + rval;
-                    break;
-                case "%=":
-                    newValue = lval % rval;
-                    break;
-                case "/=":
-                    newValue = lval / rval;
-                    break;
-                case "*=":
-                    newValue = lval * rval;
-                    break;
-                case "-=":
-                    newValue = lval - rval;
-                    break;
-                case "^=":
-                    newValue = lval ^ rval;
-                    break;
-                case "|=":
-                    newValue = lval | rval;
-                    break;
-                case "&=":
-                    newValue = lval & rval;
-                    break;
-                case ">>>=":
-                    newValue = lval >>> rval;
-                    break;
-                case "=":
-                    newValue = rval;
-                    break;
-            }
-            return newValue;
-        }
+        
         function ConditionalExpression(node) {
             var testExpr = node.test;
             var trueExpr = node.consequent;
@@ -26769,6 +26764,7 @@ define("runtime", function () {
             } else if (iterationKind) {
                 return withError("Type", "ForInOfExpression: iterationKind is neither enumerate nor iterate.");
             }
+
             if (isAbrupt(keys)) {
                 if (keys.type === "throw") return keys;
                 if (LoopContinues(exprValue, labelSet) === false) return exprValue;
@@ -26776,6 +26772,7 @@ define("runtime", function () {
                 return Completion("break");
             }
             return keys;
+
         }
         function ForInOfBodyEvaluation(lhs, stmt, keys, lhsKind, labelSet) {
             "use strict";
@@ -26798,10 +26795,8 @@ define("runtime", function () {
                 if (lhsKind === "assignment") {
 
                     if (!IsBindingPattern[lhs.type]) {
-
                         lhsRef = Evaluate(lhs);
                         status = PutValue(lhsRef, nextValue);
-
                     } else {
                         rval = ToObject(nextValue);
                         if (isAbrupt(rval)) status = rval;
@@ -26809,12 +26804,9 @@ define("runtime", function () {
                     }
 
                 } else if (lhsKind === "varBinding") {
-
                     status = BindingInitialisation(lhs, nextValue, undefined);
-
                 } else {
-
-                    Assert(lhsKind === "lexicalBinding", "lhsKind muss lexical Binding sein");
+                    Assert(lhsKind === "lexicalBinding", "lhsKind has to be a lexical Binding");
                     // Assert(lhs == ForDeclaration);
                     var iterationEnv = NewDeclarativeEnvironment(oldEnv);
                     for (var i = 0, j = names.length; i < j; i++) {
@@ -27871,11 +27863,11 @@ define("runtime", function () {
         execute.ExecuteAsyncTransform = ExecuteAsyncTransform;
         execute.TransformObjectToJSObject = TransformObjectToJSObject;
         execute.DeepStaticJSSnapshotOfObject = DeepStaticJSSnapshotOfObject;
-        execute.makeRuntime = makeRuntime;
+    //    execute.makeRuntime = makeRuntime;
         return execute;
 
-    }
-    return makeRuntime();
+//    }
+//    return makeRuntime();
 });
 
 
