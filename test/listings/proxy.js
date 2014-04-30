@@ -10,7 +10,6 @@ let obj = {
 
 let handler = {
     get: function (A, B, C) {
-
     },
     set: function (A, B, C) {
     

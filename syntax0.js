@@ -4699,10 +4699,7 @@ define("parser", function () {
         return null;
     }
     function PropertyKey() {
-        var node;
-        if (v == "[") node = this.ComputedPropertyName();
-        else if (t === "Identifier") node = this.Identifier();
-        else if (IsAnyLiteral[t]) node = this.Literal();
+        var node = this.ComputedPropertyName() || this.Identifier() || this.Literal();
 
         if (!node && (Keywords[v])) {
             node = Node("Identifier");
@@ -4710,7 +4707,7 @@ define("parser", function () {
             node.loc = token && token.loc;
         }
         if (node) {
-             if (compile) return compiler(node);
+            if (compile) return compiler(node);
             return node;
         }
 
