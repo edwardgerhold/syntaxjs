@@ -1,6 +1,4 @@
 CWD=`pwd`
-cd test/json/
+cd /s/test/json/
 ./testall $1
 cd $CWD
-
-
