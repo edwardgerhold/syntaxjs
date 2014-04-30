@@ -947,7 +947,7 @@ define("tables", function (require, exports, module) {
         __proto__:null,
         "Infinity": true,
         "NaN":true,
-        "undefined":true,
+        "undefined":true
 
     };
 
@@ -1806,7 +1806,7 @@ define("tables", function (require, exports, module) {
 	__proto__:null,
 	"]": true,
 	")": true
-    }
+    };
     var UnicodeIDStart = {
         __proto__: null
     };
@@ -4016,7 +4016,6 @@ define("earlyerrors", function () {
 
 define("parser", function () {
 
-
 //    function makeParser() {
     "use strict";
 //    var i18n = require("i18n-messages");
@@ -4877,7 +4876,7 @@ define("parser", function () {
                     parens.push(v);
                 } else if (v === ")") {
                     parens.pop();
-                    if (!parens.length) {                        
+                    if (!parens.length) {
                         break;
                     }
                 }
@@ -4897,7 +4896,7 @@ define("parser", function () {
                 node.params = (expr ? [expr] : this.ArrowParameterList(covered));
                 node.body = this.ConciseBody(node);
                 l2 = loc.end;
-                node.loc = makeLoc(l1, l2);                
+                node.loc = makeLoc(l1, l2);
                 popStrict();
                  if (compile) return compiler(node);
                 return node;
@@ -4948,7 +4947,7 @@ define("parser", function () {
                     property.name = v;
                     property.loc = token.loc;
                     match(v);
-                } 
+                }
                 /*else if (v === "!") {
                  match("!");
                  if (v == "[") {
@@ -4969,7 +4968,7 @@ define("parser", function () {
                  // MemberExpression ! Arguments
                  // MemberExpression ! Identifier
                  // setzt .eventual auf true
-                 } */ 
+                 } */
                 else {
                     throw new SyntaxError("MemberExpression . Identifier expects a valid IdentifierString or an Integer or null,true,false as PropertyKey"+atLineCol());
                 }
@@ -4977,7 +4976,7 @@ define("parser", function () {
             } else {
                 return obj;
             }
-            
+
             if (v == "[" || v == ".") return this.MemberExpression(node);
             else if (v == "(") return this.CallExpression(node);
             else if (IsTemplateToken[t]) return this.CallExpression(node);
@@ -5206,8 +5205,7 @@ define("parser", function () {
             var node = Node("ExpressionStatement");
             node.expression = expression;
             node.loc = expression.loc;
-            semicolon();
-             if (compile) return compiler(node);
+            if (compile) return compiler(node);
             return node;
         }
         return null;
@@ -5228,11 +5226,9 @@ define("parser", function () {
         if (ExprEndOfs[v]) return null;
 
         while (v != undefined) {
-            ae = this.AssignmentExpression()
-            list.push(ae);
+            if (ae = this.AssignmentExpression()) list.push(ae);
             if (v === ",") match(",");
-            else if (ltPassedBy || ExprEndOfs[v] || v === undefined) break;
-            else throw new SyntaxError("invalid expression "+atLineCol());
+            else break;
         }
         l2 = loc.end;
         switch (list.length) {
@@ -5287,9 +5283,9 @@ define("parser", function () {
             match("{");
             while (v != "}") {
                 // iif (StartBinding[v]) id = this.BindingPattern();
-                
+
                 id = this.Identifier();
-                
+
                 if (v === ":") {
                     l1 = id.loc && id.loc.start;
                     bindEl = Node("BindingElement");
@@ -5321,7 +5317,7 @@ define("parser", function () {
                     match(",");
                     if (v === "}") break;
                     continue;
-                
+
                 } else if (v != "}") {
                     throw new SyntaxError("invalid binding property list. csv and terminating }");
                 }
@@ -5386,7 +5382,7 @@ define("parser", function () {
 
             if (v === "=") node.init = this.Initializer();
             else node.init = null;
-             if (compile) return compiler(node);
+            if (compile) return compiler(node);
             return node;
         }
         return null;
@@ -5398,6 +5394,7 @@ define("parser", function () {
             decl = this.VariableDeclaration(kind);
             if (decl) list.push(decl);
             else throw new SyntaxError(kind + " declaration expected");
+
             if (isNoIn && InOrOf[v]) break;
             if (v === ",") {
                 match(",");
@@ -5405,12 +5402,8 @@ define("parser", function () {
             } else if (v === ";") {
                 match(";");
                 break;
-            } else if (ltPassedBy || v == "}" || v === undefined) {
-                break;
-            } else {
-                throw new SyntaxError("illegal token "+v+" after "+kind+" declaration");
-            }
-
+            } else break;
+            // else throw new SyntaxError("illegal "+v+" after "+kind);
         }
         if (!list.length) throw new SyntaxError("expecting identifier names after "+kind);
         return list;
@@ -5526,7 +5519,7 @@ define("parser", function () {
         node.specialMethod = specialMethod;
         l2 = loc.end;
         node.loc = makeLoc(l1, l2);
-        
+
         currentNode = nodeStack.pop();
          if (compile) return compiler(node);
         return node;
@@ -6173,7 +6166,7 @@ define("parser", function () {
             l2 = loc.end;
             makeLoc(l1, l2);
             semicolon();
-             if (compile) return compiler(node);
+            if (compile) return compiler(node);
             return node;
         }
         return null;
@@ -6207,12 +6200,11 @@ define("parser", function () {
             if (t === "Identifier" && lkhdVal == ":") node = this.LabelledStatement();
             else node = this.ExpressionStatement();
         }
-        if (node) {
+
             semicolon();
-             if (compile) return compiler(node);
-            return node;
-        }
-        return null;
+            if (compile) return compiler(node);
+        return node;
+
     }
     function IterationStatement() {
         if (v === "for") return this.ForStatement();
@@ -6243,9 +6235,9 @@ define("parser", function () {
         switch (v) {
             case "{":
             case "[":
-                return this.BindingPattern(); 
+                return this.BindingPattern();
             default:
-                return this.Identifier(); 
+                return this.Identifier();
         }
         return null;
     }
@@ -6701,7 +6693,7 @@ define("parser", function () {
         token = t = v = undefined;
         tokenArrayLength = tokens.length;
         ast = null;
-        loc = lastloc = undefined
+        loc = lastloc = undefined;
         currentNode = undefined;
         symtab = SymbolTable();
         nextToken(); // load lookahead
@@ -6745,7 +6737,7 @@ define("parser", function () {
         return ast;
     }
     function initParseGoal(source) {
-        initOldLexer(source); 
+        initOldLexer(source);
     }
     function parseGoal(goal, source, opts) {
         tokenize.saveState();
@@ -6767,7 +6759,7 @@ define("parser", function () {
         }
         return node;
     }
-    
+
     parser.ExpressionStatement = ExpressionStatement;
     parser.StartAssignmentExpression = StartAssignmentExpression;
     parser.StartAssignmentExpressionNoIn = StartAssignmentExpressionNoIn;
@@ -6904,6 +6896,8 @@ define("parser", function () {
     // }
     // return makeParser();
 });
+
+
 /*
 
     The tokenizer is different from the remaining tokenization.
@@ -8760,7 +8754,7 @@ SLOTS.FUNCTIONKIND = "FunctionKind";
 SLOTS.NEEDSSUPER = "NeedsSuper";
 SLOTS.HOMEOBJECT = "HomeObject";
 SLOTS.METHODNAME = "MethodName";
-SLOTS.ENVIRONMENT = "Environment"
+SLOTS.ENVIRONMENT = "Environment";
 
 SLOTS.BOUNDTHIS = "BoundThis";
 SLOTS.BOUNDTARGETFUNCTION = "BoundTargetFunction";
@@ -12430,7 +12424,7 @@ NativeJSObjectWrapper.prototype = {
     IsExtensible: function () {
         var o = this.Wrapped;
         return Object.isExtensible(o);
-    },
+    }
 };
 
 function NativeJSFunctionWrapper(func, that) {
@@ -12818,7 +12812,7 @@ function ArraySetLength(A, Desc) {
         }
     }
     if (newWritable === false) {
-        newLenDesc.writable = false
+        newLenDesc.writable = false;
         OrdinaryDefineOwnProperty(A, "length", {
             writable: false
         });
@@ -16212,7 +16206,7 @@ var LoaderPrototype_newModule = function(thisArg, argList) {
     }
     callInternalSlot("PreventExtensions", mod);
     return NormalCompletion(mod);
-}
+};
 
 LazyDefineBuiltinFunction(LoaderPrototype, "newModule", 1, LoaderPrototype_newModule);
 // ##################################################################
@@ -19900,7 +19894,7 @@ var ReflectObject_createSelfHostingFunction = function(thisArg, argList) {
    }
    var realmObject = realm === undefined ? getRealm() : getInternalSlot(realm, "RealmObject");
    var F = OrdinaryFunction();
-   setInternalSlot(F, SLOTS.CODE, fn.body)
+   setInternalSlot(F, SLOTS.CODE, fn.body);
    setInternalSlot(F, SLOTS.FORMALPARAMETERS, fn.params);
    setInternalSlot(F, "Strict", !!fn.strict);
    setInternalSlot(F, "Realm", realmObject);
@@ -28087,6 +28081,7 @@ Hash.prototype = {
 /**
  * FreeListNode creates a free list on the position of a pointer,
  * and is used to free memory.
+ * @param heap
  * @param ptr
  * @constructor
  */
@@ -30935,6 +30930,7 @@ define("syntaxjs-shell", function (require, exports) {
         define: pdmacro(define),
         require: pdmacro(require),
         modules: pdmacro(require.cache),
+        makePromise: pdmacro(require.cache),
 
         tokenizeIntoArrayWithWhiteSpaces: pdmacro(require("tokenizer").tokenizeIntoArrayWithWhiteSpaces),// <-- needs exports fixed
         tokenizeIntoArray: pdmacro(require("tokenizer").tokenizeIntoArray),				// <-- needs exports fixed
