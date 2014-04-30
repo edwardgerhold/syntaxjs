@@ -6643,6 +6643,7 @@ define("parser", function () {
         token = t = v = undefined;
         tokenArrayLength = tokens.length;
         ast = null;
+        loc = lastloc = undefined
         currentNode = undefined;
         symtab = SymbolTable();
         nextToken(); // load lookahead
@@ -6650,7 +6651,7 @@ define("parser", function () {
     }
 
     function initNewLexer(sourceOrTokens) {
-        currentNode = pos = t = v = token = lookaheadToken = lookaheadValue = lookaheadType = undefined;
+        currentNode = loc = lastloc = pos = t = v = token = lookaheadToken = lookaheadValue = lookaheadType = undefined;
         ast = null;
         symtab = SymbolTable();
         if (sourceOrTokens != undefined) {
@@ -26190,7 +26191,7 @@ define("runtime", function () {
                     else identName = lel.name;
                     lval = GetValue(Evaluate(lel));
                     rval = Get(obj, identName);
-                    result = getAssignmentOperatorResult(op, lval, rval);
+                    result = getAssignmentOperationResult(op, lval, rval);
         		    var target;		    
                     if (lel.as) {
                          if (IsBindingPattern[lel.as.type]) {
@@ -26229,7 +26230,7 @@ define("runtime", function () {
 
                         while (index < len) {
                             lval = Get(array, ToString(index));
-                            result = getAssignmentOperatorResult(op, lval, rval);
+                            result = getAssignmentOperationResult(op, lval, rval);
                             status = callInternalSlot("DefineOwnProperty", rest, ToString(index2), {
                                 value: result,
                                 writable: true,
@@ -26255,7 +26256,7 @@ define("runtime", function () {
                         if (isAbrupt(rval=ifAbrupt(rval))) return rval;
                         lval = GetValue(Evaluate(lel));
                         if (isAbrupt(lval=ifAbrupt(lval))) return lval;
-                        result = getAssignmentOperatorResult(op, lval, rval);
+                        result = getAssignmentOperationResult(op, lval, rval);
                         status = getLexEnv().SetMutableBinding(l, result);
                         if (isAbrupt(status)) return status;
                         index = index + 1;
@@ -26282,7 +26283,7 @@ define("runtime", function () {
                 rval = GetValue(rref);
                 if (isAbrupt(lval = ifAbrupt(lval))) return lval;
                 if (isAbrupt(rval = ifAbrupt(rval))) return rval;
-                result = getAssignmentOperatorResult(op, lval, rval);
+                result = getAssignmentOperationResult(op, lval, rval);
                 status = PutValue(lref, result);
                 if (isAbrupt(status)) return status;
             } else if (ltype === "MemberExpression") {
@@ -26294,7 +26295,7 @@ define("runtime", function () {
                 rval = GetValue(rref);
                 if (isAbrupt(lval = ifAbrupt(lval))) return lval;
                 if (isAbrupt(rval = ifAbrupt(rval))) return rval;
-                result = getAssignmentOperatorResult(op, lval, rval);
+                result = getAssignmentOperationResult(op, lval, rval);
                 status = Put(lref.base, lref.name, result, false);
                 if (isAbrupt(status)) return status;
             } else if (isValidSimpleAssignmentTarget[ltype]) {            
@@ -26310,7 +26311,8 @@ define("runtime", function () {
         }
         evaluation.ConditionalExpression = ConditionalExpression;
 
-        function getAssignmentOperatorResult(op, lval, rval) {
+        ecma.getAssignmentOperationResult = getAssignmentOperationResult;
+        function getAssignmentOperationResult(op, lval, rval) {
             switch (op) {
         	case "=": return rval;
                 case "+=": return lval + rval;
@@ -26492,83 +26494,55 @@ define("runtime", function () {
 
             var result;
             switch (op) {
-                case "of":
-                    debug("doing the impossible");
+                /*case "of":                    
                     var value = Invoke(ToObject(rval), "valueOf");
-                    result = SameValue(rval, lval);
-                    return result;
-                case "in":
-                    result = HasProperty(rval, ToPropertyKey(lval));
-                    return result;
+                    return SameValue(rval, lval);*/                    
+                case "in": 
+                    return HasProperty(rval, ToPropertyKey(lval));
                 case "<":
-                    result = lval < rval;
-                    break;
+                    return NormalCompletion(lval < rval);
                 case ">":
-                    result = lval > rval;
-                    break;
+                    return NormalCompletion(lval > rval);
                 case "<=":
-                    result = lval <= rval;
-                    break;
+                    return NormalCompletion(lval <= rval);
                 case ">=":
-                    result = lval >= rval;
-                    break;
+                    return NormalCompletion(lval >= rval);
                 case "+":
-                    result = lval + rval;
-                    break;
+                    return NormalCompletion(lval + rval);
                 case "-":
-                    result = lval - rval;
-                    break;
+                    return NormalCompletion(lval - rval);
                 case "*":
-                    result = lval * rval;
-                    break;
+                    return NormalCompletion(lval * rval);
                 case "/":
-                    result = lval / rval;
-                    break;
+                    return NormalCompletion(lval / rval);
                 case "^":
-                    result = lval ^ rval;
-                    break;
+                    return NormalCompletion(lval ^ rval);
                 case "%":
-                    result = lval % rval;
-                    break;
+                    return NormalCompletion(lval % rval);
                 case "===":
-                    result = lval === rval;
-                    break;
+                    return NormalCompletion(lval === rval);
                 case "!==":
-                    result = lval !== rval;
-                    break;
+                    return NormalCompletion(lval !== rval);
                 case "==":
-                    result = lval == rval;
-                    break;
+                    return NormalCompletion(lval == rval);
                 case "!=":
-                    result = lval != rval;
-                    break;
+                    return NormalCompletion(lval != rval);
                 case "&&":
-                    result = lval && rval;
-                    break;
+                    return NormalCompletion(lval && rval);
                 case "||":
-                    result = lval || rval;
-                    break;
+                    return NormalCompletion(lval || rval);
                 case "|":
-                    result = lval | rval;
-                    break;
+                    return NormalCompletion(lval | rval);
                 case "&":
-                    result = lval & rval;
-                    break;
+                    return NormalCompletion(lval & rval);
                 case "<<":
-                    result = lval << rval;
-                    break;
+                    return NormalCompletion(lval << rval);
                 case ">>":
-                    result = lval >> rval;
-                    break;
+                    return NormalCompletion(lval >> rval);
                 case ">>>":
-                    result = lval >>> rval;
-                    break;
+                    return NormalCompletion(lval >>> rval);
                 case "instanceof":
-                    result = instanceOfOperator(lval, rval);
-                    return result;
-                    break;
-                default:
-                    break;
+                    return NormalCompletion(instanceOfOperator(lval, rval));                    
             }
 
             return NormalCompletion(result); // NormalCompletion(result);
@@ -27880,36 +27854,17 @@ define("runtime", function () {
  * 10
  * es6> VM.eval("12")
  * 12
- * es6
+ * es6> VM.eval("Object()")
+ * { .. }
  */
 define("vm", function (require, exports) {
 
-    //
-    //  This stub looks a bit ridiculous.
-    //
-    //  My idea is now, instead of doing it in the runtime.js
-    //  To redo the runtime.js for creating basic blocks.
-    //  
-    //  I think it´s getting easier later, when i can copy and
-    //  paste the algorithms and just edit them, to process the
-    //  basic blocks 
-    //
-    //  I got this inspiration when i fell asleep this afternoon,
-    //  i dreamed of writing a two new files in a new lib/stackmachine
-    //  directory, one which makes the basic blocks,
-    //  and one which executes them
-    //
-    //  and i got the idea of adding a VM.eval function to be able
-    //  to call the thing from the interpreter
-    //
-    //  can be, that this idea is lying around until may
-    //  or that i plan it for some days or 
-    //  maybe it was wrong to write the stub for, but with this idea
-    //  i can implement a compiler for a single command and call it
-    //  from VM.eval. And so on i could continue.
-
-    var codeStack, resultStack;
+    var constPool = Object.create(null); // number indices
+    var r0, r1, r2, r3, r4, r5, r6, r7, r8, r9, r10, r11, r12;
+    var code, ip;
+    var opStack;
     var ecma = require("api");
+    var runtime = require("runtime");
     var GetIdentifierReference = ecma.GetIdentifierReference;
 
     var getRealm = ecma.getRealm;
@@ -27919,112 +27874,208 @@ define("vm", function (require, exports) {
     var ifAbrupt = ecma.ifAbrupt;
     var isAbrupt = ecma.isAbrupt;
     var NormalCompletion = ecma.NormalCompletion;
+
     var CODE = Object.create(null);
 
-    CODE.TRUE = 8;
-    CODE.FALSE = 9;
-    CODE.ID = 10;
-    CODE.NUM = 7;
-    CODE.CALL = 32;
+    CODE.HALT = 1;
+    CODE.ERROR = 2;
+    CODE.TRUE = 5;      // Boolean true
+    CODE.FALSE = 6;     // Boolean false
+    CODE.NULL = 7;
+    CODE.UNDEFINED = 8;
+    CODE.ID = 10;       // Identifer followed by NAME
+    CODE.NUM = 11;      // A Number
+    CODE.CALL = 30;
+    CODE.RET = 31;
+    CODE.CONST_1 = 44; // CONST_1 n gets constantPool[n] and puts it into r1
+    CODE.CONST_2 = 45; // CONST_2 n gets constantPool[n] and puts it into r2
+    CODE.CONST_3 = 46;
+    CODE.CONST_4 = 47;
+    CODE.STORE_1 = 51;  // STORE_1 stores the argument in r1
+    CODE.STORE_2 = 52;  // STORE_2 stores it´s argument in r2;
+    CODE.STORE_3 = 53;  // store in r3;
+    CODE.STORE_4 = 54;  //
+    CODE.ADD = 61;      // r0 = r1 + r2
+    CODE.SUB = 62;      // // r0 =r1 + r2
+    CODE.MUL = 63;
+    CODE.DIV = 64;
+    CODE.MOD = 65;
+    CODE.EXPRSTMT = 100;
+
+    Object.freeze(CODE); // Does this trigger optimized access, immutability?
+
+    var operatorCode = {
+        "+": CODE.ADD,
+        "-": CODE.SUB,
+        "*": CODE.MUL,
+        "/": CODE.DIV,
+        "%": CODE.MOD
+    };
+
+    function dbg() {
+        if (hasConsole) {
+            console.log("CODE IS NOW")
+            console.dir(code);
+            console.log("STACK IS NOW");
+            console.dir(opStack);
+        }
+    }
+
 
     function evaluate() {
-        var op;
-        while (op = codeStack.pop()) {
-            switch (op) {
-                case CODE.CALL:
-                    var callee = codeStack.pop();
-                    var args = codeStack.pop();
+        var op; // should push the other way round, now the first index is the last element
 
-                    // this invokes the ast interpreter
+        while ((op = code[--ip]) != undefined) {   // this should maybe not just loop. And be callable.
+                                    // or the switch should be in an extra function, to
+                                   // be callable from within. with code from this or that function                                    // fetch - decode - execute and what was the last? that isnt met yet.
+                            // (it´s my first try ever to do such a thing, anyways, i think i´ll also learn it)
+            switch (op) {
+
+
+                case CODE.CALL:
+                    var callee = code[--ip];
+                    var args = code[--ip];
+
+                    // this invokes the ast interpreter (currently)
                     var callRef = ecma.Evaluate(callee);
                     if (isAbrupt(callRef = ifAbrupt(callRef))) {
-                        resultStack.push(callRef);
+                        opStack.push(callRef);
                         return;
                     }
                     var argList = ecma.ArgumentListEvaluation(args);
-                    if (isAbrupt(argList)) {
-                        resultStack.push(argList);
+                    if (isAbrupt(argList = ifAbrupt(argList))) {
+                        opStack.push(argList);
                         return;
                     }
 
-                    // LATER THIS IS ALREADY FROM THE STACK
+                    // LATER THIS IS ALREADY FROM THE STACK, or, no from REGISTERs.
                     var result = ecma.EvaluateCall(callRef, argList, false);
-                    resultStack.push(result);
+                    opStack.push(result);
+
+                    // r0 =result;
+
                     if (isAbrupt(result)) return;
                     break;
 
                     // well done, here i have to repeat
                     // the original code.
                 case CODE.NUM:
-                    var value = codeStack.pop();
-                    resultStack.push(value);
+                    var value = code[--ip];  // do that with r1..rx and use new Codes.
+                    opStack.push(value);
+                    // r0 =value;
                     break;
                 case CODE.ID:
-                    var name = codeStack.pop();
+                    var name = code[--ip];
                     var idRef = GetIdentifierReference(getLexEnv(), name, getContext().strict);
-                    if (isAbrupt(idRef=ifAbrupt(idRef))) return idRef;
-                    resultStack.push(idRef);
+                    opStack.push(idRef);
+                    // r0 =idRef;
+                    if (isAbrupt(idRef)) return; // the real "return ifabrupt()" i guess
                     break;
+                case CODE.EXPRSTMT:
+                    continue;
+                case CODE.ADD:
+                    var right = code[--ip]; // Assign to Registers, to let
+                    var left = code[--ip];  // the EVALUATE Fetch it from there?
+                                            // that doesn´t improve, i´m wrong, eh
+                    var lval = GetValue(Evaluate(left));
+                    // later fetch from r0, if it´s evaluated here
+                    var rval = GetValue(Evaluate(right));
+                    // later fetch from r0, it it´s evaluated here
+                    if (isAbrupt(lval=ifAbrupt(lval))) {
+                        opStack.push(lval);
+                        return;
+                    }
+                    if (isAbrupt(rval=ifAbrupt(rval))) {
+                        opStack.push(rval);
+                        return;
+                    }
+                    var result = ecma.getAssignmentOperationResult("+", lval, rval)
+                        result=ifAbrupt(result);
+                        opStack.push(result);
+                        if (isAbrupt(result)) return;
+                    // r0 =result;
+                    break;
+
                 default:
-                    var error = withError("Type", "unsupported opcode");
-                    resultStack.push(error);
-                    return; // return if abrupt. anders
+                    var error = withError("Type", "unsupported opcode "+op);
+                    opStack.push(error);
+                    return;
                     break;
             }
+            if (ip == 0) return;
         }
     }
 
+
+
     var compile = {
+        BinaryExpression: function (node) {
+            code.push(node.left);
+            code.push(node.right);
+            code.push(CODE[operatorCode[node.operator]]);
+        },
+        AssignmentExpression: function (node) {
+            code.push(node.left);
+            code.push(node.right);
+            code.push(CODE[operatorCode[node.operator]]);
+        },
         CallExpression: function (node) {
-            codeStack.push(node.arguments);
-            codeStack.push(node.callee);
-            codeStack.push(CODE.CALL);
+            code.push(node.arguments);
+            code.push(node.callee);
+            code.push(CODE.CALL);
         },
         NumericLiteral: function (node) {
-            codeStack.push(node.value);
-            codeStack.push(CODE.NUM);
+            code.push(node.value);
+            code.push(CODE.NUM);
         },
         Identifier: function Identifier(node) {
-            codeStack.push(node.name);
-            codeStack.push(CODE.ID);
+            code.push(node.name);
+            code.push(CODE.ID);
         },
         ExpressionStatement: function ExpressionStatement(node) {
-            compile[node.expression.type](node.expression);
+            // code.push(CODE.EXPRSTMT)
+            var f = compile[node.expression.type];
+            if (f) f.call(this, node.expression);
+            else return withError("Type", "unsupported compilation unit "+node.type);
         },
         Program: function Program(prg) {
             var body = prg.body;
             var node;
-            // put them backwards onto the stack to exec the last first
+            // here i put them backwards onto the stack to exec the last first
+            // i should do forwards to just do a ++ip instead of code[--ip] (formerly code.pop(), which makes it one way code (not useful in a function, when [[CODE]] could be replaced)
             for (var i = body.length-1, j = 0; i >= j; i--) {
                 if (node = body[i]) {
                     var f = compile[node.type];
-                    if (f) f.call(compile, node);
-                    else return withError("unsupported compilation unit: "+node.type)
+                    if (typeof f == "function") f.call(compile, node);
+                    else return withError("Type","unsupported compilation unit: "+node.type)
                 }
             }
         }
     };
     var parse = require("parser");
     var hasConsole = typeof console === "object" && console && typeof console.log === "function";
-    function dbg() {
-        if (hasConsole) {
-            console.log("CODE IS NOW")
-            console.dir(codeStack);
-            console.log("STACK IS NOW");
-            console.dir(resultStack);
-        }
-    }
-    function CompileAndRun(realm, code) {
-        codeStack = [];
-        resultStack = [];
+    
+
+    function CompileAndRun(realm, src) {
+
         try {
-            var ast = parse(code);
+            var ast = parse(src);
         } catch (ex) {
             return withError("Syntax", ex.message);
         }
-        compile[ast.type](ast);
+
+        code = [];
+
+        var result = compile[ast.type](ast);
+        if (isAbrupt(result)) return result;
+
+
+        ip = code.length;
+        opStack = [];
         evaluate();
-        var result = resultStack.pop();
+
+        //var result = r0; // fetch from register 0
+        result = opStack.pop();
         if (isAbrupt(result=ifAbrupt(result))) return result;
         return NormalCompletion(result);
     }
