@@ -2479,7 +2479,7 @@ define("slower-static-semantics", function (require, exports) {
                         name = node.name;
                         names.push(name);
                     } else if (type === "BindingElement") {
-                        name = node.as.name || node.as.value;
+                        name = node.target.name || node.target.value;
                         names.push(name);
                     } else if (type === "DefaultParameter") {
                         name = node.id;
@@ -3986,7 +3986,7 @@ define("parser", function () {
 //    var i18n = require("i18n-messages");
     var tables = require("tables");
     var tokenize = require("tokenizer").tokenizeIntoArray; // around one return nextToken() to go to replace
-    // var // EarlyErrors = require("earlyerrors").// EarlyErrors;
+
     var Contains = require("earlyerrors").Contains;
     var SymbolTable = require("symboltable").SymbolTable;
     var BoundNames = require("slower-static-semantics").BoundNames;
@@ -4042,6 +4042,8 @@ define("parser", function () {
     var tokenArrayLength; // tokens.length;        (array version)
     var symtab;
     var parser = Object.create(null);
+
+
     var noInStack = [];
     var isNoIn = false;
     var yieldStack = [];
@@ -4050,8 +4052,15 @@ define("parser", function () {
     var defaultIsId = true;
     var generatorParameter = false;
     var generatorParameterStack = [];
+
+    var isIn = false; // es6 to replace NoIn
+    var inStack = [];
+    var isReturn = false;
+    var returnStack = [];
+
     var strictStack = [];
     var isStrict = false;
+
     var currentNode;
     var nodeStack = [];
     var currentModule;
@@ -4084,58 +4093,58 @@ define("parser", function () {
     };
     var debugmode = false;
     var hasConsole = typeof console === "object" && console != null && typeof console.log === "function";
+    var hasPrint = typeof print == "function";
     var nodeId = 1;
+
     var withExtras = false;
-    var extraBuffer = [];
-    var captureExtrasByValue = tables.captureExtrasByValue;
-    var captureExtrasByType = tables.captureExtrasByType;
+    // CST withExtras. The collection is now done in the tokenizer
+    // and fetched from it´s object.
 
     function compile(node) {
+        // i replace the old compile call (with a little cost for callBuilder)
+        // to have an easier interface to maintain for debugging and POC impls
         return builder.callBuilder(node);
     }
 
-    function newExtrasNode(data) {
-        var node = Node("Extras");
-        if (data) node.extras = data;
-        else node.extras = [];
-        return node;
-    }
+
     function exchangeBuffer() {
-        var b = extraBuffer;
-        extraBuffer = [];
+        var b = tokenize.extraBuffer;
+        tokenize.extraBuffer = [];
         return b;
     }
+
     function dumpExtras(node, prop, dir) {   // dumpExtras(id, "id", "before");
         var extras;
+        var extraBuffer = tokenize.extraBuffer;
         if (!node || !extraBuffer.length) return;
         if (!node.extras) node.extras = {};
         if (!node.extras[prop]) node.extras[prop] = {};
         node.extras[prop][dir] = extraBuffer;
-        extraBuffer = [];
+        tokenize.extraBuffer = [];
     }
     function dumpExtras2(node, prop) {   // dumpExtras(id, "id", "before");
         var extras;
+        var extraBuffer = tokenize.extraBuffer;
         if (!node || !extraBuffer.length) return;
         if (!node.extras) node.extras = {};
         node.extras[prop] = extraBuffer;
-        extraBuffer = [];
+        tokenize.extraBuffer = [];
     }
+
     function startLoc() {
         return loc.start;
     }
     function endLoc(node, l1) {
-        var l2 = loc.end;
-        node.loc = makeLoc(l1, l2);
+        node.loc = makeLoc(l1, loc.end);
     }
-    function Assert(test, message) {
-        if (!test) throw new Error(message);
-    }
+
     function debug() {
         if (debugmode && hasConsole) {
             if (typeof arguments[0] == "object") {
                 console.dir(arguments[0]);
             } else console.log.apply(console, arguments);
         }
+        if (hasPrint) print.apply(null, arguments);
     }
     function debugdir() {
         if (debugmode && hasConsole) console.dir.apply(console, arguments);
@@ -4191,27 +4200,6 @@ define("parser", function () {
             source: source,
             filename: filename
         };
-    }
-    function stringifyLoc(loc) {
-        var str = "";
-        if (!loc) return str;
-        if (typeof loc == "object") {
-            if (loc.start) {
-                var start = loc.start;
-                var end = loc.end;
-                if (start) {
-                    str +=  "@loc.start: line " +start.line + ", column "+start.column;
-                }
-                if (end) {
-                    if (start) str += ", ";
-                    else str += "@";
-                    str +=  "loc.end: line " +end.line + ", column "+end.column;
-                }
-            } else if (loc.line != undefined) {
-                str = "@loc: line " +loc.line + ", column "+loc.column;
-            }
-            return str;
-        }
     }
     function stringifyTokens(array) {
         var string = "";
@@ -4339,7 +4327,6 @@ define("parser", function () {
         return lkhdVal === undefined;
     }
 
-
     var nextToken = nextToken__array__;
 
     function next() {
@@ -4403,27 +4390,7 @@ define("parser", function () {
         return lkhdTok;
     }
 
-
-    function stringifyLoc(loc) {
-        var str = "";
-        if (!loc) return str;
-        if (typeof loc == "object") {
-            if (loc.start) {
-                var start = loc.start;
-                var end = loc.end;
-                if (start) {
-                    str +=  "from line " +start.line + ", column "+start.column;
-                }
-                if (end) {
-                    str +=  "- line " +end.line + ", column "+end.column;
-                }
-            } else if (loc.line != undefined) {
-                str = "from line " +loc.line + ", column "+loc.column;
-            }
-            return str;
-        }
-    }
-    function Node(type) {
+    function Node(type) {   // this one seems to get optimized and costs nothing more than inlined {}
         return {
            type: type,
            _id_: ++nodeId
@@ -5243,9 +5210,9 @@ define("parser", function () {
             var l1 = loc.start;
             var node = Node("SuperExpression");
             node.loc = makeLoc(l1, l1);
-            if (withExtras && extraBuffer.length) dumpExtras2(node, "before");
+            if (withExtras && tokenize.extraBuffer.length) dumpExtras2(node, "before");
             match("super");
-            if (withExtras && extraBuffer.length) dumpExtras2(node, "after");
+            if (withExtras && tokenize.extraBuffer.length) dumpExtras2(node, "after");
             if (currentNode) {
                 if (ContainNoSuperIn[currentNode.type]) {
                     throw new SyntaxError("contains: super is not allowed in "+currentNode.type);
@@ -5262,9 +5229,9 @@ define("parser", function () {
             var l1 = loc.start;
             var node = Node("ThisExpression");
             node.loc = makeLoc(l1, l1);
-            if (withExtras && extraBuffer.length) dumpExtras2(node, "before");
+            if (withExtras && tokenize.extraBuffer.length) dumpExtras2(node, "before");
             match("this");
-            if (withExtras && extraBuffer.length) dumpExtras2(node, "after");
+            if (withExtras && tokenize.extraBuffer.length) dumpExtras2(node, "after");
              if (compile) return compiler(node);
             return node;
         }
@@ -5292,11 +5259,11 @@ define("parser", function () {
                     bindEl = Node("BindingElement");
                     bindEl.id = id;
                     match(":");
-                    if (StartBinding[v]) bindEl.as = this.BindingPattern();
-                    else bindEl.as = this.LeftHandSideExpression();                    
-                    if (bindEl.as.type === "Identifier") {
-            		if (isStrict && ForbiddenArgumentsInStrict[bindEl.as.name]) {
-                    	    throw new SyntaxError(bindEl.as.name + " is not a valid binding identifier in strict mode");
+                    if (StartBinding[v]) bindEl.target = this.BindingPattern();
+                    else bindEl.target = this.LeftHandSideExpression();
+                    if (bindEl.target.type === "Identifier") {
+            		if (isStrict && ForbiddenArgumentsInStrict[bindEl.target.name]) {
+                    	    throw new SyntaxError(bindEl.target.name + " is not a valid binding identifier in strict mode");
                 	}
             	    }
                     l2 = loc.end;
@@ -5833,9 +5800,9 @@ define("parser", function () {
         if (v === "return") {
             l1 = loc.start;
             node = Node("ReturnStatement");
-            if (withExtras && extraBuffer.length) dumpExtras2(node, "before");
+            if (withExtras && tokenize.extraBuffer.length) dumpExtras2(node, "before");
             match("return");
-            if (withExtras && extraBuffer.length) dumpExtras2(node, "after");
+            if (withExtras && tokenize.extraBuffer.length) dumpExtras2(node, "after");
             if (v !== ";") {
                 if (ltPassedBy) {
                     l2 = loc.end;
@@ -6065,7 +6032,7 @@ define("parser", function () {
                 node.id = this.Identifier();
                 if (v === "as") {
                     match("as");
-                    node.as = this.Identifier();
+                    node.target = this.Identifier();
                 }
                 list.push(node);
                 if (v === ",") {
@@ -6121,7 +6088,7 @@ define("parser", function () {
                 node.id = this.Identifier();
                 if (v === "as") {
                     match("as");
-                    node.as = this.Identifier();
+                    node.target = this.Identifier();
                 }
                 currentNode.moduleRequests.push(node);
                 list.push(node);
@@ -7432,7 +7399,7 @@ define("js-codegen", function (require, exports, module) {
                     args = [node.elements, node.loc, node.extras];
                     break;
                 case "BindingElement":
-                    args = [node.id.name, node.as.name, node.loc, node.extras];
+                    args = [node.id.name, node.target.name, node.loc, node.extras];
                     break;
                 case "ObjectExpression":
                     args = [node.properties, node.loc, node.extras];
@@ -8069,1404 +8036,6 @@ define("js-codegen", function (require, exports, module) {
     return build;
 });
 
-
-/* experimental in master branch */
-/**
- * Created by root on 20.04.14.
- */
-define("heap", function () {
-
-var ABRUPT = 0x01;
-
-var FREE = "FREE",
-    NUMBER = "NUMBER",
-    STRING = "STRING",
-    LIST = "LIST",
-    HASH = "HASH";
-
-var TYPES = {
-    0: FREE,
-    1: NUMBER,
-    2: STRING,
-    3: LIST,
-    4: HASH
-};
-var MAX_SIZE = Math.pow(2,32)-1;    // Int32
-var POINTER_SIZE = Uint32Array.BYTES_PER_ELEMENT; // 4 Bytes
-var TYPE_SIZE = Uint8Array.BYTES_PER_ELEMENT;
-var SIZE_SIZE = Uint8Array.BYTES_PER_ELEMENT;
-var FREELIST_PTR_SIZE = POINTER_SIZE; // same kind of pointer, just for freelist space
-var ALIGN_WITH = 4;
-
-/**
- * Creates a new Space
- * @param space
- * @returns {{space: *, buffer: ArrayBuffer, heap: DataView, root: null, sp: number}}
- */
-function new_space (space) {
-    var buffer = new ArrayBuffer(space);
-    var view = new DataView(buffer);
-    return {
-        size: space,
-        buffer: buffer,
-        view: view,
-        root: Object.create(null),
-        sp: 0,  // increased on allocation by a number of header + allocated bytes
-        freeFirst: undefined,
-        freeLast: undefined
-    };
-}
-
-function get_alloc_size(bytes) {
-    return OVERHEAD_SIZE + bytes;
-}
-
-var OVERHEAD_SIZE = TYPE_SIZE + SIZE_SIZE + FREELIST_PTR_SIZE;
-
-/**
- * A doubly linked list in typed memory
- * @constructor
- */
-
-function SentinelListNode(list, heap) {
-    var ptr = ListNode(list, heap)
-    return ptr;
-}
-/**
- * ListNode has
- * + OVERHEAD_SIZE
- * item -> pointer
- * next -> pointer
- * prev -> pointer
- * allocated space for 3x pointer
- *
- * @constructor
- */
-
-function getIndex(startIndex, field_size, field_num) {
-    var start = startIndex+OVERHEAD_SIZE;
-    return start + (field_num*field_size);
-}
-function getPrev(heap, node_ptr) {
-    var index = getIndex(node_ptr, POINTER_SIZE, 1);
-    return heap.space.view.getUint32(index);
-}
-function setPrev(heap, node_ptr, value) {
-    var index = getIndex(node_ptr, POINTER_SIZE, 1);
-    return heap.space.view.setUint32(index, value);
-}
-function getNext(heap, node_ptr) {
-    var index = getIndex(node_ptr, POINTER_SIZE, 2);
-    return heap.space.view.getUint32(index);
-}
-function setNext(heap, node_ptr, value) {
-    var index = getIndex(node_ptr, POINTER_SIZE, 2);
-    return heap.space.view.setUint32(index, value);
-}
-function getValue(heap, node_ptr) {
-    // return a type
-}
-function setValue(heap, node_ptr, value) {
-    // set a type (with full overhead like the node)
-}
-function ListNode(list, heap, value, prev, next) {
-    var startIndex = heap.allocate(POINTER_SIZE * 3);
-    var firstIndex = getIndex(startIndex, POINTER_SIZE, 0);
-    store(heap, firstIndex, value);
-    store(heap, firstIndex + POINTER_SIZE, prev);
-    store(heap, firstIndex + 2 * POINTER_SIZE, next);
-    return startIndex;
-}
-/**
- * A doubly linked list with sentinel
- * The sentinel points at the beginning to itself
- * The first an last nodes prev and next point to
- * This makes iterators very easily stop at the sentinel
- * @param heap
- * @returns {List}
- * @constructor
- */
-function List(heap) {
-    var list = Object.create(List.prototype);
-    list.heap = heap;
-    list.sentinel = SentinelListNode(list, heap);
-    return list;
-}
-List.prototype = {
-    constructor: List,
-    insertFirst: function () {
-    },
-    insertLast: function () {
-    },
-    removeFirst: function () {
-    },
-    removeLast: function () {
-    }
-};
-
-/**
- * A Hashtable for typed Memory
- * @constructor
- */
-function getKey(hash, heap, key) {
-}
-function setKey() {}
-function getValue() {}
-function setValue() {}
-function Entry(hash, heap, key, value) {
-    // insert op:
-    // calculate hash index for key
-    //
-}
-
-function Hash(N, P, heap) {
-    var hash = Object.create(Hash.prototype);
-    hash.heap = heap;
-    hash.N = N;
-    hash.P = P;
-    return hash;
-}
-Hash.prototype = {
-    constructor: Hash,
-    insert: function (key, value) {
-        return this.set(key, value);
-    },
-    remove: function (key) {
-    },
-    has: function (key) {
-    },
-    get: function (key) {
-    },
-    set: function (key, value) {
-    },
-    h: function (key) {
-        var hashVal = 0;
-        var N = this.N;
-        var prime = this.P;
-        key = ""+key;
-        for (var i = 0, j = key.length; i < j; i++) {
-            hashVal += prime * key[i].charCodeAt(0);
-        }
-        return hashVal % N;
-    }
-};
-/**
- * FreeListNode creates a free list on the position of a pointer,
- * and is used to free memory.
- * @param ptr
- * @constructor
- */
-function FreeListNode(heap, ptr) {
-    var view = heap.space.view;
-    view.setInt8(ptr, FREE); // TYPE
-    // SIZE IS LEFT
-    // now add heap.freelast to this prev
-    // and say to this "heap.freelast"
-    setPrev(heap, ptr, heap.space.freelast);    // point prev to freelast
-    setNext(heap, heap.space.freelast, ptr);    // point freelast.next to this
-    heap.space.freelast = ptr;                  // and move freelast to this.
-
-}
-
-/**
- * Heap is creating and managing the memory
- * @constructor
- */
-function Heap (size) {
-    var heap = Object.create(Heap.prototype);
-    heap.size = size;
-    heap.space = new_space(size);
-    return heap;
-}
-
-Heap.prototype = {
-    constructor: Heap,
-    align: function (num, A) {
-        var sp = this.space.sp;
-        if (sp == 0) return sp;
-        A = A || ALIGN_WITH;
-        return sp + (A - (sp % A));
-    },
-    allocate: function (numBytes) {
-        var startIndex = this.align(this.space.sp); // align with 8
-        var realSize = get_alloc_size(numBytes);
-        var newSp = startIndex + realSize // allocation simply increases the sp until the space is full. (should i align here?)
-
-        if (newSp > this.size) {
-            this.resize(this.size * 2);
-        }
-        this.space.sp = newSp;
-        return startIndex;
-
-    },
-    free: function (ptr) {
-        var ptr = FreeListNode(this, ptr);
-    },
-    gc: function () {
-        // mark and sweep + copy spaces or what i improve with my little knowledge about gc strategies
-        var newSize;
-        if (newSize < this.size / 4) {
-            this.resize(Math.floor(this.size / 2))
-        }
-    },
-    resize: function (size) {
-        var oldSpace = this.space;
-        var oldSize = this.size;
-        var oldSp = this.space.sp;
-        var oldFree = this.space.free
-        var newSpace = new_space(size);
-        var newSize = Math.min(size, MAX_SIZE);
-        var viewOld = new Int8Array(oldSpace.buffer);
-        var viewNew = new Int8Array(newSpace.buffer);
-        if (newSize > oldSize) len = oldSize;
-        for (var i = 0; i < len; i++) {
-            viewNew[i] = viewOld[i]; // ptrs have same address, bytes should be bytes while copying, or=
-        }
-        this.size = size;
-        this.space = newSpace;
-        this.space.sp = oldSp;
-        this.space.freeFirst = oldSpace.freeFirst;
-        this.space.freeLast = oldSpace.freeLast;
-    },
-    createHash: function (N) {
-        // allocate a data structure header
-        return new Hash(N, this);
-    },
-    createList: function () {
-        // allocate a data structure header
-        return new List(this);
-    },
-    removeHash: function (hash) {
-        // delete each index for freelist (O(N) without money in the bank)
-        // free the type structure
-    },
-    removeList: function (list) {
-        // iterate all elements and free them
-        // free the list.
-        // TRICK: RELABEL INTO A FREE LIST ;-) IF I CAN
-    }
-};
-
-// console.log("heap debug msg: overhead size each allocation for information is: " + OVERHEAD_SIZE);
-
-exports.Heap = Heap;
-return exports;
-
-});
-/*
-i need some bytecode for syntax.js
-i couldn´t define intel instructions
-this is the jvm variant
-how to use them?
-video: bytecode for dummies, oracle learning library
-gives explanations of what to put on the stack before you call the code
-current (c) oracle (placeholder for license copy)
-*/
-define("jvm-bytecode", function () {
-var exports = {};
-exports.op = 0x00;
-exports.aconst_null = 0x01;
-exports.iconst_m1 = 0x02;
-exports.iconst_0 = 0x03;
-exports.iconst_1 = 0x04;
-exports.iconst_2 = 0x05;
-exports.iconst_3 = 0x06;
-exports.iconst_4 = 0x07;
-exports.iconst_5 = 0x08;
-exports.lconst_0 = 0x09;
-exports.lconst_1 = 0x0a;
-exports.fconst_0 = 0x0b;
-exports.fconst_1 = 0x0c;
-exports.fconst_2 = 0x0d;
-exports.dconst_0 = 0x0e;
-exports.dconst_1 = 0x0f;
-exports.bipush = 0x10;
-exports.sipush = 0x11;
-exports.ldc = 0x12;
-exports.ldc_w = 0x13;
-exports.ldc2_w = 0x14;
-exports.iload = 0x15;
-exports.lload = 0x16;
-exports.fload = 0x17;
-exports.dload = 0x18;
-exports.aload = 0x19;
-exports.iload_0 = 0x1a;
-exports.iload_1 = 0x1b;
-exports.iload_2 = 0x1c;
-exports.iload_3 = 0x1d;
-exports.lload_0 = 0x1e;
-exports.lload_1 = 0x1f;
-exports.lload_2 = 0x20;
-exports.lload_3 = 0x21;
-exports.fload_0 = 0x22;
-exports.fload_1 = 0x23;
-exports.fload_2 = 0x24;
-exports.fload_3 = 0x25;
-exports.dload_0 = 0x26;
-exports.dload_1 = 0x27;
-exports.dload_2 = 0x28;
-exports.dload_3 = 0x29;
-exports.aload_0 = 0x2a;
-exports.aload_1 = 0x2b;
-exports.aload_2 = 0x2c;
-exports.aload_3 = 0x2d;
-exports.iaload = 0x2e;
-exports.laload = 0x2f;
-exports.faload = 0x30;
-exports.daload = 0x31;
-exports.aaload = 0x32;
-exports.baload = 0x33;
-exports.caload = 0x34;
-exports.saload = 0x35;
-exports.istore = 0x36;
-exports.lstore = 0x37;
-exports.fstore = 0x38;
-exports.dstore = 0x39;
-exports.astore = 0x3a;
-exports.istore_0 = 0x3b;
-exports.istore_1 = 0x3c;
-exports.istore_2 = 0x3d;
-exports.istore_3 = 0x3e;
-exports.lstore_0 = 0x3f;
-exports.lstore_1 = 0x40;
-exports.lstore_2 = 0x41;
-exports.lstore_3 = 0x42;
-exports.fstore_0 = 0x43;
-exports.fstore_1 = 0x44;
-exports.fstore_2 = 0x45;
-exports.fstore_3 = 0x46;
-exports.dstore_0 = 0x47;
-exports.dstore_1 = 0x48;
-exports.dstore_2 = 0x49;
-exports.dstore_3 = 0x4a;
-exports.astore_0 = 0x4b;
-exports.astore_1 = 0x4c;
-exports.astore_2 = 0x4d;
-exports.astore_3 = 0x4e;
-exports.iastore = 0x4f;
-exports.lastore = 0x50;
-exports.fastore = 0x51;
-exports.dastore = 0x52;
-exports.aastore = 0x53;
-exports.bastore = 0x54;
-exports.castore = 0x55;
-exports.sastore = 0x56;
-exports.pop = 0x57;
-exports.pop2515 = 0x58;
-exports.dup = 0x59;
-exports.dup_x1 = 0x5a;
-exports.dup_x2 = 0x5b;
-exports.dup2 = 0x5c;
-exports.dup2_x1 = 0x5d;
-exports.dup2_x2 = 0x5e;
-exports.swap = 0x5f;
-exports.iadd = 0x60;
-exports.ladd = 0x61;
-exports.fadd = 0x62;
-exports.dadd = 0x63;
-exports.isub = 0x64;
-exports.lsub = 0x65;
-exports.fsub = 0x66;
-exports.dsub = 0x67;
-exports.imul = 0x68;
-exports.lmul = 0x69;
-exports.fmul = 0x6a;
-exports.dmul = 0x6b;
-exports.idiv = 0x6c;
-exports.ldiv = 0x6d;
-exports.fdiv = 0x6e;
-exports.ddiv = 0x6f;
-exports.irem = 0x70;
-exports.lrem = 0x71;
-exports.frem = 0x72;
-exports.drem = 0x73;
-exports.ineg = 0x74;
-exports.lneg = 0x75;
-exports.fneg = 0x76;
-exports.dneg = 0x77;
-exports.ishl = 0x78;
-exports.lshl = 0x79;
-exports.ishr = 0x7a;
-exports.lshr = 0x7b;
-exports.iushr = 0x7c;
-exports.lushr = 0x7d;
-exports.iand = 0x7e;
-exports.land = 0x7f;
-exports.ior = 0x80;
-exports.lor130 = 0x81; 
-exports.ixor = 0x82;
-exports.lxor = 0x83;
-exports.iinc = 0x84;
-exports.i2l = 0x85;
-exports.i2f = 0x86;
-exports.i2d = 0x87;
-exports.l2i = 0x88;
-exports.l2f = 0x89;
-exports.l2d = 0x8a;
-exports.f2i = 0x8b;
-exports.f2l = 0x8c;
-exports.f2d = 0x8d;
-exports.d2i = 0x8e;
-exports.d2l = 0x8f;
-exports.d2f = 0x90;
-exports.i2b = 0x91;
-exports.i2c = 0x92;
-exports.i2s = 0x93;
-exports.lcmp = 0x94;
-exports.fcmpl = 0x95;
-exports.fcmpg = 0x96;
-exports.dcmpl = 0x97;
-exports.dcmpg = 0x98;
-exports.ifeq = 0x99;
-exports.ifne = 0x9a;
-exports.iflt = 0x9b;
-exports.ifge = 0x9c;
-exports.ifgt = 0x9d;
-exports.ifle = 0x9e;
-exports.if_icmpeq = 0x9f;
-exports.if_icmpne = 0xa0;
-exports.if_icmplt = 0xa1;
-exports.if_icmpge = 0xa2;
-exports.if_icmpgt = 0xa3;
-exports.if_icmple = 0xa4;
-exports.if_acmpeq = 0xa5;
-exports.if_acmpne = 0xa6;
-exports.goto = 0xa7;
-exports.jsr = 0xa8;
-exports.ret = 0xa9;
-exports.tableswitch = 0xaa;
-exports.lookupswitch = 0xab;
-exports.ireturn = 0xac;
-exports.lreturn = 0xad;
-exports.freturn = 0xae;
-exports.dreturn = 0xaf;
-exports.areturn = 0xb0;
-exports._return = 0xb1;
-exports.getstatic = 0xb2;
-exports.putstatic = 0xb3;
-exports.getfield = 0xb4;
-exports.putfield = 0xb5;
-exports.invokevirtual = 0xb6;
-exports.invokespecial = 0xb7;
-exports.invokestatic = 0xb8;
-exports.invokeinterface = 0xb9;
-exports.invokedynamic = 0xba; 1
-exports._new = 0xbb;
-exports.newarray = 0xbc;
-exports.anewarray = 0xbd;
-exports.arraylength = 0xbe;
-exports.athrow = 0xbf;
-exports.checkcast = 0xc0;
-exports._instanceof = 0xc1;
-exports.monitorenter = 0xc2;
-exports.monitorexit = 0xc3;
-exports.wide = 0xc4;
-exports.multianewarray = 0xc5;
-exports.ifnull = 0xc6;
-exports.ifnonnull = 0xc7;
-exports.goto_w = 0xc8;
-exports.jsr_w = 0xc9;
-exports.breakpoint = 0xca;
-exports.impdep1 = 0xfe;
-exports.impdep2 = 0xff;
-});
-
-define("compiler", function (require, exports, module) {
-    "use strict";
-
-    var builder = {};
-    var code; // one long array with code
-    var parser = require("parser").parser;
-    var parseGoal = parser.parseGoal;
-    var setBuilder = parser.setBuilder;
-    var unsetBuilder = parser.unsetBuilder;
-
-    var names = {
-        __proto__: null,
-        "Directive": "directive",
-        "BooleanLiteral": "literal",
-        "StringLiteral": "literal",
-        "NullLiteral": "literal",
-        "NumericLiteral": "literal",
-        "VariableDeclarator": "variableDeclarator",
-        "BinaryExpression": "binaryExpression"
-    };
-     Object.keys(parser).forEach(function (k) {
-        names[k] = (k[0]).toLowerCase() + k.slice(1);
-     });
-
-    function callBuilder(node) {
-        var args;
-        var name;
-        var arr;
-        if (!node) return null;
-        if (Array.isArray(node)) {
-            var arr = [];
-            var stm;
-            for (var i = 0, j = node.length; i < j; i++) {
-                if (stm = node[i]) {
-                    arr.push(callBuilder(stm));
-                }
-            }
-            return src;
-        } else if (typeof node === "string") {
-            return node;
-        } else {
-
-            name = node.type;
-
-            switch (name) {
-                case "BlockStatement":
-                    args = [node.body, node.loc, node.extras];
-                    break;
-                case "FunctionDeclaration":
-                case "FunctionExpression":
-                case "GeneratorDeclaration":
-                case "GeneratorExpression":
-                    args = [node.id, node.params, node.body, node.strict, node.generator, node.expression, node.loc, node.extras];
-                    break;
-                case "MethodDefinition":
-                    args = [node.id, node.params, node.body, node.strict, node.static, node.generator, node.loc, node.extras];
-                    break;
-                case "ArrowExpression":
-                    args = [node.id, node.params, node.body, node.loc, node.extras];
-                    break;
-                case "ParenthesizedExpression":
-                case "ExpressionStatement":
-                    args = [node.expression, node.loc, node.extras];
-                    break;
-                case "SequenceExpression":
-                    args = [node.sequence, node.loc, node.extras];
-                    break;
-                case "VariableDeclarator":
-                    args = [node.id, node.init, node.loc, node.extras];
-                    break;
-                case "VariableDeclaration":
-                case "LexicalDeclaration":
-                    args = [node.kind, node.declarations, node.loc, node.extras];
-                    break;
-                case "EmptyStatement":
-                    args = [node.loc, node.extras];
-                    break;
-                case "ForStatement":
-                    args = [node.init, node.test, node.update, node.body, node.loc, node.extras];
-                    break;
-                case "ForInStatement":
-                case "ForOfStatement":
-                    args = [node.left, node.right, node.body, node.loc, node.extras];
-                    break;
-                case "DoWhileStatement":
-                case "WhileStatement":
-                    args = [node.test, node.body, node.loc, node.extras];
-                    break;
-                case "LabelledStatement":
-                    args = [node.label, node.statement, node.loc, node.extras];
-                    break;
-                case "IfStatement":
-                    args = [node.test, node.consequent, node.alternate, node.loc, node.extras];
-                    break;
-                case "TryStatement":
-                    args = [node.handler, node.guard, node.finalizer, node.loc, node.extras];
-                    break;
-                case "SwitchStatement":
-                    args = [node.discriminant, node.cases, node.loc, node.extras];
-                    break;
-                case "WithStatement":
-                    args = [node.object, node.body, node.loc, node.extras];
-                    break;
-                case "ComprehensionExpression":
-                    args = [node.blocks, node.filter, node.expression, node.loc, node.extras];
-                    break;
-                case "AssignmentExpression":
-                case "BinaryExpression":
-                case "LogicalExpression":
-                    args = [node.operator, node.left, node.right, node.loc, node.extras];
-                    break;
-                case "UnaryExpression":
-                    args = [node.operator, node.argument, node.prefix, node.loc, node.extras];
-                    break;
-                case "MemberExpression":
-                    args = [node.object, node.property, node.computed, node.loc, node.extras];
-                    break;
-                case "CallExpression":
-                case "NewExpression":
-                    args = [node.callee, node.arguments, node.loc, node.extras];
-                    break;
-                case "ObjectPattern":
-                case "ArrayPattern":
-                    args = [node.elements, node.loc, node.extras];
-                    break;
-                case "BindingElement":
-                    args = [node.id.name, node.as.name, node.loc, node.extras];
-                    break;
-                case "ObjectExpression":
-                    args = [node.properties, node.loc, node.extras];
-                    break;
-                case "ArrayExpression":
-                    args = [node.elements, node.loc, node.extras];
-                    break;
-                case "DefaultParameter":
-                    args = [node.id, node.init, node.loc, node.extras];
-                    break;
-                case "RestParameter":
-                    args = [node.id, node.init, node.loc, node.extras];
-                    break;
-                case "SpreadExpression":
-                    args = [node.argument, node.loc, node.extras];
-                    break;
-                case "ClassDeclaration":
-                case "ClassExpression":
-                    args = [node.id, node.extends, node.elements, node.expression, node.loc, node.extras];
-                    break;
-                case "ThisExpression":
-                case "SuperExpression":
-                    args = [node.extras, node.loc];
-                    break;
-                case "Program":
-                    args = [node.body, node.loc, node.extras];
-                    break;
-                case "Identifier":
-                    args = [node.name || node.value, node.loc, node.extras];
-                    break;
-                case "ReturnStatement":
-                case "ThrowStatement":
-                    args = [node.argument, node.loc, node.extras];
-                    break;
-                case "BreakStatement":
-                case "ContinueStatement":
-                    args = [node.argument, node.label, node.loc, node.extras];
-                    break;
-                case "YieldExpression":
-                    args = [node.argument, node.delegator, node.loc, node.extras];
-                    break;
-                case "Directive":
-                case "Literal":
-                case "NumericLiteral":
-                case "StringLiteral":
-                case "NullLiteral":
-                case "BooleanLiteral":
-                    args = [node.value, node.loc, node.extras];
-                    break;
-                case "TemplateLiteral":
-                    args = [node.spans, node.loc, node.extras];
-                    break;
-                case "WhiteSpace":
-                case "LineComment":
-                case "MultiLineComment":
-                case "LineTerminator":
-                    args = [node.value, node.loc];
-                    break;
-                case "ConditionalExpression":
-                    args = [node.test, node.consequent, node.alternate, node.loc, node.extras];
-                    break;
-            }
-            var fn = builder[names[name]];
-            if (fn) return fn.apply(builder, args);
-            else throw new TypeError("can not generate code for " + name);
-        }
-    }
-
-    builder.spreadExpression = function (argument, loc, extras) {
-    };
-
-    builder.restParameter = function (id, init, loc, extras) {
-    };
-
-    builder.defaultParameter = function (id, init, loc, extras) {
-    };
-
-    builder.classExpression =
-        builder.classDeclaration = function (id, extend, elements, expression, loc, extras) {
-        };
-
-    builder.program = function (body, loc, extras) {
-    };
-
-    builder.bindingElement = function (name, as, initializer, loc, extras) {
-    };
-    builder.objectPattern = function (elements, loc, extras) {
-    };
-    builder.arrayPattern = function (elements, loc, extras) {
-    };
-    builder.identifier = function (name, loc, extras) {
-    };
-
-    builder.directive =
-        builder.stringLiteral =
-            builder.numericLiteral =
-                builder.booleanLiteral =
-                    builder.nullLiteral =
-                    builder.literal = function (literal, loc, extras) {
-                    };
-
-    builder.emptyStatement = function emptyStatement(loc, extras) {
-    };
-
-    builder.variableDeclarator = function (id, init, loc, extras) {
-    };
-    builder.lexicalDeclaration =
-        builder.variableDeclaration = function variableStatement(kind, declarations, loc, extras) {
-        };
-
-    builder.functionBody = function (body) {
-    };
-
-    builder.arrowExpression =
-        function (id, params, body, loc, extras) {
-        };
-
-    builder.functionDeclaration =
-        builder.functionExpression =
-            builder.generatorDeclaration =
-                builder.generatorExpression = function (id, params, body, strict, generator, expression, loc, extras) {
-                };
-
-    builder.generatorMethod =
-        builder.methodDefinition = function (id, params, body, strict, generator, loc, extras) {
-        };
-
-    builder.formalParameters = function (formals) {
-    };
-
-    builder.memberExpression = function (object, property, computed) {
-    };
-
-    builder.callExpression = function (callee, args, loc, extras) {
-    };
-    builder.newExpression = function (callee, args, loc, extras) {
-    };
-
-    builder.objectExpression = function (properties, loc, extras) {
-    };
-    builder.arrayExpression = function (elements, loc, extras) {
-    };
-
-    builder.blockStatement = function (body, loc, extras) {
-    };
-    builder.unaryExpression = function (operator, argument, prefix, loc, extras) {
-    };
-
-    builder.binaryExpression = function (operator, left, right, loc, extras) {
-    };
-
-    builder.assignmentExpression = function (operator, left, right, loc, extras) {
-    };
-
-    builder.pattern = function () {};
-    builder.expressionStatement = function expressionStatement(expr, loc, extras) {
-    };
-    builder.labelledStatement = function labelledStatement(label, body, loc, extras) {
-    };
-    builder.sequenceExpression = function (seq, loc, extras) {
-    };
-    builder.ifStatement = function ifStatement(test, condition, alternate, loc, extras) {
-    };
-    builder.switchStatement = function (discriminant, cases, isLexical, loc, extras) {
-    };
-    builder.whileStatement = function whileStatement(test, body, loc, extras) {
-    };
-    builder.doWhileStatement = function doWhileStatement(test, body, loc, extras) {
-    };
-    
-    builder.withStatement = function withStatement(obj, body, loc, extras) {
-    };
-    builder.debuggerStatement = function debuggerStatement(loc, extras) {
-    };
-
-    builder.parenthesizedExpression = function (expression, loc, extras) {
-    };
-    builder.tryStatement = function (block, guard, finalizer, loc, extras) {
-    };
-    builder.forInStatement = function forInStatement(left, right, body, isForEach, loc, extras) {
-    };
-    builder.forOfStatement = function forOfStatement(left, right, body, loc, extras) {
-    };
-    builder.forStatement = function forStatement(init, test, update, body, loc, extras) {
-    };
-
-    builder.throwStatement = function (expression, loc, extras) {
-    };
-    builder.breakStatement = function (label, loc, extras) {
-    };
-    builder.continueStatement = function (label, loc, extras) {
-    };
-    builder.returnStatement = function (expression, loc, extras) {
-    };
-    builder.thisExpression = function (loc, extras) {
-    };
-    builder.superExpression = function (loc, extras) {
-    };
-
-    builder.conditionalExpression = function (test, consequent, alternate, loc, extras) {
-    };
-
-    builder.whiteSpace = function (value, loc) {
-    };
-    builder.lineComment = function(value, loc) {
-    };
-    builder.multiLineComment = function (value, loc) {
-    };
-    builder.lineTerminator = function (value, loc) {
-    };
-
-
-    function buildFromSrc(src) {
-        //setBuilder(builder, true);
-        try {
-            var result = parser(src, { builder: builder });
-        } catch (ex) {
-            result = "[" + ex.name + "]" + ex.message + ";\r\n" + tabs(1) + ex.stack + "\r\n";
-        }
-        //unsetBuilder(builder);
-        return result;
-    }
-
-    function build(ast) {
-        code = [];
-        if (typeof ast === "string") {
-            return buildFromSrc(ast);
-        }
-        if (Array.isArray(ast)) {
-            return callBuilder(ast);
-        }
-        if (typeof ast.type === "string") {
-            return callBuilder(ast);
-        }
-        throw new TypeError("compiler(): undefined input for build()")
-    }
-
-    build.callBuilder = callBuilder;
-    build.buildFromSrc = buildFromSrc;
-    build.builder = builder;
-    return build;
-});
-
-
-define("arraycompiler", function (require, exports, module) {
-    var builder = exports;
-
-    var byteCode = { // === CODE.XXX in vm.js
-        "loc": 255,
-        "true": 1,
-        "false": 0,
-        "null": 1,
-        "undefined": 2,
-        "EmptyStatement": 3,
-        "AssignmentExpression": 32,
-        "Expression": 43,
-        "SequenceExpression" : 45,
-        "VariableDeclaration" : 33,
-        "VariableDeclarationList": 34,
-        "LexicalDeclaration": 37,
-        "GeneratorBody" : 24,
-        "FunctionDeclaration": 112,
-        "FunctionExpression": 113,
-        "Identifer": 45,
-        "NumericLiteral": 46,
-        "BooleanLiteral": 67,
-        "NullLiteral": 95,
-        "TemplateLiteral": 244,
-        "RegularExpressionLiteral": 60,
-        "StatementList": 211,
-        "SwitchStatement": 155,
-        "WhileStatement": 212,
-        "DoWhileStatement": 136,
-        "ForStatement": 126,
-        "ForInStatement": 142,
-        "ForOfStatement": 145,
-        "IfStatement": 100,
-        "ReturnStatement": 23,
-        "ThrowStatement": 74,
-        "ContinueStatement": 84,
-        "BreakStatement": 85,
-        "YieldExpression": 24,
-        "CallExpression": 44,
-        "NewExpression": 234,
-        "MemberExpression": 25,
-        "ObjectExpression": 127,
-        "ArrayExpression": 137,
-        "ArrayPattern" : 148,
-        "ObjectPattern": 135,
-        "Directive": 111,
-        "ArrayComprehension": 157,
-        "GeneratorComprehension": 158,
-        "MethodDefinition": 160,
-        "PropertyDefinition": 159,
-        "PropertyDefinitionList": 185,
-        "BinaryExpression": 223,
-        "ThisStatement": 166,
-        "SuperExpression": 181,
-        "DebuggerStatement": 199,
-        "DefaultCase": 179,
-        "SwitchCase": 189,
-        "Finally": 200,
-        "ModuleDeclaration": 177,
-        "ExportStatement": 176,
-        "ImportStatement": 188,
-        "Program": 111,
-
-        "let": 144,
-        "const": 162,
-        "var": 178
-    };
-    var byteDecoder = {};
-    for (var k in byteCode) {
-        if (Object.hasOwnProperty.call(byteCode, k))
-        byteDecoder[byteCode[k]] = k;
-    }
-
-    var nodeFields = {
-       "type": 0,
-       "body": 1,
-       "left": 1,
-       "kind": 1,
-       "argument": 1,
-       "right": 2,
-       "operator": 3
-    };
-
-    function locArray(loc) {
-        return [byteCode["loc"], loc.start.line,loc.start.column, loc.end.line, loc.end.column];
-    }
-    function byteString(str) {
-        //var a = [];
-        //for (var i = 0; i < str.length; i++) a.push(str.charCodeAt(i));
-        //return a;
-        return str;
-    }
-
-    builder.emptyStatement = function emptyStatement(loc) {
-        return [byteCode["EmptyStatement"],
-        locArray(loc)];
-    };
-
-    builder.directive = function (directive, loc) {
-      return [byteCode["Directive"],
-      byteString(directive),
-      locArray(loc)]
-    };
-    builder.stringLiteral =
-        builder.booleanLiteral =
-            builder.numericLiteral =
-    builder.literal = function (type, value, loc) {
-        return [byteCode[type],
-                value];
-    };
-
-    builder.identifier = function (name) {
-       return [byteCode["Identifier"], byteString(name)];
-    };
-
-    builder.functionDeclaration = function (body, params, strict, generator, loc) {
-
-        return [byteCode["FunctionDeclaration"],
-                callBuilder(body),
-                callBuilder(params),
-                +strict,
-                +generator,
-                locArray(loc)];
-    };
-    builder.functionExpression = function (body, params, strict, generator, loc) {
-        return [byteCode["FunctionExpression"],
-            callBuilder(body),
-            callBuilder(params),
-            +strict,
-            +generator,
-            locArray(loc)];
-    };
-
-    builder.variableStatement = function variableStatement(kind, decls, loc) {
-        return [byteCode["VariableStatement"],
-                byteCode[kind],
-                callBuilder(decls),
-                locArray(loc)
-                ];
-    };
-
-    builder.callExpression = function (callee, args, loc) {
-            return [byteCode["CallExpression"],
-                callBuilder(callee),
-                callBuilder(args),
-                locArray(loc)];
-    };
-    builder.newExpression = function (callee, args, loc) {
-        return [byteCode["NewExpression"],
-            callBuilder(callee),
-            callBuilder(args),
-            locArray(loc)];
-    };
-    builder.objectExpression = function (properties, loc) {
-        return [byteCode["ObjectExpression"],
-        callBuilder(properties),
-        locArray(loc)];
-    };
-    builder.arrayExpression = function (elements, loc) {
-        return [byteCode["ArrayExpression"],
-            callBuilder(elements),
-            locArray(loc)];
-    };
-
-    builder.blockStatement = function (body, loc) {
-        return [byteCode["BlockStatement"],
-        callBuilder(body),
-        locArray(loc)];
-    };
-    builder.binaryExpression = function (left, operator, right, loc) {
-        return [byteCode["BinaryExpression"],
-        callBuilder(left),
-        callBuilder(right),
-        byteCode[operator],
-        locArray(loc)];
-    };
-    builder.assignmentExpression = function (left, operator, right, loc) {
-        return [byteCode["AssignmentExpression"],
-            callBuilder(left),
-            callBuilder(right),
-            byteCode[operator],
-            locArray(loc)];
-    };
-    builder.propertyDefinition = function (id, expr, loc) {
-        return [
-            byteCode["PropertyDefinition"],
-            byteString(id),
-            callBuilder(expr),
-            locArray(loc)
-        ];
-    };
-    builder.methodDefinition = function (id, params, body, strict, statics, generator, loc) {
-        return [
-            byteCode["MethodDefinition"],
-            byteString(id),
-            callBuilder(params),
-            callBuilder(body),
-            +strict,
-            +statics,
-            +generator,
-            locArray(loc)
-        ];
-    };
-
-    builder.bindingElement = function (name, as, loc) {
-        return [byteCode["BindingElement"],
-            byteString(name),
-            byteString(as),
-        locArray(loc)]
-    };
-
-    builder.pattern =
-    builder.arrayPattern =
-    builder.objectPattern = function (properties, loc) {
-        var bc = [];
-        for (var i = 0, j = properties.length; i < j; i++) {
-            bc.push(callBuilder(properties[i]));
-        }
-        bc.push(locArray(loc));
-        return bc;
-    };
-    builder.expressionStatement = function expressionStatement(expr, loc) {
-        return [
-        byteCode["ExpressionStatement"],
-            callBuilder(expr),
-        locArray(loc)];
-
-    };
-    builder.labeledStatement = function labeledStatement(label, body, loc) {
-        return [
-            byteCode["LabeledStatement"],
-            callBuilder(body),
-            locArray(loc)
-        ];
-    };
-    builder.sequenceExpression = function (seq, loc) {
-        return [
-            byteCode["SequenceExpression"],
-            callBuilder(seq),
-            locArray(loc)
-        ];
-    };
-    builder.ifStatement = function ifStatement(test, condition, alternate, loc) {
-        return [byteCode["IfStatement"],
-            callBuilder(condition),
-            callBuilder(alternate),
-            locArray(loc)
-        ];
-    };
-    builder.switchStatement = function (discriminant, cases, isLexical, loc) {
-        var bc = [
-            byteCode["SwitchStatement"],
-            callBuilder(discriminant)
-        ];
-        var scbc = [];
-        for (var i = 0, j = cases.length; i < j; i++) {
-            scbc.push(callBuilder(cases[i]));
-        }
-        bc.push(scbc);
-        bc.push(locArray(loc));
-        return bc;
-    };
-    builder.whileStatement = function whileStatement(test, body, loc) {
-        return [
-            byteCode["WhileStatement"],
-            callBuilder(test),
-            callBuilder(body),
-            locArray(loc)
-        ];
-    };
-    builder.withStatement = function withStatement(obj, body, loc) {
-        return [
-            byteCode["WithStatement"],
-            callBuilder(body),
-            locArray(loc)
-        ];
-    };
-    builder.debuggerStatement = function debuggerStatement(loc) {
-        return [byteCode["DebuggerStatement"], locArray(loc)];
-    };
-    builder.tryStatement = function (block, handler, guard, finalizer, loc) {
-        return [
-            byteCode["TryStatement"],
-            callBuilder(block),
-            callBuilder(handler),
-            callBuilder(finalizer),
-            locArray(loc)
-        ];
-    };
-    builder.forInStatement = function forInStatement(left, right, body, isForEach, loc) {
-        return [
-            byteCode["ForInStatement"],
-            callBuilder(left),
-            callBuilder(right),
-            callBuilder(body),
-            locArray(loc)
-        ];
-    };
-    builder.forOfStatement = function forOfStatement(left, right, body, loc) {
-        return [
-            byteCode["ForOfStatement"],
-            callBuilder(left),
-            callBuilder(right),
-            callBuilder(body),
-            locArray(loc)
-        ];
-
-    };
-    builder.forStatement = function forStatement(init, condition, update, body, loc) {
-        return [
-            byteCode["ForStatement"],
-            callBuilder(init),              // later
-            callBuilder(condition),         // these
-            callBuilder(update),            // fn return
-            callBuilder(body),              // just offsets
-            locArray(loc)                   // for the heap
-        ];
-
-    };
-    builder.doWhileStatement = function doWhileStatement(body, test, loc) {
-        return [
-            byteCode["DoWhileStatement"],
-            callBuilder(body),
-            callBuilder(test),
-            locArray(loc)
-        ];
-    };
-    builder.throwStatement = function (expression, loc) {
-        return [byteCode["ThrowStatement"],
-            callBuilder(expression),
-            locArray(loc)
-        ];
-    };
-    builder.breakStatement = function (label, loc) {
-        return [byteCode["BreakStatement"],
-            byteString(label),
-            locArray(loc)];
-    };
-    builder.continueStatement = function (label, loc) {
-        return [byteCode["ContinueStatement"],
-        byteString(label),
-        locArray(loc)];
-    };
-    builder.returnStatement = function (expression, loc) {
-        return [byteCode["ReturnStatement"],
-            callBuilder(expression),
-            locArray(loc)
-        ];
-    };
-    builder.program = function (body, loc) {
-       var bc = [byteCode["Program"]];
-        for (var i = 0, j = body.length; i < j; i++) {
-            bc.push(callBuilder(body[i]));
-        }
-        bc.push(locArray(loc));
-        return bc;
-    };
-
-    function callBuilder(node) {
-        var args;
-        var name;
-        if (!node) return "";
-        if (Array.isArray(node)) {
-            var result = [];
-            var stm;
-            for (var i = 0, j = node.length; i < j; i++) {
-                if (stm = node[i]) {
-                    result.push( callBuilder(stm) );
-                }
-            }
-            return result;
-        } else if (typeof node === "string") {
-            return byteString(node);
-        } else {
-            name = node.type;
-            switch (name) {
-                case "BlockStatement":
-                    args = [node.body, node.loc];
-                    break;
-                case "FunctionDeclaration":
-                case "FunctionExpression":
-                case "GeneratorDeclaration":
-                case "GeneratorExpression":
-                    args = [node.id, node.params, node.body, node.strict, node.generator, node.expression, node.loc];
-                    break;
-                case "MethodDefinition":
-                    args = [node.id, node.params, node.body, node.strict, node.static, node.generator, node.loc];
-                    break;
-                case "ArrowExpression":
-                    args = [node.id, node.params, node.body, node.strict, node.generator, node.expression, node.loc];
-                    break;
-                case "ExpressionStatement":
-                case "SequenceExpression":
-                    args = [node.expression, node.loc];
-                    break;
-                case "VariableDeclarator":
-                    args = [node.id, node.init, node.loc];
-                    break;
-                case "VariableDeclaration":
-                case "LexicalDeclaration":
-                    args = [node.kind, node.declarations, node.loc];
-                    break;
-                case "EmptyStatement":
-                    args = [node.loc];
-                    break;
-                case "ForStatement":
-                    args = [node.init, node.test, node.update, node.body, node.loc];
-                    break;
-                case "ForInStatement":
-                case "ForOfStatement":
-                    args = [node.left, node.right, node.body, node.loc];
-                    break;
-                case "DoWhileStatement":
-                case "WhileStatement":
-                    args = [node.test, node.body, node.loc];
-                    break;
-                case "LabelledStatement":
-                    args = [node.label, node.statement, node.loc];
-                    break;
-                case "IfStatement":
-                    args = [node.test, node.consequent, node.alternate, node.loc];
-                    break;
-                case "TryStatement":
-                    args = [node.block, node.guard, node.finalizer, node.loc];
-                    break;
-                case "SwitchStatement":
-                    args = [node.discriminant, node.cases, node.loc];
-                    break;
-                case "WithStatement":
-                    args = [node.object, node.body, node.loc];
-                    break;
-                case "ComprehensionExpression":
-                    args = [node.blocks, node.filter, node.expression];
-                    break;
-                case "PropertyDefinition":
-                    args = [node.kind, node.key, node.value, node.loc];
-                    break;
-                case "AssignmentExpression":
-                case "BinaryExpression":
-                case "LogicalExpression":
-                    args = [node.operator, node.left, node.right, node.loc];
-                    break;
-                case "UnaryExpression":
-                    args = [node.operator, node.argument, node.prefix, node.loc];
-                    break;
-                case "MemberExpression":
-                    args = [node.object, node.property, node.computed, node.loc];
-                    break;
-                case "CallExpression":
-                case "NewExpression":
-                    args = [node.callee, node.arguments, node.loc];
-                    break;
-                case "ObjectPattern":
-                case "ArrayPattern":
-                    args = [node.elements, node.loc];
-                    break;
-                case "BindingElement":
-                    args = [node.id.name, node.as.name, node.loc];
-                    break;
-                case "ObjectExpression":
-                    args = [node.properties, node.loc];
-                    break;
-                case "ArrayExpression":
-                    args = [node.elements, node.loc];
-                    break;
-                case "DefaultParameter":
-                    args = [node.id, node.init, node.loc];
-                    break;
-                case "RestParameter":
-                    args = [node.id, node.init, node.loc];
-                    break;
-                case "SpreadExpression":
-                    args = [node.argument, node.loc];
-                    break;
-                case "ClassDeclaration":
-                case "ClassExpression":
-                    args = [node.id, node.extends, node.elements, node.expression, node.loc];
-                    break;
-                case "ThisExpression":
-                case "SuperExpression":
-                    args = [node.loc];
-                    break;
-                case "Program":
-                    args = [node.body, node.loc];
-                    break;
-                case "Identifier":
-                    args = [node.name || node.value, node.loc];
-                    break;
-                case "ReturnStatement":
-                case "ThrowStatement":
-                    args = [node.argument, node.loc];
-                    break;
-                case "BreakStatement":
-                case "ContinueStatement":
-                    args = [node.argument, node.label, node.loc];
-                    break;
-                case "YieldExpression":
-                    args = [node.argument, node.delegator, node.loc];
-                    break;
-                case "Directive":
-                case "Literal":
-                case "NumericLiteral":
-                case "StringLiteral":
-                case "NullLiteral":
-                case "BooleanLiteral":
-                case "TemplateLiteral":
-                    args = [node.type, node.value, node.loc];
-                    break;
-            }
-            name = name[0].toLowerCase() + name.slice(1);
-            return builder[name].apply(builder, args);
-        }
-    }
-    builder.callBuilder = callBuilder;
-    builder.build =
-    builder.compile = function (src) {
-	    var nodes;
-        if (typeof src === "string") nodes = require("parse")(src);
-        else nodes = src;
-        return callBuilder(nodes);
-    };
-    return builder;
-});
-
-/* experimental pieces */
 
 /*
     API contains ecma-262 specification devices
@@ -26440,7 +25009,7 @@ define("runtime", function () {
                     var elem;
                     for (var x = 0, y = param.elements.length; x < y; x++) {
                         elem = param.elements[i];
-                        name = elem.as ? elem.as.name : (elem.name || elem.value);
+                        name = elem.target ? elem.target.name : (elem.name || elem.value);
                         if (!mappedNames[name]) {
                             mappedNames[name] = true;
                             g = MakeArgGetter(name, env);
@@ -27037,9 +25606,9 @@ define("runtime", function () {
                     var type = elem.type;
                     if (elem.type == "Identifier") {
                         identName = elem.name || elem.value;
-                    } else if (elem.as && IsBindingPattern[as.type]) {
+                    } else if (elem.target && IsBindingPattern[as.type]) {
                         identName = elem.id.name;
-                        target = elem.as;
+                        target = elem.target;
                     }
 
                     if (elem.init) {
@@ -27073,8 +25642,8 @@ define("runtime", function () {
     }
     evaluation.BindingElement = BindingElement;
     function BindingElement (node) {
-        if (node.as) {
-            return ResolveBinding(node.as);
+        if (node.target) {
+            return ResolveBinding(node.target);
         } else {
             return Identifier(node);
         }
@@ -27096,7 +25665,7 @@ define("runtime", function () {
                 if (elem = decl.elements[i]) {
                     if (elem.id) {
                         identName = elem.id.name;
-                        newName = elem.as.name;
+                        newName = elem.target.name;
                     } else {
                         identName = elem.name || elem.value;
                         newName = undefined;
@@ -27245,7 +25814,7 @@ define("runtime", function () {
                                 val = Get(value, decl.id.name, value);
                                 if (isAbrupt(val = ifAbrupt(val))) return val;
                                 if (val == undefined && initializer != undefined) val = initializer;
-                                env.InitializeBinding(decl.as.name, val);
+                                env.InitializeBinding(decl.target.name, val);
                             } else {    // is not a bindingelement, is an "Identifier"
                                 val =  Get(value, ToString(p), value);
                                 if (isAbrupt(val = ifAbrupt(val))) return val;
@@ -27253,7 +25822,7 @@ define("runtime", function () {
                                 env.InitializeBinding(decl.name, val);
                             }
                         } else {
-                            if (decl.id) { // BindingElement has el.id and el.as
+                            if (decl.id) { // BindingElement has el.id and el.target
                                 lhs = Evaluate(decl.id);
                                 val = Get(value, decl.id.name);
                                 if (isAbrupt(val = ifAbrupt(val))) return val;
@@ -27296,7 +25865,7 @@ define("runtime", function () {
                             if (isAbrupt(val=ifAbrupt(val))) return val;
                             if (val === undefined && initializer != undefined) val = initializer;
 
-                            env.InitializeBinding(decl.as.name, val);
+                            env.InitializeBinding(decl.target.name, val);
 
                         } else if (decl.type === "Identifier") {
                             val = Get(value, decl.name, value);
@@ -27693,14 +26262,14 @@ define("runtime", function () {
                 rval = Get(obj, identName);
                 result = getAssignmentOperationResult(op, lval, rval);
                 var target;
-                if (lel.as) {
-                    if (IsBindingPattern[lel.as.type]) {
+                if (lel.target) {
+                    if (IsBindingPattern[lel.target.type]) {
                         console.log("BINDINGPATTERN")
-                        status = DestructuringAssignmentEvaluation(lel.as, result, op);
+                        status = DestructuringAssignmentEvaluation(lel.target, result, op);
                         if (isAbrupt(status)) return status;
                     } else {
                         console.log("TARGET")
-                        target = Evaluate(lel.as);
+                        target = Evaluate(lel.target);
                         if (isAbrupt(target)) return target;
                         PutValue(target, result);
                     }
@@ -29332,6 +27901,1402 @@ define("runtime", function () {
 });
 
 
+
+/* experimental in master branch */
+/**
+ * Created by root on 20.04.14.
+ */
+define("heap", function () {
+
+var ABRUPT = 0x01;
+
+var FREE = "FREE",
+    NUMBER = "NUMBER",
+    STRING = "STRING",
+    LIST = "LIST",
+    HASH = "HASH";
+
+var TYPES = {
+    0: FREE,
+    1: NUMBER,
+    2: STRING,
+    3: LIST,
+    4: HASH
+};
+var MAX_SIZE = Math.pow(2,32)-1;    // Int32
+var POINTER_SIZE = Uint32Array.BYTES_PER_ELEMENT; // 4 Bytes
+var TYPE_SIZE = Uint8Array.BYTES_PER_ELEMENT;
+var SIZE_SIZE = Uint8Array.BYTES_PER_ELEMENT;
+var FREELIST_PTR_SIZE = POINTER_SIZE; // same kind of pointer, just for freelist space
+var ALIGN_WITH = 4;
+
+/**
+ * Creates a new Space
+ * @param space
+ * @returns {{space: *, buffer: ArrayBuffer, heap: DataView, root: null, sp: number}}
+ */
+function new_space (space) {
+    var buffer = new ArrayBuffer(space);
+    var view = new DataView(buffer);
+    return {
+        size: space,
+        buffer: buffer,
+        view: view,
+        root: Object.create(null),
+        sp: 0,  // increased on allocation by a number of header + allocated bytes
+        freeFirst: undefined,
+        freeLast: undefined
+    };
+}
+
+function get_alloc_size(bytes) {
+    return OVERHEAD_SIZE + bytes;
+}
+
+var OVERHEAD_SIZE = TYPE_SIZE + SIZE_SIZE + FREELIST_PTR_SIZE;
+
+/**
+ * A doubly linked list in typed memory
+ * @constructor
+ */
+
+function SentinelListNode(list, heap) {
+    var ptr = ListNode(list, heap)
+    return ptr;
+}
+/**
+ * ListNode has
+ * + OVERHEAD_SIZE
+ * item -> pointer
+ * next -> pointer
+ * prev -> pointer
+ * allocated space for 3x pointer
+ *
+ * @constructor
+ */
+
+function getIndex(startIndex, field_size, field_num) {
+    var start = startIndex+OVERHEAD_SIZE;
+    return start + (field_num*field_size);
+}
+function getPrev(heap, node_ptr) {
+    var index = getIndex(node_ptr, POINTER_SIZE, 1);
+    return heap.space.view.getUint32(index);
+}
+function setPrev(heap, node_ptr, value) {
+    var index = getIndex(node_ptr, POINTER_SIZE, 1);
+    return heap.space.view.setUint32(index, value);
+}
+function getNext(heap, node_ptr) {
+    var index = getIndex(node_ptr, POINTER_SIZE, 2);
+    return heap.space.view.getUint32(index);
+}
+function setNext(heap, node_ptr, value) {
+    var index = getIndex(node_ptr, POINTER_SIZE, 2);
+    return heap.space.view.setUint32(index, value);
+}
+function getValue(heap, node_ptr) {
+    // return a type
+}
+function setValue(heap, node_ptr, value) {
+    // set a type (with full overhead like the node)
+}
+function ListNode(list, heap, value, prev, next) {
+    var startIndex = heap.allocate(POINTER_SIZE * 3);
+    var firstIndex = getIndex(startIndex, POINTER_SIZE, 0);
+    store(heap, firstIndex, value);
+    store(heap, firstIndex + POINTER_SIZE, prev);
+    store(heap, firstIndex + 2 * POINTER_SIZE, next);
+    return startIndex;
+}
+/**
+ * A doubly linked list with sentinel
+ * The sentinel points at the beginning to itself
+ * The first an last nodes prev and next point to
+ * This makes iterators very easily stop at the sentinel
+ * @param heap
+ * @returns {List}
+ * @constructor
+ */
+function List(heap) {
+    var list = Object.create(List.prototype);
+    list.heap = heap;
+    list.sentinel = SentinelListNode(list, heap);
+    return list;
+}
+List.prototype = {
+    constructor: List,
+    insertFirst: function () {
+    },
+    insertLast: function () {
+    },
+    removeFirst: function () {
+    },
+    removeLast: function () {
+    }
+};
+
+/**
+ * A Hashtable for typed Memory
+ * @constructor
+ */
+function getKey(hash, heap, key) {
+}
+function setKey() {}
+function getValue() {}
+function setValue() {}
+function Entry(hash, heap, key, value) {
+    // insert op:
+    // calculate hash index for key
+    //
+}
+
+function Hash(N, P, heap) {
+    var hash = Object.create(Hash.prototype);
+    hash.heap = heap;
+    hash.N = N;
+    hash.P = P;
+    return hash;
+}
+Hash.prototype = {
+    constructor: Hash,
+    insert: function (key, value) {
+        return this.set(key, value);
+    },
+    remove: function (key) {
+    },
+    has: function (key) {
+    },
+    get: function (key) {
+    },
+    set: function (key, value) {
+    },
+    h: function (key) {
+        var hashVal = 0;
+        var N = this.N;
+        var prime = this.P;
+        key = ""+key;
+        for (var i = 0, j = key.length; i < j; i++) {
+            hashVal += prime * key[i].charCodeAt(0);
+        }
+        return hashVal % N;
+    }
+};
+/**
+ * FreeListNode creates a free list on the position of a pointer,
+ * and is used to free memory.
+ * @param ptr
+ * @constructor
+ */
+function FreeListNode(heap, ptr) {
+    var view = heap.space.view;
+    view.setInt8(ptr, FREE); // TYPE
+    // SIZE IS LEFT
+    // now add heap.freelast to this prev
+    // and say to this "heap.freelast"
+    setPrev(heap, ptr, heap.space.freelast);    // point prev to freelast
+    setNext(heap, heap.space.freelast, ptr);    // point freelast.next to this
+    heap.space.freelast = ptr;                  // and move freelast to this.
+
+}
+
+/**
+ * Heap is creating and managing the memory
+ * @constructor
+ */
+function Heap (size) {
+    var heap = Object.create(Heap.prototype);
+    heap.size = size;
+    heap.space = new_space(size);
+    return heap;
+}
+
+Heap.prototype = {
+    constructor: Heap,
+    align: function (num, A) {
+        var sp = this.space.sp;
+        if (sp == 0) return sp;
+        A = A || ALIGN_WITH;
+        return sp + (A - (sp % A));
+    },
+    allocate: function (numBytes) {
+        var startIndex = this.align(this.space.sp); // align with 8
+        var realSize = get_alloc_size(numBytes);
+        var newSp = startIndex + realSize // allocation simply increases the sp until the space is full. (should i align here?)
+
+        if (newSp > this.size) {
+            this.resize(this.size * 2);
+        }
+        this.space.sp = newSp;
+        return startIndex;
+
+    },
+    free: function (ptr) {
+        var ptr = FreeListNode(this, ptr);
+    },
+    gc: function () {
+        // mark and sweep + copy spaces or what i improve with my little knowledge about gc strategies
+        var newSize;
+        if (newSize < this.size / 4) {
+            this.resize(Math.floor(this.size / 2))
+        }
+    },
+    resize: function (size) {
+        var oldSpace = this.space;
+        var oldSize = this.size;
+        var oldSp = this.space.sp;
+        var oldFree = this.space.free
+        var newSpace = new_space(size);
+        var newSize = Math.min(size, MAX_SIZE);
+        var viewOld = new Int8Array(oldSpace.buffer);
+        var viewNew = new Int8Array(newSpace.buffer);
+        if (newSize > oldSize) len = oldSize;
+        for (var i = 0; i < len; i++) {
+            viewNew[i] = viewOld[i]; // ptrs have same address, bytes should be bytes while copying, or=
+        }
+        this.size = size;
+        this.space = newSpace;
+        this.space.sp = oldSp;
+        this.space.freeFirst = oldSpace.freeFirst;
+        this.space.freeLast = oldSpace.freeLast;
+    },
+    createHash: function (N) {
+        // allocate a data structure header
+        return new Hash(N, this);
+    },
+    createList: function () {
+        // allocate a data structure header
+        return new List(this);
+    },
+    removeHash: function (hash) {
+        // delete each index for freelist (O(N) without money in the bank)
+        // free the type structure
+    },
+    removeList: function (list) {
+        // iterate all elements and free them
+        // free the list.
+        // TRICK: RELABEL INTO A FREE LIST ;-) IF I CAN
+    }
+};
+
+// console.log("heap debug msg: overhead size each allocation for information is: " + OVERHEAD_SIZE);
+
+exports.Heap = Heap;
+return exports;
+
+});
+/*
+i need some bytecode for syntax.js
+i couldn´t define intel instructions
+this is the jvm variant
+how to use them?
+video: bytecode for dummies, oracle learning library
+gives explanations of what to put on the stack before you call the code
+current (c) oracle (placeholder for license copy)
+*/
+define("jvm-bytecode", function () {
+var exports = {};
+exports.op = 0x00;
+exports.aconst_null = 0x01;
+exports.iconst_m1 = 0x02;
+exports.iconst_0 = 0x03;
+exports.iconst_1 = 0x04;
+exports.iconst_2 = 0x05;
+exports.iconst_3 = 0x06;
+exports.iconst_4 = 0x07;
+exports.iconst_5 = 0x08;
+exports.lconst_0 = 0x09;
+exports.lconst_1 = 0x0a;
+exports.fconst_0 = 0x0b;
+exports.fconst_1 = 0x0c;
+exports.fconst_2 = 0x0d;
+exports.dconst_0 = 0x0e;
+exports.dconst_1 = 0x0f;
+exports.bipush = 0x10;
+exports.sipush = 0x11;
+exports.ldc = 0x12;
+exports.ldc_w = 0x13;
+exports.ldc2_w = 0x14;
+exports.iload = 0x15;
+exports.lload = 0x16;
+exports.fload = 0x17;
+exports.dload = 0x18;
+exports.aload = 0x19;
+exports.iload_0 = 0x1a;
+exports.iload_1 = 0x1b;
+exports.iload_2 = 0x1c;
+exports.iload_3 = 0x1d;
+exports.lload_0 = 0x1e;
+exports.lload_1 = 0x1f;
+exports.lload_2 = 0x20;
+exports.lload_3 = 0x21;
+exports.fload_0 = 0x22;
+exports.fload_1 = 0x23;
+exports.fload_2 = 0x24;
+exports.fload_3 = 0x25;
+exports.dload_0 = 0x26;
+exports.dload_1 = 0x27;
+exports.dload_2 = 0x28;
+exports.dload_3 = 0x29;
+exports.aload_0 = 0x2a;
+exports.aload_1 = 0x2b;
+exports.aload_2 = 0x2c;
+exports.aload_3 = 0x2d;
+exports.iaload = 0x2e;
+exports.laload = 0x2f;
+exports.faload = 0x30;
+exports.daload = 0x31;
+exports.aaload = 0x32;
+exports.baload = 0x33;
+exports.caload = 0x34;
+exports.saload = 0x35;
+exports.istore = 0x36;
+exports.lstore = 0x37;
+exports.fstore = 0x38;
+exports.dstore = 0x39;
+exports.astore = 0x3a;
+exports.istore_0 = 0x3b;
+exports.istore_1 = 0x3c;
+exports.istore_2 = 0x3d;
+exports.istore_3 = 0x3e;
+exports.lstore_0 = 0x3f;
+exports.lstore_1 = 0x40;
+exports.lstore_2 = 0x41;
+exports.lstore_3 = 0x42;
+exports.fstore_0 = 0x43;
+exports.fstore_1 = 0x44;
+exports.fstore_2 = 0x45;
+exports.fstore_3 = 0x46;
+exports.dstore_0 = 0x47;
+exports.dstore_1 = 0x48;
+exports.dstore_2 = 0x49;
+exports.dstore_3 = 0x4a;
+exports.astore_0 = 0x4b;
+exports.astore_1 = 0x4c;
+exports.astore_2 = 0x4d;
+exports.astore_3 = 0x4e;
+exports.iastore = 0x4f;
+exports.lastore = 0x50;
+exports.fastore = 0x51;
+exports.dastore = 0x52;
+exports.aastore = 0x53;
+exports.bastore = 0x54;
+exports.castore = 0x55;
+exports.sastore = 0x56;
+exports.pop = 0x57;
+exports.pop2515 = 0x58;
+exports.dup = 0x59;
+exports.dup_x1 = 0x5a;
+exports.dup_x2 = 0x5b;
+exports.dup2 = 0x5c;
+exports.dup2_x1 = 0x5d;
+exports.dup2_x2 = 0x5e;
+exports.swap = 0x5f;
+exports.iadd = 0x60;
+exports.ladd = 0x61;
+exports.fadd = 0x62;
+exports.dadd = 0x63;
+exports.isub = 0x64;
+exports.lsub = 0x65;
+exports.fsub = 0x66;
+exports.dsub = 0x67;
+exports.imul = 0x68;
+exports.lmul = 0x69;
+exports.fmul = 0x6a;
+exports.dmul = 0x6b;
+exports.idiv = 0x6c;
+exports.ldiv = 0x6d;
+exports.fdiv = 0x6e;
+exports.ddiv = 0x6f;
+exports.irem = 0x70;
+exports.lrem = 0x71;
+exports.frem = 0x72;
+exports.drem = 0x73;
+exports.ineg = 0x74;
+exports.lneg = 0x75;
+exports.fneg = 0x76;
+exports.dneg = 0x77;
+exports.ishl = 0x78;
+exports.lshl = 0x79;
+exports.ishr = 0x7a;
+exports.lshr = 0x7b;
+exports.iushr = 0x7c;
+exports.lushr = 0x7d;
+exports.iand = 0x7e;
+exports.land = 0x7f;
+exports.ior = 0x80;
+exports.lor130 = 0x81; 
+exports.ixor = 0x82;
+exports.lxor = 0x83;
+exports.iinc = 0x84;
+exports.i2l = 0x85;
+exports.i2f = 0x86;
+exports.i2d = 0x87;
+exports.l2i = 0x88;
+exports.l2f = 0x89;
+exports.l2d = 0x8a;
+exports.f2i = 0x8b;
+exports.f2l = 0x8c;
+exports.f2d = 0x8d;
+exports.d2i = 0x8e;
+exports.d2l = 0x8f;
+exports.d2f = 0x90;
+exports.i2b = 0x91;
+exports.i2c = 0x92;
+exports.i2s = 0x93;
+exports.lcmp = 0x94;
+exports.fcmpl = 0x95;
+exports.fcmpg = 0x96;
+exports.dcmpl = 0x97;
+exports.dcmpg = 0x98;
+exports.ifeq = 0x99;
+exports.ifne = 0x9a;
+exports.iflt = 0x9b;
+exports.ifge = 0x9c;
+exports.ifgt = 0x9d;
+exports.ifle = 0x9e;
+exports.if_icmpeq = 0x9f;
+exports.if_icmpne = 0xa0;
+exports.if_icmplt = 0xa1;
+exports.if_icmpge = 0xa2;
+exports.if_icmpgt = 0xa3;
+exports.if_icmple = 0xa4;
+exports.if_acmpeq = 0xa5;
+exports.if_acmpne = 0xa6;
+exports.goto = 0xa7;
+exports.jsr = 0xa8;
+exports.ret = 0xa9;
+exports.tableswitch = 0xaa;
+exports.lookupswitch = 0xab;
+exports.ireturn = 0xac;
+exports.lreturn = 0xad;
+exports.freturn = 0xae;
+exports.dreturn = 0xaf;
+exports.areturn = 0xb0;
+exports._return = 0xb1;
+exports.getstatic = 0xb2;
+exports.putstatic = 0xb3;
+exports.getfield = 0xb4;
+exports.putfield = 0xb5;
+exports.invokevirtual = 0xb6;
+exports.invokespecial = 0xb7;
+exports.invokestatic = 0xb8;
+exports.invokeinterface = 0xb9;
+exports.invokedynamic = 0xba; 1
+exports._new = 0xbb;
+exports.newarray = 0xbc;
+exports.anewarray = 0xbd;
+exports.arraylength = 0xbe;
+exports.athrow = 0xbf;
+exports.checkcast = 0xc0;
+exports._instanceof = 0xc1;
+exports.monitorenter = 0xc2;
+exports.monitorexit = 0xc3;
+exports.wide = 0xc4;
+exports.multianewarray = 0xc5;
+exports.ifnull = 0xc6;
+exports.ifnonnull = 0xc7;
+exports.goto_w = 0xc8;
+exports.jsr_w = 0xc9;
+exports.breakpoint = 0xca;
+exports.impdep1 = 0xfe;
+exports.impdep2 = 0xff;
+});
+
+define("compiler", function (require, exports, module) {
+    "use strict";
+
+    var builder = {};
+    var code; // one long array with code
+    var parser = require("parser").parser;
+    var parseGoal = parser.parseGoal;
+    var setBuilder = parser.setBuilder;
+    var unsetBuilder = parser.unsetBuilder;
+
+    var names = {
+        __proto__: null,
+        "Directive": "directive",
+        "BooleanLiteral": "literal",
+        "StringLiteral": "literal",
+        "NullLiteral": "literal",
+        "NumericLiteral": "literal",
+        "VariableDeclarator": "variableDeclarator",
+        "BinaryExpression": "binaryExpression"
+    };
+     Object.keys(parser).forEach(function (k) {
+        names[k] = (k[0]).toLowerCase() + k.slice(1);
+     });
+
+    function callBuilder(node) {
+        var args;
+        var name;
+        var arr;
+        if (!node) return null;
+        if (Array.isArray(node)) {
+            var arr = [];
+            var stm;
+            for (var i = 0, j = node.length; i < j; i++) {
+                if (stm = node[i]) {
+                    arr.push(callBuilder(stm));
+                }
+            }
+            return src;
+        } else if (typeof node === "string") {
+            return node;
+        } else {
+
+            name = node.type;
+
+            switch (name) {
+                case "BlockStatement":
+                    args = [node.body, node.loc, node.extras];
+                    break;
+                case "FunctionDeclaration":
+                case "FunctionExpression":
+                case "GeneratorDeclaration":
+                case "GeneratorExpression":
+                    args = [node.id, node.params, node.body, node.strict, node.generator, node.expression, node.loc, node.extras];
+                    break;
+                case "MethodDefinition":
+                    args = [node.id, node.params, node.body, node.strict, node.static, node.generator, node.loc, node.extras];
+                    break;
+                case "ArrowExpression":
+                    args = [node.id, node.params, node.body, node.loc, node.extras];
+                    break;
+                case "ParenthesizedExpression":
+                case "ExpressionStatement":
+                    args = [node.expression, node.loc, node.extras];
+                    break;
+                case "SequenceExpression":
+                    args = [node.sequence, node.loc, node.extras];
+                    break;
+                case "VariableDeclarator":
+                    args = [node.id, node.init, node.loc, node.extras];
+                    break;
+                case "VariableDeclaration":
+                case "LexicalDeclaration":
+                    args = [node.kind, node.declarations, node.loc, node.extras];
+                    break;
+                case "EmptyStatement":
+                    args = [node.loc, node.extras];
+                    break;
+                case "ForStatement":
+                    args = [node.init, node.test, node.update, node.body, node.loc, node.extras];
+                    break;
+                case "ForInStatement":
+                case "ForOfStatement":
+                    args = [node.left, node.right, node.body, node.loc, node.extras];
+                    break;
+                case "DoWhileStatement":
+                case "WhileStatement":
+                    args = [node.test, node.body, node.loc, node.extras];
+                    break;
+                case "LabelledStatement":
+                    args = [node.label, node.statement, node.loc, node.extras];
+                    break;
+                case "IfStatement":
+                    args = [node.test, node.consequent, node.alternate, node.loc, node.extras];
+                    break;
+                case "TryStatement":
+                    args = [node.handler, node.guard, node.finalizer, node.loc, node.extras];
+                    break;
+                case "SwitchStatement":
+                    args = [node.discriminant, node.cases, node.loc, node.extras];
+                    break;
+                case "WithStatement":
+                    args = [node.object, node.body, node.loc, node.extras];
+                    break;
+                case "ComprehensionExpression":
+                    args = [node.blocks, node.filter, node.expression, node.loc, node.extras];
+                    break;
+                case "AssignmentExpression":
+                case "BinaryExpression":
+                case "LogicalExpression":
+                    args = [node.operator, node.left, node.right, node.loc, node.extras];
+                    break;
+                case "UnaryExpression":
+                    args = [node.operator, node.argument, node.prefix, node.loc, node.extras];
+                    break;
+                case "MemberExpression":
+                    args = [node.object, node.property, node.computed, node.loc, node.extras];
+                    break;
+                case "CallExpression":
+                case "NewExpression":
+                    args = [node.callee, node.arguments, node.loc, node.extras];
+                    break;
+                case "ObjectPattern":
+                case "ArrayPattern":
+                    args = [node.elements, node.loc, node.extras];
+                    break;
+                case "BindingElement":
+                    args = [node.id.name, node.target.name, node.loc, node.extras];
+                    break;
+                case "ObjectExpression":
+                    args = [node.properties, node.loc, node.extras];
+                    break;
+                case "ArrayExpression":
+                    args = [node.elements, node.loc, node.extras];
+                    break;
+                case "DefaultParameter":
+                    args = [node.id, node.init, node.loc, node.extras];
+                    break;
+                case "RestParameter":
+                    args = [node.id, node.init, node.loc, node.extras];
+                    break;
+                case "SpreadExpression":
+                    args = [node.argument, node.loc, node.extras];
+                    break;
+                case "ClassDeclaration":
+                case "ClassExpression":
+                    args = [node.id, node.extends, node.elements, node.expression, node.loc, node.extras];
+                    break;
+                case "ThisExpression":
+                case "SuperExpression":
+                    args = [node.extras, node.loc];
+                    break;
+                case "Program":
+                    args = [node.body, node.loc, node.extras];
+                    break;
+                case "Identifier":
+                    args = [node.name || node.value, node.loc, node.extras];
+                    break;
+                case "ReturnStatement":
+                case "ThrowStatement":
+                    args = [node.argument, node.loc, node.extras];
+                    break;
+                case "BreakStatement":
+                case "ContinueStatement":
+                    args = [node.argument, node.label, node.loc, node.extras];
+                    break;
+                case "YieldExpression":
+                    args = [node.argument, node.delegator, node.loc, node.extras];
+                    break;
+                case "Directive":
+                case "Literal":
+                case "NumericLiteral":
+                case "StringLiteral":
+                case "NullLiteral":
+                case "BooleanLiteral":
+                    args = [node.value, node.loc, node.extras];
+                    break;
+                case "TemplateLiteral":
+                    args = [node.spans, node.loc, node.extras];
+                    break;
+                case "WhiteSpace":
+                case "LineComment":
+                case "MultiLineComment":
+                case "LineTerminator":
+                    args = [node.value, node.loc];
+                    break;
+                case "ConditionalExpression":
+                    args = [node.test, node.consequent, node.alternate, node.loc, node.extras];
+                    break;
+            }
+            var fn = builder[names[name]];
+            if (fn) return fn.apply(builder, args);
+            else throw new TypeError("can not generate code for " + name);
+        }
+    }
+
+    builder.spreadExpression = function (argument, loc, extras) {
+    };
+
+    builder.restParameter = function (id, init, loc, extras) {
+    };
+
+    builder.defaultParameter = function (id, init, loc, extras) {
+    };
+
+    builder.classExpression =
+        builder.classDeclaration = function (id, extend, elements, expression, loc, extras) {
+        };
+
+    builder.program = function (body, loc, extras) {
+    };
+
+    builder.bindingElement = function (name, as, initializer, loc, extras) {
+    };
+    builder.objectPattern = function (elements, loc, extras) {
+    };
+    builder.arrayPattern = function (elements, loc, extras) {
+    };
+    builder.identifier = function (name, loc, extras) {
+    };
+
+    builder.directive =
+        builder.stringLiteral =
+            builder.numericLiteral =
+                builder.booleanLiteral =
+                    builder.nullLiteral =
+                    builder.literal = function (literal, loc, extras) {
+                    };
+
+    builder.emptyStatement = function emptyStatement(loc, extras) {
+    };
+
+    builder.variableDeclarator = function (id, init, loc, extras) {
+    };
+    builder.lexicalDeclaration =
+        builder.variableDeclaration = function variableStatement(kind, declarations, loc, extras) {
+        };
+
+    builder.functionBody = function (body) {
+    };
+
+    builder.arrowExpression =
+        function (id, params, body, loc, extras) {
+        };
+
+    builder.functionDeclaration =
+        builder.functionExpression =
+            builder.generatorDeclaration =
+                builder.generatorExpression = function (id, params, body, strict, generator, expression, loc, extras) {
+                };
+
+    builder.generatorMethod =
+        builder.methodDefinition = function (id, params, body, strict, generator, loc, extras) {
+        };
+
+    builder.formalParameters = function (formals) {
+    };
+
+    builder.memberExpression = function (object, property, computed) {
+    };
+
+    builder.callExpression = function (callee, args, loc, extras) {
+    };
+    builder.newExpression = function (callee, args, loc, extras) {
+    };
+
+    builder.objectExpression = function (properties, loc, extras) {
+    };
+    builder.arrayExpression = function (elements, loc, extras) {
+    };
+
+    builder.blockStatement = function (body, loc, extras) {
+    };
+    builder.unaryExpression = function (operator, argument, prefix, loc, extras) {
+    };
+
+    builder.binaryExpression = function (operator, left, right, loc, extras) {
+    };
+
+    builder.assignmentExpression = function (operator, left, right, loc, extras) {
+    };
+
+    builder.pattern = function () {};
+    builder.expressionStatement = function expressionStatement(expr, loc, extras) {
+    };
+    builder.labelledStatement = function labelledStatement(label, body, loc, extras) {
+    };
+    builder.sequenceExpression = function (seq, loc, extras) {
+    };
+    builder.ifStatement = function ifStatement(test, condition, alternate, loc, extras) {
+    };
+    builder.switchStatement = function (discriminant, cases, isLexical, loc, extras) {
+    };
+    builder.whileStatement = function whileStatement(test, body, loc, extras) {
+    };
+    builder.doWhileStatement = function doWhileStatement(test, body, loc, extras) {
+    };
+    
+    builder.withStatement = function withStatement(obj, body, loc, extras) {
+    };
+    builder.debuggerStatement = function debuggerStatement(loc, extras) {
+    };
+
+    builder.parenthesizedExpression = function (expression, loc, extras) {
+    };
+    builder.tryStatement = function (block, guard, finalizer, loc, extras) {
+    };
+    builder.forInStatement = function forInStatement(left, right, body, isForEach, loc, extras) {
+    };
+    builder.forOfStatement = function forOfStatement(left, right, body, loc, extras) {
+    };
+    builder.forStatement = function forStatement(init, test, update, body, loc, extras) {
+    };
+
+    builder.throwStatement = function (expression, loc, extras) {
+    };
+    builder.breakStatement = function (label, loc, extras) {
+    };
+    builder.continueStatement = function (label, loc, extras) {
+    };
+    builder.returnStatement = function (expression, loc, extras) {
+    };
+    builder.thisExpression = function (loc, extras) {
+    };
+    builder.superExpression = function (loc, extras) {
+    };
+
+    builder.conditionalExpression = function (test, consequent, alternate, loc, extras) {
+    };
+
+    builder.whiteSpace = function (value, loc) {
+    };
+    builder.lineComment = function(value, loc) {
+    };
+    builder.multiLineComment = function (value, loc) {
+    };
+    builder.lineTerminator = function (value, loc) {
+    };
+
+
+    function buildFromSrc(src) {
+        //setBuilder(builder, true);
+        try {
+            var result = parser(src, { builder: builder });
+        } catch (ex) {
+            result = "[" + ex.name + "]" + ex.message + ";\r\n" + tabs(1) + ex.stack + "\r\n";
+        }
+        //unsetBuilder(builder);
+        return result;
+    }
+
+    function build(ast) {
+        code = [];
+        if (typeof ast === "string") {
+            return buildFromSrc(ast);
+        }
+        if (Array.isArray(ast)) {
+            return callBuilder(ast);
+        }
+        if (typeof ast.type === "string") {
+            return callBuilder(ast);
+        }
+        throw new TypeError("compiler(): undefined input for build()")
+    }
+
+    build.callBuilder = callBuilder;
+    build.buildFromSrc = buildFromSrc;
+    build.builder = builder;
+    return build;
+});
+
+
+define("arraycompiler", function (require, exports, module) {
+    var builder = exports;
+
+    var byteCode = { // === CODE.XXX in vm.js
+        "loc": 255,
+        "true": 1,
+        "false": 0,
+        "null": 1,
+        "undefined": 2,
+        "EmptyStatement": 3,
+        "AssignmentExpression": 32,
+        "Expression": 43,
+        "SequenceExpression" : 45,
+        "VariableDeclaration" : 33,
+        "VariableDeclarationList": 34,
+        "LexicalDeclaration": 37,
+        "GeneratorBody" : 24,
+        "FunctionDeclaration": 112,
+        "FunctionExpression": 113,
+        "Identifer": 45,
+        "NumericLiteral": 46,
+        "BooleanLiteral": 67,
+        "NullLiteral": 95,
+        "TemplateLiteral": 244,
+        "RegularExpressionLiteral": 60,
+        "StatementList": 211,
+        "SwitchStatement": 155,
+        "WhileStatement": 212,
+        "DoWhileStatement": 136,
+        "ForStatement": 126,
+        "ForInStatement": 142,
+        "ForOfStatement": 145,
+        "IfStatement": 100,
+        "ReturnStatement": 23,
+        "ThrowStatement": 74,
+        "ContinueStatement": 84,
+        "BreakStatement": 85,
+        "YieldExpression": 24,
+        "CallExpression": 44,
+        "NewExpression": 234,
+        "MemberExpression": 25,
+        "ObjectExpression": 127,
+        "ArrayExpression": 137,
+        "ArrayPattern" : 148,
+        "ObjectPattern": 135,
+        "Directive": 111,
+        "ArrayComprehension": 157,
+        "GeneratorComprehension": 158,
+        "MethodDefinition": 160,
+        "PropertyDefinition": 159,
+        "PropertyDefinitionList": 185,
+        "BinaryExpression": 223,
+        "ThisStatement": 166,
+        "SuperExpression": 181,
+        "DebuggerStatement": 199,
+        "DefaultCase": 179,
+        "SwitchCase": 189,
+        "Finally": 200,
+        "ModuleDeclaration": 177,
+        "ExportStatement": 176,
+        "ImportStatement": 188,
+        "Program": 111,
+
+        "let": 144,
+        "const": 162,
+        "var": 178
+    };
+    var byteDecoder = {};
+    for (var k in byteCode) {
+        if (Object.hasOwnProperty.call(byteCode, k))
+        byteDecoder[byteCode[k]] = k;
+    }
+
+    var nodeFields = {
+       "type": 0,
+       "body": 1,
+       "left": 1,
+       "kind": 1,
+       "argument": 1,
+       "right": 2,
+       "operator": 3
+    };
+
+    function locArray(loc) {
+        return [byteCode["loc"], loc.start.line,loc.start.column, loc.end.line, loc.end.column];
+    }
+    function byteString(str) {
+        //var a = [];
+        //for (var i = 0; i < str.length; i++) a.push(str.charCodeAt(i));
+        //return a;
+        return str;
+    }
+
+    builder.emptyStatement = function emptyStatement(loc) {
+        return [byteCode["EmptyStatement"],
+        locArray(loc)];
+    };
+
+    builder.directive = function (directive, loc) {
+      return [byteCode["Directive"],
+      byteString(directive),
+      locArray(loc)]
+    };
+    builder.stringLiteral =
+        builder.booleanLiteral =
+            builder.numericLiteral =
+    builder.literal = function (type, value, loc) {
+        return [byteCode[type],
+                value];
+    };
+
+    builder.identifier = function (name) {
+       return [byteCode["Identifier"], byteString(name)];
+    };
+
+    builder.functionDeclaration = function (body, params, strict, generator, loc) {
+
+        return [byteCode["FunctionDeclaration"],
+                callBuilder(body),
+                callBuilder(params),
+                +strict,
+                +generator,
+                locArray(loc)];
+    };
+    builder.functionExpression = function (body, params, strict, generator, loc) {
+        return [byteCode["FunctionExpression"],
+            callBuilder(body),
+            callBuilder(params),
+            +strict,
+            +generator,
+            locArray(loc)];
+    };
+
+    builder.variableStatement = function variableStatement(kind, decls, loc) {
+        return [byteCode["VariableStatement"],
+                byteCode[kind],
+                callBuilder(decls),
+                locArray(loc)
+                ];
+    };
+
+    builder.callExpression = function (callee, args, loc) {
+            return [byteCode["CallExpression"],
+                callBuilder(callee),
+                callBuilder(args),
+                locArray(loc)];
+    };
+    builder.newExpression = function (callee, args, loc) {
+        return [byteCode["NewExpression"],
+            callBuilder(callee),
+            callBuilder(args),
+            locArray(loc)];
+    };
+    builder.objectExpression = function (properties, loc) {
+        return [byteCode["ObjectExpression"],
+        callBuilder(properties),
+        locArray(loc)];
+    };
+    builder.arrayExpression = function (elements, loc) {
+        return [byteCode["ArrayExpression"],
+            callBuilder(elements),
+            locArray(loc)];
+    };
+
+    builder.blockStatement = function (body, loc) {
+        return [byteCode["BlockStatement"],
+        callBuilder(body),
+        locArray(loc)];
+    };
+    builder.binaryExpression = function (left, operator, right, loc) {
+        return [byteCode["BinaryExpression"],
+        callBuilder(left),
+        callBuilder(right),
+        byteCode[operator],
+        locArray(loc)];
+    };
+    builder.assignmentExpression = function (left, operator, right, loc) {
+        return [byteCode["AssignmentExpression"],
+            callBuilder(left),
+            callBuilder(right),
+            byteCode[operator],
+            locArray(loc)];
+    };
+    builder.propertyDefinition = function (id, expr, loc) {
+        return [
+            byteCode["PropertyDefinition"],
+            byteString(id),
+            callBuilder(expr),
+            locArray(loc)
+        ];
+    };
+    builder.methodDefinition = function (id, params, body, strict, statics, generator, loc) {
+        return [
+            byteCode["MethodDefinition"],
+            byteString(id),
+            callBuilder(params),
+            callBuilder(body),
+            +strict,
+            +statics,
+            +generator,
+            locArray(loc)
+        ];
+    };
+
+    builder.bindingElement = function (name, as, loc) {
+        return [byteCode["BindingElement"],
+            byteString(name),
+            byteString(as),
+        locArray(loc)]
+    };
+
+    builder.pattern =
+    builder.arrayPattern =
+    builder.objectPattern = function (properties, loc) {
+        var bc = [];
+        for (var i = 0, j = properties.length; i < j; i++) {
+            bc.push(callBuilder(properties[i]));
+        }
+        bc.push(locArray(loc));
+        return bc;
+    };
+    builder.expressionStatement = function expressionStatement(expr, loc) {
+        return [
+        byteCode["ExpressionStatement"],
+            callBuilder(expr),
+        locArray(loc)];
+
+    };
+    builder.labeledStatement = function labeledStatement(label, body, loc) {
+        return [
+            byteCode["LabeledStatement"],
+            callBuilder(body),
+            locArray(loc)
+        ];
+    };
+    builder.sequenceExpression = function (seq, loc) {
+        return [
+            byteCode["SequenceExpression"],
+            callBuilder(seq),
+            locArray(loc)
+        ];
+    };
+    builder.ifStatement = function ifStatement(test, condition, alternate, loc) {
+        return [byteCode["IfStatement"],
+            callBuilder(condition),
+            callBuilder(alternate),
+            locArray(loc)
+        ];
+    };
+    builder.switchStatement = function (discriminant, cases, isLexical, loc) {
+        var bc = [
+            byteCode["SwitchStatement"],
+            callBuilder(discriminant)
+        ];
+        var scbc = [];
+        for (var i = 0, j = cases.length; i < j; i++) {
+            scbc.push(callBuilder(cases[i]));
+        }
+        bc.push(scbc);
+        bc.push(locArray(loc));
+        return bc;
+    };
+    builder.whileStatement = function whileStatement(test, body, loc) {
+        return [
+            byteCode["WhileStatement"],
+            callBuilder(test),
+            callBuilder(body),
+            locArray(loc)
+        ];
+    };
+    builder.withStatement = function withStatement(obj, body, loc) {
+        return [
+            byteCode["WithStatement"],
+            callBuilder(body),
+            locArray(loc)
+        ];
+    };
+    builder.debuggerStatement = function debuggerStatement(loc) {
+        return [byteCode["DebuggerStatement"], locArray(loc)];
+    };
+    builder.tryStatement = function (block, handler, guard, finalizer, loc) {
+        return [
+            byteCode["TryStatement"],
+            callBuilder(block),
+            callBuilder(handler),
+            callBuilder(finalizer),
+            locArray(loc)
+        ];
+    };
+    builder.forInStatement = function forInStatement(left, right, body, isForEach, loc) {
+        return [
+            byteCode["ForInStatement"],
+            callBuilder(left),
+            callBuilder(right),
+            callBuilder(body),
+            locArray(loc)
+        ];
+    };
+    builder.forOfStatement = function forOfStatement(left, right, body, loc) {
+        return [
+            byteCode["ForOfStatement"],
+            callBuilder(left),
+            callBuilder(right),
+            callBuilder(body),
+            locArray(loc)
+        ];
+
+    };
+    builder.forStatement = function forStatement(init, condition, update, body, loc) {
+        return [
+            byteCode["ForStatement"],
+            callBuilder(init),              // later
+            callBuilder(condition),         // these
+            callBuilder(update),            // fn return
+            callBuilder(body),              // just offsets
+            locArray(loc)                   // for the heap
+        ];
+
+    };
+    builder.doWhileStatement = function doWhileStatement(body, test, loc) {
+        return [
+            byteCode["DoWhileStatement"],
+            callBuilder(body),
+            callBuilder(test),
+            locArray(loc)
+        ];
+    };
+    builder.throwStatement = function (expression, loc) {
+        return [byteCode["ThrowStatement"],
+            callBuilder(expression),
+            locArray(loc)
+        ];
+    };
+    builder.breakStatement = function (label, loc) {
+        return [byteCode["BreakStatement"],
+            byteString(label),
+            locArray(loc)];
+    };
+    builder.continueStatement = function (label, loc) {
+        return [byteCode["ContinueStatement"],
+        byteString(label),
+        locArray(loc)];
+    };
+    builder.returnStatement = function (expression, loc) {
+        return [byteCode["ReturnStatement"],
+            callBuilder(expression),
+            locArray(loc)
+        ];
+    };
+    builder.program = function (body, loc) {
+       var bc = [byteCode["Program"]];
+        for (var i = 0, j = body.length; i < j; i++) {
+            bc.push(callBuilder(body[i]));
+        }
+        bc.push(locArray(loc));
+        return bc;
+    };
+
+    function callBuilder(node) {
+        var args;
+        var name;
+        if (!node) return "";
+        if (Array.isArray(node)) {
+            var result = [];
+            var stm;
+            for (var i = 0, j = node.length; i < j; i++) {
+                if (stm = node[i]) {
+                    result.push( callBuilder(stm) );
+                }
+            }
+            return result;
+        } else if (typeof node === "string") {
+            return byteString(node);
+        } else {
+            name = node.type;
+            switch (name) {
+                case "BlockStatement":
+                    args = [node.body, node.loc];
+                    break;
+                case "FunctionDeclaration":
+                case "FunctionExpression":
+                case "GeneratorDeclaration":
+                case "GeneratorExpression":
+                    args = [node.id, node.params, node.body, node.strict, node.generator, node.expression, node.loc];
+                    break;
+                case "MethodDefinition":
+                    args = [node.id, node.params, node.body, node.strict, node.static, node.generator, node.loc];
+                    break;
+                case "ArrowExpression":
+                    args = [node.id, node.params, node.body, node.strict, node.generator, node.expression, node.loc];
+                    break;
+                case "ExpressionStatement":
+                case "SequenceExpression":
+                    args = [node.expression, node.loc];
+                    break;
+                case "VariableDeclarator":
+                    args = [node.id, node.init, node.loc];
+                    break;
+                case "VariableDeclaration":
+                case "LexicalDeclaration":
+                    args = [node.kind, node.declarations, node.loc];
+                    break;
+                case "EmptyStatement":
+                    args = [node.loc];
+                    break;
+                case "ForStatement":
+                    args = [node.init, node.test, node.update, node.body, node.loc];
+                    break;
+                case "ForInStatement":
+                case "ForOfStatement":
+                    args = [node.left, node.right, node.body, node.loc];
+                    break;
+                case "DoWhileStatement":
+                case "WhileStatement":
+                    args = [node.test, node.body, node.loc];
+                    break;
+                case "LabelledStatement":
+                    args = [node.label, node.statement, node.loc];
+                    break;
+                case "IfStatement":
+                    args = [node.test, node.consequent, node.alternate, node.loc];
+                    break;
+                case "TryStatement":
+                    args = [node.block, node.guard, node.finalizer, node.loc];
+                    break;
+                case "SwitchStatement":
+                    args = [node.discriminant, node.cases, node.loc];
+                    break;
+                case "WithStatement":
+                    args = [node.object, node.body, node.loc];
+                    break;
+                case "ComprehensionExpression":
+                    args = [node.blocks, node.filter, node.expression];
+                    break;
+                case "PropertyDefinition":
+                    args = [node.kind, node.key, node.value, node.loc];
+                    break;
+                case "AssignmentExpression":
+                case "BinaryExpression":
+                case "LogicalExpression":
+                    args = [node.operator, node.left, node.right, node.loc];
+                    break;
+                case "UnaryExpression":
+                    args = [node.operator, node.argument, node.prefix, node.loc];
+                    break;
+                case "MemberExpression":
+                    args = [node.object, node.property, node.computed, node.loc];
+                    break;
+                case "CallExpression":
+                case "NewExpression":
+                    args = [node.callee, node.arguments, node.loc];
+                    break;
+                case "ObjectPattern":
+                case "ArrayPattern":
+                    args = [node.elements, node.loc];
+                    break;
+                case "BindingElement":
+                    args = [node.id.name, node.target.name, node.loc];
+                    break;
+                case "ObjectExpression":
+                    args = [node.properties, node.loc];
+                    break;
+                case "ArrayExpression":
+                    args = [node.elements, node.loc];
+                    break;
+                case "DefaultParameter":
+                    args = [node.id, node.init, node.loc];
+                    break;
+                case "RestParameter":
+                    args = [node.id, node.init, node.loc];
+                    break;
+                case "SpreadExpression":
+                    args = [node.argument, node.loc];
+                    break;
+                case "ClassDeclaration":
+                case "ClassExpression":
+                    args = [node.id, node.extends, node.elements, node.expression, node.loc];
+                    break;
+                case "ThisExpression":
+                case "SuperExpression":
+                    args = [node.loc];
+                    break;
+                case "Program":
+                    args = [node.body, node.loc];
+                    break;
+                case "Identifier":
+                    args = [node.name || node.value, node.loc];
+                    break;
+                case "ReturnStatement":
+                case "ThrowStatement":
+                    args = [node.argument, node.loc];
+                    break;
+                case "BreakStatement":
+                case "ContinueStatement":
+                    args = [node.argument, node.label, node.loc];
+                    break;
+                case "YieldExpression":
+                    args = [node.argument, node.delegator, node.loc];
+                    break;
+                case "Directive":
+                case "Literal":
+                case "NumericLiteral":
+                case "StringLiteral":
+                case "NullLiteral":
+                case "BooleanLiteral":
+                case "TemplateLiteral":
+                    args = [node.type, node.value, node.loc];
+                    break;
+            }
+            name = name[0].toLowerCase() + name.slice(1);
+            return builder[name].apply(builder, args);
+        }
+    }
+    builder.callBuilder = callBuilder;
+    builder.build =
+    builder.compile = function (src) {
+	    var nodes;
+        if (typeof src === "string") nodes = require("parse")(src);
+        else nodes = src;
+        return callBuilder(nodes);
+    };
+    return builder;
+});
 /**
  * Created by root on 24.04.14.
  *
@@ -29577,6 +29542,7 @@ define("vm", function (require, exports) {
     }
     exports.CompileAndRun = CompileAndRun;
 });
+
 
 // *******************************************************************************************************************************
 // Highlight (UI Independent Function translating JS into a string of spans)
@@ -30676,6 +30642,8 @@ if (typeof window != "undefined") {
     });
 
 }
+
+
 /*
  *
  *  syntax.js web worker module
@@ -30754,6 +30722,7 @@ define("syntaxjs-worker", function (require, exports, module) {
     }
     return exports;
 });
+
 
 
 define("syntaxjs-shell", function (require, exports) {
