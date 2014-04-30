@@ -70,7 +70,7 @@ function search(node, parent) {
     // Search for DefineOwnProperty(OBJ, NAME, DESC)
 
     if (node.type === "CallExpression") {
-	if (node.callee.name === SLOTS.DEFINEOWNPROPERTY) {
+	if (node.callee.name === "DefineOwnProperty") {
 	    console.log("found call to [[DefineOwnProperty]] ");	    
 	    state.sources.push([node, parent]);
 	}
