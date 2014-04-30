@@ -1,24 +1,20 @@
 /*
     
     syntax.js
-    Public Domain written by Edward Gerhold
-    opensource.org/osd/ for details what the license means
+    Cool Public Domain and Open Source written by Edward Gerhold
+    www.linux-swt.de
+
+    at opensource.org/osd/ per intellij idea i found a good explanation
+    of what this means
     
-    built with ./build_syntax
+    built with ./build_syntax and node inlinefiles.js
 
     tools/inlinefiles.js
     reads these include directives in
     and processes each recursivly for more inclusions,
 
-    - each file is an amd-like module except for amd-prolly.js
-    
-	Good news: The "AMD like" is going to go.
-	I´ll rework the thing to create fresh instances of 
-	parser and runtime each realm, and with the closure
-	function i can throw away the module wrappers.
-	
     - anything included inside these files is not runnable alone and
-      only modularised for better maintainability
+      only and of course modularised for better maintainability
 
     - lib/api.js includes lib/api/*.js and lib/intrinsics/*.js
       which are sub-packages separated by ECMA-262 definitions
@@ -26,242 +22,275 @@
 
 */
 
-"use strict";
+Error.stackTraceLimit = 33;
 
-Error.stackTraceLimit = 25;
+var syntaxjs = (function () {
 
-function makePromise (resolver) {
+    "use strict"
 
-    "use strict";
-    var state = "pending";
-    var value;
+    var syntaxjs = Object.create(null);
+    define("syntaxjs", syntaxjs);
 
-    var reason;
-    var handlers = [];
-    var promise;
+    // first i create syntaxjs and
+    // add define, require, modules (require.cache link) and makePromise
 
-    function isPromise (o) {
-        return o && typeof o === "object" && (typeof o.then === "function");
-    }
 
-    function isFunction (o) {
-        return typeof o === "function";
-    }
 
-    function makeFn(type, set, data) {
-        return function __resolve__() {
+    function makePromise(resolver) {
 
-            var newValue, newReason;
-            var deferred = set.deferred;
-            var callback = set.onFulfilled;
-            var errback = set.onRejected;
-            try {
-                if (isPromise(data)) {
-                    data
-                        .then(callback, errback)
-                        .then(deferred.resolve, deferred.reject);
-                } else if (type === "resolve") {
-                    if (isFunction(callback)) newValue = callback(data);
-                    deferred.resolve(newValue);
-                } else if (type === "reject") {
-                    if (isFunction(errback)) errback(data);
-                    deferred.reject(data);
-                }
-            } catch (ex) {
-                if (isFunction(errback)) errback(ex);
-                deferred.reject(ex);
-            }
-        };
-    }
+        "use strict";
+        var state = "pending";
+        var value;
 
-    function resolve (_value_) {
-        if (state !== "pending") return;
-        state = "resolved";
-        value = _value_;
-        for (var i = 0, j = handlers.length; i < j; i++) {
-            setTimeout(makeFn("resolve", handlers[i], value), 0);
-        }
-    }
+        var reason;
+        var handlers = [];
+        var promise;
 
-    function reject (_reason_) {
-        if (state !== "pending") return;
-        state = "rejected";
-        reason = _reason_;
-        for (var i = 0, j = handlers.length; i < j; i++) {
-            setTimeout(makeFn("reject", handlers[i], reason), 0);
-        }
-    }
-
-    function then (onFulfilled, onRejected) {
-
-        if (isPromise(onFulfilled)) {
-            return onFulfilled.then(resolve, reject);
+        function isPromise(o) {
+            return o && typeof o === "object" && (typeof o.then === "function");
         }
 
-        var deferred = makePromise();
-        var set = {
-            onFulfilled: onFulfilled,
-            onRejected: onRejected,
-            deferred: deferred
-        };
+        function isFunction(o) {
+            return typeof o === "function";
+        }
 
-        if (state === "resolved") {
-            setTimeout(function () {
+        function makeFn(type, set, data) {
+            return function __resolve__() {
+
+                var newValue, newReason;
+                var deferred = set.deferred;
+                var callback = set.onFulfilled;
+                var errback = set.onRejected;
                 try {
-                    if (isFunction(onFulfilled)) deferred.resolve(onFulfilled(value));
-                    else deferred.resolve(value);
+                    if (isPromise(data)) {
+                        data
+                            .then(callback, errback)
+                            .then(deferred.resolve, deferred.reject);
+                    } else if (type === "resolve") {
+                        if (isFunction(callback)) newValue = callback(data);
+                        deferred.resolve(newValue);
+                    } else if (type === "reject") {
+                        if (isFunction(errback)) errback(data);
+                        deferred.reject(data);
+                    }
                 } catch (ex) {
+                    if (isFunction(errback)) errback(ex);
                     deferred.reject(ex);
                 }
-            }, 0);
-        } else if (state == "rejected") {
-            setTimeout(function () {
-                if (isFunction(onRejected)) onRejected(reason);
-                deferred.reject(reason);
-            }, 0);
-        } else if (state === "pending") {
-            handlers.push(set);
+            };
         }
-        return deferred.promise;
-    }
 
-    if (resolver !== undefined) {
-
-        if (isFunction(resolver)) {
-            // scheduled async "promise = makePromise(function (res, rej) {});""
-            setTimeout(function () { resolver(resolve, reject); }, 0);
-        } else if (isPromise(resolver)) {
-            // makePromise(promise) returnt ein neues Promise, 
-            try {
-                return resolver.then(resolve, reject);
-                //return makePromise(function (resolve, reject) { _then(resolve, reject); });
-            } catch (ex) {
-                return makePromise(function (resolve, reject) { reject(ex) });
+        function resolve(_value_) {
+            if (state !== "pending") return;
+            state = "resolved";
+            value = _value_;
+            for (var i = 0, j = handlers.length; i < j; i++) {
+                setTimeout(makeFn("resolve", handlers[i], value), 0);
             }
         }
+
+        function reject(_reason_) {
+            if (state !== "pending") return;
+            state = "rejected";
+            reason = _reason_;
+            for (var i = 0, j = handlers.length; i < j; i++) {
+                setTimeout(makeFn("reject", handlers[i], reason), 0);
+            }
+        }
+
+        function then(onFulfilled, onRejected) {
+
+            if (isPromise(onFulfilled)) {
+                return onFulfilled.then(resolve, reject);
+            }
+
+            var deferred = makePromise();
+            var set = {
+                onFulfilled: onFulfilled,
+                onRejected: onRejected,
+                deferred: deferred
+            };
+
+            if (state === "resolved") {
+                setTimeout(function () {
+                    try {
+                        if (isFunction(onFulfilled)) deferred.resolve(onFulfilled(value));
+                        else deferred.resolve(value);
+                    } catch (ex) {
+                        deferred.reject(ex);
+                    }
+                }, 0);
+            } else if (state == "rejected") {
+                setTimeout(function () {
+                    if (isFunction(onRejected)) onRejected(reason);
+                    deferred.reject(reason);
+                }, 0);
+            } else if (state === "pending") {
+                handlers.push(set);
+            }
+            return deferred.promise;
+        }
+
+        if (resolver !== undefined) {
+
+            if (isFunction(resolver)) {
+                // scheduled async "promise = makePromise(function (res, rej) {});""
+                setTimeout(function () {
+                    resolver(resolve, reject);
+                }, 0);
+            } else if (isPromise(resolver)) {
+                // makePromise(promise) returnt ein neues Promise,
+                try {
+                    return resolver.then(resolve, reject);
+                    //return makePromise(function (resolve, reject) { _then(resolve, reject); });
+                } catch (ex) {
+                    return makePromise(function (resolve, reject) {
+                        reject(ex)
+                    });
+                }
+            }
+        }
+
+        promise = Object.freeze({
+            then: then,
+            get value() {
+                return value;
+            },
+            get reason() {
+                return reason;
+            },
+            get state() {
+                return state;
+            },
+            get isPromise() {
+                return true;
+            },
+            constructor: makePromise
+        });
+
+        // makePromise(function (resolve, reject)) returnt das promise und hat die function async scheduled.
+        if (isFunction(resolver)) return promise;
+
+        // makePromise() mit no args returnt das deferred object
+        var deferred = Object.freeze({
+            promise: promise,
+            resolve: resolve,
+            reject: reject
+        });
+        return deferred;
     }
 
-    promise = Object.freeze({
-        then: then,
-        get value () { return value; },
-        get reason () { return reason; },
-        get state () { return state; },
-        get isPromise () { return true; },
-        constructor: makePromise
-    });
 
-    // makePromise(function (resolve, reject)) returnt das promise und hat die function async scheduled.
-    if (isFunction(resolver)) return promise;
-
-    // makePromise() mit no args returnt das deferred object 
-    var deferred = Object.freeze({
-        promise: promise,
-        resolve: resolve,
-        reject: reject
-    });
-    return deferred;
-}
-
-
-if (typeof exports !== "undefined") {
-    exports.makePromise = makePromise;
-    // promises-aplus-tests-adapter
-    exports.deferred = makePromise;
-    exports.resolve = function (value) { return makePromise(function (resolve) { resolve(value); }); };
-    exports.reject = function (reason) { return makePromise(function (resolve, reject) { reject(reason); }); };
-}
-
-
-function Module(id, exports, children, code) {
-    "use strict";
-    var m = this;
-    if (typeof id === "object") {
-        exports = id.exports;
-        id = id.id;
-        children = id.children;
-        code = id.code;
+    if (typeof exports !== "undefined") {
+        exports.makePromise = makePromise;
+        // promises-aplus-tests-adapter
+        exports.deferred = makePromise;
+        exports.resolve = function (value) {
+            return makePromise(function (resolve) {
+                resolve(value);
+            });
+        };
+        exports.reject = function (reason) {
+            return makePromise(function (resolve, reject) {
+                reject(reason);
+            });
+        };
     }
-    m.id = id;
-    m.children = children;
-    if (exports) m.loaded = true;
-    m.exports = exports || {};
-    m.require = function (ids, factory) {
-        return require.apply(this, arguments);
-    };
-    if (code) {
-        m.factory = new Function("require", "exports", "module", code);
-        m.factory(m.require.m.exports, m);
-        m.loaded = true;
-    }
-    return m;
-}
 
-function define(id, deps, factory) {
-    "use strict";
-    var exports = {};
-    var children = [];
-    var imports = [];
-    var returned;
-    var m = new Module({
-        id: id,
-        exports: exports,
-        children: children
-    });
-    var d;
-    if (!require.cache) require.cache = Object.create(null);
-    if (arguments.length === 2) {
-        if (typeof deps === "function") {
-            factory = deps;
-            deps = null;
+
+    function Module(id, exports, children, code) {
+        "use strict";
+        var m = this;
+        if (typeof id === "object") {
+            exports = id.exports;
+            id = id.id;
+            children = id.children;
+            code = id.code;
+        }
+        m.id = id;
+        m.children = children;
+        if (exports) m.loaded = true;
+        m.exports = exports || {};
+        m.require = function (ids, factory) {
+            return require.apply(this, arguments);
+        };
+        if (code) {
+            m.factory = new Function("require", "exports", "module", code);
+            m.factory(m.require.m.exports, m);
+            m.loaded = true;
+        }
+        return m;
+    }
+
+    function define(id, deps, factory) {
+        "use strict";
+        var exports = {};
+        var children = [];
+        var imports = [];
+        var returned;
+        var m = new Module({
+            id: id,
+            exports: exports,
+            children: children
+        });
+        var d;
+        if (!require.cache) require.cache = Object.create(null);
+        if (arguments.length === 2) {
+            if (typeof deps === "function") {
+                factory = deps;
+                deps = null;
+                try {
+                    returned = factory(m.require, m.exports, m);
+                } catch (ex) {
+                    throw ex;
+                }
+            } else {
+                returned = require.cache[id] = deps;
+            }
+        } else if (deps && deps.length && typeof factory === "function") {
+            for (var i = 0, j = deps.length; i < j; i++) {
+                imports.push((d = require.cache[deps[i]]) ? d.exports : null);
+                children.push(d ? d : null);
+            }
             try {
-                returned = factory(m.require, m.exports, m);
+                returned = factory.apply(factory, imports);
             } catch (ex) {
                 throw ex;
             }
+        }
+        m.exports = returned !== undefined ? returned : exports;
+        require.cache[id] = m;
+        return m.exports;
+    }
+
+    function require(deps, factory) {
+        "use strict";
+        var m;
+        var mods = [];
+        var exports;
+
+        if (!require.cache) require.cache = Object.create(null);
+        if (arguments.length === 1) {
+            if (typeof deps === "function") return deps();
+            if (m = require.cache[deps]) {
+                return m.exports;
+            }
+            if (!exports) throw "require(id): could not find " + deps;
         } else {
-            returned = require.cache[id] = deps;
-        }
-    } else if (deps && deps.length && typeof factory === "function") {
-        for (var i = 0, j = deps.length; i < j; i++) {
-            imports.push((d = require.cache[deps[i]]) ? d.exports : null);
-            children.push(d ? d : null);
-        }
-        try {
-            returned = factory.apply(factory, imports);
-        } catch (ex) {
-            throw ex;
+
+            for (var i = 0, j = deps.length; i < j; i++) {
+                m = require.cache[deps[i]];
+                mods.push(m ? m.exports : {});
+            }
+            if (factory)
+                return factory.apply(null, mods);
         }
     }
-    m.exports = returned !== undefined ? returned : exports;
-    require.cache[id] = m;
-    return m.exports;
-}
-
-function require(deps, factory) {
-    "use strict";
-    var m;
-    var mods = [];
-    var exports;
-
-    if (!require.cache) require.cache = Object.create(null);
-    if (arguments.length === 1) {
-        if (typeof deps === "function") return deps();
-        if (m = require.cache[deps]) {
-            return m.exports;
-        }
-        if (!exports) throw "require(id): could not find " + deps;
-    } else {
-
-        for (var i = 0, j = deps.length; i < j; i++) {
-            m = require.cache[deps[i]];
-            mods.push(m ? m.exports : {});
-        }
-        if (factory)
-            return factory.apply(null, mods);
-    }
-}
 
 
+
+
+    // then i have some fs operations
 
 // *******************************************************************************************************************************
 // file imports
@@ -290,8 +319,11 @@ define("filesystem", function (require, exports) {
      });
 
      returns a function calling to call work[k] if test[k]
-
      starts only a work[k] if a test[k] is existing and returning true
+
+
+
+
      */
 
 
@@ -388,6 +420,12 @@ define("filesystem", function (require, exports) {
     return exports;
 });
 
+
+    // soon back inside
+    /* // #include "lib/intl/identifier-module.js"; // disabled */
+    /* // #include "lib/intl/i18n.js"; */
+
+// the lexer and parser api ast and tostring for es6 code
 /**
  *
  *	These tables replace my first and follow sets
@@ -2186,10 +2224,6 @@ define("symboltable", function (require, exports, module) {
     };
 
 });
-
-/* // #include "lib/intl/identifier-module.js"; // disabled */
-/* // #include "lib/intl/i18n.js"; */
-
 define("slower-static-semantics", function (require, exports) {
     "use strict";
     var debugmode = false;
@@ -8065,6 +8099,7 @@ define("js-codegen", function (require, exports, module) {
 });
 
 
+// ecma-262 operations and astnode evaluation
 /*
     API contains ecma-262 specification devices
 
@@ -27869,7 +27904,7 @@ define("runtime", function () {
 
 
 
-/* experimental in master branch */
+// experimental typed memory and compiler
 /**
  * Created by root on 20.04.14.
  */
@@ -29510,6 +29545,7 @@ define("vm", function (require, exports) {
     exports.CompileAndRun = CompileAndRun;
 });
 
+// syntax highlighter
 
 // *******************************************************************************************************************************
 // Highlight (UI Independent Function translating JS into a string of spans)
@@ -30610,7 +30646,7 @@ if (typeof window != "undefined") {
 
 }
 
-
+// evaluation in web workers should save some of the ux
 /*
  *
  *  syntax.js web worker module
@@ -30691,6 +30727,7 @@ define("syntaxjs-worker", function (require, exports, module) {
 });
 
 
+// the commandline shell is my favorite playtoy
 
 define("syntaxjs-shell", function (require, exports) {
     
@@ -30871,13 +30908,16 @@ define("syntaxjs-shell", function (require, exports) {
 
 
 
+
+    // assembling and autostart of shell or browser highlighter
+
 // #######################################################################################################################
-//  Exporting the Syntax Object after Importing and Assembling the Components
+// the closure around this is new in main_syntaxjs.js, the main template
 // #######################################################################################################################
 
-define("syntaxjs", function () {
-    "use strict";
-    
+// define("syntaxjs", function () {
+// syntaxjs is now defined in amd prolly.js
+
     function pdmacro(v) {
         return {
             configurable: false,
@@ -30886,14 +30926,19 @@ define("syntaxjs", function () {
             writable: false
         };
     }
-    var syntaxjs = Object.create(null);
+
+
     var VERSION = "0.0.1";
-				    
     var syntaxjs_public_api_readonly = {
     // essential functions
-        version: pdmacro(VERSION),			
+        version: pdmacro(VERSION),
+        define: pdmacro(define),
+        require: pdmacro(require),
+        modules: pdmacro(require.cache),
+
+        tokenizeIntoArrayWithWhiteSpaces: pdmacro(require("tokenizer").tokenizeIntoArrayWithWhiteSpaces),// <-- needs exports fixed
         tokenizeIntoArray: pdmacro(require("tokenizer").tokenizeIntoArray),				// <-- needs exports fixed
-	tokenize: pdmacro(require("tokenizer")),
+	    tokenize: pdmacro(require("tokenizer")),    // <-- needs exports fixed
 	
         parse: pdmacro(require("parser")),
         parseGoal: pdmacro(require("parser").parseGoal),
@@ -30901,11 +30946,9 @@ define("syntaxjs", function () {
         createRealm: pdmacro(require("api").createPublicCodeRealm),
         toJsLang: pdmacro(require("js-codegen")),				// <-- needs exports fixed
 
-        makeAdapter: pdmacro(require("filesystem").makeAdapter),
+    // or is it a bridge? pattern mania continues
 
-	require: pdmacro(require),
-	define: pdmacro(define),
-	modules: pdmacro(require.cache),
+        makeAdapter: pdmacro(require("filesystem").makeAdapter),
 
     // experimental functions
 
@@ -30962,39 +31005,24 @@ define("syntaxjs", function () {
 
         Object.defineProperties(exports, syntaxjs_public_api_readonly);
         Object.defineProperties(exports, syntaxjs_highlighter_api);
+
     } else if (typeof load == "function" && typeof print == "function") {
-        if (typeof version === "function") syntaxjs.system = "spidermonkey";
-        if (typeof Java === "object") syntaxjs.system = "nashorn";
+
+        if (typeof version === "function")  syntaxjs.system = "spidermonkey";
+        if (typeof Java === "object")       syntaxjs.system = "nashorn";
         if (typeof exports !== "undefined") exports.syntaxjs = syntaxjs;
-    } else {
-
-
 
     }
+
     // ASSIGN properties to a SYNTAXJS object (all platforms)
     Object.defineProperties(syntaxjs, syntaxjs_public_api_readonly);
     Object.defineProperties(syntaxjs, syntaxjs_highlighter_api);
-    return syntaxjs;
-});
 
+
+// });
 /*
-*
-* app.js
-* This file starts syntax.js automatically.
-* It can be left out, if you don´t like that it´s starting something.
-* In our case it supports just:
-*
-* a) node.js
-* b) browsers
-* c) web workers of browsers
-* d) load() but depends on node.js and console.log()
-* have to implement "print()"
-*
-*
-* @type {exports}
+* automatic start (included at the end of the main script)
 */
-
-var syntaxjs = require("syntaxjs");
 
 if (syntaxjs.system === "node") {
     if (!module.parent) syntaxjs.nodeShell();
@@ -31005,6 +31033,10 @@ if (syntaxjs.system === "node") {
 } else if (syntaxjs.system === "spidermonkey") {
     print("syntax.js was successfully loaded but all console/node deps may not be removed yet");
 } else if (syntaxjs.system === "nashorn") {
-    print("support coming");
+    print("support for java coming");
 }
 
+
+    return syntaxjs;
+
+}());

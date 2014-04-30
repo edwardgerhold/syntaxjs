@@ -1,2 +1,2 @@
 
-node tools\inlinefiles.js lib\build_syntax.js syntax0.js
+node tools\inlinefiles.js lib\main_syntaxjs.js syntax0.js
