@@ -129,7 +129,7 @@ es5> var obj1 = syntaxjs.eval("{ a: 1, b: 2 }"); // .toValue if i didn´t rename
 {
     /* large internal object representation made of three objects and properties with one more each descriptor */
 }
-es5> var a = obj1["Get"]("a", obj1); // probably a completion record is returned as i don´t filter it on this access
+es5> var a = obj1[SLOTS.GET]("a", obj1); // probably a completion record is returned as i don´t filter it on this access
 
 // i think the actual function is doing it wrong (why it´s not completed)
 

@@ -412,6 +412,8 @@ define("tables", function (require, exports, module) {
         "MultiLineComment":true,
         "LineComment":true
     };
+
+
     var captureExtraValues = {
         __proto__: null,
         "(": true,
@@ -7254,6 +7256,32 @@ define("regexp-parser", function (require, exports) {
 define("js-codegen", function (require, exports, module) {
     "use strict";
 
+    /*
+
+        tasks for this file
+
+        add all extra buffer conversions to each function
+
+        task in the parser
+
+        test1:
+        1x if (withExtras) {}
+
+        (a few ms for one megabyte, i swear on syntax.js´s 3-4x es-performance)
+
+        test2:
+        1x Decorator for each node call:
+        inv. if the decorator is used, parsers withExtras must be false in the parser functions!
+
+        btw. refactor all .id strings to real identifier nodes and take
+        care of all (i think that are all, no, around modulespecifier at al.)
+        around each expression in a loop, before and before comma, lossy parsing sequences.
+        and take care of es parsing functionbodies as blockstatement
+        and run pieces of code on both to compare the ast to fix the
+        runtime for es, that es can be there instead of syntaxjs´ parser.
+
+     */
+
     var builder = {};
     var parser = require("parser").parser;
 
@@ -8281,7 +8309,7 @@ function assign(obj, obj2) {
 // ===========================================================================================================
 
 function LazyDefineFalseTrueFalse(O, name, value) {
-    return callInternalSlot("DefineOwnProperty", O, name, {
+    return callInternalSlot(SLOTS.DEFINEOWNPROPERTY, O, name, {
         configurable: false,
         enumerable: true,
         value: value,
@@ -8290,7 +8318,7 @@ function LazyDefineFalseTrueFalse(O, name, value) {
 }
 
 function LazyDefineBuiltinConstant(O, name, value) {
-    return callInternalSlot("DefineOwnProperty", O, name, {
+    return callInternalSlot(SLOTS.DEFINEOWNPROPERTY, O, name, {
         configurable: false,
         enumerable: false,
         value: value,
@@ -8303,7 +8331,7 @@ function LazyDefineBuiltinFunction(O, name, arity, fproto, e, w, c) {
     if (e === undefined) e = false;
     if (w === undefined) w = true;
     if (c === undefined) c = true;
-    return callInternalSlot("DefineOwnProperty", O, name, {
+    return callInternalSlot(SLOTS.DEFINEOWNPROPERTY, O, name, {
         configurable: c,
         enumerable: e,
         value: CreateBuiltinFunction(getRealm(),fproto, arity, name),
@@ -8317,7 +8345,7 @@ function LazyDefineAccessorFunction(O, name, arity, g, s, e, c) {
     if (c === undefined) c = true;
     var fname = name;
     if (IsSymbol(name)) fname = "["+(getInternalSlot(name, "Description")||"")+"]";
-    return callInternalSlot("DefineOwnProperty", O, name, {
+    return callInternalSlot(SLOTS.DEFINEOWNPROPERTY, O, name, {
         configurable: c,
         enumerable: e,
         get: g ? CreateBuiltinFunction(getRealm(), g, arity, "get "+fname) : undefined,
@@ -8328,7 +8356,7 @@ function LazyDefineAccessorFunction(O, name, arity, g, s, e, c) {
 function LazyDefineAccessor(obj, name, g, s, e, c) {
     if (e === undefined) e = false;
     if (c === undefined) c = true;
-    return callInternalSlot("DefineOwnProperty", obj, name, {
+    return callInternalSlot(SLOTS.DEFINEOWNPROPERTY, obj, name, {
         configurable: c,
         enumerable: e,
         get: g,
@@ -8351,7 +8379,7 @@ function LazyDefineProperty(O, P, V, w, e, c) {
             writable: w
         };
     }
-    //return callInternalSlot("DefineOwnProperty", O, P, desc);
+    //return callInternalSlot(SLOTS.DEFINEOWNPROPERTY, O, P, desc);
     return OrdinaryDefineOwnProperty(O, P, desc);
 }
 
@@ -8531,10 +8559,10 @@ function isWorker() {
  // Functions
  "FunctionKind": 5,
  "Environment": 6,
- "FormalParameters": 7,
- "Code": 8,
- "HomeObject": 9,
- "MethodName": 10,
+ SLOTS.FORMALPARAMETERS: 7,
+ SLOTS.CODE: 8,
+ SLOTS.HOMEOBJECT: 9,
+ SLOTS.METHODNAME: 10,
  // Bound Functions
  "BoundTargetFunction": 11,
  "BoundThis": 12,
@@ -8629,8 +8657,8 @@ function CreateSelfHostingFunction(realm, name, arity, source) {
 
     var fn = parseGoal("FunctionDeclaration", source);
     var F = OrdinaryFunction();
-    setInternalSlot("Code", fn.body);
-    setInternalSlot("FormalParameters", fn.params);
+    setInternalSlot(SLOTS.CODE, fn.body);
+    setInternalSlot(SLOTS.FORMALPARAMETERS, fn.params);
     setInternalSlot("Realm", realm);
     SetFunctionName(F, name);
     SetFunctionLength(F, arity);
@@ -8642,7 +8670,7 @@ function LazyDefineSelfHostingFunction(O, name, arity, fproto, e, w, c) {
     if (e === undefined) e = false;
     if (w === undefined) w = true;
     if (c === undefined) c = true;
-    return callInternalSlot("DefineOwnProperty", O, name, {
+    return callInternalSlot(SLOTS.DEFINEOWNPROPERTY, O, name, {
         configurable: c,
         enumerable: e,
         value: CreateSelfHostingFunction(getRealm(), name, arity, fproto),
@@ -8662,9 +8690,7 @@ exports.LazyDefineSelfHostingFunction = LazyDefineSelfHostingFunction;
 * Created by root on 18.04.14.
 */
 /*
-
     HOW TO?
-
     COLLECT IN THE OTHER FILES THE SLOTNAMES IN SOME OBJECT
     THEN MOVE THE SLOTS HERE
     (same name on other object gets same slot index for it later)
@@ -8672,24 +8698,44 @@ exports.LazyDefineSelfHostingFunction = LazyDefineSelfHostingFunction;
  */
 
 var SLOTS = Object.create(null);
-SLOTS.GET = "Get";
-SLOTS.SET = "Set";
-SLOTS.DEFINEOWNPROPERTY = "DefineOwnProperty";
+
+SLOTS.GET = "Get"; // x
+SLOTS.SET = "Set"; // x
+SLOTS.DEFINEOWNPROPERTY = "DefineOwnProperty"; // x
 SLOTS.GETOWNPROPERTY = "GetOwnProperty";
 SLOTS.OWNPROPERTYKEYS = "OwnPropertyKeys";
 SLOTS.ENUMERATE = "Enumerate";
-SLOTS.CALL = "Call";
-SLOTS.CONSTRUCT = "Construct";
+SLOTS.GETPROTOTYPEOF = "GetPrototypeOf"; // x
+SLOTS.SETPROTOTYPEOF = "SetPrototypeOf"; // x
+SLOTS.PROTOTYPE = "Prototype";
+SLOTS.EXTENSIBLE = "Extensible";
 SLOTS.INVOKE = "Invoke";
 SLOTS.HASPROPERTY = "HasProperty";
 SLOTS.ISEXTENSIBLE = "IsExtensible";
+SLOTS.BINDINGS = "Bindings";
+SLOTS.SYMBOLS = "Symbols";
+
+SLOTS.CODE = "Code";    // in use
+SLOTS.CALL = "Call";    // ok
+SLOTS.CONSTRUCT = "Construct"; // ok
+SLOTS.FORMALPARAMETERS = "FormalParameters"; // ok
+SLOTS.THISMODE = "ThisMode"; // ok
+SLOTS.STRICT = "Strict";    // ok
+SLOTS.FUNCTIONKIND = "FunctionKind";
+SLOTS.NEEDSSUPER = "NeedsSuper";
+SLOTS.HOMEOBJECT = SLOTS.HOMEOBJECT;
+SLOTS.METHODNAME = SLOTS.METHODNAME;
+
+
 SLOTS.BOUNDTHIS = "BoundThis";
 SLOTS.BOUNDTARGETFUNCTION = "BoundTargetFunction";
 SLOTS.BOUNDARGUMENTS = "BoundArguments";
+
 SLOTS.NUMBERDATA = "NumberData";
 SLOTS.STRINGDATA = "StringData";
 SLOTS.BOOLEANDATA = "BooleanData";
 SLOTS.SYMBOLDATA = "SymbolData";
+
 SLOTS.DESCRIPTION = "Description";
 SLOTS.ARRAYBUFFERDATA = "ArrayBufferData";
 SLOTS.TYPEDARRAYNAME = "TypedArrayName";
@@ -8701,15 +8747,11 @@ SLOTS.BYTEOFFSET = "ByteOffset";
 SLOTS.PROXYTARGET = "ProxyTarget";
 SLOTS.PROXYHANDLER = "ProxyHandler";
 
-SLOTS.PROTOTYPE = "Prototype";
-SLOTS.EXTENSIBLE = "Extensible";
-
-SLOTS.BINDINGS = "Bindings";    // Slots for my property tables
-SLOTS.SYMBOLS = "Symbols";      // Will even hold for in typed memory (need a new hash there anyways)
 
 
 
 
+Object.freeze(SLOTS);
 /**
  * Created by root on 31.03.14.
  */
@@ -9179,7 +9221,7 @@ function GetValue(V) {
         }
 
         // object
-        return callInternalSlot("Get", base, V.name, GetThisValue(V));
+        return callInternalSlot(SLOTS.GET, base, V.name, GetThisValue(V));
     } else {
         // environment record
         return base.GetBindingValue(V.name, V.strict);
@@ -9364,9 +9406,9 @@ function ObjectCreate(proto, internalDataList) {
 
 function ObjectDefineProperty(O, P, Desc) {
     if (IsDataDescriptor(Desc)) {
-        callInternalSlot("DefineOwnProperty", O,P, Desc);
+        callInternalSlot(SLOTS.DEFINEOWNPROPERTY, O,P, Desc);
     } else if (IsAccessorDescriptor(Desc)) {
-        callInternalSlot("DefineOwnProperty", O,P, Desc);
+        callInternalSlot(SLOTS.DEFINEOWNPROPERTY, O,P, Desc);
     }
     return O;
 }
@@ -9588,10 +9630,10 @@ function NewFunctionEnvironment(F, T) {
     var env = FunctionEnvironment(F, T); // ist Lexical Environment and environment record in eins
     env.thisValue = T;
     if (getInternalSlot(F, "NeedsSuper") === true) {
-        var home = getInternalSlot(F, "HomeObject");
+        var home = getInternalSlot(F, SLOTS.HOMEOBJECT);
         if (home === undefined) return withError("Reference", "NewFunctionEnvironment: HomeObject is undefined");
         env.HomeObject = home;
-        env.MethodName = getInternalSlot(F, "MethodName");
+        env.MethodName = getInternalSlot(F, SLOTS.METHODNAME);
     } else {
         env.HomeObject = undefined;
     }
@@ -9638,7 +9680,7 @@ ObjectEnvironment.prototype = {
         debug("object env: createmutablebinding mit key: " + N);
         var O = this.BoundObject;
         var configValue = D === true;
-        return callInternalSlot("DefineOwnProperty", O,N, {
+        return callInternalSlot(SLOTS.DEFINEOWNPROPERTY, O,N, {
             value: undefined,
             writable: true,
             enumerable: false,
@@ -9647,7 +9689,7 @@ ObjectEnvironment.prototype = {
     },
     CreateImmutableBinding: function (N) {
         var O = this.BoundObject;
-        return callInternalSlot("DefineOwnProperty", O,N, {
+        return callInternalSlot(SLOTS.DEFINEOWNPROPERTY, O,N, {
             value: undefined,
             writable: false,
             enumerable: false,
@@ -10297,7 +10339,7 @@ function CreateOwnAccessorProperty(O, P, G, S) {
     D.set = S;
     D.enumerable = true;
     D.configurable = true;
-    return callInternalSlot("DefineOwnProperty", O, P, D);
+    return callInternalSlot(SLOTS.DEFINEOWNPROPERTY, O, P, D);
 }
 
 function CreateDataProperty(O, P, V) {
@@ -10308,7 +10350,7 @@ function CreateDataProperty(O, P, V) {
     newDesc.writable = true;
     newDesc.enumerable = true;
     newDesc.configurable = true;
-    return callInternalSlot("DefineOwnProperty", O, P, newDesc);
+    return callInternalSlot(SLOTS.DEFINEOWNPROPERTY, O, P, newDesc);
 }
 
 function CreateDataPropertyOrThrow(O, P, V) {
@@ -10361,12 +10403,12 @@ function FromPropertyDescriptor(desc) {
     if (desc == undefined) return undefined;
     if (desc.Origin) return desc.Origin;
     var obj = ObjectCreate();
-    callInternalSlot("DefineOwnProperty", obj,"value",        PropertyDescriptor(desc.value, true, true, true));
-    callInternalSlot("DefineOwnProperty", obj,"writable",     PropertyDescriptor(desc.writable, true, true, true));
-    callInternalSlot("DefineOwnProperty", obj,"get",          PropertyDescriptor(desc.get, true, true, true));
-    callInternalSlot("DefineOwnProperty", obj,"set",          PropertyDescriptor(desc.set, true, true, true));
-    callInternalSlot("DefineOwnProperty", obj,"enumerable",   PropertyDescriptor(desc.enumerable, true, true, true));
-    callInternalSlot("DefineOwnProperty", obj,"configurable", PropertyDescriptor(desc.configurable, true, true, true));
+    callInternalSlot(SLOTS.DEFINEOWNPROPERTY, obj,"value",        PropertyDescriptor(desc.value, true, true, true));
+    callInternalSlot(SLOTS.DEFINEOWNPROPERTY, obj,"writable",     PropertyDescriptor(desc.writable, true, true, true));
+    callInternalSlot(SLOTS.DEFINEOWNPROPERTY, obj,"get",          PropertyDescriptor(desc.get, true, true, true));
+    callInternalSlot(SLOTS.DEFINEOWNPROPERTY, obj,"set",          PropertyDescriptor(desc.set, true, true, true));
+    callInternalSlot(SLOTS.DEFINEOWNPROPERTY, obj,"enumerable",   PropertyDescriptor(desc.enumerable, true, true, true));
+    callInternalSlot(SLOTS.DEFINEOWNPROPERTY, obj,"configurable", PropertyDescriptor(desc.configurable, true, true, true));
     return obj;
 }
 
@@ -10565,7 +10607,7 @@ function Put(O, P, V, Throw) {
     Assert(Type(O) === OBJECT, "o has to be an object");
     Assert(IsPropertyKey(P), "property key p expected");
     Assert(Throw === true || Throw === false, "throw has to be false or true");
-    var success = callInternalSlot("Set", O, P, V, O);
+    var success = callInternalSlot(SLOTS.SET, O, P, V, O);
     if (isAbrupt(success = ifAbrupt(success))) return success;
     if (success === false && Throw === true) return withError("Type", "Put: success false and throw true at P=" + P);
     return success;
@@ -10574,7 +10616,7 @@ function Put(O, P, V, Throw) {
 function DefineOwnPropertyOrThrow(O, P, D) {
     Assert(Type(O) === OBJECT, "object expected");
     Assert(IsPropertyKey(P), "P has to be a valid property key");
-    var success = callInternalSlot("DefineOwnProperty", O, P, D);
+    var success = callInternalSlot(SLOTS.DEFINEOWNPROPERTY, O, P, D);
     if (isAbrupt(success = ifAbrupt(success))) return success;
     if (success === false) return withError("Type", "DefinePropertyOrThrow: DefineOwnProperty has to return true. But success is false. At P="+P);
     return success;
@@ -10704,7 +10746,7 @@ function OwnPropertySymbols(O) {
 
 function GetMethod(O, P) {
     Assert(Type(O) === OBJECT && IsPropertyKey(P) === true, "o has to be object and p be a valid key");
-    var method = callInternalSlot("Get", O, P, O);
+    var method = callInternalSlot(SLOTS.GET, O, P, O);
     if (isAbrupt(method = ifAbrupt(method))) return method;
     if (IsCallable(method)) return method;
     else return withError("Type", "GetMethod: " + P + " can not be retrieved");
@@ -10859,7 +10901,7 @@ function Delete(O, P) {
 function Get(O, P) {
     Assert(Type(O) === OBJECT, "[[Get]] expecting object");
     Assert(IsPropertyKey(P), "[[Get]] expecting valid property key, got "+ P);
-    return callInternalSlot("Get", O, P, O);
+    return callInternalSlot(SLOTS.GET, O, P, O);
 }
 
 function OrdinaryObjectGet(O, P, R) {
@@ -10871,14 +10913,14 @@ function OrdinaryObjectGet(O, P, R) {
         if (isAbrupt(parent)) return parent;
         parent = ifAbrupt(parent);
         if (parent === null) return undefined;
-        return callInternalSlot("Get", parent, P, R);
+        return callInternalSlot(SLOTS.GET, parent, P, R);
     }
     var getter;
     if (IsDataDescriptor(desc)) return desc.value;
     else if (IsAccessorDescriptor(desc)) {
         getter = desc.get;
         if (getter === undefined) return undefined;
-        else return callInternalSlot("Call", getter, R, []);
+        else return callInternalSlot(SLOTS.CALL, getter, R, []);
     }
     return undefined;
 }
@@ -10892,14 +10934,14 @@ function Set(O, P, V, R) {
         parent = GetPrototypeOf(O);
         if (isAbrupt(parent = ifAbrupt(parent))) return parent;
         if (parent !== null) {
-            return callInternalSlot("Set", parent,P, V, R);
+            return callInternalSlot(SLOTS.SET, parent,P, V, R);
         }
     }
     // von unter isdata hoch gehoben
     else if (IsAccessorDescriptor(ownDesc)) {
         var setter = ownDesc.set;
         if (setter === undefined) return false;
-        var setterResult = callInternalSlot("Call", setter, R, [V]);
+        var setterResult = callInternalSlot(SLOTS.CALL, setter, R, [V]);
         if (isAbrupt(setterResult)) return setterResult;
         return true;
     }
@@ -10919,7 +10961,7 @@ function Set(O, P, V, R) {
             var valueDesc = {
                 value: V
             };
-            return callInternalSlot("DefineOwnProperty", R, P, valueDesc);
+            return callInternalSlot(SLOTS.DEFINEOWNPROPERTY, R, P, valueDesc);
         } else {
             return CreateDataProperty(R, P, V);
         }
@@ -10934,16 +10976,16 @@ function Invoke(O, P, args) {
     if (!Array.isArray(args)) args = [];
     obj = ToObject(O);
     if (isAbrupt(obj = ifAbrupt(obj))) return obj;
-    var func = callInternalSlot("Get", obj, P, O);
+    var func = callInternalSlot(SLOTS.GET, obj, P, O);
     if (!IsCallable(func)) return withError("Type", "Invoke: expected function is not callable");
     if (isAbrupt(func = ifAbrupt(func))) return func;
-    return callInternalSlot("Call", func, O, args);
+    return callInternalSlot(SLOTS.CALL, func, O, args);
 }
 
 function OrdinaryObjectInvoke(O, P, A, R) {
     Assert(IsPropertyKey(P), "expecting property key");
     Assert(Array.isArray(A), "expecting arguments list");
-    var method = callInternalSlot("Get", O, P, R);
+    var method = callInternalSlot(SLOTS.GET, O, P, R);
     if (isAbrupt(method = ifAbrupt(method))) return method;
     if (Type(method) !== OBJECT) return withError("Type", "Invoke: method " + P + " is not an object");
     if (!IsCallable(method)) return withError("Type", "Invoke: method " + P + " is not callable");
@@ -11040,8 +11082,8 @@ function OrdinaryFunction() {
     setInternalSlot(F, "Extensible", true);
     setInternalSlot(F, "Environment", undefined);
     setInternalSlot(F, "NeedsSuper", undefined);
-    setInternalSlot(F, "FormalParameters", undefined);
-    setInternalSlot(F, "Code", undefined);
+    setInternalSlot(F, SLOTS.FORMALPARAMETERS, undefined);
+    setInternalSlot(F, SLOTS.CODE, undefined);
     return F;
 }
 
@@ -11083,11 +11125,11 @@ function BoundFunctionCreate(B, T, argList) {
     setInternalSlot(F, "BoundArguments", argList.slice());
     setInternalSlot(F, "Prototype", getIntrinsic("%FunctionPrototype%"));
     setInternalSlot(F, "Extensible", true);
-    setInternalSlot(F, "Call", function (thisArg, argList) {
+    setInternalSlot(F, SLOTS.CALL, function (thisArg, argList) {
         var B = getInternalSlot(F, "BoundTargetFunction");
         var T = getInternalSlot(F, "BoundThis");
         var A = getInternalSlot(F, "BoundArguments").concat(argList);
-        return callInternalSlot("Call", B, T, A);
+        return callInternalSlot(SLOTS.CALL, B, T, A);
     });
     return F;
 }
@@ -11107,7 +11149,7 @@ function IsConstructor(F) {
 function SetFunctionLength(F, L) {
     L = ToLength(L);
     // if (isAbrupt(L)) return L;
-    return callInternalSlot("DefineOwnProperty", F, "length", {
+    return callInternalSlot(SLOTS.DEFINEOWNPROPERTY, F, "length", {
         value: L,
         writable: false,
         enumerable: false,
@@ -11164,20 +11206,20 @@ function FunctionAllocate(fProto, kind) {
     setInternalSlot(F, "FunctionKind", kind);
     setInternalSlot(F, "Prototype", fProto);
     setInternalSlot(F, "Extensible", true);
-    setInternalSlot(F, "Construct", undefined);
+    setInternalSlot(F, SLOTS.CONSTRUCT, undefined);
     setInternalSlot(F, "Realm", getRealm());
     return F;
 }
 
 function FunctionInitialize(F, kind, paramList, body, scope, strict, homeObject, methodName) {
     setInternalSlot(F, "FunctionKind", kind);
-    setInternalSlot(F, "FormalParameters", paramList);
-    setInternalSlot(F, "Code", body);
+    setInternalSlot(F, SLOTS.FORMALPARAMETERS, paramList);
+    setInternalSlot(F, SLOTS.CODE, body);
     setInternalSlot(F, "Environment", scope);
     setInternalSlot(F, "Strict", strict);
     setInternalSlot(F, "Realm", getRealm());
-    if (homeObject) setInternalSlot(F, "HomeObject", homeObject);
-    if (methodName) setInternalSlot(F, "MethodName", methodName);
+    if (homeObject) setInternalSlot(F, SLOTS.HOMEOBJECT, homeObject);
+    if (methodName) setInternalSlot(F, SLOTS.METHODNAME, methodName);
     setInternalSlot(F, "Strict", strict);
     if (kind === "arrow") setInternalSlot(F, "ThisMode", "lexical");
     else if (strict) setInternalSlot(F, "ThisMode", "strict");
@@ -11215,7 +11257,7 @@ function CreateFromConstructor(F) {
     if (isAbrupt(creator = ifAbrupt(creator))) return creator;
     if (creator === undefined) return undefined;
     if (IsCallable(creator) === false) return withError("Type", "CreateFromConstructor: creator has to be callable");
-    var obj = callInternalSlot("Call", creator, F, []);
+    var obj = callInternalSlot(SLOTS.CALL, creator, F, []);
     if (isAbrupt(obj = ifAbrupt(obj))) return obj;
     if (Type(obj) !== OBJECT) return withError("Type", "CreateFromConstructor: obj has to be an object");
     return obj;
@@ -11230,7 +11272,7 @@ function Construct(F, argList) {
         if (isAbrupt(obj = ifAbrupt(obj))) return obj;
         if (Type(obj) !== OBJECT) return withError("Type", "essential Construct: obj is not an object");
     }
-    var result = callInternalSlot("Call", F, obj, argList);
+    var result = callInternalSlot(SLOTS.CALL, F, obj, argList);
     if (isAbrupt(result = ifAbrupt(result))) return result;
     if (Type(result) === OBJECT) return result;
     return obj;
@@ -11242,13 +11284,13 @@ function OrdinaryConstruct(F, argList) {
     var obj;
     if (creator) {
         if (!IsCallable(creator)) return withError("Type", "OrdinaryConstruct: creator is not callable");
-        obj = callInternalSlot("Call", creator, F, argList);
+        obj = callInternalSlot(SLOTS.CALL, creator, F, argList);
     } else {
         obj = OrdinaryCreateFromConstructor(F, "%ObjectPrototype%");
     }
     if (isAbrupt(obj = ifAbrupt(obj))) return obj;
     if (Type(obj) !== OBJECT) return withError("Type", "OrdinaryConstruct: Type(obj) is not object");
-    var result = callInternalSlot("Call", F, obj, argList);
+    var result = callInternalSlot(SLOTS.CALL, F, obj, argList);
     if (isAbrupt(result = ifAbrupt(result))) return result;
     if (Type(result) === OBJECT) return result;
     return obj;
@@ -11262,16 +11304,16 @@ function MakeConstructor(F, writablePrototype, prototype) {
         prototype = ObjectCreate();
     }
     if (writablePrototype === undefined) writablePrototype = true;
-    setInternalSlot(F, "Construct", function Construct(argList) {
+    setInternalSlot(F, SLOTS.CONSTRUCT, function Construct(argList) {
         return OrdinaryConstruct(this, argList);
     });
-    if (installNeeded) callInternalSlot("DefineOwnProperty", prototype, "constructor", {
+    if (installNeeded) callInternalSlot(SLOTS.DEFINEOWNPROPERTY, prototype, "constructor", {
         value: F,
         writable: writablePrototype,
         enumerable: false,
         configurable: writablePrototype
     });
-    callInternalSlot("DefineOwnProperty", F, "prototype", {
+    callInternalSlot(SLOTS.DEFINEOWNPROPERTY, F, "prototype", {
         value: prototype,
         writable: writablePrototype,
         enumerable: false,
@@ -11345,10 +11387,10 @@ function CreateBuiltinFunction(realm, steps, len, name, internalSlots) {
     // the .steps reference is needed by function.prototype.toString to put out the right function
     Call.steps = steps;
 
-    setInternalSlot(F, "Call", Call);
-    setInternalSlot(F, "Code", undefined);
-    setInternalSlot(F, "Construct", undefined);
-    setInternalSlot(F, "FormalParameters", undefined);
+    setInternalSlot(F, SLOTS.CALL, Call);
+    setInternalSlot(F, SLOTS.CODE, undefined);
+    setInternalSlot(F, SLOTS.CONSTRUCT, undefined);
+    setInternalSlot(F, SLOTS.FORMALPARAMETERS, undefined);
     setInternalSlot(F, "Prototype", getIntrinsic("%FunctionPrototype%"));
     setInternalSlot(F, "Environment", undefined);
     setInternalSlot(F, "NeedsSuper", undefined);
@@ -11383,8 +11425,8 @@ function MakeMethod (F, methodName, homeObject) {
     var homeObjectType = Type(homeObject);
     Assert(homeObjectType === UNDEFINED || homeObjectType === OBJECT, "MakeMethod: HomeObject is neither undefined nor object.");
     setInternalSlot(F, "NeedsSuper", true);
-    setInternalSlot(F, "HomeObject", homeObject);
-    setInternalSlot(F, "MethodName", methodName);
+    setInternalSlot(F, SLOTS.HOMEOBJECT, homeObject);
+    setInternalSlot(F, SLOTS.METHODNAME, methodName);
     return NormalCompletion(undefined);
 }
 
@@ -11402,15 +11444,15 @@ function MakeSuperReference(propertyKey, strict) {
 function GetSuperBinding(obj) {
     if (Type(obj) !== OBJECT) return undefined;
     if (getInternalSlot(obj, "NeedsSuper") !== true) return undefined;
-    if (!hasInternalSlot(obj, "HomeObject")) return undefined;
-    return getInternalSlot(obj, "HomeObject");
+    if (!hasInternalSlot(obj, SLOTS.HOMEOBJECT)) return undefined;
+    return getInternalSlot(obj, SLOTS.HOMEOBJECT);
 }
 
 function cloneFunction (func) {
     var newFunc = OrdinaryFunction();
     setInternalSlot(newFunc, "Environment", getInternalSlot(func, "Environment"));
-    setInternalSlot(newFunc, "Code", getInternalSlot(func, "Code"));
-    setInternalSlot(newFunc, "FormalParameterList", getInternalSlot(func, "FormalParameterList"));
+    setInternalSlot(newFunc, SLOTS.CODE, getInternalSlot(func, SLOTS.CODE));
+    setInternalSlot(newFunc, "FormalParameters", getInternalSlot(func, "FormalParameterList"));
     setInternalSlot(newFunc, "ThisMode", getInternalSlot(func, "ThisMode"));
     setInternalSlot(newFunc, "FunctionKind", getInternalSlot(func, "FunctionKind"));
     setInternalSlot(newFunc, "Strict", getInternalSlot(func, "Strict"));
@@ -11423,9 +11465,9 @@ function CloneMethod(func, newHome, newName) {
     Assert(Type(newName) === UNDEFINED || IsPropertyKey(newName), "CloneMethod: newName has to be undefined or object");
     var newFunc = cloneFunction(func);
     if (getInternalSlot(func, "NeedsSuper") === true) {
-        setInternalSlot(newFunc, "HomeObject", newHome);
-        if (newName !== undefined) setInternalSlot(newFunc, "MethodName", newName);
-        else setInternalSlot(newFunc, "MethodName", getInternalSlot(func, "MethodName"));
+        setInternalSlot(newFunc, SLOTS.HOMEOBJECT, newHome);
+        if (newName !== undefined) setInternalSlot(newFunc, SLOTS.METHODNAME, newName);
+        else setInternalSlot(newFunc, SLOTS.METHODNAME, getInternalSlot(func, SLOTS.METHODNAME));
     }
     if (getInternalSlot(newFunc, "Strict") === true) {
         var status = AddRestrictedFunctionProperties(newFunc);
@@ -11440,13 +11482,13 @@ function RebindSuper(func, newHome) {
     var nu = OrdinaryFunction();
     setInternalSlot(nu, "FunctionKind", getInternalSlot(func, "FunctionKind"));
     setInternalSlot(nu, "Environment", getInternalSlot(func, "Environment"));
-    setInternalSlot(nu, "Code", getInternalSlot(func, "Code"));
-    setInternalSlot(nu, "FormalParameters", getInternalSlot(func, "FormalParameters"));
+    setInternalSlot(nu, SLOTS.CODE, getInternalSlot(func, SLOTS.CODE));
+    setInternalSlot(nu, SLOTS.FORMALPARAMETERS, getInternalSlot(func, SLOTS.FORMALPARAMETERS));
     setInternalSlot(nu, "Strict", getInternalSlot(func, "Strict"));
     setInternalSlot(nu, "ThisMode", getInternalSlot(func, "ThisMode"));
-    setInternalSlot(nu, "MethodName", getInternalSlot(func, "MethodName"));
+    setInternalSlot(nu, SLOTS.METHODNAME, getInternalSlot(func, SLOTS.METHODNAME));
     setInternalSlot(nu, "Realm", getInternalSlot(func, "Realm"));
-    setInternalSlot(nu, "HomeObject", newHome);
+    setInternalSlot(nu, SLOTS.HOMEOBJECT, newHome);
     return nu;
 }
 
@@ -11845,7 +11887,7 @@ function IteratorValue(itrResult) {
 
 function CreateEmptyIterator() {
     var emptyNextMethod = OrdinaryFunction();
-    setInternalSlot(emptyNextMethod, "Call", function (thisArg, argList) {
+    setInternalSlot(emptyNextMethod, SLOTS.CALL, function (thisArg, argList) {
         return CreateItrResultObject(undefined, true);
     });
     var obj = ObjectCreate();
@@ -12325,7 +12367,7 @@ NativeJSObjectWrapper.prototype = {
             }
             return result;
         } else if (IsCallable(f)) {
-            return callInternalSlot("Call", f, Rcv, argList);
+            return callInternalSlot(SLOTS.CALL, f, Rcv, argList);
         }
     },
     Delete: function (P) {
@@ -13233,7 +13275,7 @@ function NextTask (result, nextQueue) {
     var newContext = ExecutionContext(null, getRealm());
     newContext.realm = nextPending.Realm;
     getStack().push(newContext);
-    var result = callInternalSlot("Call", nextPending.Task, undefined, nextPending.Arguments);
+    var result = callInternalSlot(SLOTS.CALL, nextPending.Task, undefined, nextPending.Arguments);
     if (isAbrupt(result=ifAbrupt(result))) {
         if (hasConsole) {
             var ex = exports.makeNativeException(ex);
@@ -13267,7 +13309,7 @@ function DefineBuiltinProperties(O) {
     for (var name in standard_properties) {
         if (standard_properties[name] === true) {
             var desc = callInternalSlot("GetOwnProperty", globalThis, name);
-            var status = callInternalSlot("DefineOwnProperty", O, name, desc);
+            var status = callInternalSlot(SLOTS.DEFINEOWNPROPERTY, O, name, desc);
             if (isAbrupt(status)) return status;
         }
     }
@@ -13745,7 +13787,7 @@ function StructuredClone (input, transferList, targetRealm) {
             return withError("Range", "DataCloneError: transferable has no [[Transfer]] slot");
         }
         var Transfer = getInternalSlot(transferable, "Transfer");
-        var transferResult = callInternalSlot("Call", Transfer, transferable, [targetRealm]);
+        var transferResult = callInternalSlot(SLOTS.CALL, Transfer, transferable, [targetRealm]);
         if (isAbrupt(transferResult = ifAbrupt(transferResult))) return transferResult;
         memory.push({ input: transferable, output: transferResult });
     }
@@ -13756,7 +13798,7 @@ function StructuredClone (input, transferList, targetRealm) {
         transferResult = mapping.output;
         transferable = mapping.input;
         var OnSuccessTransfer = getInternalSlot(transferable, "OnSuccessTransfer");
-        callInternalSlot("Call", OnSuccessTransfer, transferable, [transferResult, targetRealm]);
+        callInternalSlot(SLOTS.CALL, OnSuccessTransfer, transferable, [transferResult, targetRealm]);
     }
     return NormalCompletion(clone);
 }
@@ -14175,7 +14217,7 @@ exports.float64 = float64;
         descriptor.enumerable = true;
         descriptor.value = value;
         descriptor.writable = true;
-        callInternalSlot("DefineOwnProperty", intrinsics, intrinsicName, descriptor);
+        callInternalSlot(SLOTS.DEFINEOWNPROPERTY, intrinsics, intrinsicName, descriptor);
     }
     function createIntrinsicConstructor (intrinsics, name, len, intrinsicName) {
         var constructor = OrdinaryFunction();
@@ -14189,7 +14231,7 @@ exports.float64 = float64;
         define_intrinsic(intrinsics, intrinsicName, func);
         SetFunctionName(func, name);
         SetFunctionLength(func, len);
-        setInternalSlot(func, "Construct", undefined);
+        setInternalSlot(func, SLOTS.CONSTRUCT, undefined);
         return func;
     }
     function createIntrinsicPrototype (intrinsics, intrinsicName) {
@@ -14346,10 +14388,10 @@ exports.float64 = float64;
         var ThrowTypeError_Call = function (thisArg, argList) {
             return withError("Type", "The system is supposed to throw a Type Error with %ThrowTypeError% here.");
         };
-        setInternalSlot(ThrowTypeError, "Call", ThrowTypeError_Call);
-        setInternalSlot(ThrowTypeError, "Construct", undefined);
+        setInternalSlot(ThrowTypeError, SLOTS.CALL, ThrowTypeError_Call);
+        setInternalSlot(ThrowTypeError, SLOTS.CONSTRUCT, undefined);
 
-setInternalSlot(PrintFunction, "Call", function (thisArg, argList) {
+setInternalSlot(PrintFunction, SLOTS.CALL, function (thisArg, argList) {
    var str = "";
    var j = argList.length-1;
    if (j === 0) str = argList[0];
@@ -14372,7 +14414,7 @@ setInternalSlot(PrintFunction, "Call", function (thisArg, argList) {
  */
 
 
-setInternalSlot(DebugFunction, "Call", function debugfunc (thisArg, argList)  {
+setInternalSlot(DebugFunction, SLOTS.CALL, function debugfunc (thisArg, argList)  {
 
     var TAB = "\t";
     var O = argList[0];
@@ -14427,13 +14469,13 @@ setInternalSlot(DebugFunction, "Call", function debugfunc (thisArg, argList)  {
             var thisMode = getInternalSlot(O, "ThisMode");
             console.log(TAB+"[[ThisMode]]: "+thisMode);
 
-            var formals = getInternalSlot(O, "FormalParameters");
+            var formals = getInternalSlot(O, SLOTS.FORMALPARAMETERS);
             console.log(TAB+"[[FormalParameters]]:");
             console.log(formals.join(","));
 
             console.log(TAB+"[[Code]]:");
 
-            var code = getInternalSlot(O, "Code");
+            var code = getInternalSlot(O, SLOTS.CODE);
             console.log(JSON.stringify(code, null, 4));
         }
 
@@ -14514,7 +14556,7 @@ var loaderAdapter = require("filesystem").makeAdapter({
     }())
 });
 
-setInternalSlot(LoadFunction, "Call", function load(thisArg, argList) {
+setInternalSlot(LoadFunction, SLOTS.CALL, function load(thisArg, argList) {
     var file = argList[0];
     try {
         var data = loaderAdapter(file);
@@ -14533,7 +14575,7 @@ setInternalSlot(LoadFunction, "Call", function load(thisArg, argList) {
  *
  */
 
-    setInternalSlot(RequestFunction, "Call", function request(thisArg, argList) {
+    setInternalSlot(RequestFunction, SLOTS.CALL, function request(thisArg, argList) {
         var url = argList[0];
         var d, p;
         if (isWindow()) {
@@ -14626,7 +14668,7 @@ var RealmConstructor_Call = function (thisArg, argList) {
         if (!IsCallable(initializer)) return withError("Type", "initializer should be a function");
         var builtins = ObjectCreate();
         DefineBuiltinProperties(realm, builtins);
-        var status = callInternalSlot("Call", initializer, RealmConstructor, [builtins]);
+        var status = callInternalSlot(SLOTS.CALL, initializer, RealmConstructor, [builtins]);
         if (isAbrupt(status)) return status;
     }
     return RealmConstructor;
@@ -14698,8 +14740,8 @@ LazyDefineAccessor(RealmConstructor, "stdlib", 3, RealmConstructor_stdlib_get);
 
 
 // %Realm%
-setInternalSlot(RealmConstructor, "Call", RealmConstructor_Call);
-setInternalSlot(RealmConstructor, "Construct", RealmConstructor_Construct);
+setInternalSlot(RealmConstructor, SLOTS.CALL, RealmConstructor_Call);
+setInternalSlot(RealmConstructor, SLOTS.CONSTRUCT, RealmConstructor_Construct);
 LazyDefineProperty(RealmConstructor, $$create, CreateBuiltinFunction(realm,RealmConstructor_$$create, 0, "[Symbol.create]"));
 MakeConstructor(RealmConstructor, false, RealmPrototype);
 // %RealmPrototype%
@@ -14857,11 +14899,11 @@ function CallNormalize() {
         var refererAddress = getInternalSlot(F, "RefererAddress");
         var loaderObj = loader.LoaderObj;
         var normalizeHook = Get(loaderObj, "normalize");
-        var name = callInternalSlot("Call", normalizeHook, loaderObj, [request, refererName, refererAddress]);
+        var name = callInternalSlot(SLOTS.CALL, normalizeHook, loaderObj, [request, refererName, refererAddress]);
         if (isAbrupt(name = ifAbrupt(name))) return name;
-        return callInternalSlot("Call", resolve, undefined, [name]);
+        return callInternalSlot(SLOTS.CALL, resolve, undefined, [name]);
     };
-    setInternalSlot(F, "Call", CallNormalizeFunction_Call);
+    setInternalSlot(F, SLOTS.CALL, CallNormalizeFunction_Call);
     return F;
 }
 
@@ -14895,7 +14937,7 @@ function GetOrCreateLoad() {
         ProceedToLocate(loader, load);
         return NormalCompletion(load);
     };
-    setInternalSlot(F, "Call", GetOrCreateLoad_Call);
+    setInternalSlot(F, SLOTS.CALL, GetOrCreateLoad_Call);
     return F;
 }
 
@@ -14921,9 +14963,9 @@ function CallLocate() {
         if (isAbrupt(hook = ifAbrupt(hook))) return hook;
         if (!IsCallable(hook)) return withError("Type", "call locate hook is not callable");
         var obj = CreateLoadRequestObject(load.Name, load.Metadata);
-        return callInternalSlot("Call", hook, loader, [obj])
+        return callInternalSlot(SLOTS.CALL, hook, loader, [obj])
     };
-    setInternalSlot(F, "Call", CallLocate_Call);
+    setInternalSlot(F, SLOTS.CALL, CallLocate_Call);
     return F;
 }
 
@@ -14952,9 +14994,9 @@ function CallFetch() {
         if (isAbrupt(hook = ifAbrupt(hook))) return hook;
         if (!IsCallable(hook)) return withError("Type", "fetch hook is not a function");
         var obj = CreateLoadRequestObject(load.Name, load.Metadata, address);
-        return callInternalSlot("Call", hook, loader, [obj]);
+        return callInternalSlot(SLOTS.CALL, hook, loader, [obj]);
     };
-    setInternalSlot(F, "Call", CallFetch_Call);
+    setInternalSlot(F, SLOTS.CALL, CallFetch_Call);
     return F;
 }
 
@@ -14990,9 +15032,9 @@ function CallTranslate() {
         if (isAbrupt(hook = ifAbrupt(hook))) return hook;
         if (!IsCallable(hook)) return withError("Type", "call translate hook is not callable");
         var obj = CreateLoadRequestObject(load.Name, load.Metadata, load.Address, source);
-        return callInternalSlot("Call", hook, loader, [obj]);
+        return callInternalSlot(SLOTS.CALL, hook, loader, [obj]);
     };
-    setInternalSlot(F, "Call", CallTranslate_Call);
+    setInternalSlot(F, SLOTS.CALL, CallTranslate_Call);
     return F;
 }
 
@@ -15010,9 +15052,9 @@ function CallInstantiate() {
         if (isAbrupt(hook = ifAbrupt(hook))) return hook;
         if (!IsCallable(hook)) return withError("Type", "call instantiate hook is not callable");
         var obj = CreateLoadRequestObject(load.Name, load.Metadata, load.Address, source);
-        return callInternalSlot("Call", hook, loader, [obj]);
+        return callInternalSlot(SLOTS.CALL, hook, loader, [obj]);
     };
-    setInternalSlot(F, "Call", CallInstantiate_Call);
+    setInternalSlot(F, SLOTS.CALL, CallInstantiate_Call);
     return F;
 }
 
@@ -15050,7 +15092,7 @@ function InstantiateSucceeded() {
         }
         return ProcessLoadDependencies(load, loader, depsList);
     };
-    setInternalSlot(F, "Call", InstantiateSucceeded_Call);
+    setInternalSlot(F, SLOTS.CALL, InstantiateSucceeded_Call);
     return F;
 }
 
@@ -15070,7 +15112,7 @@ function LoadFailed() {
         Assert(load.LinkSets.length === 0, "load.[[LinkSets]] has to be empty at this point");
     };
     var F = OrdinaryFunction();
-    setInternalSlot(F, "Call", LoadFailedFunction_Call);
+    setInternalSlot(F, SLOTS.CALL, LoadFailedFunction_Call);
     return F;
 }
 
@@ -15111,7 +15153,7 @@ function AddDependencyLoad() {
         return NormalCompletion(undefined);
     };
     var F = OrdinaryFunction();
-    setInternalSlot(F, "Call", AddDependencyLoad_Call);
+    setInternalSlot(F, SLOTS.CALL, AddDependencyLoad_Call);
     return F;
 }
 
@@ -15128,7 +15170,7 @@ function LoadSucceeded() {
         return NormalCompletion(undefined);
     };
     var F = OrdinaryFunction();
-    setInternalSlot(F, "Call", LoadSucceeded_Call);
+    setInternalSlot(F, SLOTS.CALL, LoadSucceeded_Call);
     return F;
 }
 
@@ -15168,7 +15210,7 @@ function AsyncStartLoadPartwayThrough() {
         var linkSet = CreateLinkSet(loader, load);
         if (!Array.isArray(loader.Loads)) loader.Loads = [];
         loader.Loads.push(load);
-        var result = callInternalSlot("Call", resolve, null, [linkSet.done]);
+        var result = callInternalSlot(SLOTS.CALL, resolve, null, [linkSet.done]);
         if (step === "locate") {
             ProceedToLocate(loader, load);
         } else if (step === "fetch") {
@@ -15181,7 +15223,7 @@ function AsyncStartLoadPartwayThrough() {
             ProceedToTranslate(loader, load, sourcePromise);
         }
     };
-    setInternalSlot(F, "Call", AsyncStartLoadPartwayThrough_Call);
+    setInternalSlot(F, SLOTS.CALL, AsyncStartLoadPartwayThrough_Call);
     return F;
 }
 //
@@ -15286,7 +15328,7 @@ function UpdateLinkSetOnLoad(linkSet, load) {
         return LinkSetFailed(linkSet, status.value);
     }
     Assert(linkSet.Loads.length === 0, "linkset.Loads has to be empty here");
-    var result = callInternalSlot("Call", linkset.Resolve, undefined, [startingLoad]);
+    var result = callInternalSlot(SLOTS.CALL, linkset.Resolve, undefined, [startingLoad]);
     Assert(!isAbrupt(result), "linkSet.resolve had to terminate normally");
     return result;
 }
@@ -15305,7 +15347,7 @@ function LinkSetFailed(linkSet, exc) {
             loader.Loads.splice(idx,1); // SPLICE KOSTET EXTRA
         }
     }
-    var result = callInternalSlot("Call", linkset.Reject, undefined, [exc]);
+    var result = callInternalSlot(SLOTS.CALL, linkset.Reject, undefined, [exc]);
     Assert(!isAbrupt(result), "linkSet.reject had to terminate normally");
     return NormalCompletion(result);
 }
@@ -15576,7 +15618,7 @@ function LinkDynamicModules(loads, loader) {
     for (var i = 0; i < loads.length; i++) {
         var load = loads[i];
         var factory = load.Execute;
-        var module = callInternalSlot("Call", factory, undefined, []);
+        var module = callInternalSlot(SLOTS.CALL, factory, undefined, []);
         if (isAbrupt(module = ifAbrupt(module))) return module;
 
         if (!hasInternalSlot(module, "Exports")) {
@@ -15663,7 +15705,7 @@ function EvaluateLoadedModule() {
         return NormalCompletion(module);
     };
     var F = OrdinaryFunction();
-    setInternalSlot(F, "Call", EvaluateLoadedModule_Call);
+    setInternalSlot(F, SLOTS.CALL, EvaluateLoadedModule_Call);
     return F;
 }
 
@@ -15713,7 +15755,7 @@ function CreateConstantGetter(key, value) {
 
 function ReturnUndefined() {
     var F = OrdinaryFunction();
-    setInternalSlot(F, "Call", ReturnUndefined_Call);
+    setInternalSlot(F, SLOTS.CALL, ReturnUndefined_Call);
     return F;
 }
 
@@ -15801,7 +15843,7 @@ var LoaderConstructor_Call = function (thisArg, argList) {
         var hook = Get(options, name);
         if (isAbrupt(hook = ifAbrupt(hook))) return hook;
         if (hook !== undefined) {
-            var result = callInternalSlot("DefineOwnProperty", loader, name, {
+            var result = callInternalSlot(SLOTS.DEFINEOWNPROPERTY, loader, name, {
                 value: hook,
                 writable: true,
                 enumerable: true,
@@ -16080,8 +16122,8 @@ var LoaderPrototype_$$iterator = LoaderPrototype_entries;
 
 // Loader
 setInternalSlot(LoaderConstructor, "Prototype", FunctionPrototype);
-setInternalSlot(LoaderConstructor, "Call", LoaderConstructor_Call);
-setInternalSlot(LoaderConstructor, "Construct", LoaderConstructor_Construct);
+setInternalSlot(LoaderConstructor, SLOTS.CALL, LoaderConstructor_Call);
+setInternalSlot(LoaderConstructor, SLOTS.CONSTRUCT, LoaderConstructor_Construct);
 LazyDefineProperty(LoaderConstructor, $$create, CreateBuiltinFunction(realm,LoaderConstructor_$$create, 0, "[Symbol.create]"));
 MakeConstructor(LoaderConstructor, false, LoaderPrototype);
 //SetFunctionName(LoaderConstructor, "Loader");
@@ -16558,7 +16600,7 @@ DefineOwnProperty(ArrayPrototype, "toString", {
         var func = Get(array, "join");
         if (isAbrupt(func = ifAbrupt(func))) return func;
         if (!IsCallable(func)) func = Get(ObjectPrototype, "toString");
-        return callInternalSlot("Call", func, array, []);
+        return callInternalSlot(SLOTS.CALL, func, array, []);
     }),
     enumerable: false,
     writable: true,
@@ -16585,7 +16627,7 @@ var ArrayPrototype_concat = function (thisArg, argList) {
         if (IsConstructor(C)) {
             var thisRealm = getRealm();
             if (thisRealm === getInternalSlot(C, "Realm")) {
-                A =  callInternalSlot("Construct", C, [0]);
+                A =  callInternalSlot(SLOTS.CONSTRUCT, C, [0]);
                 if (isAbrupt(A=ifAbrupt(A))) return A;
             }
         }
@@ -16879,7 +16921,7 @@ var ArrayPrototype_splice = function splice(thisArg, argList) {
         if (IsConstructor(C) === true) {
             var thisRealm = getRealm();
             if (SameValue(thisRealm, getInternalSlot(C, "Realm"))) {
-                A = callInternalSlot("Construct", [actualDeleteCount]);
+                A = callInternalSlot(SLOTS.CONSTRUCT, [actualDeleteCount]);
             }
         }
     }
@@ -17051,7 +17093,7 @@ DefineOwnProperty(ArrayPrototype, "forEach", {
             if (kPresent) {
                 var kValue = Get(O, Pk);
                 if (isAbrupt(kValue = ifAbrupt(kValue))) return kValue;
-                var funcResult = callInternalSlot("Call", callback, T, [kValue, k, O]);
+                var funcResult = callInternalSlot(SLOTS.CALL, callback, T, [kValue, k, O]);
                 if (isAbrupt(funcResult)) return funcResult;
             }
             k = k + 1;
@@ -17082,9 +17124,9 @@ DefineOwnProperty(ArrayPrototype, "map", {
             if (kPresent) {
                 var kValue = Get(O, Pk);
                 if (isAbrupt(kValue = ifAbrupt(kValue))) return kValue;
-                var mappedValue = callInternalSlot("Call", callback, T, [kValue, k, O]);
+                var mappedValue = callInternalSlot(SLOTS.CALL, callback, T, [kValue, k, O]);
                 if (isAbrupt(mappedValue = ifAbrupt(mappedValue))) return mappedValue;
-                callInternalSlot("DefineOwnProperty", A, Pk, {
+                callInternalSlot(SLOTS.DEFINEOWNPROPERTY, A, Pk, {
                     value: mappedValue,
                     writable: true,
                     enumerable: true,
@@ -17121,7 +17163,7 @@ DefineOwnProperty(ArrayPrototype, "filter", {
                 var kValue = Get(O, Pk);
                 if (isAbrupt(kValue = ifAbrupt(kValue))) return kValue;
 
-                var selected = callInternalSlot("Call", callback, T, [kValue, k, O]);
+                var selected = callInternalSlot(SLOTS.CALL, callback, T, [kValue, k, O]);
                 if (isAbrupt(selected = ifAbrupt(selected))) return selected;
                 if (ToBoolean(selected) === true) {
 
@@ -17161,7 +17203,7 @@ DefineOwnProperty(ArrayPrototype, "every", {
             if (kPresent) {
                 var kValue = Get(O, Pk);
                 if (isAbrupt(kValue = ifAbrupt(kValue))) return kValue;
-                var testResult = callInternalSlot("Call", callback, T, [kValue, k, O]);
+                var testResult = callInternalSlot(SLOTS.CALL, callback, T, [kValue, k, O]);
                 if (isAbrupt(testResult = ifAbrupt(testResult))) return testResult;
                 if (ToBoolean(testResult) === false) return NormalCompletion(false);
             }
@@ -17192,7 +17234,7 @@ DefineOwnProperty(ArrayPrototype, "some", {
             if (kPresent) {
                 var kValue = Get(O, Pk);
                 if (isAbrupt(kValue = ifAbrupt(kValue))) return kValue;
-                var testResult = callInternalSlot("Call", callback, T, [kValue, k, O]);
+                var testResult = callInternalSlot(SLOTS.CALL, callback, T, [kValue, k, O]);
                 if (isAbrupt(testResult = ifAbrupt(testResult))) return testResult;
                 if (ToBoolean(testResult) === true) return NormalCompletion(true);
             }
@@ -17234,8 +17276,8 @@ var ArrayPrototype_values = function (thisArg, argList) {
         if (isAbrupt(O)) return O;
         return CreateArrayIterator(O, "value");
 };
-setInternalSlot(ArrayProto_values, "Call", ArrayPrototype_values);
-setInternalSlot(ArrayProto_values, "Construct", undefined);
+setInternalSlot(ArrayProto_values, SLOTS.CALL, ArrayPrototype_values);
+setInternalSlot(ArrayProto_values, SLOTS.CONSTRUCT, undefined);
 LazyDefineProperty(ArrayPrototype, "values", ArrayProto_values);
 
 
@@ -17361,7 +17403,7 @@ var ArrayPrototype_reduce = function reduce(thisArg, argList) {
         if (kPresent) {
             var kValue = Get(O, Pk);
             if (isAbrupt(kPresent = ifAbrupt(kPresent))) return kPresent;
-            accumulator = callInternalSlot("Call", callback, undefined, [accumulator, kValue, k, O]);
+            accumulator = callInternalSlot(SLOTS.CALL, callback, undefined, [accumulator, kValue, k, O]);
             if (isAbrupt(accumulator=ifAbrupt(accumulator))) return accumulator;
         }
         k = k + 1;
@@ -17401,7 +17443,7 @@ var ArrayPrototype_reduceRight = function reduceRight(thisArg, argList) {
         if (kPresent) {
             var kValue = Get(O, Pk);
             if (isAbrupt(kPresent = ifAbrupt(kPresent))) return kPresent;
-            accumulator = callInternalSlot("Call", callback, undefined, [accumulator, kValue, k, O]);
+            accumulator = callInternalSlot(SLOTS.CALL, callback, undefined, [accumulator, kValue, k, O]);
             if (isAbrupt(accumulator=ifAbrupt(accumulator))) return accumulator;
         }
         k = k - 1;
@@ -17469,7 +17511,7 @@ var ArrayPrototype_findIndex = function (thisArg, argList) {
         if (kPresent === true) {
             var kValue = Get(O, Pk);
             if (isAbrupt(kValue=ifAbrupt(kValue))) return kValue;
-            var testResult = callInternalSlot("Call", predicate, T, [kValue, k, O]);
+            var testResult = callInternalSlot(SLOTS.CALL, predicate, T, [kValue, k, O]);
             if (isAbrupt(testResult=ifAbrupt(testResult))) return testResult;
             if (ToBoolean(testResult) === true) return NormalCompletion(k);
         }
@@ -17497,7 +17539,7 @@ var ArrayPrototype_find = function (thisArg, argList) {
         if (kPresent === true) {
             var kValue = Get(O, Pk);
             if (isAbrupt(kValue=ifAbrupt(kValue))) return kValue;
-            var testResult = callInternalSlot("Call", predicate, T, [kValue, k, O]);
+            var testResult = callInternalSlot(SLOTS.CALL, predicate, T, [kValue, k, O]);
             if (isAbrupt(testResult=ifAbrupt(testResult))) return testResult;
             if (ToBoolean(testResult) === true) return NormalCompletion(kValue);
         }
@@ -17536,8 +17578,8 @@ var ArrayPrototype_fill = function (thisArg, argList) {
 };
 
 MakeConstructor(ArrayConstructor, true, ArrayPrototype);
-setInternalSlot(ArrayConstructor, "Call", ArrayConstructor_call);
-setInternalSlot(ArrayConstructor, "Construct", ArrayConstructor_construct);
+setInternalSlot(ArrayConstructor, SLOTS.CALL, ArrayConstructor_call);
+setInternalSlot(ArrayConstructor, SLOTS.CONSTRUCT, ArrayConstructor_construct);
 LazyDefineBuiltinConstant(ArrayConstructor, "length", 1);
 
 setInternalSlot(ArrayPrototype, "Prototype", ObjectPrototype);
@@ -17612,19 +17654,19 @@ DefineOwnProperty(ArrayIteratorPrototype, "next", {
             if (isAbrupt(elementValue = ifAbrupt(elementValue))) return elementValue;
 
             result = ArrayCreate(2);
-            callInternalSlot("DefineOwnProperty", result, "0", {
+            callInternalSlot(SLOTS.DEFINEOWNPROPERTY, result, "0", {
                 value: elementKey,
                 writable: true,
                 enumerable: true,
                 configurable: true
             });
-            callInternalSlot("DefineOwnProperty", result, "1", {
+            callInternalSlot(SLOTS.DEFINEOWNPROPERTY, result, "1", {
                 value: elementValue,
                 writable: true,
                 enumerable: true,
                 configurable: true
             });
-            callInternalSlot("DefineOwnProperty", result, "length", {
+            callInternalSlot(SLOTS.DEFINEOWNPROPERTY, result, "length", {
                 value: 2,
                 writable: true,
                 eumerable: false,
@@ -17653,7 +17695,7 @@ DefineOwnProperty(ArrayIteratorPrototype, "next", {
 // String Constructor and Prototype
 // ===========================================================================================================
 
-setInternalSlot(StringConstructor, "Call", function Call(thisArg, argList) {
+setInternalSlot(StringConstructor, SLOTS.CALL, function Call(thisArg, argList) {
     var O = thisArg;
     var s;
     if (!argList.length) s = "";
@@ -17673,7 +17715,7 @@ setInternalSlot(StringConstructor, "Call", function Call(thisArg, argList) {
     }
     return s;
 });
-setInternalSlot(StringConstructor, "Construct", function Construct(argList) {
+setInternalSlot(StringConstructor, SLOTS.CONSTRUCT, function Construct(argList) {
     var F = StringConstructor;
     return OrdinaryConstruct(F, argList);
 });
@@ -17841,7 +17883,7 @@ var StringPrototype_replace = function (thisArg, argList) {
             if (match) {
                 var matched = searchString;
                 if (IsCallable(replaceValue)) {
-                    var replValue = callInternalSlot("Call", replaceValue, undefined, [matched, pos, string]);
+                    var replValue = callInternalSlot(SLOTS.CALL, replaceValue, undefined, [matched, pos, string]);
                     if (isAbrupt(replValue = ifAbrupt(replValue))) return replValue;
                     var replStr = ToString(replValue);
                     if (isAbrupt(replStr = ifAbrupt(replStr))) return replStr;
@@ -17973,7 +18015,7 @@ var StringPrototype_toArray = function (thisArg, argList) {
     var n = 0;
     while (n < len) {
         var c = S[n];
-        callInternalSlot("DefineOwnProperty", array, ToString(n), {
+        callInternalSlot(SLOTS.DEFINEOWNPROPERTY, array, ToString(n), {
             configurable: true,
             enumerable: true,
             value: c,
@@ -18379,7 +18421,7 @@ LazyDefineBuiltinConstant(StringIteratorPrototype, $$toStringTag, "String Iterat
 // Boolean Constructor and Prototype
 // ===========================================================================================================
 
-setInternalSlot(BooleanConstructor, "Call", function Call(thisArg, argList) {
+setInternalSlot(BooleanConstructor, SLOTS.CALL, function Call(thisArg, argList) {
     var O = thisArg;
     var value = argList[0];
     var b = ToBoolean(value);
@@ -18389,7 +18431,7 @@ setInternalSlot(BooleanConstructor, "Call", function Call(thisArg, argList) {
     }
     return NormalCompletion(b);
 });
-setInternalSlot(BooleanConstructor, "Construct", function Construct(argList) {
+setInternalSlot(BooleanConstructor, SLOTS.CONSTRUCT, function Construct(argList) {
     return OrdinaryConstruct(this, argList);
 });
 MakeConstructor(BooleanConstructor, true, BooleanPrototype);
@@ -18493,8 +18535,8 @@ var SymbolFunction_$$create = function (thisArg, argList) {
     return withError("Type", "The Symbol[@@create] method of the Symbol function is supposed to throw a Type Error");
 };
 MakeConstructor(SymbolFunction, true, SymbolPrototype);
-setInternalSlot(SymbolFunction, "Call", SymbolFunction_Call);
-setInternalSlot(SymbolFunction, "Construct", SymbolFunction_Construct);
+setInternalSlot(SymbolFunction, SLOTS.CALL, SymbolFunction_Call);
+setInternalSlot(SymbolFunction, SLOTS.CONSTRUCT, SymbolFunction_Construct);
 setInternalSlot(SymbolPrototype, "Prototype", ObjectPrototype);
 
 LazyDefineBuiltinConstant(SymbolFunction, $$create, CreateBuiltinFunction(realm, SymbolFunction_$$create, 0, "[Symbol.create]"));
@@ -18525,7 +18567,7 @@ LazyDefineBuiltinConstant(ErrorConstructor, "prototype", ErrorPrototype);
 LazyDefineBuiltinConstant(ErrorPrototype, "constructor", ErrorConstructor);
 LazyDefineBuiltinConstant(ErrorPrototype, "name", "Error");
 
-setInternalSlot(ErrorConstructor, "Call", function (thisArg, argList) {
+setInternalSlot(ErrorConstructor, SLOTS.CALL, function (thisArg, argList) {
     var func = ErrorConstructor;
     var message = argList[0];
     var name = "Error";
@@ -18560,7 +18602,7 @@ setInternalSlot(ErrorConstructor, "Call", function (thisArg, argList) {
     return O;
 });
 
-setInternalSlot(ErrorConstructor, "Construct", function (argList) {
+setInternalSlot(ErrorConstructor, SLOTS.CONSTRUCT, function (argList) {
     var F = this;
     var argumentsList = argList;
     return OrdinaryConstruct(F, argumentsList);
@@ -18605,7 +18647,7 @@ function createNativeError(nativeType, ctor, proto) {
     var name = nativeType + "Error";
     var intrProtoName = "%" + nativeType + "ErrorPrototype%";
     //SetFunctionName(ctor, name);
-    setInternalSlot(ctor, "Call", function (thisArg, argList) {
+    setInternalSlot(ctor, SLOTS.CALL, function (thisArg, argList) {
         var func = this;
         var O = thisArg;
         var message = argList[0];
@@ -18639,7 +18681,7 @@ function createNativeError(nativeType, ctor, proto) {
 
     });
 
-    setInternalSlot(ctor, "Construct", function (thisArg, argList) {
+    setInternalSlot(ctor, SLOTS.CONSTRUCT, function (thisArg, argList) {
         var F = ctor;
         var argumentsList = argList;
         return OrdinaryCreateFromConstructor(F, argumentsList);
@@ -18684,7 +18726,7 @@ createNativeError("Eval", EvalErrorConstructor, EvalErrorPrototype);
 // eval("let x = 10"); Function calls the parser and exports.Evaluate
 // ===========================================================================================================
 
-setInternalSlot(EvalFunction, "Call", function (thisArg, argList) {
+setInternalSlot(EvalFunction, SLOTS.CALL, function (thisArg, argList) {
 
     var input, strict, direct, strictCaller, evalRealm, directCallToEval,
         ctx, value, result, script, evalCxt, LexEnv, VarEnv, strictVarEnv,
@@ -18744,14 +18786,14 @@ setInternalSlot(EvalFunction, "Call", function (thisArg, argList) {
     return result;
 });
 
-setInternalSlot(EvalFunction, "Construct", null);
+setInternalSlot(EvalFunction, SLOTS.CONSTRUCT, null);
 
 
 // ===========================================================================================================
 // Date Constructor and Prototype (algorithms above)
 // ===========================================================================================================
 
-setInternalSlot(DateConstructor, "Call", function (thisArg, argList) {
+setInternalSlot(DateConstructor, SLOTS.CALL, function (thisArg, argList) {
 
     var O = thisArg;
     var numberOfArgs = argList.length;
@@ -18819,7 +18861,7 @@ setInternalSlot(DateConstructor, "Call", function (thisArg, argList) {
     }
 });
 
-setInternalSlot(DateConstructor, "Construct", function (thisArg, argList) {
+setInternalSlot(DateConstructor, SLOTS.CONSTRUCT, function (thisArg, argList) {
     return OrdinaryConstruct(this, argList);
 });
 
@@ -19071,7 +19113,7 @@ LazyDefineBuiltinConstant(DatePrototype, $$toStringTag, "Date");
 // encodeURI, decodeURI functions
 // ===========================================================================================================
 
-setInternalSlot(EncodeURIFunction, "Call", function (thisArg, argList) {
+setInternalSlot(EncodeURIFunction, SLOTS.CALL, function (thisArg, argList) {
     var uri = argList[0];
     var uriString = ToString(uri);
     if (isAbrupt(uriString = ifAbrupt(uriString))) return uriString;
@@ -19079,7 +19121,7 @@ setInternalSlot(EncodeURIFunction, "Call", function (thisArg, argList) {
     return Encode(uriString, unescapedUriSet);
 });
 
-setInternalSlot(EncodeURIComponentFunction, "Call", function (thisArg, argList) {
+setInternalSlot(EncodeURIComponentFunction, SLOTS.CALL, function (thisArg, argList) {
     var uriComponent = argList[0];
     var uriComponentString = ToString(uriComponent);
     if (isAbrupt(uriComponentString = ifAbrupt(uriComponentString))) return uriComponentString;
@@ -19087,7 +19129,7 @@ setInternalSlot(EncodeURIComponentFunction, "Call", function (thisArg, argList) 
     return Encode(uriComponentString, unescapedUriComponentSet);
 });
 
-setInternalSlot(DecodeURIFunction, "Call", function (thisArg, argList) {
+setInternalSlot(DecodeURIFunction, SLOTS.CALL, function (thisArg, argList) {
     var encodedUri = argList[0];
     var uriString = ToString(encodedUri);
     if (isAbrupt(uriString = ifAbrupt(uriString))) return uriString;
@@ -19095,7 +19137,7 @@ setInternalSlot(DecodeURIFunction, "Call", function (thisArg, argList) {
     return Decode(uriString, reservedUriSet);
 });
 
-setInternalSlot(DecodeURIComponentFunction, "Call", function (thisArg, argList) {
+setInternalSlot(DecodeURIComponentFunction, SLOTS.CALL, function (thisArg, argList) {
     var encodedUriComponent = argList[0];
     var uriComponentString = ToString(encodedUriComponent);
     if (isAbrupt(uriComponentString = ifAbrupt(uriComponentString))) return uriComponentString;
@@ -19108,11 +19150,11 @@ setInternalSlot(DecodeURIComponentFunction, "Call", function (thisArg, argList) 
 // escape, unescape
 // ===========================================================================================================
 
-setInternalSlot(EscapeFunction, "Call", function (thisArg, argList) {
+setInternalSlot(EscapeFunction, SLOTS.CALL, function (thisArg, argList) {
     return escape(argList[0]);
 });
 
-setInternalSlot(UnescapeFunction, "Call", function (thisArg, argList) {
+setInternalSlot(UnescapeFunction, SLOTS.CALL, function (thisArg, argList) {
     return unescape(argList[0]);
 });
 
@@ -19125,9 +19167,9 @@ var ParseIntFunction_call = function (thisArg, argList) {
 var ParseFloatFunction_call = function (thisArg, argList) {
     return parseFloat(""+argList[0]);
 };
-setInternalSlot(ParseIntFunction, "Call", ParseIntFunction_call);
+setInternalSlot(ParseIntFunction, SLOTS.CALL, ParseIntFunction_call);
 
-setInternalSlot(ParseFloatFunction, "Call", ParseFloatFunction_call);
+setInternalSlot(ParseFloatFunction, SLOTS.CALL, ParseFloatFunction_call);
 
 
 
@@ -19284,7 +19326,7 @@ var NAN = NaN;
 var POSITIVE_INFINITY = Infinity;
 var NEGATIVE_INFINITY = -Infinity;
 
-setInternalSlot(NumberConstructor, "Call", function (thisArg, argList) {
+setInternalSlot(NumberConstructor, SLOTS.CALL, function (thisArg, argList) {
     var value = argList[0];
     var O = thisArg;
     var n;
@@ -19298,7 +19340,7 @@ setInternalSlot(NumberConstructor, "Call", function (thisArg, argList) {
     return n;
 });
 
-setInternalSlot(NumberConstructor, "Construct", function (argList) {
+setInternalSlot(NumberConstructor, SLOTS.CONSTRUCT, function (argList) {
     var F = NumberConstructor;
     return OrdinaryConstruct(F, argList);
 });
@@ -19522,7 +19564,7 @@ function ProxyCreate(target, handler) {
     setInternalSlot(proxy, "Prototype", ProxyPrototype);
     setInternalSlot(proxy, "ProxyTarget", target);
     setInternalSlot(proxy, "ProxyHandler", handler);
-    if (!IsConstructor(target)) setInternalSlot(proxy, "Construct", undefined);
+    if (!IsConstructor(target)) setInternalSlot(proxy, SLOTS.CONSTRUCT, undefined);
     return proxy;
 }
 
@@ -19561,8 +19603,8 @@ var ProxyConstructor_Construct = function (argList) {
 };
 
 LazyDefineBuiltinFunction(ProxyConstructor, "revocable", 2, ProxyConstructor_revocable);
-setInternalSlot(ProxyConstructor, "Call", ProxyConstructor_Call);
-setInternalSlot(ProxyConstructor, "Construct", ProxyConstructor_Construct);
+setInternalSlot(ProxyConstructor, SLOTS.CALL, ProxyConstructor_Call);
+setInternalSlot(ProxyConstructor, SLOTS.CONSTRUCT, ProxyConstructor_Construct);
 
 
 // ===========================================================================================================
@@ -19726,7 +19768,7 @@ var ReflectObject_set =function (thisArg, argList) {
     var key = ToPropertyKey(propertyKey);
     if (isAbrupt(key = ifAbrupt(key))) return key;
     if (receiver === undefined) receiver = target;
-    return callInternalSlot("Set", obj, key, V, receiver);
+    return callInternalSlot(SLOTS.SET, obj, key, V, receiver);
 };
 var ReflectObject_invoke = function (thisArg, argList) {
     var target = argList[0];
@@ -19760,7 +19802,7 @@ var ReflectObject_defineProperty = function (thisArg, argList) {
     if (isAbrupt(key = ifAbrupt(key))) return key;
     var desc = ToPropertyDescriptor(attributes);
     if (isAbrupt(desc = ifAbrupt(desc))) return desc;
-    return callInternalSlot("DefineOwnProperty", obj,key, desc);
+    return callInternalSlot(SLOTS.DEFINEOWNPROPERTY, obj,key, desc);
 };
 var ReflectObject_enumerate = function (thisArg, argList) {
     var target = argList[0];
@@ -19826,8 +19868,8 @@ var ReflectObject_createSelfHostingFunction = function(thisArg, argList) {
    }
    var realmObject = realm === undefined ? getRealm() : getInternalSlot(realm, "RealmObject");
    var F = OrdinaryFunction();
-   setInternalSlot(F, "Code", fn.body)
-   setInternalSlot(F, "FormalParameters", fn.params);
+   setInternalSlot(F, SLOTS.CODE, fn.body)
+   setInternalSlot(F, SLOTS.FORMALPARAMETERS, fn.params);
    setInternalSlot(F, "Strict", !!fn.strict);
    setInternalSlot(F, "Realm", realmObject);
    return NormalCompletion(F);
@@ -19942,8 +19984,8 @@ var ObjectConstructor_construct = function (argList) {
     return ObjectCreate();
 };
 
-setInternalSlot(ObjectConstructor, "Call", ObjectConstructor_call);
-setInternalSlot(ObjectConstructor, "Construct", ObjectConstructor_construct);
+setInternalSlot(ObjectConstructor, SLOTS.CALL, ObjectConstructor_call);
+setInternalSlot(ObjectConstructor, SLOTS.CONSTRUCT, ObjectConstructor_construct);
 
 var ObjectConstructor_seal = function (thisArg, argList) {
         var O;
@@ -20290,7 +20332,7 @@ var ObjectPrototype_valueOf = function valueOf(thisArg, argList) {
 var ObjectPrototype_get_proto = function (thisArg, argList) {
     var O = ToObject(thisArg);
     if (isAbrupt(O = ifAbrupt(O))) return O;
-    return callInternalSlot("GetPrototypeOf", O);
+    return callInternalSlot(SLOTS.GETPROTOTYPEOF, O);
 };
 var ObjectPrototype_set_proto = function (thisArg, argList) {
     var proto = argList[0];
@@ -20299,7 +20341,7 @@ var ObjectPrototype_set_proto = function (thisArg, argList) {
     var protoType = Type(proto);
     if (protoType !== OBJECT && protoType !== null) return proto;
     if (Type(O) !== OBJECT) return proto;
-    var status = callInternalSlot("SetPrototypeOf", O, proto);
+    var status = callInternalSlot(SLOTS.SETPROTOTYPEOF, O, proto);
     if (isAbrupt(status = ifAbrupt(status))) return status;
     if (status === false) return withError("Type", "__proto__: SetPrototypeOf failed.");
     return proto;
@@ -20337,7 +20379,7 @@ DefineOwnProperty(NotifierPrototype, "notify", {
         if (Type(notifier) !== OBJECT) return withError("Type", "Notifier is not an object.");
         var target = getInternalSlot(notifier, "Target");
         var newRecord = ObjectCreate();
-        var status = callInternalSlot("DefineOwnProperty", newRecord, "object", {
+        var status = callInternalSlot(SLOTS.DEFINEOWNPROPERTY, newRecord, "object", {
             value: target,
             writable: false,
             enumerable: true,
@@ -20350,9 +20392,9 @@ DefineOwnProperty(NotifierPrototype, "notify", {
         for (var N in bindings) {
             if (Object.hasOwnProperty.call(bindings, N)) {
                 if (N !== "object") {
-                    value = callInternalSlot("Get", changeRecord, N, changeRecord);
+                    value = callInternalSlot(SLOTS.GET, changeRecord, N, changeRecord);
                     if (isAbrupt(value = ifAbrupt(value))) return value;
-                    status = callInternalSlot("DefineOwnProperty", newRecord, N, {
+                    status = callInternalSlot(SLOTS.DEFINEOWNPROPERTY, newRecord, N, {
                         value: value,
                         writable: false,
                         enumerable: true,
@@ -20385,18 +20427,18 @@ DefineOwnProperty(NotifierPrototype, "performChange", {
         if (Type(changeType) !== STRING) return withError("Type", "changeType has to be a string");
         if (!IsCallable(changeFn)) return withError("Type", "changeFn is not a callable");
         status = BeginChange(target, changeType);
-        var changeRecord = callInternalSlot("Call", changeFn, undefined, []);
+        var changeRecord = callInternalSlot(SLOTS.CALL, changeFn, undefined, []);
         status = EndChange(target, changeType);
         var changeObservers = getInternalSlot(notifier, "ChangeObservers");
         if (!changeObservers.length) return NormalCompletion();
         var newRecord = ObjectCreate();
-        status = callInternalSlot("DefineOwnProperty", newRecord, "object", {
+        status = callInternalSlot(SLOTS.DEFINEOWNPROPERTY, newRecord, "object", {
             value: target,
             writable: false,
             enumerable: true,
             configurable: false
         });
-        status = callInternalSlot("DefineOwnProperty", newRecord, "type", {
+        status = callInternalSlot(SLOTS.DEFINEOWNPROPERTY, newRecord, "type", {
             value: changeType,
             writable: false,
             enumerable: true,
@@ -20407,9 +20449,9 @@ DefineOwnProperty(NotifierPrototype, "performChange", {
         for (var N in bindings) {
             if (Object.hasOwnProperty.call(bindings, N)) {
                 if (N !== "object" && N !== "type") {
-                    value = callInternalSlot("Get", changeRecord, N, changeRecord);
+                    value = callInternalSlot(SLOTS.GET, changeRecord, N, changeRecord);
                     if (isAbrupt(value = ifAbrupt(value))) return value;
-                    status = callInternalSlot("DefineOwnProperty", newRecord, N, {
+                    status = callInternalSlot(SLOTS.DEFINEOWNPROPERTY, newRecord, N, {
                         value: value,
                         writable: false,
                         enumerable: true,
@@ -20497,7 +20539,7 @@ function DeliverChangeRecords(C) {
     var record;
     for (var i = 0, j = changeRecords.length; i < j; i++) {
         if (record = changeRecords[i]) {
-            status = callInternalSlot("DefineOwnProperty", array, ToString(n), {
+            status = callInternalSlot(SLOTS.DEFINEOWNPROPERTY, array, ToString(n), {
                 value: record,
                 writable: true,
                 enumerable: true,
@@ -20507,7 +20549,7 @@ function DeliverChangeRecords(C) {
         }
     }
     if (Get(array, "length") === 0) return false;
-    callInternalSlot("Call", C, undefined, [array]);
+    callInternalSlot(SLOTS.CALL, C, undefined, [array]);
     return true;
 }
 
@@ -20527,20 +20569,20 @@ function DeliverAllChangeRecords() {
 function CreateChangeRecord(type, object, name, oldDesc, newDesc) {
     var changeRecord = ObjectCreate();
     var status;
-    status = callInternalSlot("DefineOwnProperty", changeRecord, "type", {
+    status = callInternalSlot(SLOTS.DEFINEOWNPROPERTY, changeRecord, "type", {
         value: type,
         writable: false,
         enumerable: true,
         configurable: false
     });
-    status = callInternalSlot("DefineOwnProperty", changeRecord, "object", {
+    status = callInternalSlot(SLOTS.DEFINEOWNPROPERTY, changeRecord, "object", {
         value: object,
         writable: false,
         enumerable: true,
         configurable: false
     });
     if (Type(name) === STRING) {
-        status = callInternalSlot("DefineOwnProperty", changeRecord, "name", {
+        status = callInternalSlot(SLOTS.DEFINEOWNPROPERTY, changeRecord, "name", {
             value: name,
             writable: false,
             enumerable: true,
@@ -20549,7 +20591,7 @@ function CreateChangeRecord(type, object, name, oldDesc, newDesc) {
     }
     if (IsDataDescriptor(oldDesc)) {
         if (!IsDataDescriptor(newDesc) || !SameValue(oldDesc.value, newDesc.value)) {
-            status = callInternalSlot("DefineOwnProperty", changeRecord, "oldValue", {
+            status = callInternalSlot(SLOTS.DEFINEOWNPROPERTY, changeRecord, "oldValue", {
                 value: oldDesc,
                 writable: false,
                 enumerable: true,
@@ -20563,31 +20605,31 @@ function CreateChangeRecord(type, object, name, oldDesc, newDesc) {
 
 function CreateSpliceChanceRecord(object, index, removed, addedCount) {
     var changeRecord = ObjectCreate();
-    var status = callInternalSlot("DefineOwnProperty", changeRecord, "type", {
+    var status = callInternalSlot(SLOTS.DEFINEOWNPROPERTY, changeRecord, "type", {
         value: "splice",
         writable: false,
         enumerable: true,
         configurable: false
     });
-    status = callInternalSlot("DefineOwnProperty", changeRecord, "object", {
+    status = callInternalSlot(SLOTS.DEFINEOWNPROPERTY, changeRecord, "object", {
         value: object,
         writable: false,
         enumerable: true,
         configurable: false
     });
-    status = callInternalSlot("DefineOwnProperty", changeRecord, "index", {
+    status = callInternalSlot(SLOTS.DEFINEOWNPROPERTY, changeRecord, "index", {
         value: index,
         writable: false,
         enumerable: true,
         configurable: false
     });
-    status = callInternalSlot("DefineOwnProperty", changeRecord, "removed", {
+    status = callInternalSlot(SLOTS.DEFINEOWNPROPERTY, changeRecord, "removed", {
         value: removed,
         writable: false,
         enumerable: true,
         configurable: false
     });
-    status = callInternalSlot("DefineOwnProperty", changeRecord, "addedCount", {
+    status = callInternalSlot(SLOTS.DEFINEOWNPROPERTY, changeRecord, "addedCount", {
         value: addedCount,
         writable: false,
         enumerable: true,
@@ -20698,7 +20740,7 @@ LazyDefineBuiltinFunction(FunctionPrototype, "valueOf", 0, function valueOf(this
     return thisArg;
 });
 
-setInternalSlot(FunctionConstructor, "Call", function (thisArg, argList) {
+setInternalSlot(FunctionConstructor, SLOTS.CALL, function (thisArg, argList) {
 
     var argCount = argList.length;
     var P = "";
@@ -20738,7 +20780,7 @@ setInternalSlot(FunctionConstructor, "Call", function (thisArg, argList) {
 
     var scope = getRealm().globalEnv;
     var F = thisArg;
-    if (F === undefined || !hasInternalSlot(F, "Code")) {
+    if (F === undefined || !hasInternalSlot(F, SLOTS.CODE)) {
         var C = FunctionConstructor;
         var proto = GetPrototypeFromConstructor(C, "%FunctionPrototype%");
         if (isAbrupt(proto = ifAbrupt(proto))) return proto;
@@ -20755,7 +20797,7 @@ setInternalSlot(FunctionConstructor, "Call", function (thisArg, argList) {
 
 });
 
-setInternalSlot(FunctionConstructor, "Construct", function (argList) {
+setInternalSlot(FunctionConstructor, SLOTS.CONSTRUCT, function (argList) {
     var F = this;
     return OrdinaryConstruct(F, argList);
 });
@@ -20795,12 +20837,12 @@ CreateDataProperty(FunctionPrototype, "toString", CreateBuiltinFunction(realm, f
     if (!IsCallable(F)) return withError("Type", "Function.prototype.toString only applies to functions!");
     var name = Get(F, "name") || "(anonymous)";
     var P, C;
-    P = getInternalSlot(F, "FormalParameters");
-    C = getInternalSlot(F, "Code");
+    P = getInternalSlot(F, SLOTS.FORMALPARAMETERS);
+    C = getInternalSlot(F, SLOTS.CODE);
     var kind = getInternalSlot(F, "FunctionKind");
     var star = kind === "generator" ? "*" : "";
     var callfn;
-    if (!C && (callfn=getInternalSlot(F, "Call"))) {
+    if (!C && (callfn=getInternalSlot(F, SLOTS.CALL))) {
         var code = "// [[Builtin Function native JavaScript Code]]\r\n";
         // createbuiltin wraps the builtin
         if (callfn.steps) callfn = callfn.steps;
@@ -20833,7 +20875,7 @@ DefineOwnProperty(FunctionPrototype, "apply", {
         var argArray = argList[1] || ArrayCreate(0);
         var argList2 = CreateListFromArrayLike(argArray);
         if (isAbrupt(argList2 = ifAbrupt(argList2))) return argList2;
-        return callInternalSlot("Call", func, T, argList2);
+        return callInternalSlot(SLOTS.CALL, func, T, argList2);
     }),
     enumerable: false,
     configurable: true,
@@ -20857,7 +20899,7 @@ DefineOwnProperty(FunctionPrototype, "call", {
         if (!IsCallable(func)) return withError("Type", "fproto.call: func is not callable");
         var T = ToObject(argList[0]);
         var args = argList.slice(1);
-        return callInternalSlot("Call", func, T, args);
+        return callInternalSlot(SLOTS.CALL, func, T, args);
     }),
     writable: true,
     enumerable: false,
@@ -20947,7 +20989,7 @@ LazyDefineProperty(GeneratorPrototype, "throw", CreateBuiltinFunction(realm, fun
     return result;
 }));
 
-setInternalSlot(GeneratorFunction, "Call", function Call(thisArg, argList) {
+setInternalSlot(GeneratorFunction, SLOTS.CALL, function Call(thisArg, argList) {
     // GeneratorFunction(p1...pn, body)
     var argCount = argList.length;
     var P = "";
@@ -20990,7 +21032,7 @@ setInternalSlot(GeneratorFunction, "Call", function Call(thisArg, argList) {
 
     var scope = getRealm().globalEnv;
     var F = thisArg;
-    if (F == undefined || !hasInternalSlot(F, "Code")) {
+    if (F == undefined || !hasInternalSlot(F, SLOTS.CODE)) {
         F = FunctionAllocate(GeneratorFunction, "generator");
     }
     if (getInternalSlot(F, "FunctionKind") !== "generator") return withError("Type", "function object not a generator");
@@ -21001,7 +21043,7 @@ setInternalSlot(GeneratorFunction, "Call", function Call(thisArg, argList) {
     return NormalCompletion(F);
 });
 
-setInternalSlot(GeneratorFunction, "Construct", function (argList) {
+setInternalSlot(GeneratorFunction, SLOTS.CONSTRUCT, function (argList) {
     var F = GeneratorFunction;
     return OrdinaryConstruct(F, argList);
 });
@@ -21031,11 +21073,11 @@ function Str(key, holder, _state) {
     if (Type(value) === OBJECT) {
         var toJSON = Get(value, "toJSON");
         if (IsCallable(toJSON)) {
-            value = callInternalSlot("Call", toJSON, value, [key]);
+            value = callInternalSlot(SLOTS.CALL, toJSON, value, [key]);
         }
     }
     if (IsCallable(replacer)) {
-        value = callInternalSlot("Call", replacer, holder, [key, value]);
+        value = callInternalSlot(SLOTS.CALL, replacer, holder, [key, value]);
     }
     if (Type(value) === OBJECT) {
         if (hasInternalSlot(value, "NumberData")) {
@@ -21186,7 +21228,7 @@ function Walk(holder, name, reviver) {
                 if (newElement === undefined) {
                     status = Delete(val, I);
                 } else {
-                    status = callInternalSlot("DefineOwnProperty", val, ToString(I), {
+                    status = callInternalSlot(SLOTS.DEFINEOWNPROPERTY, val, ToString(I), {
                         value: newElement,
                         writable: true,
                         enumerable: true,
@@ -21207,7 +21249,7 @@ function Walk(holder, name, reviver) {
                 if (newElement === undefined) {
                     status = Delete(val, P);
                 } else {
-                    status = callInternalSlot("DefineOwnProperty", val, P, {
+                    status = callInternalSlot(SLOTS.DEFINEOWNPROPERTY, val, P, {
                         value: newElement,
                         writable: true,
                         enumerable: true,
@@ -21220,7 +21262,7 @@ function Walk(holder, name, reviver) {
             }
         }
     }
-    return callInternalSlot("Call", reviver, holder, [name, val]);
+    return callInternalSlot(SLOTS.CALL, reviver, holder, [name, val]);
 }
 
 DefineOwnProperty(JSONObject, "parse", {
@@ -21369,7 +21411,7 @@ var PromiseConstructor_resolve = function (thisArg, argList) {
     }
     var promiseCapability = NewPromiseCapability(C);
     if (isAbrupt(promiseCapability = ifAbrupt(promiseCapability))) return promiseCapability;
-    var resolveResult = callInternalSlot("Call", promiseCapability.Resolve, undefined, [x]);
+    var resolveResult = callInternalSlot(SLOTS.CALL, promiseCapability.Resolve, undefined, [x]);
     if (isAbrupt(resolveResult = ifAbrupt(resolveResult))) return resolveResult;
     return NormalCompletion(promiseCapability.Promise);
 };
@@ -21378,7 +21420,7 @@ var PromiseConstructor_reject = function (thisArg, argList) {
     var C = thisArg;
     var promiseCapability = NewPromiseCapability(C);
     if (isAbrupt(promiseCapability = ifAbrupt(promiseCapability))) return promiseCapability;
-    var rejectResult = callInternalSlot("Call", promiseCapability.Reject, undefined, [r]);
+    var rejectResult = callInternalSlot(SLOTS.CALL, promiseCapability.Reject, undefined, [r]);
     if (isAbrupt(rejectResult = ifAbrupt(rejectResult))) return rejectResult;
     return NormalCompletion(promiseCapability.Promise)
 };
@@ -21391,7 +21433,7 @@ var PromiseConstructor_cast = function (thisArg, argList) {
     }
     var promiseCapability = NewPromiseCapability(C);
     if (isAbrupt(promiseCapability = ifAbrupt(promiseCapability))) return promiseCapability;
-    var resolveResult = callInternalSlot("Call", promiseCapability.Resolve, undefined, [x]);
+    var resolveResult = callInternalSlot(SLOTS.CALL, promiseCapability.Resolve, undefined, [x]);
     if (isAbrupt(resolveResult = ifAbrupt(resolveResult))) return resolveResult;
     return NormalCompletion(promiseCapability.Promise);
 };
@@ -21428,13 +21470,13 @@ function makePromiseAllResolveElementsFunction () {
         if ((result = IfAbruptRejectPromise(result, promiseCapability)) && isAbrupt(result)) return result;
         remainingElementsCount.value -= 1;
         if (remainingElementsCount.value === 0) {
-            return callInternalSlot("Call", promiseCapability.Resolve, undefined, [values]);
+            return callInternalSlot(SLOTS.CALL, promiseCapability.Resolve, undefined, [values]);
         }
         return NormalCompletion(undefined);
     };
     //var F = CreateBuiltinFunction(getRealm(), "Promise.all Resolve Elements", 1, PromiseAllResolveElements_call);
     var F = OrdinaryFunction();
-    setInternalSlot(F, "Call", PromiseAllResolveElements_call);
+    setInternalSlot(F, SLOTS.CALL, PromiseAllResolveElements_call);
     return F;
 }
 var PromiseConstructor_all = function (thisArg, argList) {
@@ -21453,7 +21495,7 @@ var PromiseConstructor_all = function (thisArg, argList) {
         if ((next=IfAbruptRejectPromise(next, promiseCapability)) && isAbrupt(next)) return next;
         if (next === false) {
             if (index == 0) {
-                var resolveResult = callInternalSlot("Call", promiseCapability.Resolve, undefined, [values]);
+                var resolveResult = callInternalSlot(SLOTS.CALL, promiseCapability.Resolve, undefined, [values]);
                 if (isAbrupt(resolveResult = ifAbrupt(resolveResult))) return resolveResult;
             }
             return NormalCompletion(promiseCapability.Promise)
@@ -21509,8 +21551,8 @@ var PromisePrototype_catch = function (thisArg, argList) {
 };
 //SetFunctionName(PromiseConstructor, "Promise");
 MakeConstructor(PromiseConstructor, true, PromisePrototype);
-setInternalSlot(PromiseConstructor, "Call", PromiseConstructor_call);
-setInternalSlot(PromiseConstructor, "Construct", PromiseConstructor_Construct);
+setInternalSlot(PromiseConstructor, SLOTS.CALL, PromiseConstructor_call);
+setInternalSlot(PromiseConstructor, SLOTS.CONSTRUCT, PromiseConstructor_Construct);
 LazyDefineProperty(PromiseConstructor, $$create, CreateBuiltinFunction(realm, PromiseConstructor_$$create, 0, "[Symbol.create]"));
 LazyDefineBuiltinFunction(PromiseConstructor, "resolve", 1, PromiseConstructor_resolve);
 LazyDefineBuiltinFunction(PromiseConstructor, "reject", 1, PromiseConstructor_reject);
@@ -21538,7 +21580,7 @@ function PromiseBuiltinCapability() {
 function PromiseOf(value) {
     var capability = NewPromiseCapability();
     if (isAbrupt(capability = ifAbrupt(capability))) return capability;
-    var resolveResult = callInternalSlot("Call", capability.Resolve, undefined, [value]);
+    var resolveResult = callInternalSlot(SLOTS.CALL, capability.Resolve, undefined, [value]);
     if (isAbrupt(resolveResult = ifAbrupt(resolveResult))) return resolveResult;
     return NormalCompletion(capability.Promise);
 }
@@ -21568,14 +21610,14 @@ function UpdatePromiseFromPotentialThenable(x, promiseCapability) {
     if (Type(x) !== OBJECT) return NormalCompletion("not a thenable");
     var then = Get(x, "then");
     if (isAbrupt(then = ifAbrupt(then))) {
-        var rejectResult = callInternalSlot("Call", promiseCapability.Reject, undefined, [then.value]);
+        var rejectResult = callInternalSlot(SLOTS.CALL, promiseCapability.Reject, undefined, [then.value]);
         if (isAbrupt(rejectResult = ifAbrupt(rejectResult))) return rejectResult;
         return NormalCompletion(null);
     }
     if (!IsCallable(then)) return NormalCompletion("not a thenable");
-    var thenCallResult = callInternalSlot("Call", then, x, [promiseCapability.Resolve, promiseCapability.Reject]);
+    var thenCallResult = callInternalSlot(SLOTS.CALL, then, x, [promiseCapability.Resolve, promiseCapability.Reject]);
     if (isAbrupt(thenCallResult = ifAbrupt(thenCallResult))) {
-        rejectResult = callInternalSlot("Call", promiseCapability.Reject, undefined, [thenCallResult.value]);
+        rejectResult = callInternalSlot(SLOTS.CALL, promiseCapability.Reject, undefined, [thenCallResult.value]);
         if (isAbrupt(rejectResult = ifAbrupt(rejectResult))) return rejectResult;
     }
     return NormalCompletion(null);
@@ -21598,12 +21640,12 @@ function PromiseReactionTask() {
         var promiseCapability = reaction.Capability;
         var handler = reaction.Handler;
         var PromiseTaskQueue = getTasks(getRealm(), "Promise");
-        var handlerResult = callInternalSlot("Call", handler, undefined, [argument]);
+        var handlerResult = callInternalSlot(SLOTS.CALL, handler, undefined, [argument]);
         if (isAbrupt(handlerResult = ifAbrupt(handlerResult))) {
-            var status = callInternalSlot("Call", promiseCapability.Reject, undefined, [handlerResult.value]);
+            var status = callInternalSlot(SLOTS.CALL, promiseCapability.Reject, undefined, [handlerResult.value]);
             return NextTask(status, PromiseTaskQueue);
         }
-        status = callInternalSlot("Call", promiseCapability.Resolve, undefined, [handlerResult]);
+        status = callInternalSlot(SLOTS.CALL, promiseCapability.Resolve, undefined, [handlerResult]);
         return NextTask(status, PromiseTaskQueue);
     };
     F = CreateBuiltinFunction(getRealm(), PromiseReactionTask_call, "PromiseReactionTask", 2);
@@ -21611,7 +21653,7 @@ function PromiseReactionTask() {
 }
 function IfAbruptRejectPromise(value, capability) {
     if (isAbrupt(value=ifAbrupt(value))) {
-        var rejectedResult = callInternalSlot("Call", capability.Reject, undefined, [value.value]);
+        var rejectedResult = callInternalSlot(SLOTS.CALL, capability.Reject, undefined, [value.value]);
         if (isAbrupt(rejectedResult = ifAbrupt(rejectedResult))) return rejectedResult;
         return NormalCompletion(capability.Promise);
     }
@@ -21630,7 +21672,7 @@ function makePromiseRejectFunction() {
         alreadyResolved.value = true;
         return RejectPromise(promise, reason);
     };
-    setInternalSlot(F, "Call", PromiseRejectFunction_call);
+    setInternalSlot(F, SLOTS.CALL, PromiseRejectFunction_call);
     return F;
 }
 function makePromiseResolveFunction() {
@@ -21659,16 +21701,16 @@ function makePromiseResolveFunction() {
             return FulfillPromise(promise, resolution);
         }
         var resolvingFunctions = CreateResolvingFunctions(promise);
-        var thenCallResult = callInternalSlot("Call", then, resolution, [resolvingFunctions.Resolve, resolvingFunctions.Reject]);
+        var thenCallResult = callInternalSlot(SLOTS.CALL, then, resolution, [resolvingFunctions.Resolve, resolvingFunctions.Reject]);
 
         if (isAbrupt(thenCallResult=ifAbrupt(thenCallResult))) {
-            return callInternalSlot("Call", resolvingFunctions.Reject, undefined, [thenCallResult.value]);
+            return callInternalSlot(SLOTS.CALL, resolvingFunctions.Reject, undefined, [thenCallResult.value]);
         }
 
         return NormalCompletion(thenCallResult);
 
     };
-    setInternalSlot(F, "Call", PromiseResolveFunction_call);
+    setInternalSlot(F, SLOTS.CALL, PromiseResolveFunction_call);
     return F;
 }
 function CreateResolvingFunctions (promise) {
@@ -21710,7 +21752,7 @@ function CreatePromiseCapabilityRecord(promise, constructor) {
     var promiseCapability = PromiseCapability(promise, undefined, undefined);
     var executor = GetCapabilitiesExecutor();
     setInternalSlot(executor, "Capability", promiseCapability);
-    var constructorResult = callInternalSlot("Call", constructor, promise, [executor]);
+    var constructorResult = callInternalSlot(SLOTS.CALL, constructor, promise, [executor]);
     if (isAbrupt(constructorResult = ifAbrupt(constructorResult))) return constructorResult;
     if (!IsCallable(promiseCapability.Resolve)) return withError("Type", "capability.[[Resolve]] is not a function");
     if (!IsCallable(promiseCapability.Reject)) return withError("Type", "capability.[[Reject]] is not a function");
@@ -21730,7 +21772,7 @@ function GetCapabilitiesExecutor () {
         promiseCapability.Reject = reject;
         return NormalCompletion(undefined);
     };
-    setInternalSlot(F, "Call", GetCapabilitiesExecutor_call);
+    setInternalSlot(F, SLOTS.CALL, GetCapabilitiesExecutor_call);
     return F;
 }
 function InitializePromise(promise, executor) {
@@ -21740,9 +21782,9 @@ function InitializePromise(promise, executor) {
     setInternalSlot(promise, "PromiseResolveReactions", []);
     setInternalSlot(promise, "PromiseRejectReactions", []);
     var resolvingFunctions = CreateResolvingFunctions(promise);
-    var completion = callInternalSlot("Call", executor, undefined, [resolvingFunctions.Resolve, resolvingFunctions.Reject]);
+    var completion = callInternalSlot(SLOTS.CALL, executor, undefined, [resolvingFunctions.Resolve, resolvingFunctions.Reject]);
     if (isAbrupt(completion=ifAbrupt(completion))) {
-        var status = callInternalSlot("Call", resolvingFunctions.Reject, undefined, [completion.value]);
+        var status = callInternalSlot(SLOTS.CALL, resolvingFunctions.Reject, undefined, [completion.value]);
         if (isAbrupt(status)) return status;
     }
     return NormalCompletion(promise);
@@ -21771,7 +21813,7 @@ function makeIdentityFunction () {
         var x = argList[0];
         return NormalCompletion(x);
     };
-    setInternalSlot(F, "Call", Identity_call);
+    setInternalSlot(F, SLOTS.CALL, Identity_call);
     SetFunctionName(F, "IdentityFunction");
     SetFunctionLength(F, 1);
     return F;
@@ -21785,7 +21827,7 @@ function makeResolutionHandlerFunction () {
         var rejectionHandler = getInternalSlot(handler, "RejectionHandler");
         if (SameValue(x, promise)) {
             var selfResolutionError = withError("Type", "selfResolutionError");
-            return callInternalSlot("Call", rejectionHandler, undefined, [selfResolutionError]);
+            return callInternalSlot(SLOTS.CALL, rejectionHandler, undefined, [selfResolutionError]);
         }
         var C = getInternalSlot(promise, "PromiseConstructor");
         var promiseCapability = NewPromiseCapability(C);
@@ -21795,9 +21837,9 @@ function makeResolutionHandlerFunction () {
         if (updateResult !== "not a thenable") {
             return Invoke(promiseCapability.Promise, "then", [fulfillmentHandler, rejectionHandler]);
         }
-        return callInternalSlot("Call", fulfillmentHandler, undefined, [x]);
+        return callInternalSlot(SLOTS.CALL, fulfillmentHandler, undefined, [x]);
     };
-    setInternalSlot(handler, "Call", handler_call);
+    setInternalSlot(handler, SLOTS.CALL, handler_call);
     return handler;
 }
 function makeThrowerFunction () {
@@ -21806,7 +21848,7 @@ function makeThrowerFunction () {
         var e = argList[0];
         return Completion("throw", e, empty);
     };
-    setInternalSlot(F, "Call", ThrowerFunction_call);
+    setInternalSlot(F, SLOTS.CALL, ThrowerFunction_call);
     SetFunctionName(F, "ThrowerFunction");
     SetFunctionLength(F, 1);
     return F;
@@ -22047,7 +22089,7 @@ var RegExpPrototype_replace = function (thisArg, argList) {
             if (functionalReplace === true) {
                 var replacerArgs = [matched];
                 replacerArgs = replacerArgs.concat(captures);
-                var replValue = callInternalSlot("Call", replaceValue, undefined, replacerArgs);
+                var replValue = callInternalSlot(SLOTS.CALL, replaceValue, undefined, replacerArgs);
                 var replacement = ToString(replValue);
             } else {
                 replacement = GetReplaceSubstitution(matched, string, position, captures);
@@ -22114,8 +22156,8 @@ var RegExpPrototype_toString = function (thisArg, argList) {
 };
 
 
-setInternalSlot(RegExpConstructor, "Call", RegExp_Call);
-setInternalSlot(RegExpConstructor, "Construct", RegExp_Construct);
+setInternalSlot(RegExpConstructor, SLOTS.CALL, RegExp_Call);
+setInternalSlot(RegExpConstructor, SLOTS.CONSTRUCT, RegExp_Construct);
 
 LazyDefineBuiltinConstant(RegExpConstructor, "prototype", RegExpPrototype);
 LazyDefineBuiltinConstant(RegExpPrototype, "constructor", RegExpConstructor);
@@ -22150,7 +22192,7 @@ LazyDefineBuiltinFunction(RegExpPrototype, "toString", 1, RegExpPrototype_toStri
 // ArrayBuffer
 // ===========================================================================================================
 
-setInternalSlot(ArrayBufferConstructor, "Call", function (thisArg, argList) {
+setInternalSlot(ArrayBufferConstructor, SLOTS.CALL, function (thisArg, argList) {
     var length = argList[0];
     var O = thisArg;
     if (Type(O) !== OBJECT || (!hasInternalSlot(O, "ArrayBufferData")) || (getInternalSlot(O, "ArrayBufferData") !== undefined)) {
@@ -22164,7 +22206,7 @@ setInternalSlot(ArrayBufferConstructor, "Call", function (thisArg, argList) {
     return SetArrayBufferData(O, byteLength);
 });
 
-setInternalSlot(ArrayBufferConstructor, "Construct", function (argList) {
+setInternalSlot(ArrayBufferConstructor, SLOTS.CONSTRUCT, function (argList) {
     var F = ArrayBufferConstructor;
     return OrdinaryConstruct(F, argList);
 });
@@ -22447,8 +22489,8 @@ var DataViewPrototype_setUint32 = function (thisArg, argList) {
 
 
 MakeConstructor(DataViewConstructor, true, DataViewPrototype);
-setInternalSlot(DataViewConstructor, "Call", DataViewConstructor_Call);
-setInternalSlot(DataViewConstructor, "Construct", DataViewConstructor_Construct);
+setInternalSlot(DataViewConstructor, SLOTS.CALL, DataViewConstructor_Call);
+setInternalSlot(DataViewConstructor, SLOTS.CONSTRUCT, DataViewConstructor_Construct);
 LazyDefineBuiltinFunction(DataViewConstructor, $$create, 1, DataViewConstructor_$$create);
 LazyDefineAccessorFunction(DataViewPrototype, "buffer", 0, DataViewPrototype_get_buffer);
 LazyDefineAccessorFunction(DataViewPrototype, "byteLength", 0, DataViewPrototype_get_byteLength);
@@ -22697,14 +22739,14 @@ var TypedArrayConstructor_from = function from(thisArg, argList) {
             }
         }
         var len = values.length;
-        newObj = callInternalSlot("Construct", C, C, [len]);
+        newObj = callInternalSlot(SLOTS.CONSTRUCT, C, C, [len]);
         if (isAbrupt(newObj = ifAbrupt(newObj))) return newObj;
         k = 0;
         while (k < len) {
             Pk = ToString(k);
             kValue = values[k];
             if (mapping) {
-                mappedValue = callInternalSlot("Call", mapfn, T, [kValue]);
+                mappedValue = callInternalSlot(SLOTS.CALL, mapfn, T, [kValue]);
                 if (isAbrupt(mappedValue = ifAbrupt(mappedValue))) return mappedValue;
             } else mappedValue = kValue;
             putStatus = Put(newObj, Pk, mappedValue, true);
@@ -22717,7 +22759,7 @@ var TypedArrayConstructor_from = function from(thisArg, argList) {
     var lenValue = Get(items, "length");
     len = ToLength(lenValue);
     if (isAbrupt(len = ifAbrupt(len))) return len;
-    newObj = callInternalSlot("Construct", C, C, [len]);
+    newObj = callInternalSlot(SLOTS.CONSTRUCT, C, C, [len]);
     if (isAbrupt(newObj = ifAbrupt(newObj))) return newObj;
 
     var mappedValue;
@@ -22727,7 +22769,7 @@ var TypedArrayConstructor_from = function from(thisArg, argList) {
         kValue = Get(items, Pk);
         if (isAbrupt(kValue = ifAbrupt(kValue))) return kValue;
         if (mapping) {
-            mappedValue = callInternalSlot("Call", mapfn, T, [kValue, k, items]);
+            mappedValue = callInternalSlot(SLOTS.CALL, mapfn, T, [kValue, k, items]);
             if (isAbrupt(mappedValue = ifAbrupt(mappedValue))) return mappedValue;
         } else {
             mappedValue = kValue;
@@ -22746,7 +22788,7 @@ var TypedArrayConstructor_of = function of(thisArg, argList) {
     if (isAbrupt(len=ifAbrupt(length))) return length;
     var C = thisArg;
     if (IsConstructor(C)) {
-        var newObj = callInternalSlot("Construct", C, C, [len]);
+        var newObj = callInternalSlot(SLOTS.CONSTRUCT, C, C, [len]);
         if (isAbrupt(newObj = ifAbrupt(newObj))) return newObj;
     } else {
         return withError("Type", "The thisValue has to be a constructor");
@@ -22765,7 +22807,7 @@ var TypedArrayConstructor_of = function of(thisArg, argList) {
     return NormalCompletion(newObj);
 };
 
-setInternalSlot(TypedArrayConstructor, "Call", TypedArrayConstructor_Call);
+setInternalSlot(TypedArrayConstructor, SLOTS.CALL, TypedArrayConstructor_Call);
 LazyDefineProperty(TypedArrayConstructor, $$create, CreateBuiltinFunction(realm, TypedArrayConstructor_$$create, 0, "[Symbol.create]"));
 LazyDefineProperty(TypedArrayConstructor, "from", CreateBuiltinFunction(realm, TypedArrayConstructor_from, 1, "from"));
 LazyDefineProperty(TypedArrayConstructor, "of", CreateBuiltinFunction(realm, TypedArrayConstructor_of, 2, "of"));
@@ -22869,7 +22911,7 @@ function createTypedArrayVariant(_type, _bpe, _ctor, _proto, ctorName) {
     setInternalSlot(_ctor, "Realm", getRealm());
     setInternalSlot(_ctor, "TypedArrayConstructor", ctorName);
     setInternalSlot(_ctor, "Prototype", TypedArrayConstructor);
-    setInternalSlot(_ctor, "Call", function (thisArg, argList) {
+    setInternalSlot(_ctor, SLOTS.CALL, function (thisArg, argList) {
         var O = thisArg;
         if (Type(O) !== OBJECT) return withError("Type", "O is not an object");
         if (!hasInternalSlot(O, "TypedArrayName")) return withError("Type", "[[TypedArrayName]] is missing");
@@ -22881,9 +22923,9 @@ function createTypedArrayVariant(_type, _bpe, _ctor, _proto, ctorName) {
         var realmF = getInternalSlot(F, "Realm");
         var sup = Get(realmF.intrinsics, "%TypedArray%");
         var args = argList;
-        return callInternalSlot("Call", sup, O, args);
+        return callInternalSlot(SLOTS.CALL, sup, O, args);
     });
-    setInternalSlot(_ctor, "Construct", function (argList) {
+    setInternalSlot(_ctor, SLOTS.CONSTRUCT, function (argList) {
         return OrdinaryConstruct(this, argList);
     });
     LazyDefineBuiltinConstant(_ctor, "BYTES_PER_ELEMENT", _bpe);
@@ -22908,7 +22950,7 @@ createTypedArrayVariant("Float64", 8, Float64ArrayConstructor, Float64ArrayProto
 // set Timeout
 // ===========================================================================================================
 
-setInternalSlot(SetTimeoutFunction, "Call", function (thisArg, argList) {
+setInternalSlot(SetTimeoutFunction, SLOTS.CALL, function (thisArg, argList) {
     var func = argList[0];
     var timeout = argList[1] || 0;
     var task;
@@ -22933,7 +22975,7 @@ setInternalSlot(SetTimeoutFunction, "Call", function (thisArg, argList) {
 setInternalSlot(MapConstructor, "Prototype", FunctionPrototype);
 setInternalSlot(MapPrototype, "Prototype", ObjectPrototype);
 
-setInternalSlot(MapConstructor, "Call", function Call(thisArg, argList) {
+setInternalSlot(MapConstructor, SLOTS.CALL, function Call(thisArg, argList) {
 
     var iterable = argList[0];
     var comparator = argList[1];
@@ -22977,12 +23019,12 @@ setInternalSlot(MapConstructor, "Call", function Call(thisArg, argList) {
         if (isAbrupt(k = ifAbrupt(k))) return k;
         v = Get(nextItem, "1");
         if (isAbrupt(v = ifAbrupt(v))) return v;
-        status = callInternalSlot("Call", adder, map, [k, v]);
+        status = callInternalSlot(SLOTS.CALL, adder, map, [k, v]);
         if (isAbrupt(status)) return status;
     }
 });
 
-setInternalSlot(MapConstructor, "Construct", function Construct(argList) {
+setInternalSlot(MapConstructor, SLOTS.CONSTRUCT, function Construct(argList) {
     var F = this;
     var args = argList;
     return OrdinaryConstruct(F, args);
@@ -23288,7 +23330,7 @@ DefineOwnProperty(MapIteratorPrototype, "next", {
 setInternalSlot(SetConstructor, "Prototype", FunctionPrototype);
 setInternalSlot(SetPrototype, "Prototype", ObjectPrototype);
 
-setInternalSlot(SetConstructor, "Call", function Call(thisArg, argList) {
+setInternalSlot(SetConstructor, SLOTS.CALL, function Call(thisArg, argList) {
     var iterable = argList[0];
     var comparator = argList[1];
     var set = thisArg;
@@ -23331,13 +23373,13 @@ setInternalSlot(SetConstructor, "Call", function Call(thisArg, argList) {
         if (isAbrupt(k = ifAbrupt(k))) return k;
         v = Get(nextItem, "1");
         if (isAbrupt(v = ifAbrupt(v))) return v;
-        status = callInternalSlot("Call", adder, set, [v]);
+        status = callInternalSlot(SLOTS.CALL, adder, set, [v]);
         if (isAbrupt(status)) return status;
     }
 
 
 });
-setInternalSlot(SetConstructor, "Construct", function Construct(argList) {
+setInternalSlot(SetConstructor, SLOTS.CONSTRUCT, function Construct(argList) {
     var F = this;
     var args = argList;
     return OrdinaryConstruct(F, args);
@@ -23357,7 +23399,7 @@ DefineOwnProperty(SetConstructor, $$create, {
 });
 
 DefineOwnProperty(SetPrototype, $$toStringTag, {
-    value: "Set",
+    value: SLOTS.SET,
     writable: false,
     enumerable: false,
     configurable: false
@@ -23563,7 +23605,7 @@ DefineOwnProperty(SetIteratorPrototype, "next", {
 // ===========================================================================================================
 
 setInternalSlot(EmitterPrototype, "Prototype", ObjectPrototype);
-setInternalSlot(EmitterConstructor, "Call", function Call(thisArg, argList) {
+setInternalSlot(EmitterConstructor, SLOTS.CALL, function Call(thisArg, argList) {
     var O = thisArg;
     var type = Type(O);
     var has, listeners;
@@ -23585,7 +23627,7 @@ setInternalSlot(EmitterConstructor, "Call", function Call(thisArg, argList) {
     return O;
 });
 
-setInternalSlot(EmitterConstructor, "Construct", function Call(argList) {
+setInternalSlot(EmitterConstructor, SLOTS.CONSTRUCT, function Call(argList) {
     var F = this;
     var args = argList;
     return OrdinaryConstruct(F, args);
@@ -23667,7 +23709,7 @@ DefineOwnProperty(EmitterPrototype, "once", {
 
                 return CreateBuiltinFunction(realm, function once_callback(thisArg, argList) {
                     if (callback) {
-                        callInternalSlot("Call", callback, thisArg, argList);
+                        callInternalSlot(SLOTS.CALL, callback, thisArg, argList);
                         callback = null;
                     }
                 });
@@ -23765,7 +23807,7 @@ DefineOwnProperty(EmitterPrototype, "emit", {
         var result;
         for (var i = 0, j = list.length; i < j; i++) {
             if (callback = list[i]) {
-                result = callInternalSlot("Call", callback, thisArg, values);
+                result = callInternalSlot(SLOTS.CALL, callback, thisArg, values);
                 if (isAbrupt(result)) return result;
             }
         }
@@ -23900,7 +23942,7 @@ var StructType_Call = function (thisArg, argList) {
 // that all "objects" gonna be refactored for typed memory is some other topic.
 
 // StructType
-setInternalSlot(StructTypeConstructor, "Call", StructType_Call);
+setInternalSlot(StructTypeConstructor, SLOTS.CALL, StructType_Call);
 // StructType.prototype
 
 
@@ -24351,6 +24393,7 @@ define("runtime", function () {
     var IsAnonymousFunctionDefinition = statics.IsAnonymousFunctionDefinition;
     var StringValue = statics.StringValue;
     var IsIdentifierRef = statics.IsIdentifierRef;
+    var SLOTS = ecma.SLOTS;
     var OBJECT = ecma.OBJECT;
     var NUMBER = ecma.NUMBER;
     var STRING = ecma.STRING;
@@ -24663,8 +24706,8 @@ define("runtime", function () {
 
         var name;
         var boundNamesInPattern;
-        var code = getCode(script,"body");
-        var strict = !!getCode(script,"strict");
+        var code = script.body
+        var strict = !!script.strict;
         var cx = getContext();
         if (strict) cx.strict = true;
         var lexNames = LexicallyDeclaredNames(code);
@@ -24823,15 +24866,15 @@ define("runtime", function () {
 
         var F;
         var cx = getContext();
-        var params = getCode(node, "params");
-        var body = getCode(node, "body");
-        var generator = !!getCode(node,"generator");
-        var needsSuper = !!getCode(node, "needsSuper");
-        var strict = cx.strict || !!getCode(node,"strict");
+        var params = node.params;
+        var body = node.body;
+        var generator = !!node.generator;
+        var needsSuper = !!node.needsSuper;
+        var strict = cx.strict || !!node.strict;
         var scope = env;
 
         if (!generator) {
-            var name = getCode(node,"id");
+            var name = node.id;
             F = FunctionCreate("normal", params, body, scope, strict);
             // 14.1.16 4.
             if (needsSuper) MakeMethod(F, name, undefined);
@@ -24839,7 +24882,7 @@ define("runtime", function () {
             if (name) SetFunctionName(F, name);
         } else if (generator) {
             strict = true;
-            var name = getCode(node,"id");
+            var name = node.id;
             F = GeneratorFunctionCreate("generator", params, body, scope, strict);
             var prototype = ObjectCreate(getIntrinsic("%GeneratorPrototype%"));
             if (name) SetFunctionName(F, name);
@@ -24856,10 +24899,10 @@ define("runtime", function () {
         //console.log("ins=");
         //console.dir(argList);
         var cx = getContext();
-        var code = getInternalSlot(F, "Code");
-        var formals = getInternalSlot(F, "FormalParameters");
-        var strict = getInternalSlot(F, "Strict");
-        var thisMode = getInternalSlot(F, "ThisMode");
+        var code = getInternalSlot(F, SLOTS.CODE);
+        var formals = getInternalSlot(F, SLOTS.FORMALPARAMETERS);
+        var strict = getInternalSlot(F, SLOTS.STRICT);
+        var thisMode = getInternalSlot(F, SLOTS.THISMODE);
         var boundNamesInPattern;
         var parameterNames = BoundNames(formals);
         var varDeclarations = VarScopedDeclarations(code);
@@ -24939,7 +24982,7 @@ define("runtime", function () {
         }
         var ao = InstantiateArgumentsObject(argList);
         if (isAbrupt(ao = ifAbrupt(ao))) return ao;
-        var formalStatus = BindingInitialisation(formals, ao, undefined);
+        var formalStatus = BindingInitialization(formals, ao, undefined);
         if (isAbrupt(formalStatus)) return formalStatus;
 
         if (argumentsObjectNeeded) {
@@ -24955,7 +24998,7 @@ define("runtime", function () {
     function InstantiateArgumentsObject(args) {
         var len = args.length;
         var obj = ArgumentsExoticObject();
-        /* callInternalSlot("DefineOwnProperty", */
+        /* callInternalSlot(SLOTS.DEFINEOWNPROPERTY, */
 
         writePropertyDescriptor(obj, "length", {
             value: len,
@@ -24967,7 +25010,7 @@ define("runtime", function () {
         var val;
         while (indx >= 0) {
             val = args[indx];
-            //callInternalSlot("DefineOwnProperty", 
+            //callInternalSlot(SLOTS.DEFINEOWNPROPERTY,
             writePropertyDescriptor(obj, ToString(indx), {
                 value: val,
                 writable: true,
@@ -25014,7 +25057,7 @@ define("runtime", function () {
                             mappedNames[name] = true;
                             g = MakeArgGetter(name, env);
                             s = MakeArgSetter(name, env);
-                            callInternalSlot("DefineOwnProperty", map, name, {
+                            callInternalSlot(SLOTS.DEFINEOWNPROPERTY, map, name, {
                                 get: g,
                                 set: s,
                                 enumerable: true,
@@ -25032,7 +25075,7 @@ define("runtime", function () {
                         mappedNames[name] = true;
                         g = MakeArgGetter(name, env);
                         s = MakeArgSetter(name, env);
-                        callInternalSlot("DefineOwnProperty", map, name, {
+                        callInternalSlot(SLOTS.DEFINEOWNPROPERTY, map, name, {
                             get: g,
                             set: s,
                             enumerable: true,
@@ -25170,7 +25213,7 @@ define("runtime", function () {
         }
         if (tailPosition) { PrepareForTailCall(); }
 
-        var result = callInternalSlot("Call", func, thisValue, argList);
+        var result = callInternalSlot(SLOTS.CALL, func, thisValue, argList);
         if (tailPosition) {}
         return result;
 
@@ -25178,11 +25221,11 @@ define("runtime", function () {
     function Call(thisArg, argList) {
         var status, result, fname, localEnv;
         var F = this;
-        var code = getInternalSlot(this, "Code");
+        var code = getInternalSlot(this, SLOTS.CODE);
         if (!code) return withError("Type", "Call: this value has no [[Code]] slot (if you called a native function it´s a bug and it´s [[Call]] isn´t set. but that shouldn´t happen.)");
-        var params = getInternalSlot(this, "FormalParameters");
-        var thisMode = getInternalSlot(this, "ThisMode");
-        var strictSlot = getInternalSlot(this, "Strict");
+        var params = getInternalSlot(this, SLOTS.FORMALPARAMETERS);
+        var thisMode = getInternalSlot(this, SLOTS.THISMODE);
+        var strictSlot = getInternalSlot(this, SLOTS.STRICT);
         var scope = getInternalSlot(this, "Environment");
         var realm = getRealm();
         var callerContext = getContext();
@@ -25238,7 +25281,7 @@ define("runtime", function () {
     }
     evaluation.ThrowStatement = ThrowStatement;
     function ThrowStatement(node) {
-        var expr = getCode(node, "argument");
+        var expr = node.argument;
 
         var exprRef = Evaluate(expr);
         if (isAbrupt(exprRef)) return exprRef;
@@ -25248,7 +25291,7 @@ define("runtime", function () {
     }
     evaluation.ReturnStatement = ReturnStatement;
     function ReturnStatement(node) {
-        var expr = getCode(node, "argument");
+        var expr = node.argument;
         var exprRef = Evaluate(expr);
         if (isAbrupt(exprRef)) return exprRef;
         var exprValue = GetValue(exprRef);
@@ -25258,7 +25301,7 @@ define("runtime", function () {
     function YieldExpression(node, completion) {
 
         var parent = node.parent;
-        var expression = getCode(node, "argument");
+        var expression = node.argument;
         var delegator = node.delegator;
 
         if (!expression) {
@@ -25311,7 +25354,7 @@ define("runtime", function () {
             if (isAbrupt(newG = ifAbrupt(newG))) return newG;
             G = newG;
         }
-        return GeneratorStart(G, getInternalSlot(F, "Code"));
+        return GeneratorStart(G, getInternalSlot(F, SLOTS.CODE));
     }
     function EvaluateConciseBody(F) {
         "use strict";
@@ -25342,9 +25385,9 @@ define("runtime", function () {
         "use strict";
         var exprRef, exprValue;
         var node;
-        var code = getInternalSlot(F,"Code");
+        var code = getInternalSlot(F,SLOTS.CODE);
         var kind = getInternalSlot(F, "FunctionKind");
-        var thisMode = getInternalSlot(F, "ThisMode");
+        var thisMode = getInternalSlot(F, SLOTS.THISMODE);
         if (kind === "generator") {
             return CreateGeneratorInstance(F);
         } else if (thisMode === "lexical") {
@@ -25389,8 +25432,8 @@ define("runtime", function () {
     evaluation.GeneratorDeclaration = GeneratorDeclaration;
     function GeneratorDeclaration(node) {
         "use strict";
-        var params = getCode(node, "params");
-        var body = getCode(node, "body");
+        var params = node.params;
+        var body = node.body;
         var id = node.id;
         var gproto = Get(getIntrinsics(), "%GeneratorPrototype%");
         var scope = getLexEnv();
@@ -25419,11 +25462,11 @@ define("runtime", function () {
         "use strict";
         var F;
         var scope = getLexEnv();
-        var body = getCode(node, "body");
-        var params = getCode(node, "params");
+        var body = node.body;
+        var params = node.params;
         var strict = true;
         F = FunctionCreate("arrow", params, body, scope, strict);
-        setInternalSlot(F, "ThisMode",  "lexical");
+        setInternalSlot(F, SLOTS.THISMODE,  "lexical");
         //MakeConstructor(F);
         return NormalCompletion(F);
     }
@@ -25433,9 +25476,9 @@ define("runtime", function () {
         "use strict";
         var F;
         var id = node.id;
-        var expr = getCode(node,   "expression");
-        var params = getCode(node, "params");
-        var body = getCode(node,   "body");
+        var expr = node.expression;
+        var params = node.params;
+        var body = node.body;
         var scope;
         var strict = getContext().strict || node.strict;
         if (expr) {
@@ -25517,13 +25560,10 @@ define("runtime", function () {
             if (isAbrupt(exprRef = ifAbrupt(exprRef))) return exprRef;
             callee = GetValue(exprRef);
         } else {
-
             exprRef = MakeSuperReference(undefined, strict);
             if (isAbrupt(exprRef = ifAbrupt(exprRef))) return exprRef;
             callee = GetValue(exprRef);
-
         }
-
         if (isAbrupt(callee = ifAbrupt(callee))) return callee;
         if (!IsConstructor(callee)) return withError("Type", "expected function is not a constructor");
         if (callee) cx.callee = "new " + (Get(callee, "name") || "(anonymous)");
@@ -25531,7 +25571,7 @@ define("runtime", function () {
         var argList;
         if (args) argList = ArgumentListEvaluation(args);
         else argList = [];
-        return callInternalSlot("Construct", callee, argList);
+        return callInternalSlot(SLOTS.CONSTRUCT, callee, argList);
     }
     evaluation.CallExpression = CallExpression;
     function CallExpression(node) {
@@ -25556,7 +25596,7 @@ define("runtime", function () {
     function VariableDeclaration(node) {
         "use strict";
         var decl, decl2, init, arr, initializer, status;
-        var env = isCodeType(node, "VariableDeclaration") ? (node.kind === "var" ? getVarEnv() : getLexEnv()) : getLexEnv();
+        var env = (node.type === "VariableDeclaration") ? (node.kind === "var" ? getVarEnv() : getLexEnv()) : getLexEnv();
         var i, j, p, q, type;
         var name;
         var cx = getContext();
@@ -25568,10 +25608,8 @@ define("runtime", function () {
                 if (decl.init) initializer = GetValue(Evaluate(decl.init));
                 else return withError("Type", "Destructuring Patterns must have some = Initializer.");
                 if (isAbrupt(initializer=ifAbrupt(initializer))) return initializer;
-                status = BindingInitialisation(decl, initializer, env);
+                status = BindingInitialization(decl, initializer, env);
                 if (isAbrupt(status = ifAbrupt(status))) return status;
-
-
             } else {
                 if (decl.init) {
                     name = decl.id.name;
@@ -25582,14 +25620,14 @@ define("runtime", function () {
                             SetFunctionName(initializer, name);
                         }
                     }
-                    status = BindingInitialisation(name, initializer, env);
+                    status = BindingInitialization(name, initializer, env);
                     if (isAbrupt(status = ifAbrupt(status))) return status;
                 }
             }
         }
         return NormalCompletion();
     }
-    function KeyedBindingInitialisation(decl, obj, env) {
+    function KeyedBindingInitialization(decl, obj, env) {
         "use strict";
         var elem;
         var val;
@@ -25598,11 +25636,8 @@ define("runtime", function () {
         var identName, newName, init, target;
         if (decl.type === "ObjectPattern" || decl.type === "ObjectExpression") {
             var elems = decl.elements||decl.properties;
-
             for (var p = 0, q = elems.length; p < q; p++) {
-
                 if (elem = elems[p]) {
-
                     var type = elem.type;
                     if (elem.type == "Identifier") {
                         identName = elem.name || elem.value;
@@ -25610,25 +25645,20 @@ define("runtime", function () {
                         identName = elem.id.name;
                         target = elem.target;
                     }
-
                     if (elem.init) {
                         var initializer = GetValue(Evaluate(elem.init));
                         if (isAbrupt(initializer = ifAbrupt(initializer))) return initializer;
                     }
-
                     obj = ToObject(obj);
                     if (isAbrupt(obj=ifAbrupt(obj))) return obj;
-
                     var val = Get(obj, ToString(identName));
                     val = ifAbrupt(val);
                     if (isAbrupt(val)) return val;
-
                     if (val === undefined && initializer != undefined) {
                         val = initializer;
                     }
-
                     if (target) {
-                        status = KeyedBindingInitialisation(target, val, env);
+                        status = KeyedBindingInitialization(target, val, env);
                         if (isAbrupt(status)) return status;
                     } else {
                         status = InitializeBoundName(identName, val, env);
@@ -25648,9 +25678,10 @@ define("runtime", function () {
             return Identifier(node);
         }
     }
-    function IteratorBindingInitialisation() {
+    function IteratorBindingInitialization() {
+
     }
-    function IndexedBindingInitialisation(decl, nextIndex, value, env) {
+    function IndexedBindingInitialization(decl, nextIndex, value, env) {
         "use strict";
         var len = Get(value, "length");
         var elem;
@@ -25692,7 +25723,6 @@ define("runtime", function () {
                     }
                 }
             }
-
         } else if (decl && decl.type === "RestParameter") {
             var array = ArrayCreate(len - nextIndex);
             var name = decl.id;
@@ -25717,11 +25747,9 @@ define("runtime", function () {
         }
         return len;
     }
-
     function getStrict() {
         return getContext().strict;
     }
-
     function InitializeBoundName(name, value, environment) {
         Assert(Type(name) === STRING, "InitializeBoundName: name has to be a string");
         if (environment != undefined) {
@@ -25732,9 +25760,7 @@ define("runtime", function () {
             return PutValue(lhs, value);
         }
     }
-
-
-    function BindingInitialisation(node, value, env) {
+    function BindingInitialization(node, value, env) {
         "use strict";
         var names, name, val, got, len, ex, decl, lhs, strict, type, identName;
         var cx = getContext();
@@ -25743,18 +25769,17 @@ define("runtime", function () {
             for (var i = 0, j = node.length; i < j; i++) {
                 decl = node[i];
                 type = decl.type;
-
                 if (type === "ObjectPattern") {
-                    ex = KeyedBindingInitialisation(decl, Get(value, ToString(i)), env);
+                    ex = KeyedBindingInitialization(decl, Get(value, ToString(i)), env);
                     if (isAbrupt(ex)) return ex;
                 } else if (type === "ArrayPattern") {
-                    ex = IndexedBindingInitialisation(decl, undefined, Get(value, ToString(i)), env);
+                    ex = IndexedBindingInitialization(decl, undefined, Get(value, ToString(i)), env);
                     if (isAbrupt(ex)) return ex;
                 } else if (type === "RestParameter") {
-                    ex = IndexedBindingInitialisation(decl, i, value, env);
+                    ex = IndexedBindingInitialization(decl, i, value, env);
                     if (isAbrupt(ex)) return ex;
                 } else {
-                    ex = BindingInitialisation(decl, Get(value, ToString(i)), env);
+                    ex = BindingInitialization(decl, Get(value, ToString(i)), env);
                     if (isAbrupt(ex)) return ex;
                 }
             }
@@ -25763,22 +25788,17 @@ define("runtime", function () {
         type = node.type;
         strict = !! cx.strict;
         if (type === "ForDeclaration") {
-            return BindingInitialisation(node.id, value, env);
+            return BindingInitialization(node.id, value, env);
         }
         if (type === "DefaultParameter") {
-
             name = node.id;
             if (value === undefined) value = GetValue(Evaluate(node.init));
-
-
             if (env !== undefined) env.InitializeBinding(name, value, strict);
             else {
                 lhs = ResolveBinding(name);
                 PutValue(lhs, value);
             }
             return NormalCompletion(undefined);
-
-
         }
         if (type === "Identifier") {
             name = node.name;
@@ -25792,10 +25812,8 @@ define("runtime", function () {
                 if (isAbrupt(ex)) return ex;
                 return NormalCompletion(undefined);
             }
-
-        } else if (type === "ArrayPattern" || type === "ArrayExpression") {
+        } else if (type === "ArrayPattern") {
             var decl;
-
             /* coerce to object addition */
             value = ToObject(value);
             if (isAbrupt(value = ifAbrupt(value))) return value;
@@ -25803,7 +25821,7 @@ define("runtime", function () {
             for (var p = 0, q = node.elements.length; p < q; p++) {
                 if (decl = node.elements[p]) {
                     if (decl.type === "RestParameter") {
-                        return IndexedBindingInitialisation(decl, p, value, env);
+                        return IndexedBindingInitialization(decl, p, value, env);
                     } else {
                         if (decl.init) {
                             var initializer = GetValue(Evaluate(decl.init));
@@ -25840,7 +25858,7 @@ define("runtime", function () {
                 }
             }
             return NormalCompletion(undefined);
-        } else if (type === "ObjectPattern" || type === "ObjectExpression") {
+        } else if (type === "ObjectPattern") {
             var decl;
             /* coerce to object addition */
 
@@ -25877,8 +25895,6 @@ define("runtime", function () {
                         }
 
                     } else {
-
-
                         if (decl.id) {
                             lhs = Evaluate(decl.id);
                             val = Get(value, decl.id.name);
@@ -25941,7 +25957,7 @@ define("runtime", function () {
     }
     evaluation.NumericLiteral = NumericLiteral;
     function NumericLiteral(node) {
-        if (node && node.computed) return MV(node.computed);
+        if (node.computed) return MV(node.computed);
         return MV(node.value);
         // return +node.value;
     }
@@ -25955,7 +25971,6 @@ define("runtime", function () {
     }
     evaluation.Literal = Literal;
     function Literal(node) {
-        //if (node.longName) return evaluation[node.longName](node);
         return node.value;
     }
     evaluation.ThisExpression = ThisExpression;
@@ -25980,51 +25995,38 @@ define("runtime", function () {
         var exprValue;
         var i, j = elementList.length;
         var element;
-
         for (i = 0; i < j; i++) {
             element = elementList[i];
-
             if (element.type === "Elision") {
-
                 nextIndex += element.width;
-
             } else if (element.type === "SpreadExpression") {
-
                 var spreadRef = Evaluate(element);
                 var spreadObj = GetValue(spreadRef);
                 if (isAbrupt(spreadObj=ifAbrupt(spreadObj))) return spreadObj;
                 var spreadLen = Get(spreadObj, "length");
                 if (isAbrupt(spreadLen=ifAbrupt(spreadLen))) return spreadLen;
-
                 for (var k = 0; k < spreadLen; k++) {
-
                     exprValue = Get(spreadObj, ToString(k));
                     if (isAbrupt(exprValue = ifAbrupt(exprValue))) return exprValue;
-
-                    callInternalSlot("DefineOwnProperty", array, ToString(nextIndex), {
+                    callInternalSlot(SLOTS.DEFINEOWNPROPERTY, array, ToString(nextIndex), {
                         writable: true,
                         value: exprValue,
                         enumerable: true,
                         configurable: true
                     });
-
                     nextIndex = nextIndex + 1;
                 }
-
             } else {
-
                 exprRef = Evaluate(element);
                 if (isAbrupt(exprRef = ifAbrupt(exprRef))) return exprRef;
                 exprValue = GetValue(exprRef);
                 if (isAbrupt(exprValue = ifAbrupt(exprValue))) return exprValue;
-
-                callInternalSlot("DefineOwnProperty", array, ToString(nextIndex), {
+                callInternalSlot(SLOTS.DEFINEOWNPROPERTY, array, ToString(nextIndex), {
                     writable: true,
                     value: exprValue,
                     enumerable: true,
                     configurable: true
                 });
-
                 nextIndex = nextIndex + 1;
             }
         }
@@ -26046,7 +26048,6 @@ define("runtime", function () {
                     enumerable: false,
                     configurable: false
                 });
-
                 return array;
             }
         }
@@ -26060,13 +26061,11 @@ define("runtime", function () {
             enumerable: false,
             configurable: false
         });
-
         return NormalCompletion(array);
     }
     evaluation.PropertyDefinition = PropertyDefinition;
     function PropertyDefinition(newObj, propertyDefinition) {
         "use strict";
-
         var kind = propertyDefinition.kind;
         var key =  propertyDefinition.key;
         var node = propertyDefinition.value;
@@ -26074,42 +26073,28 @@ define("runtime", function () {
         var status;
         var strict = node.strict;
         var propRef, propName, propValue;
-
         /* I refactored it today, but resetted it tonight, i rewrite it tomorrow */
-
         // TOMORROW ? (FOUR DAYS AGO)
-
         if (kind == "init") {
-
             // prop key
             if (computed) {
                 var symRef = Evaluate(key);
                 var symValue = GetValue(symRef);
-
                 if (isAbrupt(symValue = ifAbrupt(symValue))) return symValue;
-
                 if (!IsSymbol(symValue)) symValue = ToString(symValue);
                 if (isAbrupt(symValue = ifAbrupt(symValue))) return symValue;
-
                 if (!IsPropertyKey(symValue)) return withError("Type", "A [computed] property inside an object literal has to evaluate to a Symbol primitive");
-
                 propName = symValue;
             } else {
-
                 // init
                 propName = ToString(PropName(key));
                 if (isAbrupt(propName=ifAbrupt(propName))) return propName;
-
             }
-
             // value
             if (isCodeType(node, "FunctionDeclaration")) {
-
                 status = defineFunctionOnObject(node, newObj, propName);
                 if (isAbrupt(status)) return status;
-
             } else {
-
                 propRef = Evaluate(node, newObj);
                 if (isAbrupt(propRef = ifAbrupt(propRef))) return propRef;
                 propValue = GetValue(propRef);
@@ -26118,7 +26103,7 @@ define("runtime", function () {
                 // DOESNT WORK
                 if (!computed && (propName === "__proto__")) {
                     if (Type(propValue) === OBJECT || propValue === null) {
-                        return callInternalSlot("SetPrototypeOf", newObj, propValue);
+                        return callInternalSlot(SLOTS.SETPROTOTYPEOF, newObj, propValue);
                     }
                     return NormalCompletion(empty);
                 }
@@ -26129,9 +26114,7 @@ define("runtime", function () {
         } else if (kind === "method") {
             propValue = Evaluate(node, newObj);
             if (isAbrupt(propValue = ifAbrupt(propValue))) return propValue;
-
         } else if (kind === "get" || kind === "set") {
-
             // get [s] () { return 10 }
             if (node.computed) {
                 propName = GetValue(Evaluate(key));
@@ -26139,7 +26122,6 @@ define("runtime", function () {
                 if (!IsSymbol(propName)) propName = ToString(propName);
                 if (isAbrupt(propName = ifAbrupt(propName))) return propName;
                 if (!IsPropertyKey(propName)) return withError("Type", "A [computed] property has to evaluate to valid property key");
-
             } else {
                 propName = typeof key === "string" ? key : key.name || key.value;
             }
@@ -26150,8 +26132,8 @@ define("runtime", function () {
         "use strict";
         var cx = getContext();
         var scope = getLexEnv();
-        var body = getCode(node, "body");
-        var formals = getCode(node, "params");
+        var body = node.body;
+        var formals = node.params;
         var strict = cx.strict || node.strict;
         var fproto = Get(getIntrinsics(), "%FunctionPrototype%");
         var id = node.id;
@@ -26164,27 +26146,22 @@ define("runtime", function () {
         }
         if (ReferencesSuper(node)) {
             var home = getLexEnv().GetSuperBase();
-            //getInternalSlot(object, "HomeObject");
+            //getInternalSlot(object, SLOTS.HOMEOBJECT);
         } else {
             methodName = undefined;
             home = undefined;
         }
-
         if (generator) propValue = GeneratorFunctionCreate("method", formals, body, scope, strict, fproto, home, methodName);
         else propValue = FunctionCreate("method", formals, body, scope, strict, fproto, home, methodName);
-
         if (id) scope.InitializeBinding(id, propValue);
-
         MakeConstructor(propValue);
         SetFunctionName(propValue, propName);
         CreateDataProperty(newObj, propName, propValue);
-
     }
     function defineGetterOrSetterOnObject (node, newObj, propName, kind) {
-
         var scope = getLexEnv();
-        var body = getCode(node, "body");
-        var formals = getCode(node, "params");
+        var body = node.body;
+        var formals = node.params;
         var functionPrototype = getIntrinsic("%FunctionPrototype%");
         var strict = node.strict;
         var methodName;
@@ -26197,9 +26174,8 @@ define("runtime", function () {
             home = undefined;
             methodName = undefined
         }
-        //getInternalSlot(object, "HomeObject");
+        //getInternalSlot(object, SLOTS.HOMEOBJECT);
         propValue = FunctionCreate("method", formals, body, scope, strict, functionPrototype, home, methodName);
-
         var desc = kind == "get" ? {
             get: propValue,
             enumerable: true,
@@ -26209,16 +26185,14 @@ define("runtime", function () {
             enumerable: true,
             configurable: true
         };
-
         SetFunctionName(propValue, propName, kind);
         status = DefineOwnPropertyOrThrow(newObj, propName, desc);
         if (isAbrupt(status)) return status;
-
     }
     evaluation.ObjectExpression = ObjectExpression;
     function ObjectExpression(node) {
         "use strict";
-        var props = getCode(node, "properties");
+        var props = node.properties;
         var newObj = ObjectCreate();
         var status;
         for (var i = 0, j = props.length; i < j; i++) {
@@ -26237,109 +26211,106 @@ define("runtime", function () {
     }
     function IteratorDestructuringEvaluation() {}
     function DestructuringAssignmentEvaluation(left, rval, op) {
+        if (type === "ObjectPattern") {
+            return ObjectPatternDestructuring(left, rval, op);
+        } else if (type === "ArrayPattern") {
+            return ArrayPatternDestructuring(left, rval, op);
+        }
+    }
+    function ObjectPatternDestructuring(left, rval, op) {
         "use strict";
         var leftElems = left.elements;
         var type = left.type;
-
         var lval;
         var lref;
         var result;
         var l, i, j;
-        var obj, array;
-
-        if (type === "ObjectPattern" || type === "ObjectExpression") {
-
-            obj = rval;
-            var identName, newName;
-
-            if (Type(rval) !== OBJECT) return withError("Type", "can not desctructure a non-object into some object");
-
-            for (i = 0, j = leftElems.length; i < j; i++) {
-                var lel = leftElems[i];
-                if (lel.id) identName = lel.id.name;
-                else identName = lel.name;
-                lval = GetValue(Evaluate(lel));
-                rval = Get(obj, identName);
-                result = getAssignmentOperationResult(op, lval, rval);
-                var target;
-                if (lel.target) {
-                    if (IsBindingPattern[lel.target.type]) {
-                        console.log("BINDINGPATTERN")
-                        status = DestructuringAssignmentEvaluation(lel.target, result, op);
-                        if (isAbrupt(status)) return status;
-                    } else {
-                        console.log("TARGET")
-                        target = Evaluate(lel.target);
-                        if (isAbrupt(target)) return target;
-                        PutValue(target, result);
-                    }
-                } else {
-                    getLexEnv().SetMutableBinding(identName, result);
-                }
-                target = undefined;
-            }
-            return NormalCompletion(result);
-        } else if (type === "ArrayPattern" || type === "ArrayExpression") {
-            array = rval;
-            if (Type(array) !== OBJECT) return withError("Type", "can not desctructure a non-object into some object");
-            var width;
-            var index = 0;
-            var len = Get(array, "length");
-            var status;
-
-            for (i = 0, j = leftElems.length; i < j; i++) {
-                var lel = leftElems[i];
-
-                var ltype = lel.type;
-                if (ltype === "SpreadExpression") { // === REST! Achtung
-
-                    var rest = ArrayCreate(0);
-                    var restName = BoundNames(lel.argument)[0];
-                    var index2 = 0;
-
-                    while (index < len) {
-                        lval = Get(array, ToString(index));
-                        result = getAssignmentOperationResult(op, lval, rval);
-                        status = callInternalSlot("DefineOwnProperty", rest, ToString(index2), {
-                            value: result,
-                            writable: true,
-                            enumerable: true,
-                            configurable: true
-                        });
-                        if (isAbrupt(status)) return status;
-                        index += 1;
-                        index2 += 1;
-                    }
-                    getLexEnv().SetMutableBinding(restName, rest);
-                    break;
-
-                } else if (ltype === "Elision") {
-
-                    index += node.width - 1;
-                    result = undefined;
-
-                } else {
-
-                    l = lel.value || lel.name;
-                    rval = Get(array, ToString(index));
-                    if (isAbrupt(rval=ifAbrupt(rval))) return rval;
-                    lval = GetValue(Evaluate(lel));
-                    if (isAbrupt(lval=ifAbrupt(lval))) return lval;
-                    result = getAssignmentOperationResult(op, lval, rval);
-                    status = getLexEnv().SetMutableBinding(l, result);
+        var obj;
+        obj = rval;
+        var identName, newName;
+        if (Type(rval) !== OBJECT) return withError("Type", "can not desctructure a non-object into some object");
+        for (i = 0, j = leftElems.length; i < j; i++) {
+            var lel = leftElems[i];
+            if (lel.id) identName = lel.id.name;
+            else identName = lel.name;
+            lval = GetValue(Evaluate(lel));
+            rval = Get(obj, identName);
+            result = getAssignmentOperationResult(op, lval, rval);
+            var target;
+            if (lel.target) {
+                if (IsBindingPattern[lel.target.type]) {
+                    console.log("BINDINGPATTERN")
+                    status = DestructuringAssignmentEvaluation(lel.target, result, op);
                     if (isAbrupt(status)) return status;
-                    index = index + 1;
+                } else {
+                    console.log("TARGET")
+                    target = Evaluate(lel.target);
+                    if (isAbrupt(target)) return target;
+                    PutValue(target, result);
                 }
+            } else {
+                getLexEnv().SetMutableBinding(identName, result);
             }
-
-
-            return NormalCompletion(result);
+            target = undefined;
         }
+        return NormalCompletion(result);
     }
+    function ArrayPatternDestructuring (left, rval, op) {
+        "use strict";
+        var leftElems = left.elements;
+        var type = left.type;
+        var lval;
+        var result;
+        var l, i, j;
+        var array;
+        array = rval;
+        if (Type(rval) !== OBJECT) return withError("Type", "can not desctructure a non-object into some object");
+        var index = 0;
+        var len = Get(rval, "length");
+        var status;
+        for (i = 0, j = leftElems.length; i < j; i++) {
+            var lel = leftElems[i];
+            var ltype = lel.type;
+            if (ltype === "SpreadExpression") {
+                var rest = ArrayCreate(0);
+                var restName = BoundNames(lel.argument)[0];
+                var index2 = 0;
+                while (index < len) {
+                    lval = Get(array, ToString(index));
+                    result = getAssignmentOperationResult(op, lval, rval);
+                    status = callInternalSlot(SLOTS.DEFINEOWNPROPERTY, rest, ToString(index2), {
+                        value: result,
+                        writable: true,
+                        enumerable: true,
+                        configurable: true
+                    });
+                    if (isAbrupt(status)) return status;
+                    index += 1;
+                    index2 += 1;
+                }
+                getLexEnv().SetMutableBinding(restName, rest);
+                break;
+            } else if (ltype === "Elision") {
+                index += node.width - 1;
+                result = undefined;
+            } else {
+                l = lel.value || lel.name;
+                rval = Get(array, ToString(index));
+                if (isAbrupt(rval = ifAbrupt(rval))) return rval;
+                lval = GetValue(Evaluate(lel));
+                if (isAbrupt(lval = ifAbrupt(lval))) return lval;
+                result = getAssignmentOperationResult(op, lval, rval);
+                status = getLexEnv().SetMutableBinding(l, result);
+                if (isAbrupt(status)) return status;
+                index = index + 1;
+            }
+        }
+        return NormalCompletion(result);
+    }
+
     function AssignmentExpression(node) {
         var lref, rref;
         var lval, rval;
-        var base, name;
         var op = node.operator;
         var result, status;
         var ltype = node.left.type;
@@ -26407,7 +26378,6 @@ define("runtime", function () {
             var trueRef = Evaluate(trueExpr);
             if (isAbrupt(trueRef = ifAbrupt(trueRef))) return trueRef;
             var trueValue = GetValue(trueRef);
-
             if (isAbrupt(trueValue = ifAbrupt(trueValue))) return trueValue;
             return NormalCompletion(trueValue);
         } else {
@@ -26431,7 +26401,7 @@ define("runtime", function () {
         var isPrefixOperation = node.prefix;
         var oldValue, newValue, val;
         var op = node.operator;
-        var argument = getCode(node, "argument");
+        var argument = node.argument;
         var exprRef = Evaluate(argument);
         if (isAbrupt(exprRef = ifAbrupt(exprRef))) return exprRef;
         if (op === "typeof") {
@@ -26563,7 +26533,7 @@ define("runtime", function () {
 
         var result;
         switch (op) {
-            /*case "of":                    
+            /*case "of":
              var value = Invoke(ToObject(rval), "valueOf");
              return SameValue(rval, lval);*/
             case "in":
@@ -26680,7 +26650,7 @@ define("runtime", function () {
     }
     evaluation.BlockStatement = BlockStatement;
     function BlockStatement(node) {
-        var stmtList = getCode(node, "body");
+        var stmtList = node.body;
 
         var oldEnv = getLexEnv();
         var blockEnv = NewDeclarativeEnvironment(oldEnv);
@@ -26727,7 +26697,7 @@ define("runtime", function () {
     function WhileStatement(node, labelSet) {
 
         var test = node.test;
-        var body = getCode(node, "body");
+        var body = node.body;
         var exprRef, exprValue;
         var V, stmt;
         labelSet = labelSet || Object.create(null);
@@ -26752,7 +26722,7 @@ define("runtime", function () {
     }
     function DoWhileStatement(node, labelSet) {
         var test = node.test;
-        var body = getCode(node, "body");
+        var body = node.body;
         var exprRef, exprValue;
         var V, stmt;
         labelSet = labelSet || Object.create(null);
@@ -26845,7 +26815,7 @@ define("runtime", function () {
                 }
 
             } else if (lhsKind === "varBinding") {
-                status = BindingInitialisation(lhs, nextValue, undefined);
+                status = BindingInitialization(lhs, nextValue, undefined);
             } else {
                 Assert(lhsKind === "lexicalBinding", "lhsKind has to be a lexical Binding");
                 // Assert(lhs == ForDeclaration);
@@ -26854,7 +26824,7 @@ define("runtime", function () {
                     iterationEnv.CreateMutableBinding(names[i], true);
                 }
                 getContext().LexEnv = iterationEnv;
-                status = BindingInitialisation(lhs, nextValue, iterationEnv);
+                status = BindingInitialization(lhs, nextValue, iterationEnv);
                 if (isAbrupt(status)) {
                     getContext().LexEnv = oldEnv;
                     return status;
@@ -26877,7 +26847,7 @@ define("runtime", function () {
     function ForInStatement(node, labelSet) {
         var left = node.left;
         var right = node.right;
-        var body = getCode(node, "body");
+        var body = node.body;
         var tleft = left.type;
         var tright = right.type;
 
@@ -26894,7 +26864,7 @@ define("runtime", function () {
         "use strict";
         var left = node.left;
         var right = node.right;
-        var body = getCode(node, "body");
+        var body = node.body;
         var tleft = left.type;
         var tright = right.type;
         var labelSet = labelSet || Object.create(null);
@@ -26946,7 +26916,7 @@ define("runtime", function () {
         var initExpr = node.init;
         var testExpr = node.test;
         var incrExpr = node.update;
-        var body = getCode(node, "body");
+        var body = node.body;
         var exprRef, exprValue;
         var varDcl, isConst, dn, forDcl;
         var oldEnv, loopEnv, bodyResult;
@@ -27177,13 +27147,13 @@ define("runtime", function () {
             prop = ToString(index);
             cookedValue = cookedStrings[index];
             rawValue = rawStrings[index];
-            if (cookedValue !== undefined) callInternalSlot("DefineOwnProperty", siteObj, prop, {
+            if (cookedValue !== undefined) callInternalSlot(SLOTS.DEFINEOWNPROPERTY, siteObj, prop, {
                 value: cookedValue,
                 enumerable: false,
                 writable: false,
                 configurable: false
             });
-            if (rawValue !== undefined) callInternalSlot("DefineOwnProperty", rawObj, prop, {
+            if (rawValue !== undefined) callInternalSlot(SLOTS.DEFINEOWNPROPERTY, rawObj, prop, {
                 value: rawValue,
                 enumerable: false,
                 writable: false,
@@ -27210,8 +27180,8 @@ define("runtime", function () {
     var defaultClassConstructorFunctionBody = parseGoal("FunctionBody", "return super(...args);");
     function DefineMethod(node, object, functionPrototype) {
         "use strict";
-        var body = getCode(node, "body");
-        var formals = getCode(node, "params");
+        var body = node.body;
+        var formals = node.params;
         var key = node.id;
         var computed = node.computed;
         var strict = IsStrict(body);
@@ -27313,18 +27283,18 @@ define("runtime", function () {
         if (isAbrupt(F=ifAbrupt(F))) return F;
         if (!constructor) {
             if (isExtending) {
-                setInternalSlot(F, "FormalParameters", defaultClassConstructorFormalParameters);
-                setInternalSlot(F, "Code", defaultClassConstructorFunctionBody);
+                setInternalSlot(F, SLOTS.FORMALPARAMETERS, defaultClassConstructorFormalParameters);
+                setInternalSlot(F, SLOTS.CODE, defaultClassConstructorFunctionBody);
             } else {
-                setInternalSlot(F, "FormalParameters", []);
-                setInternalSlot(F, "Code", []);
+                setInternalSlot(F, SLOTS.FORMALPARAMETERS, []);
+                setInternalSlot(F, SLOTS.CODE, []);
             }
         } else {
-            setInternalSlot(F, "FormalParameters", constructor.params);
+            setInternalSlot(F, SLOTS.FORMALPARAMETERS, constructor.params);
             SetFunctionLength(F, ExpectedArgumentCount(constructor.params));
-            setInternalSlot(F, "Code", constructor.body);
+            setInternalSlot(F, SLOTS.CODE, constructor.body);
         }
-        setInternalSlot(F, "Construct", function (argList) {
+        setInternalSlot(F, SLOTS.CONSTRUCT, function (argList) {
             var F = this;
             return OrdinaryConstruct(F, argList);
         });
@@ -27342,8 +27312,8 @@ define("runtime", function () {
             }
         }
         if (protoParent) {
-            setInternalSlot(F, "HomeObject", protoParent);
-            setInternalSlot(F, "MethodName", "constructor");
+            setInternalSlot(F, SLOTS.HOMEOBJECT, protoParent);
+            setInternalSlot(F, SLOTS.METHODNAME, "constructor");
         }
         MakeConstructor(F, false, Proto);
         if (className) {
@@ -27360,7 +27330,7 @@ define("runtime", function () {
     evaluation.SuperExpression = SuperExpression;
     evaluation.ModuleDeclaration = ModuleDeclaration;
     function ModuleDeclaration(node) {
-        var body = getCode(node, "body");
+        var body = node.body;
         var oldContext = getContext();
         var initContext = ExecutionContext(getLexEnv(), getRealm());
         var env = NewDeclarativeEnvironment(getLexEnv());
@@ -27376,7 +27346,7 @@ define("runtime", function () {
     evaluation.ImportStatement = ImportStatement;
     evaluation.ExportStatement = ExportStatement;
     function ImportStatement(node) {
-        // Get Module x 
+        // Get Module x
         // Get Property y of Module and Return
         var importRef;
         var importValue;
@@ -27391,7 +27361,7 @@ define("runtime", function () {
     }
     evaluation.WithStatement = WithStatement;
     function WithStatement(node) {
-        var body = getCode(node, "body");
+        var body = node.body;
         var object = GetValue(Evaluate(node.object));
         if (isAbrupt(object = ifAbrupt(object))) return object;
         var objEnv = ObjectEnvironment(object, getContext().LexEnv);
@@ -27465,7 +27435,7 @@ define("runtime", function () {
             var bn = BoundNames(forBinding);
             for (var i = 0, j = bn.length; i < j; i++) {
                 forEnv.CreateMutableBinding(bn[i]);
-                status = BindingInitialisation(forBinding, nextValue, forEnv);
+                status = BindingInitialization(forBinding, nextValue, forEnv);
                 if (isAbrupt(status)) return status;
             }
             getContext().LexEnv = forEnv;
@@ -27493,7 +27463,7 @@ define("runtime", function () {
         var blocks = node.blocks;
         var binding;
         var closure = FunctionCreate("generator", [], [], getLexEnv(), true);
-        return callInternalSlot("Call", closure, undefined, []);
+        return callInternalSlot(SLOTS.CALL, closure, undefined, []);
     }
     function CatchClauseEvaluation(thrownValue, catchNode) {
         var status, oldEnv, catchEnv;
@@ -27507,7 +27477,7 @@ define("runtime", function () {
         for (var i = 0, j = boundNames.length; i < j; i++) {
             catchEnv.CreateMutableBinding(boundNames[i]);
         }
-        status = BindingInitialisation(catchParameter, thrownValue, undefined);
+        status = BindingInitialization(catchParameter, thrownValue, undefined);
         if (isAbrupt(status)) return status;
         R = Evaluate(catchBlock);
         getContext().LexEnv = oldEnv;
@@ -27680,7 +27650,7 @@ define("runtime", function () {
                 func = task.func;
                 time = Date.now();
                 if (time >= (task.time + task.timeout)) {
-                    if (IsCallable(func)) result = callInternalSlot("Call", func, ThisResolution(), []);
+                    if (IsCallable(func)) result = callInternalSlot(SLOTS.CALL, func, ThisResolution(), []);
                     if (isAbrupt(result)) {
                         try {
                             throw makeNativeException(result.value);
@@ -27841,12 +27811,12 @@ define("runtime", function () {
                 var set = desc.set;
                 var newGetter, newSetter;
                 newGetter = function () {
-                    var result = callInternalSlot("Call", get, O, []);
+                    var result = callInternalSlot(SLOTS.CALL, get, O, []);
                     if (isAbrupt(result = ifAbrupt(result))) throw result;
                     return TransformObjectToJSObject(result);
                 };
                 newSetter = function (v) {
-                    var result = callInternalSlot("Call", set, O, [v]);
+                    var result = callInternalSlot(SLOTS.CALL, set, O, [v]);
                     if (isAbrupt(result = ifAbrupt(result))) throw result;
                     return v;
                 };
@@ -27862,7 +27832,7 @@ define("runtime", function () {
                 if (Type(value) === OBJECT) {
                     if (IsCallable(value)) {
                         newValue = function () {
-                            var c = callInternalSlot("Call", value, value, arguments);
+                            var c = callInternalSlot(SLOTS.CALL, value, value, arguments);
                             c = unwrap(c);
                             if (Type(c) === OBJECT) return TransformObjectToJSObject(c);
                             return c;
