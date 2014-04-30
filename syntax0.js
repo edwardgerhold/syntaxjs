@@ -8074,7 +8074,7 @@ define("js-codegen", function (require, exports, module) {
 /**
  * Created by root on 20.04.14.
  */
-// define("heap", function () {
+define("heap", function () {
 
 var ABRUPT = 0x01;
 
@@ -8350,8 +8350,9 @@ Heap.prototype = {
 // console.log("heap debug msg: overhead size each allocation for information is: " + OVERHEAD_SIZE);
 
 exports.Heap = Heap;
+return exports;
 
-// });
+});
 /*
 i need some bytecode for syntax.js
 i couldn´t define intel instructions
@@ -9606,8 +9607,8 @@ var function_table = {
     "[object ProxyExoticObject]": ProxyExoticObject.prototype,
     "[object PromiseExoticObject]": OrdinaryObject.prototype,
     "[object SymbolPrimitiveType]": SymbolPrimitiveType.prototype,
-    "[object EddiesDOMObjectWrapper]": ExoticDOMObjectWrapper.prototype,
-    "[object EddiesDOMFunctionWrapper]": ExoticDOMFunctionWrapper.prototype,
+    "[object EddiesDOMObjectWrapper]": NativeJSObjectWrapper.prototype,
+    "[object EddiesDOMFunctionWrapper]": NativeJSFunctionWrapper.prototype,
     "[object IntegerIndexedExoticObject]": IntegerIndexedExoticObject.prototype,
     "[object TypeExoticObject]": TypeExoticObject.prototype,
     "[object TypeDescriptorExoticObject]": TypeDescriptorExoticObject.prototype
@@ -13710,9 +13711,9 @@ function IntegerIndexedObjectCreate(prototype) {
  * Created by root on 30.03.14.
  */
 
-function ExoticDOMObjectWrapper(object) {
-    if (object instanceof ExoticDOMObjectWrapper || object instanceof ExoticDOMFunctionWrapper) return object;
-    var O = Object.create(ExoticDOMObjectWrapper.prototype);
+function NativeJSObjectWrapper(object) {
+    if (object instanceof NativeJSObjectWrapper || object instanceof NativeJSFunctionWrapper) return object;
+    var O = Object.create(NativeJSObjectWrapper.prototype);
     setInternalSlot(O, "Wrapped", object);
     setInternalSlot(O, "Bindings", Object.create(null));        
     setInternalSlot(O, "Symbols", Object.create(null));
@@ -13720,8 +13721,8 @@ function ExoticDOMObjectWrapper(object) {
     setInternalSlot(O, "Extensible", true);
     return O;
 }
-ExoticDOMObjectWrapper.prototype = {
-    constructor: ExoticDOMObjectWrapper,
+NativeJSObjectWrapper.prototype = {
+    constructor: NativeJSObjectWrapper,
     type: "object",
     toString: function () {
         return "[object EddiesDOMObjectWrapper]";
@@ -13730,9 +13731,9 @@ ExoticDOMObjectWrapper.prototype = {
         var o = this.Wrapped;
         var p = o[P];
         if (typeof p === "object" && p) {
-            return ExoticDOMObjectWrapper(p);
+            return NativeJSObjectWrapper(p);
         } else if (typeof p === "function") {
-            return ExoticDOMFunctionWrapper(p, o);
+            return NativeJSFunctionWrapper(p, o);
         }
         return p;
     },
@@ -13749,9 +13750,9 @@ ExoticDOMObjectWrapper.prototype = {
             var result = f.apply(o, argList);
 
             if (typeof result === "object" && result) {
-                result = ExoticDOMObjectWrapper(result);
+                result = NativeJSObjectWrapper(result);
             } else if (typeof result === "function") {
-                result = ExoticDOMFunctionWrapper(result, o);
+                result = NativeJSFunctionWrapper(result, o);
             }
             return result;
         } else if (IsCallable(f)) {
@@ -13789,8 +13790,8 @@ ExoticDOMObjectWrapper.prototype = {
     },
 };
 
-function ExoticDOMFunctionWrapper(func, that) {
-    var F = Object.create(ExoticDOMFunctionWrapper.prototype);
+function NativeJSFunctionWrapper(func, that) {
+    var F = Object.create(NativeJSFunctionWrapper.prototype);
     setInternalSlot(F, "Wrapped", func);
     setInternalSlot(F, "NativeThis", that);
     setInternalSlot(F, "Bindings", Object.create(null));    
@@ -13799,8 +13800,8 @@ function ExoticDOMFunctionWrapper(func, that) {
     setInternalSlot(F, "Extensible", true);
     return F;
 }
-ExoticDOMFunctionWrapper.prototype = {
-    constructor: ExoticDOMFunctionWrapper,
+NativeJSFunctionWrapper.prototype = {
+    constructor: NativeJSFunctionWrapper,
 
     toString: function () {
         return "[object EddiesDOMFunctionWrapper]";
@@ -13815,14 +13816,14 @@ ExoticDOMFunctionWrapper.prototype = {
         
         
         if (typeof result === "object" && result) {
-            result = ExoticDOMObjectWrapper(result);
+            result = NativeJSObjectWrapper(result);
         } else if (typeof result === "function") {
-            result = ExoticDOMFunctionWrapper(result, that);
+            result = NativeJSFunctionWrapper(result, that);
         }
         return NormalCompletion(result);
     }
 };
-addMissingProperties(ExoticDOMFunctionWrapper.prototype, ExoticDOMObjectWrapper.prototype);
+addMissingProperties(NativeJSFunctionWrapper.prototype, NativeJSObjectWrapper.prototype);
 
 
 /**
@@ -25372,7 +25373,23 @@ var VMObject_eval = function (thisArg, argList) {
     else if (!(realmObject = getInternalSlot(realm, "RealmObject"))) return withError("Type", "Sorry, only realm objects are accepted as realm object");
     return require("vm").CompileAndRun(realmObject, code);
 };
+
+var VMObject_heap = function (thisArg, argList) {
+    var size = argList[0];
+    var realm = argList[1];
+    var realmObject;
+    if (realm === undefined) realmObject = getRealm();
+    else if (!(realmObject = getInternalSlot(realm, "RealmObject"))) return withError("Type", "Sorry, only realm objects are accepted as realm object");
+    var Heap = require("heap").Heap;
+    var heap = new Heap(size);
+    var O = NativeJSObjectWrapper(heap);
+    setInternalSlot(O, "Heap", heap);    
+    LazyDefineProperty(O, $$toStringTag, "HeapWrapper");    
+    return NormalCompletion(O);
+};
 LazyDefineBuiltinFunction(VMObject, "eval", 1, VMObject_eval);
+LazyDefineBuiltinFunction(VMObject, "heap", 1, VMObject_heap);
+
 /*
 
     This is a small interface for my upcoming virtual machine implementation,
@@ -25459,7 +25476,7 @@ LazyDefineBuiltinFunction(VMObject, "eval", 1, VMObject_eval);
         if (typeof Java !== "function" && typeof load !== "function" && typeof print !== "function") {
 	
 	        LazyDefineProperty(intrinsics, "%DOMWrapper%", 
-	        ExoticDOMObjectWrapper(
+	        NativeJSObjectWrapper(
 	        typeof importScripts === "function" ? self : 
 	        typeof window === "object" ? window : 
 	        typeof process === "object" ? process : {}
@@ -25558,8 +25575,8 @@ LazyDefineBuiltinFunction(VMObject, "eval", 1, VMObject_eval);
     exports.ArgumentsExoticObject = ArgumentsExoticObject;
     exports.ArrayCreate = ArrayCreate;
     exports.ArraySetLength = ArraySetLength;
-    exports.ExoticDOMObjectWrapper = ExoticDOMObjectWrapper;
-    exports.ExoticDOMFunctionWrapper = ExoticDOMFunctionWrapper;
+    exports.NativeJSObjectWrapper = NativeJSObjectWrapper;
+    exports.NativeJSFunctionWrapper = NativeJSFunctionWrapper;
     exports.BoundFunctionCreate = BoundFunctionCreate;
     exports.GeneratorFunctionCreate = GeneratorFunctionCreate;
     exports.ObjectDefineProperties = ObjectDefineProperties;

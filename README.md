@@ -1,5 +1,7 @@
-syntaxjs
-========
+syntax.js
+=========
+(the name is the original name of the original 99 line syntaxhighlighter from x-mas 2012)
+
 
 Not bugfree(*) but compliant EcmaScript 6 (7**) Interpreter(*****) written 
 in EcmaScript 5. This project was started on a PIII/933 with mcedit in a dorm 
@@ -21,10 +23,18 @@ A few JSDoc comments will replace the chaotic few comments left between.
 a while. But then we´ll also have Weak Maps, Weak Sets, and Weak Refs. 
 
 
+Latest Mistake
+==============
+
+I spotted that an AssignmentElement for Destructuring of Objects
+may contain a { x: LeftHandSideExpression() } which can be any target where
+we can assign something to (PutValue(lhsRef, value) does that then.) Currently
+only Aliasnames worked. I hadn´t checked it for a long time, since last year
+november i guess.
+
+
 New: Multiple Realms
 ======================
-
-
 
 ```bash
 npm install -g  #to install syntaxjs from it´s directory
@@ -165,6 +175,16 @@ Parser_API
 ==========
 
 It´s using Mozilla Parser_API for AST representation.
+
+BUT: It´s a little incompatible with the latest draft i´ve seen. It was with an earlier,
+but the latest hat "default" and "rest" on function declaration nodes. I didn´t know if 
+i would have to set default to a sparse array with holes, wherever no default is assigned.
+And the Rest is of course cool extracted, but also in my .params list. Which is then passed
+to the Ecma Specification Algorithm "BindingInitialisation" as one Array after "ArgumentsListEvaluation",
+which fetches the values of the passed Parameters, while the former processes the Bound Names of
+the params to put each value into (with env.InitializeBinding (Identifiers) or PutValue (any Reference)).
+
+Well, the Format might change inside.
 
 
 ```
@@ -513,3 +533,5 @@ while (nextToken = tokenize.nextToken()) {
 The API is not complete. The exports are not clean yet. The new tokenizer fails
 some tests, for whatever reason of the skipped lineterminators it is. So i have
 still some lines to edit here.
+
+
