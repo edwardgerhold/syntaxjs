@@ -26213,6 +26213,7 @@ define("runtime", function () {
     }
     function IteratorDestructuringEvaluation() {}
     function DestructuringAssignmentEvaluation(left, rval, op) {
+	var type = left.type;
         if (type === "ObjectPattern") {
             return ObjectPatternDestructuring(left, rval, op);
         } else if (type === "ArrayPattern") {
