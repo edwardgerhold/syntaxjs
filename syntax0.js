@@ -22959,7 +22959,7 @@ createTypedArrayVariant("Float64", 8, Float64ArrayConstructor, Float64ArrayProto
 
 setInternalSlot(SetTimeoutFunction, SLOTS.CALL, function (thisArg, argList) {
     var func = argList[0];
-    var timeout = argList[1] || 0;
+    var timeout = argList[1] | 0;
     var task;
     if (!IsCallable(func)) return withError("Type", "setTimeout: function argument expected");
     task = {
@@ -22970,7 +22970,6 @@ setInternalSlot(SetTimeoutFunction, SLOTS.CALL, function (thisArg, argList) {
     getEventQueue().push(task);
     return task;
 });
-
 
 // ===========================================================================================================
 // Map
@@ -23811,14 +23810,18 @@ DefineOwnProperty(EmitterPrototype, "emit", {
         if (list == undefined) return NormalCompletion(undefined);
 
         //setTimeout(function () {
+        var F = OrdinaryFunction();
+        var status = callInternalSlot(SLOTS.CALL, SetTimeoutFunction, null, [F, 0]);
+        setInternalSlot(F, SLOTS.CALL, function (thisArg, argList) {
         var result;
         for (var i = 0, j = list.length; i < j; i++) {
             if (callback = list[i]) {
                 result = callInternalSlot(SLOTS.CALL, callback, thisArg, values);
-                if (isAbrupt(result)) return result;
+            //    if (isAbrupt(result)) return result;
             }
         }
-        //},0);
+        });
+        //});
 
         return NormalCompletion(undefined);
     }),
@@ -23974,14 +23977,10 @@ LazyDefineBuiltinFunction(TypePrototype, "opaqueType", 1, TypePrototype_opaqueTy
 
 /*
 
-    This is a small interface for my upcoming virtual machine implementation,
+    This is a small interface for the upcoming virtual machine implementation,
     that i can execute VM.eval(code[, realm]) from the es6> prompt and don´t
     have to switch to node for calling the functions.
-
-    The code should be in lib/vm/vm.js and it´s include files.
-    But until it is really a vm, some weeks and months will pass us by.
-    For now, i will put it in lib/parsenodes.
-
+    
 */
 var VMObject_eval = function (thisArg, argList) {
     var code = argList[0];
@@ -24008,13 +24007,7 @@ var VMObject_heap = function (thisArg, argList) {
 LazyDefineBuiltinFunction(VMObject, "eval", 1, VMObject_eval);
 LazyDefineBuiltinFunction(VMObject, "heap", 1, VMObject_heap);
 
-/*
 
-    This is a small interface for my upcoming virtual machine implementation,
-    that i can execute VM.eval(code[, realm]) from the es6> prompt and don´t
-    have to switch to node for calling the functions.
-
-*/
 
 
         createGlobalThis = function createGlobalThis(realm, globalThis, intrinsics) {
