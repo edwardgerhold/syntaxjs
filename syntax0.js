@@ -8575,8 +8575,8 @@ function isWorker() {
  SLOTS.HOMEOBJECT: 9,
  SLOTS.METHODNAME: 10,
  // Bound Functions
- "BoundTargetFunction": 11,
- "BoundThis": 12,
+ SLOTS.BOUNDTARGETFUNCTION: 11,
+ SLOTS.BOUNDTHIS: 12,
  "BoundParameters": 13,
  // Object Wrappers
  "StringData": 14,
@@ -8700,13 +8700,7 @@ exports.LazyDefineSelfHostingFunction = LazyDefineSelfHostingFunction;
 /**
 * Created by root on 18.04.14.
 */
-/*
-    HOW TO?
-    COLLECT IN THE OTHER FILES THE SLOTNAMES IN SOME OBJECT
-    THEN MOVE THE SLOTS HERE
-    (same name on other object gets same slot index for it later)
 
- */
 
 var SLOTS = Object.create(null);
 
@@ -8755,9 +8749,10 @@ SLOTS.BYTELENGTH = "ByteLength";
 SLOTS.BYTEOFFSET = "ByteOffset";
 
 // proxyexoticobjects.js the first to use them.
-SLOTS.PROXYTARGET = "ProxyTarget";
-SLOTS.PROXYHANDLER = "ProxyHandler";
+SLOTS.PROXYTARGET = "ProxyTarget"; // x
+SLOTS.PROXYHANDLER = "ProxyHandler"; // x
 
+SLOTS.LOADERRECORD = "LoaderRecord"; // x
 
 Object.freeze(SLOTS);
 /**
@@ -9401,6 +9396,17 @@ OrdinaryObject.prototype = {
 function ObjectCreate(proto, internalDataList) {
     if (proto === undefined) proto = Get(getIntrinsics(), "%ObjectPrototype%");
     var O = OrdinaryObject(proto);
+    /*
+        new
+     */
+    if (internalDataList && Array.isArray(internalDataList)) {
+        for (var i = 0, j = internalDataList.length; i < j; i++) {
+            O[internalDataList[i]] = undefined;
+        }
+    }else
+    /*
+        legacy
+     */
     if (internalDataList && typeof internalDataList === "object") {
         for (var k in internalDataList) {
             if (Object.hasOwnProperty.call(internalDataList, k)) {
@@ -11128,15 +11134,15 @@ addMissingProperties(OrdinaryFunction.prototype, OrdinaryObject.prototype);
 
 function BoundFunctionCreate(B, T, argList) {
     var F = OrdinaryFunction();
-    setInternalSlot(F, "BoundTargetFunction", B);
-    setInternalSlot(F, "BoundThis", T);
-    setInternalSlot(F, "BoundArguments", argList.slice());
+    setInternalSlot(F, SLOTS.BOUNDTARGETFUNCTION, B);
+    setInternalSlot(F, SLOTS.BOUNDTHIS, T);
+    setInternalSlot(F, SLOTS.BOUNDARGUMENTS, argList.slice());
     setInternalSlot(F, "Prototype", getIntrinsic("%FunctionPrototype%"));
     setInternalSlot(F, "Extensible", true);
     setInternalSlot(F, SLOTS.CALL, function (thisArg, argList) {
-        var B = getInternalSlot(F, "BoundTargetFunction");
-        var T = getInternalSlot(F, "BoundThis");
-        var A = getInternalSlot(F, "BoundArguments").concat(argList);
+        var B = getInternalSlot(F, SLOTS.BOUNDTARGETFUNCTION);
+        var T = getInternalSlot(F, SLOTS.BOUNDTHIS);
+        var A = getInternalSlot(F, SLOTS.BOUNDARGUMENTS).concat(argList);
         return callInternalSlot(SLOTS.CALL, B, T, A);
     });
     return F;
@@ -11333,7 +11339,7 @@ function MakeConstructor(F, writablePrototype, prototype) {
 function OrdinaryHasInstance(C, O) {
     var BC, P;
     if (!IsCallable(C)) return false;
-    if (BC = getInternalSlot(C, "BoundTargetFunction")) {
+    if (BC = getInternalSlot(C, SLOTS.BOUNDTARGETFUNCTION)) {
         return OrdinaryHasInstance(BC, O);
     }
     if (Type(O) !== OBJECT) return false;
@@ -14782,7 +14788,7 @@ function getRecordFromList(list, field, value) {
 function thisLoader(value) {
     if (value instanceof CompletionRecord) return thisLoader(value.value);
     var m;
-    if (Type(value) === OBJECT && (m=getInternalSlot(value, "LoaderRecord"))) {
+    if (Type(value) === OBJECT && (m=getInternalSlot(value, SLOTS.LOADERRECORD))) {
         if (m !== undefined) return value;
     }
     return withError("Type", "thisLoader(value): value is not a valid loader object");
@@ -15831,7 +15837,7 @@ var LoaderConstructor_Call = function (thisArg, argList) {
     if (options === undefined) options = ObjectCreate();
     if (Type(loader) !== OBJECT) return withError("Type", "Loader is not an object");
 
-    if (getInternalSlot(loader, "LoaderRecord") !== undefined) return withError("Type", "loader.[[LoaderRecord]] isnt undefined");
+    if (getInternalSlot(loader, SLOTS.LOADERRECORD) !== undefined) return withError("Type", "loader.[[LoaderRecord]] isnt undefined");
     if (Type(options) !== OBJECT) return withError("Type", "the Loader constructors´ options argument is not an object");
 
     var realmObject = Get(options, "realm");
@@ -15871,10 +15877,10 @@ var LoaderConstructor_Call = function (thisArg, argList) {
     if (isAbrupt(status)) return status;
     status = define_loader_pipeline_hook("instantiate");
     if (isAbrupt(status)) return status;
-    if (getInternalSlot(loader, "LoaderRecord") !== undefined) return withError("Type", "loader.[[LoaderRecord]] seems to have been changed, expected the undefined value.");
+    if (getInternalSlot(loader, SLOTS.LOADERRECORD) !== undefined) return withError("Type", "loader.[[LoaderRecord]] seems to have been changed, expected the undefined value.");
 
     var loaderRecord = CreateLoaderRecord(realm, loader);
-    setInternalSlot(loader, "LoaderRecord", loaderRecord);
+    setInternalSlot(loader, SLOTS.LOADERRECORD, loaderRecord);
     return NormalCompletion(loader);
 };
 
@@ -15885,9 +15891,7 @@ var LoaderConstructor_Construct = function (argList) {
 // 31.1.
 var LoaderConstructor_$$create = function (thisArg, argList) {
     var F = thisArg;
-    var loader = OrdinaryCreateFromConstructor(F, "%LoaderPrototype%", {
-        "LoaderRecord": undefined
-    });
+    var loader = OrdinaryCreateFromConstructor(F, "%LoaderPrototype%", [ SLOTS.LOADERRECORD ]);
     return loader;
 };
 
@@ -15897,7 +15901,7 @@ var LoaderPrototype_get_realm = function (thisArg, argList) {
     if (Type(loader) !== OBJECT || !hasInternalSlot(loader, "Realm")) {
         return withError("Type", "the this value is not a valid loader object");
     }
-    var loaderRecord = getInternalSlot(loader, "LoaderRecord");
+    var loaderRecord = getInternalSlot(loader, SLOTS.LOADERRECORD);
     var realm = loaderRecord.Realm;
     return NormalCompletion(realm);
 };
@@ -15908,7 +15912,7 @@ var LoaderPrototype_get_global = function (thisArg, argList) {
     if (Type(loader) !== OBJECT || !hasInternalSlot(loader, "Realm")) {
         return withError("Type", "the this value is not a valid loader object");
     }
-    var loaderRecord = getInternalSlot(loader, "LoaderRecord");
+    var loaderRecord = getInternalSlot(loader, SLOTS.LOADERRECORD);
     var realm = loaderRecord.Realm;
     var global = realm.globalThis;
     return NormalCompletion(global);
@@ -15937,7 +15941,7 @@ var LoaderPrototype_define = function (thisArg, argList) {
     var options = argList[2];
     var loader = thisArg;
     if (isAbrupt(loader = ifAbrupt(loader))) return loader;
-    var loaderRecord = getInternalSlot(loader, "LoaderRecord");
+    var loaderRecord = getInternalSlot(loader, SLOTS.LOADERRECORD);
     name = ToString(name);
     if (isAbrupt(name = ifAbrupt(name))) return name;
     var address = GetOption(options, "address");
@@ -15959,7 +15963,7 @@ var LoaderPrototype_load = function (thisArg, argList) {
     var options = argList[1];
     var loader = thisLoader(thisArg);
     if (isAbrupt(loader = ifAbrupt(loader))) return loader;
-    var loaderRecord = getInternalSlot(loader,"LoaderRecord");
+    var loaderRecord = getInternalSlot(loader,SLOTS.LOADERRECORD);
     var p = LoadModule(loader, name, options);
     if (isAbrupt(p = ifAbrupt(p))) return p;
     var F = ReturnUndefined();
@@ -15974,7 +15978,7 @@ var LoaderPrototype_module = function (thisArg, argList) {
     var options = argList[1];
     var loader = thisLoader(thisArg);
     if (isAbrupt(loader = ifAbrupt(loader))) return loader;
-    var loaderRecord = getInternalSlot(loader, "LoaderRecord");
+    var loaderRecord = getInternalSlot(loader, SLOTS.LOADERRECORD);
     var address = GetOption(options, "address");
     if (isAbrupt(address = ifAbrupt(address))) return address;
     var load = CreateLoad(undefined);
@@ -15996,7 +16000,7 @@ var LoaderPrototype_import = function (thisArg, argList) {
     var options = argList[1];
     var loader = thisLoader(thisArg);
     if (isAbrupt(loader = ifAbrupt(loader))) return loader;
-    var loaderRecord = getInternalSlot(loader, "LoaderRecord");
+    var loaderRecord = getInternalSlot(loader, SLOTS.LOADERRECORD);
     var p = LoadModule(loaderRecord, name, options);
     if (isAbrupt(p = ifAbrupt(p))) return p;
     var F = EvaluateLoadedModule();
@@ -16011,7 +16015,7 @@ var LoaderPrototype_eval = function (thisArg, argList) {
     var source = argList[0];
     var loader = thisLoader(thisArg);
     if (isAbrupt(loader = ifAbrupt(loader))) return loader;
-    var loaderRecord = getInternalSlot(loader, "LoaderRecord");
+    var loaderRecord = getInternalSlot(loader, SLOTS.LOADERRECORD);
     return IndirectEval(loaderRecord.Realm, source);
 };
 
@@ -16022,7 +16026,7 @@ var LoaderPrototype_get = function (thisArg, argList) {
     if (isAbrupt(loader = ifAbrupt(loader))) return loader;
     var name = ToString(argList[0]);
     if (isAbrupt(name = ifAbrupt(name))) return name;
-    var loaderRecord = getInternalSlot(loader, "LoaderRecord");
+    var loaderRecord = getInternalSlot(loader, SLOTS.LOADERRECORD);
 
     var modules = loaderRecord.Modules;
     var record, module;
@@ -16043,7 +16047,7 @@ var LoaderPrototype_has = function (thisArg, argList) {
     var name = ToString(argList[0]);
     if (isAbrupt(name = ifAbrupt(name))) return name;
 
-    var loaderRecord = getInternalSlot(loader, "LoaderRecord");
+    var loaderRecord = getInternalSlot(loader, SLOTS.LOADERRECORD);
     var modules = loaderRecord.Modules;
     if (hasRecordInList(modules, "Key", name)) return NormalCompletion(true);
 
@@ -16064,7 +16068,7 @@ var LoaderPrototype_set = function (thisArg, argList) {
     var module = argList[1];
     var loader = thisLoader(thisArg);
     if (isAbrupt(loader = ifAbrupt(loader))) return loader;
-    var loaderRecord = getInternalSlot(loader, "LoaderRecord");
+    var loaderRecord = getInternalSlot(loader, SLOTS.LOADERRECORD);
     var name = ToString(name);
     if (isAbrupt(name = ifAbrupt(name))) return name;
     if (Type(module) !== OBJECT) return withError("Type", "module is not an object");
@@ -16083,7 +16087,7 @@ var LoaderPrototype_delete = function (thisArg, argList) {
     var name = argList[0];
     var loader = thisLoader(thisArg);
     if (isAbrupt(loader = ifAbrupt(loader))) return loader;
-    var loaderRecord = getInternalSlot(loader, "LoaderRecord");
+    var loaderRecord = getInternalSlot(loader, SLOTS.LOADERRECORD);
     name = ToString(name);
     if (isAbrupt(name = ifAbrupt(name))) return name;
     var modules = loaderRecord.Modules;
@@ -16160,7 +16164,7 @@ LazyDefineProperty(LoaderPrototype, $$toStringTag, "Loader");
 
 function CreateLinkedModuleInstance (loader) {
     var mod = OrdinaryModule();
-//    var lr = getInternalSlot(loader, "LoaderRecord");
+//    var lr = getInternalSlot(loader, SLOTS.LOADERRECORD);
 //    lr.Modules.push({ Name: name, Module: mod });
     return mod;
 }
@@ -16209,7 +16213,7 @@ exports.CreateLoaderIterator = CreateLoaderIterator;
 var LoaderIteratorPrototype_next = function next(thisArg, argList) {
     var iterator = thisArg;
     var m = getInternalSlot(iterator, "Loader");
-    var loaderRecord = getInternalSlot(m, "LoaderRecord");
+    var loaderRecord = getInternalSlot(m, SLOTS.LOADERRECORD);
     var index = getInternalSlot(iterator, "LoaderNextIndex");
     var itemKind = getInternalSlot(iterator, "LoaderIterationKind");
     if (m === undefined) return CreateItrResultObject(undefined, true);
@@ -24386,6 +24390,7 @@ define("runtime", function () {
     var IsLexicalDeclaration = statics.IsLexicalDeclaration;
     var IsConstantDeclaration = statics.IsConstantDeclaration;
     var ReferencesSuper = statics.ReferencesSuper;
+
     var ConstructorMethod = statics.ConstructorMethod;
     var PrototypeMethodDefinitions = statics.PrototypeMethodDefinitions;
     var StaticMethodDefinitions = statics.StaticMethodDefinitions;
@@ -24482,6 +24487,7 @@ define("runtime", function () {
     var Type = ecma.Type;
     var Reference = ecma.Reference;
     var GetIdentifierReference = ecma.GetIdentifierReference;
+    var IsSuperReference = ecma.IsSuperReference;
     var GetThisEnvironment = ecma.GetThisEnvironment;
     var GetOwnProperty = ecma.GetOwnProperty;
     var GetValue = ecma.GetValue;
@@ -26433,7 +26439,7 @@ define("runtime", function () {
             }
             if (IsPropertyReference(exprRef)) {
                 if (IsSuperReference(exprRef)) return withError("Reference", "Can not delete a super reference.");
-                var deleteStatus = Delete(ToObject(GetBase(exprRef), GetReferenceName(exprRef)));
+                var deleteStatus = Delete(ToObject(GetBase(exprRef), GetReferencedName(exprRef)));
                 deleteStatus = ifAbrupt(deleteStatus);
                 if (isAbrupt(deleteStatus)) return deleteStatus;
                 if (deleteStatus === false && IsStrictReference(exprRef)) return withError("Type", "deleteStatus is false and IsStrictReference is true.");
