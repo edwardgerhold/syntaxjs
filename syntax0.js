@@ -8355,7 +8355,7 @@ function LazyDefineAccessorFunction(O, name, arity, g, s, e, c) {
     if (e === undefined) e = false;
     if (c === undefined) c = true;
     var fname = name;
-    if (IsSymbol(name)) fname = "["+(getInternalSlot(name, "Description")||"")+"]";
+    if (IsSymbol(name)) fname = "["+(getInternalSlot(name, SLOTS.DESCRIPTION)||"")+"]";
     return callInternalSlot(SLOTS.DEFINEOWNPROPERTY, O, name, {
         configurable: c,
         enumerable: e,
@@ -8709,14 +8709,14 @@ SLOTS.SET = "Set"; // x
 SLOTS.DEFINEOWNPROPERTY = "DefineOwnProperty"; // x
 SLOTS.GETOWNPROPERTY = "GetOwnProperty";
 SLOTS.OWNPROPERTYKEYS = "OwnPropertyKeys";
-SLOTS.ENUMERATE = "Enumerate";
+SLOTS.ENUMERATE = "Enumerate"; // x
 SLOTS.GETPROTOTYPEOF = "GetPrototypeOf"; // x
 SLOTS.SETPROTOTYPEOF = "SetPrototypeOf"; // x
-SLOTS.PROTOTYPE = "Prototype";
-SLOTS.EXTENSIBLE = "Extensible";
-SLOTS.INVOKE = "Invoke";
-SLOTS.HASPROPERTY = "HasProperty";
-SLOTS.ISEXTENSIBLE = "IsExtensible";
+SLOTS.PROTOTYPE = "Prototype"; // x
+SLOTS.EXTENSIBLE = "Extensible"; // x
+SLOTS.INVOKE = "Invoke"; // x
+SLOTS.HASPROPERTY = "HasProperty"; // x
+SLOTS.ISEXTENSIBLE = "IsExtensible"; //x
 SLOTS.BINDINGS = "Bindings";
 SLOTS.SYMBOLS = "Symbols";
 
@@ -8747,11 +8747,17 @@ SLOTS.TYPEDARRAYNAME = "TypedArrayName";
 SLOTS.TYPEDARRAYCONSTRUCTOR = "TypedArrayConstructor";
 SLOTS.BYTELENGTH = "ByteLength";
 SLOTS.BYTEOFFSET = "ByteOffset";
+SLOTS.ARRAYLENGTH = "ArrayLength";
+SLOTS.ARRAYBUFFERBYTELENGTH = "ArrayBufferByteLength"
+
+SLOTS.ARRAYINITIALISATIONSTATE = "ArrayInitialisationState";
 
 // proxyexoticobjects.js the first to use them.
 SLOTS.PROXYTARGET = "ProxyTarget"; // x
 SLOTS.PROXYHANDLER = "ProxyHandler"; // x
 SLOTS.LOADERRECORD = "LoaderRecord"; // x
+
+SLOTS.DATAVIEW = "DataView";
 
 Object.freeze(SLOTS);
 /**
@@ -9977,8 +9983,8 @@ function ToPrimitive(V, prefType) {
         /* else if (s === "[object OrdinaryObject]") {*/
         else if (hasInternalSlot(V, SLOTS.NUMBERDATA)) return thisNumberValue(V);
         else if (hasInternalSlot(V, SLOTS.STRINGDATA)) return thisStringValue(V);
-        else if (hasInternalSlot(V, "BooleanData")) return thisBooleanValue(V);
-        else if (hasInternalSlot(V, "SymbolData")) return thisSymbolValue(V);
+        else if (hasInternalSlot(V, SLOTS.BOOLEANDATA)) return thisBooleanValue(V);
+        else if (hasInternalSlot(V, SLOTS.SYMBOLDATA)) return thisSymbolValue(V);
         else if (s === "[object SymbolPrimitiveType]") {
             return V;
         } else if (EnvironmentType[s]) {
@@ -10162,7 +10168,7 @@ function ToString(V) {
         return withError("Type", "Can not convert symbol to string");
     }
     if (t === OBJECT) {
-        if (hasInternalSlot(V, "SymbolData")) return withError("Type", "Can not convert symbol to string");
+        if (hasInternalSlot(V, SLOTS.SYMBOLDATA)) return withError("Type", "Can not convert symbol to string");
         var primVal = ToPrimitive(V, "string");
         return ToString(primVal);
     }
@@ -10178,7 +10184,7 @@ function ToObject(V) {
     if (V instanceof SymbolPrimitiveType) {
         var s = SymbolPrimitiveType();
         setInternalSlot(s, SLOTS.PROTOTYPE, getIntrinsic("%SymbolPrototype%"));
-        setInternalSlot(s, "SymbolData", V);
+        setInternalSlot(s, SLOTS.SYMBOLDATA, V);
         return s;
     }
     if (typeof V === "number") {
@@ -10264,8 +10270,8 @@ function SameValueZero(x, y) {
     if (IsTypeObject(x)) {
           // IsTypeObject(y)
          return SameValue(getInternalSlot(x, "TypeDescriptor"), getInternalSlot(y, "TypeDescriptor"))
-             && SameValue(getInternalSlot(x, "ViewedArrayBuffer"), getInternalSlot(y, "ViewedArrayBuffer"))
-             && SameValue(getInternalSlot(x, "ByteOffset"), getInternalSlot(y, "ByteOffset"))
+             && SameValue(getInternalSlot(x, SLOTS.VIEWEDARRAYBUFFER), getInternalSlot(y, SLOTS.VIEWEDARRAYBUFFER))
+             && SameValue(getInternalSlot(x, SLOTS.BYTEOFFSET), getInternalSlot(y, SLOTS.BYTEOFFSET))
              && SameValue(getInternalSlot(x, "Opacity"), getInternalSlot(y, "Opacity"));
 
     }
@@ -11177,7 +11183,7 @@ function SetFunctionName(F, name, prefix) {
     Assert(IsCallable(F), "SetFunctionName: F has to be an EcmaScript Function Object");
     Assert(!HasOwnProperty(F, "name"), "SetFunctionName: Function may not have a name property");
     if (t === SYMBOL) {
-        var desc = getInternalSlot(name, "Description");
+        var desc = getInternalSlot(name, SLOTS.DESCRIPTION);
         if (desc === undefined) name = "";
         else name = "[" + desc + "]";
     }
@@ -11974,44 +11980,39 @@ function CreateByteDataBlock(bytes) {
 }
 
 function CopyDataBlockBytes(toBlock, toIndex, fromBlock, fromIndex, count) {
-    for (var i = fromIndex, j = fromIndex + count, k = toIndex; i < j; i++, k++) {
-        var value = fromBlock[i];
-        toBlock[k] = value;
-    }
+    for (var i = fromIndex, j = fromIndex + count, k = toIndex; i < j; i++, k++) toBlock[k] = fromBlock[i];
 }
-
-// ===========================================================================================================
-// ArrayBuffer
-// ===========================================================================================================
 
 function CreateByteArrayBlock(bytes) {
     return new ArrayBuffer(bytes); //spaeter alloziere auf eigenem heap
 }
 
 function SetArrayBufferData(arrayBuffer, bytes) {
-    Assert(hasInternalSlot(arrayBuffer, "ArrayBufferData"), "[[ArrayBufferData]] has to exist");
+    Assert(hasInternalSlot(arrayBuffer, SLOTS.ARRAYBUFFERDATA), "[[ArrayBufferData]] has to exist");
     Assert(bytes > 0, "bytes must be a positive integer");
     var block = CreateByteArrayBlock(bytes); // hehe
-    setInternalSlot(arrayBuffer, "ArrayBufferData", block);
-    setInternalSlot(arrayBuffer, "ArrayBufferByteLength", bytes);
+    setInternalSlot(arrayBuffer, SLOTS.ARRAYBUFFERDATA, block);
+    setInternalSlot(arrayBuffer, SLOTS.ARRAYBUFFERBYTELENGTH, bytes);
     return arrayBuffer;
 }
 
 function AllocateArrayBuffer(F) {
-    var obj = OrdinaryCreateFromConstructor(F, "%ArrayBufferPrototype%", {
-        "ArrayBufferData": undefined,
-        "ArrayBufferByteLength": undefined
-    });
+    var obj = OrdinaryCreateFromConstructor(F, "%ArrayBufferPrototype%",
+        [
+            SLOTS.ARRAYBUFFERDATA,
+            SLOTS.ARRAYBUFFERBYTELENGTH
+        ]
+    );
     if (isAbrupt(obj = ifAbrupt(obj))) return obj;
-    setInternalSlot(obj, "ArrayBufferByteLength", 0);
+    setInternalSlot(obj, SLOTS.ARRAYBUFFERBYTELENGTH, 0);
     return obj;
 }
 
 
 
 function GetValueFromBuffer(arrayBuffer, byteIndex, type, isLittleEndian) {
-    var length = getInternalSlot(arrayBuffer, "ArrayBufferByteLength");
-    var block = getInternalSlot(arrayBuffer, "ArrayBufferData");
+    var length = getInternalSlot(arrayBuffer, SLOTS.ARRAYBUFFERBYTELENGTH);
+    var block = getInternalSlot(arrayBuffer, SLOTS.ARRAYBUFFERDATA);
     if (block === undefined || block === null) return withError("Type", "[[ArrayBufferData]] is not initialized or available.");
     
     var elementSize = arrayType2elementSize[type];
@@ -12024,8 +12025,8 @@ function GetValueFromBuffer(arrayBuffer, byteIndex, type, isLittleEndian) {
 }
 
 function SetValueInBuffer(arrayBuffer, byteIndex, type, value, isLittleEndian) {
-    var length = getInternalSlot(arrayBuffer, "ByteLength");
-    var block = getInternalSlot(arrayBuffer, "ArrayBufferData");
+    var length = getInternalSlot(arrayBuffer, SLOTS.BYTELENGTH);
+    var block = getInternalSlot(arrayBuffer, SLOTS.ARRAYBUFFERDATA);
     if (block === undefined || block === null) return withError("Type", "[[ArrayBufferData]] is not initialized or available.");
     var elementSize = arrayType2elementSize[type];
     var numValue = +value;
@@ -12060,8 +12061,8 @@ function SetValueInBuffer(arrayBuffer, byteIndex, type, value, isLittleEndian) {
 function SetViewValue(view, requestIndex, isLittleEndian, type, value) {
     var v = ToObject(view);
     if (isAbrupt(v = ifAbrupt(v))) return v;
-    if (!hasInternalSlot(v, "DataView")) return withError("Type", "object has no [[ArrayBufferData]]");
-    var buffer = getInternalSlot(v, "ViewedArrayBuffer");
+    if (!hasInternalSlot(v, SLOTS.DATAVIEW)) return withError("Type", "object has no [[ArrayBufferData]]");
+    var buffer = getInternalSlot(v, SLOTS.VIEWEDARRAYBUFFER);
     if (buffer === undefined) return withError("Type", "buffer is undefined");
     var numberIndex = ToNumber(requestIndex);
     var getIndex = ToInteger(numberIndex);
@@ -12069,8 +12070,8 @@ function SetViewValue(view, requestIndex, isLittleEndian, type, value) {
     if ((numberIndex !== getIndex) || (getIndex < 0)) return withError("Range", "index out of range");
     var littleEndian = ToBoolean(isLittleEndian);
     if (isAbrupt(littleEndian = ifAbrupt(littleEndian))) return littleEndian;
-    var viewOffset = getInternalSlot(v, "ByteOffset");
-    var viewSize = getInternalSlot(v, "ByteLength");
+    var viewOffset = getInternalSlot(v, SLOTS.BYTEOFFSET);
+    var viewSize = getInternalSlot(v, SLOTS.BYTELENGTH);
     var elementSize = TypedArrayElementSize[type];
     if (getIndex + elementSize > viewSize) return withError("Range", "out of range larger viewsize");
     var bufferIndex = getIndex + viewOffset;
@@ -12080,8 +12081,8 @@ function SetViewValue(view, requestIndex, isLittleEndian, type, value) {
 function GetViewValue(view, requestIndex, isLittleEndian, type) {
     var v = ToObject(view);
     if (isAbrupt(v = ifAbrupt(v))) return v;
-    if (!hasInternalSlot(v, "DataView")) return withError("Type", "not a ArrayBufferData");
-    var buffer = getInternalSlot(v, "ViewedArrayBuffer");
+    if (!hasInternalSlot(v, SLOTS.DATAVIEW)) return withError("Type", "not a ArrayBufferData");
+    var buffer = getInternalSlot(v, SLOTS.VIEWEDARRAYBUFFER);
     if (buffer === undefined) return withError("Type", "buffer is undefined");
     var numberIndex = ToNumber(requestIndex);
     var getIndex = ToInteger(numberIndex);
@@ -12089,8 +12090,8 @@ function GetViewValue(view, requestIndex, isLittleEndian, type) {
     if ((numberIndex !== getIndex) || (getIndex < 0)) return withError("Range", "index out of range");
     var littleEndian = ToBoolean(isLittleEndian);
     if (isAbrupt(littleEndian = ifAbrupt(littleEndian))) return littleEndian;
-    var viewOffset = getInternalSlot(v, "ByteOffset");
-    var viewSize = getInternalSlot(v, "ByteLength");
+    var viewOffset = getInternalSlot(v, SLOTS.BYTEOFFSET);
+    var viewSize = getInternalSlot(v, SLOTS.BYTELENGTH);
     var elementSize = TypedArrayElementSize[type];
     if (getIndex + elementSize > viewSize) return withError("Range", "out of range larger viewsize");
     var bufferIndex = getIndex + viewOffset;
@@ -12143,24 +12144,24 @@ var typedConstructorNames = {
 
 function IntegerIndexedExoticObject() {
     var O = Object.create(IntegerIndexedExoticObject.prototype);
-    setInternalSlot(O, "ArrayBufferData", undefined);
-    setInternalSlot(O, "ViewedArrayBuffer", undefined);
-    setInternalSlot(O, "ArrayLength", undefined);
-    setInternalSlot(O, "ByteOffset", undefined);
-    setInternalSlot(O, "TypedArrayName", undefined);
+    setInternalSlot(O, SLOTS.ARRAYBUFFERDATA, undefined);
+    setInternalSlot(O, SLOTS.VIEWEDARRAYBUFFER, undefined);
+    setInternalSlot(O, SLOTS.ARRAYLENGTH, undefined);
+    setInternalSlot(O, SLOTS.BYTEOFFSET, undefined);
+    setInternalSlot(O, SLOTS.TYPEDARRAYNAME, undefined);
     return O;
 }
 IntegerIndexedExoticObject.prototype = assign(IntegerIndexedExoticObject.prototype, {
     DefineOwnProperty: function (P, Desc) {
         var O = this;
         Assert(IsPropertyKey(P), "P has to be a valid property key");
-        Assert(getInternalSlot(O,"ArrayBufferData") !== undefined, "[[ArrayBufferData]] must not be undefined");
+        Assert(getInternalSlot(O,SLOTS.ARRAYBUFFERDATA) !== undefined, "[[ArrayBufferData]] must not be undefined");
         if (Type(P) === STRING) {
             var intIndex = ToInteger(P);
             if (isAbrupt(intIndex = ifAbrupt(intIndex))) return intIndex;
             if (SameValue(ToString(intIndex), P)) {
                 if (intIndex < 0) return false;
-                var len = getInternalSlot(O,"ArrayLength");
+                var len = getInternalSlot(O,SLOTS.ARRAYLENGTH);
                 if (len === undefined) return withError("Type", "integerindexed: length is undefined");
                 if (intIndex >= len) return false;
                 if (IsAccessorDescriptor(Desc)) return false;
@@ -12215,7 +12216,7 @@ IntegerIndexedExoticObject.prototype = assign(IntegerIndexedExoticObject.prototy
     GetOwnProperty: function (P) {
         var O = this;
         Assert(IsPropertyKey(P), "P has to be a valid property key");
-        Assert(getInternalSlot(O,"ArrayBufferData") !== undefined, "[[ArrayBufferData]] must not be undefined");
+        Assert(getInternalSlot(O,SLOTS.ARRAYBUFFERDATA) !== undefined, "[[ArrayBufferData]] must not be undefined");
         if (Type(P) === STRING) {
             var intIndex = ToInteger(P);
             if (isAbrupt(intIndex = ifAbrupt(intIndex))) return intIndex;
@@ -12268,11 +12269,11 @@ addMissingProperties(IntegerIndexedExoticObject.prototype, OrdinaryObject.protot
 function IntegerIndexedElementGet(O, index) {
     Assert(Type(index) === NUMBER, "index type has to be number");
     Assert(index === ToInteger(index), "index has to be tointeger of index");
-    var buffer = getInternalSlot(O, "ViewedArrayBuffer");
-    var length = getInternalSlot(O, "ArrayLength");
+    var buffer = getInternalSlot(O, SLOTS.VIEWEDARRAYBUFFER);
+    var length = getInternalSlot(O, SLOTS.ARRAYLENGTH);
     if (index < 0 || index >= length) return undefined;
-    var offset = getInternalSlot(O,"ByteOffset");
-    var arrayTypeName = getInternalSlot(O,"TypedArrayName");
+    var offset = getInternalSlot(O,SLOTS.BYTEOFFSET);
+    var arrayTypeName = getInternalSlot(O,SLOTS.TYPEDARRAYNAME);
     var elementSize = ToNumber(TypedArrayElementSize[arrayTypeName]);
     var indexedPosition = (index * elementSize) + offset;
     var elementType = TypedArrayElementType[arrayTypeName];
@@ -12284,14 +12285,14 @@ function IntegerIndexedElementSet(O, index, value) {
     Assert(index === ToInteger(index), "index has to be tointeger of index");
     var O = ToObject(ThisResolution());
     if (isAbrupt(O = ifAbrupt(O))) return O;
-    var buffer = getInternalSlot(O, "ViewedArrayBuffer");
+    var buffer = getInternalSlot(O, SLOTS.VIEWEDARRAYBUFFER);
     if (!buffer) return withError("Type", "object is not a viewed array buffer");
-    var length = getInternalSlot(O, "ArrayLength");
+    var length = getInternalSlot(O, SLOTS.ARRAYLENGTH);
     var numValue = ToNumber(value);
     if (isAbrupt(numValue = ifAbrupt(numValue))) return numValue;
     if (index < 0 || index >= length) return numValue;
-    var offset = getInternalSlot(O,"ByteOffset");
-    var arrayTypeName = getInternalSlot(O,"TypedArrayName");
+    var offset = getInternalSlot(O,SLOTS.BYTEOFFSET);
+    var arrayTypeName = getInternalSlot(O,SLOTS.TYPEDARRAYNAME);
     var elementSize = ToNumber(TypedArrayElementSize[arrayTypeName]);
     var indexedPosition = (index * elementSize) + offset;
     var elementType = TypedArrayElementType[arrayTypeName];
@@ -12463,7 +12464,7 @@ var es5id = Math.floor(Math.random() * (1 << 16));
 
 function SymbolPrimitiveType(id, desc) {
     var O = Object.create(SymbolPrimitiveType.prototype);
-    setInternalSlot(O, "Description", desc);
+    setInternalSlot(O, SLOTS.DESCRIPTION, desc);
     setInternalSlot(O, SLOTS.PROTOTYPE, null);
     setInternalSlot(O, SLOTS.EXTENSIBLE, false);
     setInternalSlot(O, "Integrity", "frozen");
@@ -12525,8 +12526,8 @@ var $$isConcatSpreadable = SymbolPrimitiveType("@@isConcatSpreadable",  "Symbol.
 function thisSymbolValue(value) {
     if (value instanceof CompletionRecord) return thisSymbolValue(value.value);
     if (Type(value) === SYMBOL) return value;
-    if (Type(value) === OBJECT && hasInternalSlot(value, "SymbolData")) {
-        var b = getInternalSlot(value, "SymbolData");
+    if (Type(value) === OBJECT && hasInternalSlot(value, SLOTS.SYMBOLDATA)) {
+        var b = getInternalSlot(value, SLOTS.SYMBOLDATA);
         if (Type(b) === SYMBOL) return b;
     }
     return withError("Type", "thisSymbolValue: value is not a Symbol");
@@ -12676,8 +12677,8 @@ function thisBooleanValue(value) {
     if (value instanceof CompletionRecord) return thisBooleanValue(value.value);
     if (typeof value === "boolean") return value;
     if (Type(value) === BOOLEAN) return value;
-    if (Type(value) === OBJECT && hasInternalSlot(value, "BooleanData")) {
-        var b = getInternalSlot(value, "BooleanData");
+    if (Type(value) === OBJECT && hasInternalSlot(value, SLOTS.BOOLEANDATA)) {
+        var b = getInternalSlot(value, SLOTS.BOOLEANDATA);
         if (typeof b === "boolean") return b;
     }
     return withError("Type", "thisBooleanValue: value is not a Boolean");
@@ -12693,8 +12694,8 @@ function ArrayExoticObject(proto) {
     setInternalSlot(A, SLOTS.PROTOTYPE, proto? proto : ArrayPrototype);
     return A;
 }
-ArrayExoticObject.prototype = assign(ArrayExoticObject.prototype, OrdinaryObject.prototype);
-ArrayExoticObject.prototype = assign(ArrayExoticObject.prototype, {
+
+ArrayExoticObject.prototype = {
     constructor: ArrayExoticObject,
     type: "object",
     toString: function () {
@@ -12737,7 +12738,8 @@ ArrayExoticObject.prototype = assign(ArrayExoticObject.prototype, {
         }
         return false;
     }
-});
+};
+addMissingProperties(ArrayExoticObject.prototype, OrdinaryObject.prototype);
 
 
 // ===========================================================================================================
@@ -12749,9 +12751,9 @@ function ArrayCreate(len, proto) {
     var array = ArrayExoticObject(p);
     setInternalSlot(array, SLOTS.EXTENSIBLE, true);
     if (len !== undefined) {
-        setInternalSlot(array , "ArrayInitialisationState", true);
+        setInternalSlot(array , SLOTS.ARRAYINITIALISATIONSTATE, true);
     } else {
-        setInternalSlot(array , "ArrayInitialisationState",  false);
+        setInternalSlot(array , SLOTS.ARRAYINITIALISATIONSTATE,  false);
         len = 0;
     }
     OrdinaryDefineOwnProperty(array, "length", {
@@ -13823,7 +13825,7 @@ function InternalStructuredClone (input, memory, targetRealm) {
     }
     if (getInternalSlot(input, "Transfer") === "neutered") return withError("Range", "DataCloneError: inputs [[Transfer]] is neutered.");
     var value;
-    if ((value = getInternalSlot(input, "BooleanData")) !== undefined) {
+    if ((value = getInternalSlot(input, SLOTS.BOOLEANDATA)) !== undefined) {
         output = OrdinaryConstruct(getIntrinsic("%Boolean%", targetRealm), [value]);
     }
     else if ((value = getInternalSlot(input, SLOTS.NUMBERDATA)) !== undefined) {
@@ -13837,22 +13839,22 @@ function InternalStructuredClone (input, memory, targetRealm) {
         setInternalSlot(output, "RegExpMatcher", value);
         setInternalSlot(output, "OriginalSource", getInternalSlot(input, "OriginalSource"));
         setInternalSlot(output, "OriginalFlags", getInternalSlot(input, "OriginalFlags"));
-    } else if ((value = getInternalSlot(input, "ArrayBufferData")) !== undefined) {
+    } else if ((value = getInternalSlot(input, SLOTS.ARRAYBUFFERDATA)) !== undefined) {
         output = CopyArrayBufferToRealm(input, targetRealm);
         if (isAbrupt(output = ifAbrupt(output))) return output;
-    } else if ((value = getInternalSlot(input, "ViewedArrayBuffer")) !== undefined) {
+    } else if ((value = getInternalSlot(input, SLOTS.VIEWEDARRAYBUFFER)) !== undefined) {
         var arrayBuffer = value;
         //if (OrdinaryHasInstance(getIntrinsic("%DataView%")), input) { // assumes i´m in source realm
-        if (!hasInternalSlot(input, "TypedArrayConstructor")) {
+        if (!hasInternalSlot(input, SLOTS.TYPEDARRAYCONSTRUCTOR)) {
             output = OrdinaryConstruct(getIntrinsicFromRealm("%DataView%", targetRealm), []);
-            setInternalSlot(output, "ViewedArrayBuffer", getInternalSlot(input, "ViewedArrayBuffer"));
-            setInternalSlot(output, "ByteOffset", getInternalSlot(input, "ByteOffset"));
-            setInternalSlot(output, "ByteLength", getInternalSlot(input, "ByteLength"));
+            setInternalSlot(output, SLOTS.VIEWEDARRAYBUFFER, getInternalSlot(input, SLOTS.VIEWEDARRAYBUFFER));
+            setInternalSlot(output, SLOTS.BYTEOFFSET, getInternalSlot(input, SLOTS.BYTEOFFSET));
+            setInternalSlot(output, SLOTS.BYTELENGTH, getInternalSlot(input, SLOTS.BYTELENGTH));
         } else {
-            output = OrdinaryConstruct(getIntrinsicFromRealm("%"+getInternalSlot(input, "TypedArrayConstructor")+"%", targetRealm), []);
-            setInternalSlot(output, "ViewedArrayBuffer", getInternalSlot(input, "ViewedArrayBuffer"));
-            setInternalSlot(output, "ByteOffset", getInternalSlot(input, "ByteOffset"));
-            setInternalSlot(output, "ByteLength", getInternalSlot(input, "ByteLength"));
+            output = OrdinaryConstruct(getIntrinsicFromRealm("%"+getInternalSlot(input, SLOTS.TYPEDARRAYCONSTRUCTOR)+"%", targetRealm), []);
+            setInternalSlot(output, SLOTS.VIEWEDARRAYBUFFER, getInternalSlot(input, SLOTS.VIEWEDARRAYBUFFER));
+            setInternalSlot(output, SLOTS.BYTEOFFSET, getInternalSlot(input, SLOTS.BYTEOFFSET));
+            setInternalSlot(output, SLOTS.BYTELENGTH, getInternalSlot(input, SLOTS.BYTELENGTH));
         }
     } else if (hasInternalSlot(input, "MapData")) {
         // hmmm missing
@@ -13901,14 +13903,14 @@ function InternalStructuredClone (input, memory, targetRealm) {
 var Transfer_Call = function (thisArg, argList) {
     var targetRealm = argList[0];
     var object = thisArg;
-    if (hasInternalSlot(object, "ArrayBufferData"))
+    if (hasInternalSlot(object, SLOTS.ARRAYBUFFERDATA))
         return CopyArrayBufferToRealm(object, targetRealm);
 };
 
 function CopyArrayBufferToRealm(arrayBuffer, targetRealm) {
     var ArrayBufferConstructor = getIntrinsicFromRealm("%ArrayBuffer%", targetRealm);
-    var length = getInternalSlot(arrayBuffer, "ArrayBufferByteLength");
-    var srcBlock = getInternalSlot(arrayBuffer, "ArrayBufferData");
+    var length = getInternalSlot(arrayBuffer, SLOTS.ARRAYBUFFERBYTELENGTH);
+    var srcBlock = getInternalSlot(arrayBuffer, SLOTS.ARRAYBUFFERDATA);
     var result = OrdinaryConstruct(ArrayBufferConstructor, []);
     var setStatus = SetArrayBufferData(result, length);
     if (isAbrupt(setStatus)) return setStatus;
@@ -13922,7 +13924,7 @@ var OnSuccessfulTransfer_Call = function (thisArg, argList) {
     var transferResult = argList[0];
     var targetRealm = argList[1];
     var object = thisArg;
-    if (hasInternalProperty(object, "ArrayBufferData")) {
+    if (hasInternalProperty(object, SLOTS.ARRAYBUFFERDATA)) {
         var neuteringResult = SetArrayBufferData(object, 0);
         if (isAbrupt(neuteringResult = ifAbrupt(neuteringResult))) return neuteringResult;
         setInternalSlot(object, "Transfer", "neutered");
@@ -13988,7 +13990,7 @@ var Nil = null;
                 return CreateTypedObject(typeObject);
             }
             var arg0 = argList[0];
-            if (getInternalSlot(arg0, "ArrayBufferData")) {
+            if (getInternalSlot(arg0, SLOTS.ARRAYBUFFERDATA)) {
                  var length = argList[1];
                  length = length || buffer.length;
                  if (isGroundType(typeObject)) return withError("Type", "object is a ground object");
@@ -14000,8 +14002,8 @@ var Nil = null;
                      var o = CreateTypedObject(typeObject);
                      typeDescriptor =getInternalSlot(typeObject, "TypeDescriptor");
                      var dimensions = getInternalSlot(typeObject, "Dimensions");
-                     var buffer = getInternalSlot(typeObject, "ViewedArrayBuffer");
-                     var offset = getInternalSlot(o, "ByteOffset");
+                     var buffer = getInternalSlot(typeObject, SLOTS.VIEWEDARRAYBUFFER);
+                     var offset = getInternalSlot(o, SLOTS.BYTEOFFSET);
                      ConvertAndCopyTo(typeDescriptor, dimensions, buffer, offset, value);
                  }
             }
@@ -14010,8 +14012,8 @@ var Nil = null;
         GetOwnProperty: function (P) {
            var typeDescriptor = getInternalSlot(O, "TypeDescriptor");
            var dimensions = getInternalSlot(O, "Dimensions");
-           var buffer = getInternalSlot(O, "ViewedArrayBuffer");
-           var offset = getInternalSlot(O, "ByteOffset");
+           var buffer = getInternalSlot(O, SLOTS.VIEWEDARRAYBUFFER);
+           var offset = getInternalSlot(O, SLOTS.BYTEOFFSET);
            if (dimensions === Nil) {
                var value = getInternalSlot(typeDescriptor, "Structure");
                var r = FieldRecord(P);
@@ -14094,7 +14096,7 @@ function AlignTo(value, alignment) {
 function IsTypeObject(O) {
     if (Type(O) !== OBJECT) return false;
     if (!hasInternalSlot(O, "TypeDescriptor")) return false;
-    return hasInternalSlot(O, "ViewedArrayBuffer");
+    return hasInternalSlot(O, SLOTS.VIEWEDARRAYBUFFER);
 
 }
 
@@ -14511,7 +14513,7 @@ setInternalSlot(DebugFunction, SLOTS.CALL, function debugfunc (thisArg, argList)
 
     } else if (type == SYMBOL) {
         console.log("Symbol");
-        var descr = getInternalSlot(O, "Description");
+        var descr = getInternalSlot(O, SLOTS.DESCRIPTION);
         console.log("[[Description]]: " +descr);
     } else if (type == BOOLEAN) {
         console.log("Boolean");
@@ -16358,8 +16360,8 @@ var ArrayConstructor_call =  function (thisArg, argList) {
 
     if (numberOfArgs === 1) {
         len = GetValue(argList[0]);
-        if (Type(O) === OBJECT && !getInternalSlot(O, "ArrayInitialisationState")) {
-            setInternalSlot(O, "ArrayInitialisationState", true);
+        if (Type(O) === OBJECT && !getInternalSlot(O, SLOTS.ARRAYINITIALISATIONSTATE)) {
+            setInternalSlot(O, SLOTS.ARRAYINITIALISATIONSTATE, true);
             array = O;
         } else {
             F = this;
@@ -16389,8 +16391,8 @@ var ArrayConstructor_call =  function (thisArg, argList) {
 
     } else {
         len = GetValue(argList[0]);
-        if (Type(O) === OBJECT && !getInternalSlot(O, "ArrayInitialisationState")) {
-            setInternalSlot(O, "ArrayInitialisationState", true);
+        if (Type(O) === OBJECT && !getInternalSlot(O, SLOTS.ARRAYINITIALISATIONSTATE)) {
+            setInternalSlot(O, SLOTS.ARRAYINITIALISATIONSTATE, true);
             array = O;
         } else {
             F = this;
@@ -18436,8 +18438,8 @@ setInternalSlot(BooleanConstructor, SLOTS.CALL, function Call(thisArg, argList) 
     var O = thisArg;
     var value = argList[0];
     var b = ToBoolean(value);
-    if (Type(O) === OBJECT && hasInternalSlot(O, "BooleanData") && getInternalSlot(O, "BooleanData") === undefined) {
-        setInternalSlot(O, "BooleanData", b);
+    if (Type(O) === OBJECT && hasInternalSlot(O, SLOTS.BOOLEANDATA) && getInternalSlot(O, SLOTS.BOOLEANDATA) === undefined) {
+        setInternalSlot(O, SLOTS.BOOLEANDATA, b);
         return NormalCompletion(O);
     }
     return NormalCompletion(b);
@@ -18448,11 +18450,7 @@ setInternalSlot(BooleanConstructor, SLOTS.CONSTRUCT, function Construct(argList)
 MakeConstructor(BooleanConstructor, true, BooleanPrototype);
 DefineOwnProperty(BooleanConstructor, $$create, {
     value: CreateBuiltinFunction(realm, function (thisArg, argList) {
-        var F = thisArg;
-        var obj = OrdinaryCreateFromConstructor(F, "%BooleanPrototype%", {
-            "BooleanData": undefined
-        });
-        return obj;
+        return OrdinaryCreateFromConstructor(thisArg, "%BooleanPrototype%",[SLOTS.BOOLEANDATA]);
     }),
     enumerable: false,
     writable: true,
@@ -18495,7 +18493,7 @@ var SymbolFunction_Call = function Call(thisArg, argList) {
     if (description !== undefined) descString = ToString(description);
     if (isAbrupt(descString = ifAbrupt(descString))) return descString;
     var symbol = SymbolPrimitiveType();
-    setInternalSlot(symbol, "Description", descString);
+    setInternalSlot(symbol, SLOTS.DESCRIPTION, descString);
     return NormalCompletion(symbol);
 };
 var SymbolFunction_Construct = function Construct(argList) {
@@ -18503,9 +18501,9 @@ var SymbolFunction_Construct = function Construct(argList) {
 };
 var SymbolPrototype_toString = function toString(thisArg, argList) {
     var s = thisArg;
-    if (hasInternalSlot(s, "SymbolData")) return withError("Type", "The this argument has got no [[SymbolData]] property.");
-    var sym = getInternalSlot(s, "SymbolData");
-    var desc = getInternalSlot(sym, "Description");
+    if (hasInternalSlot(s, SLOTS.SYMBOLDATA)) return withError("Type", "The this argument has got no [[SymbolData]] property.");
+    var sym = getInternalSlot(s, SLOTS.SYMBOLDATA);
+    var desc = getInternalSlot(sym, SLOTS.DESCRIPTION);
     if (desc === undefined) desc = "";
     Assert(Type(desc) === STRING, "The [[Description]] field of the symbol of the this argument is not a string");
     var result = "Symbol(" + desc + ")";
@@ -18514,8 +18512,8 @@ var SymbolPrototype_toString = function toString(thisArg, argList) {
 
 var SymbolPrototype_valueOf = function valueOf(thisArg, argList) {
     var s = thisArg;
-    if (hasInternalSlot(s, "SymbolData")) return withError("Type", "The this argument has got no [[SymbolData]] property.");
-    var sym = getInternalSlot(s, "SymbolData");
+    if (hasInternalSlot(s, SLOTS.SYMBOLDATA)) return withError("Type", "The this argument has got no [[SymbolData]] property.");
+    var sym = getInternalSlot(s, SLOTS.SYMBOLDATA);
     return NormalCompletion(sym);
 };
 var SymbolPrototype_$$toPrimitive = function (thisArg, argList) {
@@ -18524,7 +18522,7 @@ var SymbolPrototype_$$toPrimitive = function (thisArg, argList) {
 var SymbolFunction_keyFor = function (thisArg, argList) {
     var sym = argList[0];
     if (Type(sym) !== SYMBOL) return withError("Type", "keyFor: sym is not a symbol");
-    var key = getInternalSlot(sym, "Description");
+    var key = getInternalSlot(sym, SLOTS.DESCRIPTION);
     var e = getRealm().GlobalSymbolRegistry[key];
     if (SameValue(e.Symbol, sym)) return NormalCompletion(e.Key);
     Assert(getRealm().GlobalSymbolRegistry[key] === undefined, "GlobalSymbolRegistry must not contain an entry for sym");
@@ -18538,7 +18536,7 @@ var SymbolFunction_for = function (thisArg, argList) {
     if (e !== undefined && SameValue(e.Key, stringKey)) return NormalCompletion(e.Symbol);
     Assert(e === undefined, "GlobalSymbolRegistry must currently not contain an entry for stringKey");
     var newSymbol = SymbolPrimitiveType();
-    setInternalSlot(newSymbol, "Description", stringKey);
+    setInternalSlot(newSymbol, SLOTS.DESCRIPTION, stringKey);
     getRealm().GlobalSymbolRegistry[stringKey] = { Key: stringKey, Symbol: newSymbol };
     return NormalCompletion(newSymbol); // There is a Typo newSumbol in the Spec.
 };
@@ -19817,7 +19815,7 @@ var ReflectObject_enumerate = function (thisArg, argList) {
     var target = argList[0];
     var obj = ToObject(target);
     if (isAbrupt(obj = ifAbrupt(obj))) return obj;
-    return callInternalSlot("Enumerate", obj);
+    return callInternalSlot(SLOTS.ENUMERATE, obj);
 };
 var ReflectObject_ownKeys = function (thisArg, argList) {
     var target = argList[0];
@@ -20307,10 +20305,10 @@ var ObjectPrototype_toString = function toString(thisArg, argList) {
     var intrToStr = O.toString();
 
     if (builtinTag = builtinTagsByToString[intrToStr]) {}
-    else if (hasInternalSlot(O, "SymbolData")) builtinTag = "Symbol";
+    else if (hasInternalSlot(O, SLOTS.SYMBOLDATA)) builtinTag = "Symbol";
     else if (hasInternalSlot(O, SLOTS.STRINGDATA)) builtinTag = "String";
     else if (hasInternalSlot(O, "ErrorData")) builtinTag = "Error";
-    else if (hasInternalSlot(O, "BooleanData")) builtinTag = "Boolean";
+    else if (hasInternalSlot(O, SLOTS.BOOLEANDATA)) builtinTag = "Boolean";
     else if (hasInternalSlot(O, SLOTS.NUMBERDATA)) builtinTag = "Number";
     else if (hasInternalSlot(O, "DateValue")) builtinTag = "Date";
     else if (hasInternalSlot(O, "RegExpMatcher")) builtinTag = "RegExp";
@@ -21093,7 +21091,7 @@ function Str(key, holder, _state) {
             value = ToNumber(value);
         } else if (hasInternalSlot(value, SLOTS.STRINGDATA)) {
             value = ToString(value);
-        } else if (hasInternalSlot(value, "BooleanData")) {
+        } else if (hasInternalSlot(value, SLOTS.BOOLEANDATA)) {
             value = ToBoolean(value);
         }
     }
@@ -22204,10 +22202,10 @@ LazyDefineBuiltinFunction(RegExpPrototype, "toString", 1, RegExpPrototype_toStri
 setInternalSlot(ArrayBufferConstructor, SLOTS.CALL, function (thisArg, argList) {
     var length = argList[0];
     var O = thisArg;
-    if (Type(O) !== OBJECT || (!hasInternalSlot(O, "ArrayBufferData")) || (getInternalSlot(O, "ArrayBufferData") !== undefined)) {
+    if (Type(O) !== OBJECT || (!hasInternalSlot(O, SLOTS.ARRAYBUFFERDATA)) || (getInternalSlot(O, SLOTS.ARRAYBUFFERDATA) !== undefined)) {
         return withError("Type", "Can not initialize the this argument as an ArrayBuffer or it is already initialized!");
     }
-    Assert(getInternalSlot(O, "ArrayBufferData") === undefined, "ArrayBuffer has already to be initialized here but it is not.");
+    Assert(getInternalSlot(O, SLOTS.ARRAYBUFFERDATA) === undefined, "ArrayBuffer has already to be initialized here but it is not.");
     var numberLength = ToNumber(length);
     var byteLength = ToInteger(numberLength);
     if (isAbrupt(byteLength = ifAbrupt(byteLength))) return byteLength;
@@ -22233,7 +22231,7 @@ DefineOwnProperty(ArrayBufferConstructor, "isView", {
     value: CreateBuiltinFunction(realm, function (thisArg, argList) {
         var arg = argList[0];
         if (Type(arg) !== OBJECT) return false;
-        return hasInternalSlot(arg, "ViewedArrayBuffer");
+        return hasInternalSlot(arg, SLOTS.VIEWEDARRAYBUFFER);
 
     }),
     writable: false,
@@ -22265,9 +22263,9 @@ setInternalSlot(ArrayBufferPrototype, SLOTS.PROTOTYPE, ObjectPrototype);
 DefineOwnProperty(ArrayBufferPrototype, "byteLength", {
     get: CreateBuiltinFunction(realm, function (thisArg, argList) {
         var O = thisArg;
-        if (!hasInternalSlot(O, "ArrayBufferData")) return withError("Type", "The this argument hasnÂ´t [[ArrayBufferData]]");
-        if (getInternalSlot(O, "ArrayBufferData") === undefined) return withError("Type", "The this arguments [[ArrayBufferData]] is not initialized");
-        var length = getInternalSlot(O, "ArrayBufferByteLength");
+        if (!hasInternalSlot(O, SLOTS.ARRAYBUFFERDATA)) return withError("Type", "The this argument hasnÂ´t [[ArrayBufferData]]");
+        if (getInternalSlot(O, SLOTS.ARRAYBUFFERDATA) === undefined) return withError("Type", "The this arguments [[ArrayBufferData]] is not initialized");
+        var length = getInternalSlot(O, SLOTS.ARRAYBUFFERBYTELENGTH);
         return length;
     }),
     set: undefined,
@@ -22290,20 +22288,20 @@ var DataViewConstructor_Call= function (thisArg, argList) {
     var byteOffset = argList[1];
     var byteLength = argList[2];
     if (byteOffset === undefined) byteOffset = 0;
-    if (Type(O) !== OBJECT || !hasInternalSlot(O, "DataView")) return withError("Type", "DataView object expected");
-    Assert(hasInternalSlot(O, "ViewedArrayBuffer"), "O has to have a ViewedArrayBuffer slot.");
-    var viewedArrayBuffer = getInternalSlot(O, "ViewedArrayBuffer");
+    if (Type(O) !== OBJECT || !hasInternalSlot(O, SLOTS.DATAVIEW)) return withError("Type", "DataView object expected");
+    Assert(hasInternalSlot(O, SLOTS.VIEWEDARRAYBUFFER), "O has to have a ViewedArrayBuffer slot.");
+    var viewedArrayBuffer = getInternalSlot(O, SLOTS.VIEWEDARRAYBUFFER);
     if (viewedArrayBuffer !== undefined) return withError("Type", "ViewedArrayBuffer of DataView has to be undefined.");
     if (Type(buffer) !== OBJECT) return withError("Type", "buffer has to be an arraybuffer object");
     var arrayBufferData;
-    if (!hasInternalSlot(buffer, "ArrayBufferData")) return withError("Type", "In DataView(buffer), buffer has to have ArrayBufferData slot");
-    arrayBufferData = getInternalSlot(buffer, "ArrayBufferData");
+    if (!hasInternalSlot(buffer, SLOTS.ARRAYBUFFERDATA)) return withError("Type", "In DataView(buffer), buffer has to have ArrayBufferData slot");
+    arrayBufferData = getInternalSlot(buffer, SLOTS.ARRAYBUFFERDATA);
     if (arrayBufferData === undefined) return withError("Type", "arrayBufferData of buffer may not be undefined");
     var numberOffset = ToNumber(byteOffset);
     var offset = ToInteger(numberOffset);
     if (isAbrupt(offset=ifAbrupt(offset))) return offset;
     if (numberOffset !== offset || offset < 0) return withError("Range", "numberOffset is not equal to offset or is less than 0.");
-    var byteBufferLength = getInternalSlot(buffer, "ArrayBufferByteLength");
+    var byteBufferLength = getInternalSlot(buffer, SLOTS.ARRAYBUFFERBYTELENGTH);
     if (offset > byteBufferLength) return withError("Range", "offset > byteBufferLength");
     if (byteLength === undefined) {
         var viewByteLength = byteBufferLength - offset;
@@ -22315,10 +22313,10 @@ var DataViewConstructor_Call= function (thisArg, argList) {
         var viewByteLength = viewLength;
         if ((offset+viewByteLength) > byteBufferLength) return withError("Range","offset + viewByteLength > byteBufferLength");
     }
-    if (getInternalSlot(O, "ViewedArrayBuffer") !== undefined) return withError("Type", "ViewedArrayBuffer of O has to be undefined here");
-    setInternalSlot(O, "ViewedArrayBuffer", buffer);
-    setInternalSlot(O, "ByteLength", viewByteLength);
-    setInternalSlot(O, "ByteOffset", offset);
+    if (getInternalSlot(O, SLOTS.VIEWEDARRAYBUFFER) !== undefined) return withError("Type", "ViewedArrayBuffer of O has to be undefined here");
+    setInternalSlot(O, SLOTS.VIEWEDARRAYBUFFER, buffer);
+    setInternalSlot(O, SLOTS.BYTELENGTH, viewByteLength);
+    setInternalSlot(O, SLOTS.BYTEOFFSET, offset);
     return NormalCompletion(O);
 };
 
@@ -22328,21 +22326,21 @@ var DataViewConstructor_Construct = function (argList) {
 
 var DataViewConstructor_$$create = function (thisArg, argList) {
     var F = thisArg;
-    var obj = OrdinaryCreateFromConstructor(F, "%DataViewPrototype%", {
-        "DataView": undefined,
-        "ViewedArrayBuffer": undefined,
-        "ByteLength": undefined,
-        "ByteOffset": undefined
-    });
-    setInternalSlot(obj, "DataView", true);
+    var obj = OrdinaryCreateFromConstructor(F, "%DataViewPrototype%", [
+        SLOTS.DATAVIEW,
+        SLOTS.VIEWEDARRAYBUFFER,
+        SLOTS.BYTELENGTH,
+        SLOTS.BYTEOFFSET
+    ]);
+    setInternalSlot(obj, SLOTS.DATAVIEW, true);
     return obj;
 };
 
 var DataViewPrototype_get_buffer = function (thisArg, argList) {
     var O = thisArg;
     if (Type(O) !== OBJECT) return withError("Type", "O is not an object");
-    if (!hasInternalSlot(O, "ViewedArrayBuffer")) return withError("Type", "O has no ViewedArrayBuffer slot");
-    var buffer = getInternalSlot(O, "ViewedArrayBuffer");
+    if (!hasInternalSlot(O, SLOTS.VIEWEDARRAYBUFFER)) return withError("Type", "O has no ViewedArrayBuffer slot");
+    var buffer = getInternalSlot(O, SLOTS.VIEWEDARRAYBUFFER);
     if (buffer === undefined) return withError("Type", "buffer is undefined but must not");
     return NormalCompletion(buffer);
 };
@@ -22350,20 +22348,20 @@ var DataViewPrototype_get_buffer = function (thisArg, argList) {
 var DataViewPrototype_get_byteLength = function (thisArg, argList) {
     var O = thisArg;
     if (Type(O) !== OBJECT) return withError("Type", "O is not an object");
-    if (!hasInternalSlot(O, "ViewedArrayBuffer")) return withError("Type", "O has no ViewedArrayBuffer property");
-    var buffer = getInternalSlot(O, "ViewedArrayBuffer");
+    if (!hasInternalSlot(O, SLOTS.VIEWEDARRAYBUFFER)) return withError("Type", "O has no ViewedArrayBuffer property");
+    var buffer = getInternalSlot(O, SLOTS.VIEWEDARRAYBUFFER);
     if (buffer === undefined) return withError("Type", "buffer is undefined");
-    var size = getInternalSlot(O, "ByteLength");
+    var size = getInternalSlot(O, SLOTS.BYTELENGTH);
     return NormalCompletion(size);
 };
 
 var DataViewPrototype_get_byteOffset = function (thisArg, argList) {
     var O = thisArg;
     if (Type(O) !== OBJECT) return withError("Type", "O is not an object");
-    if (!hasInternalSlot(O, "ViewedArrayBuffer")) return withError("Type", "O has no ViewedArrayBuffer property");
-    var buffer = getInternalSlot(O, "ViewedArrayBuffer");
+    if (!hasInternalSlot(O, SLOTS.VIEWEDARRAYBUFFER)) return withError("Type", "O has no ViewedArrayBuffer property");
+    var buffer = getInternalSlot(O, SLOTS.VIEWEDARRAYBUFFER);
     if (buffer === undefined) return withError("Type", "buffer is undefined");
-    var offset = getInternalSlot(O, "ByteOffset");
+    var offset = getInternalSlot(O, SLOTS.BYTEOFFSET);
     return NormalCompletion(offset);
 };
 
@@ -22520,7 +22518,7 @@ LazyDefineBuiltinFunction(DataViewPrototype, "setInt32", 2, DataViewPrototype_se
 LazyDefineBuiltinFunction(DataViewPrototype, "setUint8", 2, DataViewPrototype_setUint8);
 LazyDefineBuiltinFunction(DataViewPrototype, "setUint16", 2, DataViewPrototype_setUint16);
 LazyDefineBuiltinFunction(DataViewPrototype, "setUint32", 2, DataViewPrototype_setUint32);
-LazyDefineBuiltinConstant(DataViewConstructor, $$toStringTag, "DataView");
+LazyDefineBuiltinConstant(DataViewConstructor, $$toStringTag, SLOTS.DATAVIEW);
 
 
 var TypedArrayConstructor_Call = function (thisArg, argList) {
@@ -22537,15 +22535,15 @@ var TypedArrayConstructor_Call = function (thisArg, argList) {
     var constructorName;
     if (Type(array) === OBJECT) {
         if (IsArray(array)) {
-            Assert((Type(array) === OBJECT) && !hasInternalSlot(array, "TypedArrayName") && !hasInternalSlot(array, "ArrayBufferData"),
+            Assert((Type(array) === OBJECT) && !hasInternalSlot(array, SLOTS.TYPEDARRAYNAME) && !hasInternalSlot(array, SLOTS.ARRAYBUFFERDATA),
                 "array has to be an object without [[TypedArrayName]] or [[ArrayBufferData]] slots");
             O = thisArg;
             var srcArray = array;
-            if (Type(O) != OBJECT || !hasInternalSlot(O, "TypedArrayName")) return withError(
+            if (Type(O) != OBJECT || !hasInternalSlot(O, SLOTS.TYPEDARRAYNAME)) return withError(
                 "Type", "this value is no object or has no [[TypedArrayName]] slot"
             );
-            Assert(hasInternalSlot(O, "ViewedArrayBuffer"), "this value has no [[ViewedArrayBuffer]] slot");
-            var constructorName = getInternalSlot(O, "TypedArrayName");
+            Assert(hasInternalSlot(O, SLOTS.VIEWEDARRAYBUFFER), "this value has no [[ViewedArrayBuffer]] slot");
+            var constructorName = getInternalSlot(O, SLOTS.TYPEDARRAYNAME);
             var elementType = TypedArrayElementType[constructorName];
             var arrayLength = Get(srcArray, "length");
             if (isAbrupt(arrayLength=ifAbrupt(arrayLength))) return arrayLength;
@@ -22566,27 +22564,27 @@ var TypedArrayConstructor_Call = function (thisArg, argList) {
                 SetValueInBuffer(data, k * elementSize, elementType, kNumber);
                 k = k + 1;
             }
-            if (getInternalSlot(O, "ViewedArrayBuffer") !== undefined) return withError("Type", "the this values [[ViewedArrayBuffer]] may not be initialized here");
-            setInternalSlot(O, "ViewedArrayBuffer", data);
-            setInternalSlot(O, "ByteLength", byteLength);
-            setInternalSlot(O, "ByteOffset", 0);
-            setInternalSlot(O, "ArrayLength", elementLength);
+            if (getInternalSlot(O, SLOTS.VIEWEDARRAYBUFFER) !== undefined) return withError("Type", "the this values [[ViewedArrayBuffer]] may not be initialized here");
+            setInternalSlot(O, SLOTS.VIEWEDARRAYBUFFER, data);
+            setInternalSlot(O, SLOTS.BYTELENGTH, byteLength);
+            setInternalSlot(O, SLOTS.BYTEOFFSET, 0);
+            setInternalSlot(O, SLOTS.ARRAYLENGTH, elementLength);
             return NormalCompletion(O);
         } else if ((typedArray = array) instanceof IntegerIndexedExoticObject) {
-            Assert((Type(typedArray) === OBJECT) && hasInternalSlot(typedArray, "TypedArrayName"), "typedArray has to be an object and to have a TypedArrayName slot");
+            Assert((Type(typedArray) === OBJECT) && hasInternalSlot(typedArray, SLOTS.TYPEDARRAYNAME), "typedArray has to be an object and to have a TypedArrayName slot");
             var srcArray = typedArray;
             O = thisArg;
-            if ((Type(O) !== OBJECT) || getInternalSlot(O, "TypedArrayName")===undefined) return withError("Type", "this value has to be object and to have a defined TypedArrayName slot");
-            Assert(hasInternalSlot(O, "ViewedArrayBuffer"), "this value has to have a ViewedArrayBuffer slot");
-            if (getInternalSlot(O, "ViewedArrayBuffer") === undefined) return withError("Type", "ViewedArrayBuffer may not be undefined");
-            var constructorName = getInternalSlot(O, "TypedArrayName");
+            if ((Type(O) !== OBJECT) || getInternalSlot(O, SLOTS.TYPEDARRAYNAME)===undefined) return withError("Type", "this value has to be object and to have a defined TypedArrayName slot");
+            Assert(hasInternalSlot(O, SLOTS.VIEWEDARRAYBUFFER), "this value has to have a ViewedArrayBuffer slot");
+            if (getInternalSlot(O, SLOTS.VIEWEDARRAYBUFFER) === undefined) return withError("Type", "ViewedArrayBuffer may not be undefined");
+            var constructorName = getInternalSlot(O, SLOTS.TYPEDARRAYNAME);
             var elementType = TypedArrayElementType[constructorName];
-            var elementLength = getInternalSlot(srcArray, "ArrayLength");
-            var srcName = getInternalSlot(srcArray, "TypedArrayName");
+            var elementLength = getInternalSlot(srcArray, SLOTS.ARRAYLENGTH);
+            var srcName = getInternalSlot(srcArray, SLOTS.TYPEDARRAYNAME);
             var srcType = TypedArrayElementType[srcName];
             var srcElementSize = TypedArrayElementSize[srcType];
-            var srcData = getInternalSlot(srcArray, "ViewedArrayBuffer");
-            var srcByteOffset = getInternalSlot(srcArray, "ByteOffset");
+            var srcData = getInternalSlot(srcArray, SLOTS.VIEWEDARRAYBUFFER);
+            var srcByteOffset = getInternalSlot(srcArray, SLOTS.BYTEOFFSET);
             var elementSize = TypedArrayElementSize[constructorName];
             var byteLength = elementSize * elementLength;
             if (SameValue(elementType, srcType)) {
@@ -22610,20 +22608,20 @@ var TypedArrayConstructor_Call = function (thisArg, argList) {
                     count = count - 1;
                 }
             }
-            if (getInternalSlot(O, "ViewedArrayBuffer") !== undefined) return withError("Type", "ViewedArrayBuffer may not be defined at this point");
-            setInternalSlot(O, "ViewedArrayBuffer", data);
-            setInternalSlot(O, "ByteLength", byteLength);
-            setInternalSlot(O, "ByteOffset", 0);
-            setInternalSlot(O, "ArrayLength", elementLength);
+            if (getInternalSlot(O, SLOTS.VIEWEDARRAYBUFFER) !== undefined) return withError("Type", "ViewedArrayBuffer may not be defined at this point");
+            setInternalSlot(O, SLOTS.VIEWEDARRAYBUFFER, data);
+            setInternalSlot(O, SLOTS.BYTELENGTH, byteLength);
+            setInternalSlot(O, SLOTS.BYTEOFFSET, 0);
+            setInternalSlot(O, SLOTS.ARRAYLENGTH, elementLength);
             return NormalCompletion(O);
         }
     } else if (typeof (length = array) == "number") {
         O = thisArg;
         if (Type(O) !== OBJECT) return withError("Type", "this value is not an object");
-        if (!hasInternalSlot(O, "TypedArrayName")) return withError("Type", "object has no TypedArrayName property");
-        Assert(hasInternalSlot(O, "ViewedArrayBuffer"), "object has to have a ViewedArrayBuffer property");
-        if (getInternalSlot(O, "ViewedArrayBuffer") === undefined) return withError("Type", "object has to have a well defined ViewedArrayBuffer property");
-        constructorName = getInternalSlot(O, "TypedArrayName");
+        if (!hasInternalSlot(O, SLOTS.TYPEDARRAYNAME)) return withError("Type", "object has no TypedArrayName property");
+        Assert(hasInternalSlot(O, SLOTS.VIEWEDARRAYBUFFER), "object has to have a ViewedArrayBuffer property");
+        if (getInternalSlot(O, SLOTS.VIEWEDARRAYBUFFER) === undefined) return withError("Type", "object has to have a well defined ViewedArrayBuffer property");
+        constructorName = getInternalSlot(O, SLOTS.TYPEDARRAYNAME);
         elementType = TypedArrayElementType[constructorName];
         numberLength = ToNumber(length);
         elementLength = ToLength(numberLength);
@@ -22635,33 +22633,33 @@ var TypedArrayConstructor_Call = function (thisArg, argList) {
         byteLength = elementSize * elementLength;
         status = SetArrayBufferData(data, byteLength);
         if (isAbrupt(status = ifAbrupt(status))) return status;
-        setInternalSlot(O, "ViewedArrayBuffer", data);
-        setInternalSlot(O, "ByteLength", byteLength);
-        setInternalSlot(O, "ByteOffset", 0);
-        setInternalSlot(O, "ArrayLength", elementLength);
+        setInternalSlot(O, SLOTS.VIEWEDARRAYBUFFER, data);
+        setInternalSlot(O, SLOTS.BYTELENGTH, byteLength);
+        setInternalSlot(O, SLOTS.BYTEOFFSET, 0);
+        setInternalSlot(O, SLOTS.ARRAYLENGTH, elementLength);
         return NormalCompletion(O);
     } else {
-        Assert(hasInternalSlot(O, "ViewedArrayBuffer"), "O has to have [[ViewedArrayBuffer]]");
+        Assert(hasInternalSlot(O, SLOTS.VIEWEDARRAYBUFFER), "O has to have [[ViewedArrayBuffer]]");
         var buffer = argList[0];
         var byteOffset = argList[1];
         if (byteOffset === undefined) byteOffset = 0;
         length = argList[2];
-        Assert((Type(buffer) === OBJECT) && hasInternalSlot(buffer, "ArrayBufferData"), "buffer has to be an object and to have [[ArrayBufferData]]");
+        Assert((Type(buffer) === OBJECT) && hasInternalSlot(buffer, SLOTS.ARRAYBUFFERDATA), "buffer has to be an object and to have [[ArrayBufferData]]");
         O = thisArg;
-        var arrayBufferData = getInternalSlot(buffer, "ArrayBufferData");
+        var arrayBufferData = getInternalSlot(buffer, SLOTS.ARRAYBUFFERDATA);
         if (arrayBufferData === undefined) return withError("Type", "[[ArrayBufferData]] is undefined");
-        if (Type(O) !== OBJECT || !hasInternalSlot(O, "TypedArrayName")) return withError("Type", "O has to be object and to have [[TypedArrayName]]");
-        var viewedArrayBuffer = getInternalSlot(O, "ViewedArrayBuffer");
-        var typedArrayName = getInternalSlot(O, "TypedArrayName");
+        if (Type(O) !== OBJECT || !hasInternalSlot(O, SLOTS.TYPEDARRAYNAME)) return withError("Type", "O has to be object and to have [[TypedArrayName]]");
+        var viewedArrayBuffer = getInternalSlot(O, SLOTS.VIEWEDARRAYBUFFER);
+        var typedArrayName = getInternalSlot(O, SLOTS.TYPEDARRAYNAME);
         if (typedArrayName === undefined) return withError("Type", "O has to have a well defined [[TypedArrayName]]");
-        constructorName = getInternalSlot(O, "TypedArrayName");
+        constructorName = getInternalSlot(O, SLOTS.TYPEDARRAYNAME);
         elementType = TypedArrayElementType[constructorName];
         elementSize = TypedArrayElementSize[elementType];
         var offset = ToInteger(byteOffset);
         if (isAbrupt(offset = ifAbrupt(offset))) return offset;
         if (offset < 0) return withError("Range", "offset is smaller 0");
         if ((offset % elementSize) !== 0) return withError("Range", "offset mod elementSize is not 0");
-        var byteBufferLength = getInternalSlot(buffer, "ArrayBufferByteLength");
+        var byteBufferLength = getInternalSlot(buffer, SLOTS.ARRAYBUFFERBYTELENGTH);
         if (offset + elementSize >= byteBufferLength) return withError("Range", "offset + elementSize is >= byteBufferLength");
         var newByteLength;
         if (length === undefined) {
@@ -22675,10 +22673,10 @@ var TypedArrayConstructor_Call = function (thisArg, argList) {
             if (offset + newByteLength > byteBufferLength) return withError("Range", "offset + newByteLength is larger than byteBufferLength");
         }
         if (viewedArrayBuffer !== undefined) return withError("Type", "the [[ViewedArrayBuffer]] of O is not empty");
-        setInternalSlot(O, "ViewedArrayBuffer", buffer);
-        setInternalSlot(O, "ByteLength", newByteLength);
-        setInternalSlot(O, "ByteOffset", offset);
-        setInternalSlot(O, "ArrayLength", Math.floor(newByteLength / elementSize));
+        setInternalSlot(O, SLOTS.VIEWEDARRAYBUFFER, buffer);
+        setInternalSlot(O, SLOTS.BYTELENGTH, newByteLength);
+        setInternalSlot(O, SLOTS.BYTEOFFSET, offset);
+        setInternalSlot(O, SLOTS.ARRAYLENGTH, Math.floor(newByteLength / elementSize));
     }
     return NormalCompletion(O);
 };
@@ -22698,15 +22696,15 @@ var typedArrayPrototypeNames = {
 var TypedArrayConstructor_$$create = function $$create(thisArg, argList) {
     var F = thisArg;
     if (Type(F) !== OBJECT) return withError("Type", "the this value is not an object");
-    if (!hasInternalSlot(F, "TypedArrayConstructor")) return withError("Type", "The this value has no [[TypedArrayConstructor]] property");
-    var proto = GetPrototypeFromConstructor(F, typedArrayPrototypeNames[getInternalSlot(F, "TypedArrayConstructor")]);
+    if (!hasInternalSlot(F, SLOTS.TYPEDARRAYCONSTRUCTOR)) return withError("Type", "The this value has no [[TypedArrayConstructor]] property");
+    var proto = GetPrototypeFromConstructor(F, typedArrayPrototypeNames[getInternalSlot(F, SLOTS.TYPEDARRAYCONSTRUCTOR)]);
     if (isAbrupt(proto = ifAbrupt(proto))) return proto;
     var obj = IntegerIndexedObjectCreate(proto);
-    setInternalSlot(obj, "ViewedArrayBuffer", undefined);
-    setInternalSlot(obj, "TypedArrayName", getInternalSlot(F, "TypedArrayConstructor"));
-    setInternalSlot(obj, "ByteLength", 0);
-    setInternalSlot(obj, "ByteOffset", 0);
-    setInternalSlot(obj, "ArrayLength", 0);
+    setInternalSlot(obj, SLOTS.VIEWEDARRAYBUFFER, undefined);
+    setInternalSlot(obj, SLOTS.TYPEDARRAYNAME, getInternalSlot(F, SLOTS.TYPEDARRAYCONSTRUCTOR));
+    setInternalSlot(obj, SLOTS.BYTELENGTH, 0);
+    setInternalSlot(obj, SLOTS.BYTEOFFSET, 0);
+    setInternalSlot(obj, SLOTS.ARRAYLENGTH, 0);
     return obj;
 };
 
@@ -22828,26 +22826,26 @@ LazyDefineProperty(TypedArrayConstructor, "of", CreateBuiltinFunction(realm, Typ
 var TypedArrayPrototype_get_byteLength = function (thisArg, argList) {
     var O = thisArg;
     if (Type(O) !== OBJECT) return withError("Type", "this value is not an object");
-    if (!hasInternalSlot(O, "ViewedArrayBuffer")) return withError("Type", "has no ViewedArrayBuffer slot");
-    var buffer = getInternalSlot(O, "ViewedArrayBuffer");
+    if (!hasInternalSlot(O, SLOTS.VIEWEDARRAYBUFFER)) return withError("Type", "has no ViewedArrayBuffer slot");
+    var buffer = getInternalSlot(O, SLOTS.VIEWEDARRAYBUFFER);
     if (buffer === undefined) return withError("Type", "slot value for viewed array buffer is undefined");
-    var length = getInternalSlot(O, "ByteLength");
+    var length = getInternalSlot(O, SLOTS.BYTELENGTH);
     return NormalCompletion(length);
 };
 var TypedArrayPrototype_get_byteOffset = function (thisArg, argList) {
     var O = thisArg;
     if (Type(O) !== OBJECT) return withError("Type", "this value is not an object");
-    if (!hasInternalSlot(O, "ViewedArrayBuffer")) return withError("Type", "has no ViewedArrayBuffer slot");
-    var buffer = getInternalSlot(O, "ViewedArrayBuffer");
+    if (!hasInternalSlot(O, SLOTS.VIEWEDARRAYBUFFER)) return withError("Type", "has no ViewedArrayBuffer slot");
+    var buffer = getInternalSlot(O, SLOTS.VIEWEDARRAYBUFFER);
     if (buffer === undefined) return withError("Type", "slot value for viewed array buffer is undefined");
-    var offset = getInternalSlot(O, "ByteOffset");
+    var offset = getInternalSlot(O, SLOTS.BYTEOFFSET);
     return NormalCompletion(offset);
 };
 var TypedArrayPrototype_get_buffer = function (thisArg, argList) {
     var O = thisArg;
     if (Type(O) !== OBJECT) return withError("Type", "this value is not an object");
-    if (!hasInternalSlot(O, "ViewedArrayBuffer")) return withError("Type", "has no ViewedArrayBuffer slot");
-    var buffer = getInternalSlot(O, "ViewedArrayBuffer");
+    if (!hasInternalSlot(O, SLOTS.VIEWEDARRAYBUFFER)) return withError("Type", "has no ViewedArrayBuffer slot");
+    var buffer = getInternalSlot(O, SLOTS.VIEWEDARRAYBUFFER);
     if (buffer === undefined) return withError("Type", "slot value for viewed array buffer is undefined");
     return NormalCompletion(buffer);
 };
@@ -22899,8 +22897,8 @@ var TypedArrayPrototype_$$iterator = function iterator(thisArg, argList) {
 var TypedArrayPrototype_get_$$toStringTag = function get_toStringTag(thisArg, argList) {
     var O = thisArg;
     if (Type(O) !== OBJECT) return withError("Type", "the this value is not an object");
-    if (!hasInternalSlot(O, "TypedArrayName")) return withError("Type", "the this value has no [[TypedArrayName]] slot");
-    var name = getInternalSlot(O, "TypedArrayName");
+    if (!hasInternalSlot(O, SLOTS.TYPEDARRAYNAME)) return withError("Type", "the this value has no [[TypedArrayName]] slot");
+    var name = getInternalSlot(O, SLOTS.TYPEDARRAYNAME);
     Assert(Type(name) == STRING, "name has to be a string value");
     return NormalCompletion(name);
 };
@@ -22918,16 +22916,16 @@ function createTypedArrayPrototype(proto) {
 
 function createTypedArrayVariant(_type, _bpe, _ctor, _proto, ctorName) {
     setInternalSlot(_ctor, "Realm", getRealm());
-    setInternalSlot(_ctor, "TypedArrayConstructor", ctorName);
+    setInternalSlot(_ctor, SLOTS.TYPEDARRAYCONSTRUCTOR, ctorName);
     setInternalSlot(_ctor, SLOTS.PROTOTYPE, TypedArrayConstructor);
     setInternalSlot(_ctor, SLOTS.CALL, function (thisArg, argList) {
         var O = thisArg;
         if (Type(O) !== OBJECT) return withError("Type", "O is not an object");
-        if (!hasInternalSlot(O, "TypedArrayName")) return withError("Type", "[[TypedArrayName]] is missing");
-        //if (getInternalSlot(O, "TypedArrayName") != undefined) return withError("Type", "[[TypedArrayName]] isnt undefined");
+        if (!hasInternalSlot(O, SLOTS.TYPEDARRAYNAME)) return withError("Type", "[[TypedArrayName]] is missing");
+        //if (getInternalSlot(O, SLOTS.TYPEDARRAYNAME) != undefined) return withError("Type", "[[TypedArrayName]] isnt undefined");
         var suffix = "Array";
         if (_type === "Uint8C") suffix = "lamped" + suffix;
-        setInternalSlot(O, "TypedArrayName", _type + suffix);
+        setInternalSlot(O, SLOTS.TYPEDARRAYNAME, _type + suffix);
         var F = this;
         var realmF = getInternalSlot(F, "Realm");
         var sup = Get(realmF.intrinsics, "%TypedArray%");
