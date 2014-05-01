@@ -29,8 +29,7 @@ var syntaxjs = (function () {
     "use strict"
 
     var syntaxjs = Object.create(null);
-    define("syntaxjs", syntaxjs);
-
+    
     // first i create syntaxjs and
     // add define, require, modules (require.cache link) and makePromise
 
@@ -4053,7 +4052,6 @@ define("parser", function () {
     var AssignmentOperators = tables.AssignmentOperators;
     var UnaryOperators = tables.UnaryOperators;
     var UpdateOperators = tables.UpdateOperators;
-    var ExprEndOfs = tables.ExprEndOfs;
     var OperatorPrecedence = tables.OperatorPrecedence;
     var UnaryOperatorPrecedence = tables.UnaryOperatorPrecedence;
     var isDirective = tables.isDirective;
@@ -4079,17 +4077,14 @@ define("parser", function () {
     var parser = Object.create(null);
 
 
-    var noInStack = [];
-    var isNoIn = false;
+    var inStack = [];
+    var isIn = true;
     var yieldStack = [];
-    var yieldIsId = true;
+    var isYieldId = true;
     var defaultStack = [];
-    var defaultIsId = true;
+    var isDefaultId = true;
     var generatorParameter = false;
     var generatorParameterStack = [];
-
-    var isIn = false; // es6 to replace NoIn
-    var inStack = [];
     var isReturn = false;
     var returnStack = [];
 
@@ -4103,8 +4098,8 @@ define("parser", function () {
     var loc = makeLoc();
     var lastloc;
     var text;
-    var compile = false;
     var builder = null;
+    var compile = false;
     var compiler;
     var cb;
     var notify = false;
@@ -4199,11 +4194,11 @@ define("parser", function () {
         state = stateStack.pop();
     }
     function pushNoIn(new_state) {
-        noInStack.push(isNoIn);
-        isNoIn = new_state;
+        inStack.push(isIn);
+        isIn = new_state;
     }
     function popNoIn() {
-        isNoIn = noInStack.pop();
+        isIn = inStack.pop();
     }
     function build(node) {
         if (!compile) return node;
@@ -4262,8 +4257,9 @@ define("parser", function () {
         var column = loc.start.column;
         return "value="+v+" type="+t+" lkhdVal="+lkhdVal+" at line "+line+", column "+column;
     }
+    var uqrx = /^("|')|("|')$/g;
     function unquote(str) {
-        return ("" + str).replace(/^("|')|("|')$/g, ""); //'
+        return str.replace(uqrx, ""); //'
     }
     var observers = [];
     function registerObserver(f) {
@@ -4284,23 +4280,23 @@ define("parser", function () {
     }
 
     var saveBuilder = [];
-    function unsetBuilder(objBuilder) {
+    function unsetBuilder(builderObj) {
         var state;
-        if (builder === objBuilder) state = saveBuilder.pop();
+        if (builder === builderObj) state = saveBuilder.pop();
         if (state) {
             builder = state.builder;
             compile = state.compile;
         }
     }
-    function setBuilder(objBuilder, boolCompile) {
+    function setBuilder(builderObj, boolCompile) {
         saveBuilder.push({
             builder: builder,
             compile: compile
         });
-        if (typeof objBuilder !== "object") {
-            throw new TypeError("objBuilder ist a Mozilla Parser-API compatible Builder Object for Code Generation from the AST, see http://developers.mozilla.org/en-US/docs/SpiderMonkey/Parser_API for more how to use..");
+        if (typeof builderObj !== "object") {
+            throw new TypeError("builderObj ist a Mozilla Parser-API compatible Builder Object for Code Generation from the AST, see http://developers.mozilla.org/en-US/docs/SpiderMonkey/Parser_API for more how to use..");
         }
-        builder = objBuilder;
+        builder = builderObj;
         if (boolCompile !== undefined) compile = !!boolCompile;
         return true;
     }
@@ -4427,8 +4423,8 @@ define("parser", function () {
 
     function Node(type) {   // this one seems to get optimized and costs nothing more than inlined {}
         return {
-           type: type,
-           _id_: ++nodeId
+            type: type,
+            _id_: ++nodeId
         };
     }
 
@@ -4449,9 +4445,10 @@ define("parser", function () {
             lkhdVal: lkhdVal,
             lkhdTyp: lkhdTyp,
 
-            isNoIn: isNoIn,
-            yieldIsId: yieldIsId,
-            defaultIsId: defaultIsId,
+            isIn: isIn,
+            inStack: inStack,
+            isYieldId: isYieldId,
+            isDefaultId: isDefaultId,
             yieldStack: yieldStack,
             defaultStack: defaultStack,
             symtab: symtab
@@ -4479,9 +4476,10 @@ define("parser", function () {
             lkhdVal = memento.lkhdVal;
             lkhdTyp = memento.lkhdTyp;
 
-            isNoIn = memento.isNoIn;
-            yieldIsId = memento.yieldIsId;
-            defaultIsId = memento.defaultIsId;
+            isIn = memento.isIn;
+            inStack = memento.inStack;
+            isYieldId = memento.isYieldId;
+            isDefaultId = memento.isDefaultId;
             yieldStack = memento.yieldStack;
             defaultStack = memento.defaultStack;
             //         nodeTable = memento.nodeTable;
@@ -4496,18 +4494,18 @@ define("parser", function () {
             node.computed = token.computed;
             node.loc = makeLoc(loc.start, loc.end);
             match(v);
-             if (compile) return compiler(node);
+            if (compile) return compiler(node);
             return node;
         }
         return null;
     }
     function Identifier() {
-        if (t === "Identifier" || (v === "yield" && yieldIsId) || (v === "default" && defaultIsId)) {
+        if (t === "Identifier" || (v === "yield" && isYieldId) || (v === "default" && isDefaultId)) {
             var node = Node("Identifier");
             node.name = v;
             node.loc = token.loc;
             match(v);
-             if (compile) return compiler(node);
+            if (compile) return compiler(node);
             return node;
         }
         return null;
@@ -4557,7 +4555,7 @@ define("parser", function () {
             l2 = loc.end;
             node.loc = makeLoc(l1, l2);
             match("]");
-             if (compile) return compiler(node);
+            if (compile) return compiler(node);
             return node;
         }
         return null;
@@ -4578,30 +4576,30 @@ define("parser", function () {
             node.expression = this.AssignmentExpression();
             l2 = loc.end;
             node.loc = makeLoc(l1, l2);
-             if (compile) return compiler(node);
+            if (compile) return compiler(node);
             return node;
         }
         return null;
     }
     function YieldAsIdentifier() {
         if (v === "yield") {
-            if (yieldIsId) {
+            if (isYieldId) {
                 var node = Node("Identifier");
                 node.name = "yield";
                 node.loc = token && token.loc;
                 match("yield");
-                 if (compile) return compiler(node);
+                if (compile) return compiler(node);
                 return node;
             }
         }
         return null;
     }
     function YieldExpression() {
-        if (v === "yield" && !yieldIsId) {
+        if (v === "yield" && !isYieldId) {
             match("yield");
             var node = Node("YieldExpression");
             node.argument = this.Expression();
-             if (compile) return compiler(node);
+            if (compile) return compiler(node);
             return node;
         }
         return null;
@@ -4610,7 +4608,7 @@ define("parser", function () {
         if (v === "class") {
             var isExpr = true;
             var node = this.ClassDeclaration(isExpr);
-             if (compile) return compiler(node);
+            if (compile) return compiler(node);
             return node;
         }
         return null;
@@ -4624,7 +4622,7 @@ define("parser", function () {
             l2 = loc.end;
             node.loc = makeLoc(l1, l2);
             match(v);
-             if (compile) return compiler(node);
+            if (compile) return compiler(node);
             return node;
         }
         return null;
@@ -4645,7 +4643,7 @@ define("parser", function () {
                 node.loc = makeLoc(l1, l2);
             }
             match(v);
-             if (compile) return compiler(node);
+            if (compile) return compiler(node);
             return node;
         }
         return null;
@@ -4680,7 +4678,7 @@ define("parser", function () {
             l2 = loc.end;
             match("]");
             node.loc = makeLoc(l1, l2);
-             if (compile) return compiler(node);
+            if (compile) return compiler(node);
             return node;
         }
         return null;
@@ -4822,16 +4820,16 @@ define("parser", function () {
             l2 = loc.end;
             match("}");
             node.loc = makeLoc(l1, l2);
-             if (compile) return compiler(node);
+            if (compile) return compiler(node);
             return node;
         }
         return null;
     }
     function ExpressionNoIn() {
-        noInStack.push(isNoIn);
-        isNoIn = true;
+        inStack.push(isIn);
+        isIn = false;
         var node = this.Expression();
-        isNoIn = noInStack.pop();
+        isIn = inStack.pop();
         return node;
     }
     function CoverParenthesizedExpression(tokens) {
@@ -4845,7 +4843,7 @@ define("parser", function () {
         // match(")");
         var l2 = loc.end;
         node.loc = makeLoc(l1, l2);
-         if (compile) return compiler(node);
+        if (compile) return compiler(node);
         return node;
     }
     function ArrowParameterList(tokens) {
@@ -4895,7 +4893,7 @@ define("parser", function () {
                 l2 = loc.end;
                 node.loc = makeLoc(l1, l2);
                 popStrict();
-                 if (compile) return compiler(node);
+                if (compile) return compiler(node);
                 return node;
             } else {
                 return this.CoverParenthesizedExpression(covered);
@@ -4914,10 +4912,10 @@ define("parser", function () {
         if (!fn) fn = this[PrimaryExpressionByValue[v]];
         if (!fn) fn = this[PrimaryExpressionByType[t]];
         if (!fn && v === "yield") {
-            if (yieldIsId) fn = this.YieldAsIdentifier;
+            if (isYieldId) fn = this.YieldAsIdentifier;
             else fn = this.YieldExpression;
         }
-        if (!fn && defaultIsId && v === "default") fn = this.DefaultAsIdentifier;
+        if (!fn && isDefaultId && v === "default") fn = this.DefaultAsIdentifier;
         if (fn) node = fn.call(this);
         if (node) return this.PostfixExpression(node);
         return null;
@@ -4950,12 +4948,12 @@ define("parser", function () {
                  if (v == "[") {
                  var
                  } else if (v == "(") {
-                    var args = this.Arguments();
+                 var args = this.Arguments();
 
 
                  } else if (t === "Identifier") {
-                    property = {};
-                    property.name = v;
+                 property = {};
+                 property.name = v;
                  }
                  property.eventual = true;
                  node.eventual = true;
@@ -4981,7 +4979,7 @@ define("parser", function () {
             else if (v == "!") return this.MemberExpression(node);
             l2 = loc.end;
             node.loc = makeLoc(l1, l2);
-             if (compile) return compiler(node);
+            if (compile) return compiler(node);
             return node;
         }
         return null;
@@ -5010,10 +5008,10 @@ define("parser", function () {
         return null;
     }
     function ConditionalExpressionNoIn(test) {
-        noInStack.push(isNoIn);
-        isNoIn = true;
+        inStack.push(isIn);
+        isIn = false;
         var r = this.ConditionalExpression(test);
-        isNoIn = noInStack.pop();
+        isIn = inStack.pop();
         return r;
     }
     function ConditionalExpression(test) {
@@ -5037,7 +5035,7 @@ define("parser", function () {
                 node = tmp;
             }
 
-             if (compile) return compiler(node);
+            if (compile) return compiler(node);
             return node;
         }
         return null;
@@ -5052,7 +5050,7 @@ define("parser", function () {
             node.argument = lhs;
             node.loc = makeLoc(l1, loc.end);
             match(v);
-             if (compile) return compiler(node);
+            if (compile) return compiler(node);
             return node;
         }
         return lhs;
@@ -5069,23 +5067,23 @@ define("parser", function () {
             var l2 = loc.end;
             if (node.argument == null) throw new SyntaxError("invalid unary expression "+node.operator+", operand missing " + atLineCol());
             node.loc = makeLoc(l1, l2);
-             if (compile) return compiler(node);
+            if (compile) return compiler(node);
             return node;
         }
         return this.PostfixExpression();
     }
     function AssignmentExpressionNoIn() {
-        noInStack.push(isNoIn);
-        isNoIn = true;
+        inStack.push(isIn);
+        isIn = false;
         var node = this.AssignmentExpression();
-        isNoIn = noInStack.pop();
+        isIn = inStack.pop();
         return node;
     }
     function StartAssignmentExpressionNoIn() {
-        noInStack.push(isNoIn);
-        isNoIn = true;
+        inStack.push(isIn);
+        isIn = false;
         var node = this.StartAssignmentExpression();
-        isNoIn = noInStack.pop();
+        isIn = inStack.pop();
         return node;
     }
 
@@ -5093,7 +5091,7 @@ define("parser", function () {
         var node = null, leftHand, l1, l2;
         l1 = loc.start;
         leftHand = this.LeftHandSideExpression();
-        if (AssignmentOperators[v] && (!isNoIn || (isNoIn && v != "in"))) {
+        if (AssignmentOperators[v] && (isIn || (!isIn && v != "in"))) {
             var node = Node("AssignmentExpression");
             node.longName = PunctToExprName[v];
             node.operator = v;
@@ -5104,7 +5102,7 @@ define("parser", function () {
             var l2 = loc.end;
             node.loc = makeLoc(l1, l2);
             node = rotate_binexps(node);
-        } else if (BinaryOperators[v] && (!isNoIn || (isNoIn && v != "in"))) {
+        } else if (BinaryOperators[v] && (isIn || (!isIn && v != "in"))) {
             var node = Node("BinaryExpression");
             node.longName = PunctToExprName[v];
             node.operator = v;
@@ -5119,7 +5117,7 @@ define("parser", function () {
             node = rotate_binexps(node);
         }
         else return leftHand;
-         if (compile) return compiler(node);
+        if (compile) return compiler(node);
         return node;
     }
     function AssignmentExpression() {
@@ -5140,7 +5138,7 @@ define("parser", function () {
                 node.arguments = [ template ];
                 l2 = loc.end;
                 node.loc = makeLoc(l1, l2);
-                 // if (compile) return builder.callExpression(node.callee, node.arguments, node.loc);
+                // if (compile) return builder.callExpression(node.callee, node.arguments, node.loc);
                 return node;
             } else if (v === "(") {
                 node.arguments = this.Arguments();
@@ -5157,7 +5155,7 @@ define("parser", function () {
                 } else {
                     l2 = loc.end;
                     node.loc = makeLoc(l1, l2);
-                     if (compile) return compiler(node);
+                    if (compile) return compiler(node);
                     return node;
                 }
             } else {
@@ -5187,7 +5185,7 @@ define("parser", function () {
             }
             l2 = loc.end;
             node.loc = makeLoc(l1, l2);
-             if (compile) return compiler(node);
+            if (compile) return compiler(node);
             return node;
         }
         return null;
@@ -5211,7 +5209,7 @@ define("parser", function () {
         var node = Node("SequenceExpression");
         node.sequence = list;
         node.loc = makeLoc(l1, l2);
-         if (compile) return compiler(node);
+        if (compile) return compiler(node);
         return node;
     }
     function Expression() {
@@ -5248,7 +5246,7 @@ define("parser", function () {
                 }
                 currentNode.needsSuper = true;
             }
-             if (compile) return compiler(node);
+            if (compile) return compiler(node);
             return node;
         }
         return null;
@@ -5261,7 +5259,7 @@ define("parser", function () {
             if (withExtras && tokenize.extraBuffer.length) dumpExtras2(node, "before");
             match("this");
             if (withExtras && tokenize.extraBuffer.length) dumpExtras2(node, "after");
-             if (compile) return compiler(node);
+            if (compile) return compiler(node);
             return node;
         }
         return null;
@@ -5291,10 +5289,10 @@ define("parser", function () {
                     if (StartBinding[v]) bindEl.target = this.BindingPattern();
                     else bindEl.target = this.LeftHandSideExpression();
                     if (bindEl.target.type === "Identifier") {
-            		if (isStrict && ForbiddenArgumentsInStrict[bindEl.target.name]) {
-                    	    throw new SyntaxError(bindEl.target.name + " is not a valid binding identifier in strict mode");
-                	}
-            	    }
+                        if (isStrict && ForbiddenArgumentsInStrict[bindEl.target.name]) {
+                            throw new SyntaxError(bindEl.target.name + " is not a valid binding identifier in strict mode");
+                        }
+                    }
                     l2 = loc.end;
                     bindEl.loc = makeLoc(l1, l2);
                     list.push(bindEl);
@@ -5351,7 +5349,7 @@ define("parser", function () {
             if (v === "=") node.init = this.Initializer();
             l2 = loc.end;
             node.loc = makeLoc(l1, l2);
-             if (compile) return compiler(node);
+            if (compile) return compiler(node);
             return node;
         }
         return null;
@@ -5362,7 +5360,7 @@ define("parser", function () {
             node.kind = kind;
             return node;
         }
-        if (t === "Identifier" || (v === "yield" && yieldIsId) || (v === "default" && defaultIsId)) {
+        if (t === "Identifier" || (v === "yield" && isYieldId) || (v === "default" && isDefaultId)) {
             node = Node("VariableDeclarator");
             node.kind = kind;
             var id = this.Identifier();
@@ -5391,8 +5389,7 @@ define("parser", function () {
             decl = this.VariableDeclaration(kind);
             if (decl) list.push(decl);
             else throw new SyntaxError(kind + " declaration expected");
-
-            if (isNoIn && InOrOf[v]) break;
+            if (!isIn && InOrOf[v]) break;
             if (v === ",") {
                 match(",");
                 continue;
@@ -5417,16 +5414,16 @@ define("parser", function () {
             node.declarations = this.VariableDeclarationList(node.kind);
             l2 = loc.end;
             node.loc = makeLoc(l1, l2);
-             if (compile) return compiler(node);
+            if (compile) return compiler(node);
             return node;
         }
         return null;
     }
     function VariableStatementNoIn() {
-        noInStack.push(isNoIn);
-        isNoIn = true;
+        inStack.push(isIn);
+        isIn = false;
         var node = this.VariableStatement();
-        isNoIn = noInStack.pop();
+        isIn = inStack.pop();
         return node;
     }
     function ClassDeclaration(isExpr) {
@@ -5454,13 +5451,12 @@ define("parser", function () {
             }
             match("}");
             popStrict();
-             if (compile) return compiler(node);
+            if (compile) return compiler(node);
             return node;
         }
         return null;
     }
     function MethodDefinition(parent, isObjectMethod, computedPropertyName) {
-
         var l1, l2;
         var node;
         var isStaticMethod = false;
@@ -5469,20 +5465,17 @@ define("parser", function () {
         var isSetter = false;
         var specialMethod = false;
         if (v === "}") return null;
-
         l1 = loc.start;
         if (v === ";") {
             if (!isObjectMethod) match(";");
             else throw new SyntaxError("invalid ; in object literal");
         }
-
         if (v === "static") {
             if (!isObjectMethod) {
                 isStaticMethod = true;
                 match(v);
             } else throw new SyntaxError("static is not allowed in objects");
         }
-
         if (v === "*") {
             isGenerator = true;
             match(v);
@@ -5495,7 +5488,6 @@ define("parser", function () {
             match(v);
             // set c() {}
         }
-
         node = Node("MethodDefinition");
         nodeStack.push(currentNode);
         currentNode = node;
@@ -5516,11 +5508,9 @@ define("parser", function () {
         node.specialMethod = specialMethod;
         l2 = loc.end;
         node.loc = makeLoc(l1, l2);
-
         currentNode = nodeStack.pop();
-         if (compile) return compiler(node);
+        if (compile) return compiler(node);
         return node;
-
     }
     function RestParameter() {
         if (v === "...") {
@@ -5537,7 +5527,7 @@ define("parser", function () {
             match(v);
             var l2 = loc.end;
             node.loc = makeLoc(l1, l2);
-             if (compile) return compiler(node);
+            if (compile) return compiler(node);
             return node;
         }
         return null;
@@ -5550,7 +5540,7 @@ define("parser", function () {
             node.argument = this.AssignmentExpression();
             var l2 = node.argument && node.argument.loc && node.argument.loc.end;
             node.loc = makeLoc(l1, l2);
-             if (compile) return compiler(node);
+            if (compile) return compiler(node);
             return node;
         }
         return null;
@@ -5565,7 +5555,7 @@ define("parser", function () {
             match("=");
             node.init = this.AssignmentExpression();
             node.loc = makeLoc(l1, loc.end);
-             if (compile) return compiler(node);
+            if (compile) return compiler(node);
             return node;
         }
         return null;
@@ -5604,13 +5594,13 @@ define("parser", function () {
     function FunctionDeclaration(isExpr) {
         var node, start, end, sourceStart, sourceEnd;
         if (v === "function") {
-            defaultStack.push(defaultIsId);
-            defaultIsId = true;
+            defaultStack.push(isDefaultId);
+            isDefaultId = true;
             start = loc.start;
             match("function");
             if (v === "*") {
                 node = Node("GeneratorDeclaration");
-                node.generator = true;
+                node.generator = true; // i am a legacy man :) (otherwise my node.type is violating the parser api)
                 match("*");
             } else {
                 node = Node("FunctionDeclaration");
@@ -5632,19 +5622,16 @@ define("parser", function () {
                     throw new SyntaxError("Function and Generator Declarations must have a name [only expressions can be anonymous]");
                 }
             }
-
             symtab.newScope();
-
             match("(");
             node.params = this.FormalParameterList();
             match(")");
             if (!node.generator) {
-                yieldStack.push(yieldIsId);
-                yieldIsId = true;
-            } else
-            {
-                yieldStack.push(yieldIsId);
-                yieldIsId = false;
+                yieldStack.push(isYieldId);
+                isYieldId = true;
+            } else {
+                yieldStack.push(isYieldId);
+                isYieldId = false;
                 node.strict = true;
             }
             //pushDecls();
@@ -5652,16 +5639,16 @@ define("parser", function () {
             node.body = this.FunctionBody(node);
             match("}");
             //popDecls(node);
-            yieldIsId = yieldStack.pop();
+            isYieldId = yieldStack.pop();
             end = loc.end;
             node.loc = makeLoc(start, end);
             if (node.generator) {
                 node.nodesById = CreateTablePlusAddParentPointerIds(node);
             }
-            defaultIsId = defaultStack.pop();
+            isDefaultId = defaultStack.pop();
             currentNode = nodeStack.pop();
             symtab.oldScope();
-             if (compile) return compiler(node);
+            if (compile) return compiler(node);
             return node;
         }
         return null;
@@ -5670,10 +5657,10 @@ define("parser", function () {
         return this.FunctionDeclaration(true);
     }
     function GeneratorBody(parent) {
-        yieldStack.push(yieldIsId);
-        yieldIsId = false;
+        yieldStack.push(isYieldId);
+        isYieldId = false;
         var body = this.FunctionBody(parent);
-        yieldIsId = yieldStack.pop();
+        isYieldId = yieldStack.pop();
         return body;
     }
     function FunctionBody(parent) {
@@ -5701,12 +5688,12 @@ define("parser", function () {
     function ConciseBody(parent) {
         if (v == "{") {
             var body;
-            yieldStack.push(yieldIsId);
-            yieldIsId = true;
+            yieldStack.push(isYieldId);
+            isYieldId = true;
             match("{");
             body = this.FunctionBody(parent);
             match("}");
-            yieldIsId = yieldStack.pop();
+            isYieldId = yieldStack.pop();
             return body;
         }
         return this.AssignmentExpression();
@@ -5755,18 +5742,18 @@ define("parser", function () {
             var l1, l2;
             l1 = loc.start;
             var node = Node("BlockStatement");
-            defaultStack.push(defaultIsId);
-            defaultIsId = true;
+            defaultStack.push(isDefaultId);
+            isDefaultId = true;
             //pushLexOnly();
             match("{");
             node.body = this.StatementList();
             l2 = loc.end;
             node.loc = makeLoc(l1, l2);
-            defaultIsId = defaultStack.pop();
+            isDefaultId = defaultStack.pop();
             match("}");
             symtab.oldBlock();
             //popLexOnly(node);
-             if (compile) return compiler(node);
+            if (compile) return compiler(node);
             return node;
         }
         return null;
@@ -5792,7 +5779,7 @@ define("parser", function () {
             semicolon();
             l2 = loc.end;
             node.loc = makeLoc(l1, l2);
-             if (compile) return compiler(node);
+            if (compile) return compiler(node);
             return node;
         }
         return null;
@@ -5817,7 +5804,7 @@ define("parser", function () {
             semicolon();
             l2 = loc.end;
             node.loc = makeLoc(l1, l2);
-             if (compile) return compiler(node);
+            if (compile) return compiler(node);
             return node;
         }
     }
@@ -5840,7 +5827,7 @@ define("parser", function () {
             semicolon();
             l2 = loc.end;
             node.loc = makeLoc(l1, l2);
-             if (compile) return compiler(node);
+            if (compile) return compiler(node);
             return node;
         }
         return null;
@@ -5861,7 +5848,7 @@ define("parser", function () {
             } else semicolon();
             l2 = loc.end;
             node.loc = makeLoc(l1, l2);
-             if (compile) return compiler(node);
+            if (compile) return compiler(node);
             return node;
         }
         return null;
@@ -5880,7 +5867,7 @@ define("parser", function () {
             node.statement = stmt;
             var l2 = loc.end;
             node.loc = makeLoc(l1, l2);
-             if (compile) return compiler(node);
+            if (compile) return compiler(node);
             return node;
         }
         return null;
@@ -5896,7 +5883,7 @@ define("parser", function () {
             if (v === "finally") node.finalizer = this.Finally();
             l2 = loc.end;
             node.loc = makeLoc(l1, l2);
-             if (compile) return compiler(node);
+            if (compile) return compiler(node);
             return node;
         }
         return null;
@@ -5913,7 +5900,7 @@ define("parser", function () {
             node.block = this.Statement();
             l2 = loc.end;
             node.loc = makeLoc(l1, l2);
-             if (compile) return compiler(node);
+            if (compile) return compiler(node);
             return node;
         }
         return null;
@@ -5927,7 +5914,7 @@ define("parser", function () {
             node.block = this.Statement();
             l2 = loc.end;
             node.loc = makeLoc(l1, l2);
-             if (compile) return compiler(node);
+            if (compile) return compiler(node);
             return node;
         }
         return null;
@@ -5948,7 +5935,7 @@ define("parser", function () {
             node.body = this.BlockStatement();
             var l2 = loc.end;
             node.loc = makeLoc(l1, l2);
-             if (compile) return compiler(node);
+            if (compile) return compiler(node);
             return node;
         }
         return null;
@@ -5962,7 +5949,7 @@ define("parser", function () {
             semicolon();
             l2 = loc.end;
             node.loc = makeLoc(l1, l2);
-             if (compile) return compiler(node);
+            if (compile) return compiler(node);
             return node;
         }
         return null;
@@ -5994,7 +5981,7 @@ define("parser", function () {
             currentNode = nodeStack.pop();
             currentModule =  moduleStack.pop();
             symtab.oldScope();
-             if (compile) return compiler(node);
+            if (compile) return compiler(node);
             return node;
         }
         return null;
@@ -6020,7 +6007,7 @@ define("parser", function () {
                 case "import": item = this.ImportStatement();
                     break;
                 default:
-                        item = this.Statement();
+                    item = this.Statement();
                     break;
             }
             if (item) {
@@ -6047,7 +6034,7 @@ define("parser", function () {
                 node.named = node2;
             }
         }
-         if (compile) return compiler(node);
+        if (compile) return compiler(node);
         return node;
     }
     function NamedImports() {
@@ -6101,7 +6088,7 @@ define("parser", function () {
             }
             node.from = this.FromClause();
             semicolon();
-             if (compile) return compiler(node);
+            if (compile) return compiler(node);
             return node;
         }
         return null;
@@ -6129,10 +6116,10 @@ define("parser", function () {
         return null;
     }
     function DeclarationDefault() {
-        defaultStack.push(defaultIsId);
-        defaultIsId = true;
+        defaultStack.push(isDefaultId);
+        isDefaultId = true;
         var node = this.FunctionDeclaration();
-        defaultIsId = defaultStack.pop();
+        isDefaultId = defaultStack.pop();
         return node;
     }
     function ExportStatement() {
@@ -6197,11 +6184,9 @@ define("parser", function () {
             if (t === "Identifier" && lkhdVal == ":") node = this.LabelledStatement();
             else node = this.ExpressionStatement();
         }
-
-            semicolon();
-            if (compile) return compiler(node);
+        semicolon();
+        if (compile) return compiler(node);
         return node;
-
     }
     function IterationStatement() {
         if (v === "for") return this.ForStatement();
@@ -6223,7 +6208,7 @@ define("parser", function () {
             if (v != "in" && v != "of") {
                 throw new SyntaxError("invalid token '"+v+"' after let or const declaration at the for statement "+atLineCol() );
             }
-             if (compile) return compiler(node);
+            if (compile) return compiler(node);
             return node;
         }
         return null;
@@ -6340,7 +6325,7 @@ define("parser", function () {
             node.body = this.Statement();
             l2 = loc.end;
             node.loc = makeLoc(l1, l2);
-             if (compile) return compiler(node);
+            if (compile) return compiler(node);
             return node;
         }
         return null;
@@ -6357,7 +6342,7 @@ define("parser", function () {
                 match("else");
                 node.alternate = this.Statement();
             }
-             if (compile) return compiler(node);
+            if (compile) return compiler(node);
             return node;
         }
         return null;
@@ -6373,7 +6358,7 @@ define("parser", function () {
             match(")");
             node.body = this.Statement();
             l2 = loc.end;
-             if (compile) return compiler(node);
+            if (compile) return compiler(node);
             return node;
         }
         return null;
@@ -6392,15 +6377,15 @@ define("parser", function () {
             l2 = loc.end;
             semicolon();
             node.loc = makeLoc(l1, l2);
-             if (compile) return compiler(node);
+            if (compile) return compiler(node);
             return node;
         }
         return null;
     }
     function SwitchStatement() {
         if (v === "switch") {
-            defaultStack.push(defaultIsId);
-            defaultIsId = false;
+            defaultStack.push(isDefaultId);
+            isDefaultId = false;
             var c;
             var node = Node("SwitchStatement");
             var l1 = loc.start;
@@ -6422,8 +6407,8 @@ define("parser", function () {
             match("}");
             l2 = loc.end;
             node.loc = makeLoc(l1, l2);
-            defaultIsId = defaultStack.pop();
-             if (compile) return compiler(node);
+            isDefaultId = defaultStack.pop();
+            if (compile) return compiler(node);
             return node;
         }
         return null;
@@ -6435,7 +6420,7 @@ define("parser", function () {
             match(":");
             node.consequent = this.SwitchStatementList();
             semicolon();
-             if (compile) return compiler(node);
+            if (compile) return compiler(node);
             return node;
         }
         return null;
@@ -6448,7 +6433,7 @@ define("parser", function () {
             match(":");
             node.consequent = this.SwitchStatementList();
             semicolon();
-             if (compile) return compiler(node);
+            if (compile) return compiler(node);
             return node;
         }
         return null;
@@ -6461,7 +6446,7 @@ define("parser", function () {
             dumpExtras2(node, "before");
             match(";");
             dumpExtras2(node, "after");
-             if (compile) return compiler(node);
+            if (compile) return compiler(node);
             return node;
         }
         return null;
@@ -6478,7 +6463,7 @@ define("parser", function () {
             var l2 = loc.end;
             node.loc = makeLoc(l1, l2);
             semicolon();
-             if (compile) node = compiler(node);
+            if (compile) node = compiler(node);
             nodes.push(node);
         }
         return strict;
@@ -6513,17 +6498,17 @@ define("parser", function () {
         root.strict = true;
         var l2 = loc.end;
         root.loc = makeLoc(l1, l2);
-         if (compile) return compiler(root);
+        if (compile) return compiler(root);
         return root;
     }
     function DefaultAsIdentifier() {
         if (v === "default") {
-            if (defaultIsId) {
+            if (isDefaultId) {
                 var node = Node("Identifier");
                 node.name = "default";
                 node.loc = token && token.loc;
                 match("default");
-                 if (compile) return compiler(node);
+                if (compile) return compiler(node);
                 return node;
             }
         }
@@ -6541,7 +6526,7 @@ define("parser", function () {
         var l2;
         l2 = lastloc && lastloc.end;
         node.loc = makeLoc(l1, l2);
-         if (compile) return compiler(node);
+        if (compile) return compiler(node);
         return node;
     }
     function RegularExpressionLiteral() {
@@ -6553,7 +6538,7 @@ define("parser", function () {
             var l2 = loc.end;
             node.loc = makeLoc(l1,l2);
             next();
-             if (compile) return compiler(node);
+            if (compile) return compiler(node);
             return node;
         }
         return null;
@@ -27899,7 +27884,7 @@ define("runtime", function () {
 /**
  * Created by root on 20.04.14.
  */
-define("heap", function () {
+define("heap", function (require, exports) {
 
 var ABRUPT = 0x01;
 
@@ -30908,7 +30893,6 @@ define("syntaxjs-shell", function (require, exports) {
 // #######################################################################################################################
 
 // define("syntaxjs", function () {
-// syntaxjs is now defined in amd prolly.js
 
     function pdmacro(v) {
         return {
@@ -30919,20 +30903,16 @@ define("syntaxjs-shell", function (require, exports) {
         };
     }
 
-
     var VERSION = "0.0.1";
     var syntaxjs_public_api_readonly = {
     // essential functions
         version: pdmacro(VERSION),
         define: pdmacro(define),
         require: pdmacro(require),
-        modules: pdmacro(require.cache),
-        makePromise: pdmacro(require.cache),
-
+        makePromise: pdmacro(makePromise),
         tokenizeIntoArrayWithWhiteSpaces: pdmacro(require("tokenizer").tokenizeIntoArrayWithWhiteSpaces),// <-- needs exports fixed
         tokenizeIntoArray: pdmacro(require("tokenizer").tokenizeIntoArray),				// <-- needs exports fixed
 	    tokenize: pdmacro(require("tokenizer")),    // <-- needs exports fixed
-	
         parse: pdmacro(require("parser")),
         parseGoal: pdmacro(require("parser").parseGoal),
         eval: pdmacro(require("runtime")),
@@ -31016,7 +30996,6 @@ define("syntaxjs-shell", function (require, exports) {
 /*
 * automatic start (included at the end of the main script)
 */
-
 if (syntaxjs.system === "node") {
     if (!module.parent) syntaxjs.nodeShell();
 } else if (syntaxjs.system === "browser") {
@@ -31028,6 +31007,7 @@ if (syntaxjs.system === "node") {
 } else if (syntaxjs.system === "nashorn") {
     print("support for java coming");
 }
+
 
 
     return syntaxjs;

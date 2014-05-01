@@ -1,0 +1,14 @@
+{
+	"computed properties again":
+	{
+	    "init": 		
+		"let s = Symbol(); let obj = { [s]: 101, x: { [s]: 202 } }",
+	    "tests": 
+	    [
+
+		["typeof s", "symbol"],
+		["obj[s]", 101],
+		["obj.x[s]", 202]
+	    ]
+	}
+}
