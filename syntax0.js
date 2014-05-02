@@ -531,7 +531,7 @@ define("i18n", function (require, exports) {
         var c1, c2;
         var aCount = 1;
         var str = exports.languages.lang[index];
-        if (str===undefined) return NOT_FOUND_ERR;
+        if (str===undefined) return formatStr(exports.NOT_FOUND_ERR, index);
         c2 = str[0];
         var out = "";
         for (var i = 1, j = str.length; i < j; i++) {
@@ -548,7 +548,7 @@ define("i18n", function (require, exports) {
             }
 
         }
-        out+=c2;
+        if (c2 != undefined) out+=c2;
         return out;
     }
 
@@ -565,6 +565,7 @@ define("i18n", function (require, exports) {
         var c1, c2;
         var aCount = 1;
         c2 = str[0];
+        if (str == undefined) return "";
         var out = "";
         for (var i = 1, j = str.length; i < j; i++) {
             c1 = c2;
@@ -579,7 +580,7 @@ define("i18n", function (require, exports) {
                 out += c1;
             }
         }
-        out+=c2;
+        if (c2 != undefined) out+=c2;
         return out;
     }
 
@@ -592,7 +593,9 @@ define("i18n", function (require, exports) {
      */
     function trans(index) {
         "use strict";
-        return this[this.lang][index];
+        var s = exports.languages[exports.languages.lang][index];
+        if (s == undefined) return formatStr(exports.NOT_FOUND_ERR, lang);
+        return s;
     }
 
 
