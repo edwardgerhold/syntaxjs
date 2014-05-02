@@ -26,8 +26,23 @@ Error.stackTraceLimit = 33;
 
 var syntaxjs;
 
-
-
+/**
+ * a poorly failing A+ or better A- Promise which fails in 1/3 of the tests.
+ * The exports have the test adapter forgotten to be removed you can test it.
+ * But for resolving it serves, i have not checked it with any exception except
+ * a little testfile with some reject yet. I haven´t checked the verbose output
+ * of the promise tests, i remember. Anyways. It´s simply enough to return a value
+ *
+ * var realm = syntaxjs.createRealm();
+ * realm.evalAsync("let x = 10; x;").then(function (value) { console.log(v); return v; }, function (err) { throw err; });
+ * // now let´s invoke the exception handler by repeating it, let x is already declared will be asyntax error
+ * realm.evalAsync("let x = 10; x;").then(function (value) { console.log(v); return v; }, function (err) { throw err; });
+ *
+ * @param resolver - a function (resolve, reject) which gets two functions passed to resolve this promise with either the
+ * one or the other.
+ *
+ * @returns {*}
+ */
     function makePromise(resolver) {
 
         "use strict";
@@ -62,12 +77,20 @@ var syntaxjs;
                         if (isFunction(callback)) newValue = callback(data);
                         deferred.resolve(newValue);
                     } else if (type === "reject") {
-                        if (isFunction(errback)) errback(data);
-                        deferred.reject(data);
+                        try {
+                            if (isFunction(errback)) errback(data);
+                            deferred.reject(data);
+                        } catch(ex) {
+                            deferred.reject(ex);
+                        }
                     }
                 } catch (ex) {
-                    if (isFunction(errback)) errback(ex);
-                    deferred.reject(ex);
+                    try {
+                        if (isFunction(errback)) errback(ex);
+                        deferred.reject(ex);
+                    } catch (ex) {
+                        deferred.reject(ex);
+                    }
                 }
             };
         }
@@ -171,7 +194,11 @@ var syntaxjs;
         });
         return deferred;
     }
-
+    /**
+     * What´s the aplus test adapter doing here?
+     * This is a joke or? Good that it´s not happening in production.
+     * Anyways, so the world can see, it fails 1/3 (i guess in error handling)
+     */
 
     if (typeof exports !== "undefined") {
         exports.makePromise = makePromise;
@@ -188,17 +215,21 @@ var syntaxjs;
             });
         };
     }
-
-
+    /**
+     * require.cache[id] = Module
+     *
+     * Module({ id: exports children : code });
+     *
+     * @param id
+     * @param exports
+     * @param children
+     * @param code
+     * @returns {Module}
+     * @constructor
+     */
     function Module(id, exports, children, code) {
         "use strict";
         var m = this;
-        if (typeof id === "object") {
-            exports = id.exports;
-            id = id.id;
-            children = id.children;
-            code = id.code;
-        }
         m.id = id;
         m.children = children;
         if (exports) m.loaded = true;
@@ -207,27 +238,64 @@ var syntaxjs;
             return require.apply(this, arguments);
         };
         if (code) {
-            m.factory = new Function("require", "exports", "module", code);
-            m.factory(m.require.m.exports, m);
+            if (typeof code === "function")
+                m.factory = code;
+            else
+                m.factory = new Function("require", "exports", "module", code);
+            m.exports = m.factory(m.require, m.exports, m);
             m.loaded = true;
         }
         return m;
     }
-
+    /**
+     * syntaxjs.define is a function on the syntaxjs object
+     * this one is putting all exported values under it´s
+     * required name, the module id, in require.cache[name]
+     *
+     * define("intrinsic", function (require, exports, module) {
+     *      var tables = require("tables");
+     *      exports.dummy = IsBindingPattern["ArrayPattern"];
+     *      return exports;
+     * });
+     *
+     * syntaxjs.define(name, ["dep1","dep2"], function (dep1, dep2) {
+     *      return dep1+dep2;
+     * });
+     *
+     * It looks like the define(function() {}) is missing, i see
+     *
+     * @param id
+     * @param deps
+     * @param factory
+     * @returns {*|{}|Module.exports}
+     *
+     */
     function define(id, deps, factory) {
         "use strict";
         var exports = {};
         var children = [];
         var imports = [];
         var returned;
-        var m = new Module({
-            id: id,
-            exports: exports,
-            children: children
-        });
+        var m = new Module(id, exports, children);
         var d;
+        /*
+        // should i do that? i spend 5 minutes on it
+        if (arguments.length === 1 && typeof arguments[0] === "object" && arguments[0]) {
+            if (typeof __dirname !== "undefined" && typeof __filename == "string") {
+               var _id = __dirname + __filename;
+               require.cache[_id] = new Module(_id, arguments[0]);
+            } else if (typeof location !== undefined) {
+                _id = location.href;
+                _id = ("" + location.href).slice(("" + location.href).lastIndexOf("/"));
+                return require[_id] = arguments[0];
+            }
+        }
+        */
         if (!require.cache) require.cache = Object.create(null);
         if (arguments.length === 2) {
+            if (typeof deps === "object" && !Array.isArray(deps)) {
+                require.cache[id] = new Module(id, deps);
+            }
             if (typeof deps === "function") {
                 factory = deps;
                 deps = null;
@@ -254,6 +322,23 @@ var syntaxjs;
         require.cache[id] = m;
         return m.exports;
     }
+    /**
+     * require does the sync return of module.exports from require.cache[id]
+     *
+     * it´s defined on syntaxjs, too. You can acces the intrinsic modules by
+     * calling syntaxjs.require("name");
+     *
+     * var tables = require("tables");
+     * var format = require("i18n").format;
+     *
+     * Some might return export objects, some might return functions.
+     * I want to change my kind of writing this to return export objects only
+     * Everyhting else is a mess like this here still is
+     *
+     * @param deps
+     * @param factory
+     * @returns {*}
+     */
 
     function require(deps, factory) {
         "use strict";
@@ -278,7 +363,6 @@ var syntaxjs;
                 return factory.apply(null, mods);
         }
     }
-
 
 
 
@@ -546,12 +630,10 @@ define("i18n", function (require, exports) {
             } else {
                 out += c1;
             }
-
         }
         if (c2 != undefined) out+=c2;
         return out;
     }
-
     /**
      * formatStr is the same as format
      * returns "i am tool" or in german
@@ -615,7 +697,7 @@ exports.NOT_FOUND_ERR = "i18n-failure: '%s' not found."
 
     require("i18n").addLang("de_DE");
     require("i18n").addLang("en_US");
-    require("i18n").setLang("en_US"); // i´ll add a command to the interpreter
+    require("i18n").setLang("en_US");  // i´ll add a command to the interpreter
                                         // setLanguage() prints available languages
                                         // setLanguage(lang) sets the language
                                         // everything else but an existing should throw

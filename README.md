@@ -193,9 +193,12 @@ undefined
 
 The async versions
 
+```js
+var realm = syntaxjs.createRealm();
+realm.evalAsync("let x = 10; x").then(function (value) { console.log(value); }, function (err) { console.error(err); });
+// i entered it twice and got an exception for the already declared x in the realm.
 ```
-realm.evalAsync("let x = 10; x").then(function (value) { console.log(value); }, function (err) { throw err; });
-```
+
 
 This one works i tested it recently.
 
