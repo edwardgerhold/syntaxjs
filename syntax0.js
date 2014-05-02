@@ -8750,6 +8750,7 @@ SLOTS.BYTEOFFSET = "ByteOffset";
 SLOTS.ARRAYLENGTH = "ArrayLength";
 SLOTS.DATAVIEW = "DataView";
 SLOTS.ARRAYBUFFERBYTELENGTH = "ArrayBufferByteLength";
+SLOTS.VIEWEDARRAYBUFFER = "ViewedArrayBuffer";
 // Array Slots
 SLOTS.ARRAYINITIALISATIONSTATE = "ArrayInitialisationState";
 SLOTS.ITERATEDOBJECT = "IteratedObject";
@@ -9190,31 +9191,31 @@ function isAbrupt(completion) {
 
 
 // ===========================================================================================================
-// return withError
+// return newError
 // ===========================================================================================================
-// This Function returns the Errors, say the spec says "Throw a TypeError", then return withError("Type", message);
+// This Function returns the Errors, say the spec says "Throw a TypeError", then return newError("Type", message);
 
-function withReferenceError(message) {
+function newReferenceError(message) {
     return Completion("throw", OrdinaryConstruct(getIntrinsic("%ReferenceError%"), [message]));
 }
 
-function withRangeError(message) {
+function newRangeError(message) {
     return Completion("throw", OrdinaryConstruct(getIntrinsic("%RangeError%"), [message]));
 }
 
-function withSyntaxError(message) {
+function newSyntaxError(message) {
     return Completion("throw", OrdinaryConstruct(getIntrinsic("%SyntaxError%"), [message]));
 }
 
-function withTypeError(message) {
+function newTypeError(message) {
     return Completion("throw", OrdinaryConstruct(getIntrinsic("%TypeError%"), [message]));
 }
 
-function withURIError(message) {
+function newURIError(message) {
     return Completion("throw", OrdinaryConstruct(getIntrinsic("%URIError%"), [message]));
 }
 
-function withEvalError(message) {
+function newEvalError(message) {
     return Completion("throw", OrdinaryConstruct(getIntrinsic("%EvalError%"), [message]));
 }
 
@@ -23936,7 +23937,6 @@ var TypePrototypePrototype_get = function (thisArg, argList) {
     if (!hasInternalSlot(O, SLOTS.TYPEDESCRIPTOR)) return withError("Type", "has no type descriptor");
     return NormalCompletion(getInternalSlot(O, SLOTS.TYPEDESCRIPTOR));
 };
-
 var TypePrototype_arrayType = function (thisArg, argList) {
     var O = thisArg;
     var length = argList[0];
@@ -23945,7 +23945,7 @@ var TypePrototype_arrayType = function (thisArg, argList) {
     var numberLength = ToNumber(length);
     var elementLength = ToLength(numberLength);
     if (isAbrupt(elementLength=ifAbrupt(elementLength))) return elementLength;
-    if (SameValueZero(numberLength, elementLength)) return withError("Range", "");
+    if (SameValueZero(numberLength, elementLength)) return withError("Range", "numberLength is not elementLength");
     var arrayDescriptor = GetOrCreateArrayTypeDescriptor(typeDescriptor);
     if (isAbrupt(arrayDescriptor=ifAbrupt(arrayDescriptor))) return arrayDescriptor;
     var R = TypeExoticObject();
@@ -23954,7 +23954,6 @@ var TypePrototype_arrayType = function (thisArg, argList) {
     setInternalSlot(R, SLOTS.DIMENSIONS, newDimensions);
     return NormalCompletion(R);
 };
-
 var TypePrototype_opaqueType = function (thisArg, argList) {
     var O = thisArg;
     if (!IsTypeObject(O)) return withError("Type","is not a typed object");
@@ -23967,21 +23966,19 @@ var TypePrototype_opaqueType = function (thisArg, argList) {
     setInternalSlot(R, SLOTS.DIMENSIONS, dimensions);
     return NormalCompletion(R);
 };
-
-
-
-var StructType_Call = function (thisArg, argList) {
+var StructTypeConstructor_Call = function (thisArg, argList) {
     var object = argList[0];
-    if (Type(object) !== OBJECT) return withError("Type", "");
+    if (Type(object) !== OBJECT) return withError("Type", "first argument is not an object");
+
     var O = thisArg;
-    if (!IsTypeObject(O)) return withError("Type", "");
+    if (!IsTypeObject(O)) return withError("Type", "O is no TypeObject");
     var currentOffset = 0;
     var maxAlignment = 1;
     var structure = [];
     for (var P in object.Bindings) {
         var fieldType = Get(object, P);
         if (isAbrupt(fieldType=ifAbrupt(fieldType))) return fieldType;
-        if (!IsTypeObject(fieldType)) return withError("Type", "");
+        if (!IsTypeObject(fieldType)) return withError("Type", "fieldType is no TypeObject");
         var alignment = Alignment(fieldType);
         maxAlignment = Math.max(alignment, maxAlignment);
         currentOffset = AlignTo(currentOffset, alignment);
@@ -24003,12 +24000,24 @@ var StructType_Call = function (thisArg, argList) {
     });
     return NormalCompletion(O);
 };
+var StructTypeConstructor_Construct = function (argList) {
+    return OrdinaryConstruct(this, argList);
+};
+var StructTypeConstructor_$$create = function (thisArg, argList) {
+    var F = thisArg;
+    var proto = OrdinaryCreateFromConstructor(F, "%StructTypePrototype%", [ SLOTS.TYPEDESCRIPTOR, SLOTS.DIMENSIONS ]);
+    if (isAbrupt(proto = ifAbrupt(proto))) return proto;
+    return ObjectCreate(proto);
+};
 
 // The above must be moved out of intrinsics/ into api for more speed creating realms.
 // that all "objects" gonna be refactored for typed memory is some other topic.
 
 // StructType
-setInternalSlot(StructTypeConstructor, SLOTS.CALL, StructType_Call);
+setInternalSlot(StructTypeConstructor, SLOTS.CALL, StructTypeConstructor_Call);
+setInternalSlot(StructTypeConstructor, SLOTS.CONSTRUCT, StructTypeConstructor_Construct);
+LazyDefineBuiltinFunction(StructTypePrototype, $$create, 1, StructTypeConstructor_$$create)
+
 // StructType.prototype
 
 
@@ -24017,18 +24026,6 @@ setInternalSlot(StructTypeConstructor, SLOTS.CALL, StructType_Call);
 LazyDefineAccessor(TypePrototype, "prototype", TypePrototypePrototype_get);
 LazyDefineBuiltinFunction(TypePrototype, "arrayType", 1, TypePrototype_arrayType);
 LazyDefineBuiltinFunction(TypePrototype, "opaqueType", 1, TypePrototype_opaqueType);
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 /*
@@ -24354,6 +24351,8 @@ LazyDefineBuiltinFunction(VMObject, "heap", 1, VMObject_heap);
     exports.MakeMethod = MakeMethod;
     exports.CloneMethod = CloneMethod;
     exports.withError = withError;
+    exports.newTypeError = newTypeError; // soon they replace withError(type
+    exports.newReferenceError = newReferenceError;
     // my own definitions between the ecma stuff
     exports.SetFunctionLength = SetFunctionLength;
     exports.LazyDefineProperty = LazyDefineProperty;
