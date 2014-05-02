@@ -426,6 +426,51 @@ define("filesystem", function (require, exports) {
 
     // soon back inside
 //---#include "lib/intl/identifier-module.js"; // only loading takes longer, i need to learn more from m.bynens and norbert l. (seriously) and then go for Intl and Collator. :)
+define("languages.de_DE", function (require, exports) {
+    "use strict";
+
+    exports.__proto__ = null;
+
+    var o = exports;
+
+    /**
+     * Find a good indexing..
+     */
+
+    exports.REFERENCE_S_IS_UNRESOLVABLE = "Referenz %s ist unauflösbar durch GetValue(V)";
+    exports.NOT_A_REFERENCE = "Ist keine Referenz";
+    exports.UNRESOLVABLE_REFERENCE = "Unaufloesbare Referenz";
+    exports.S_IS_NOT_AN_OBJECT = "%s ist kein Object";
+    exports.S_IS_NO_AVAILABLE_SLOT = "%s ist kein verfügbarer Slot.";
+
+    return exports;
+
+});
+
+define("languages.en_US", function (require, exports) {
+    "use strict";
+
+    exports.__proto__ = null;
+
+
+
+    /**
+     * Find a good indexing..
+     */
+
+    exports.REFERENCE_S_IS_UNRESOLVABLE = "Reference %s is unresolvable by GetValue(V)";
+    exports.NOT_A_REFERENCE = "Not a reference";
+    exports.UNRESOLVABLE_REFERENCE = "Unresolvable Reference";
+    exports.S_IS_NOT_AN_OBJECT = "%s is not an object";
+    exports.S_IS_NO_AVAILABLE_SLOT = "%s is no available slot.";
+
+
+
+
+    return exports;
+});
+
+
 
 define("i18n", function (require, exports) {
 "use strict";
@@ -501,7 +546,9 @@ define("i18n", function (require, exports) {
             } else {
                 out += c1;
             }
+
         }
+        out+=c2;
         return out;
     }
 
@@ -532,6 +579,7 @@ define("i18n", function (require, exports) {
                 out += c1;
             }
         }
+        out+=c2;
         return out;
     }
 
@@ -550,15 +598,24 @@ define("i18n", function (require, exports) {
 
 exports.languages = languages;
 exports.addLang = addLang;
+exports.setLang = setLang;
 exports.setFallback = setFallback;
 exports.trans = trans;
 exports.format = format;
 exports.formatStr = formatStr;
 exports.NOT_FOUND_ERR = "i18n-failure: '%s' not found."
 
+// I initialise this in lib/_main_.js
 
 });
 
+
+    require("i18n").addLang("de_DE");
+    require("i18n").addLang("en_US");
+    require("i18n").setLang("en_US"); // i´ll add a command to the interpreter
+                                        // setLanguage() prints available languages
+                                        // setLanguage(lang) sets the language
+                                        // everything else but an existing should throw
 
 // the lexer and parser api ast and tostring for es6 code
 /**
@@ -8234,6 +8291,14 @@ define("api", function (require, exports) {
     var stack;
     var eventQueue;
 
+    /**
+     * i18n
+     */
+    var format = require("i18n").format; // with %s and varargs, linear by characters and concat of out with +=;
+    var trans = require("i18n").trans; // no formatting of %s
+    // means to write return withError("Type", format("NOT_FOUND_ERR", filename));
+    // withError will be globally replaced with newTypeError, etc, soon
+
     var all = {
         toString: function () {
             return "[all imports/exports value]";
@@ -9412,6 +9477,9 @@ Reference.prototype = {
 
 };
 
+
+
+
 function GetValue(V) {
 
     if (isAbrupt(V = ifAbrupt(V))) return V;
@@ -9419,7 +9487,7 @@ function GetValue(V) {
 
     var base = V.base;
 
-    if (IsUnresolvableReference(V)) return withError("Reference", "GetValue: '" + V.name + "' is an unresolvable reference");
+    if (IsUnresolvableReference(V)) return withError("Reference", format("REFERENCE_S_IS_UNRESOLVABLE", V.name));
 
     if (IsPropertyReference(V)) {
 
@@ -9440,13 +9508,13 @@ function GetValue(V) {
 function PutValue(V, W) {
     if (isAbrupt(V = ifAbrupt(V))) return V;
     if (isAbrupt(W = ifAbrupt(W))) return W;
-    if (Type(V) !== REFERENCE) return withError("Reference", "PutValue: V is not a reference");
+    if (Type(V) !== REFERENCE) return withError("Reference", trans("NOT_A_REFERENCE"));
     var base = V.base;
 
     if (IsUnresolvableReference(V)) {
 
         //console.log("unresolvable "+V.name);
-        if (V.strict) return withError("Reference", "PutValue: unresolvable Reference");
+        if (V.strict) return withError("Reference", trans("UNRESOLVABLE_REFERENCE"));
         var globalObj = GetGlobalObject();
         return Put(globalObj, V.name, W, false);
 
@@ -14608,6 +14676,31 @@ exports.float64 = float64;
         };
         setInternalSlot(ThrowTypeError, SLOTS.CALL, ThrowTypeError_Call);
         setInternalSlot(ThrowTypeError, SLOTS.CONSTRUCT, undefined);
+
+
+        var SetLang_Call = function (thisArg, argList) {
+                try {var languages = require("i18n").languages;}
+                catch (ex) {return withError("Type", ex.message);}
+                if (argList.length === 0) {
+                    callInternalSlot(SLOTS.CALL, PrintFunction, undefined, ["print(lang)", "available languages:"])
+                    for (var lang in languages) {
+                        if (Object.hasOwnProperty.call(languages, lang)) {
+                            callInternalSlot(SLOTS.CALL, PrintFunction, undefined, [lang]);
+                        }
+                    }
+                }
+                var lang = ToString(argList[0]);
+                if (isAbrupt(lang=ifAbrupt(lang))) return lang;
+                try {require("i18n").setLang(lang);}
+                catch (ex) {return withError("Type", ex.message);}
+                return NormalCompletion(undefined);
+        };
+        var SetLanguage = createIntrinsicFunction(intrinsics, "setLanguage", 1, "%SetLanguage%")
+        setInternalSlot(SetLanguage, SLOTS.CALL, SetLang_Call);
+        setInternalSlot(SetLanguage, SLOTS.CONSTRUCT, undefined);
+        // maybe it´s best on: Reflect.
+        // but i get strange feelings to wish to implement the intl api together with es6 and asm.js
+
 
 setInternalSlot(PrintFunction, SLOTS.CALL, function (thisArg, argList) {
    var str = "";
@@ -24264,6 +24357,7 @@ LazyDefineBuiltinFunction(VMObject, "heap", 1, VMObject_heap);
             DefineOwnProperty(globalThis, "print", GetOwnProperty(intrinsics, "%PrintFunction%"));
             DefineOwnProperty(globalThis, "request", GetOwnProperty(intrinsics, "%Request%"));
             DefineOwnProperty(globalThis, "setTimeout", GetOwnProperty(intrinsics, "%SetTimeout%"));
+            DefineOwnProperty(globalThis, "setLanguage", GetOwnProperty(intrinsics, "%SetLanguage%"));
             LazyDefineBuiltinConstant(globalThis, "undefined", undefined);
             DefineOwnProperty(globalThis, "unescape", GetOwnProperty(intrinsics, "%Unescape%"));
             LazyDefineBuiltinConstant(globalThis, $$toStringTag, "syntaxjs");
@@ -29954,7 +30048,6 @@ define("annotations.de_DE", function (require, exports) {
 
 });
 //--#include "lib/highlighter/annotations.en_US.js";
-
 /*
 
 
