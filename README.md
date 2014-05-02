@@ -1,10 +1,11 @@
-syntax.js
+syntax.js (*1)
 =========
-(the name is the original name of the original 99 line syntaxhighlighter from x-mas 2012)
+Not bugfree(*) but relativly compliant EcmaScript 6 (7**) Interpreter(*****) written 
+in EcmaScript 5 (could run in 3 with shims i bet, or be factored down with __proto__:null
+and syntaxjs[xxx] = yz instead of using Object.defineProperty, ok, the most interesting
+is to use "use strict" to let it throw if something is really wrong).
 
-
-Not bugfree(*) but compliant EcmaScript 6 (7**) Interpreter(*****) written 
-in EcmaScript 5. This project was started on a PIII/933 with mcedit in a dorm 
+This project was started on a PIII/933 with mcedit in a dorm 
 and is now continued on a notebook with 2 cores still in the dorm. It´s a fun 
 project. And pretty soon able to run itself. (***)
 
@@ -12,6 +13,10 @@ Hmm, i notice difficulties with writing plain text with myself nowadays.
 I´m working on it.
 
 (*) still doesn´t run arbitrary JavaScript code, but all lockups are removed.
+I rewrote the Expression, for those who noticed but don´t like to look again,
+wether i have changed it, or not. The bugs are no longer in the parser, but
+in the runtime itself. It is able to parse itself with over 200,000 nodes.
+But sucks within define.
 
 (**) contains at last one implemented ES7 proposal and stubs for the other
 
@@ -22,6 +27,29 @@ A few JSDoc comments will replace the chaotic few comments left between.
 (****) typed mem and stack machine is a must for me but it will still take
 a while. But then we´ll also have Weak Maps, Weak Sets, and Weak Refs. 
 
+New Access to Modules
+=====================
+
+syntaxjs.define and syntaxjs.require can define and load modules for the
+use in syntaxjs. After a while without a public api i found that some 
+access would be cool, and to add the functions to the syntaxjs object solves
+all my problems with defining another require e.g. under node.js.
+This require btw. is serving the AMD format, but is only doing sync requests
+to require.cache.
+All modules with all their properties can be found  syntaxjs.require.cache[name];
+Now my modules make more sense i find.
+
+```js
+// npm install -g 
+> var syntaxjs = require("syntaxjs")
+> var format = syntaxjs.require("i18n").format;
+> console.log(format("%s %s %s", "i", "am", "novice"));
+> i am novice
+
+```
+
+This shows the latest module i18n. It now carries a format and a raw 
+function
 
 Latest Mistake
 ==============
@@ -534,4 +562,54 @@ The API is not complete. The exports are not clean yet. The new tokenizer fails
 some tests, for whatever reason of the skipped lineterminators it is. So i have
 still some lines to edit here.
 
-
+(*1)
+====
+(the name is the original name of the original 99 line syntaxhighlighter from x-mas 2012,
+it got a part of the parser (first with keywords.indexOf(value) worst quadratic complexity,
+in june 2013 i decided to continue my homepage highlighter. A month later i started reading
+the famous 6th edition of EcmaScript. I started with a visitor pattern for the interpreter,
+and noticed later, that i need a stack under it for generators, or at last parent pointers,
+which aren´t in mozilla´s parser api suggestion yet, or i would have to traverse the tree 
+once to get the node we left, compared by identitity and then the next node in the execution.
+A stack for each StatementList and an InstructionIndex gives that complex stuff for free.
+To reduce the callstack anyways i´ve started with the vm project to add a stack/register
+based runtime. The cool is, the visitor is a good fallback or interpreter demo and no loss.
+Same for typed memory. In august 2013 i had already the option to refactor my few lines for
+typed memory or to continue and do a big search and replace later. I chose the latter,
+for whichever reason, sometimes i felt blamed, since i put it online, sometimes i felt
+angry to have not used the typed heap from the beginning on, and on the other hand
+i tell myself, that is good training for me, because i am unexperienced, have no job
+in this branch and need to get practically a bit more experienced. In 2013 i only had an
+old computer with 933mhz, 1cpu and 512megs of RAM. Even sublime was to slow and had too long
+delays, that i took mcedit of the midnight commander (i had to turn of highlighting)
+and wrote down, on a heavy to press keyboard (i wasted three cheap keyboards for 5-8 Euros 
+in the coming half year), what i could. Later in December i broke after a longer editing 
+session the program a little, that i was shocked not to find it at once (there where
+many typos and mistakes to fix, and i lost strict mode´s thisArgs till today), and in
+February and March i learned Java by University Lecture and really hard time hacking
+of Data Structures and Design Patterns (I printed Head First Design Patterns from
+the owners Site and tried them all out, and was impressed by the impressing Art of
+their written language), and in April i continued the tool every day a bit. A third of
+the commits contain little changes, 10% are fixes for my own stupidness, the numbers
+may be wrong, but after i decided to support getify´s CST, i had only one option,
+to continue the program, which can implement it, and on the other hand, i also wanted
+to complete the program at least together with ES6, i´m stuck for a native engine until
+ES7 because i still have to do the byte code interpreter and typed memory system i have
+designed for longer now and don´t want to write my object the same way to replace them
+later. So i decided to gather more experience before i change languages. My latest idea is
+to learn how to transfer this interpreters runtime into some "use asm" compatible 
+fetch, decode, execute of the stack. The encoding of strings (esprima uses code points,
+i use strings, but i would use code points, if i become somewhat smarter in using them)
+is a bit less difficult than looping and using String.fromCharCode by just using
+a constant pool. For registers we have a lot of variables (unlimited?). For transferring
+the algorithms into some basic block interpreting algorithms is done relativly fast
+by copy and paste, if i make it, to enter the main loop. The old execute function
+of syntaxjs.eval shows, where the machine has to go. First there is this main loop,
+then this one can call evaluate, or relativly perform everything from the loop, which
+means to reduce the callstack to a single node´s height. Currently it grows with
+the nesting but should hold for a couple of programs, because callstacks are relativly
+big. But the AST is minimum of 10x bigger than the regular program. Another calculated
+down format is to use "return" for return or "break" for break or "function" for function,
+which can be replaced by numbers, and then constant pool data or three byte instructions
+or loads and stores. I have to get into it, and to copy and paste the runOFtime for.
+One can start with a single command an then add each function singularly.

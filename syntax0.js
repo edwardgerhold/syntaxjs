@@ -284,7 +284,7 @@ var syntaxjs;
 
 (function () {
 
-    "use strict"
+    "use strict";
 
     syntaxjs = Object.create(null);
     
@@ -426,7 +426,139 @@ define("filesystem", function (require, exports) {
 
     // soon back inside
 //---#include "lib/intl/identifier-module.js"; // only loading takes longer, i need to learn more from m.bynens and norbert l. (seriously) and then go for Intl and Collator. :)
-//---#include "lib/intl/i18n.js"; */
+
+define("i18n", function (require, exports) {
+"use strict";
+
+    var languages = exports.languages = Object.create(null);
+
+    /**
+     * add a language (any string value)
+     * it requires an existing module
+     * else require throws with the missing filename
+     *
+     * exports.languages = new Object
+     * replaces this object in it´s use
+     *
+     * @param lang
+     */
+    function addLang(lang) {
+        "use strict";
+        languages[lang] = require("languages." + lang);
+    }
+
+    /**
+     * set the specific default language
+     * the module must have been added before,
+     * else i throw an exception
+     * @param lang
+     */
+    function setLang(lang) {
+        "use strict";
+        if (exports.languages[lang]) exports.languages.lang = exports.languages[lang];
+        else throw new TypeError("the following language has not been added with setLang(): "+lang);
+    }
+
+    /**
+     * set a fallback language, if the language has no string available
+     * if a fallback isnt present, a "NO_STRING_PRESENT: "+index should be shown
+     * @param lang
+     */
+    function setFallback(lang) {
+        "use strict";
+        if(exports.languages[lang])
+        exports.languages.fallback = exports.languages[lang];
+        else throw new TypeError("can not set fallback to '"+lang+"'. language doesn´t exist. Use addLang('"+lang+"') to require('languages."+lang+"')");
+    }
+
+    /**
+     * format(index, "%s %s %s", "i", "am", "tool");
+     * returns "i am tool" or in german, if setLang("de_DE") happened "ich bin Werkzeug"
+     * %s is for any value as we are in javascript
+     * better formatting can be added but is not concerned now
+     *
+     * @param index
+     * @returns {string}
+     */
+
+    function format(index) {
+        "use strict";
+        var c1, c2;
+        var aCount = 1;
+        var str = exports.languages.lang[index];
+        if (str===undefined) return NOT_FOUND_ERR;
+        c2 = str[0];
+        var out = "";
+        for (var i = 1, j = str.length; i < j; i++) {
+            c1 = c2;
+            c2 = str[i];
+            if (c1 == "%" && c2 == "s") {
+                out += arguments[aCount];
+                aCount += 1;
+                i+=1;
+                c1 = str[i-1];
+                c2 = str[i];
+            } else {
+                out += c1;
+            }
+        }
+        return out;
+    }
+
+    /**
+     * formatStr is the same as format
+     * returns "i am tool" or in german
+     * and performs no translation
+     *
+     * @param str
+     * @returns {string}
+     */
+    function formatStr(str) {
+        "use strict";
+        var c1, c2;
+        var aCount = 1;
+        c2 = str[0];
+        var out = "";
+        for (var i = 1, j = str.length; i < j; i++) {
+            c1 = c2;
+            c2 = str[i];
+            if (c1 == "%" && c2 == "s") {
+                out += arguments[aCount];
+                aCount += 1;
+                i+=1;
+                c1 = str[i-1];
+                c2 = str[i];
+            } else {
+                out += c1;
+            }
+        }
+        return out;
+    }
+
+    /**
+     * This one fetches a translated string
+     * and performs no formatting
+     *
+     * @param index
+     * @returns {*}
+     */
+    function trans(index) {
+        "use strict";
+        return this[this.lang][index];
+    }
+
+
+exports.languages = languages;
+exports.addLang = addLang;
+exports.setFallback = setFallback;
+exports.trans = trans;
+exports.format = format;
+exports.formatStr = formatStr;
+exports.NOT_FOUND_ERR = "i18n-failure: '%s' not found."
+
+
+});
+
 
 // the lexer and parser api ast and tostring for es6 code
 /**
@@ -25252,12 +25384,17 @@ define("runtime", function () {
 
     function EvaluateCall(ref, args, tailPosition) {
         var thisValue;
+        
         var func = GetValue(ref);
+        
         if (isAbrupt(func = ifAbrupt(func))) return func;
         var argList = ArgumentListEvaluation(args);
+        
         if (isAbrupt(argList = ifAbrupt(argList))) return argList;
+
         if (Type(func) !== OBJECT) return withError("Type", "EvaluateCall: func is not an object");
         if (!IsCallable(func)) return withError("Type", "EvaluateCall: func is not callable");
+
         if (Type(ref) === REFERENCE) {
             if (IsPropertyReference(ref)) {
                 thisValue = GetThisValue(ref);
@@ -25265,13 +25402,16 @@ define("runtime", function () {
                 var env = GetBase(ref);
                 thisValue = env.WithBaseObject();
             }
+            
         } else {
             thisValue = undefined;
         }
-        if (tailPosition) { PrepareForTailCall(); }
+        
+//        if (tailPosition) { PrepareForTailCall(); }
 
         var result = callInternalSlot(SLOTS.CALL, func, thisValue, argList);
-        if (tailPosition) {}
+
+//        if (tailPosition) {}
         return result;
 
     }
