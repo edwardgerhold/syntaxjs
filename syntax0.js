@@ -26,23 +26,22 @@ Error.stackTraceLimit = 33;
 
 var syntaxjs;
 
-/**
- * a poorly failing A+ or better A- Promise which fails in 1/3 of the tests.
- * The exports have the test adapter forgotten to be removed you can test it.
- * But for resolving it serves, i have not checked it with any exception except
- * a little testfile with some reject yet. I haven´t checked the verbose output
- * of the promise tests, i remember. Anyways. It´s simply enough to return a value
- *
- * var realm = syntaxjs.createRealm();
- * realm.evalAsync("let x = 10; x;").then(function (value) { console.log(v); return v; }, function (err) { throw err; });
- * // now let´s invoke the exception handler by repeating it, let x is already declared will be asyntax error
- * realm.evalAsync("let x = 10; x;").then(function (value) { console.log(v); return v; }, function (err) { throw err; });
- *
- * @param resolver - a function (resolve, reject) which gets two functions passed to resolve this promise with either the
- * one or the other.
- *
- * @returns {*}
- */
+    /**
+     * a poorly failing A+ or better A- Promise which fails in 1/3 of the tests.
+     * The exports have the test adapter forgotten to be removed you can test it.
+     * While writing this, i have tested it and see the issue at the throw err handler
+     * a console.log(err) prints the error, but a throw err is caught away. Hmm. Should
+     * compare what´s really going on some day. And maybe rename makePromise to Promise.
+     *
+     * var realm = syntaxjs.createRealm();
+     * realm.evalAsync("let x = 10; x;").then(function (value) { console.log(v); return v; }, function (err) { throw err; });
+     * // now let´s invoke the exception handler by repeating it, let x is already declared will be asyntax error
+     * realm.evalAsync("let x = 10; x;").then(function (value) { console.log(v); return v; }, function (err) { console.log(err); });
+     * // console.log(err) prints the syntax error
+     *
+     * @param resolver
+     * @returns {*}
+     */
     function makePromise(resolver) {
 
         "use strict";
@@ -218,8 +217,6 @@ var syntaxjs;
     /**
      * require.cache[id] = Module
      *
-     * Module({ id: exports children : code });
-     *
      * @param id
      * @param exports
      * @param children
@@ -229,7 +226,7 @@ var syntaxjs;
      */
     function Module(id, exports, children, code) {
         "use strict";
-        var m = this;
+        var m = Object.create(null);
         m.id = id;
         m.children = children;
         if (exports) m.loaded = true;
@@ -28249,1627 +28246,352 @@ define("runtime", function () {
 
 
 
-// experimental typed memory and compiler
+// experimental typed memory and compiler (development)
+//--#include "lib/heap/heap.js"; // too high level (would be too slow)
+//--#include "lib/compile/jvm-bytecode.js"; // good documented
+//--#include "lib/compile/compiler.js";	// miss
+//--#include "lib/compile/arraycompiler.js";	// previous miss
+//--#include "lib/compile/vm.js";		// little stack
 /**
- * Created by root on 20.04.14.
+ * Created by root on 03.05.14.
  */
-define("heap", function (require, exports) {
-
-var ABRUPT = 0x01;
-
-var FREE = "FREE",
-    NUMBER = "NUMBER",
-    STRING = "STRING",
-    LIST = "LIST",
-    HASH = "HASH";
-
-var TYPES = {
-    0: FREE,
-    1: NUMBER,
-    2: STRING,
-    3: LIST,
-    4: HASH
-};
-var MAX_SIZE = Math.pow(2,32)-1;    // Int32
-var POINTER_SIZE = Uint32Array.BYTES_PER_ELEMENT; // 4 Bytes
-var TYPE_SIZE = Uint8Array.BYTES_PER_ELEMENT;
-var SIZE_SIZE = Uint8Array.BYTES_PER_ELEMENT;
-var FREELIST_PTR_SIZE = POINTER_SIZE; // same kind of pointer, just for freelist space
-var ALIGN_WITH = 4;
-
 /**
- * Creates a new Space
- * @param space
- * @returns {{space: *, buffer: ArrayBuffer, heap: DataView, root: null, sp: number}}
+ * this is really becoming an asm.js compiler
+ * i think this will work, even if it´s getting
+ * rejected by the AOT at the beginning end else
+ * this bytecode will anyways be 3-4x faster than
+ * the ast anyways, so trying it out makes much sense
  */
-function new_space (space) {
-    var buffer = new ArrayBuffer(space);
-    var view = new DataView(buffer);
-    return {
-        size: space,
-        buffer: buffer,
-        view: view,
-        root: Object.create(null),
-        sp: 0,  // increased on allocation by a number of header + allocated bytes
-        freeFirst: undefined,
-        freeLast: undefined
-    };
-}
+define("asm-compiler", function (require, exports) {
 
-function get_alloc_size(bytes) {
-    return OVERHEAD_SIZE + bytes;
-}
-
-var OVERHEAD_SIZE = TYPE_SIZE + SIZE_SIZE + FREELIST_PTR_SIZE;
-
-/**
- * A doubly linked list in typed memory
- * @constructor
- */
-
-function SentinelListNode(list, heap) {
-    var ptr = ListNode(list, heap)
-    return ptr;
-}
-/**
- * ListNode has
- * + OVERHEAD_SIZE
- * item -> pointer
- * next -> pointer
- * prev -> pointer
- * allocated space for 3x pointer
- *
- * @constructor
- */
-
-function getIndex(startIndex, field_size, field_num) {
-    var start = startIndex+OVERHEAD_SIZE;
-    return start + (field_num*field_size);
-}
-function getPrev(heap, node_ptr) {
-    var index = getIndex(node_ptr, POINTER_SIZE, 1);
-    return heap.space.view.getUint32(index);
-}
-function setPrev(heap, node_ptr, value) {
-    var index = getIndex(node_ptr, POINTER_SIZE, 1);
-    return heap.space.view.setUint32(index, value);
-}
-function getNext(heap, node_ptr) {
-    var index = getIndex(node_ptr, POINTER_SIZE, 2);
-    return heap.space.view.getUint32(index);
-}
-function setNext(heap, node_ptr, value) {
-    var index = getIndex(node_ptr, POINTER_SIZE, 2);
-    return heap.space.view.setUint32(index, value);
-}
-function getValue(heap, node_ptr) {
-    // return a type
-}
-function setValue(heap, node_ptr, value) {
-    // set a type (with full overhead like the node)
-}
-function ListNode(list, heap, value, prev, next) {
-    var startIndex = heap.allocate(POINTER_SIZE * 3);
-    var firstIndex = getIndex(startIndex, POINTER_SIZE, 0);
-    store(heap, firstIndex, value);
-    store(heap, firstIndex + POINTER_SIZE, prev);
-    store(heap, firstIndex + 2 * POINTER_SIZE, next);
-    return startIndex;
-}
-/**
- * A doubly linked list with sentinel
- * The sentinel points at the beginning to itself
- * The first an last nodes prev and next point to
- * This makes iterators very easily stop at the sentinel
- * @param heap
- * @returns {List}
- * @constructor
- */
-function List(heap) {
-    var list = Object.create(List.prototype);
-    list.heap = heap;
-    list.sentinel = SentinelListNode(list, heap);
-    return list;
-}
-List.prototype = {
-    constructor: List,
-    insertFirst: function () {
-    },
-    insertLast: function () {
-    },
-    removeFirst: function () {
-    },
-    removeLast: function () {
-    }
-};
-
-/**
- * A Hashtable for typed Memory
- * @constructor
- */
-function getKey(hash, heap, key) {
-}
-function setKey() {}
-function getValue() {}
-function setValue() {}
-function Entry(hash, heap, key, value) {
-    // insert op:
-    // calculate hash index for key
-    //
-}
-
-function Hash(N, P, heap) {
-    var hash = Object.create(Hash.prototype);
-    hash.heap = heap;
-    hash.N = N;
-    hash.P = P;
-    return hash;
-}
-Hash.prototype = {
-    constructor: Hash,
-    insert: function (key, value) {
-        return this.set(key, value);
-    },
-    remove: function (key) {
-    },
-    has: function (key) {
-    },
-    get: function (key) {
-    },
-    set: function (key, value) {
-    },
-    h: function (key) {
-        var hashVal = 0;
-        var N = this.N;
-        var prime = this.P;
-        key = ""+key;
-        for (var i = 0, j = key.length; i < j; i++) {
-            hashVal += prime * key[i].charCodeAt(0);
-        }
-        return hashVal % N;
-    }
-};
-/**
- * FreeListNode creates a free list on the position of a pointer,
- * and is used to free memory.
- * @param heap
- * @param ptr
- * @constructor
- */
-function FreeListNode(heap, ptr) {
-    var view = heap.space.view;
-    view.setInt8(ptr, FREE); // TYPE
-    // SIZE IS LEFT
-    // now add heap.freelast to this prev
-    // and say to this "heap.freelast"
-    setPrev(heap, ptr, heap.space.freelast);    // point prev to freelast
-    setNext(heap, heap.space.freelast, ptr);    // point freelast.next to this
-    heap.space.freelast = ptr;                  // and move freelast to this.
-
-}
-
-/**
- * Heap is creating and managing the memory
- * @constructor
- */
-function Heap (size) {
-    var heap = Object.create(Heap.prototype);
-    heap.size = size;
-    heap.space = new_space(size);
-    return heap;
-}
-
-Heap.prototype = {
-    constructor: Heap,
-    align: function (num, A) {
-        var sp = this.space.sp;
-        if (sp == 0) return sp;
-        A = A || ALIGN_WITH;
-        return sp + (A - (sp % A));
-    },
-    allocate: function (numBytes) {
-        var startIndex = this.align(this.space.sp); // align with 8
-        var realSize = get_alloc_size(numBytes);
-        var newSp = startIndex + realSize // allocation simply increases the sp until the space is full. (should i align here?)
-
-        if (newSp > this.size) {
-            this.resize(this.size * 2);
-        }
-        this.space.sp = newSp;
-        return startIndex;
-
-    },
-    free: function (ptr) {
-        var ptr = FreeListNode(this, ptr);
-    },
-    gc: function () {
-        // mark and sweep + copy spaces or what i improve with my little knowledge about gc strategies
-        var newSize;
-        if (newSize < this.size / 4) {
-            this.resize(Math.floor(this.size / 2))
-        }
-    },
-    resize: function (size) {
-        var oldSpace = this.space;
-        var oldSize = this.size;
-        var oldSp = this.space.sp;
-        var oldFree = this.space.free
-        var newSpace = new_space(size);
-        var newSize = Math.min(size, MAX_SIZE);
-        var viewOld = new Int8Array(oldSpace.buffer);
-        var viewNew = new Int8Array(newSpace.buffer);
-        if (newSize > oldSize) len = oldSize;
-        for (var i = 0; i < len; i++) {
-            viewNew[i] = viewOld[i]; // ptrs have same address, bytes should be bytes while copying, or=
-        }
-        this.size = size;
-        this.space = newSpace;
-        this.space.sp = oldSp;
-        this.space.freeFirst = oldSpace.freeFirst;
-        this.space.freeLast = oldSpace.freeLast;
-    },
-    createHash: function (N) {
-        // allocate a data structure header
-        return new Hash(N, this);
-    },
-    createList: function () {
-        // allocate a data structure header
-        return new List(this);
-    },
-    removeHash: function (hash) {
-        // delete each index for freelist (O(N) without money in the bank)
-        // free the type structure
-    },
-    removeList: function (list) {
-        // iterate all elements and free them
-        // free the list.
-        // TRICK: RELABEL INTO A FREE LIST ;-) IF I CAN
-    }
-};
-
-// console.log("heap debug msg: overhead size each allocation for information is: " + OVERHEAD_SIZE);
-
-exports.Heap = Heap;
-return exports;
-
-});
-/*
-i need some bytecode for syntax.js
-i couldn´t define intel instructions
-this is the jvm variant
-how to use them?
-video: bytecode for dummies, oracle learning library
-gives explanations of what to put on the stack before you call the code
-current (c) oracle (placeholder for license copy)
-*/
-define("jvm-bytecode", function () {
-var exports = {};
-exports.op = 0x00;
-exports.aconst_null = 0x01;
-exports.iconst_m1 = 0x02;
-exports.iconst_0 = 0x03;
-exports.iconst_1 = 0x04;
-exports.iconst_2 = 0x05;
-exports.iconst_3 = 0x06;
-exports.iconst_4 = 0x07;
-exports.iconst_5 = 0x08;
-exports.lconst_0 = 0x09;
-exports.lconst_1 = 0x0a;
-exports.fconst_0 = 0x0b;
-exports.fconst_1 = 0x0c;
-exports.fconst_2 = 0x0d;
-exports.dconst_0 = 0x0e;
-exports.dconst_1 = 0x0f;
-exports.bipush = 0x10;
-exports.sipush = 0x11;
-exports.ldc = 0x12;
-exports.ldc_w = 0x13;
-exports.ldc2_w = 0x14;
-exports.iload = 0x15;
-exports.lload = 0x16;
-exports.fload = 0x17;
-exports.dload = 0x18;
-exports.aload = 0x19;
-exports.iload_0 = 0x1a;
-exports.iload_1 = 0x1b;
-exports.iload_2 = 0x1c;
-exports.iload_3 = 0x1d;
-exports.lload_0 = 0x1e;
-exports.lload_1 = 0x1f;
-exports.lload_2 = 0x20;
-exports.lload_3 = 0x21;
-exports.fload_0 = 0x22;
-exports.fload_1 = 0x23;
-exports.fload_2 = 0x24;
-exports.fload_3 = 0x25;
-exports.dload_0 = 0x26;
-exports.dload_1 = 0x27;
-exports.dload_2 = 0x28;
-exports.dload_3 = 0x29;
-exports.aload_0 = 0x2a;
-exports.aload_1 = 0x2b;
-exports.aload_2 = 0x2c;
-exports.aload_3 = 0x2d;
-exports.iaload = 0x2e;
-exports.laload = 0x2f;
-exports.faload = 0x30;
-exports.daload = 0x31;
-exports.aaload = 0x32;
-exports.baload = 0x33;
-exports.caload = 0x34;
-exports.saload = 0x35;
-exports.istore = 0x36;
-exports.lstore = 0x37;
-exports.fstore = 0x38;
-exports.dstore = 0x39;
-exports.astore = 0x3a;
-exports.istore_0 = 0x3b;
-exports.istore_1 = 0x3c;
-exports.istore_2 = 0x3d;
-exports.istore_3 = 0x3e;
-exports.lstore_0 = 0x3f;
-exports.lstore_1 = 0x40;
-exports.lstore_2 = 0x41;
-exports.lstore_3 = 0x42;
-exports.fstore_0 = 0x43;
-exports.fstore_1 = 0x44;
-exports.fstore_2 = 0x45;
-exports.fstore_3 = 0x46;
-exports.dstore_0 = 0x47;
-exports.dstore_1 = 0x48;
-exports.dstore_2 = 0x49;
-exports.dstore_3 = 0x4a;
-exports.astore_0 = 0x4b;
-exports.astore_1 = 0x4c;
-exports.astore_2 = 0x4d;
-exports.astore_3 = 0x4e;
-exports.iastore = 0x4f;
-exports.lastore = 0x50;
-exports.fastore = 0x51;
-exports.dastore = 0x52;
-exports.aastore = 0x53;
-exports.bastore = 0x54;
-exports.castore = 0x55;
-exports.sastore = 0x56;
-exports.pop = 0x57;
-exports.pop2515 = 0x58;
-exports.dup = 0x59;
-exports.dup_x1 = 0x5a;
-exports.dup_x2 = 0x5b;
-exports.dup2 = 0x5c;
-exports.dup2_x1 = 0x5d;
-exports.dup2_x2 = 0x5e;
-exports.swap = 0x5f;
-exports.iadd = 0x60;
-exports.ladd = 0x61;
-exports.fadd = 0x62;
-exports.dadd = 0x63;
-exports.isub = 0x64;
-exports.lsub = 0x65;
-exports.fsub = 0x66;
-exports.dsub = 0x67;
-exports.imul = 0x68;
-exports.lmul = 0x69;
-exports.fmul = 0x6a;
-exports.dmul = 0x6b;
-exports.idiv = 0x6c;
-exports.ldiv = 0x6d;
-exports.fdiv = 0x6e;
-exports.ddiv = 0x6f;
-exports.irem = 0x70;
-exports.lrem = 0x71;
-exports.frem = 0x72;
-exports.drem = 0x73;
-exports.ineg = 0x74;
-exports.lneg = 0x75;
-exports.fneg = 0x76;
-exports.dneg = 0x77;
-exports.ishl = 0x78;
-exports.lshl = 0x79;
-exports.ishr = 0x7a;
-exports.lshr = 0x7b;
-exports.iushr = 0x7c;
-exports.lushr = 0x7d;
-exports.iand = 0x7e;
-exports.land = 0x7f;
-exports.ior = 0x80;
-exports.lor130 = 0x81; 
-exports.ixor = 0x82;
-exports.lxor = 0x83;
-exports.iinc = 0x84;
-exports.i2l = 0x85;
-exports.i2f = 0x86;
-exports.i2d = 0x87;
-exports.l2i = 0x88;
-exports.l2f = 0x89;
-exports.l2d = 0x8a;
-exports.f2i = 0x8b;
-exports.f2l = 0x8c;
-exports.f2d = 0x8d;
-exports.d2i = 0x8e;
-exports.d2l = 0x8f;
-exports.d2f = 0x90;
-exports.i2b = 0x91;
-exports.i2c = 0x92;
-exports.i2s = 0x93;
-exports.lcmp = 0x94;
-exports.fcmpl = 0x95;
-exports.fcmpg = 0x96;
-exports.dcmpl = 0x97;
-exports.dcmpg = 0x98;
-exports.ifeq = 0x99;
-exports.ifne = 0x9a;
-exports.iflt = 0x9b;
-exports.ifge = 0x9c;
-exports.ifgt = 0x9d;
-exports.ifle = 0x9e;
-exports.if_icmpeq = 0x9f;
-exports.if_icmpne = 0xa0;
-exports.if_icmplt = 0xa1;
-exports.if_icmpge = 0xa2;
-exports.if_icmpgt = 0xa3;
-exports.if_icmple = 0xa4;
-exports.if_acmpeq = 0xa5;
-exports.if_acmpne = 0xa6;
-exports.goto = 0xa7;
-exports.jsr = 0xa8;
-exports.ret = 0xa9;
-exports.tableswitch = 0xaa;
-exports.lookupswitch = 0xab;
-exports.ireturn = 0xac;
-exports.lreturn = 0xad;
-exports.freturn = 0xae;
-exports.dreturn = 0xaf;
-exports.areturn = 0xb0;
-exports._return = 0xb1;
-exports.getstatic = 0xb2;
-exports.putstatic = 0xb3;
-exports.getfield = 0xb4;
-exports.putfield = 0xb5;
-exports.invokevirtual = 0xb6;
-exports.invokespecial = 0xb7;
-exports.invokestatic = 0xb8;
-exports.invokeinterface = 0xb9;
-exports.invokedynamic = 0xba; 1
-exports._new = 0xbb;
-exports.newarray = 0xbc;
-exports.anewarray = 0xbd;
-exports.arraylength = 0xbe;
-exports.athrow = 0xbf;
-exports.checkcast = 0xc0;
-exports._instanceof = 0xc1;
-exports.monitorenter = 0xc2;
-exports.monitorexit = 0xc3;
-exports.wide = 0xc4;
-exports.multianewarray = 0xc5;
-exports.ifnull = 0xc6;
-exports.ifnonnull = 0xc7;
-exports.goto_w = 0xc8;
-exports.jsr_w = 0xc9;
-exports.breakpoint = 0xca;
-exports.impdep1 = 0xfe;
-exports.impdep2 = 0xff;
-});
-
-define("compiler", function (require, exports, module) {
     "use strict";
 
-    var builder = {};
-    var code; // one long array with code
-    var parser = require("parser").parser;
-    var parseGoal = parser.parseGoal;
-    var setBuilder = parser.setBuilder;
-    var unsetBuilder = parser.unsetBuilder;
+    var DEFAULT_SIZE = 1024*1024;    // 1 Meg of RAM (string, id, num)
+                                     // No Joke, i have to add
+                                     // the nodeCounter to guess
+                                     // the average memory consumption
+                                     // for the compilationUnit
 
-    var names = {
-        __proto__: null,
-        "Directive": "directive",
-        "BooleanLiteral": "literal",
-        "StringLiteral": "literal",
-        "NullLiteral": "literal",
-        "NumericLiteral": "literal",
-        "VariableDeclarator": "variableDeclarator",
-        "BinaryExpression": "binaryExpression"
-    };
-     Object.keys(parser).forEach(function (k) {
-        names[k] = (k[0]).toLowerCase() + k.slice(1);
-     });
+    var POOL;
+    var MEMORY, HEAP32, FLOAT64;
+    var STACKSIZE, STACKTOP;
 
-    function callBuilder(node) {
-        var args;
-        var name;
-        var arr;
-        if (!node) return null;
-        if (Array.isArray(node)) {
-            var arr = [];
-            var stm;
-            for (var i = 0, j = node.length; i < j; i++) {
-                if (stm = node[i]) {
-                    arr.push(callBuilder(stm));
-                }
-            }
-            return src;
-        } else if (typeof node === "string") {
-            return node;
-        } else {
+    /**
+     * first bytecodes
+     */
 
-            name = node.type;
 
-            switch (name) {
-                case "BlockStatement":
-                    args = [node.body, node.loc, node.extras];
-                    break;
-                case "FunctionDeclaration":
-                case "FunctionExpression":
-                case "GeneratorDeclaration":
-                case "GeneratorExpression":
-                    args = [node.id, node.params, node.body, node.strict, node.generator, node.expression, node.loc, node.extras];
-                    break;
-                case "MethodDefinition":
-                    args = [node.id, node.params, node.body, node.strict, node.static, node.generator, node.loc, node.extras];
-                    break;
-                case "ArrowExpression":
-                    args = [node.id, node.params, node.body, node.loc, node.extras];
-                    break;
-                case "ParenthesizedExpression":
-                case "ExpressionStatement":
-                    args = [node.expression, node.loc, node.extras];
-                    break;
-                case "SequenceExpression":
-                    args = [node.sequence, node.loc, node.extras];
-                    break;
-                case "VariableDeclarator":
-                    args = [node.id, node.init, node.loc, node.extras];
-                    break;
-                case "VariableDeclaration":
-                case "LexicalDeclaration":
-                    args = [node.kind, node.declarations, node.loc, node.extras];
-                    break;
-                case "EmptyStatement":
-                    args = [node.loc, node.extras];
-                    break;
-                case "ForStatement":
-                    args = [node.init, node.test, node.update, node.body, node.loc, node.extras];
-                    break;
-                case "ForInStatement":
-                case "ForOfStatement":
-                    args = [node.left, node.right, node.body, node.loc, node.extras];
-                    break;
-                case "DoWhileStatement":
-                case "WhileStatement":
-                    args = [node.test, node.body, node.loc, node.extras];
-                    break;
-                case "LabelledStatement":
-                    args = [node.label, node.statement, node.loc, node.extras];
-                    break;
-                case "IfStatement":
-                    args = [node.test, node.consequent, node.alternate, node.loc, node.extras];
-                    break;
-                case "TryStatement":
-                    args = [node.handler, node.guard, node.finalizer, node.loc, node.extras];
-                    break;
-                case "SwitchStatement":
-                    args = [node.discriminant, node.cases, node.loc, node.extras];
-                    break;
-                case "WithStatement":
-                    args = [node.object, node.body, node.loc, node.extras];
-                    break;
-                case "ComprehensionExpression":
-                    args = [node.blocks, node.filter, node.expression, node.loc, node.extras];
-                    break;
-                case "AssignmentExpression":
-                case "BinaryExpression":
-                case "LogicalExpression":
-                    args = [node.operator, node.left, node.right, node.loc, node.extras];
-                    break;
-                case "UnaryExpression":
-                    args = [node.operator, node.argument, node.prefix, node.loc, node.extras];
-                    break;
-                case "MemberExpression":
-                    args = [node.object, node.property, node.computed, node.loc, node.extras];
-                    break;
-                case "CallExpression":
-                case "NewExpression":
-                    args = [node.callee, node.arguments, node.loc, node.extras];
-                    break;
-                case "ObjectPattern":
-                case "ArrayPattern":
-                    args = [node.elements, node.loc, node.extras];
-                    break;
-                case "BindingElement":
-                    args = [node.id.name, node.target.name, node.loc, node.extras];
-                    break;
-                case "ObjectExpression":
-                    args = [node.properties, node.loc, node.extras];
-                    break;
-                case "ArrayExpression":
-                    args = [node.elements, node.loc, node.extras];
-                    break;
-                case "DefaultParameter":
-                    args = [node.id, node.init, node.loc, node.extras];
-                    break;
-                case "RestParameter":
-                    args = [node.id, node.init, node.loc, node.extras];
-                    break;
-                case "SpreadExpression":
-                    args = [node.argument, node.loc, node.extras];
-                    break;
-                case "ClassDeclaration":
-                case "ClassExpression":
-                    args = [node.id, node.extends, node.elements, node.expression, node.loc, node.extras];
-                    break;
-                case "ThisExpression":
-                case "SuperExpression":
-                    args = [node.extras, node.loc];
-                    break;
-                case "Program":
-                    args = [node.body, node.loc, node.extras];
-                    break;
-                case "Identifier":
-                    args = [node.name || node.value, node.loc, node.extras];
-                    break;
-                case "ReturnStatement":
-                case "ThrowStatement":
-                    args = [node.argument, node.loc, node.extras];
-                    break;
-                case "BreakStatement":
-                case "ContinueStatement":
-                    args = [node.argument, node.label, node.loc, node.extras];
-                    break;
-                case "YieldExpression":
-                    args = [node.argument, node.delegator, node.loc, node.extras];
-                    break;
-                case "Directive":
-                case "Literal":
-                case "NumericLiteral":
-                case "StringLiteral":
-                case "NullLiteral":
-                case "BooleanLiteral":
-                    args = [node.value, node.loc, node.extras];
-                    break;
-                case "TemplateLiteral":
-                    args = [node.spans, node.loc, node.extras];
-                    break;
-                case "WhiteSpace":
-                case "LineComment":
-                case "MultiLineComment":
-                case "LineTerminator":
-                    args = [node.value, node.loc];
-                    break;
-                case "ConditionalExpression":
-                    args = [node.test, node.consequent, node.alternate, node.loc, node.extras];
-                    break;
-            }
-            var fn = builder[names[name]];
-            if (fn) return fn.apply(builder, args);
-            else throw new TypeError("can not generate code for " + name);
+    var HALT = 0x255;
+    var STRINGLITERAL = 0x15;
+    var NUMERICLITERAL = 0x16;
+    var IDENTIFIER = 0x17;
+
+    var SCONST = STRINGLITERAL;  // String from Constant Pool (choose your register)
+    var NCONST = NUMERICLITERAL;  // Numeric from Constant Pool (coose your register)
+    var ICONST = IDENTIFIER;  // IdentifierName from Constant Pool (choose your register)
+
+    /**
+     * initialize the compiler for a new compilation
+     * after compilation use exports.get() to get the data
+     *
+     * @param stackSize
+     */
+    function init(stackSize) {
+        POOL = [];
+        MEMORY = new ArrayBuffer(stackSize);
+        HEAP32 = new Int32Array(MEMORY);
+        FLOAT64 = new Float64Array(MEMORY);
+        STACKSIZE = stackSize;
+        STACKTOP = 0;
+    }
+
+    /**
+     * get returns the compiled data, the heap, the constant pool, the stacksize and stacktop
+     * @returns {{POOL: *, HEAP32: *, STACKSIZE: *, STACKTOP: *}}
+     *
+     */
+    function get() {
+        return {
+            POOL: POOL,
+            HEAP32: HEAP32,
+            STACKSIZE: STACKSIZE,
+            STACKTOP: STACKTOP
         }
     }
 
-    builder.spreadExpression = function (argument, loc, extras) {
-    };
-
-    builder.restParameter = function (id, init, loc, extras) {
-    };
-
-    builder.defaultParameter = function (id, init, loc, extras) {
-    };
-
-    builder.classExpression =
-        builder.classDeclaration = function (id, extend, elements, expression, loc, extras) {
-        };
-
-    builder.program = function (body, loc, extras) {
-    };
-
-    builder.bindingElement = function (name, as, initializer, loc, extras) {
-    };
-    builder.objectPattern = function (elements, loc, extras) {
-    };
-    builder.arrayPattern = function (elements, loc, extras) {
-    };
-    builder.identifier = function (name, loc, extras) {
-    };
-
-    builder.directive =
-        builder.stringLiteral =
-            builder.numericLiteral =
-                builder.booleanLiteral =
-                    builder.nullLiteral =
-                    builder.literal = function (literal, loc, extras) {
-                    };
-
-    builder.emptyStatement = function emptyStatement(loc, extras) {
-    };
-
-    builder.variableDeclarator = function (id, init, loc, extras) {
-    };
-    builder.lexicalDeclaration =
-        builder.variableDeclaration = function variableStatement(kind, declarations, loc, extras) {
-        };
-
-    builder.functionBody = function (body) {
-    };
-
-    builder.arrowExpression =
-        function (id, params, body, loc, extras) {
-        };
-
-    builder.functionDeclaration =
-        builder.functionExpression =
-            builder.generatorDeclaration =
-                builder.generatorExpression = function (id, params, body, strict, generator, expression, loc, extras) {
-                };
-
-    builder.generatorMethod =
-        builder.methodDefinition = function (id, params, body, strict, generator, loc, extras) {
-        };
-
-    builder.formalParameters = function (formals) {
-    };
-
-    builder.memberExpression = function (object, property, computed) {
-    };
-
-    builder.callExpression = function (callee, args, loc, extras) {
-    };
-    builder.newExpression = function (callee, args, loc, extras) {
-    };
-
-    builder.objectExpression = function (properties, loc, extras) {
-    };
-    builder.arrayExpression = function (elements, loc, extras) {
-    };
-
-    builder.blockStatement = function (body, loc, extras) {
-    };
-    builder.unaryExpression = function (operator, argument, prefix, loc, extras) {
-    };
-
-    builder.binaryExpression = function (operator, left, right, loc, extras) {
-    };
-
-    builder.assignmentExpression = function (operator, left, right, loc, extras) {
-    };
-
-    builder.pattern = function () {};
-    builder.expressionStatement = function expressionStatement(expr, loc, extras) {
-    };
-    builder.labelledStatement = function labelledStatement(label, body, loc, extras) {
-    };
-    builder.sequenceExpression = function (seq, loc, extras) {
-    };
-    builder.ifStatement = function ifStatement(test, condition, alternate, loc, extras) {
-    };
-    builder.switchStatement = function (discriminant, cases, isLexical, loc, extras) {
-    };
-    builder.whileStatement = function whileStatement(test, body, loc, extras) {
-    };
-    builder.doWhileStatement = function doWhileStatement(test, body, loc, extras) {
-    };
-    
-    builder.withStatement = function withStatement(obj, body, loc, extras) {
-    };
-    builder.debuggerStatement = function debuggerStatement(loc, extras) {
-    };
-
-    builder.parenthesizedExpression = function (expression, loc, extras) {
-    };
-    builder.tryStatement = function (block, guard, finalizer, loc, extras) {
-    };
-    builder.forInStatement = function forInStatement(left, right, body, isForEach, loc, extras) {
-    };
-    builder.forOfStatement = function forOfStatement(left, right, body, loc, extras) {
-    };
-    builder.forStatement = function forStatement(init, test, update, body, loc, extras) {
-    };
-
-    builder.throwStatement = function (expression, loc, extras) {
-    };
-    builder.breakStatement = function (label, loc, extras) {
-    };
-    builder.continueStatement = function (label, loc, extras) {
-    };
-    builder.returnStatement = function (expression, loc, extras) {
-    };
-    builder.thisExpression = function (loc, extras) {
-    };
-    builder.superExpression = function (loc, extras) {
-    };
-
-    builder.conditionalExpression = function (test, consequent, alternate, loc, extras) {
-    };
-
-    builder.whiteSpace = function (value, loc) {
-    };
-    builder.lineComment = function(value, loc) {
-    };
-    builder.multiLineComment = function (value, loc) {
-    };
-    builder.lineTerminator = function (value, loc) {
-    };
-
-
-    function buildFromSrc(src) {
-        //setBuilder(builder, true);
-        try {
-            var result = parser(src, { builder: builder });
-        } catch (ex) {
-            result = "[" + ex.name + "]" + ex.message + ";\r\n" + tabs(1) + ex.stack + "\r\n";
-        }
-        //unsetBuilder(builder);
-        return result;
+    /**
+     * add a value to the constant pool
+     * the index of the value in the array is returned
+     * i don´t check for dupes, so two stringliterals with
+     * the same value get added twice
+     *
+     * @param value
+     * @returns {number}
+     */
+    function addToConstantPool(value) {
+        return POOL.push(value) - 1;
     }
 
-    function build(ast) {
-        code = [];
-        if (typeof ast === "string") {
-            return buildFromSrc(ast);
-        }
+    /**
+     * since the heap is a HEAP32 a 1 counts 4 bytes
+     * stackAlloc is namely in emscripten/docs/paper.pdf
+     *
+     * @param size32
+     * @returns {*}
+     */
+    function stackAlloc(size32) {
+        var ptr = STACKTOP;
+        STACKTOP += size32;
+        return ptr;
+    }
+
+    /**
+     * IDENTIFIER is a bytecode identification
+     *
+     * @type {number}
+     */
+
+    var IDENTIFIER = 14;
+
+    /**
+     * this compiles the identifier for the ast heap
+     * the difference today is, that i store "IDENTIFIER"
+     * instead of storing an "SCONST" and a REGISTER NUMBER
+     * the register number is not determined yet.
+     *
+     * @param node
+     * @returns {*}
+     * @constructor
+     */
+    function identifier (node) {
+        var poolIndex = POOL.push(node.name) - 1;
+        var ptr = STACKTOP;
+        HEAP32[ptr] = ICONST;
+        HEAP32[ptr+1] = poolIndex;
+        STACKTOP += 2;
+        return ptr;
+    }
+
+    /**
+     * it was quite a lot to add this to FLOAT64
+     * to align the data and calculate the pointer
+     * maybe it´s better, than i still can change
+     * the code. now i add even the numeric value
+     * for simplification to the constant pool.
+     *
+     * @param node
+     * @returns {*}
+     */
+
+    function numericLiteral (node) {
+        var poolIndex = POOL.push(node.value) - 1;
+        var ptr = STACKTOP;
+        HEAP32[ptr] = NCONST;
+        HEAP32[ptr+1] = poolIndex;
+        STACKTOP += 2;
+        return ptr;
+    }
+
+    /**
+     * stringLiteral
+     * 1. obtain ptr from STACKTOP;
+     * 2. add node.value to the constant pool and get poolIndex
+     * 3. write poolIndex into the HEAP
+     * 4. increase STACKTOP
+     * @param node
+     * @constructor
+     */
+    function stringLiteral (node) {
+        var poolIndex = POOL.push(node.value) - 1;
+        var ptr = STACKTOP;
+        HEAP32[ptr] = SCONST;
+        HEAP32[ptr+1] = poolIndex;
+        STACKTOP += 2;
+        return ptr;
+    }
+
+
+
+    function compile(ast) {
+        if (!ast) return 0;
         if (Array.isArray(ast)) {
-            return callBuilder(ast);
+            for (var i = 0, j = ast.length; i < j; ++i) {
+                compile(ast[i]);
+            }
+            return;
         }
-        if (typeof ast.type === "string") {
-            return callBuilder(ast);
+        switch (ast.type) {
+            case "StringLiteral":
+                stringLiteral(ast);
+                break;
+            case "Identifier":
+                identifier(ast);
+                break;
+            case "NumericLiteral":
+                numericLiteral(ast);
+                break;
+            case "Program":
+                compile(ast.body);
+                break;
+            case "ExpressionStatement":
+                compile(ast.expression);
+                break;
+            default:
+                return -1;
         }
-        throw new TypeError("compiler(): undefined input for build()")
     }
 
-    build.callBuilder = callBuilder;
-    build.buildFromSrc = buildFromSrc;
-    build.builder = builder;
-    return build;
+    /**
+     * spent thirty seconds for showing how to use the compiler
+     * @param ast
+     * @returns {{POOL: *, HEAP32: *, STACKSIZE: *, STACKTOP: *}}
+     */
+    function compileUnit(ast) {
+        init(DEFAULT_SIZE); // invent a good guess and a resize for the emergency case
+        compile(ast);
+        return get();
+    }
+
+    /**
+     * i don´t need that object in here now,
+     * but i better save them down here once
+     * @type {null}
+     */
+
+    var bytecodes = Object.create(null);
+
+    bytecodes.SCONST = SCONST;
+    bytecodes.NCONST = NCONST;
+    bytecodes.ICONST = ICONST;
+    // equal to
+    bytecodes.STRINGLITERAL = STRINGLITERAL;
+    bytecodes.IDENTIFIER = IDENTIFIER;
+    bytecodes.NUMERICLITERAL = NUMERICLITERAL;
+
+    /**
+     * the steps are to call init, compile and get
+     * and to unify it i add the method compileUnit
+     * @type {null}
+     */
+    exports.bytecodes = bytecodes;
+    exports.init = init;
+    exports.compile = compile;
+    exports.get = get;
+    exports.compileUnit = compileUnit;
+
 });
 
+	
 
-define("arraycompiler", function (require, exports, module) {
-    var builder = exports;
-
-    var byteCode = { // === CODE.XXX in vm.js
-        "loc": 255,
-        "true": 1,
-        "false": 0,
-        "null": 1,
-        "undefined": 2,
-        "EmptyStatement": 3,
-        "AssignmentExpression": 32,
-        "Expression": 43,
-        "SequenceExpression" : 45,
-        "VariableDeclaration" : 33,
-        "VariableDeclarationList": 34,
-        "LexicalDeclaration": 37,
-        "GeneratorBody" : 24,
-        "FunctionDeclaration": 112,
-        "FunctionExpression": 113,
-        "Identifer": 45,
-        "NumericLiteral": 46,
-        "BooleanLiteral": 67,
-        "NullLiteral": 95,
-        "TemplateLiteral": 244,
-        "RegularExpressionLiteral": 60,
-        "StatementList": 211,
-        "SwitchStatement": 155,
-        "WhileStatement": 212,
-        "DoWhileStatement": 136,
-        "ForStatement": 126,
-        "ForInStatement": 142,
-        "ForOfStatement": 145,
-        "IfStatement": 100,
-        "ReturnStatement": 23,
-        "ThrowStatement": 74,
-        "ContinueStatement": 84,
-        "BreakStatement": 85,
-        "YieldExpression": 24,
-        "CallExpression": 44,
-        "NewExpression": 234,
-        "MemberExpression": 25,
-        "ObjectExpression": 127,
-        "ArrayExpression": 137,
-        "ArrayPattern" : 148,
-        "ObjectPattern": 135,
-        "Directive": 111,
-        "ArrayComprehension": 157,
-        "GeneratorComprehension": 158,
-        "MethodDefinition": 160,
-        "PropertyDefinition": 159,
-        "PropertyDefinitionList": 185,
-        "BinaryExpression": 223,
-        "ThisStatement": 166,
-        "SuperExpression": 181,
-        "DebuggerStatement": 199,
-        "DefaultCase": 179,
-        "SwitchCase": 189,
-        "Finally": 200,
-        "ModuleDeclaration": 177,
-        "ExportStatement": 176,
-        "ImportStatement": 188,
-        "Program": 111,
-
-        "let": 144,
-        "const": 162,
-        "var": 178
-    };
-    var byteDecoder = {};
-    for (var k in byteCode) {
-        if (Object.hasOwnProperty.call(byteCode, k))
-        byteDecoder[byteCode[k]] = k;
-    }
-
-    var nodeFields = {
-       "type": 0,
-       "body": 1,
-       "left": 1,
-       "kind": 1,
-       "argument": 1,
-       "right": 2,
-       "operator": 3
-    };
-
-    function locArray(loc) {
-        return [byteCode["loc"], loc.start.line,loc.start.column, loc.end.line, loc.end.column];
-    }
-    function byteString(str) {
-        //var a = [];
-        //for (var i = 0; i < str.length; i++) a.push(str.charCodeAt(i));
-        //return a;
-        return str;
-    }
-
-    builder.emptyStatement = function emptyStatement(loc) {
-        return [byteCode["EmptyStatement"],
-        locArray(loc)];
-    };
-
-    builder.directive = function (directive, loc) {
-      return [byteCode["Directive"],
-      byteString(directive),
-      locArray(loc)]
-    };
-    builder.stringLiteral =
-        builder.booleanLiteral =
-            builder.numericLiteral =
-    builder.literal = function (type, value, loc) {
-        return [byteCode[type],
-                value];
-    };
-
-    builder.identifier = function (name) {
-       return [byteCode["Identifier"], byteString(name)];
-    };
-
-    builder.functionDeclaration = function (body, params, strict, generator, loc) {
-
-        return [byteCode["FunctionDeclaration"],
-                callBuilder(body),
-                callBuilder(params),
-                +strict,
-                +generator,
-                locArray(loc)];
-    };
-    builder.functionExpression = function (body, params, strict, generator, loc) {
-        return [byteCode["FunctionExpression"],
-            callBuilder(body),
-            callBuilder(params),
-            +strict,
-            +generator,
-            locArray(loc)];
-    };
-
-    builder.variableStatement = function variableStatement(kind, decls, loc) {
-        return [byteCode["VariableStatement"],
-                byteCode[kind],
-                callBuilder(decls),
-                locArray(loc)
-                ];
-    };
-
-    builder.callExpression = function (callee, args, loc) {
-            return [byteCode["CallExpression"],
-                callBuilder(callee),
-                callBuilder(args),
-                locArray(loc)];
-    };
-    builder.newExpression = function (callee, args, loc) {
-        return [byteCode["NewExpression"],
-            callBuilder(callee),
-            callBuilder(args),
-            locArray(loc)];
-    };
-    builder.objectExpression = function (properties, loc) {
-        return [byteCode["ObjectExpression"],
-        callBuilder(properties),
-        locArray(loc)];
-    };
-    builder.arrayExpression = function (elements, loc) {
-        return [byteCode["ArrayExpression"],
-            callBuilder(elements),
-            locArray(loc)];
-    };
-
-    builder.blockStatement = function (body, loc) {
-        return [byteCode["BlockStatement"],
-        callBuilder(body),
-        locArray(loc)];
-    };
-    builder.binaryExpression = function (left, operator, right, loc) {
-        return [byteCode["BinaryExpression"],
-        callBuilder(left),
-        callBuilder(right),
-        byteCode[operator],
-        locArray(loc)];
-    };
-    builder.assignmentExpression = function (left, operator, right, loc) {
-        return [byteCode["AssignmentExpression"],
-            callBuilder(left),
-            callBuilder(right),
-            byteCode[operator],
-            locArray(loc)];
-    };
-    builder.propertyDefinition = function (id, expr, loc) {
-        return [
-            byteCode["PropertyDefinition"],
-            byteString(id),
-            callBuilder(expr),
-            locArray(loc)
-        ];
-    };
-    builder.methodDefinition = function (id, params, body, strict, statics, generator, loc) {
-        return [
-            byteCode["MethodDefinition"],
-            byteString(id),
-            callBuilder(params),
-            callBuilder(body),
-            +strict,
-            +statics,
-            +generator,
-            locArray(loc)
-        ];
-    };
-
-    builder.bindingElement = function (name, as, loc) {
-        return [byteCode["BindingElement"],
-            byteString(name),
-            byteString(as),
-        locArray(loc)]
-    };
-
-    builder.pattern =
-    builder.arrayPattern =
-    builder.objectPattern = function (properties, loc) {
-        var bc = [];
-        for (var i = 0, j = properties.length; i < j; i++) {
-            bc.push(callBuilder(properties[i]));
-        }
-        bc.push(locArray(loc));
-        return bc;
-    };
-    builder.expressionStatement = function expressionStatement(expr, loc) {
-        return [
-        byteCode["ExpressionStatement"],
-            callBuilder(expr),
-        locArray(loc)];
-
-    };
-    builder.labeledStatement = function labeledStatement(label, body, loc) {
-        return [
-            byteCode["LabeledStatement"],
-            callBuilder(body),
-            locArray(loc)
-        ];
-    };
-    builder.sequenceExpression = function (seq, loc) {
-        return [
-            byteCode["SequenceExpression"],
-            callBuilder(seq),
-            locArray(loc)
-        ];
-    };
-    builder.ifStatement = function ifStatement(test, condition, alternate, loc) {
-        return [byteCode["IfStatement"],
-            callBuilder(condition),
-            callBuilder(alternate),
-            locArray(loc)
-        ];
-    };
-    builder.switchStatement = function (discriminant, cases, isLexical, loc) {
-        var bc = [
-            byteCode["SwitchStatement"],
-            callBuilder(discriminant)
-        ];
-        var scbc = [];
-        for (var i = 0, j = cases.length; i < j; i++) {
-            scbc.push(callBuilder(cases[i]));
-        }
-        bc.push(scbc);
-        bc.push(locArray(loc));
-        return bc;
-    };
-    builder.whileStatement = function whileStatement(test, body, loc) {
-        return [
-            byteCode["WhileStatement"],
-            callBuilder(test),
-            callBuilder(body),
-            locArray(loc)
-        ];
-    };
-    builder.withStatement = function withStatement(obj, body, loc) {
-        return [
-            byteCode["WithStatement"],
-            callBuilder(body),
-            locArray(loc)
-        ];
-    };
-    builder.debuggerStatement = function debuggerStatement(loc) {
-        return [byteCode["DebuggerStatement"], locArray(loc)];
-    };
-    builder.tryStatement = function (block, handler, guard, finalizer, loc) {
-        return [
-            byteCode["TryStatement"],
-            callBuilder(block),
-            callBuilder(handler),
-            callBuilder(finalizer),
-            locArray(loc)
-        ];
-    };
-    builder.forInStatement = function forInStatement(left, right, body, isForEach, loc) {
-        return [
-            byteCode["ForInStatement"],
-            callBuilder(left),
-            callBuilder(right),
-            callBuilder(body),
-            locArray(loc)
-        ];
-    };
-    builder.forOfStatement = function forOfStatement(left, right, body, loc) {
-        return [
-            byteCode["ForOfStatement"],
-            callBuilder(left),
-            callBuilder(right),
-            callBuilder(body),
-            locArray(loc)
-        ];
-
-    };
-    builder.forStatement = function forStatement(init, condition, update, body, loc) {
-        return [
-            byteCode["ForStatement"],
-            callBuilder(init),              // later
-            callBuilder(condition),         // these
-            callBuilder(update),            // fn return
-            callBuilder(body),              // just offsets
-            locArray(loc)                   // for the heap
-        ];
-
-    };
-    builder.doWhileStatement = function doWhileStatement(body, test, loc) {
-        return [
-            byteCode["DoWhileStatement"],
-            callBuilder(body),
-            callBuilder(test),
-            locArray(loc)
-        ];
-    };
-    builder.throwStatement = function (expression, loc) {
-        return [byteCode["ThrowStatement"],
-            callBuilder(expression),
-            locArray(loc)
-        ];
-    };
-    builder.breakStatement = function (label, loc) {
-        return [byteCode["BreakStatement"],
-            byteString(label),
-            locArray(loc)];
-    };
-    builder.continueStatement = function (label, loc) {
-        return [byteCode["ContinueStatement"],
-        byteString(label),
-        locArray(loc)];
-    };
-    builder.returnStatement = function (expression, loc) {
-        return [byteCode["ReturnStatement"],
-            callBuilder(expression),
-            locArray(loc)
-        ];
-    };
-    builder.program = function (body, loc) {
-       var bc = [byteCode["Program"]];
-        for (var i = 0, j = body.length; i < j; i++) {
-            bc.push(callBuilder(body[i]));
-        }
-        bc.push(locArray(loc));
-        return bc;
-    };
-
-    function callBuilder(node) {
-        var args;
-        var name;
-        if (!node) return "";
-        if (Array.isArray(node)) {
-            var result = [];
-            var stm;
-            for (var i = 0, j = node.length; i < j; i++) {
-                if (stm = node[i]) {
-                    result.push( callBuilder(stm) );
-                }
-            }
-            return result;
-        } else if (typeof node === "string") {
-            return byteString(node);
-        } else {
-            name = node.type;
-            switch (name) {
-                case "BlockStatement":
-                    args = [node.body, node.loc];
-                    break;
-                case "FunctionDeclaration":
-                case "FunctionExpression":
-                case "GeneratorDeclaration":
-                case "GeneratorExpression":
-                    args = [node.id, node.params, node.body, node.strict, node.generator, node.expression, node.loc];
-                    break;
-                case "MethodDefinition":
-                    args = [node.id, node.params, node.body, node.strict, node.static, node.generator, node.loc];
-                    break;
-                case "ArrowExpression":
-                    args = [node.id, node.params, node.body, node.strict, node.generator, node.expression, node.loc];
-                    break;
-                case "ExpressionStatement":
-                case "SequenceExpression":
-                    args = [node.expression, node.loc];
-                    break;
-                case "VariableDeclarator":
-                    args = [node.id, node.init, node.loc];
-                    break;
-                case "VariableDeclaration":
-                case "LexicalDeclaration":
-                    args = [node.kind, node.declarations, node.loc];
-                    break;
-                case "EmptyStatement":
-                    args = [node.loc];
-                    break;
-                case "ForStatement":
-                    args = [node.init, node.test, node.update, node.body, node.loc];
-                    break;
-                case "ForInStatement":
-                case "ForOfStatement":
-                    args = [node.left, node.right, node.body, node.loc];
-                    break;
-                case "DoWhileStatement":
-                case "WhileStatement":
-                    args = [node.test, node.body, node.loc];
-                    break;
-                case "LabelledStatement":
-                    args = [node.label, node.statement, node.loc];
-                    break;
-                case "IfStatement":
-                    args = [node.test, node.consequent, node.alternate, node.loc];
-                    break;
-                case "TryStatement":
-                    args = [node.block, node.guard, node.finalizer, node.loc];
-                    break;
-                case "SwitchStatement":
-                    args = [node.discriminant, node.cases, node.loc];
-                    break;
-                case "WithStatement":
-                    args = [node.object, node.body, node.loc];
-                    break;
-                case "ComprehensionExpression":
-                    args = [node.blocks, node.filter, node.expression];
-                    break;
-                case "PropertyDefinition":
-                    args = [node.kind, node.key, node.value, node.loc];
-                    break;
-                case "AssignmentExpression":
-                case "BinaryExpression":
-                case "LogicalExpression":
-                    args = [node.operator, node.left, node.right, node.loc];
-                    break;
-                case "UnaryExpression":
-                    args = [node.operator, node.argument, node.prefix, node.loc];
-                    break;
-                case "MemberExpression":
-                    args = [node.object, node.property, node.computed, node.loc];
-                    break;
-                case "CallExpression":
-                case "NewExpression":
-                    args = [node.callee, node.arguments, node.loc];
-                    break;
-                case "ObjectPattern":
-                case "ArrayPattern":
-                    args = [node.elements, node.loc];
-                    break;
-                case "BindingElement":
-                    args = [node.id.name, node.target.name, node.loc];
-                    break;
-                case "ObjectExpression":
-                    args = [node.properties, node.loc];
-                    break;
-                case "ArrayExpression":
-                    args = [node.elements, node.loc];
-                    break;
-                case "DefaultParameter":
-                    args = [node.id, node.init, node.loc];
-                    break;
-                case "RestParameter":
-                    args = [node.id, node.init, node.loc];
-                    break;
-                case "SpreadExpression":
-                    args = [node.argument, node.loc];
-                    break;
-                case "ClassDeclaration":
-                case "ClassExpression":
-                    args = [node.id, node.extends, node.elements, node.expression, node.loc];
-                    break;
-                case "ThisExpression":
-                case "SuperExpression":
-                    args = [node.loc];
-                    break;
-                case "Program":
-                    args = [node.body, node.loc];
-                    break;
-                case "Identifier":
-                    args = [node.name || node.value, node.loc];
-                    break;
-                case "ReturnStatement":
-                case "ThrowStatement":
-                    args = [node.argument, node.loc];
-                    break;
-                case "BreakStatement":
-                case "ContinueStatement":
-                    args = [node.argument, node.label, node.loc];
-                    break;
-                case "YieldExpression":
-                    args = [node.argument, node.delegator, node.loc];
-                    break;
-                case "Directive":
-                case "Literal":
-                case "NumericLiteral":
-                case "StringLiteral":
-                case "NullLiteral":
-                case "BooleanLiteral":
-                case "TemplateLiteral":
-                    args = [node.type, node.value, node.loc];
-                    break;
-            }
-            name = name[0].toLowerCase() + name.slice(1);
-            return builder[name].apply(builder, args);
-        }
-    }
-    builder.callBuilder = callBuilder;
-    builder.build =
-    builder.compile = function (src) {
-	    var nodes;
-        if (typeof src === "string") nodes = require("parse")(src);
-        else nodes = src;
-        return callBuilder(nodes);
-    };
-    return builder;
-});
-/**
- * Created by root on 24.04.14.
- *
- * es6> let x = 10;
- * undefined
- * es6> VM.eval("x")
- * 10
- * es6> VM.eval("12")
- * 12
- * es6> VM.eval("Object()")
- * { .. }
- */
 define("vm", function (require, exports) {
 
-    var bc = require("jvm-bytecode");
-    var parse = require("parser");
+    var compiler = require("asm-compiler");
+    /**
+     * this is just the compiled ast
+     * object semantics are not implemented in these few lines
+     *
+     */
+    var POOL;
+    var MEMORY;
+    var HEAP32;
+    var STACKTOP;
+    var STACKSIZE;
+    var PC;
+
+    /**
+     * registers
+     */
+    var r0, r1, r2, r3, r4, r5, r6, r7, r8, r9;
+    var r10, r11, r12, r13, r14, r15, r16, r17, r18, r19;
+
+
+    /**
+     * the bytecodes,
+     * i should use a better transfer object and use
+     * the dot notation in the switch statement
+     * than to copy and paste them
+     * @type {number}
+     */
+    var SCONST = 0x15;
+    var NCONST = 0x16;
+    var ICONST = 0x17;
+    var HALT = 0x255;
+
+    /**
+     * i knew from the beginning on, later i will replace them
+     * currently they will slow down and help a little within
+     * the code until it becomes replacable
+     * @type {exports}
+     */
+
     var ecma = require("api");
-    var runtime = require("runtime");
-    var hasConsole = typeof console === "object" && console && typeof console.log === "function";
-    var hasPrint = typeof print === "function";
-
-    var constPool = Object.create(null); // number indices
-    var r0, r1, r2, r3, r4, r5, r6, r7, r8, r9, r10, r11, r12;
-    var code, ip;
-    var opStack;
-    var GetIdentifierReference = ecma.GetIdentifierReference;
-
-    var getRealm = ecma.getRealm;
+    var parse = require("parser");
+    var parseGoal = parse.parseGoal;
     var withError = ecma.withError;
-    var getContext = ecma.getContext;
-    var getLexEnv = ecma.getLexEnv;
     var ifAbrupt = ecma.ifAbrupt;
     var isAbrupt = ecma.isAbrupt;
-    var NormalCompletion = ecma.NormalCompletion;
-    var Completion = ecma.Completion;
+    var getRealm = ecma.getRealm;
+    var getLexEnv = ecma.getLexEnv;
+    var getContext = ecma.getContext;
+    var GetIdentifierReference = ecma.GetIdentifierReference;
 
-    var CODE = Object.create(null);
+    /**
+     * my first switch in a loop to process bytecode
+     *
+     * inspired by the emscripten/docs/paper.pdf technology
+     * that i can support and implement some asm.js like code
+     * which is easily optimizable for the engine
+     * that´s much better than interpreting the ast, but i love
+     * the runtime so much that i will complete it (it´s not much
+     * anymore, just fixing some bugs, meanwhile i can copy and paste the
+     * functions to change to HEAP32[] semantics, i think that already goes)
+     */
 
-    CODE.HALT = 1;      //
-    CODE.ERROR = 2;     //
-    CODE.TRUE = 5;      // Boolean true
-    CODE.FALSE = 6;     // Boolean false
-    CODE.NULL = 7;      //
-    CODE.UNDEFINED = 8; //
-    CODE.ID = 10;       // Identifer followed by NAME
-    CODE.NUM = 11;      // A Number
-    CODE.CALL = 30;     //
-    CODE.RET = 31;      //
-    CODE.CONST_1 = 44;  // CONST_1 n gets constantPool[n] and puts it into r1
-    CODE.CONST_2 = 45;  // CONST_2 n gets constantPool[n] and puts it into r2
-    CODE.CONST_3 = 46;  //
-    CODE.CONST_4 = 47;  //
-    CODE.STORE_1 = 51;  // STORE_1 stores the argument in r1
-    CODE.STORE_2 = 52;  // STORE_2 stores it´s argument in r2;
-    CODE.STORE_3 = 53;  // store in r3;
-    CODE.STORE_4 = 54;  //
-    CODE.ADD = 61;      // r0 = r1 + r2
-    CODE.SUB = 62;      // r0 =r1 + r2
-    CODE.MUL = 63;      //
-    CODE.DIV = 64;      //
-    CODE.MOD = 65;      //
-    CODE.EXPRSTMT = 100;//
-                        //
-    Object.freeze(CODE);// Does this trigger optimized access, immutability?
-                        //
-    var operatorCode = {
-        "+": CODE.ADD,
-        "-": CODE.SUB,
-        "*": CODE.MUL,
-        "/": CODE.DIV,
-        "%": CODE.MOD
-    };
-
-    function dbg() {
-        if (hasConsole) {
-            console.log("CODE IS NOW")
-            console.dir(code);
-            console.log("STACK IS NOW");
-            console.dir(opStack);
-        }
-    }
-
-
-
-    var evaluation = {
-
-
-    };
-    function evaluate() {
-        var op; // should push the other way round, now the first index is the last element
-
-        while ((op = code[--ip]) != undefined) {   // this should maybe not just loop. And be callable.
-                                    // or the switch should be in an extra function, to
-                                   // be callable from within. with code from this or that function                                    // fetch - decode - execute and what was the last? that isnt met yet.
-                            // (it´s my first try ever to do such a thing, anyways, i think i´ll also learn it)
-            switch (op) {
-
-
-                case CODE.CALL:
-                    var callee = code[--ip];
-                    var args = code[--ip];
-
-                    // this invokes the ast interpreter (currently)
-                    var callRef = ecma.Evaluate(callee);
-                    if (isAbrupt(callRef = ifAbrupt(callRef))) {
-                        opStack.push(callRef);
-                        return;
-                    }
-                    var argList = ecma.ArgumentListEvaluation(args);
-                    if (isAbrupt(argList = ifAbrupt(argList))) {
-                        opStack.push(argList);
-                        return;
-                    }
-
-                    // LATER THIS IS ALREADY FROM THE STACK, or, no from REGISTERs.
-                    var result = ecma.EvaluateCall(callRef, argList, false);
-                    opStack.push(result);
-
-                    // r0 =result;
-
-                    if (isAbrupt(result)) return;
+    function main() {
+        "use strict";
+        var code;
+        loop:
+        while (PC < STACKTOP) {
+            code = HEAP32[PC];
+            switch (code) {
+                case SCONST:
+                    r0 = POOL[HEAP32[PC + 1]];
+                    PC += 2;
                     break;
-
-                    // well done, here i have to repeat
-                    // the original code.
-                case CODE.NUM:
-                    var value = code[--ip];  // do that with r1..rx and use new Codes.
-                    opStack.push(value);
-                    // r0 =value;
+                case NCONST:
+                    r0 = POOL[HEAP32[PC + 1]];
+                    PC += 2;
                     break;
-                case CODE.ID:
-                    var name = code[--ip];
-                    var idRef = GetIdentifierReference(getLexEnv(), name, getContext().strict);
-                    opStack.push(idRef);
-                    // r0 =idRef;
-                    if (isAbrupt(idRef)) return; // the real "return ifabrupt()" i guess
+                case ICONST:
+                    var name = POOL[HEAP32[PC + 1]];
+                    r0 = GetIdentifierReference(getLexEnv(), name, getContext().strict)
+                    PC += 2;
                     break;
-                case CODE.EXPRSTMT:
-                    continue;
-                case CODE.ADD:
-                    var right = code[--ip]; // Assign to Registers, to let
-                    var left = code[--ip];  // the EVALUATE Fetch it from there?
-                                            // that doesn´t improve, i´m wrong, eh
-                    var lval = GetValue(Evaluate(left));
-                    // later fetch from r0, if it´s evaluated here
-                    var rval = GetValue(Evaluate(right));
-                    // later fetch from r0, it it´s evaluated here
-                    if (isAbrupt(lval=ifAbrupt(lval))) {
-                        opStack.push(lval);
-                        return;
-                    }
-                    if (isAbrupt(rval=ifAbrupt(rval))) {
-                        opStack.push(rval);
-                        return;
-                    }
-                    var result = ecma.getAssignmentOperationResult("+", lval, rval)
-                        result=ifAbrupt(result);
-                        opStack.push(result);
-                        if (isAbrupt(result)) return;
-                    // r0 =result;
-                    break;
-
+                case HALT:
+                    break loop;
                 default:
-                    var error = withError("Type", "unsupported opcode "+op);
-                    opStack.push(error);
-                    return;
-                    break;
+                    r0 = withError("Type", "unknown instruction " + code);
+                    break loop;
+
             }
-            if (ip == 0) return;
         }
     }
 
-
-
-    var compile = {
-        /*
-            this is compilation
-
-
-
-         */
-        BinaryExpression: function (node) {
-            code.push(node.left);
-            code.push(node.right);
-            code.push(CODE[operatorCode[node.operator]]);
-        },
-        AssignmentExpression: function (node) {
-            code.push(node.left);
-            code.push(node.right);
-            code.push(CODE[operatorCode[node.operator]]);
-        },
-        CallExpression: function (node) {
-            code.push(node.arguments);
-            code.push(node.callee);
-            code.push(CODE.CALL);
-        },
-        NumericLiteral: function (node) {
-            code.push(node.value);
-            code.push(CODE.NUM);
-        },
-        Identifier: function Identifier(node) {
-            code.push(node.name);
-            code.push(CODE.ID);
-        },
-        ExpressionStatement: function ExpressionStatement(node) {
-            // code.push(CODE.EXPRSTMT)
-            var f = compile[node.expression.type];
-            if (f) f.call(this, node.expression);
-            else return withError("Type", "unsupported compilation unit "+node.type);
-        },
-        Program: function Program(prg) {
-            var body = prg.body;
-            var node;
-            // here i put them backwards onto the stack to exec the last first
-            // i should do forwards to just do a ++ip instead of code[--ip] (formerly code.pop(), which makes it one way code (not useful in a function, when [[CODE]] could be replaced)
-            for (var i = body.length-1, j = 0; i >= j; i--) {
-                if (node = body[i]) {
-                    var f = compile[node.type];
-                    if (typeof f == "function") f.call(compile, node);
-                    else return withError("Type","unsupported compilation unit: "+node.type)
-                }
-            }
-        }
-    };
-
+    /**
+     * I just kept the code from VM.eval to call require("vm").CompileAndRun
+     *
+     * Now this invokes the asm.js compiler (which currently uses a constant pool for help)
+     *
+     * And then it executes the bytecode from the typed array and maybe fetches data from the
+     * constant pool or calls the incredible essential methods
+     *
+     * I´m going to continue this.
+     *
+     * @param realm
+     * @param src
+     * @returns {*}
+     * @constructor
+     */
 
     function CompileAndRun(realm, src) {
         try {
@@ -29877,16 +28599,15 @@ define("vm", function (require, exports) {
         } catch (ex) {
             return withError("Syntax", ex.message);
         }
-        code = [];
-        var result = compile[ast.type](ast);
-        if (isAbrupt(result)) return result;
-        ip = code.length;
-        opStack = [];
-        evaluate();
-        //var result = r0; // fetch from register 0
-        result = opStack.pop();
-        if (isAbrupt(result=ifAbrupt(result))) return result;
-        return NormalCompletion(result);
+        var unit = compiler.compileUnit(ast);
+        POOL = unit.POOL;
+        MEMORY = unit.MEMORY;
+        HEAP32 = unit.HEAP32;
+        STACKTOP = unit.STACKTOP;
+        STACKSIZE = unit.STACKSIZE;
+        PC = 0;
+        main();
+        return r0;
     }
     exports.CompileAndRun = CompileAndRun;
 });
