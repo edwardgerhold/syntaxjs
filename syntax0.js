@@ -28228,6 +28228,7 @@ define("asm-compiler", function (require, exports) {
         return {
             POOL: POOL,
             HEAP32: HEAP32,
+            FLOAT64: FLOAT64,
             STACKSIZE: STACKSIZE,
             STACKTOP: STACKTOP
         }
@@ -28384,6 +28385,8 @@ define("asm-compiler", function (require, exports) {
     bytecodes.SCONST = SCONST;
     bytecodes.NCONST = NCONST;
     bytecodes.ICONST = ICONST;
+    bytecodes.BTRUE = BTRUE;
+    bytecodes.BFALSE = BFALSE;
     // equal to
     bytecodes.STRINGLITERAL = STRINGLITERAL;
     bytecodes.IDENTIFIER = IDENTIFIER;
@@ -28462,6 +28465,8 @@ define("vm", function (require, exports) {
     var STACKSIZE;
     var PC;
 
+    var PROGLEN;
+
     /**
      * registers
      */
@@ -28521,9 +28526,9 @@ define("vm", function (require, exports) {
 
     function main() {
         "use strict";
-        var code;
         loop:
-        while ((code = HEAP32[PC]) && (PC < STACKTOP)) {
+        while (PC < PROGLEN) {
+            var code = HEAP32[PC];
             switch (code) {
                 case SCONST:
                     r0 = POOL[HEAP32[PC + 1]];
@@ -28584,7 +28589,9 @@ define("vm", function (require, exports) {
         POOL = unit.POOL;
         MEMORY = unit.MEMORY;
         HEAP32 = unit.HEAP32;
+        FLOAT64 = unit.FLOAT64;
         STACKTOP = unit.STACKTOP;
+        PROGLEN = STACKTOP;
         STACKSIZE = unit.STACKSIZE;
         PC = 0;
         r0 = undefined;
