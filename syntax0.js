@@ -28499,6 +28499,7 @@ define("vm", function (require, exports) {
     var parse = require("parser");
     var parseGoal = parse.parseGoal;
     var withError = ecma.withError;
+    var newTypeError = ecma.newTypeError;
     var ifAbrupt = ecma.ifAbrupt;
     var isAbrupt = ecma.isAbrupt;
     var getRealm = ecma.getRealm;
@@ -28522,7 +28523,7 @@ define("vm", function (require, exports) {
         "use strict";
         var code;
         loop:
-        while (code = HEAP32[PC]) {
+        while ((code = HEAP32[PC]) && (PC < STACKTOP)) {
             switch (code) {
                 case SCONST:
                     r0 = POOL[HEAP32[PC + 1]];
