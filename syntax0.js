@@ -510,9 +510,6 @@ define("filesystem", function (require, exports) {
 define("languages.de_DE", function (require, exports) {
     "use strict";
 
-    exports.__proto__ = null;
-
-    var o = exports;
 
     /**
      * Find a good indexing..
@@ -523,6 +520,8 @@ define("languages.de_DE", function (require, exports) {
     exports.UNRESOLVABLE_REFERENCE = "Unaufloesbare Referenz";
     exports.S_IS_NOT_AN_OBJECT = "%s ist kein Object";
     exports.S_IS_NO_AVAILABLE_SLOT = "%s ist kein verfügbarer Slot.";
+
+    exports.UNKNOWN_INSTRUCTION_S = "Unbekannte Instruktion: %s";
 
     return exports;
 
@@ -544,6 +543,10 @@ define("languages.en_US", function (require, exports) {
     exports.UNRESOLVABLE_REFERENCE = "Unresolvable Reference";
     exports.S_IS_NOT_AN_OBJECT = "%s is not an object";
     exports.S_IS_NO_AVAILABLE_SLOT = "%s is no available slot.";
+
+
+    exports.UNKNOWN_INSTRUCTION_S = "Unknown instruction: %s";
+
 
 
 
@@ -692,12 +695,7 @@ exports.NOT_FOUND_ERR = "i18n-failure: '%s' not found."
 });
 
 
-    require("i18n").addLang("de_DE");
-    require("i18n").addLang("en_US");
-    require("i18n").setLang("en_US");  // i´ll add a command to the interpreter
-                                        // setLanguage() prints available languages
-                                        // setLanguage(lang) sets the language
-                                        // everything else but an existing should throw
+
 
 // the lexer and parser api ast and tostring for es6 code
 /**
@@ -26907,9 +26905,6 @@ define("runtime", function () {
 
         var result;
         switch (op) {
-            /*case "of":
-             var value = Invoke(ToObject(rval), "valueOf");
-             return SameValue(rval, lval);*/
             case "in":
                 return HasProperty(rval, ToPropertyKey(lval));
             case "<":
@@ -28252,6 +28247,14 @@ define("runtime", function () {
 //--#include "lib/compile/compiler.js";	// miss
 //--#include "lib/compile/arraycompiler.js";	// previous miss
 //--#include "lib/compile/vm.js";		// little stack
+
+// This will make sure that i have to rewrite
+    // my essential functions like i expected them to
+    // to work with typed memory objects
+    // which will have to move over time
+    // but first i´ll just compile and use
+    // a constant pool for help
+//#include "lib/compile/asm-typechecker.js
 /**
  * Created by root on 03.05.14.
  */
@@ -28481,7 +28484,7 @@ define("asm-compiler", function (require, exports) {
 
 });
 
-	
+
 
 define("vm", function (require, exports) {
 
@@ -28594,11 +28597,8 @@ define("vm", function (require, exports) {
      */
 
     function CompileAndRun(realm, src) {
-        try {
-            var ast = parse(src);
-        } catch (ex) {
-            return withError("Syntax", ex.message);
-        }
+        var ast;
+        try {ast = parse(src)} catch (ex) {return withError("Syntax", ex.message)}
         var unit = compiler.compileUnit(ast);
         POOL = unit.POOL;
         MEMORY = unit.MEMORY;
@@ -30120,6 +30120,14 @@ define("syntaxjs-shell", function (require, exports) {
     Object.defineProperties(syntaxjs, syntaxjs_public_api_readonly);
     Object.defineProperties(syntaxjs, syntaxjs_highlighter_api);
 
+
+    require("i18n").addLang("de_DE");
+    require("i18n").addLang("en_US");
+    require("i18n").setLang("en_US");  // i´ll add a command to the interpreter
+
+// setLanguage() prints available languages
+// setLanguage(lang) sets the language
+// everything else but an existing should throw
 
 // });
 /*
