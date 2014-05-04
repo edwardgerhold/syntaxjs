@@ -1,5 +1,6 @@
 # Implementing new Syntax
 
++
 With the Example of the Concurrency Strawman
 
 http://wiki.ecmascript.org/doku.php?id=strawman:concurrency
@@ -105,7 +106,7 @@ if (eventual) {
     // 
     var p = GetValue(Evaluate(object));
     if (isAbrupt(p)) return p;
-    if (!IsPromise(p)) return withError("Type", "Object has to evaluate to a promise!");
+    if (!IsPromise(p)) return newTypeError( "Object has to evaluate to a promise!");
     if (computed) {
 	// p ! [expr]
     } else {
