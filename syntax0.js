@@ -28207,8 +28207,8 @@ define("asm-compiler", function (require, exports) {
     var NUMLIT = 0x18;
 
     // bools could get one code each?
-    var BTRUE  = 0x20;        // Code for a true Boolean
-    var BFALSE = 0x21;        // Code for a false Boolean
+    var TRUEBOOL  = 0x20;        // Code for a true Boolean
+    var FALSEBOOL = 0x21;        // Code for a false Boolean
 
     var EQ = 0x50;
     var NEQ = 0x51;
@@ -28235,7 +28235,6 @@ define("asm-compiler", function (require, exports) {
         STACKSIZE = stackSize;
         STACKTOP = 0;
     }
-
     /**
      * get returns the compiled data, the heap, the constant pool, the stacksize and stacktop
      * @returns {{POOL: *, HEAP32: *, STACKSIZE: *, STACKTOP: *}}
@@ -28275,27 +28274,8 @@ define("asm-compiler", function (require, exports) {
     }
 
     /**
-     * size8 is 1 byte. means 4 for heap32, 1 for heap8, 8 for float64
-     * stackAlloc is namely in emscripten/docs/paper.pdf
-     *
-     * @param size8
-     * @returns {*}
-     */
-    function stackAlloc(size8) {
-        var ptr = STACKTOP;
-        STACKTOP += size8;
-        return ptr;
-    }
-
-    /**
-     * this compiles the identifier for the ast heap
-     * the difference today is, that i store "IDENTIFIER"
-     * instead of storing an "SCONST" and a REGISTER NUMBER
-     * the register number is not determined yet.
-     *
      * @param node
      * @returns {*}
-     * @constructor
      */
     function identifier (node) {
         var poolIndex = POOL.push(node.name) - 1;
@@ -28303,30 +28283,22 @@ define("asm-compiler", function (require, exports) {
         HEAP32[ptr] = ICONST;
         HEAP32[ptr+1] = poolIndex;
         STACKTOP += 8;
+        console.log("compiled identifier to " + ptr);
         return ptr;
     }
-
     /**
-     * it was quite a lot to add this to FLOAT64
-     * to align the data and calculate the pointer
-     * maybe it´s better, than i still can change
-     * the code. now i add even the numeric value
-     * for simplification to the constant pool.
-     *
      * @param node
      * @returns {*}
      */
-
-
     function numericLiteral (node) {
         var poolIndex = POOL.push(node.value) - 1;
         var ptr = STACKTOP >> 2;
         HEAP32[ptr] = NCONST;
         HEAP32[ptr+1] = poolIndex;
         STACKTOP += 8;
+        console.log("compiled numericLiteral to " + ptr);
         return ptr;
     }
-
     /**
      * stringLiteral
      * 1. obtain ptr from STACKTOP;
@@ -28334,7 +28306,6 @@ define("asm-compiler", function (require, exports) {
      * 3. write poolIndex into the HEAP
      * 4. increase STACKTOP
      * @param node
-     * @constructor
      */
     function stringLiteral (node) {
         var poolIndex = POOL.push(node.computed) - 1;
@@ -28342,53 +28313,68 @@ define("asm-compiler", function (require, exports) {
         HEAP32[ptr] = SCONST;
         HEAP32[ptr+1] = poolIndex;
         STACKTOP += 8;
+        console.log("compiled stringLiteral to " + ptr);
         return ptr;
     }
-
     /**
-     *
      * @param node
      * @returns {*}
      */
     function booleanLiteral(node) {
         var ptr = STACKTOP >> 2;
-        if (node.value === "true") HEAP32[ptr] = BTRUE;
-        else HEAP32[ptr] = BFALSE;
+        if (node.value === "true") HEAP32[ptr] = TRUEBOOL;
+        else HEAP32[ptr] = FALSEBOOL;
         STACKTOP += 4;
+        console.log("compiled boolean to " + ptr);
         return ptr;
+
     }
 
+    /**
+     *
+     * @param node
+     * @returns {number}
+     */
     function expressionStatement(node) {
+        console.log("compiling expression statement");
         return compile(node.expression);
     }
 
+    /**
+     *
+     * @param node
+     */
     function assignmentExpression(node) {
     }
-
+    /**
+     *
+     */
     function binaryExpression(node) {
     }
-
-
-
+    /**
+     *
+     * @param node
+     * @returns {*}
+     */
     function program(node) {
         var body = node.body;
         var strict = !!node.strict;
         var len = body.length;
-        var ptr = STACKTOP >> 2;
+
+        var ptr = STACKTOP >> 2; // /4
+
         HEAP32[ptr] = PRG;          // "Program"
         HEAP32[ptr+1] = strict|0;   // node.strict
-        HEAP32[ptr+2] = len;        // body.length
+        HEAP32[ptr+2] = len|0;        // body.length
+
         STACKTOP += 12;             //
-        var ptr2 = STACKTOP;             // start of array
-        STACKTOP += len << 2;  // len * 4 (int32 ptr each field)
+        STACKTOP += (len << 2);   // *4
+
         for (var i = 0, j = len; i < j; i++) {
-            HEAP32[ptr2+i] = compile(body[i]);  // fill array with starting offsets
+            HEAP32[ptr+3+i] = compile(body[i]);// fill array with starting offsets
         }
         return ptr;
     }
-
-
-
     /**
      *
      * @param ast
@@ -28422,31 +28408,13 @@ define("asm-compiler", function (require, exports) {
         return get();
     }
 
-    /**
-     * i don´t need that object in here now,
-     * but i better save them down here once
-     * @type {null}
-     */
 
-    var bytecodes = Object.create(null);
-    bytecodes.SCONST = SCONST;
-    bytecodes.NCONST = NCONST;
-    bytecodes.ICONST = ICONST;
-    bytecodes.BTRUE = BTRUE;
-    bytecodes.BFALSE = BFALSE;
-
-    // equal to
-    /*
-    bytecodes.STRINGLITERAL = STRINGLITERAL;
-    bytecodes.IDENTIFIER = IDENTIFIER;
-    bytecodes.NUMERICLITERAL = NUMERICLITERAL;
-    */
     /**
      * the steps are to call init, compile and get
      * and to unify it i add the method compileUnit
      * @type {null}
      */
-    exports.bytecodes = bytecodes;
+
     exports.init = init;
     exports.compile = compile;
     exports.get = get;
@@ -28468,19 +28436,13 @@ define("vm", function (require, exports) {
      * intl functions to translate messages from the beginning on
      * @type {Function|format}
      */
+        
     var format = require("i18n").format;
     var formatStr = require("i18n").formatStr;
     var trans = require("i18n").trans;
 
     /**
-     * this is just the compiled ast
-     * object semantics are not implemented in these few lines
-     *
-     * i´ve seen, i should learn how to write "hidden classes"
-     * i heard in a talk, maybe you heard, that the other engines
-     * use hidden classes now, too. And they are really simpler
-     * than writing a hash for the heap, which i already wanted to
-     * :-)
+     * this is just the bytecode memory
      */
     var POOL;
     var MEMORY;
@@ -28495,8 +28457,6 @@ define("vm", function (require, exports) {
     var STACKTOP;
     var STACKSIZE;
 
-    var PC;
-    var PROGLEN; // no longer
 
     /**
      * registers
@@ -28508,9 +28468,7 @@ define("vm", function (require, exports) {
 
     /**
      * the bytecodes,
-     * i should use a better transfer object and use
-     * the dot notation in the switch statement
-     * than to copy and paste them
+     *
      * @type {number}
      */
     var PRG = 0x05;
@@ -28521,17 +28479,14 @@ define("vm", function (require, exports) {
     var ICONST = 0x17;  // load identifername from constant pool (index is next int)
 
 
-    var NUMLIT = 0x18;         // Float follows
-
-    var BTRUE = 0x20;       // BooleanLiteral "true"  (know the code, choose register)
-    var BFALSE = 0x21;      // BooleanLiteral "false" (know the code, choose register)
+    var TRUEBOOL = 0x20;       // BooleanLiteral "true"  (know the code, choose register)
+    var FALSEBOOL = 0x21;      // BooleanLiteral "false" (know the code, choose register)
 
 
     var EQ = 0x50;
     var NEQ = 0x51;
 
     var HALT = 0x255;
-
 
 
     /**
@@ -28555,13 +28510,8 @@ define("vm", function (require, exports) {
     var GetIdentifierReference = ecma.GetIdentifierReference;
     var NormalCompletion = ecma.NormalCompletion;
 
-    function getReference() {
-        "use strict";
-        // set register 0 with the reference (real object currently)
-        // with the identifier fetched from constantPool[index from register 1]
-        // that looks only like a temp solution
-        r0 = GetIdentifierReference(getLexEnv(), POOL[r1], strict);
-        return;
+    function getReference(poolIndex) {
+        r0 = GetIdentifierReference(getLexEnv(), POOL[poolIndex], strict);
     }
 
     /**
@@ -28573,14 +28523,10 @@ define("vm", function (require, exports) {
     /**
      * stack - contains the ptr to the next instruction
      *
-     * should grow each statement list
-     * and shrink each instruction
-     * the program should halt (or run nextTask) when
-     * the stack is empty.
+     * should grow each statement list, and shrink each instruction
+     * the program should halt (or run nextTask) if the stack is empty.
      */
     var stackBuffer, stack, sp;
-
-
 
     function unknownInstruction(code) {
         r0 = newTypeError(format("UNKNOWN_INSTRUCTION_S", code));
@@ -28589,76 +28535,77 @@ define("vm", function (require, exports) {
     function main() {
         "use strict";
 
-        while (sp >= 0) {
+        do {
 
-            // get next ptr from execution stack and reduce pointer
-            PC = stack[sp];
-            // fetch code from ptr from bytecode
-            var code = HEAP32[PC];
+            console.log("sp is "+sp);
+            var ptr = stack[sp];      // 1. ptr from stack
+            console.log("got ptr "+ptr);
+            var code = HEAP32[ptr];     // 2. byte code from heap[ptr]
+            console.log("got code "+code);
 
-            // evaluate byte code and work with the registers and heap
+
             switch (code) {
-                case SLIST:
-                    r3 = HEAP32[PC + 1]|0; // len
-                    r1 = PC+2;             // i = pc
-                    r2 = r1 + r3 - 1;      // j = i + len
-                    r4 = 0;
-                    for (; r2 >= r1; r2--, r4++) stack[sp+r4] = HEAP32[r2]; // first element the last on the stack
-                    continue;
                 case PRG:
-                    strict = HEAP32[PC + 1]; // strict mode? external calls to set strict? a lot of procedures will be.
-                    r3 = HEAP32[PC + 2];     // len
-                    r1 = PC+3;               // i = pc
-                    r2 = r1 + r3 - 1;        // j = i + len
-                    r4 = 0;
-                    for (; r2 >= r1; r2--, r4++) stack[sp+r4] = HEAP32[r2]; // last element first onto stack
+
+                    console.log("PRG")
+
+                    strict = HEAP32[ptr + 1]; // strict mode? external calls to set strict? a lot of procedures will be.
+                    console.log("strict = " + strict);
+
+                    r1 = ptr + 3;                           // -> first instruction
+                    console.log("first instruction is at " + r1);
+
+
+                    r3 = HEAP32[ptr + 2];     // number of instructions
+                    console.log("number of instructions " + r3 );
+
+                    r2 = r1 + r3 - 1;           // -> last instruction
+                    console.log("last instruction = "+ r2);
+
+                    for (; r2 >= r1; r2--) {
+
+                        stack[sp] = HEAP32[r2]; // that is a ptr
+
+                        console.log("added ptr " + stack[sp] + " to sp " + sp)
+                        sp = sp + 1;
+
+                    } // last element first onto stack
+
+                    sp = sp - 1; // go back to stack top
+
                     continue;
                 case SCONST:
-                    r0 = POOL[HEAP32[PC + 1]];
+                    console.log("SCONST");
+                    r0 = POOL[HEAP32[ptr + 1]];
                     break;
                 case NCONST:
-                    r0 = POOL[HEAP32[PC + 1]]; // uses pool still inside of the block
+                    console.log("NCONST")
+                    r0 = POOL[HEAP32[ptr + 1]]; // uses pool still inside of the block
                     break;
                 case ICONST:
-                    r1 = HEAP32[PC + 1];
-                    getReference(); // uses pool outside of the block
+                    console.log("ICONST")
+                    getReference(HEAP32[ptr+1]); // uses pool outside of the block
                     break;
-                case BTRUE:
+                case TRUEBOOL:
+                    console.log("TRUEBOOL");
                     r0 = true;      // booleans are not allowed?
+
                     break;
-                case BFALSE:
+                case FALSEBOOL:
+                    console.log("FALSEBOOL")
                     r0 = false;     // booleans are not allowed?
                     break;
                 case HALT:
                     return;
                 default:
-                    unknownInstruction();
+                    unknownInstruction(code);
                     return;
             }
 
             sp = sp - 1;
-        }
+
+        } while (sp >= 0);
     }
-
-    /**
-     * I just kept the code from VM.eval to call require("vm").CompileAndRun
-     *
-     * Now this invokes the "asm.js" (eek!) compiler (which currently uses a constant pool for help)
-     *
-     * And then it executes the bytecode from the typed array and maybe fetches data from the
-     * constant pool or calls the incredible essential methods
-     *
-     *  The borders of what is later the asm module and what is extern are not clear yet, for
-     *  that i will have to do for a while
-     *
-     * I´m going to continue this.
-     *
-     * @param realm
-     * @param src
-     * @returns {*}
-     * @constructor
-     */
-
 
     function CompileAndRun(realm, src) {
         var ast;
@@ -28675,15 +28622,12 @@ define("vm", function (require, exports) {
         FLOAT32 = unit.FLOAT32;
         FLOAT64 = unit.FLOAT64;
         STACKTOP = unit.STACKTOP;
-
-        PROGLEN = STACKTOP >> 2; // 32bit offset proglen (8 bit stacktop bytelen)
         STACKSIZE = unit.STACKSIZE;
-        PC = 0;
         r0 = undefined;
-        stackBuffer = new ArrayBuffer(4096 * 1024);
+        stackBuffer = new ArrayBuffer(4096 * 16);
         stack = new Int32Array(stackBuffer);
         sp = 0;
-        stack[sp] = 0; // show to HEAP32[0] (which should be e.g. a prg)
+        stack[0] = 0; // show to HEAP32[0] which is HALT
         main();
         if (isAbrupt(r0=ifAbrupt(r0))) return r0;
         return NormalCompletion(r0);
