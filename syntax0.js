@@ -28188,21 +28188,27 @@ define("asm-compiler", function (require, exports) {
                                      // for the compilationUnit
 
     var POOL;
-    var MEMORY, HEAP32, FLOAT64;
+    var MEMORY, HEAP8, HEAPU8, HEAP16, HEAPU16, HEAPU32, HEAP32, FLOAT32, FLOAT64;
     var STACKSIZE, STACKTOP;
 
     /**
      * first bytecodes
      */
 
+    /*
     var STRINGLITERAL = 0x15;
     var NUMERICLITERAL = 0x16;
     var IDENTIFIER = 0x17;
-    var BOOLEANLITERAL = 0x18;
+    var BOOLEANLITERAL = 0x19;
+    */
+
+    var PRG = 0x05;
 
     var SCONST = 0x15;  // String from Constant Pool (choose your register)
     var NCONST = 0x16;  // Numeric from Constant Pool (coose your register)
     var ICONST = 0x17;  // IdentifierName from Constant Pool (choose your register)
+
+    var NUMLIT = 0x18;
 
     // bools could get one code each?
     var BTRUE  = 0x20;        // Code for a true Boolean
@@ -28222,7 +28228,13 @@ define("asm-compiler", function (require, exports) {
     function init(stackSize) {
         POOL = [];
         MEMORY = new ArrayBuffer(stackSize);
+        HEAP8 = new Int8Array(MEMORY);
+        HEAPU8 = new Uint8Array(MEMORY);
+        HEAP16 = new Int16Array(MEMORY);
+        HEAPU16 = new Uint16Array(MEMORY);
         HEAP32 = new Int32Array(MEMORY);
+        HEAPU32 = new Uint32Array(MEMORY);
+        FLOAT32 = new Float32Array(MEMORY);
         FLOAT64 = new Float64Array(MEMORY);
         STACKSIZE = stackSize;
         STACKTOP = 0;
@@ -28236,7 +28248,13 @@ define("asm-compiler", function (require, exports) {
     function get() {
         return {
             POOL: POOL,
+            HEAP8: HEAP8,
+            HEAPU8: HEAPU8,
+            HEAP16: HEAP16,
+            HEAPU16: HEAPU16,
+            HEAPU32: HEAPU32,
             HEAP32: HEAP32,
+            FLOAT32: FLOAT32,
             FLOAT64: FLOAT64,
             STACKSIZE: STACKSIZE,
             STACKTOP: STACKTOP
@@ -28263,9 +28281,9 @@ define("asm-compiler", function (require, exports) {
      * @param size32
      * @returns {*}
      */
-    function stackAlloc(size32) {
+    function stackAlloc(size8) {
         var ptr = STACKTOP;
-        STACKTOP += size32;
+        STACKTOP += size8;
         return ptr;
     }
 
@@ -28288,10 +28306,10 @@ define("asm-compiler", function (require, exports) {
      */
     function identifier (node) {
         var poolIndex = POOL.push(node.name) - 1;
-        var ptr = STACKTOP;
+        var ptr = STACKTOP >> 2;
         HEAP32[ptr] = ICONST;
         HEAP32[ptr+1] = poolIndex;
-        STACKTOP += 2;
+        STACKTOP += 8;
         return ptr;
     }
 
@@ -28307,11 +28325,28 @@ define("asm-compiler", function (require, exports) {
      */
 
     function numericLiteral (node) {
+        var ptr = STACKTOP >> 2;
+        var value = +node.value;
+        HEAP32[ptr] = NUMLIT;
+        ptr = STACKTOP + 4;
+        HEAPU8[ptr] =   (value >> 56) & 255;
+        HEAPU8[ptr+1] = (value >> 48) & 255;
+        HEAPU8[ptr+2] = (value >> 40) & 255;
+        HEAPU8[ptr+3] = (value >> 32) & 255;
+        HEAPU8[ptr+4] = (value >> 24) & 255;
+        HEAPU8[ptr+5] = (value >> 16) & 255;
+        HEAPU8[ptr+6] = (value >> 8)  & 255;
+        HEAPU8[ptr+7] = (value >> 0)  & 255;
+        STACKTOP += 12;
+        return ptr;
+    }
+
+    function numericLiteral2 (node) {
         var poolIndex = POOL.push(node.value) - 1;
-        var ptr = STACKTOP;
+        var ptr = STACKTOP >> 2;
         HEAP32[ptr] = NCONST;
         HEAP32[ptr+1] = poolIndex;
-        STACKTOP += 2;
+        STACKTOP += 8;
         return ptr;
     }
 
@@ -28326,47 +28361,83 @@ define("asm-compiler", function (require, exports) {
      */
     function stringLiteral (node) {
         var poolIndex = POOL.push(node.value) - 1;
-        var ptr = STACKTOP;
+        var ptr = STACKTOP >> 2;
         HEAP32[ptr] = SCONST;
         HEAP32[ptr+1] = poolIndex;
-        STACKTOP += 2;
+        STACKTOP += 8;
         return ptr;
     }
 
+    /**
+     *
+     * @param node
+     * @returns {*}
+     */
     function booleanLiteral(node) {
-        var ptr = STACKTOP;
-        if (node.value === "true")
-        HEAP32[ptr] = BTRUE;
+        var ptr = STACKTOP >> 2;
+        if (node.value === "true") HEAP32[ptr] = BTRUE;
         else HEAP32[ptr] = BFALSE;
-        STACKTOP += 1;
+        STACKTOP += 4;
         return ptr;
     }
 
+    function expressionStatement(node) {
+        compile(node.expression);
+    }
+
+    function assignmentExpression(node) {
+    }
+
+    function binaryExpression(node) {
+    }
+
+    function program(node) {
+        var body = node.body;
+        var strict = !!node.strict;
+        var len = body.length;
+        var ptr = STACKTOP >> 2;
+        HEAP32[ptr] = PRG;
+        HEAP32[ptr+1] = strict|0;
+        /*
+            HEAP32[ptr+2] = body.length;
+            here body.length slots with on ptr to start instruction each.
+            and remember saving restoring program counters from assembly
+         */
+        STACKTOP += 8;
+        for (var i = 0, j = len; i < j; i++) {
+            compile(body[i]);
+        }
+        return ptr;
+    }
+
+    /**
+     *
+     * @param ast
+     * @returns {number}
+     */
     function compile(ast) {
         if (!ast) return 0;
+
         if (Array.isArray(ast)) {
             for (var i = 0, j = ast.length; i < j; ++i) {
                 compile(ast[i]);
             }
             return;
         }
+
         switch (ast.type) {
-            case "StringLiteral":
-                stringLiteral(ast);
+            case "StringLiteral":           return stringLiteral(ast);
+            case "Identifier":              return identifier(ast);
+            case "NumericLiteral":          return numericLiteral(ast);
+            case "Program":                 return program(ast);
+            case "BooleanLiteral":          return booleanLiteral(ast);
+            case "ExpressionStatement":     return expressionStatement(ast);
+            case "AssignmentExpression":    return assignmentExpression(ast);
+            case "BinaryExpression":
                 break;
-            case "Identifier":
-                identifier(ast);
+            case "CallExpression":
                 break;
-            case "NumericLiteral":
-                numericLiteral(ast);
-                break;
-            case "Program":
-                compile(ast.body);
-                break;
-            case "BooleanLiteral":
-                booleanLiteral(ast);
-            case "ExpressionStatement":
-                compile(ast.expression);
+            case "NewExpression":
                 break;
             default:
                 return -1;
@@ -28396,11 +28467,13 @@ define("asm-compiler", function (require, exports) {
     bytecodes.ICONST = ICONST;
     bytecodes.BTRUE = BTRUE;
     bytecodes.BFALSE = BFALSE;
+    bytecodes.NUMLIT = NUMLIT;
     // equal to
+    /*
     bytecodes.STRINGLITERAL = STRINGLITERAL;
     bytecodes.IDENTIFIER = IDENTIFIER;
     bytecodes.NUMERICLITERAL = NUMERICLITERAL;
-
+    */
     /**
      * the steps are to call init, compile and get
      * and to unify it i add the method compileUnit
@@ -28469,11 +28542,18 @@ define("vm", function (require, exports) {
      */
     var POOL;
     var MEMORY;
+    var HEAP8;
+    var HEAPU8;
+    var HEAP16;
+    var HEAPU16;
     var HEAP32;
+    var HEAPU32;
+    var FLOAT32;
+    var FLOAT64;
     var STACKTOP;
     var STACKSIZE;
-    var PC;
 
+    var PC;
     var PROGLEN;
 
     /**
@@ -28490,12 +28570,18 @@ define("vm", function (require, exports) {
      * than to copy and paste them
      * @type {number}
      */
-    var SCONST = 0x15;
-    var NCONST = 0x16;
-    var ICONST = 0x17;
+    var PRG = 0x05;
+
+    var SCONST = 0x15;  // load string from constant pool (index next nr)
+    var NCONST = 0x16;  // load number from constant pool
+    var ICONST = 0x17;  // load identifername from constant pool (index is next int)
+
+
+    var NUMLIT = 0x18;         // Float follows
 
     var BTRUE = 0x20;       // BooleanLiteral "true"  (know the code, choose register)
     var BFALSE = 0x21;      // BooleanLiteral "false" (know the code, choose register)
+
 
     var EQ = 0x50;
     var NEQ = 0x51;
@@ -28520,6 +28606,14 @@ define("vm", function (require, exports) {
     var getLexEnv = ecma.getLexEnv;
     var getContext = ecma.getContext;
     var GetIdentifierReference = ecma.GetIdentifierReference;
+
+
+    /**
+     *
+     */
+
+    var strict = false;     // strictMode
+
 
     /**
      * my first switch in a loop to process bytecode
@@ -28548,9 +28642,11 @@ define("vm", function (require, exports) {
                     PC += 2;
                     break;
                 case ICONST:
-                    var name = POOL[HEAP32[PC + 1]];
+                    r1 = POOL[HEAP32[PC + 1]];
+
                     // here comes that function pool into play (first need to read valid asm.js)
-                    r0 = GetIdentifierReference(getLexEnv(), name, getContext().strict)
+                    r0 = GetIdentifierReference(getLexEnv(), r1, strict);
+
                     PC += 2;
                     break;
                 case BTRUE:
@@ -28560,6 +28656,25 @@ define("vm", function (require, exports) {
                 case BFALSE:
                     r0 = false;
                     PC += 1;
+                    break;
+                case NUMLIT:
+                    var ptr = (PC+1) << 2;  // PC+1 * 4
+
+                    var value = (HEAPU8[ptr] << 56);
+                    value += (HEAPU8[ptr+1] << 48);
+                    value += (HEAPU8[ptr+2] << 40);
+                    value += (HEAPU8[ptr+3] << 32);
+                    value += (HEAPU8[ptr+4] << 24);
+                    value += (HEAPU8[ptr+5] << 16);
+                    value += (HEAPU8[ptr+6] << 8);
+                    value += (HEAPU8[ptr+7] << 0);
+                    r0 = value;
+                    PC += 3;
+                    break;
+                case PRG:
+                    r0 = HEAP32[PC+1]
+                    strict = !!r0;      // setze strictmode
+                    PC+=2;
                     break;
                 case HALT:
                     break loop;
@@ -28597,10 +28712,17 @@ define("vm", function (require, exports) {
         var unit = compiler.compileUnit(ast);
         POOL = unit.POOL;
         MEMORY = unit.MEMORY;
+        HEAP8 = unit.HEAP8;
+        HEAPU8 = unit.HEAPU8;
+        HEAP16 = unit.HEAP16;
+        HEAPU16 = unit.HEAPU16;
+        HEAPU32 = unit.HEAPU32;
         HEAP32 = unit.HEAP32;
+        FLOAT32 = unit.FLOAT32;
         FLOAT64 = unit.FLOAT64;
         STACKTOP = unit.STACKTOP;
-        PROGLEN = STACKTOP;
+
+        PROGLEN = STACKTOP >> 2; // 32bit offset proglen (8 bit stacktop bytelen)
         STACKSIZE = unit.STACKSIZE;
         PC = 0;
         r0 = undefined;
