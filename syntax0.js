@@ -28181,11 +28181,7 @@ define("asm-compiler", function (require, exports) {
 
     "use strict";
 
-    var DEFAULT_SIZE = 1024*1024;    // 1 Meg of RAM (string, id, num)
-                                     // No Joke, i have to add
-                                     // the nodeCounter to guess
-                                     // the average memory consumption
-                                     // for the compilationUnit
+    var DEFAULT_SIZE = 2*1024*1024; // 2 Meg of RAM (string, id, num) should be big enough to run this program
 
     var POOL;
     var MEMORY, HEAP8, HEAPU8, HEAP16, HEAPU16, HEAPU32, HEAP32, FLOAT32, FLOAT64;
@@ -28267,6 +28263,10 @@ define("asm-compiler", function (require, exports) {
      * i don´t check for dupes, so two stringliterals with
      * the same value get added twice
      *
+     * This is something external, the integer for the poolIndex
+     * can be passed around, the rest must happen outside of the
+     * fast interpreter block (that will still save us some ms)
+     *
      * @param value
      * @returns {number}
      */
@@ -28275,10 +28275,10 @@ define("asm-compiler", function (require, exports) {
     }
 
     /**
-     * since the heap is a HEAP32 a 1 counts 4 bytes
+     * size8 is 1 byte. means 4 for heap32, 1 for heap8, 8 for float64
      * stackAlloc is namely in emscripten/docs/paper.pdf
      *
-     * @param size32
+     * @param size8
      * @returns {*}
      */
     function stackAlloc(size8) {
@@ -28286,13 +28286,6 @@ define("asm-compiler", function (require, exports) {
         STACKTOP += size8;
         return ptr;
     }
-
-    /**
-     * IDENTIFIER is a bytecode identification
-     *
-     * @type {number}
-     */
-
 
     /**
      * this compiles the identifier for the ast heap
@@ -28324,24 +28317,8 @@ define("asm-compiler", function (require, exports) {
      * @returns {*}
      */
 
-    function numericLiteral (node) {
-        var ptr = STACKTOP >> 2;
-        var value = +node.value;
-        HEAP32[ptr] = NUMLIT;
-        ptr = STACKTOP + 4;
-        HEAPU8[ptr] =   (value >> 56) & 255;
-        HEAPU8[ptr+1] = (value >> 48) & 255;
-        HEAPU8[ptr+2] = (value >> 40) & 255;
-        HEAPU8[ptr+3] = (value >> 32) & 255;
-        HEAPU8[ptr+4] = (value >> 24) & 255;
-        HEAPU8[ptr+5] = (value >> 16) & 255;
-        HEAPU8[ptr+6] = (value >> 8)  & 255;
-        HEAPU8[ptr+7] = (value >> 0)  & 255;
-        STACKTOP += 12;
-        return ptr;
-    }
 
-    function numericLiteral2 (node) {
+    function numericLiteral (node) {
         var poolIndex = POOL.push(node.value) - 1;
         var ptr = STACKTOP >> 2;
         HEAP32[ptr] = NCONST;
@@ -28360,7 +28337,7 @@ define("asm-compiler", function (require, exports) {
      * @constructor
      */
     function stringLiteral (node) {
-        var poolIndex = POOL.push(node.value) - 1;
+        var poolIndex = POOL.push(node.computed) - 1;
         var ptr = STACKTOP >> 2;
         HEAP32[ptr] = SCONST;
         HEAP32[ptr+1] = poolIndex;
@@ -28382,7 +28359,7 @@ define("asm-compiler", function (require, exports) {
     }
 
     function expressionStatement(node) {
-        compile(node.expression);
+        return compile(node.expression);
     }
 
     function assignmentExpression(node) {
@@ -28391,24 +28368,26 @@ define("asm-compiler", function (require, exports) {
     function binaryExpression(node) {
     }
 
+
+
     function program(node) {
         var body = node.body;
         var strict = !!node.strict;
         var len = body.length;
         var ptr = STACKTOP >> 2;
-        HEAP32[ptr] = PRG;
-        HEAP32[ptr+1] = strict|0;
-        /*
-            HEAP32[ptr+2] = body.length;
-            here body.length slots with on ptr to start instruction each.
-            and remember saving restoring program counters from assembly
-         */
-        STACKTOP += 8;
+        HEAP32[ptr] = PRG;          // "Program"
+        HEAP32[ptr+1] = strict|0;   // node.strict
+        HEAP32[ptr+2] = len;        // body.length
+        STACKTOP += 12;             //
+        var ptr2 = STACKTOP;             // start of array
+        STACKTOP += len << 2;  // len * 4 (int32 ptr each field)
         for (var i = 0, j = len; i < j; i++) {
-            compile(body[i]);
+            HEAP32[ptr2+i] = compile(body[i]);  // fill array with starting offsets
         }
         return ptr;
     }
+
+
 
     /**
      *
@@ -28416,15 +28395,7 @@ define("asm-compiler", function (require, exports) {
      * @returns {number}
      */
     function compile(ast) {
-        if (!ast) return 0;
-
-        if (Array.isArray(ast)) {
-            for (var i = 0, j = ast.length; i < j; ++i) {
-                compile(ast[i]);
-            }
-            return;
-        }
-
+        if (!ast) return -1;
         switch (ast.type) {
             case "StringLiteral":           return stringLiteral(ast);
             case "Identifier":              return identifier(ast);
@@ -28433,14 +28404,10 @@ define("asm-compiler", function (require, exports) {
             case "BooleanLiteral":          return booleanLiteral(ast);
             case "ExpressionStatement":     return expressionStatement(ast);
             case "AssignmentExpression":    return assignmentExpression(ast);
-            case "BinaryExpression":
-                break;
-            case "CallExpression":
-                break;
-            case "NewExpression":
-                break;
-            default:
-                return -1;
+            case "BinaryExpression":break;
+            case "CallExpression":break;
+            case "NewExpression":break;
+            default:return -1;
         }
     }
 
@@ -28467,7 +28434,7 @@ define("asm-compiler", function (require, exports) {
     bytecodes.ICONST = ICONST;
     bytecodes.BTRUE = BTRUE;
     bytecodes.BFALSE = BFALSE;
-    bytecodes.NUMLIT = NUMLIT;
+
     // equal to
     /*
     bytecodes.STRINGLITERAL = STRINGLITERAL;
@@ -28490,31 +28457,6 @@ define("asm-compiler", function (require, exports) {
 
 /**
  *
- * This VM will become some asm.js interpreter,
- * with that i mean, that it is itself written in
- * asm.js as good as it goes
- *
- * At the beginning it won´t be any real asm.js
- * and only look like making accesses to the HEAP
- * for fetching bytecodes, pointers and constant pool
- * indexes
- *
- * it is not known how i call the remaining javascript from
- * the asm.js interpreter.
- * I don´t know how much i have to rewrite from the "api" module
- * to make it work,
- * but i would be there to rewrite the whole code for making it
- * fast
- *
- * The AST interpreter is finished very soon. I have to add the stack
- * to the generator and to write down the latest call instantiation to
- * make sure the current bug which is there can no longer be there
- * and to fix the labelled break/continue(which should just be a comparison
- * on "ifAbrupt" if the label is my label to break or continue)
- * And that was all.
- * With the builtins i´m a bit behind.
- * And i am not sure, how many of the builtins i can rewrite with the asm
- * compiler. But maybe i just get the things optimized.
  *
  */
 
@@ -28554,13 +28496,14 @@ define("vm", function (require, exports) {
     var STACKSIZE;
 
     var PC;
-    var PROGLEN;
+    var PROGLEN; // no longer
 
     /**
      * registers
      */
     var r0, r1, r2, r3, r4, r5, r6, r7, r8, r9;
     var r10, r11, r12, r13, r14, r15, r16, r17, r18, r19;
+
 
 
     /**
@@ -28571,6 +28514,7 @@ define("vm", function (require, exports) {
      * @type {number}
      */
     var PRG = 0x05;
+    var SLIST = 0x06;
 
     var SCONST = 0x15;  // load string from constant pool (index next nr)
     var NCONST = 0x16;  // load number from constant pool
@@ -28588,6 +28532,8 @@ define("vm", function (require, exports) {
 
     var HALT = 0x255;
 
+
+
     /**
      * i knew from the beginning on, later i will replace them
      * currently they will slow down and help a little within
@@ -28600,13 +28546,23 @@ define("vm", function (require, exports) {
     var parseGoal = parse.parseGoal;
     var withError = ecma.withError;
     var newTypeError = ecma.newTypeError;
+    var newSyntaxError = ecma.newSyntaxError;
     var ifAbrupt = ecma.ifAbrupt;
     var isAbrupt = ecma.isAbrupt;
     var getRealm = ecma.getRealm;
     var getLexEnv = ecma.getLexEnv;
     var getContext = ecma.getContext;
     var GetIdentifierReference = ecma.GetIdentifierReference;
+    var NormalCompletion = ecma.NormalCompletion;
 
+    function getReference() {
+        "use strict";
+        // set register 0 with the reference (real object currently)
+        // with the identifier fetched from constantPool[index from register 1]
+        // that looks only like a temp solution
+        r0 = GetIdentifierReference(getLexEnv(), POOL[r1], strict);
+        return;
+    }
 
     /**
      *
@@ -28614,82 +28570,80 @@ define("vm", function (require, exports) {
 
     var strict = false;     // strictMode
 
-
     /**
-     * my first switch in a loop to process bytecode
+     * stack - contains the ptr to the next instruction
      *
-     * inspired by the emscripten/docs/paper.pdf technology
-     * that i can support and implement some asm.js like code
-     * which is easily optimizable for the engine
-     * that´s much better than interpreting the ast, but i love
-     * the runtime so much that i will complete it (it´s not much
-     * anymore, just fixing some bugs, meanwhile i can copy and paste the
-     * functions to change to HEAP32[] semantics, i think that already goes)
+     * should grow each statement list
+     * and shrink each instruction
+     * the program should halt (or run nextTask) when
+     * the stack is empty.
      */
+    var stackBuffer, stack, sp;
+
+
+
+    function unknownInstruction(code) {
+        r0 = newTypeError(format("UNKNOWN_INSTRUCTION_S", code));
+    }
 
     function main() {
         "use strict";
-        loop:
-        while (PC < PROGLEN) {
+
+        while (sp >= 0) {
+
+            // get next ptr from execution stack and reduce pointer
+            PC = stack[sp];
+            // fetch code from ptr from bytecode
             var code = HEAP32[PC];
+
+            // evaluate byte code and work with the registers and heap
             switch (code) {
+                case SLIST:
+                    r3 = HEAP32[PC + 1]|0; // len
+                    r1 = PC+2;             // i = pc
+                    r2 = r1 + r3 - 1;      // j = i + len
+                    r4 = 0;
+                    for (; r2 >= r1; r2--, r4++) stack[sp+r4] = HEAP32[r2]; // first element the last on the stack
+                    continue;
+                case PRG:
+                    strict = HEAP32[PC + 1]; // strict mode? external calls to set strict? a lot of procedures will be.
+                    r3 = HEAP32[PC + 2];     // len
+                    r1 = PC+3;               // i = pc
+                    r2 = r1 + r3 - 1;        // j = i + len
+                    r4 = 0;
+                    for (; r2 >= r1; r2--, r4++) stack[sp+r4] = HEAP32[r2]; // last element first onto stack
+                    continue;
                 case SCONST:
                     r0 = POOL[HEAP32[PC + 1]];
-                    PC += 2;
                     break;
                 case NCONST:
-                    r0 = POOL[HEAP32[PC + 1]];
-                    PC += 2;
+                    r0 = POOL[HEAP32[PC + 1]]; // uses pool still inside of the block
                     break;
                 case ICONST:
-                    r1 = POOL[HEAP32[PC + 1]];
-
-                    // here comes that function pool into play (first need to read valid asm.js)
-                    r0 = GetIdentifierReference(getLexEnv(), r1, strict);
-
-                    PC += 2;
+                    r1 = HEAP32[PC + 1];
+                    getReference(); // uses pool outside of the block
                     break;
                 case BTRUE:
-                    r0 = true;
-                    PC += 1;
+                    r0 = true;      // booleans are not allowed?
                     break;
                 case BFALSE:
-                    r0 = false;
-                    PC += 1;
-                    break;
-                case NUMLIT:
-                    var ptr = (PC+1) << 2;  // PC+1 * 4
-
-                    var value = (HEAPU8[ptr] << 56);
-                    value += (HEAPU8[ptr+1] << 48);
-                    value += (HEAPU8[ptr+2] << 40);
-                    value += (HEAPU8[ptr+3] << 32);
-                    value += (HEAPU8[ptr+4] << 24);
-                    value += (HEAPU8[ptr+5] << 16);
-                    value += (HEAPU8[ptr+6] << 8);
-                    value += (HEAPU8[ptr+7] << 0);
-                    r0 = value;
-                    PC += 3;
-                    break;
-                case PRG:
-                    r0 = HEAP32[PC+1]
-                    strict = !!r0;      // setze strictmode
-                    PC+=2;
+                    r0 = false;     // booleans are not allowed?
                     break;
                 case HALT:
-                    break loop;
+                    return;
                 default:
-                    r0 = newTypeError(format("UNKNOWN_INSTRUCTION_S", code));
-                    break loop;
-
+                    unknownInstruction();
+                    return;
             }
+
+            sp = sp - 1;
         }
     }
 
     /**
      * I just kept the code from VM.eval to call require("vm").CompileAndRun
      *
-     * Now this invokes the asm.js compiler (which currently uses a constant pool for help)
+     * Now this invokes the "asm.js" (eek!) compiler (which currently uses a constant pool for help)
      *
      * And then it executes the bytecode from the typed array and maybe fetches data from the
      * constant pool or calls the incredible essential methods
@@ -28726,8 +28680,13 @@ define("vm", function (require, exports) {
         STACKSIZE = unit.STACKSIZE;
         PC = 0;
         r0 = undefined;
+        stackBuffer = new ArrayBuffer(4096 * 1024);
+        stack = new Int32Array(stackBuffer);
+        sp = 0;
+        stack[sp] = 0; // show to HEAP32[0] (which should be e.g. a prg)
         main();
-        return r0;
+        if (isAbrupt(r0=ifAbrupt(r0))) return r0;
+        return NormalCompletion(r0);
     }
     exports.CompileAndRun = CompileAndRun;
 });
