@@ -1,0 +1,23 @@
+{
+	"method definitions":
+	{
+	    "init": 		
+		"let obj = { s(a,b){ return a+b }, x: { s() { return 202 } } };",
+	    "tests": 
+	    [
+		["obj.s(89,12)", 101],
+		["obj.x.s()", 202]
+	    ]
+	},
+	"method definitions, computed access":
+	{
+	    "init": 		
+		"let obj = { s(a,b){ return a+b }, x: { s() { return 202 } } };",
+	    "tests": 
+	    [
+		["obj[\"s\"](89,12)", 101],
+		["obj[\"x\"][\"s\"]()", 202]
+	    ]
+	}	
+	
+}

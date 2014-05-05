@@ -3075,7 +3075,7 @@ define("slower-static-semantics", function (require, exports) {
         for (var i = 0, j = defs.length; i < j; i++) {
             def = defs[i];
             if (def && def.type === "MethodDefinition") {
-                if (def.isProtototype) list.pus(def);
+                if (def.isProtototype) list.push(def);
                 else if (!def.static && !def.isConstructor) list.push(def);
             }
         }
@@ -4525,7 +4525,7 @@ define("parser", function () {
     function atLineCol() {
         var line = loc.start.line;
         var column = loc.start.column;
-        return "value="+v+" type="+t+" lkhdVal="+lkhdVal+" at line "+line+", column "+column;
+        return " [[value="+v+" type="+t+" lkhdVal="+lkhdVal+" at line "+line+", column "+column+"]]";
     }
     var uqrx = /^("|')|("|')$/g;
     function unquote(str) {
@@ -4956,6 +4956,7 @@ define("parser", function () {
     function StrictFormalParameters() {
         return this.FormalParameterList.apply(this, arguments);
     }
+    
     function ComputedPropertyName() {
         var propertyName;
         if (v === "[") {
@@ -4967,13 +4968,14 @@ define("parser", function () {
         return null;
     }
     function PropertyKey() {
-        var node = this.ComputedPropertyName() || this.Identifier() || this.Literal();
+        var node = /*this.ComputedPropertyName() ||*/ this.Identifier() || this.Literal();
 
         if (!node && (Keywords[v])) {
             node = Node("Identifier");
             node.name = v;
             node.loc = token && token.loc;
         }
+
         if (node) {
             if (compile) return compiler(node);
             return node;
@@ -5018,7 +5020,7 @@ define("parser", function () {
 
                     node = Node("PropertyDefinition");
 
-                    if ((lkhdVal === "," || lkhdVal === "}") && (BindingIdentifiers[t] || v === "constructor")) { // {x,y}
+                    if (!computedPropertyName && (lkhdVal === "," || lkhdVal === "}") && (BindingIdentifiers[t] || v === "constructor")) { // {x,y}
 
                         node.kind = "init";
                         id = this.PropertyKey();
@@ -5761,8 +5763,15 @@ define("parser", function () {
         node = Node("MethodDefinition");
         nodeStack.push(currentNode);
         currentNode = node;
-        if (v =="[") node.computed = true;
-        node.id = this.PropertyKey();
+        if (computedPropertyName) {
+    	    node.id = computedPropertyName;
+    	    node.computed = true;
+        } else if (v =="[") {
+    	    node.id = this.ComputedPropertyName();
+    	    node.computed = true;
+    	} else node.id = this.PropertyKey();
+    	
+    	
         if (isStrict && ForbiddenArgumentsInStrict[node.id.name]) throw new SyntaxError(node.id.name + " is not a valid method identifier in strict mode");
         node.generator = isGenerator;
         if (!isObjectMethod) node.static = isStaticMethod;

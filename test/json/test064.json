@@ -1,0 +1,14 @@
+{
+	"computed property methods":
+	{
+	    "init": 		
+		"let s = Symbol(); let obj = { [s]() { return 101; }, x: { [s](){ return 202 } } };",
+	    "tests": 
+	    [
+
+		["typeof s", "symbol"],
+		["obj[s]()", 101],
+		["obj.x[s]()", 202]
+	    ]
+	}
+}
