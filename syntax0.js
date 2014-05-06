@@ -897,8 +897,7 @@ define("tables", function (require, exports, module) {
     };
 
     var PrimaryExpressionByValue = {
-        
-        __proto__: null,        
+        __proto__: null,
         "(": "CoverParenthesizedExpressionAndArrowParameterList",
         
         "[": "ArrayExpression",	
@@ -5267,6 +5266,7 @@ define("parser", function () {
 
                     if (v === "...") arg = this.SpreadExpression();
                     else arg = this.AssignmentExpression();
+                    if (arg)
                     args.push(arg);
 
                     if (v === ",") match(",");
@@ -5573,7 +5573,7 @@ define("parser", function () {
                     }
                 } else {
                     if (isStrict && ForbiddenArgumentsInStrict[id.name]) {
-                        throw new SyntaxError(v + " is not a valid bindingidentifier in strict mode");
+                        throw new SyntaxError(v + " is not a valid binding identifier in strict mode");
                     }
                     list.push(id);
                     if (v === "=") {
@@ -5593,9 +5593,18 @@ define("parser", function () {
         } else if (v === "[") {
             match("[");
             while (v !== "]") {
-                if (v === "...") id = this.RestParameter();
-                else if (StartBinding[v]) id = this.BindingPattern();
-                else id = this.Identifier();
+                switch(v) {
+                    case "...":
+                        id = this.RestParameter();
+                        break;
+                    case "{":
+                    case "[":
+                        id = this.BindingPattern();
+                        break;
+                    default:
+                        id = this.Identifier();
+                        break;
+                }
                 if (id) list.push(id);
                 if (v === "=") {
                     id.init = this.Initializer();
@@ -6441,7 +6450,7 @@ define("parser", function () {
         var s;
         if (v)
             do {
-                if (s = this.Statement()) list.push(s);
+                list.push(this.Statement());
             } while (!FinishSwitchStatementList[v] && v != undefined );
         return list;
     }
@@ -6451,7 +6460,7 @@ define("parser", function () {
         var s;
         if (v)
             do {
-                if (s = this.Statement()) list.push(s);
+                list.push(this.Statement());
             } while (!FinishStatementList[v] && v != undefined);
         return list;
     }
@@ -6463,6 +6472,15 @@ define("parser", function () {
             if (t === "Identifier" && lkhdVal == ":") node = this.LabelledStatement();
             else node = this.ExpressionStatement();
         }
+
+
+        if (!node && (v === "function")) {
+            if (isStrict)
+            throw new SyntaxError("FunctionDeclarations are not allowed outside of the Top-Level in strict mode");
+            else node = this.FunctionDeclaration();
+        }
+
+
         semicolon();
         if (compile) return compiler(node);
         return node;
@@ -24614,6 +24632,7 @@ define("runtime", function () {
     var isWorker = typeof importScripts === "function" && typeof window === "undefined";
     var hasConsole = typeof console === "object" && console && typeof console.log == "function";
     var hasPrint = typeof print === "function";
+
     function debug() {
         if (debugmode && hasConsole) console.log.apply(console, arguments);
     }
@@ -24823,6 +24842,10 @@ define("runtime", function () {
     var SetFunctionLength = ecma.SetFunctionLength;
     var writePropertyDescriptor = ecma.writePropertyDescriptor;
     var withError = ecma.withError;
+    var newSyntaxError = ecma.newSyntaxError;
+    var newTypeError = ecma.newTypeError;
+    var newReferenceError = ecma.newReferenceError;
+
     var printException = ecma.printException;
     var makeMyExceptionText = ecma.makeMyExceptionText;
     var CheckObjectCoercible = ecma.CheckObjectCoercible;
@@ -24898,7 +24921,7 @@ define("runtime", function () {
     }
     function inStrict (node) {
         if (node && node.strict) return true;
-        return getLexEnv().strict;
+        return getContext().strict;
 
     }
     function SkipDecl(node) {
@@ -24993,7 +25016,7 @@ define("runtime", function () {
             }
         }
 
-        var varDeclarations = script.varDeclarations || VarScopedDeclarations(script.body);
+        var varDeclarations = VarScopedDeclarations(script.body);
         var functionsToInitialize = [];
         var declaredFunctionNames = Object.create(null);
         var d;
@@ -28292,12 +28315,50 @@ define("asm-typechecker", function (require, exports){
         return node.type === "UnaryExpression" && node.operator === "-" && node.argument.type === "Identifier";
     }
 
-    function isFixnum() {
+    function isVariableDeclarator(node) {
+        return node.type === "VariableDeclarator";
     }
 
-    function isUnsigned () {
+    function isNumber (node) {
+        return node.type === "NumericLiteral";
     }
-    function isExtern () {
+
+    function isReturnStatement(node) {
+        return node.type === "ReturnStatement";
+    }
+
+    function isVariableDeclaration (node) {
+        return node.type === "VariableDeclaration";
+    }
+
+
+    /**
+     * ReturnStatement Analysis
+     * Return the type of the return statement
+     *
+     * return +e:Expression
+     * return e:Expression|0
+     * return n:-NumericLiteral
+     * return;
+     *
+     * @param node
+     */
+    function getTypeOfReturnStatement(node) {
+        if (isReturnStatement(node)) {
+            var argument = node.argument;
+            if (!argument) return VOID;
+            switch (argument.type) {
+                case "UnaryExpression":
+                    if (argument.prefix) {
+                        if (argument.operator === "-" && argument.type === "NumericLiteral") return SIGNED;
+                        if (argument.operator === "+") return DOUBLE;
+                    }
+                    break;
+                case "BinaryExpression":
+                    if (node.operator === "|" && node.value === "0") return INT;
+                    break;
+            }
+        }
     }
 
 
@@ -28307,6 +28368,30 @@ define("asm-typechecker", function (require, exports){
      * @constructor
      */
     function VariableDeclaration(node) {
+        var declarations;
+        if (isVariableDeclaration(node)) {
+            for (var i = 0, j = declarations.length; i < j; i++) {
+                var decl = declarations[i];
+
+            }
+
+        }
+    }
+
+    function getTypeOfVariableDeclaration(node) {
+        if (isVariableDeclarator(node)) {
+            if (node.init) return getTypeOfInitializer(node);
+        }
+    }
+
+    function getTypeOfInitializer(node) {
+        var initializer = decl.init;
+        if (isInt(initializer)) return INT;
+        if (isDouble(initializer)) return DOUBLE;
+        if (isNumber(initalizer)) return DOUBLE;
+    }
+
+    function isValidInitializer(node) {
 
     }
 
@@ -28348,35 +28433,16 @@ define("asm-typechecker", function (require, exports){
         var i = 0;
         var expr = body[0];
         do {
-
+            var type = getTypeOfParameter(expr);
+            if (type != DOUBLE && type != INT) {
+                throw new TypeError("error validating parameter types");
+            }
         } while ((expr = body[++i]) && (expr.type === "AssignmentExpression" || expr.type === "VariableDeclaration"));
         // walks as long as there are assignments under each.
         // but
     }
 
-    /**
-     * Validate AssignmentExpressions
-     * look into the BoundNames of fDecl.params
-     * and if it´s a parameter
-     *
-     * and return the resulting type
-     * or return null
-     *
-     * @param node
-     * @constructor
-     */
-    function AssignmentExpression(node) {
-    }
 
-    function IfStatement(node) {
-    }
-
-    function SwitchStatement(node) {
-    }
-
-    function ExpressionStatement(node) {
-
-    }
 
 
     function validate(node) {
@@ -28402,8 +28468,6 @@ define("asm-typechecker", function (require, exports){
     // contains the functions like parser, tokenizer, evaluation
     validator.FunctionDeclaration = FunctionDeclaration;
     validator.VariableDeclaration = VariableDeclaration;
-    validator.IfStatement = IfStatement;
-    validator.SwitchStatement = SwitchStatement;
 
     function validateAST(ast, validate) {
         var result;
@@ -28429,6 +28493,9 @@ define("asm-typechecker", function (require, exports){
         return result;
     }
     exports.getTypeOfParameter = getTypeOfParameter;
+    exports.getTypeOfReturnStatement  = getTypeOfReturnStatement;
+    exports.getTypeOfVariableDeclaration = getTypeOfVariableDeclaration;
+
     exports.isLeftAndRightSameIdentifier = isLeftAndRightSameIdentifier;
     exports.validateAST = validateAST;
     exports.validate = validate;
