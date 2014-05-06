@@ -26812,21 +26812,9 @@ define("runtime", function () {
         if (IsCallable(C) === false) return newTypeError( "instanceOfOperator: C ist not callable.");
         return OrdinaryHasInstance(C, O);
     }
-    function BinaryExpression(node) {
 
-        var op = node.operator;
-
-        var lref = Evaluate(node.left);
-        if (isAbrupt(lref = ifAbrupt(lref))) return lref;
-        var rref = Evaluate(node.right);
-        if (isAbrupt(rref = ifAbrupt(rref))) return rref;
-
-        var lval = GetValue(lref);
-        if (isAbrupt(lval = ifAbrupt(lval))) return lval;
-        var rval = GetValue(rref);
-        if (isAbrupt(rval = ifAbrupt(rval))) return rval;
-
-        var result;
+    ecma.applyBinOp = applyBinOp;
+    function applyBinOp(op, rval, lval) {
         switch (op) {
             case "in":
                 return HasProperty(rval, ToPropertyKey(lval));
@@ -26875,6 +26863,26 @@ define("runtime", function () {
             case "instanceof":
                 return NormalCompletion(instanceOfOperator(lval, rval));
         }
+    }
+
+
+    function BinaryExpression(node) {
+
+        var op = node.operator;
+
+        var lref = Evaluate(node.left);
+        if (isAbrupt(lref = ifAbrupt(lref))) return lref;
+        var rref = Evaluate(node.right);
+        if (isAbrupt(rref = ifAbrupt(rref))) return rref;
+
+        var lval = GetValue(lref);
+        if (isAbrupt(lval = ifAbrupt(lval))) return lval;
+        var rval = GetValue(rref);
+        if (isAbrupt(rval = ifAbrupt(rval))) return rval;
+
+
+
+        var result = applyBinOp(op, rval, lval)
 
         return NormalCompletion(result); // NormalCompletion(result);
     }
@@ -28550,13 +28558,24 @@ define("asm-compiler", function (require, exports) {
     var SCONST = 0x15;  // String from Constant Pool (choose your register)
     var NCONST = 0x16;  // Numeric from Constant Pool (coose your register)
     var ICONST = 0x17;  // IdentifierName from Constant Pool (choose your register)
-    var NUMLIT = 0x18;
+
     // bools could get one code each?
     var TRUEBOOL  = 0x20;        // Code for a true Boolean
     var FALSEBOOL = 0x21;        // Code for a false Boolean
+
+    var EXPRSTMT = 0x33;
     var EQ = 0x50;
     var NEQ = 0x51;
-    var HALT = 0x255;
+
+
+    var ADDI = 0xA0;
+
+    var BINEXPR = 0xB0;
+    var LOAD1   = 0xB1;
+    var LOAD2   = 0xB2;
+    var BINOP   = 0xB3;
+
+    var HALT = 0xFF;
     /**
      * initialize the compiler for a new compilation
      * after compilation use exports.get() to get the data
@@ -28671,22 +28690,39 @@ define("asm-compiler", function (require, exports) {
 
     }
     /**
+     * I really compile the node.expression
+     * into one slot.
      * @param node
      * @returns {number}
      */
     function expressionStatement(node) {
-        console.log("compiling expression statement");
-        return compile(node.expression);
+        var ptr = STACKTOP >> 2;
+        STACKTOP += 8;
+        HEAP32[ptr] = EXPRSTMT;
+        HEAP32[ptr+1] = compile(node.expression);
+        return ptr;
     }
     /**
      * @param node
      */
     function assignmentExpression(node) {
+        var ptr = STACKTOP >> 2;
+        return ptr;
     }
     /**
      *
      */
     function binaryExpression(node) {
+        var ptr = STACKTOP >> 2;
+        STACKTOP += 28;
+        HEAP32[ptr] = BINEXPR;
+        HEAP32[ptr+1] = compile(node.left);
+        HEAP32[ptr+2] = LOAD1;
+        HEAP32[ptr+3] = compile(node.right);
+        HEAP32[ptr+4] = LOAD2;
+        HEAP32[ptr+5] = BINOP;
+        HEAP32[ptr+6] = node.operator.charCodeAt(0);
+        return ptr;
     }
     /**
      *
@@ -28810,11 +28846,22 @@ define("vm", function (require, exports) {
     var TRUEBOOL = 0x20;       // BooleanLiteral "true"  (know the code, choose register)
     var FALSEBOOL = 0x21;      // BooleanLiteral "false" (know the code, choose register)
 
+    var EXPRSTMT = 0x33;
+
+
 
     var EQ = 0x50;
     var NEQ = 0x51;
 
-    var HALT = 0x255;
+    var ADDI = 0xA0;
+    var BINEXPR = 0xB0;
+    var LOAD1   = 0xB1;
+    var LOAD2   = 0xB2;
+    var BINOP   = 0xB3;
+
+
+    var HALT = 0xFF;
+
 
 
     /**
@@ -28837,9 +28884,42 @@ define("vm", function (require, exports) {
     var getContext = ecma.getContext;
     var GetIdentifierReference = ecma.GetIdentifierReference;
     var NormalCompletion = ecma.NormalCompletion;
-
+    var applyBinOp = ecma.applyBinOp;
+    var getAssignmentOperationResult = ecma.getAssignmentOperationResult;
     function getReference(poolIndex) {
         r0 = GetIdentifierReference(getLexEnv(), POOL[poolIndex], strict);
+    }
+    function getTrue() {
+        r0 = true;
+    }
+    function getFalse() {
+        r0 = false;
+    }
+    function getFromPool(index) {
+        r0 = POOL[index];
+    }
+    function getBinaryResult(operator) {
+        r0 = applyBinOp(String.fromCharCode(operator), r1, r2);
+    }
+
+    var r1s = [];
+    var r2s = [];
+
+    function saveR1() {
+        "use strict";
+        r1s.push(r1);
+    }
+    function restoreR1() {
+        "use strict";
+        r1 = r1s.pop();
+    }
+    function saveR2() {
+        "use strict";
+        r2s.push(r2);
+    }
+    function restoreR2() {
+        "use strict";
+        r2 = r2s.pop();
     }
 
     /**
@@ -28863,54 +28943,45 @@ define("vm", function (require, exports) {
 
     function main() {
         "use strict";
+        "use asm soon";
 
         do {
 
-            console.log("sp is " + sp);
+            console.log("main: sp is " + sp);
             var ptr = stack[sp];      // 1. ptr from stack
-            console.log("got ptr " + ptr);
+            console.log("main: got ptr " + ptr);
             var code = HEAP32[ptr];     // 2. byte code from heap[ptr]
-            console.log("got code " + code);
-
-
+            console.log("main: got code " + code);
+            console.log("code is:");
             switch (code) {
                 case PRG:
-
                     console.log("PRG")
-
                     strict = HEAP32[ptr + 1]; // strict mode? external calls to set strict? a lot of procedures will be.
                     console.log("strict = " + strict);
-
                     r1 = ptr + 3;                           // -> first instruction
                     console.log("first instruction is at " + r1);
-
-
                     r3 = HEAP32[ptr + 2];     // number of instructions
                     console.log("number of instructions " + r3);
-
                     r2 = r1 + r3 - 1;           // -> last instruction
                     console.log("last instruction = " + r2);
-
                     for (; r2 >= r1; r2--) {
-
                         stack[sp] = HEAP32[r2]; // that is a ptr
-
                         console.log("added ptr " + stack[sp] + " to sp " + sp)
-
                         sp = sp + 1;
-
                     } // last element first onto stack
-
                     sp = sp - 1; // go back to stack top
-
+                    continue;
+                case EXPRSTMT:
+                    console.log("EXPRSTMT");
+                    stack[sp] = HEAP32[ptr+1];
                     continue;
                 case SCONST:
                     console.log("SCONST");
-                    r0 = POOL[HEAP32[ptr + 1]];
+                    getFromPool(HEAP32[ptr + 1])
                     break;
                 case NCONST:
-                    console.log("NCONST")
-                    r0 = POOL[HEAP32[ptr + 1]]; // uses pool still inside of the block
+                    console.log("NCONST");
+                    getFromPool(HEAP32[ptr + 1]);
                     break;
                 case ICONST:
                     console.log("ICONST")
@@ -28918,12 +28989,41 @@ define("vm", function (require, exports) {
                     break;
                 case TRUEBOOL:
                     console.log("TRUEBOOL");
-                    r0 = true;      // booleans are not allowed?
-
+                    getTrue();
                     break;
                 case FALSEBOOL:
-                    console.log("FALSEBOOL")
-                    r0 = false;     // booleans are not allowed?
+                    console.log("FALSEBOOL");
+                    getFalse();
+                    break;
+                case ADDI:
+                    console.log("ADDI")
+                    r1 = HEAP32[ptr+1];
+                    r2 = HEAP32[ptr+2];
+                    r0 = r1+r2;
+                    break;
+                case BINEXPR:
+                    console.log("BINEXPR");
+                    stack[sp]   = HEAP32[ptr+5];// BINOP (add r1 + r2 into r0)
+                    stack[++sp] = HEAP32[ptr+4] // LOAD2
+                    stack[++sp] = HEAP32[ptr+3] // bytecode right // eval and next from stack is load2
+                    stack[++sp] = HEAP32[ptr+2] // LOAD1
+                    stack[++sp] = HEAP32[ptr+1] // bytecode left // eval and second from stack is load1
+                    continue;
+                case LOAD1:
+                    console.log("LOAD1");
+                    saveR1();
+                    r1 = r0;
+                    break;
+                case LOAD2:
+                    console.log("LOAD2");
+                    saveR2();
+                    r2 = r0;
+                    break;
+                case BINOP:
+                    console.log("BINOP")
+                    getBinaryResult(HEAP32[ptr+1]); // ptr+1 == operator
+                    restoreR1();
+                    restoreR2();
                     break;
                 case HALT:
                     return;
@@ -28931,9 +29031,7 @@ define("vm", function (require, exports) {
                     unknownInstruction(code);
                     return;
             }
-
             sp = sp - 1;
-
         } while (sp >= 0);
     }
 
@@ -28957,7 +29055,7 @@ define("vm", function (require, exports) {
         stackBuffer = new ArrayBuffer(4096 * 16);
         stack = new Int32Array(stackBuffer);
         sp = 0;
-        stack[0] = 0; // show to HEAP32[0] which is HALT
+        stack[0] = 0; 
         main();
         if (isAbrupt(r0=ifAbrupt(r0))) return r0;
         return NormalCompletion(r0);
