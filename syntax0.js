@@ -9322,11 +9322,6 @@ function isAbrupt(completion) {
 //if (completion instanceof CompletionRecord && completion.type !== "normal") return true;
 
 
-// ===========================================================================================================
-// return newError
-// ===========================================================================================================
-// This Function returns the Errors, say the spec says "Throw a TypeError", then return newError("Type", message);
-
 function newReferenceError(message) {
     return Completion("throw", OrdinaryConstruct(getIntrinsic("%ReferenceError%"), [message]));
 }
@@ -11169,7 +11164,7 @@ function Get(O, P) {
 
 function OrdinaryObjectGet(O, P, R) {
     Assert(IsPropertyKey(P), "Get (object) expects a valid Property Key (got " + P + ")");
-    var desc = callInternalSlot("GetOwnProperty", O, P);
+    var desc = callInternalSlot(SLOTS.GETOWNPROPERTY, O, P);
     if (isAbrupt(desc = ifAbrupt(desc))) return desc;
     if (desc === undefined) {
         var parent = GetPrototypeOf(O);
@@ -11191,7 +11186,7 @@ function OrdinaryObjectGet(O, P, R) {
 function Set(O, P, V, R) {
     var ownDesc, parent, setter;
     Assert(IsPropertyKey(P), "Set (object) expects a valid Property Key");
-    ownDesc = callInternalSlot("GetOwnProperty", O, P); // readPropertyDescriptor(O, P);
+    ownDesc = callInternalSlot(SLOTS.GETOWNPROPERTY, O, P); // readPropertyDescriptor(O, P);
     if (isAbrupt(ownDesc = ifAbrupt(ownDesc))) return ownDesc;
     if (ownDesc === undefined) {
         parent = GetPrototypeOf(O);
@@ -11217,7 +11212,7 @@ function Set(O, P, V, R) {
     if (IsDataDescriptor(ownDesc)) {
         if (ownDesc.writable == false) return false;
         if (Type(R) !== OBJECT) return false;
-        var existingDescriptor = callInternalSlot("GetOwnProperty", R, P);
+        var existingDescriptor = callInternalSlot(SLOTS.GETOWNPROPERTY, R, P);
         if (isAbrupt(existingDescriptor = ifAbrupt(existingDescriptor))) return existingDescriptor;
 
         if (existingDescriptor !== undefined) {
@@ -11262,7 +11257,7 @@ function DefineOwnProperty(O, P, Desc) {
 function HasOwnProperty(O, P) {
     Assert(Type(O) === OBJECT, "GetOwnProperty: first argument has to be an object");
     Assert(IsPropertyKey(P), "HasOwnProperty: second argument has to be a valid property key, got " + P);
-    var desc = callInternalSlot("GetOwnProperty", O, P);
+    var desc = callInternalSlot(SLOTS.GETOWNPROPERTY, O, P);
     return desc !== undefined;
 
 }
@@ -11804,7 +11799,7 @@ ArgumentsExoticObject.prototype = {
         var desc = readPropertyDescriptor(this, P);
         if (desc === undefined) return desc;
         var map = getInternalSlot(ao, "ParameterMap");
-        var isMapped = callInternalSlot("GetOwnProperty", map, P);
+        var isMapped = callInternalSlot(SLOTS.GETOWNPROPERTY, map, P);
         if (isMapped) desc.value = Get(map, P);
         return desc;
     },
@@ -11814,7 +11809,7 @@ ArgumentsExoticObject.prototype = {
     DefineOwnProperty: function (P, Desc) {
         var ao = this;
         var map = getInternalSlot(ao, "ParameterMap");
-        var isMapped = callInternalSlot("GetOwnProperty", map, P);
+        var isMapped = callInternalSlot(SLOTS.GETOWNPROPERTY, map, P);
         var allowed = OrdinaryDefineOwnProperty(ao, P, Desc);
 
         var putStatus;
@@ -11836,7 +11831,7 @@ ArgumentsExoticObject.prototype = {
     },
     Delete: function (P) {
         var map = getInternalSlot(this, "ParameterMap");
-        var isMapped = callInternalSlot("GetOwnProperty", map, P);
+        var isMapped = callInternalSlot(SLOTS.GETOWNPROPERTY, map, P);
         var result = Delete(this, P);
         if (isAbrupt(result = ifAbrupt(result))) return result;
         if (result && isMapped) callInternalSlot("Delete", map, P);
@@ -11962,7 +11957,7 @@ function ArraySetLength(A, Desc) {
     if (newLen != ToNumber(Desc.value)) return newRangeError( "Array length index out of range");
     if (isAbrupt(newLen=ifAbrupt(newLen))) return newLen;
     newLenDesc.value = newLen;
-    var oldLenDesc = callInternalSlot("GetOwnProperty", A, "length");
+    var oldLenDesc = callInternalSlot(SLOTS.GETOWNPROPERTY, A, "length");
     if (!oldLenDesc) oldLenDesc = Object.create(null);
     var oldLen = Desc.value;
     if (newLen >= oldLen) return OrdinaryDefineOwnProperty(A, "length", newLenDesc);
@@ -13044,7 +13039,7 @@ StringExoticObject.prototype = assign(StringExoticObject.prototype, {
     },
     DefineOwnProperty: function (P, D) {
         var O = this;
-        var current = callInternalSlot("GetOwnProperty", O, P);
+        var current = callInternalSlot(SLOTS.GETOWNPROPERTY, O, P);
         var extensible = IsExtensible(this);
         return ValidateAndApplyPropertyDescriptor(O, P, extensible, D, current);
     },
@@ -13488,6 +13483,7 @@ function TaskQueue() {
 function makeTaskQueues(realm) {
     realm.LoadingTasks = TaskQueue();
     realm.PromiseTasks = TaskQueue();
+    realm.ScriptEvaluationTasks = TaskQueue();
     realm.TimerTasks = TaskQueue();
 }
 
@@ -13550,6 +13546,8 @@ function NextTask (result, nextQueue) {
     return NextTask(result, nextQueue);
 }
 
+
+
 function ScriptEvaluationTask (source) {
     Assert(typeof source === "string", "ScriptEvaluationTask: Source has to be a string");
     var status = NormalCompletion(undefined);
@@ -13580,7 +13578,7 @@ function DefineBuiltinProperties(O) {
     var globalThis = getGlobalThis();
     for (var name in standard_properties) {
         if (standard_properties[name] === true) {
-            var desc = callInternalSlot("GetOwnProperty", globalThis, name);
+            var desc = callInternalSlot(SLOTS.GETOWNPROPERTY, globalThis, name);
             var status = callInternalSlot(SLOTS.DEFINEOWNPROPERTY, O, name, desc);
             if (isAbrupt(status)) return status;
         }
@@ -13677,13 +13675,6 @@ exports.ModuleObjectCreate = ModuleObjectCreate;
 exports.ModuleExoticObject = ModuleExoticObject;
 exports.NewModuleEnvironment = NewModuleEnvironment;
 
-/**
- * Created by root on 31.03.14.
- */
-
-    // ===========================================================================================================
-    // A List? Unused
-    // ===========================================================================================================
 
 function List() {
     var list = Object.create(List.prototype);
@@ -20499,7 +20490,7 @@ var ObjectConstructor_getOwnPropertyDescriptors = function (thisArg, argList) {
 	    var nextKey = IteratorValue(next);
 	    nextKey = ToPropertyKey(nextKey);
 	    if (isAbrupt(nextKey=ifAbrupt(nextKey))) return nextKey;
-	    var desc = callInternalSlot("GetOwnProperty", obj, nextKey);
+	    var desc = callInternalSlot(SLOTS.GETOWNPROPERTY, obj, nextKey);
 	    if (isAbrupt(desc=ifAbrupt(desc))) return desc;
 	    var descriptor = FromPropertyDescriptor(desc);
 	    if (isAbrupt(descriptor=ifAbrupt(descriptor))) return descriptor;
@@ -28537,11 +28528,11 @@ define("vm", function (require, exports) {
 
         do {
 
-            console.log("sp is "+sp);
+            console.log("sp is " + sp);
             var ptr = stack[sp];      // 1. ptr from stack
-            console.log("got ptr "+ptr);
+            console.log("got ptr " + ptr);
             var code = HEAP32[ptr];     // 2. byte code from heap[ptr]
-            console.log("got code "+code);
+            console.log("got code " + code);
 
 
             switch (code) {
@@ -28557,10 +28548,10 @@ define("vm", function (require, exports) {
 
 
                     r3 = HEAP32[ptr + 2];     // number of instructions
-                    console.log("number of instructions " + r3 );
+                    console.log("number of instructions " + r3);
 
                     r2 = r1 + r3 - 1;           // -> last instruction
-                    console.log("last instruction = "+ r2);
+                    console.log("last instruction = " + r2);
 
                     for (; r2 >= r1; r2--) {
 
@@ -28584,7 +28575,7 @@ define("vm", function (require, exports) {
                     break;
                 case ICONST:
                     console.log("ICONST")
-                    getReference(HEAP32[ptr+1]); // uses pool outside of the block
+                    getReference(HEAP32[ptr + 1]); // uses pool outside of the block
                     break;
                 case TRUEBOOL:
                     console.log("TRUEBOOL");
