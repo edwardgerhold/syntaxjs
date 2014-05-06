@@ -2390,13 +2390,8 @@ define("tables", function (require, exports, module) {
 define("symboltable", function (require, exports, module) {
 
 	function Environment (outer) {
-		var env = Object.create(Environment.prototype);
-        // dONT CHAIN THE SCOPES. jUST CREATE AN UNLINKED ENV EACH SCOPE FOR SYMBOL TABLES
-        // THE CHAIN IS USEFUL IN THE RUNTIME BUT NOT HERE TO PREVENT IRRITATIONS
-        // HAD OVER TWO WEEKS OR HOW OLD THIS IS A BUG INSIDE THAT LEXENV COULDNT CREATE NESTED SAME NAMES
-        // SYMBOLTABLE ITSELF CAN BE IMPROVED
-
-        // AIMS: geNERATE boundnames, VARSCOPEDDECLS, LEXDECLS WITH LOWER COST THAN LATER ANALYSIS.
+        if (!(this instanceof Environment)) return new Environment(outer);
+		var env = this;
 		env.bindings = Object.create(null);
 		env.names = Object.create(null);
 		env.outer = outer || null;
@@ -2429,28 +2424,30 @@ define("symboltable", function (require, exports, module) {
     }
 
 	function Scope (outer) {
-		var scope = Object.create(null);        
-		scope.varEnv = Environment(scope.varEnv);
+        if (!(this instanceof Scope)) return new Scope(outer);
+		var scope = this;
+		scope.varEnv = new Environment(scope.varEnv);
 		scope.lexEnv = scope.varEnv;
 		scope.contains = Object.create(null);
 		scope.outer = outer || null;		
 		return scope;		
 	}
+    Scope.prototype = Object.create(null);
+
     function SymbolTable() {
-        var s = Object.create(SymbolTable.prototype);
-        s.newScope();
-        return s;
+        if (!(this instanceof SymbolTable)) return new SymbolTable();
+        this.scope = new Scope(this.Scope);
     }
     SymbolTable.prototype = {
     	newScope: function () {
-    		this.scope = Scope(this.scope);            
+    		this.scope = new Scope(this.scope);
     	},
     	oldScope: function () {
     		if (this.scope)
     		this.scope = this.scope.outer;
     	},    	
     	newBlock: function () {
-    		this.scope.lexEnv = Environment(this.scope.lexEnv);
+    		this.scope.lexEnv = new Environment(this.scope.lexEnv);
     	},
     	oldBlock: function () {
             if (this.scope)
@@ -13696,7 +13693,7 @@ exports.NewModuleEnvironment = NewModuleEnvironment;
 
 function List() {
     var list = Object.create(List.prototype);
-    var sentinel = {};
+    var sentinel = { next: undefined, prev: undefined, value: undefined };
     sentinel.next = sentinel;
     sentinel.prev = sentinel;
     list.sentinel = sentinel;
@@ -13705,10 +13702,10 @@ function List() {
 }
 List.prototype.insertFirst = function (item) {
     var rec = {
+        next: this.sentinel,
+        prev: this.sentinel.prev,
         value: item
     };
-    rec.next = this.sentinel;
-    rec.prev = this.sentinel.prev;
     this.sentinel.prev.next = rec;
     this.sentinel.prev = rec;
     this.size += 1;
@@ -13716,10 +13713,10 @@ List.prototype.insertFirst = function (item) {
 };
 List.prototype.insertLast = function (item) {
     var rec = {
+        next: this.sentinel,
+        prev: this.sentinel.next,
         value: item
     };
-    rec.prev = this.sentinel;
-    rec.next = this.sentinel.next;
     this.sentinel.next.prev = rec;
     this.sentinel.next = rec;
     this.size += 1;
@@ -13789,7 +13786,7 @@ List.prototype.removeLast = function () {
 List.prototype.push = List.prototype.insertLast;
 List.prototype.pop = List.prototype.removeLast;
 List.prototype.shift = List.prototype.removeFirst;
-
+List.prototype.unshift = List.prototype.insertFirst;
 
 
 var tables = require("tables");
@@ -28189,13 +28186,20 @@ define("runtime", function () {
  * This file will mostly implement the asm.js Specification in sense of
  * AST analysis, and later, when more is existing bytecode analysis.
  *
- * The function here should be easy to apply on the ast to obtain true or
+ * The functions here should be easy to apply on the ast to obtain true or
  * false or the resulting type of the relevant check.
  * Whenever needed it should memoize and generate static informations.
  *
  */
 define("asm-typechecker", function (require, exports){
     "use strict";
+
+    /**
+     * The environments are needed again
+     */
+    var globalEnvironment = Object.create(null);
+    var localEnvironment = Object.create(null);
+    var blockEnvironment = Object.create(null);
 
     /**
      * these types are disallowed from escaping
@@ -28311,8 +28315,13 @@ define("asm-typechecker", function (require, exports){
         return (node.type === "UnaryExpression") && (node.operator === "+") && (node.argument.type === "Identifier");
     }
 
-    function isSigned(node) {
+    function isSignedId(node) {
+        // -x
         return node.type === "UnaryExpression" && node.operator === "-" && node.argument.type === "Identifier";
+    }
+    function isSignedNumeric(node) {
+        // -x
+        return node.type === "UnaryExpression" && node.operator === "-" && node.argument.type === "NumericLiteral";
     }
 
     function isVariableDeclarator(node) {
@@ -28443,6 +28452,20 @@ define("asm-typechecker", function (require, exports){
     }
 
 
+    function isFunctionDeclaration(node) {
+        return node.type === "FunctionDeclaration";
+    }
+
+    function Module (node) {
+        if (isFunctionDeclaration(node)) {
+            var params = node.params;
+            if (node.params.length === 3) {
+                var stdlib = node.params[0];
+                var foreign = node.params[1];
+                var heap = node.params[2];
+            }
+        }
+    }
 
 
     function validate(node) {
@@ -28506,53 +28529,34 @@ define("asm-typechecker", function (require, exports){
 
 });
 /**
- * Created by root on 03.05.14.
- */
-/**
- * this is really becoming an asm.js compiler
- * i think this will work, even if it´s getting
- * rejected by the AOT at the beginning end else
- * this bytecode will anyways be 3-4x faster than
- * the ast anyways, so trying it out makes much sense
  */
 define("asm-compiler", function (require, exports) {
 
     "use strict";
-
     var DEFAULT_SIZE = 2*1024*1024; // 2 Meg of RAM (string, id, num) should be big enough to run this program
-
     var POOL;
     var MEMORY, HEAP8, HEAPU8, HEAP16, HEAPU16, HEAPU32, HEAP32, FLOAT32, FLOAT64;
     var STACKSIZE, STACKTOP;
-
     /**
      * first bytecodes
      */
-
     /*
     var STRINGLITERAL = 0x15;
     var NUMERICLITERAL = 0x16;
     var IDENTIFIER = 0x17;
     var BOOLEANLITERAL = 0x19;
     */
-
     var PRG = 0x05;
-
     var SCONST = 0x15;  // String from Constant Pool (choose your register)
     var NCONST = 0x16;  // Numeric from Constant Pool (coose your register)
     var ICONST = 0x17;  // IdentifierName from Constant Pool (choose your register)
-
     var NUMLIT = 0x18;
-
     // bools could get one code each?
     var TRUEBOOL  = 0x20;        // Code for a true Boolean
     var FALSEBOOL = 0x21;        // Code for a false Boolean
-
     var EQ = 0x50;
     var NEQ = 0x51;
-
     var HALT = 0x255;
-
     /**
      * initialize the compiler for a new compilation
      * after compilation use exports.get() to get the data
@@ -28581,6 +28585,7 @@ define("asm-compiler", function (require, exports) {
     function get() {
         return {
             POOL: POOL,
+            MEMORY: MEMORY,
             HEAP8: HEAP8,
             HEAPU8: HEAPU8,
             HEAP16: HEAP16,
@@ -28591,9 +28596,8 @@ define("asm-compiler", function (require, exports) {
             FLOAT64: FLOAT64,
             STACKSIZE: STACKSIZE,
             STACKTOP: STACKTOP
-        }
+        };
     }
-
     /**
      * add a value to the constant pool
      * the index of the value in the array is returned
@@ -28610,7 +28614,6 @@ define("asm-compiler", function (require, exports) {
     function addToConstantPool(value) {
         return POOL.push(value) - 1;
     }
-
     /**
      * @param node
      * @returns {*}
@@ -28667,9 +28670,7 @@ define("asm-compiler", function (require, exports) {
         return ptr;
 
     }
-
     /**
-     *
      * @param node
      * @returns {number}
      */
@@ -28677,9 +28678,7 @@ define("asm-compiler", function (require, exports) {
         console.log("compiling expression statement");
         return compile(node.expression);
     }
-
     /**
-     *
      * @param node
      */
     function assignmentExpression(node) {
@@ -28698,16 +28697,12 @@ define("asm-compiler", function (require, exports) {
         var body = node.body;
         var strict = !!node.strict;
         var len = body.length;
-
         var ptr = STACKTOP >> 2; // /4
-
         HEAP32[ptr] = PRG;          // "Program"
         HEAP32[ptr+1] = strict|0;   // node.strict
         HEAP32[ptr+2] = len|0;        // body.length
-
         STACKTOP += 12;             //
         STACKTOP += (len << 2);   // *4
-
         for (var i = 0, j = len; i < j; i++) {
             HEAP32[ptr+3+i] = compile(body[i]);// fill array with starting offsets
         }
@@ -28734,7 +28729,6 @@ define("asm-compiler", function (require, exports) {
             default:return -1;
         }
     }
-
     /**
      * spent thirty seconds for showing how to use the compiler
      * @param ast
@@ -28745,19 +28739,15 @@ define("asm-compiler", function (require, exports) {
         compile(ast);
         return get();
     }
-
-
     /**
      * the steps are to call init, compile and get
      * and to unify it i add the method compileUnit
      * @type {null}
      */
-
     exports.init = init;
     exports.compile = compile;
     exports.get = get;
     exports.compileUnit = compileUnit;
-
 });
 
 
