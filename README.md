@@ -1,3 +1,6 @@
+SIM-Card defect: This means no internet at home. It will take me a few days
+to get a new one. So long no updates.
+
 syntax.js 
 =========
 
