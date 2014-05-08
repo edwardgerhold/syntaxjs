@@ -1,0 +1,6 @@
+echo "self execution"
+echo "currently it s*cks; require, define, makePromise are there, but don´t work properly."
+echo "now the code will fail with some undefined value in CheckObjectCoercible"
+echo "new is that the error messages can become internationalized"
+node syntax0.js syntax0.js
+

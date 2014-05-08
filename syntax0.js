@@ -9508,9 +9508,9 @@ function setCodeRealm(r) {  // CREATE REALM (API)
     require("runtime").setCodeRealm(r);
 }
 
-function ExecutionContext(outer, realm, state, generator) {
+function ExecutionContext(outerCtx, realm, state, generator) {
     "use strict";
-    var VarEnv = NewDeclarativeEnvironment(outer);
+    var VarEnv = NewDeclarativeEnvironment((outerCtx && outerCtx.VarEnv)||null);
     return {
         __proto__: ExecutionContext.prototype,
         state: [], // depr.
@@ -9519,7 +9519,7 @@ function ExecutionContext(outer, realm, state, generator) {
         operandStack: [],
         sp: -1,
         realm: realm,
-        outer: outer||null,
+        outer: outerCtx||null,
         VarEnv: VarEnv,
         LexEnv: VarEnv,
         generator: generator
@@ -11928,7 +11928,7 @@ function CreateBuiltinFunction(realm, steps, len, name, internalSlots) {
     function Call() {
         var result;
         var oldContext = getContext();
-        var callContext = ExecutionContext(getLexEnv(), realm);
+        var callContext = ExecutionContext(getContext(), realm);
         var stack = getStack();
         stack.push(callContext);
         result = steps.apply(this, arguments);
@@ -19380,7 +19380,7 @@ setInternalSlot(EvalFunction, SLOTS.CALL, function (thisArg, argList) {
         VarEnv = strictVarEnv;
     }
 
-    evalCxt = ExecutionContext(getLexEnv());
+    evalCxt = ExecutionContext(getContext());
     evalCxt.realm = evalRealm;
     evalCxt.VarEnv = VarEnv;
     evalCxt.LexEnv = LexEnv;
@@ -25823,7 +25823,7 @@ define("runtime", function () {
         var scope = getInternalSlot(this, SLOTS.ENVIRONMENT);
         var realm = getRealm();
         var callerContext = getContext();
-        var calleeContext = ExecutionContext(getLexEnv());
+        var calleeContext = ExecutionContext(getContext());
         var calleeName = Get(this, "name"); // costs time and money, is just for the context.name for stackframe
         var callerName = callerContext.callee;
         stack.push(calleeContext);
@@ -27960,7 +27960,7 @@ define("runtime", function () {
     function ModuleDeclaration(node) {
         var body = node.body;
         var oldContext = getContext();
-        var initContext = ExecutionContext(getLexEnv(), getRealm());
+        var initContext = ExecutionContext(getContext(), getRealm());
         var env = NewDeclarativeEnvironment(getLexEnv());
 
         var status = InstantiateModuleDeclaration(node, env);
@@ -29763,7 +29763,7 @@ define("asm-compiler", function (require, exports) {
 define("vm", function (require, exports) {
 
 
-    var realm, strict;
+    var realm, strict, tailCall;
 
     var compiler = require("asm-compiler");
 
@@ -29800,8 +29800,16 @@ define("vm", function (require, exports) {
     var STACKTOP;
     var STACKSIZE;
 
-    var operandStack = new Array(1000);
+    var operands = new Array(1000);
     var sp = -1;
+    
+    var frames =  new Array(1000);
+    var fp = -1;
+
+    function newFrame() {
+        "use strict";
+        frames[++fp] = ExecutionContext(frames[fp-1]);
+    }
 
     /**
      * global registers
@@ -29890,84 +29898,84 @@ define("vm", function (require, exports) {
     var GetValue = ecma.GetValue;
     function getReference(poolIndex) {
         var $0 = GetIdentifierReference(getLexEnv(), POOL[poolIndex], strict);
-        operandStack[++sp] = $0;
+        operands[++sp] = $0;
     }
     function evaluateTrue() {
         var $0 = true;
-        operandStack[++sp] = $0;
+        operands[++sp] = $0;
     }
     function evaluateFalse() {
         var $0 = false;
-        operandStack[++sp] = $0;
+        operands[++sp] = $0;
     }
     function getFromPool(index) {
         var $0 = POOL[index];
-        operandStack[++sp] = $0;
+        operands[++sp] = $0;
     }
     function getNumberFromPool(index) {
         var $0 = +POOL[index];
-        operandStack[++sp] = $0;
+        operands[++sp] = $0;
     }
     function getStringFromPool(index) {
         var $0 = ""+POOL[index];
-        operandStack[++sp] = $0;
+        operands[++sp] = $0;
     }
     function evaluateBinary(operator) {
         var $0,$1,$2;
-        $2 = operandStack[sp--];
-        $1 = operandStack[sp--];
+        $2 = operands[sp--];
+        $1 = operands[sp--];
         $1 = GetValue($1);
         $2 = GetValue($2);
         if (isAbrupt($1=ifAbrupt($1))) $0 = $1;
         else if (isAbrupt($2=ifAbrupt($2))) $0 = $2;
         else $0 = applyBinOp(operatorForCode[operator], $1, $2);
-        operandStack[++sp] = $0;
+        operands[++sp] = $0;
     }
     function evaluateAssignment(operator) {
         var $0,$1,$2;
-        $2 = operandStack[sp--];
-        $1 = operandStack[sp--];
+        $2 = operands[sp--];
+        $1 = operands[sp--];
         if (isAbrupt($1=ifAbrupt($1))) $0 = $1;
         else if (isAbrupt($2=ifAbrupt($2))) $0 = $2;
         else $0 = applyAssignmentBinOp(operatorForCode[operator], $1, $2);
-        operandStack[++sp] = $0;
+        operands[++sp] = $0;
     }
     function evaluateCall() {
         var $0,$1,$2;
-        $2 = operandStack[sp--];
-        $1 = operandStack[sp--];
+        $2 = operands[sp--];
+        $1 = operands[sp--];
         if (isAbrupt($1=ifAbrupt($1))) $0 = $1;
         else if (isAbrupt($2=ifAbrupt($2))) $0 = $2;
-        else $0 = EvaluateCall($1, $2, strict);
-        operandStack[++sp] = $0;
+        else $0 = EvaluateCall($1, $2, tailCall);
+        operands[++sp] = $0;
     }
     function evaluateConstruct() {
         var $0,$1,$2;
-        $2 = operandStack[sp--];
-        $1 = operandStack[sp--];
+        $2 = operands[sp--];
+        $1 = operands[sp--];
         if (isAbrupt($1=ifAbrupt($1))) $0 = $1;
         else if (isAbrupt($2=ifAbrupt($2))) $0 = $2;
         else $0 = OrdinaryConstruct($1, $2);
-        operandStack[++sp] = $0;
+        operands[++sp] = $0;
     }
     function evaluateUnary(operator) {
         var $0;
-        var $1 = operandStack[sp--];
+        var $1 = operands[sp--];
         if (isAbrupt($1=ifAbrupt($1))) $0 = $1;
         else $0 = applyUnaryOp(unaryOperatorFromCode[operator], true, $1);
-        operandStack[++sp] = $0;
+        operands[++sp] = $0;
     }
     function evaluatePostfix(operator) {
         var $0, $1;
-        $1 = operandStack[sp--];
+        $1 = operands[sp--];
         if (isAbrupt(r1=ifAbrupt(r1))) $0 = $1;
         else $0 = applyUnaryOp(unaryOperatorFromCode[operator], false, $1);
-        operandStack[++sp] = $0;
+        operands[++sp] = $0;
     }
     function evaluateString() {
-        var $1 = operandStack[sp--];
+        var $1 = operands[sp--];
         var $0 = String.fromCharCode.apply(undefined, $1);
-        operandStack[++sp] = $0;
+        operands[++sp] = $0;
     }
 
     /**
@@ -29978,14 +29986,15 @@ define("vm", function (require, exports) {
     var stackBuffer, stack, pc;
     function unknownInstruction(code) {
         var $0 = newTypeError(format("UNKNOWN_INSTRUCTION_S", code));
-        operandStack[++sp] = $0;
+        operands[++sp] = $0;
     }
     function unknownError() {
         var $0 = newTypeError(format("UNKNOWN_ERROR"));
-        operandStack[++sp] = $0;
+        operands[++sp] = $0;
     }
 
-    function main() {
+    
+    function main(pc) {
         var $0, $1,$2,$3,$4;
         "use strict";
 
@@ -29997,6 +30006,7 @@ define("vm", function (require, exports) {
         do {
             var ip = stack[pc];
             var code = HEAP32[ip];
+
             switch (code) {
                 case PRG:
                     strict = HEAP32[ip + 1];
@@ -30023,7 +30033,7 @@ define("vm", function (require, exports) {
                     stack[pc++] = HEAP32[ip+1]; // eval test
                     break;
                 case IFOP:
-                    $0 = operandStack[sp--];
+                    $0 = operands[sp--];
                     if (!!$0) stack[pc++] = HEAP32[ip+1];
                     else stack[pc++] = HEAP32[ip+2];
                     break;
@@ -30064,12 +30074,12 @@ define("vm", function (require, exports) {
                 case STR:
                     $2 = HEAP32[ip+1];
                     $1 = HEAPU16.subarray(((ip+2)<<1), (((ip+2)<<1)+$2));
-                    operandStack[++sp] = $1;
+                    operands[++sp] = $1;
                     evaluateString();
                     break;
                 case NUM:
                     $0 = HEAPF64[(ip+1)>>1];
-                    operandStack[++sp] = $0; // may not be in here.
+                    operands[++sp] = $0; // may not be in here.
                     // $0 can be argument? is numeric
                     break;
 
@@ -30121,7 +30131,7 @@ define("vm", function (require, exports) {
                     stack[pc++] = HEAP32[ip+1]; // 1. condition
                     break;
                 case WHILEBODY:
-                    $0 = !!operandStack[sp--]; // may not be in here. operandStack is DYNAMIC TYPED.
+                    $0 = !!operands[sp--]; // may not be in here. operands is DYNAMIC TYPED.
                     if ($0) {
                         $1 = ip + 2;            // first
                         $3 = HEAP32[ip + 1];    // len
@@ -30138,7 +30148,7 @@ define("vm", function (require, exports) {
                         for (; $2 >= $1; $2--) stack[pc++] = HEAP32[$2];
                     break;
                 case DOWHILECOND:
-                    $0 = !!operandStack[sp--]; // this may not happen in here
+                    $0 = !!operands[sp--]; // this may not happen in here
                     if ($0) {
                         stack[pc++] = HEAP32[ip+1];
                     }
@@ -30209,9 +30219,9 @@ define("vm", function (require, exports) {
         realm = CreateRealm(); // this costs starting the thing a lot of ms to create all objects.
         ecma.saveCodeRealm();
         ecma.setCodeRealm(realm);
-        main();
+        main(pc);
         ecma.restoreCodeRealm();
-        var $0 = operandStack[sp--];
+        var $0 = operands[sp--];
         if (isAbrupt($0=ifAbrupt($0))) return $0;
         return NormalCompletion($0);
     }
