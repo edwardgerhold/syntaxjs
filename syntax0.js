@@ -29083,14 +29083,10 @@ define("asm-compiler", function (require, exports) {
     var STACKBASE, STACKSIZE, STACKTOP;
     /**
      * first bytecodes
-     *
-     *
      * currently intcodes
      *
-     * the compiler and the interpreter
-     * go through a few refactorings
-     * i see instructions/annotations which are not needed anymore
-     * and more
+     * the compiler and the interpreter will go through a few refactorings
+     * i see instructions/annotations which are not needed anymore and could be replaced
      */
     var PRG = 0x05;
     var SLIST = 0x06;
@@ -29110,7 +29106,6 @@ define("asm-compiler", function (require, exports) {
     var UNARYOP = 0x37;
     var POSTFIXOP = 0x38;
     var VARDECL = 0x40;
-
     var IFEXPR = 0x61;
     var IFOP = 0x62;
     var WHILESTMT = 0x63;
@@ -29129,13 +29124,11 @@ define("asm-compiler", function (require, exports) {
     var NEWEXPR = 0xC2;
     var CONSTRUCT = 0xC3;
     var FUNCDECL = 0xC4;
-
     var ARRAYEXPR = 0xD1;
     var ARRAYINIT = 0xD2;
     var OBJECTEXPR = 0xD4;
     var PROPDEF = 0xD5;
     var OBJECTINIT = 0xD6;
-
     var RET = 0xD0;
     var ERROR = 0xFE;
     var HALT = 0xFF;
@@ -29156,7 +29149,7 @@ define("asm-compiler", function (require, exports) {
      */
     function init(stackSize, poolSize) {
         POOL = Array(poolSize||10000);
-        pp = 0;
+        pp = -1;
         MEMORY = new ArrayBuffer(stackSize||1024*1024);
         HEAP8 = new Int8Array(MEMORY);
         HEAPU8 = new Uint8Array(MEMORY);
@@ -29206,14 +29199,15 @@ define("asm-compiler", function (require, exports) {
      * @returns {number}
      */
     function addToConstantPool(value) {
-        return POOL.push(value) - 1;
+        return POOL[++pp];
     }
     /**
      * @param node
      * @returns {*}
      */
     function identifier (node) {
-        var poolIndex = POOL.push(node.name) - 1;
+        POOL[++pp] = node.name;
+        var poolIndex = pp;
         var ptr = STACKTOP >> 2;
         HEAP32[ptr] = IDCONST;
         HEAP32[ptr+1] = poolIndex;
@@ -29226,7 +29220,8 @@ define("asm-compiler", function (require, exports) {
      * @returns {*}
      */
     function numericLiteralPool (node) {
-        var poolIndex = POOL.push(node.value) - 1;
+        POOL[++pp] = node.value;
+        var poolIndex = pp;
         var ptr = STACKTOP >> 2;
         HEAP32[ptr] = NUMCONST;
         HEAP32[ptr+1] = poolIndex;
@@ -29288,7 +29283,8 @@ define("asm-compiler", function (require, exports) {
      * @param node
      */
     function stringLiteralPool (node) {
-        var poolIndex = POOL.push(node.computed) - 1;
+        POOL[++pp] = node.computed;
+        var poolIndex = pp;
         var ptr = STACKTOP >> 2;
         HEAP32[ptr] = STRCONST;
         HEAP32[ptr+1] = poolIndex;
@@ -29442,7 +29438,8 @@ define("asm-compiler", function (require, exports) {
     }
 
     function functionDeclaration(node) {
-        var poolIndex = POOL.push(node);
+        POOL[++pp] = node;
+        var poolIndex = pp;
         var ptr = STACKTOP;
         STACKTOP += 8;
         HEAP32[ptr] = FUNCDECL;
@@ -29451,7 +29448,8 @@ define("asm-compiler", function (require, exports) {
     }
 
     function variableDeclaration(node) {
-        var poolIndex = POOL.push(node);
+        POOL[++pp] = node;
+        var poolIndex = pp;
         var ptr = STACKTOP;
         STACKTOP += 8;
         HEAP32[ptr] = VARDECL;
@@ -29461,7 +29459,8 @@ define("asm-compiler", function (require, exports) {
 
     function propertyDefinition(node) {
         var ptr = STACKTOP >> 2;
-        var keyIndex = POOL.push(node.key);
+        POOL[++pp] = node.key;
+        var keyIndex = pp;
         STACKTOP += 16;
         HEAP32[ptr] = PROPDEF;
         HEAP32[ptr+1] = propDefKinds[node.kind];
@@ -29695,7 +29694,7 @@ define("asm-compiler", function (require, exports) {
 define("vm", function (require, exports) {
 
 
-    var realm;
+    var realm, strict;
 
     var compiler = require("asm-compiler");
 
@@ -29955,7 +29954,8 @@ define("vm", function (require, exports) {
                     stack[pc++] = HEAP32[ip+1]; // eval test
                     break;
                 case IFOP:
-                    if (!!r0) stack[pc++] = HEAP32[ip+1];
+                    $0 = operandStack[sp--];
+                    if (!!$0) stack[pc++] = HEAP32[ip+1];
                     else stack[pc++] = HEAP32[ip+2];
                     break;
                 /**
