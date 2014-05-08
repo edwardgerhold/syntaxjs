@@ -7038,9 +7038,9 @@ define("parser", function () {
         if (v === ";") {
             node = Node("EmptyStatement");
             node.loc = makeLoc(loc.start, loc.end);
-            dumpExtras2(node, "before");
+        //  dumpExtras2(node, "before");
             match(";");
-            dumpExtras2(node, "after");
+         //   dumpExtras2(node, "after");
             if (compile) return compiler(node);
             return node;
         }
@@ -9515,6 +9515,9 @@ function ExecutionContext(outer, realm, state, generator) {
         __proto__: ExecutionContext.prototype,
         state: [], // depr.
         stack: [],
+        pc: 0,
+        operandStack: [],
+        sp: -1,
         realm: realm,
         outer: outer||null,
         VarEnv: VarEnv,
@@ -9538,10 +9541,12 @@ function ExecutionContext_toString() {
 
 function CompletionRecord(type, value, target) {
     "use strict";
-    var cr = Object.create(CompletionRecord.prototype);
-    cr.type = type;
-    cr.value = value;
-    cr.target = target;
+    return {
+        __proto__:CompletionRecord.prototype,
+        type: undefined,
+        value: undefined,
+        target: undefined
+    }
     return cr;
 }
 
@@ -28108,6 +28113,9 @@ define("runtime", function () {
     }
     evaluation.Finally = Finally;
     function Finally(node) {
+        /*
+            return operandStack.pop();
+         */
         return Evaluate(node.block);
     }
     evaluation.TryStatement = TryStatement;
@@ -28239,16 +28247,13 @@ define("runtime", function () {
         var body, i, j;
         if (!node) return;
         if (typeof node === "string") {
-            //        debug("Evaluate(resolvebinding " + node + ")");
             R = ResolveBinding(node);
             return R;
         }
         if (Array.isArray(node)) {
-            //      debug("Evaluate(StatementList)");
             if (node.type) R = evaluation[node.type](node, a, b, c);
             else R = evaluation.StatementList(node, a, b, c);
             return R;
-
         }
         // debug("Evaluate(" + node.type + ")");
         if (E = evaluation[node.type]) {
@@ -28262,17 +28267,14 @@ define("runtime", function () {
 
 
 
-
-
-
-
-
-
     /*
         got to change all function (node)
         to function ()
-        which fetch the nodes from the code stack
-        (generator)
+        which fetch the nodes/results from the codeStack/operandStack
+        this can be done top-to-bottom on one day,
+        once i am in.
+        Then a resume evaluation should be a no-problem and be already for free.
+        Plus it makes the lowest call stack possible, with just the ops on the data.
 
      */
     function putOnStack(node) {
@@ -28283,13 +28285,9 @@ define("runtime", function () {
         switch(node.type) {
             case "Program":
                 // // return {type:type,_id_:++nodeId,strict:undefined,body:undefined,loc:undefined,extras:undefined};
-                for (i = 0, j = node.body.length; i < j; i++) {
-                    no = node.body[i];
-                    // putOnStack(no);
-                    stack.push(no);
-
+                for (i= node.body.length - 1; i >= 0; i--) {
+                    stack.push(node.body[i]);
                 }
-                stack.push(node);
                 break;
             case "Identifier":
                 stack.push(node);
@@ -28303,17 +28301,8 @@ define("runtime", function () {
                 // // return {type:type,_id_:++nodeId,expression:undefined,loc:undefined,extras:undefined};
             case "LexicalDeclaration":
             case "VariableDeclaration":
-                for (i = 0, j = node.declarations.length; i < j; i++) {
-                    stack.push(node.declarations[i]);
-                }
                 stack.push(node);
                 break;
-                // // return {type:type,_id_:++nodeId,kind:undefined,declarations:undefined,loc:undefined,extras:undefined};
-            case "VariableDeclarator":
-                // // return {type:type,_id_:++nodeId,kind:undefined,id:undefined,init:undefined};
-                stack.push(node);
-                break;
-
             case "FunctionDeclaration":
             case "FunctionExpression":
             case "GeneratorDeclaration":
@@ -28396,42 +28385,117 @@ define("runtime", function () {
     }
 
 
+    function evalLoop() {
+        var i, j;
+        var body, declarations, no;
 
+        var cx = getContext();
+        var stack = cx.stack;
+        var pc = cx.pc;
+        var operandStack = cx.operandStack;
+        var sp = cx.sp;
 
+        var status, result;
+        var r0, r1, r2, r3, r4;
+        var R, E, V;
+        var node;
+        do {
 
+            // initial cx.stack = [ Program ];
+            node = stack[sp];
 
+            switch (node.type) {
+                case "Program":
+                    putOnStack(node.body);
+                    // hat nun alle nodes platziert.
+                    // hier noch die GlobalDeclarationInstantiation
+                    var status = InstantiateGlobalDeclaration();
+                    cx.strict = !!node.strict;
 
+                    break;
+                case "Identifier":
+                    R = Identifier();
+                    if (isAbrupt(R=ifAbrupt(R))) return R;
+                    operandStack[++sp] = R;
+                    // should be on operand stack now
+                case "ParenthesizedExpression":
+                case "ExpressionStatement":
+                    stack[++sp]
+                    break;
+                case "LexicalDeclaration":
+                case "VariableDeclaration":
+                    break;
+                case "VariableDeclarator":
+                    break;
+                case "FunctionDeclaration":
+                case "FunctionExpression":
+                case "GeneratorDeclaration":
+                case "GeneratorExpression":
+                    break;
+                case "ArrowExpression":
+                    break;
+                case "NumericLiteral":
+                case "StringLiteral":
+                case "BooleanLiteral":
+                case "Literal":
+                    operandStack[++sp] = Literal();
+                    break;
+                case "TemplateLiteral":
+                    break;
+                case "ObjectExpression":
+                    break;
+                case "ArrayExpression":
+                    break;
+                case "ObjectPattern":
+                case "ArrayPattern":
+                case "WhileStatement":
+                case "DoWhileStatement":
+                case "BlockStatement":
+                case "IfStatement":
+                case "ConditionalExpression":
+                case "BinaryExpression":
+                case "AssignmentExpression":
+                case "ForInOfStatement":
+                case "ForStatement":
+                case "NewExpression":
+                case "CallExpression":
+                case "RestParameter":
+                case "SpreadExpression":
+                case "BindingPattern":
+                case "ArrayComprehension":
+                case "GeneratorComprehension":
+                case "SwitchStatement":
+                case "DefaultClause":
+                case "SwitchCase":
+                case "TryStatement":
+                case "CatchClause":
+                case "Finally":
+                default:
+                    break;
+            }
 
+            // if (!stack.length) NextTask();
 
+            sp = sp - 1;
 
+        } while (sp >= 0);
 
+        cx.sp = sp;
+        cx.pc = pc;
 
+        R = operandStack[sp--];
+        if (isAbrupt(R=ifAbrupt(R))) return R;
+        return NormalCompletion(R);
+    }
 
+    /*
+        Downwards the EventQueue (setTimeout, Emitter):
+        put the handler together with the new TaskQueue
+        and use "TimerTasks" for your "setTimeout" Tasks.
+        but change to use their task structure, my "task"
+        here is different.
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+     */
 
     function HandleEventQueue(shellmode, initialized) {
         var task, func, time, result;
@@ -28440,7 +28504,9 @@ define("runtime", function () {
         var LoadingTasks = getRealm().LoadingTasks;
         var PromiseTasks = getRealm().PromiseTasks;
 
-        var result = NextTask(undefined, PromiseTasks);
+        var result = NextTask(undefined, PromiseTasks); // PRomises are resolved here, is right
+        // result = NextTask(undefined,LoaderTasks);
+        //
 
         function handler() {
             var eventQueue = getEventQueue();
@@ -28485,12 +28551,16 @@ define("runtime", function () {
         }
         realm.xs.scriptLocation = scriptLocation;
     }
+
+
     function initializeTheRuntime() {
         initializedTheRuntime = true;
     }
     function endRuntime() {
         initializedTheRuntime = false;
     }
+
+
     function execute(source, shellModeBool, resetEnvNowBool) {
         var exprRef, exprValue, text, type, message, stack, error, name, callstack;
 
@@ -28939,15 +29009,14 @@ define("asm-typechecker", function (require, exports){
      */
     function FunctionDeclaration(node) {
         currentFunctionStack.push(currentFunction);
-        currentFunction = node;
-
-        currentFunction.boundNamesParams = BoundNames(node.params);
-
-        currentFunction.varScopedDecls = VarScopedDeclarations(node);
-        currentFunction.varDeclaredNames = VarDeclaredNames(node);
-        currentFunction.lexScopedDecls = LexicallyScopedDeclarations(node);
-        currentFunction.lexDeclaredNames = LexicallyDeclaredNames(node);
-
+        currentFunction = {
+            node: node,
+            boundNamesParam: BoundNames(node.params),
+            varScopedDecls: VarScopedDeclarations(node),
+            varDeclaredNames: VarDeclaredNames(node),
+            lexScopedDecls: LexicallyScopedDeclarations(node),
+            lexDeclaredNames: LexicallyDeclaredNames(node)
+        };
         /*
                 go for the the body
 
