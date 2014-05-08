@@ -2202,6 +2202,11 @@ define("tables", function (require, exports, module) {
         "LineTerminator": true
     };
 
+    /**
+     * used in lib/compile/asm-runtime and asm-compiler to map the operator which are plain text
+     *
+     * @type {{>>: number, >=: number, >>>: number, instanceof: number, in: number, of: number, =>: number, ...: number, .: number, ,: number, &: number, &&: number, &=: number, |=: number, |: number, ||: number, !: number, !!: number, !=: number, !==: number, =: number, ==: number, ===: number, {: number, }: number, (: number, ): number, [: number, ]: number, <: number, >: number, <=: number, <<: number, <<=: number, >>=: number, <<<: number, >>>=: number, ;: number, ::: number, :=: number, :: number, +: number, -: number, *: number, /: number, +=: number, -=: number, *=: number, /=: number, %: number, %=: number, ++: number, --: number, ^: number, ^=: number, ?: number, <|: number, #: number, ~: number}}
+     */
     var codeForOperator = {
         ">>":17,
         ">=": 18,
@@ -2325,6 +2330,10 @@ define("tables", function (require, exports, module) {
         77:"~"
     };
 
+    /**
+     * used in the VM to translate the operators
+     * @type {{0: string, 1: string, 2: string, 3: string, 4: string, 5: string, 6: string, 7: string, 8: string, 9: string}}
+     */
     var unaryOperatorFromCode = {
         0: "void",
         1: "delete",
@@ -2350,6 +2359,19 @@ define("tables", function (require, exports, module) {
         "++":8,
         "--":9
     };
+
+
+    var propDefKinds = {
+        "init": 1,
+        "method": 2,
+        "computed": 3
+    };
+    var propDefCodes = {
+        1: "init",
+        2: "method",
+        3: "computed"
+    };
+
 
     exports.isDirective = isDirective;
     exports.isStrictDirective = isStrictDirective;
@@ -2449,6 +2471,9 @@ define("tables", function (require, exports, module) {
     exports.operatorForCode = operatorForCode;
     exports.unaryOperatorFromCode = unaryOperatorFromCode;
     exports.unaryOperatorFromString = unaryOperatorFromString;
+    exports.propDefKinds = propDefKinds;
+    exports.propDefCodes = propDefCodes;
+
     return exports;
 
     /*
@@ -4881,11 +4906,94 @@ define("parser", function () {
         return lkhdTok;
     }
 
-    function Node(type) {   // this one seems to get optimized and costs nothing more than inlined {}
+    function Node2(type) {   // this one seems to get optimized and costs nothing more than inlined {}
         return {
             type: type,
             _id_: ++nodeId
         };
+    }
+    function Node(type) {
+        switch(type) {
+            case "Program":
+                return {type:type,_id_:++nodeId,strict:undefined,body:undefined,loc:undefined,extras:undefined};
+            case "Identifier":
+                return {type:type,_id_:++nodeId,name:undefined,loc:undefined,extras:undefined};
+            case "ParenthesizedExpression":
+            case "ExpressionStatement":
+                return {type:type,_id_:++nodeId,expression:undefined,loc:undefined,extras:undefined};
+            case "LexicalDeclaration":
+            case "VariableDeclaration":
+                return {type:type,_id_:++nodeId,kind:undefined,declarations:undefined,loc:undefined,extras:undefined};
+            case "VariableDeclarator":
+               return {type:type,_id_:++nodeId,kind:undefined,id:undefined,init:undefined};
+            case "FunctionDeclaration":
+            case "FunctionExpression":
+            case "GeneratorDeclaration":
+            case "GeneratorExpression":
+                return {type:type,_id_:++nodeId,expression:undefined,generator:undefined,strict:undefined,id:undefined,params:undefined,body:undefined,loc:undefined,extras:undefined};
+            case "ArrowExpression":
+                return {type:type,_id_:++nodeId,params:undefined,body:undefined,loc:undefined,ebxtras:undefined};
+            case "NumericLiteral":
+            case "StringLiteral":
+            case "BooleanLiteral":
+            case "Literal":
+                return {type:type,_id_:++nodeId,value:undefined,loc:undefined,extras:undefined}
+            case "TemplateLiteral":
+                return {type:type,_id_:++nodeId,spans:undefined,loc:undefined,extras:undefined}
+            case "ObjectExpression":
+                return {type:type,_id_:++nodeId,properties:undefined,loc:undefined,extras:undefined};
+            case "ArrayExpression":
+                return {type:type,_id_:++nodeId,elements:undefined,loc:undefined,extras:undefined};
+            case "ObjectPattern":
+            case "ArrayPattern":
+                return {type:type,_id_:++nodeId,elements:undefined,loc:undefined,extras:undefined};
+            case "WhileStatement":
+            case "DoWhileStatement":
+                return {type:type,_id_:++nodeId,test:undefined, body:undefined,loc:undefined,extras:undefined};
+            case "BlockStatement":
+                return {type:type,_id_:++nodeId,body:undefined,loc:undefined,extras:undefined};
+            case "IfStatement":
+                return {type:type,_id_:++nodeId,test:undefined,consequent:undefined,alternate:undefined,loc:undefined,extras:undefined};
+            case "ConditionalExpression":
+                return {type:type,_id_:++nodeId,test:undefined,consequent:undefined,alternate:undefined,loc:undefined,extras:undefined};
+            case "BinaryExpression":
+            case "AssignmentExpression":
+                return {type:type,_id_:++nodeId,operator:undefined,left:undefined,right:undefined,loc:undefined,extras:undefined};
+            case "ForInOfStatement":
+                return {type:type,_id_:++nodeId,left:undefined,right:undefined,body:undefined,loc:undefined,extras:undefined};
+            case "ForStatement":
+                return {type:type,_id_:++nodeId,init:undefined,test:undefined,update:undefined,loc:undefined,extras:undefined};
+            case "NewExpression":
+                return {type:type,_id_:++nodeId, callee:undefined, arguments:undefined, loc:undefined, extras:undefined};
+            case "CallExpression":
+                return {type:type,_id_:++nodeId, callee:undefined, arguments:undefined, loc:undefined, extras:undefined};
+            case "RestParameter":
+                return {type:type,_id_:++nodeId, id:undefined, loc:undefined, extras:undefined};
+            case "SpreadExpression":
+                return {type:type,_id_:++nodeId, id:undefined, loc:undefined, extras:undefined};
+            case "BindingPattern":
+                return {type:type,_id_:++nodeId, id:undefined, target:undefined, loc:undefined, extras:undefined};
+            case "ArrayComprehension":
+                return {type:type,_id_:++nodeId, blocks:undefined, filter:undefined, expression:undefined, loc:undefined, extras:undefined};
+            case "GeneratorComprehension":
+                return {type:type,_id_:++nodeId, loc:undefined, extras:undefined};
+            case "SwitchStatement":
+                return {type:type,_id_:++nodeId, discriminant:undefined, cases:undefined, loc:undefined, extras:undefined};
+            case "DefaultCase":
+                return {type:type,_id_:++nodeId, consequent:undefined, loc:undefined, extras:undefined};
+            case "SwitchCase":
+                return {type:type,_id_:++nodeId, test:undefined, consequent:undefined, loc:undefined, extras:undefined};
+            case "TryStatement":
+                return {type:type,_id_:++nodeId, handler:undefined, guard:undefined, finalizer:undefined, loc:undefined, extras:undefined};
+            case "CatchClause":
+                return {type:type,_id_:++nodeId, block:undefined, loc:undefined, extras:undefined};
+            case "Finally":
+                return {type:type,_id_:++nodeId, block:undefined, loc:undefined, extras:undefined};
+            case "Elision":
+                return {type:type,_id_:++nodeId, width: undefined, loc: undefined, extras: undefined};
+            default:
+                return {type:type,_id_:++nodeId, loc:undefined, extras:undefined};
+        }
     }
 
     var positions = [];
@@ -4904,7 +5012,6 @@ define("parser", function () {
             lkhdTok: lkhdTok,
             lkhdVal: lkhdVal,
             lkhdTyp: lkhdTyp,
-
             isIn: isIn,
             inStack: inStack,
             isYieldId: isYieldId,
@@ -8368,7 +8475,6 @@ define("js-codegen", function (require, exports, module) {
         var src = "do " + callBuilder(body) + " while (" + callBuilder(test) + ");";
         return src;
     };
-    
     builder.withStatement = function withStatement(obj, body, loc, extras) {
         var src = "";
         if (extras && extras.with) src += callBuilder(extras.with.before);
@@ -9404,14 +9510,17 @@ function setCodeRealm(r) {  // CREATE REALM (API)
 
 function ExecutionContext(outer, realm, state, generator) {
     "use strict";
-    var ec = Object.create(ExecutionContext.prototype);
-    ec.state = [];
-    ec.realm = realm;
-    outer = outer || null;
-    ec.VarEnv = NewDeclarativeEnvironment(outer);
-    ec.LexEnv = ec.VarEnv;
-    ec.generator = generator;
-    return ec;
+    var VarEnv = NewDeclarativeEnvironment(outer);
+    return {
+        __proto__: ExecutionContext.prototype,
+        state: [], // depr.
+        stack: [],
+        realm: realm,
+        outer: outer||null,
+        VarEnv: VarEnv,
+        LexEnv: VarEnv,
+        generator: generator
+    };
 }
 ExecutionContext.prototype.toString = ExecutionContext_toString;
 ExecutionContext.prototype.constructor = ExecutionContext;
@@ -26848,10 +26957,32 @@ define("runtime", function () {
         }
     }
 
-    function ConditionalExpression(node) {
+
+    /*
+        auf den stack
+        1. test, consequent, alternate, dann ce expr
+        (4 * auf den stack)
+
+        wenn die expr dran ist,
+        poppt sie die anderen 3 nodes runter
+
+     */
+
+    function ConditionalExpression(node) {  // (node) entfaellt
+
         var testExpr = node.test;
         var trueExpr = node.consequent;
         var falseExpr = node.alternate;
+        /*
+            var cx = getContext();
+
+            testExpr = cx.stack.pop();
+            trueExpr = cx.stack.pop();
+            falseExpr = cx.stack.pop();
+
+
+         */
+
         var exprRef = Evaluate(testExpr);
         var exprValue = GetValue(exprRef);
         if (isAbrupt(exprValue)) return exprValue;
@@ -28127,6 +28258,181 @@ define("runtime", function () {
         }
         return R;
     }
+
+
+
+
+
+
+
+
+
+
+    /*
+        got to change all function (node)
+        to function ()
+        which fetch the nodes from the code stack
+        (generator)
+
+     */
+    function putOnStack(node) {
+        var i, j;
+        var body, declarations, no;
+        var stack = getContext().stack;
+
+        switch(node.type) {
+            case "Program":
+                // // return {type:type,_id_:++nodeId,strict:undefined,body:undefined,loc:undefined,extras:undefined};
+                for (i = 0, j = node.body.length; i < j; i++) {
+                    no = node.body[i];
+                    // putOnStack(no);
+                    stack.push(no);
+
+                }
+                stack.push(node);
+                break;
+            case "Identifier":
+                stack.push(node);
+                break;
+                // // return {type:type,_id_:++nodeId,name:undefined,loc:undefined,extras:undefined};
+            case "ParenthesizedExpression":
+            case "ExpressionStatement":
+                stack.push(node.expression);
+                stack.push(node);
+                break;
+                // // return {type:type,_id_:++nodeId,expression:undefined,loc:undefined,extras:undefined};
+            case "LexicalDeclaration":
+            case "VariableDeclaration":
+                for (i = 0, j = node.declarations.length; i < j; i++) {
+                    stack.push(node.declarations[i]);
+                }
+                stack.push(node);
+                break;
+                // // return {type:type,_id_:++nodeId,kind:undefined,declarations:undefined,loc:undefined,extras:undefined};
+            case "VariableDeclarator":
+                // // return {type:type,_id_:++nodeId,kind:undefined,id:undefined,init:undefined};
+                stack.push(node);
+                break;
+
+            case "FunctionDeclaration":
+            case "FunctionExpression":
+            case "GeneratorDeclaration":
+            case "GeneratorExpression":
+                stack.push(node);
+                // // return {type:type,_id_:++nodeId,expression:undefined,generator:undefined,strict:undefined,id:undefined,params:undefined,body:undefined,loc:undefined,extras:undefined};
+                break;
+            case "ArrowExpression":
+                // // return {type:type,_id_:++nodeId,params:undefined,body:undefined,loc:undefined,ebxtras:undefined};
+                stack.push(node);
+                break;
+            case "NumericLiteral":
+            case "StringLiteral":
+            case "BooleanLiteral":
+            case "Literal":
+                // // return {type:type,_id_:++nodeId,value:undefined,loc:undefined,extras:undefined}
+                stack.push(node);
+                break;
+            case "TemplateLiteral":
+                // // return {type:type,_id_:++nodeId,spans:undefined,loc:undefined,extras:undefined}
+                stack.push(node);
+                break;
+            case "ObjectExpression":
+                // // return {type:type,_id_:++nodeId,properties:undefined,loc:undefined,extras:undefined};
+                stack.push(node);
+                break;
+            case "ArrayExpression":
+                // // return {type:type,_id_:++nodeId,elements:undefined,loc:undefined,extras:undefined};
+                stack.push(node);
+                break;
+            case "ObjectPattern":
+            case "ArrayPattern":
+                // // return {type:type,_id_:++nodeId,elements:undefined,loc:undefined,extras:undefined};
+            case "WhileStatement":
+            case "DoWhileStatement":
+                // // return {type:type,_id_:++nodeId,test:undefined, body:undefined,loc:undefined,extras:undefined};
+            case "BlockStatement":
+                // // return {type:type,_id_:++nodeId,body:undefined,loc:undefined,extras:undefined};
+            case "IfStatement":
+                // // return {type:type,_id_:++nodeId,test:undefined,consequent:undefined,alternate:undefined,loc:undefined,extras:undefined};
+            case "ConditionalExpression":
+                // // return {type:type,_id_:++nodeId,test:undefined,consequent:undefined,alternate:undefined,loc:undefined,extras:undefined};
+            case "BinaryExpression":
+            case "AssignmentExpression":
+                // // return {type:type,_id_:++nodeId,operator:undefined,left:undefined,right:undefined,loc:undefined,extras:undefined};
+            case "ForInOfStatement":
+                // // return {type:type,_id_:++nodeId,left:undefined,right:undefined,body:undefined,loc:undefined,extras:undefined};
+            case "ForStatement":
+                // // return {type:type,_id_:++nodeId,init:undefined,test:undefined,update:undefined,loc:undefined,extras:undefined};
+            case "NewExpression":
+                // // return {type:type,_id_:++nodeId, callee:undefined, arguments:undefined, loc:undefined, extras:undefined};
+            case "CallExpression":
+                // // return {type:type,_id_:++nodeId, callee:undefined, arguments:undefined, loc:undefined, extras:undefined};
+            case "RestParameter":
+                // // return {type:type,_id_:++nodeId, id:undefined, loc:undefined, extras:undefined};
+            case "SpreadExpression":
+                // // return {type:type,_id_:++nodeId, id:undefined, loc:undefined, extras:undefined};
+            case "BindingPattern":
+                // // return {type:type,_id_:++nodeId, id:undefined, target:undefined, loc:undefined, extras:undefined};
+            case "ArrayComprehension":
+                // // return {type:type,_id_:++nodeId, blocks:undefined, filter:undefined, expression:undefined, loc:undefined, extras:undefined};
+            case "GeneratorComprehension":
+                // // return {type:type,_id_:++nodeId, loc:undefined, extras:undefined};
+            case "SwitchStatement":
+                // // return {type:type,_id_:++nodeId, discriminant:undefined, cases:undefined, loc:undefined, extras:undefined};
+            case "DefaultClause":
+                // // return {type:type,_id_:++nodeId, consequent:undefined, loc:undefined, extras:undefined};
+            case "SwitchCase":
+                // // return {type:type,_id_:++nodeId, test:undefined, consequent:undefined, loc:undefined, extras:undefined};
+            case "TryStatement":
+                // // return {type:type,_id_:++nodeId, handler:undefined, guard:undefined, finalizer:undefined, loc:undefined, extras:undefined};
+            case "CatchClause":
+                // // return {type:type,_id_:++nodeId, block:undefined, loc:undefined, extras:undefined};
+            case "Finally":
+                // // return {type:type,_id_:++nodeId, block:undefined, loc:undefined, extras:undefined};
+            default:
+                // // return {type:type,_id_:++nodeId, loc:undefined, extras:undefined};
+        }
+
+    }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
     function HandleEventQueue(shellmode, initialized) {
         var task, func, time, result;
         // pendingExceptions = []
@@ -28365,6 +28671,12 @@ define("runtime", function () {
         });
         return o;
     }
+    
+    
+    
+    
+    
+    execute.evaluation = evaluation;
     execute.setCodeRealm = setCodeRealm;
     execute.Evaluate = Evaluate;
     execute.ExecuteAsync = ExecuteAsync;
@@ -28766,9 +29078,9 @@ define("asm-compiler", function (require, exports) {
 
     "use strict";
     var DEFAULT_SIZE = 2*1024*1024; // 2 Meg of RAM (string, id, num) should be big enough to run this program
-    var POOL;
+    var POOL, pp;
     var MEMORY, HEAP8, HEAPU8, HEAP16, HEAPU16, HEAPU32, HEAP32, HEAPF32, HEAPF64;
-    var STACKSIZE, STACKTOP;
+    var STACKBASE, STACKSIZE, STACKTOP;
     /**
      * first bytecodes
      *
@@ -28797,6 +29109,8 @@ define("asm-compiler", function (require, exports) {
     var UNARYEXPR = 0x36;
     var UNARYOP = 0x37;
     var POSTFIXOP = 0x38;
+    var VARDECL = 0x40;
+
     var IFEXPR = 0x61;
     var IFOP = 0x62;
     var WHILESTMT = 0x63;
@@ -28814,14 +29128,25 @@ define("asm-compiler", function (require, exports) {
     var CALL = 0xC1;
     var NEWEXPR = 0xC2;
     var CONSTRUCT = 0xC3;
+    var FUNCDECL = 0xC4;
+
+    var ARRAYEXPR = 0xD1;
+    var ARRAYINIT = 0xD2;
+    var OBJECTEXPR = 0xD4;
+    var PROPDEF = 0xD5;
+    var OBJECTINIT = 0xD6;
+
     var RET = 0xD0;
     var ERROR = 0xFE;
     var HALT = 0xFF;
     var EMPTY = -0x01;  // negative can not point into something
 
-    var codeForOperator = require("tables").codeForOperator;
-    var operatorForCode = require("tables").operatorForCode;
-    var unaryOperatorFromString = require("tables").unaryOperatorFromString;
+    var tables = require("tables");
+    var propDefKinds = tables.propDefKinds;
+    var propDefCodes = tables.propDefCodes;
+    var codeForOperator = tables.codeForOperator;
+    var operatorForCode = tables.operatorForCode;
+    var unaryOperatorFromString = tables.unaryOperatorFromString;
 
     /**
      * initialize the compiler for a new compilation
@@ -28829,9 +29154,10 @@ define("asm-compiler", function (require, exports) {
      *
      * @param stackSize
      */
-    function init(stackSize) {
-        POOL = [];
-        MEMORY = new ArrayBuffer(stackSize);
+    function init(stackSize, poolSize) {
+        POOL = Array(poolSize||10000);
+        pp = 0;
+        MEMORY = new ArrayBuffer(stackSize||1024*1024);
         HEAP8 = new Int8Array(MEMORY);
         HEAPU8 = new Uint8Array(MEMORY);
         HEAP16 = new Int16Array(MEMORY);
@@ -28840,6 +29166,7 @@ define("asm-compiler", function (require, exports) {
         HEAPU32 = new Uint32Array(MEMORY);
         HEAPF32 = new Float32Array(MEMORY);
         HEAPF64 = new Float64Array(MEMORY);
+        STACKBASE = 0;
         STACKSIZE = stackSize;
         STACKTOP = 0;
     }
@@ -28851,6 +29178,7 @@ define("asm-compiler", function (require, exports) {
     function get() {
         return {
             POOL: POOL,
+            pp: pp,
             MEMORY: MEMORY,
             HEAP8: HEAP8,
             HEAPU8: HEAPU8,
@@ -28979,7 +29307,6 @@ define("asm-compiler", function (require, exports) {
         STACKTOP += 4;
         //console.log("compiled boolean to " + ptr);
         return ptr;
-
     }
     /**
      * I really compile the node.expression
@@ -29012,7 +29339,6 @@ define("asm-compiler", function (require, exports) {
     function sequenceExpression(node) {
         var ptr = STACKTOP >> 2;
         var len = node.sequence.length
-
         HEAP32[ptr] = SEQEXPR;
         HEAP32[ptr+1] = len|0;
         STACKTOP += 8 + (len << 2);
@@ -29026,49 +29352,41 @@ define("asm-compiler", function (require, exports) {
      */
     function assignmentExpression(node) {
         var ptr = STACKTOP >> 2;
-        STACKTOP += 28;
+        STACKTOP += 20;
         HEAP32[ptr] = ASSIGNEXPR;
         HEAP32[ptr+1] = compile(node.left);
-        HEAP32[ptr+2] = LOAD1;
-        HEAP32[ptr+3] = compile(node.right);
-        HEAP32[ptr+4] = LOAD2;
-        HEAP32[ptr+5] = ASSIGN;
-        HEAP32[ptr+6] = codeForOperator[node.operator];
+        HEAP32[ptr+2] = compile(node.right);
+        HEAP32[ptr+3] = ASSIGN;
+        HEAP32[ptr+4] = codeForOperator[node.operator];
         //console.log("compiled assign expr to " + ptr);
         return ptr;
     }
 
     function unaryExpression(node) {
         var ptr = STACKTOP >> 2;
+        STACKTOP += 12;
         if (node.prefix)
         HEAP32[ptr] = UNARYEXPR;
         HEAP32[ptr+1] = compile(node.argument);
-        HEAP32[ptr+2] = LOAD1;
-        if (node.prefix) HEAP32[ptr+3] = UNARYOP;
-        else HEAP32[ptr+3] = POSTFIXOP;
-        HEAP32[ptr+4] = unaryOperatorFromString[node.operator];
+        if (node.prefix) HEAP32[ptr+2] = UNARYOP;
+        else HEAP32[ptr+2] = POSTFIXOP;
+        HEAP32[ptr+2] = unaryOperatorFromString[node.operator];
         return ptr;
     }
-
-
-
     /**
      *
      */
     function binaryExpression(node) {
         var ptr = STACKTOP >> 2;
-        STACKTOP += 28;
+        STACKTOP += 20;
         HEAP32[ptr] = BINEXPR;
         HEAP32[ptr+1] = compile(node.left);
-        HEAP32[ptr+2] = LOAD1;
-        HEAP32[ptr+3] = compile(node.right);
-        HEAP32[ptr+4] = LOAD2;
-        HEAP32[ptr+5] = BINOP;
-        HEAP32[ptr+6] = codeForOperator[node.operator];
+        HEAP32[ptr+2] = compile(node.right);
+        HEAP32[ptr+3] = BINOP;
+        HEAP32[ptr+4] = codeForOperator[node.operator];
         //console.log("compiled binary expr to " + ptr);
         return ptr;
     }
-
     /**
      *
      * @param node
@@ -29076,30 +29394,25 @@ define("asm-compiler", function (require, exports) {
      */
     function callExpression(node) {
         var ptr = STACKTOP >> 2;
-        STACKTOP += 24;
+        STACKTOP += 16;
         HEAP32[ptr] = CALLEXPR;
         HEAP32[ptr+1] = compile(node.callee);
-        HEAP32[ptr+2] = LOAD1;
-        HEAP32[ptr+3] = compile(node.arguments);
-        HEAP32[ptr+4] = LOAD2;
-        HEAP32[ptr+5] = CALL;
+        HEAP32[ptr+2] = compile(node.arguments);
+        HEAP32[ptr+3] = CALL;
         //console.log("compiled call expr to " + ptr);
         return ptr;
     }
-
     /**
      *
      * @param node
      */
     function newExpression(node) {
         var ptr = STACKTOP >> 2;
-        STACKTOP += 24;
+        STACKTOP += 16;
         HEAP32[ptr] = NEWEXPR;
         HEAP32[ptr+1] = compile(node.callee);
-        HEAP32[ptr+2] = LOAD1;
-        HEAP32[ptr+3] = compile(node.arguments);
-        HEAP32[ptr+4] = LOAD2;
-        HEAP32[ptr+5] = CONSTRUCT;
+        HEAP32[ptr+2] = compile(node.arguments);
+        HEAP32[ptr+3] = CONSTRUCT;
         //console.log("compiled new expr to " + ptr);
         return ptr;
     }
@@ -29129,8 +29442,65 @@ define("asm-compiler", function (require, exports) {
     }
 
     function functionDeclaration(node) {
-
+        var poolIndex = POOL.push(node);
+        var ptr = STACKTOP;
+        STACKTOP += 8;
+        HEAP32[ptr] = FUNCDECL;
+        HEAP32[ptr+1] = poolIndex;
+        return ptr;
     }
+
+    function variableDeclaration(node) {
+        var poolIndex = POOL.push(node);
+        var ptr = STACKTOP;
+        STACKTOP += 8;
+        HEAP32[ptr] = VARDECL;
+        HEAP32[ptr+1] = poolIndex;
+        return ptr;
+    }
+
+    function propertyDefinition(node) {
+        var ptr = STACKTOP >> 2;
+        var keyIndex = POOL.push(node.key);
+        STACKTOP += 16;
+        HEAP32[ptr] = PROPDEF;
+        HEAP32[ptr+1] = propDefKinds[node.kind];
+        HEAP32[ptr+2] = keyIndex;
+        HEAP32[ptr+3] = compile(node.value);
+        return ptr;
+    }
+
+    function objectExpression(node) {
+        var ptr = STACKTOP >> 2;
+        var len = node.elements.length;
+        STACKTOP += 8 + (len<<2);
+        HEAP32[ptr] = OBJECTEXPR;
+        HEAP32[ptr+1] = len;
+        for (var i = 0; i < len; i++) HEAP32[ptr+1+i] = compile(node.properties[i]);
+        return ptr;
+    }
+
+    function arrayExpression(node) {
+        var ptr = STACKTOP >> 2;
+        var len = node.elements.length;
+        STACKTOP += 8 + (len<<2);
+        HEAP32[ptr] = ARRAYEXPR;
+        HEAP32[ptr+1] = len;
+        for (var i = 0; i < len; i++) HEAP32[ptr+1+i] = compile(node.elements[i]);
+        return ptr;
+    }
+
+    function elision(ast) {
+        var ptr = STACKTOP >> 2;
+        var width = node.width;
+        STACKTOP+=8;
+        HEAP32[ptr] = ELISION;
+        HEAP32[ptr+1] = width;
+        return ptr;
+    }
+
+
+
 
     function returnStatement(node) {
         var ptr = STACKTOP >> 2;
@@ -29178,13 +29548,30 @@ define("asm-compiler", function (require, exports) {
         var len = node.body.length;
         var body = node.body;
         var ptr = STACKTOP >> 2;
-        STACKTOP += 16+(len<<2);
+        STACKTOP += 20+(len<<2);
         HEAP32[ptr] = WHILESTMT;
         HEAP32[ptr+1] = compile(node.test);
         HEAP32[ptr+2] = WHILEBODY;
         HEAP32[ptr+3] = len;
         for (var i = 0, j = len; i < j; i++) HEAP32[ptr+4+i] = compile(body[i]);
         HEAP32[ptr+4+len] = ptr;
+        return ptr;
+    }
+
+    function doWhileStatement(node) {
+        var len = node.body.length;
+        var body = node.body;
+        var ptr = STACKTOP >> 2;
+        STACKTOP += 20+(len<<2);
+
+        HEAP32[ptr] = DOWHILESTMT;
+        HEAP32[ptr+1] = len;
+        for (var i = 0, j = len; i < j; i++) HEAP32[ptr+2+i] = compile(body[i]);
+        HEAP32[ptr+2+len] = compile(node.test);
+
+        var ptr2 = ptr+2+len;
+        HEAP32[ptr2] = DOWHILECOND;
+        HEAP32[ptr2+1] = ptr;
         return ptr;
     }
 
@@ -29216,6 +29603,15 @@ define("asm-compiler", function (require, exports) {
      * @param ast
      * @returns {number}
      */
+    function switchStatement(node) {}
+    function switchCase(node) {}
+    function defaultClause(node) {}
+
+    function tryStatement(node) {}
+    function catchClause(node) {}
+    function finally_(node) {}
+
+
     function compile(ast) {
         if (!ast) return -1;
         switch (ast.type) {
@@ -29235,6 +29631,27 @@ define("asm-compiler", function (require, exports) {
             case "IfStatement":             return ifStatement(ast);
             case "BlockStatement":          return blockStatement(ast);
             case "WhileStatement":          return whileStatement(ast);
+            case "DoWhileStatement":        return doWhileStatement(ast);
+            case "FunctionDeclaration":     return functionDeclaration(ast);
+            case "VariableDeclaration":     return variableDeclaration(ast);
+            case "ObjectExpression":        return objectExpression(ast);
+            case "PropertyDefinition":      return propertyDefinition(ast);
+            case "ArrayExpression":         return arrayExpression(ast);
+            case "Elision":                 return elision(ast);
+
+                /*
+
+                case "SwitchStatement": return switchStatement(ast);
+                case "SwitchCase": return switchCase(ast);
+                case "DefaultCase": return defaultCase
+
+            case "TryStatement":            return tryStatement(ast);
+            case "CatchClause":             return catchClause(ast);
+            case "Finally":                 return finally_(ast);
+
+
+
+                 */
             default:
                 return ERROR;
         }
@@ -29282,9 +29699,11 @@ define("vm", function (require, exports) {
 
     var compiler = require("asm-compiler");
 
-    var codeForOperator = require("tables").codeForOperator;
-    var operatorForCode = require("tables").operatorForCode;
-    var unaryOperatorFromCode = require("tables").unaryOperatorFromCode;
+    var tables = require("tables");
+    var codeForOperator = tables.codeForOperator;
+    var operatorForCode = tables.operatorForCode;
+    var unaryOperatorFromCode = tables.unaryOperatorFromCode;
+    var propDefCodes = tables.propDefCodes;
 
     /**
      * intl functions to translate messages from the beginning on
@@ -29299,6 +29718,7 @@ define("vm", function (require, exports) {
      * this is just the bytecode memory
      */
     var POOL;
+    var pp;
     var MEMORY;
     var HEAP8;
     var HEAPU8;
@@ -29308,72 +29728,19 @@ define("vm", function (require, exports) {
     var HEAPU32;
     var HEAPF32;
     var HEAPF64;
+    var STACKBASE;
     var STACKTOP;
     var STACKSIZE;
 
-    /*
-        before i forget
-     */
-
     var operandStack = new Array(1000);
-    var oc = -1;
-    function pushOp() {
-        operandStack[++oc] = r0;
-    }
-    function pop1Op() {
-        r1 = operandStack[oc--];
-    }
-    function pop2Op() {
-        // r2 is evaled first, so popped of last
-        r1 = operandStack[oc--];
-        r2 = operandStack[oc--];
-    }
+    var sp = -1;
 
     /**
-     * registers
+     * global registers
      */
-
     var r0, r1, r2, r3, r4, r5, r6, r7, r8, r9;
-    var r10, r11, r12, r13, r14, r15, r16, r17, r18, r19;
-
-
-    /*
-        saving registers
-        before using the operand stack
-        i had to save the registers
-
-        dunno if it´s needed later
-     */
-    var r1s = [];
-    var r2s = [];
-
-    function saveR1() {
-        r1s.push(r1);
-    }
-    function restoreR1() {
-        r1 = r1s.pop();
-    }
-    function saveR2() {
-        r2s.push(r2);
-    }
-    function restoreR2() {
-        r2 = r2s.pop();
-    }
-    function r0r1() {
-        r1 = r0;
-    }
-    function r0r2() {
-        r2 = r0;
-    }
 
     /**
-     * the bytecodes,
-     *
-     * What i figured out, you can see it at repeating blocks
-     * The initial "...EXPR" int code can be removed.
-     * In better VMs you see already that the code has been removed
-     *
-     *
      * @type {number}
      */
     var PRG = 0x05;
@@ -29393,6 +29760,7 @@ define("vm", function (require, exports) {
     var UNARYEXPR = 0x36;
     var UNARYOP = 0x37;
     var POSTFIXOP = 0x38;
+    var VARDECL = 0x40;
     var IFEXPR = 0x60;
     var IFOP = 0x61;
     var WHILESTMT = 0x63;
@@ -29410,6 +29778,15 @@ define("vm", function (require, exports) {
     var CALL = 0xC1;
     var NEWEXPR = 0xC2;
     var CONSTRUCT = 0xC3;
+    var FUNCDECL = 0xC4;
+
+    var ARRAYEXPR = 0xD1;
+    var ARRAYINIT = 0xD2;
+    var OBJECTEXPR = 0xD4;
+    var PROPDEF = 0xD5;
+    var OBJECTINIT = 0xD6;
+
+
     var RET = 0xD0;
     var ERROR = 0xFE;
     var HALT = 0xFF;
@@ -29444,118 +29821,171 @@ define("vm", function (require, exports) {
     var EvaluateCall = EvaluateCall;
     var GetValue = ecma.GetValue;
     function getReference(poolIndex) {
-        r0 = GetIdentifierReference(getLexEnv(), POOL[poolIndex], strict);
+        var $0 = GetIdentifierReference(getLexEnv(), POOL[poolIndex], strict);
+        operandStack[++sp] = $0;
     }
-    function getTrue() {
-        r0 = true;
+    function evaluateTrue() {
+        var $0 = true;
+        operandStack[++sp] = $0;
     }
-    function getFalse() {
-        r0 = false;
+    function evaluateFalse() {
+        var $0 = false;
+        operandStack[++sp] = $0;
     }
     function getFromPool(index) {
-        r0 = POOL[index];
+        var $0 = POOL[index];
+        operandStack[++sp] = $0;
     }
     function getNumberFromPool(index) {
-        r0 = +POOL[index];
+        var $0 = +POOL[index];
+        operandStack[++sp] = $0;
     }
     function getStringFromPool(index) {
-        r0 = ""+POOL[index];
+        var $0 = ""+POOL[index];
+        operandStack[++sp] = $0;
     }
-    function getBinaryResult(operator) {
-        r1 = operandStack[oc--];
-        r2 = operandStack[oc--];
-        r1 = GetValue(r1);
-        r2 = GetValue(r2);
-        if (isAbrupt(r1=ifAbrupt(r1))) r0 = r1;
-        else if (isAbrupt(r2=ifAbrupt(r2))) r0 = r2;
-        else r0 = applyBinOp(operatorForCode[operator], r1, r2);
+    function evaluateBinary(operator) {
+        var $0,$1,$2;
+        $2 = operandStack[sp--];
+        $1 = operandStack[sp--];
+        $1 = GetValue($1);
+        $2 = GetValue($2);
+        if (isAbrupt($1=ifAbrupt($1))) $0 = $1;
+        else if (isAbrupt($2=ifAbrupt($2))) $0 = $2;
+        else $0 = applyBinOp(operatorForCode[operator], $1, $2);
+        operandStack[++sp] = $0;
     }
-    function getAssignmentResult(operator) {
-        r1 = operandStack[oc--];
-        r2 = operandStack[oc--];
-        if (isAbrupt(r1=ifAbrupt(r1))) r0 = r1;
-        else if (isAbrupt(r2=ifAbrupt(r2))) r0 = r2;
-        else r0 = applyAssignmentBinOp(operatorForCode[operator], r1, r2);
+    function evaluateAssignment(operator) {
+        var $0,$1,$2;
+        $2 = operandStack[sp--];
+        $1 = operandStack[sp--];
+        if (isAbrupt($1=ifAbrupt($1))) $0 = $1;
+        else if (isAbrupt($2=ifAbrupt($2))) $0 = $2;
+        else $0 = applyAssignmentBinOp(operatorForCode[operator], $1, $2);
+        operandStack[++sp] = $0;
     }
-    function getCallResult() {
-        r1 = operandStack[oc--];
-        r2 = operandStack[oc--];
-        if (isAbrupt(r1=ifAbrupt(r1))) r0 = r1;
-        else if (isAbrupt(r2=ifAbrupt(r2))) r0 = r2;
-        else r0 = EvaluateCall(r1, r2, strict);
+    function evaluateCall() {
+        var $0,$1,$2;
+        $2 = operandStack[sp--];
+        $1 = operandStack[sp--];
+        if (isAbrupt($1=ifAbrupt($1))) $0 = $1;
+        else if (isAbrupt($2=ifAbrupt($2))) $0 = $2;
+        else $0 = EvaluateCall($1, $2, strict);
+        operandStack[++sp] = $0;
     }
-    function getConstructResult() {
-        r2 = operandStack[oc--];
-        r1 = operandStack[oc--];
-        if (isAbrupt(r1=ifAbrupt(r1))) r0 = r1;
-        else if (isAbrupt(r2=ifAbrupt(r2))) r0 = r2;
-        else r0 = OrdinaryConstruct(r1, r2);
+    function evaluateConstruct() {
+        var $0,$1,$2;
+        $2 = operandStack[sp--];
+        $1 = operandStack[sp--];
+        if (isAbrupt($1=ifAbrupt($1))) $0 = $1;
+        else if (isAbrupt($2=ifAbrupt($2))) $0 = $2;
+        else $0 = OrdinaryConstruct($1, $2);
+        operandStack[++sp] = $0;
     }
-    function getUnaryResult(operator) {
-        r1 = operandStack[oc--];
-        if (isAbrupt(r1=ifAbrupt(r1))) r0 = r1;
-        else r0 = applyUnaryOp(unaryOperatorFromCode[operator], true, r1);
+    function evaluateUnary(operator) {
+        var $0;
+        var $1 = operandStack[sp--];
+        if (isAbrupt($1=ifAbrupt($1))) $0 = $1;
+        else $0 = applyUnaryOp(unaryOperatorFromCode[operator], true, $1);
+        operandStack[++sp] = $0;
     }
-    function getPostfixResult(operator) {
-        r1 = operandStack[oc--];
-        if (isAbrupt(r1=ifAbrupt(r1))) r0 = r1;
-        else r0 = applyUnaryOp(unaryOperatorFromCode[operator], false, r1);
+    function evaluatePostfix(operator) {
+        var $0, $1;
+        $1 = operandStack[sp--];
+        if (isAbrupt(r1=ifAbrupt(r1))) $0 = $1;
+        else $0 = applyUnaryOp(unaryOperatorFromCode[operator], false, $1);
+        operandStack[++sp] = $0;
     }
-    function getString() {
-        r0 = String.fromCharCode.apply(undefined, r1);
+    function evaluateString() {
+        var $1 = operandStack[sp--];
+        var $0 = String.fromCharCode.apply(undefined, $1);
+        operandStack[++sp] = $0;
     }
+
     /**
-     *
-     */
-    var strict = false;     // strictMode
-    /**
-     * stack - contains the ptr to the next instruction
-     *
+     * stack - contains the ip to the next instruction
      * should grow each statement list, and shrink each instruction
      * the program should halt (or run nextTask) if the stack is empty.
      */
-    var stackBuffer, stack, sp;
+    var stackBuffer, stack, pc;
     function unknownInstruction(code) {
-        r0 = newTypeError(format("UNKNOWN_INSTRUCTION_S", code));
+        var $0 = newTypeError(format("UNKNOWN_INSTRUCTION_S", code));
+        operandStack[++sp] = $0;
     }
     function unknownError() {
-        "use strict";
-        r0 = newTypeError(format("UNKNOWN_ERROR"))
+        var $0 = newTypeError(format("UNKNOWN_ERROR"));
+        operandStack[++sp] = $0;
     }
-    /*
-        this thing reads, loads the stack up,
-        continues.
-        the rule is to assign to stack[sp++]
-        and to break; for the sp = sp - 1; at the end
-        that we can get the next ptr from stack[sp];
-        this loops through the whole code
-        the stack will be filled and worked down
 
-        the good is, the same is what i will
-        do with runtime.js that i can bring a
-        sophisticated solution for the generator.
-        And with the same manner i also reduce
-        the too large call stack by a lot. I will
-        call methods, but not so deep again, then.
-     */
     function main() {
+        var $0, $1,$2,$3,$4;
         "use strict";
+
+        /*
+            the external functions will be as expensive as calling
+            a WhiteSpace()||LineTerminator()||Comment()||Expression()||
+         */
+
         do {
-            var ptr = stack[sp];        // 1. ptr from stack (running program)
-            var code = HEAP32[ptr];     // 2. start byte code from heap[ptr] (compiled code)
+            var ip = stack[pc];
+            var code = HEAP32[ip];
             switch (code) {
-                /*
-                    ptr+1 strict
-                    ptr+2 len
-                    ptr+2+1+len ptrs
-                 */
                 case PRG:
-                    //console.log("PRG")
-                    strict = HEAP32[ptr + 1];
-                    r1 = ptr + 3;             // -> first instruction
-                    r3 = HEAP32[ptr + 2];     // number of instructions
-                    r2 = r1 + r3 - 1;         // -> last instruction
-                    for (; r2 >= r1; r2--) stack[sp++] = HEAP32[r2];
+                    strict = HEAP32[ip + 1];
+                    $1 = ip + 3;                    // first
+                    $3 = HEAP32[ip + 2];            // len
+                    $2 = $1 + $3 - 1;               // last
+                    for (; $2 >= $1; $2--) stack[pc++] = HEAP32[$2];
+                    break;
+            /**
+             * code,len,elems
+             */
+                case BLOCKSTMT:
+                case SEQEXPR:
+                    $1 = ip + 2;
+                    $3 = HEAP32[ip + 1];
+                    $2 = $1 + $3 - 1;
+                    for (; $2 >= $1; $2--) stack[pc++] = HEAP32[$2];
+                    break;
+                /*
+
+                */
+                case IFEXPR:
+                    stack[pc++] = ip+2; // IFOP (compares r0 to true)
+                    stack[pc++] = HEAP32[ip+1]; // eval test
+                    break;
+                case IFOP:
+                    if (!!r0) stack[pc++] = HEAP32[ip+1];
+                    else stack[pc++] = HEAP32[ip+2];
+                    break;
+                /**
+                 * expression statement
+                 * and parenthesized expression
+                 */
+                case EXPRSTMT:
+                case PARENEXPR:
+                    stack[pc++] = HEAP32[ip+1];
+                    break;
+                /*
+                 * from the constant pool
+                 */
+                case STRCONST:
+                    $1 = HEAP32[ip + 1]
+                    getStringFromPool($1)
+                    break;
+                case NUMCONST:
+                    $1 = HEAP32[ip + 1]
+                    getNumberFromPool($1);
+                    break;
+                case IDCONST:
+                    $1 = HEAP32[ip + 1]
+                    getReference($1); // uses pool outside of the block
+                    break;
+                case TRUEBOOL:
+                    evaluateTrue();
+                    break;
+                case FALSEBOOL:
+                    evaluateFalse();
                     break;
             /**
              * str and num
@@ -29563,168 +29993,106 @@ define("vm", function (require, exports) {
              *
              */
                 case STR:
-                    r2 = HEAP32[ptr+1];
-                    r1 = HEAPU16.subarray(((ptr+2)<<1), (((ptr+2)<<1)+r2));
-                    getString();
+                    $2 = HEAP32[ip+1];
+                    $1 = HEAPU16.subarray(((ip+2)<<1), (((ip+2)<<1)+$2));
+                    operandStack[++sp] = $1;
+                    evaluateString();
                     break;
                 case NUM:
-                    r0 = HEAPF64[(ptr+1)>>1];
+                    $0 = HEAPF64[(ip+1)>>1];
+                    operandStack[++sp] = $0; // may not be in here.
+                    // $0 can be argument? is numeric
                     break;
+
             /**
-             *  sequence expressions
-             *  are , separated
-             *
-             *  saved as
-             *  [0] seqexpr
-             *  [1] len
-             *  [2..1+len] expr ptrs
-             */
-                case BLOCKSTMT:
-                case SEQEXPR:
-                    r1 = ptr + 2;
-                    r3 = HEAP32[ptr + 1];
-                    r2 = r1 + r3 - 1;
-                    for (; r2 >= r1; r2--) stack[sp++] = HEAP32[r2]; 
-                    break;
-                /*
-                */
-                case IFEXPR:
-                    stack[sp++] = ptr+2; // IFOP (compares r0 to true)
-                    stack[sp++] = HEAP32[ptr+1]; // eval test
-                    break;
-                case IFOP:
-                    if (!!r0) stack[sp++] = HEAP32[ptr+1];
-                    else stack[sp++] = HEAP32[ptr+2];
-                    break;
-                /**
-                 * expression statement
-                 * and parenthesized expression
-                 * i could skip this code
-                 * but i didn´t
-                 */
-                case EXPRSTMT:
-                case PARENEXPR:
-                    //console.log("EXPR " + code);
-                    stack[sp++] = HEAP32[ptr+1];
-                    break;
-                /*
-                 * from the constant pool
-                 */
-                case STRCONST:
-                    //console.log("STRCONST");
-                    getStringFromPool(HEAP32[ptr + 1])
-                    break;
-                case NUMCONST:
-                    //console.log("NUMCONST");
-                    getNumberFromPool(HEAP32[ptr + 1]);
-                    break;
-                case IDCONST:
-                    //console.log("IDCONST")
-                    getReference(HEAP32[ptr + 1]); // uses pool outside of the block
-                    break;
-                case TRUEBOOL:
-                    //console.log("TRUEBOOL");
-                    //getTrue();
-                    r0 = true;
-                    break;
-                case FALSEBOOL:
-                    //console.log("FALSEBOOL");
-                    //getFalse();
-                    r0 = false;
-                    break;
-            /**
-             *
-             * too much code
-             * (transfered r0 to r1
-             * or r0 to r2)
-             * saved Register R1 or R2 with saveR?() before
-             * (i see there are multiple ways to do such a machine)
-             *
-             * now it pushes onto the operand stack
-             *
-             * maybe these bytes are faster than the
-             * opstack array
-             *
-             * but these codes add 2 instructions each target node
-             */
-                case LOAD1:
-                    pushOp();       // now it´s no longer a r0->r1, now it pushes r0 onto the operandStack[++oc] = r0
-                    break;
-                case LOAD2:
-                    pushOp();       // can be removed by assuring the other operation does the push onto the opstack
-                                    // when the result is calculated, like in school already thaught since decades.
-                    break;
-            /**
-             *  binary expressions
-             *  assignment,
-             *  call
              *  have the same order
               */
                 case BINEXPR:
                 case ASSIGNEXPR:
                 case NEWEXPR:
                 case CALLEXPR:
-                    //console.log("BIN EXPR "+code);
-                    stack[sp++] = ptr+5; // 5. will be executed last
-                    stack[sp++] = ptr+4; // 4. LOAD2 (arguments from r0 -> r2)      <---- can be removed
-                    stack[sp++] = HEAP32[ptr+3]; // 3. second: arguments to r0
-                    stack[sp++] = ptr+2; // 2. LOAD1 (callee from r0 -> r2)             <---- can be removed
-                    stack[sp++] = HEAP32[ptr+1]; // 1. first statement: callee to r0
+                    stack[pc++] = ip+3;         // call
+                    stack[pc++] = HEAP32[ip+2]; // args
+                    stack[pc++] = HEAP32[ip+1]; // callee
                     break;
                 case BINOP:
-                    // apply to r1 and r2
-                    // which have been prepared with
-                    // they come from the operand stack
-                    // but that has to be written a little cleaner
-                    // just remember
-                    getBinaryResult(HEAP32[ptr+1]); // ptr+1 == operator
+                    $1 = HEAP32[ip+1]
+                    evaluateBinary($1);
                     break;
                 case ASSIGN:
-                    //console.log("ASSIGN")
-                    getAssignmentResult(HEAP32[ptr+1]); // ptr+1 == operator
+                    $1 = HEAP32[ip+1]
+                    evaluateAssignment($1);
                     break;
                 case CALL:
-                    //console.log("CALL")
-                    getCallResult();
+                    evaluateCall();
                     break;
                 case CONSTRUCT:
-                    //console.log("CONSTRUCT")
-                    getConstructResult();
+                    evaluateConstruct();
                     break;
             /**
              * unary expression code blocks
              */
                 case UNARYEXPR:
-                    //console.log("UNARY EXPR")
-                    stack[sp++] = ptr+3;         // UNARYOP/POSTFIXOP (reads from r1, see getUnary/PostfixResult, should change)
-                    stack[sp++] = ptr+2;         // LOAD 1 <--- not needed (remove)
-                    stack[sp++] = HEAP32[ptr+1]; // calulate this .argument
+                    stack[pc++] = ip+2;         // prefix/postifx
+                    stack[pc++] = HEAP32[ip+1]; // .arg
                     break;
                 case UNARYOP:
-                    getUnaryResult(HEAP32[ptr+1]);
+                    $1 = HEAP32[ip+1]; // op
+                    evaluateUnary($1);
                     break;
                 case POSTFIXOP:
-                    getPostfixResult(HEAP32[ptr+1]);
+                    $1 = HEAP32[ip+1]; // op
+                    evaluatePostfix($1);
                     break;
             /**
              * while
              */
                 case WHILESTMT:
-                    stack[sp++] = ptr+2;         // 2. goto whilebody
-                    stack[sp++] = HEAP32[ptr+1]; // 1. condition
+                    stack[pc++] = ip+2;         // 2. goto whilebody
+                    stack[pc++] = HEAP32[ip+1]; // 1. condition
                     break;
                 case WHILEBODY:
-                    if (r0) {
-                        r1 = ptr + 2; // first
-                        r3 = HEAP32[ptr + 1]; // len
-                        r2 = r1 + r3 - 1; // last
-                        stack[sp++] = r2+1; // r2+1. back to whileexpr
-                        for (; r2 >= r1; r2--) stack[sp++] = HEAP32[r2];
+                    $0 = !!operandStack[sp--]; // may not be in here. operandStack is DYNAMIC TYPED.
+                    if ($0) {
+                        $1 = ip + 2;            // first
+                        $3 = HEAP32[ip + 1];    // len
+                        $2 = $1 + $3 - 1;       // last
+                        stack[pc++] = $2+1;     // wexpr
+                        for (; $2 >= $1; $2--) stack[pc++] = HEAP32[$2];
+                    }
+                    break;
+                case DOWHILESTMT:
+                        $1 = ip + 2;            // first
+                        $3 = HEAP32[ip + 1];    // len
+                        $2 = $1 + $3 - 1;       // last
+                        stack[pc++] = $2+1;     // dowhilebody
+                        for (; $2 >= $1; $2--) stack[pc++] = HEAP32[$2];
+                    break;
+                case DOWHILECOND:
+                    $0 = !!operandStack[sp--]; // this may not happen in here
+                    if ($0) {
+                        stack[pc++] = HEAP32[ip+1];
                     }
                 break;
+
+
+                case ARRAYEXPR:
+                case ARRAYINIT:
+
+
+                case OBJECTEXPR:
+                    break;
+                case PROPDEF:
+                    break;
+                case OBJECTINIT:
+                    break;
+                case FUNCDECL:
+                    break;
+                case VARDECL:
+                    break;
+
             /**
-             *
-             * first crap
+             * first
              */
                 case HALT:
                     return;
@@ -29735,8 +30103,8 @@ define("vm", function (require, exports) {
                     unknownInstruction(code);
                     return;
             }
-            sp = sp - 1;
-        } while (sp >= 0);
+            pc = pc - 1;
+        } while (pc >= 0);
     }
 
     /**
@@ -29751,6 +30119,7 @@ define("vm", function (require, exports) {
         try {ast = parse(src)} catch (ex) {return newSyntaxError( ex.message)}
         var unit = compiler.compileUnit(ast);
         POOL = unit.POOL;
+        pp = unit.pp;
         MEMORY = unit.MEMORY;
         HEAP8 = unit.HEAP8;
         HEAPU8 = unit.HEAPU8;
@@ -29760,20 +30129,22 @@ define("vm", function (require, exports) {
         HEAP32 = unit.HEAP32;
         HEAPF32 = unit.HEAPF32;
         HEAPF64 = unit.HEAPF64;
+        STACKBASE = unit.STACKBASE;
         STACKTOP = unit.STACKTOP;
         STACKSIZE = unit.STACKSIZE;
         r0 = undefined;
         stackBuffer = new ArrayBuffer(4096 * 16);
         stack = new Int32Array(stackBuffer);
-        sp = 0;
-        stack[0] = 0; // ptr to first bytecode at HEAP32[stack[0]]
+        pc = 0;
+        stack[pc] = STACKBASE; // ip to first bytecode at HEAP32[stack[0]]
         realm = CreateRealm(); // this costs starting the thing a lot of ms to create all objects.
         ecma.saveCodeRealm();
         ecma.setCodeRealm(realm);
         main();
         ecma.restoreCodeRealm();
-        if (isAbrupt(r0=ifAbrupt(r0))) return r0;
-        return NormalCompletion(r0);
+        var $0 = operandStack[sp--];
+        if (isAbrupt($0=ifAbrupt($0))) return $0;
+        return NormalCompletion($0);
     }
     exports.CompileAndRun = CompileAndRun;
 });
