@@ -510,9 +510,6 @@ define("filesystem", function (require, exports) {
 define("languages.de_DE", function (require, exports) {
     "use strict";
 
-
-
-
     exports.REFERENCE_S_IS_UNRESOLVABLE = "Referenz %s ist unauflösbar";
     exports.NOT_A_REFERENCE = "Ist keine Referenz";
     exports.UNRESOLVABLE_REFERENCE = "Unaufloesbare Referenz";
@@ -527,12 +524,25 @@ define("languages.de_DE", function (require, exports) {
     exports.NOT_CALLABLE = "Keine Funktion";
 
 
+    exports.NULL_NOT_COERCIBLE = "null is nicht erzwingbar durch die Testfunktion CheckObjectCoercible";
+    exports.UNDEFINED_NOT_COERCIBLE = "undefined ist nicht erzwingbar durch die Testfunktion CheckObjectCoercible";
+
+    exports.S_ALREADY_INITIALIZED = "%s ist bereits initialisiert.";
+    exports.S_IS_NOT_INITIALIZED = "%s ist nicht richtig initialisiert.";
+
+
+    exports.NO_PARSER_ERROR_S = "Habe keinen Parser für %s";
+
     exports.UNKNOWN_INSTRUCTION_S = "Unbekannte Instruktion: %s";
     exports.UNKNOWN_ERROR         = "Unbekannter Fehler";
 
     // Ranges
     exports.OUT_OF_RANGE = "Nicht im Intervall";
     exports.S_IS_OUT_OF_RANGE_S = "%s ist nicht im Intervall %s";
+
+
+    exports.AVAILABLE_LANGUAGES = "Verfügbare Sprachen";
+    exports.LANGUAGE_NOT_FOUND_S = "Sprache nicht gefunden: %s";
 
     return exports;
 
@@ -571,7 +581,11 @@ define("languages.en_US", function (require, exports) {
     exports.S_IS_NOT_AN_OBJECT = "%s is not an object";
 
     // Slots
+    exports.S_ALREADY_INITIALIZED = "%s is already initialized.";
+    exports.S_IS_NOT_INITIALIZED = "%s is not properly initialized";
+
     exports.S_IS_NO_AVAILABLE_SLOT = "%s is no available slot.";
+    exports.SLOT_NOT_AVAILABLE = "slot is not available";
 
     // Constructor
     exports.S_IS_NO_CONSTRUCTOR = "%s is not a constructor";
@@ -585,10 +599,17 @@ define("languages.en_US", function (require, exports) {
     exports.OUT_OF_RANGE = "Out of range";
     exports.S_IS_OUT_OF_RANGE_S = "%s is out of range %s";
 
+    // CheckObjectCoercible
+    exports.NULL_NOT_COERCIBLE = "null is not coercible by the check function CheckObjectCoercible";
+    exports.UNDEFINED_NOT_COERCIBLE = "undefined is not coercible by the check function CheckObjectCoercible";
 
+    exports.NO_PARSER_ERROR_S = "got no parser for %s";
     // VM.eval
     exports.UNKNOWN_INSTRUCTION_S = "Unknown instruction: %s";
     exports.UNKNOWN_ERROR         = "Unknown Error";
+
+    exports.AVAILABLE_LANGUAGES = "Available Languages";
+    exports.LANGUAGE_NOT_FOUND_S = "Language not found: %s";
 
     return exports;
 });
@@ -653,7 +674,7 @@ define("i18n", function (require, exports) {
         var c1, c2;
         var aCount = 1;
         var str = exports.languages.lang[index];
-        if (str===undefined) return formatStr(exports.NOT_FOUND_ERR, index);
+        if (str===undefined) return format("LANGUAGE_NOT_FOUND_S", index);
         c2 = str[0];
         var out = "";
         for (var i = 1, j = str.length; i < j; i++) {
@@ -714,7 +735,7 @@ define("i18n", function (require, exports) {
     function trans(index) {
         "use strict";
         var s = exports.languages[exports.languages.lang][index];
-        if (s == undefined) return formatStr(exports.NOT_FOUND_ERR, lang);
+        if (s == undefined) return format("LANGUAGE_NOT_FOUND_S", lang);
         return s;
     }
 
@@ -9130,6 +9151,8 @@ SLOTS.INVOKE = "Invoke";
 SLOTS.HASPROPERTY = "HasProperty";
 SLOTS.ISEXTENSIBLE = "IsExtensible";
 SLOTS.INTEGRITY = "Integrity";
+// Arguments
+SLOTS.PARAMETERMAP = "ParameterMap";
 // Functions
 SLOTS.CODE = "Code";
 SLOTS.CALL = "Call";
@@ -9820,8 +9843,8 @@ function GetThisValue(V) {
 function OrdinaryObject(prototype) {
     var O = Object.create(OrdinaryObject.prototype);
     prototype = prototype === undefined ? getIntrinsic("%ObjectPrototype%") || null : prototype;
-    setInternalSlot(O,"Bindings",Object.create(null));
-    setInternalSlot(O,"Symbols",Object.create(null));
+    setInternalSlot(O,SLOTS.BINDINGS,Object.create(null));
+    setInternalSlot(O,SLOTS.SYMBOLS,Object.create(null));
     setInternalSlot(O,SLOTS.PROTOTYPE,prototype || null);
     setInternalSlot(O,SLOTS.EXTENSIBLE, true);
     return O;
@@ -10692,8 +10715,9 @@ function ToObject(V) {
 function CheckObjectCoercible(argument) {
 
     if (argument instanceof CompletionRecord) return CheckObjectCoercible(argument.value);
-    else if (argument === undefined) return newTypeError( "CheckObjectCoercible: undefined is not coercible");
-    else if (argument === null) return newTypeError( "CheckObjectCoercible: null is not coercible");
+    else if (argument === undefined) return newTypeError(format("UNDEFINED_NOT_COERCIBLE"));
+
+    else if (argument === null) return newTypeError(format("NULL_NOT_COERCIBLE"));
 
     var type = Type(argument);
     switch (type) {
@@ -10841,14 +10865,14 @@ exports.AbstractRelationalComparison = AbstractRelationalComparison;
 
 function readPropertyDescriptor(object, name) {
     if (IsSymbol(name)) {
-        return object["Symbols"][name.es5id];
+        return object[SLOTS.SYMBOLS][name.es5id];
     } else {
-        return object["Bindings"][name];
+        return object[SLOTS.BINDINGS][name];
     }
     /*if (IsSymbol(name)) {
-     return getInternalSlot(getInternalSlot(object, "Symbols"), getInternalSlot(name,SLOTS.ES5ID));
+     return getInternalSlot(getInternalSlot(object, SLOTS.SYMBOLS), getInternalSlot(name,SLOTS.ES5ID));
      } else {
-     return getInternalSlot(getInternalSlot(object,"Bindings"),name);
+     return getInternalSlot(getInternalSlot(object,SLOTS.BINDINGS),name);
      }*/
 }
 
@@ -10862,15 +10886,15 @@ function writePropertyDescriptor(object, name, value) {
         // i can not list them if i don´t (Object.getOwnPropertySymbols)
         // (until i can be sure that globalsymbolregistry got them all)
 
-        return object["Symbols"][name.es5id] = value;
+        return object[SLOTS.SYMBOLS][name.es5id] = value;
 
     } else {
-        return object["Bindings"][name] = value;
+        return object[SLOTS.BINDINGS][name] = value;
     }
     /*if (IsSymbol(name)) {
-     return setInternalSlot(getInternalSlot(object, "Symbols"), getInternalSlot(name,SLOTS.ES5ID),  value);
+     return setInternalSlot(getInternalSlot(object, SLOTS.SYMBOLS), getInternalSlot(name,SLOTS.ES5ID),  value);
      } else {
-     return setInternalSlot(getInternalSlot(object,"Bindings"), name, value);
+     return setInternalSlot(getInternalSlot(object,SLOTS.BINDINGS), name, value);
      }*/
 }
 
@@ -11254,7 +11278,7 @@ function GetOwnPropertyKeys(O, type) {
 
 function OwnPropertyKeys(O, type) {
     var keys = [];
-    var bindings = getInternalSlot(O,"Bindings");
+    var bindings = getInternalSlot(O,SLOTS.BINDINGS);
     var key;
     for (key in bindings) {
         keys.push(key);
@@ -11264,7 +11288,7 @@ function OwnPropertyKeys(O, type) {
 
 function OwnPropertyKeysAsList(O) {
     var keys = [];
-    var bindings = getInternalSlot(O, "Bindings");
+    var bindings = getInternalSlot(O, SLOTS.BINDINGS);
     var key;
     for (key in bindings) {
         keys.push(key);
@@ -11278,7 +11302,7 @@ function OwnPropertyKeysAsList(O) {
 
 function OwnPropertySymbols(O) {
     var keys = [];
-    var symbols = getInternalSlot(O, "Symbols");
+    var symbols = getInternalSlot(O, SLOTS.SYMBOLS);
     var key, desc;
     for (key in symbols) {
         if (desc = symbols[key]) {
@@ -11626,8 +11650,8 @@ function PreventExtensions(O) {
 
 function OrdinaryFunction() {
     var F = Object.create(OrdinaryFunction.prototype);
-    setInternalSlot(F, "Bindings", Object.create(null));
-    setInternalSlot(F, "Symbols", Object.create(null));
+    setInternalSlot(F, SLOTS.BINDINGS, Object.create(null));
+    setInternalSlot(F, SLOTS.SYMBOLS, Object.create(null));
     setInternalSlot(F, SLOTS.PROTOTYPE, getIntrinsic("%FunctionPrototype%"));
     setInternalSlot(F, SLOTS.REALM, undefined);
     setInternalSlot(F, SLOTS.EXTENSIBLE, true);
@@ -11646,12 +11670,12 @@ OrdinaryFunction.prototype = {
     },
     Get: function (P, R) {
         var v = OrdinaryObjectGet(this, P, R);
-        if (P === "caller" && IsCallable(v) && getInternalSlot(v, "Strict")) return null;
+        if (P === "caller" && IsCallable(v) && getInternalSlot(v, SLOTS.STRICT)) return null;
         return v;
     },
     GetOwnProperty: function (P) {
         var d = GetOwnProperty(this, P);
-        if (P === "caller" && IsCallable(v) && getInternalSlot(v, "Strict")) d.value = null;
+        if (P === "caller" && IsCallable(v) && getInternalSlot(v, SLOTS.STRICT)) d.value = null;
         return d;
     },
     Call: function () {
@@ -11767,11 +11791,11 @@ function FunctionInitialize(F, kind, paramList, body, scope, strict, homeObject,
     setInternalSlot(F, SLOTS.FORMALPARAMETERS, paramList);
     setInternalSlot(F, SLOTS.CODE, body);
     setInternalSlot(F, SLOTS.ENVIRONMENT, scope);
-    setInternalSlot(F, "Strict", strict);
+    setInternalSlot(F, SLOTS.STRICT, strict);
     setInternalSlot(F, SLOTS.REALM, getRealm());
     if (homeObject) setInternalSlot(F, SLOTS.HOMEOBJECT, homeObject);
     if (methodName) setInternalSlot(F, SLOTS.METHODNAME, methodName);
-    setInternalSlot(F, "Strict", strict);
+    setInternalSlot(F, SLOTS.STRICT, strict);
     if (kind === "arrow") setInternalSlot(F, "ThisMode", "lexical");
     else if (strict) setInternalSlot(F, "ThisMode", "strict");
     else setInternalSlot(F, "ThisMode", "global");
@@ -11945,7 +11969,7 @@ function CreateBuiltinFunction(realm, steps, len, name, internalSlots) {
     setInternalSlot(F, SLOTS.PROTOTYPE, getIntrinsic("%FunctionPrototype%"));
     setInternalSlot(F, SLOTS.ENVIRONMENT, undefined);
     setInternalSlot(F, SLOTS.NEEDSSUPER, undefined);
-    setInternalSlot(F, "Strict", true);
+    setInternalSlot(F, SLOTS.STRICT, true);
     setInternalSlot(F, SLOTS.REALM, realm);
     AddRestrictedFunctionProperties(F);
     if (typeof len === "string") {
@@ -12006,7 +12030,7 @@ function cloneFunction (func) {
     setInternalSlot(newFunc, "FormalParameters", getInternalSlot(func, "FormalParameterList"));
     setInternalSlot(newFunc, "ThisMode", getInternalSlot(func, "ThisMode"));
     setInternalSlot(newFunc, SLOTS.FUNCTIONKIND, getInternalSlot(func, SLOTS.FUNCTIONKIND));
-    setInternalSlot(newFunc, "Strict", getInternalSlot(func, "Strict"));
+    setInternalSlot(newFunc, SLOTS.STRICT, getInternalSlot(func, SLOTS.STRICT));
     return newFunc;
 }
 
@@ -12020,7 +12044,7 @@ function CloneMethod(func, newHome, newName) {
         if (newName !== undefined) setInternalSlot(newFunc, SLOTS.METHODNAME, newName);
         else setInternalSlot(newFunc, SLOTS.METHODNAME, getInternalSlot(func, SLOTS.METHODNAME));
     }
-    if (getInternalSlot(newFunc, "Strict") === true) {
+    if (getInternalSlot(newFunc, SLOTS.STRICT) === true) {
         var status = AddRestrictedFunctionProperties(newFunc);
         if (isAbrupt(status)) return status;
     }
@@ -12035,7 +12059,7 @@ function RebindSuper(func, newHome) {
     setInternalSlot(nu, SLOTS.ENVIRONMENT, getInternalSlot(func, SLOTS.ENVIRONMENT));
     setInternalSlot(nu, SLOTS.CODE, getInternalSlot(func, SLOTS.CODE));
     setInternalSlot(nu, SLOTS.FORMALPARAMETERS, getInternalSlot(func, SLOTS.FORMALPARAMETERS));
-    setInternalSlot(nu, "Strict", getInternalSlot(func, "Strict"));
+    setInternalSlot(nu, SLOTS.STRICT, getInternalSlot(func, SLOTS.STRICT));
     setInternalSlot(nu, "ThisMode", getInternalSlot(func, "ThisMode"));
     setInternalSlot(nu, SLOTS.METHODNAME, getInternalSlot(func, SLOTS.METHODNAME));
     setInternalSlot(nu, SLOTS.REALM, getInternalSlot(func, SLOTS.REALM));
@@ -12052,8 +12076,8 @@ function RebindSuper(func, newHome) {
 function ArgumentsExoticObject() {
     var O = Object.create(ArgumentsExoticObject.prototype);
 
-    setInternalSlot(O, "Bindings", Object.create(null));
-    setInternalSlot(O, "Symbols", Object.create(null));
+    setInternalSlot(O, SLOTS.BINDINGS, Object.create(null));
+    setInternalSlot(O, SLOTS.SYMBOLS, Object.create(null));
 
     setInternalSlot(O, SLOTS.PROTOTYPE, getIntrinsic("%ArrayPrototype%"));
 
@@ -12061,7 +12085,7 @@ function ArgumentsExoticObject() {
     setInternalSlot(map, "toString", function () {
         return "[object ParameterMap]";
     });
-    setInternalSlot(O, "ParameterMap", map);
+    setInternalSlot(O, SLOTS.PARAMETERMAP, map);
 
     return O;
 }
@@ -12073,12 +12097,12 @@ ArgumentsExoticObject.prototype = {
 
     Get: function (P) {
         var ao = this;
-        var map = getInternalSlot(ao, "ParameterMap");
+        var map = getInternalSlot(ao, SLOTS.PARAMETERMAP);
         var isMapped = map.GetOwnProperty(P);
         if (!isMapped) {
             var v = OrdinaryGetOwnProperty(ao, P);
             if (v !== undefined) v = v.value;
-            if (P === "caller" && (Type(v) === OBJECT && (IsCallable(v) || IsConstructor(v))) && getInternalSlot(v, "Strict")) {
+            if (P === "caller" && (Type(v) === OBJECT && (IsCallable(v) || IsConstructor(v))) && getInternalSlot(v, SLOTS.STRICT)) {
                 return newTypeError( "Arguments.Get: Can not access 'caller' in strict mode");
             }
             return v;
@@ -12091,7 +12115,7 @@ ArgumentsExoticObject.prototype = {
         var ao = this;
         var desc = readPropertyDescriptor(this, P);
         if (desc === undefined) return desc;
-        var map = getInternalSlot(ao, "ParameterMap");
+        var map = getInternalSlot(ao, SLOTS.PARAMETERMAP);
         var isMapped = callInternalSlot(SLOTS.GETOWNPROPERTY, map, P);
         if (isMapped) desc.value = Get(map, P);
         return desc;
@@ -12101,7 +12125,7 @@ ArgumentsExoticObject.prototype = {
     // Muss definitiv einen Bug haben.
     DefineOwnProperty: function (P, Desc) {
         var ao = this;
-        var map = getInternalSlot(ao, "ParameterMap");
+        var map = getInternalSlot(ao, SLOTS.PARAMETERMAP);
         var isMapped = callInternalSlot(SLOTS.GETOWNPROPERTY, map, P);
         var allowed = OrdinaryDefineOwnProperty(ao, P, Desc);
 
@@ -12123,7 +12147,7 @@ ArgumentsExoticObject.prototype = {
         return true;
     },
     Delete: function (P) {
-        var map = getInternalSlot(this, "ParameterMap");
+        var map = getInternalSlot(this, SLOTS.PARAMETERMAP);
         var isMapped = callInternalSlot(SLOTS.GETOWNPROPERTY, map, P);
         var result = Delete(this, P);
         if (isAbrupt(result = ifAbrupt(result))) return result;
@@ -12164,8 +12188,8 @@ function CreateArrayIterator(array, kind) {
 }
 function ArrayExoticObject(proto) {
     var A = Object.create(ArrayExoticObject.prototype);
-    setInternalSlot(A, "Bindings",Object.create(null));
-    setInternalSlot(A, "Symbols", Object.create(null));
+    setInternalSlot(A, SLOTS.BINDINGS,Object.create(null));
+    setInternalSlot(A, SLOTS.SYMBOLS, Object.create(null));
     setInternalSlot(A, SLOTS.EXTENSIBLE, true);
     setInternalSlot(A, SLOTS.PROTOTYPE, proto? proto : ArrayPrototype);
     return A;
@@ -13108,8 +13132,8 @@ function NativeJSObjectWrapper(object) {
     if (object instanceof NativeJSObjectWrapper || object instanceof NativeJSFunctionWrapper) return object;
     var O = Object.create(NativeJSObjectWrapper.prototype);
     setInternalSlot(O, "Wrapped", object);
-    setInternalSlot(O, "Bindings", Object.create(null));        
-    setInternalSlot(O, "Symbols", Object.create(null));
+    setInternalSlot(O, SLOTS.BINDINGS, Object.create(null));
+    setInternalSlot(O, SLOTS.SYMBOLS, Object.create(null));
     setInternalSlot(O, SLOTS.PROTOTYPE, getIntrinsic("%ObjectPrototype%"));
     setInternalSlot(O, SLOTS.EXTENSIBLE, true);
     return O;
@@ -13187,8 +13211,8 @@ function NativeJSFunctionWrapper(func, that) {
     var F = Object.create(NativeJSFunctionWrapper.prototype);
     setInternalSlot(F, "Wrapped", func);
     setInternalSlot(F, "NativeThis", that);
-    setInternalSlot(F, "Bindings", Object.create(null));    
-    setInternalSlot(F, "Symbols", Object.create(null));
+    setInternalSlot(F, SLOTS.BINDINGS, Object.create(null));
+    setInternalSlot(F, SLOTS.SYMBOLS, Object.create(null));
     setInternalSlot(F, SLOTS.PROTOTYPE, getIntrinsic("%FunctionPrototype%"));
     setInternalSlot(F, SLOTS.EXTENSIBLE, true);
     return F;
@@ -13308,8 +13332,8 @@ function thisSymbolValue(value) {
 
 function StringExoticObject() {
     var S = Object.create(StringExoticObject.prototype);
-    setInternalSlot(S, "Bindings", Object.create(null));
-    setInternalSlot(S, "Symbols", Object.create(null));
+    setInternalSlot(S, SLOTS.BINDINGS, Object.create(null));
+    setInternalSlot(S, SLOTS.SYMBOLS, Object.create(null));
     setInternalSlot(S, SLOTS.EXTENSIBLE, true);
     return S;
 }
@@ -13376,7 +13400,7 @@ StringExoticObject.prototype = assign(StringExoticObject.prototype, {
 	var str = getInternalSlot(O, SLOTS.STRINGDATA);
 	var len = str.length;
 	for (var i = 0; i < len; i++) keys.push(ToString(i));
-	var bindings = getInternalSlot(O, "Bindings");
+	var bindings = getInternalSlot(O, SLOTS.BINDINGS);
 	for (var p in bindings) {
 	    var P = +p;
 	    if (ToInteger(P) >= len) keys.push(P);
@@ -13386,7 +13410,7 @@ StringExoticObject.prototype = assign(StringExoticObject.prototype, {
 	    if (P != P)
 	    keys.push(p);	
 	}
-	var symbols = getInternalSlot(O, "Symbols")
+	var symbols = getInternalSlot(O, SLOTS.SYMBOLS)
 	for (p in symbols) {
 	    var s = symbols[p];
 	    if (s && s.symbol) {	// have to add and
@@ -14977,12 +15001,13 @@ exports.float64 = float64;
                 try {var languages = require("i18n").languages;}
                 catch (ex) {return newTypeError( ex.message);}
                 if (argList.length === 0) {
-                    callInternalSlot(SLOTS.CALL, PrintFunction, undefined, ["print(lang)", "available languages:"])
+                    callInternalSlot(SLOTS.CALL, PrintFunction, undefined, [format("AVAILABLE_LANGUAGES")])
                     for (var lang in languages) {
                         if (Object.hasOwnProperty.call(languages, lang)) {
                             callInternalSlot(SLOTS.CALL, PrintFunction, undefined, [lang]);
                         }
                     }
+                    return NormalCompletion(undefined);
                 }
                 var lang = ToString(argList[0]);
                 if (isAbrupt(lang=ifAbrupt(lang))) return lang;
@@ -14993,6 +15018,7 @@ exports.float64 = float64;
         var SetLanguage = createIntrinsicFunction(intrinsics, "setLanguage", 1, "%SetLanguage%")
         setInternalSlot(SetLanguage, SLOTS.CALL, SetLang_Call);
         setInternalSlot(SetLanguage, SLOTS.CONSTRUCT, undefined);
+
         // maybe it´s best on: Reflect.
         // but i get strange feelings to wish to implement the intl api together with es6 and asm.js
 
@@ -15047,8 +15073,8 @@ setInternalSlot(DebugFunction, SLOTS.CALL, function debugfunc (thisArg, argList)
         console.log(toString);
         console.log("{");
 
-        var bindings = getInternalSlot(O, "Bindings");
-        var symbols = getInternalSlot(O, "Symbols");
+        var bindings = getInternalSlot(O, SLOTS.BINDINGS);
+        var symbols = getInternalSlot(O, SLOTS.SYMBOLS);
         var isExtensible = getInternalSlot(O, SLOTS.EXTENSIBLE);
         var proto = GetPrototypeOf(O);
         var prototypeInfo;
@@ -15069,7 +15095,7 @@ setInternalSlot(DebugFunction, SLOTS.CALL, function debugfunc (thisArg, argList)
         Object.keys(symbols).forEach(printer);
 
         if (IsCallable(O)) {
-            var strict = getInternalSlot(O, "Strict");
+            var strict = getInternalSlot(O, SLOTS.STRICT);
             console.log(TAB+"[[Strict]]:" + strict);
 
             var thisMode = getInternalSlot(O, "ThisMode");
@@ -15303,8 +15329,8 @@ var RealmPrototype_stdlib_get = function (thisArg, argList) {
     if (realm === undefined) return newTypeError( "[[Realm]] is undefined?");
     var props = ObjectCreate(getIntrinsic("%ObjectPrototype%"));
 
-    var bindings = getInternalSlot(getGlobalThis(), "Bindings");
-    var symbols = getInternalSlot(getGlobalThis(), "Symbols");
+    var bindings = getInternalSlot(getGlobalThis(), SLOTS.BINDINGS);
+    var symbols = getInternalSlot(getGlobalThis(), SLOTS.SYMBOLS);
 
     function forEachProperty(props, bindings) {
         for (var P in bindings) {
@@ -20472,7 +20498,7 @@ var ReflectObject_createSelfHostingFunction = function(thisArg, argList) {
    var F = OrdinaryFunction();
    setInternalSlot(F, SLOTS.CODE, fn.body);
    setInternalSlot(F, SLOTS.FORMALPARAMETERS, fn.params);
-   setInternalSlot(F, "Strict", !!fn.strict);
+   setInternalSlot(F, SLOTS.STRICT, !!fn.strict);
    setInternalSlot(F, SLOTS.REALM, realmObject);
    return NormalCompletion(F);
 };
@@ -20989,7 +21015,7 @@ DefineOwnProperty(NotifierPrototype, "notify", {
         });
         //if (isAbrupt(status)) return status;
 
-        var bindings = getInternalSlot(changeRecord, "Bindings");
+        var bindings = getInternalSlot(changeRecord, SLOTS.BINDINGS);
         var value;
         for (var N in bindings) {
             if (Object.hasOwnProperty.call(bindings, N)) {
@@ -21046,7 +21072,7 @@ DefineOwnProperty(NotifierPrototype, "performChange", {
             enumerable: true,
             configurable: false
         });
-        var bindings = getInternalSlot(changeRecord, "Bindings");
+        var bindings = getInternalSlot(changeRecord, SLOTS.BINDINGS);
         var value;
         for (var N in bindings) {
             if (Object.hasOwnProperty.call(bindings, N)) {
@@ -23100,7 +23126,6 @@ LazyDefineBuiltinFunction(DataViewPrototype, "setUint16", 2, DataViewPrototype_s
 LazyDefineBuiltinFunction(DataViewPrototype, "setUint32", 2, DataViewPrototype_setUint32);
 LazyDefineBuiltinConstant(DataViewConstructor, $$toStringTag, SLOTS.DATAVIEW);
 
-
 var TypedArrayConstructor_Call = function (thisArg, argList) {
     var array, typedArray, length;
     array = argList[0];
@@ -23297,7 +23322,7 @@ var TypedArrayConstructor_from = function from(thisArg, argList) {
     var C = thisArg;
     var newObj;
     var putStatus;
-    if (!IsConstructor(C)) return newTypeError( "The this value is no constructor function.");
+    if (!IsConstructor(C)) return newTypeError(format("S_IS_NO_CONSTRUCTOR", "the this value"));
     var items = ToObject(source);
     if (isAbrupt(items = ifAbrupt(items))) return items;
     var mapping;
@@ -23306,7 +23331,7 @@ var TypedArrayConstructor_from = function from(thisArg, argList) {
     if (mapfn === undefined) {
         mapping = false;
     } else {
-        if (!IsCallable(mapfn)) return newTypeError( "mapfn is not a callable object");
+        if (!IsCallable(mapfn)) return newTypeError(format("S_IS_NOT_CALLABLE", "mapfn"));
         T = tArg;
         mapping = true;
     }
@@ -23342,7 +23367,7 @@ var TypedArrayConstructor_from = function from(thisArg, argList) {
         }
         return NormalCompletion(newObj);
     }
-    Assert(HasProperty(items, "length"), "items has to be an array like object");
+    Assert(HasProperty(items, "length"), format("EXPECTING_ARRAYLIKE"));
     var lenValue = Get(items, "length");
     len = ToLength(lenValue);
     if (isAbrupt(len = ifAbrupt(len))) return len;
@@ -23366,8 +23391,9 @@ var TypedArrayConstructor_from = function from(thisArg, argList) {
         k = k + 1;
     }
     return NormalCompletion(newObj);
-
 };
+
+
 var TypedArrayConstructor_of = function of(thisArg, argList) {
     var items = CreateArrayFromList(argList);
     var lenValue = Get(items, "length");
@@ -25340,10 +25366,10 @@ define("runtime", function () {
                 vn = d.id.name;
                 if (!declaredVarNames[vn]) {
                     vnDefinable = env.CanDeclareGlobalVar(vn);
-                    debug("Can declare global var: " + vn + ", is " + vnDefinable);
+                    //debug("Can declare global var: " + vn + ", is " + vnDefinable);
                     if (!vnDefinable) return newTypeError( "Instantiate global: can not declare global variable" + vn);
                     declaredVarNames[vn] = d;
-                } else debug(vn + "is already declared");
+                } //else //debug(vn + "is already declared");
 
             } else if (IsBindingPattern[d.type]) { // extra hack or spec update ?
 
@@ -25352,15 +25378,15 @@ define("runtime", function () {
                     vn = boundNamesInPattern[y];
                     if (!declaredVarNames[vn]) {
                         vnDefinable = env.CanDeclareGlobalVar(vn);
-                        debug("Can declare global var: " + vn + ", is " + vnDefinable);
+                        //debug("Can declare global var: " + vn + ", is " + vnDefinable);
                         if (!vnDefinable) return newTypeError( "Instantiate global: can not declare global variable" + vn);
                         declaredVarNames[vn] = d;
-                    } else debug(vn + "is already declared");
+                    } //else //debug(vn + "is already declared");
                 }
             }
         }
         var fo;
-        if (functionsToInitialize.length) debug("Functions to initialize: " + functionsToInitialize.length);
+        // if (functionsToInitialize.length) //debug("Functions to initialize: " + functionsToInitialize.length);
         for (i = 0, j = functionsToInitialize.length; i < j; i++) {
             d = functionsToInitialize[i];
             fn = d.id;
@@ -25378,7 +25404,7 @@ define("runtime", function () {
         var lexDeclarations = LexicalDeclarations(script.body);
         var dn, kind;
         for (i = 0, j = lexDeclarations.length; i < j; i++) {
-            debug("lexdecls: " + j);
+            //debug("lexdecls: " + j);
             d = lexDeclarations[i];
             kind = d.kind;
             if (IsBindingPattern[d.type]) { // extra hack
@@ -25674,7 +25700,7 @@ define("runtime", function () {
         }
 
         if (Object.keys(mappedNames).length) {
-            setInternalSlot(obj, "ParameterMap", map);
+            setInternalSlot(obj, SLOTS.PARAMETERMAP, map);
         }
 
         var status = DefineOwnPropertyOrThrow(map, $$iterator, {
@@ -26454,12 +26480,12 @@ define("runtime", function () {
             return NormalCompletion(undefined);
         } else if (type === "ObjectPattern") {
             var decl;
-            /* coerce to object addition */
 
+            /* coerce to object addition */
             value = ToObject(value);
             if (isAbrupt(value = ifAbrupt(value))) return value;
 
-            /* read let {length} = "123" on es-discuss, fails at Get() few lines below, that´s why*/
+
             for (var p = 0, q = node.elements.length; p < q; p++) {
                 if (decl = node.elements[p]) {
                     if (decl.init) {
@@ -26821,6 +26847,7 @@ define("runtime", function () {
         var result;
         var l, i, j;
         var obj;
+        var status;
         obj = rval;
         var identName, newName;
         if (Type(rval) !== OBJECT) return newTypeError( "can not desctructure a non-object into some object");
@@ -26834,11 +26861,11 @@ define("runtime", function () {
             var target;
             if (lel.target) {
                 if (IsBindingPattern[lel.target.type]) {
-                    console.log("BINDINGPATTERN")
+                    //consoleLog("BINDINGPATTERN")
                     status = DestructuringAssignmentEvaluation(lel.target, result, op);
                     if (isAbrupt(status)) return status;
                 } else {
-                    console.log("TARGET")
+                    //consoleLog("TARGET")
                     target = Evaluate(lel.target);
                     if (isAbrupt(target)) return target;
                     PutValue(target, result);
@@ -26857,6 +26884,7 @@ define("runtime", function () {
         var lval;
         var result;
         var l, i, j;
+        var status;
         var array;
         array = rval;
         if (Type(rval) !== OBJECT) return newTypeError( "can not desctructure a non-object into some object");
@@ -26940,7 +26968,7 @@ define("runtime", function () {
             if (isAbrupt(rval = ifAbrupt(rval))) return rval;
             return DestructuringAssignmentEvaluation(node.left, rval, node.operator);
         } else {
-            return newReferenceError( "Currently not a valid lefthandside expression for assignment")
+            return newReferenceError("Currently not a valid lefthandside expression for assignment")
         }
         return NormalCompletion(result);
     }
@@ -27257,10 +27285,6 @@ define("runtime", function () {
         var index = 0;
 
         var gen = getContext().generator;
-        if (gen) {
-            if (hasConsole) console.log("## generator function executing ##");
-            // set Instruction Index to saved Index + 1
-        }
 
         var V = undefined;
         for (var i = index, j = stmtList.length; i < j; i++) {
@@ -27309,16 +27333,13 @@ define("runtime", function () {
         return NormalCompletion();
     }
     function LoopContinues(completion, labelSet) {
-        debug("LoopContinues:");
-        debugdir(completion);
-        debugdir(labelSet);
         // -- inconsistency fix
         if (completion instanceof CompletionRecord === false) return true;
         // --- reg. code
         if (completion.type === "normal") return true;
         if (completion.type !== "continue") return false;
         if (completion.target === "" || completion.target === undefined) return true;
-        return labelSet && labelSet[completion.target];
+        return !!(labelSet && labelSet[completion.target]);
 
     }
     evaluation.WhileStatement = WhileStatement;
@@ -27333,14 +27354,18 @@ define("runtime", function () {
         for (;;) {
 
             var testRef = Evaluate(test);
+
+
             if (isAbrupt(testRef = ifAbrupt(testRef))) return testRef;
             var testValue = GetValue(testRef);
             if (isAbrupt(testValue = ifAbrupt(testValue))) return testValue;
-
             if (ToBoolean(testValue) === false) {
                 return NormalCompletion(V);
             }
+
             exprRef = Evaluate(body);
+
+
             exprValue = GetValue(exprRef);
             if (LoopContinues(exprValue, labelSet) === false) return exprValue;
             V = unwrap(exprValue);
@@ -27358,11 +27383,13 @@ define("runtime", function () {
         for (;;) {
 
             exprRef = Evaluate(body);
+
             exprValue = GetValue(exprRef);
             if (LoopContinues(exprValue, labelSet) === false) return exprValue;
             V = unwrap(exprValue);
 
             var testRef = Evaluate(test);
+
             if (isAbrupt(testRef = ifAbrupt(testRef))) return testRef;
             var testValue = GetValue(testRef);
             if (isAbrupt(testValue = ifAbrupt(testValue))) return testValue;
@@ -27524,13 +27551,7 @@ define("runtime", function () {
         var exists;
         var label = node.label.name || node.label.value;
         var statement = node.statement;
-        var labelSet = labelSet || Object.create(null);
-
-        if (!labelSet) {
-            exists = false;
-            labelSet = Object.create(null);
-
-        } else exists = true;
+        var labelSet = Object.create(null);
 
         labelSet[label] = node;
 
@@ -28255,7 +28276,7 @@ define("runtime", function () {
             else R = evaluation.StatementList(node, a, b, c);
             return R;
         }
-        // debug("Evaluate(" + node.type + ")");
+        // //debug("Evaluate(" + node.type + ")");
         if (E = evaluation[node.type]) {
             // tellExecutionContext(node, 0);
             R = E(node, a, b, c);
@@ -28368,7 +28389,7 @@ define("runtime", function () {
                 // // return {type:type,_id_:++nodeId, loc:undefined, extras:undefined};
             case "SwitchStatement":
                 // // return {type:type,_id_:++nodeId, discriminant:undefined, cases:undefined, loc:undefined, extras:undefined};
-            case "DefaultClause":
+            case "DefaultCase":
                 // // return {type:type,_id_:++nodeId, consequent:undefined, loc:undefined, extras:undefined};
             case "SwitchCase":
                 // // return {type:type,_id_:++nodeId, test:undefined, consequent:undefined, loc:undefined, extras:undefined};
@@ -28465,7 +28486,7 @@ define("runtime", function () {
                 case "ArrayComprehension":
                 case "GeneratorComprehension":
                 case "SwitchStatement":
-                case "DefaultClause":
+                case "DefaultCase":
                 case "SwitchCase":
                 case "TryStatement":
                 case "CatchClause":
@@ -28519,12 +28540,10 @@ define("runtime", function () {
                         try {
                             throw makeNativeException(result.value);
                         } catch (ex) {
-                            if (hasConsole) {
-                                console.log("Exception: happend async and is just a print of the exception´s object");
-                                console.log(ex.name);
-                                console.log(ex.message);
-                                console.log(ex.stack);
-                            }
+                                consoleLog("Exception: happend async and is just a print of the exception´s object");
+                                consoleLog(ex.name);
+                                consoleLog(ex.message);
+                                consoleLog(ex.stack);
                         }
                     }
                 } else eventQueue.push(task);
@@ -28599,10 +28618,10 @@ define("runtime", function () {
             if (Type(exprRef) === REFERENCE) exprValue = GetValue(exprRef);
             else exprValue = exprRef;
         } catch (ex) {
-            console.log("Real JS Exception:");
-            console.log(ex);
-            console.log(ex.message);
-            console.log(ex.stack);
+            consoleLog("Real JS Exception:");
+            consoleLog(ex);
+            consoleLog(ex.message);
+            consoleLog(ex.stack);
             throw ex;
         }
         // exception handling. really temporarily in this place like this
@@ -29250,6 +29269,7 @@ define("asm-compiler", function (require, exports) {
             HEAP32: HEAP32,
             HEAPF32: HEAPF32,
             HEAPF64: HEAPF64,
+            STACKBASE: STACKBASE,
             STACKSIZE: STACKSIZE,
             STACKTOP: STACKTOP
         };
@@ -29317,6 +29337,7 @@ define("asm-compiler", function (require, exports) {
         STACKTOP+=12;
         HEAP32[ptr] = NUM;
         HEAPF64[(ptr+1)>>1] = value;
+        //console.log("compiled numlit to " + ptr);
         return ptr;
     }
 
@@ -29340,6 +29361,7 @@ define("asm-compiler", function (require, exports) {
         HEAP32[ptr+1] = len;
         var ptr2 = (ptr+2)<<1;
         for (var i = 0; i < len; i++) HEAPU16[ptr2+i] = codePoints[i];
+        //console.log("compiled str to " + ptr);
         return ptr;
     }
 
@@ -29436,6 +29458,7 @@ define("asm-compiler", function (require, exports) {
         if (node.prefix) HEAP32[ptr+2] = UNARYOP;
         else HEAP32[ptr+2] = POSTFIXOP;
         HEAP32[ptr+2] = unaryOperatorFromString[node.operator];
+        //console.log("compiled unary expr to " + ptr);
         return ptr;
     }
     /**
@@ -29513,6 +29536,7 @@ define("asm-compiler", function (require, exports) {
         STACKTOP += 8;
         HEAP32[ptr] = FUNCDECL;
         HEAP32[ptr+1] = poolIndex;
+        //console.log("compiled fdecl to " + ptr);
         return ptr;
     }
 
@@ -29523,6 +29547,7 @@ define("asm-compiler", function (require, exports) {
         STACKTOP += 8;
         HEAP32[ptr] = VARDECL;
         HEAP32[ptr+1] = poolIndex;
+        //console.log("compiled var decl to " + ptr);
         return ptr;
     }
 
@@ -29535,6 +29560,7 @@ define("asm-compiler", function (require, exports) {
         HEAP32[ptr+1] = propDefKinds[node.kind];
         HEAP32[ptr+2] = keyIndex;
         HEAP32[ptr+3] = compile(node.value);
+        //console.log("compiled prop def to " + ptr);
         return ptr;
     }
 
@@ -29545,6 +29571,7 @@ define("asm-compiler", function (require, exports) {
         HEAP32[ptr] = OBJECTEXPR;
         HEAP32[ptr+1] = len;
         for (var i = 0; i < len; i++) HEAP32[ptr+1+i] = compile(node.properties[i]);
+        //console.log("compiled object expr to " + ptr);
         return ptr;
     }
 
@@ -29555,6 +29582,7 @@ define("asm-compiler", function (require, exports) {
         HEAP32[ptr] = ARRAYEXPR;
         HEAP32[ptr+1] = len;
         for (var i = 0; i < len; i++) HEAP32[ptr+1+i] = compile(node.elements[i]);
+        //console.log("compiled array expr to " + ptr);
         return ptr;
     }
 
@@ -29564,11 +29592,9 @@ define("asm-compiler", function (require, exports) {
         STACKTOP+=8;
         HEAP32[ptr] = ELISION;
         HEAP32[ptr+1] = width;
+        //console.log("compiled elision to " + ptr);
         return ptr;
     }
-
-
-
 
     function returnStatement(node) {
         var ptr = STACKTOP >> 2;
@@ -29577,6 +29603,7 @@ define("asm-compiler", function (require, exports) {
         if (node.argument)
         HEAP32[ptr+1] = compile(node.argument);
         else HEAP32[ptr+1] = EMPTY;
+        //console.log("compiled return to " + ptr);
         return ptr;
     }
 
@@ -29609,6 +29636,7 @@ define("asm-compiler", function (require, exports) {
         HEAP32[ptr] = BLOCKSTMT;
         HEAP32[ptr+1] = len|0;
         for (var i = 0, j = len; i < j; i++) HEAP32[ptr+2+i] = compile(body[i]);
+        //console.log("compiled block to " + ptr);
         return ptr;
     }
 
@@ -29623,6 +29651,7 @@ define("asm-compiler", function (require, exports) {
         HEAP32[ptr+3] = len;
         for (var i = 0, j = len; i < j; i++) HEAP32[ptr+4+i] = compile(body[i]);
         HEAP32[ptr+4+len] = ptr;
+        //console.log("compiled while to " + ptr);
         return ptr;
     }
 
@@ -29640,6 +29669,7 @@ define("asm-compiler", function (require, exports) {
         var ptr2 = ptr+2+len;
         HEAP32[ptr2] = DOWHILECOND;
         HEAP32[ptr2+1] = ptr;
+        //console.log("compiled doWhile to " + ptr);
         return ptr;
     }
 
@@ -29671,6 +29701,8 @@ define("asm-compiler", function (require, exports) {
      * @param ast
      * @returns {number}
      */
+
+
     function switchStatement(node) {}
     function switchCase(node) {}
     function defaultClause(node) {}
@@ -29693,6 +29725,7 @@ define("asm-compiler", function (require, exports) {
             case "BinaryExpression":        return binaryExpression(ast);
             case "CallExpression":          return callExpression(ast);
             case "NewExpression":           return newExpression(ast);
+            case "ReturnStatement":         return returnStatement(ast);
             case "ParenthesizedExpression": return parenthesizedExpression(ast);
             case "SequenceExpression":      return sequenceExpression(ast);
             case "UnaryExpression":         return unaryExpression(ast);
@@ -29711,11 +29744,10 @@ define("asm-compiler", function (require, exports) {
 
                 case "SwitchStatement": return switchStatement(ast);
                 case "SwitchCase": return switchCase(ast);
-                case "DefaultCase": return defaultCase
-
-            case "TryStatement":            return tryStatement(ast);
-            case "CatchClause":             return catchClause(ast);
-            case "Finally":                 return finally_(ast);
+                case "DefaultCase": return defaultCase(ast);
+                case "TryStatement":            return tryStatement(ast);
+                case "CatchClause":             return catchClause(ast);
+                case "Finally":                 return finally_(ast);
 
 
 
@@ -30032,6 +30064,7 @@ define("vm", function (require, exports) {
                     stack[pc++] = ip+2; // IFOP (compares r0 to true)
                     stack[pc++] = HEAP32[ip+1]; // eval test
                     break;
+
                 case IFOP:
                     $0 = operands[sp--];
                     if (!!$0) stack[pc++] = HEAP32[ip+1];
