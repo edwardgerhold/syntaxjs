@@ -1,573 +1,142 @@
-syntax.js 
+syntax.js
 =========
 
-Not bugfree(*) but relativly compliant EcmaScript 6 (7**) Interpreter(*****) written 
-in EcmaScript 5 (could run in 3 with shims i bet, or be factored down with __proto__:null
-and syntaxjs[xxx] = yz instead of using Object.defineProperty, ok, the most interesting
-is to use "use strict" to let it throw if something is really wrong).
+EcmaScript 6 Interpreter and beyond written with JavaScript or EcmaScript 5.
 
-This project was started on a PIII/933 with mcedit in a dorm 
-and is now continued on a notebook with 2 cores still in the dorm. It´s a fun 
-project. And pretty soon able to run itself. (***)
+For node.js (shell) and browser (syntaxhighlighter for PRE with controls 
+possible and CODE without controls, but that kind of design is temporary)
 
-Hmm, i notice difficulties with writing plain text with myself nowadays.
-I´m working on it.
+Not working: Generators, and the module loader is still disconnected. And maybe 
+the destructuring to a LeftHandSideExpression Target is not completed, plus
+a few little things inside which make the program fail in running itself with
+node syntax0.js syntax0.js
 
-(*) still doesn´t run arbitrary JavaScript code, but all lockups are removed.
-I rewrote the Expression, for those who noticed but don´t like to look again,
-wether i have changed it, or not. The bugs are no longer in the parser, but
-in the runtime itself. It is able to parse itself with over 200,000 nodes.
-But sucks within define.
+Running a file
 
-(**) contains at last one implemented ES7 proposal and stubs for the other
+```
+> ./es6 [filename]
+> node syntax0.js [filename]
 
-(***) serious documentation and proper seriously written license (with
-the same meaning) will take a while and a day more or two. 
-A few JSDoc comments will replace the chaotic few comments left between.
+```
 
-(****) typed mem and stack machine is a must for me but it will still take
-a while. But then we´ll also have Weak Maps, Weak Sets, and Weak Refs. 
-
-(*****) will soon compile to asm.js
-
-New Access to Modules
-=====================
-
-We can now access the syntaxjs intrinsic modules with syntaxjs.define and require.
-require(id) reads the Module objects back from syntaxjs.require.cache[id].
+Example creating a realm
 
 ```js
-// npm install -g 
-> var syntaxjs = require("syntaxjs")
-> var format = syntaxjs.require("i18n").format;
-> console.log(format("%s %s %s", "i", "am", "novice"));
-> i am novice
-
+> var syntaxjs = require("./syntax0.js").syntaxjs;
+> var realm = syntaxjs.createRealm();
+> var code = "let name = 'I'; let s = String.raw(`${name} wrote this`); print(s);"
+> realm.eval(code);
+I wrote this
 ```
 
-This shows the latest module i18n. It now carries a format and a raw 
-function
-
-Latest Mistake
-==============
-
-I spotted that an AssignmentElement for Destructuring of Objects
-may contain a { x: LeftHandSideExpression() } which can be any target where
-we can assign something to (PutValue(lhsRef, value) does that then.) Currently
-only Aliasnames worked. I hadn´t checked it for a long time, since last year
-November i guess, and i stumbled into a mess, you can think.
-
-Bigger Bug
-==========
-By checking toMethod and passing parameters i´ve seen that the parameters
-are shadowed or something similar. Normally it should run arbitrary code.
-But it fails on executing itself or on programs which run in browsers or 
-on node. That bug is still not covered by the few tests, they are still less
-then necessary to debug the thing, but i´m sure it will already go away when
-i update to the new callexpression and arguments semantics, as it´s a related
-bug, which are already defined in the latest two drafts.
-
-
-New: Multiple Realms
-======================
-
-```bash
-npm install -g  #to install syntaxjs from it´s directory
-```
-Then call it in your javascript to evaluate es6 code.
-
-```javascript
-var realm = require("syntaxjs").createRealm();
-realm.eval("let x = 10");
-realm.eval("x"); 
-// 10
-
-var realm2 = require("syntaxjs").createRealm();
-realm2.eval("x");
-// Error: GetValue: 'x' is an unresolvable Reference
-
-realm2.eval("let x = 20");
-realm2.eval("x");
-// 20
-realm.eval("x");
-// 10
-```
-
-Regular Usage
-=============
-It can be tried with simply typing node syntax0.js. 
-
-```
-linux-www5:~ # node syntax0.js [exec_me.js]
-````
-
-node syntax0.js [filename.js] executes a file
-or just starts a readline shell when called without arguments
-
-```javascript
-es6> let f = x => x*x;  // all working again
-undefined
-es6> f(100);
-10000
-es6>
-undefined
-es6> let s = Symbol.for("Test");
-undefined
-es6> let obj = { [s]() { return Symbol.keyFor(s); } };
-undefined
-es6> Object.getOwnPropertyDescriptor(obj, s).value.name;
-[Test]
-es6> obj[s]()
-Test
-es6>
-undefined
-es6> let name = "Edward";
-undefined
-es6> String.raw(`${name} is stupid`);
-Edward is stupid
-es6> String.raw`${name} is stupid`;
-Edward is stupid
-es6> Object.create(null)
-{ Bindings: {}, Symbols: {}, Prototype: null, Extensible: true }
-es6> for (let i = 0; 
-...> i < 3; i++) console.log(i);
-0
-1
-2
-undefined
-es6> .print id
-{
-    "type": "Program",
-    "body": [
-	{
-	    "type": "ExpressionStatement",
-	    "expression": {
-		"type": "Identifier",
-		"name": "id",
-		"loc": { "start": { "line": 1, "column": 1 }, "end":{ "line": 1, "column": 2 } }
-	    },
-	    "loc": { "start": { "line": 1, "column": 1 }, "end":{ "line": 1, "column": 2 } }
-	},
-    ],
-    "loc": { "start": { "line": 1, "column": 1 }, "end":{ "line": 1, "column": 2 } }
-}
-```
-
-
-Not yet complete
-================
-
-Examples:
-```
-// get an object by calling eval
-es5> var obj1 = syntaxjs.eval("{ a: 1, b: 2 }"); // .toValue if i didn´t rename for now.
-{
-    /* large internal object representation made of three objects and properties with one more each descriptor */
-}
-es5> var a = obj1[SLOTS.GET]("a", obj1); // probably a completion record is returned as i don´t filter it on this access
-
-// i think the actual function is doing it wrong (why it´s not completed)
-
-es5> var obj2 = realm.evalXform("{ a:1, b:2 }");
-{ a:getter/setter, b:getter/setter }
-
-// the better xformer captures a snapshot of the state which can be deeply converted into a static snapshot
-
-es5> var obj2 = realm.evalXform("{ a:1, b:2 }");
-{ a:1, b:2 }
-es5> obj2.a;
-```
-
-debug(param)
-
+Accessing the internal modules
 
 ```js
-es6> debug({a:1,b:2,c:3,d(){},[Symbol.create]:true})
-Type() results in object
-[object Object]
-{
-        [[Prototype]]: [object Object]
-        [[Extensible]]: true
-        [[Bindings]]:
-                a: (number) ecw
-                b: (number) ecw
-                c: (number) ecw
-                d: (object) ecw
-        [[Symbols]]:
-}		@@create: (symbol) ---
-undefined
+var tables = syntaxjs.require("tables")
+var parse = syntaxjs.require("parser");
+var parseGoal = syntaxjs.require("parser").parseGoal;
+var program = parse("function x() {}");	// output a full parse to "Program" 
+var fdecl = parseGoal("FunctionDeclaration", "function x() {}"); // starts at "FunctionDeclaration"
 ```
 
-The async versions
+
+Most Tests are now in test/json
+
+One of the biggest lacks, or the biggest lack is the weak test coverage of syntax.js
+I had a couple of tests written for tester.js and my homepage, and since last month
+i am collecting tests in test/json, but they don´t cover all bugs, so i got still to
+do
+
+```
+./testall   # runs the tests with syntaxjs.eval()
+./showfail  # shows all bugs marked with FAIL:
+./showpass  # tells what i´ve already finished
+./testall -r  # tests with realm.eval()
+
+```
+
+syntaxjs.eval() and realm.eval() are currently slightly minimal different,
+i guess syntaxjs.eval handles the TaskQueues correctly and for the realm 
+i don´t know the result now, but both will go away and move into the realm.
+syntaxjs.eval() will soon just use the realm behind, currently there is a
+whole function.
+
+
+Example just using the eval function with a new environment each time
+This is the old syntaxjs interface and i subject to change internally
+because it was my first one and is more than deprecated and overthought.
 
 ```js
-var realm = syntaxjs.createRealm();
-realm.evalAsync("let x = 10; x").then(function (value) { console.log(value); }, function (err) { console.error(err); });
-// i entered it twice and got an exception for the already declared x in the realm. don´t forget the rejection handler.
+// the deprecated eval interface
+var result = syntaxjs.eval(code);
+result = syntaxjs.eval(code, true); // evals and keeps the environment alive for the next call
+result = syntaxjs.eval(code, true); // evals and keeps the environment alive for the next call
+result = syntaxjs.eval(code, true); // evals and keeps the environment alive for the next call
+result = syntaxjs.eval(code, true, true); // enough, keep alive, but reset the realm once
 ```
 
-
-This one works i tested it recently.
-
-Parser_API
-==========
-
-It´s using Mozilla Parser_API for AST representation.
-
-BUT: It´s a little incompatible with the latest draft i´ve seen. It was with an earlier,
-but the latest hat "default" and "rest" on function declaration nodes. I didn´t know if 
-i would have to set default to a sparse array with holes, wherever no default is assigned.
-And the Rest is of course cool extracted, but also in my .params list. Which is then passed
-to the Ecma Specification Algorithm "BindingInitialisation" as one Array after "ArgumentsListEvaluation",
-which fetches the values of the passed Parameters, while the former processes the Bound Names of
-the params to put each value into (with env.InitializeBinding (Identifiers) or PutValue (any Reference)).
-
-Well, the Format might change inside.
+Project goal: getting it complete and giving not up. It´s my first application.
+And it looks like my first application. Here i learn to write much, the spec is
+better written, than i coded, and i learn from. I refactor a lot by replacing 
+code with other code, and search and replace globally with regexp to replace old
+strings or names with better ones. Currently it has no garbage collection, no
+weak maps and uses plain javascript objects. One ES6 Object is made out of three
+JS Objects for the Object with it´s slots, plus bindings (properties) and symbols
+(es5 uses stringkeys, and the second object makes it impossible to collide.
+Later it should use typed memory, serialized object, slots in array form, hidden
+classes instead of hashing, lists and arrays, and have own garbage collection,
+together with WeakMaps, WeakSets, and WeakRefs. The code is so far designed to be
+changeable, to be exchangeable with new code.
 
 
-```
-> syntaxjs.tokenize("`ich ${bin} ein ${  template()  }`")
-[{
-    type: "TemplateLiteral",
-    value: ["ich ", "bin", " ein ", "  template()  ",""]
-}]
-
-```
-
-* New Nodes
-* Semantic Analysis 
-* Contains
-* Properties 
-* Expressions being flagged
-* Template Literal Node
-
-```
-    // now (it´s not an effort to rename value to spans. It´s a new node which will carry .raw and .cooked)
-    {
-        type: "TemplateLiteral",
-        spans: ["ich ", "bin", " ein ", "  template()  ",""]
-    }
-
-    // later better (compiler has raw and cooked, which are anyways _static_ semantics, ready)
-
-    {
-        type: "TemplateLiteral",
-        raw: ["ich "," ein ",""]
-        cooked: ["bin", "  template()  "]
-        noSubstitution: false               // true if raw.length == 1 && cooked.length == 0
-     }
-```
-
-```{ type: "LexicalDeclaration", declarations, kind }``` (should be spread into LetDeclaration and ConstDeclaration for making the best possible)
-```{ type: "ForDeclaration", kind }``` (for-of has a ForDeclaration rule, ArrayComprehension and GeneratorComprehension have a ForBinding,
-possibly this could be refactored, but currently it is supporting the system to work)
-
-```{ type: "Module", body }``` (new top level production, has other rules than "Program")
-```{ type: "ModuleDeclaration", id, strict, body }```
-```{ type: "ImportStatement", imports }```
-```{ type: "ExportStatement", exports }```
-
-```{ type: "RestParameter", argument: id }``` latest parserapi draft covers .rest at functions, but not in patterns, etc.
-```{ type: "SpreadExpression", argument: id }``` spread expressions are the ...spread for any array or arguments list.
-```{ type: "DefaultArgument", id: name/pattern, init: expression }``` id can be
-```{ type: "MethodDefinition", id, generator, computed, formals, body }``` This makes it convenient to parse methods with concise syntax,
-.computed is for get [s]() computed property names (needed)
-```{ type: "BindingElement", id: identifier[, as: identifier] }``` in ObjectPattern["properties"]
-
-.computed is IsComputedPropertyName (in objectliterals, resolves to a symbol)
-.computed in MemberExpression stands for obj[key] 
-But .computed in PropertyDefinitionLists (objectExpr.properties) stands for { [s]: prop } keys.
-I have to remove limitation to evaluation to a symbol, i guess.
-
- ```
-    isConstantDeclaration = { "const" : true };
-    if (isConstantDeclaration[node.kind]) used in instantiation
-
-    if (node.const) used in instantiation
-
-    if (varDecl.kind === "const") the only possibility today, but assume you have a varDecl.declarations[i] in the hand. There is no .kind.
-
- ```
-
-Builder incomplete
-==================
-
-```
-    var builder = {};
-    // The original Parser_API builder has a different signature for each node.type
-    
-    builder.functionDeclaration = function fdecl(id, formals, body, strict, generator, expression, loc) {
-	// much parameters to pass exactly when doing the interfacing
-	// is a little to learn for the beginning and easy after being introduced to
-    };
-
-```
-
-propose ```function [node.type](node) { ...process node here.. }```
-
-```
-    var builder = {};
-    // a codegenerator
-    builder["VariableStatement"] = function (node) {
-	var src= node.kind + " ";
-	foreach(node.declarations, function (decl) {
-	    src += decl.id 
-	    if (decl.init) src += " = "+builder[decl.init.type](decl.init);
-	});
-	src += ";";
-	return src;	
-    };
-    // or a compiler
-    builder["ReturnStatement"] = function (node) {
-	var code = alloc(4); 
-	var ptr = heap.store(builder[node.argument.type](node.argument)));
-	code[0] = byteCode["return"];
-	ptr = ptr || 0;
-	code[1] = (ptr >> 16) & 0xFF;  // oh it´s wrong
-	code[2] = (ptr >> 8)  & 0xFF;  // am i mismatching three address
-	code[3] = ptr	      & 0xFF;  // and write a three-byte address??? hehe
-	return code;		       // cosmic waves decoded in the back of the head without getting the full meaning, but a similarity, he?
-    };
-
-```
-
-Missing
-=========
-
-* Developer Documentation
-
-= Bugs
-
-
-```
-// this is the only practically not working yet
-// i shouldn´t show it first
-es6> function *gen() { yield 10; }
-undefined
-es6> let it = gen();
-undefined
-es6> it.next().value;
-10
-// About the stack machine, or a parent pointer plus instruction index
-```
-
-
-Design Issues
-============
-
-- Design Patterns
-- Other JS Engines
-
-```
-function load() { [native code] }
-jjs> load("/s/syntax0.js");
-
-syntax.js was successfully loaded
-jjs> jjs> syntaxjs
-Exception in thread "main" ECMAScript Exception: TypeError: Cannot get default string value
-        at jdk.nashorn.internal.runtime.ECMAErrors.error(ECMAErrors.java:56)
-        at jdk.nashorn.internal.runtime.ECMAErrors.typeError(ECMAErrors.java:212)
-        at jdk.nashorn.internal.runtime.ECMAErrors.typeError(ECMAErrors.java:184)
-        at jdk.nashorn.internal.objects.Global.getDefaultValue(Global.java:586)
-        at jdk.nashorn.internal.runtime.ScriptObject.getDefaultValue(ScriptObject.java:1257)
-        at jdk.nashorn.internal.runtime.JSType.toPrimitive(JSType.java:256)
-        at jdk.nashorn.internal.runtime.JSType.toPrimitive(JSType.java:252)
-        at jdk.nashorn.internal.runtime.JSType.toStringImpl(JSType.java:993)
-        at jdk.nashorn.internal.runtime.JSType.toString(JSType.java:326)
-        at jdk.nashorn.tools.Shell.readEvalPrint(Shell.java:449)
-        at jdk.nashorn.tools.Shell.run(Shell.java:155)
-        at jdk.nashorn.tools.Shell.main(Shell.java:130)
-        at jdk.nashorn.tools.Shell.main(Shell.java:109)
-```
-
-Spidermonkey
-
-
-```
-js> load("syntax0.js");
-syntaxjs was successfully loaded
-js> syntaxjs
-null
-// es ist bloss ein "Object.create(null)"
-js> syntaxjs.eval("10")
-10
-js> var realm = syntaxjs.createRealm();
-js>
-/s/syntax0.js:23412:57 ReferenceError: process is not defined
-
-```
-
-- Heap
-- Compiler
-- Syntax Highlighter
-
-Tests
-=====
-
-
-I am writing new tests in /test/json.
-
-Run ./testall in the root dir or from /test/json
-
-I will change testmaker.js to write down unit tests
-for other libraries from the .json files.
-
-The final test shall be test262 which can be run, too,
-but that is another story. First i need new tests from
-myself for myself to finish this program.
-
-
-```
-testmaker.js 0.0.0 for tester.js for syntax.js by Edward
-{
-	"test1":	
-	{
-	    "init": 
-		"let x = 10;",
-	    "tests": 
-	    [
-		["x",10],
-		["x+x;", 20]
-	    ]
-	},
-	
-	"test2": 
-	{
-	    "init": 
-		"const x = 20;",
-	    "tests": 
-	    [
-		["x = 30; x;", 20],
-		["x-=10", 10],
-		["x", 20]
-	    ]
-	}
-}
-
-2 tests completed in : 2ms
-Number of Tests: 2
-Executed assertions: 2
-Passed assertions: 2
-Failed assertions: 0
-Unexpected exceptions: 0
-PASS: assert: actual=10, expected=10: message=x
-PASS: assert: actual=20, expected=20: message=x+x;
-3 tests completed in : 1ms
-Number of Tests: 3
-Executed assertions: 3
-Passed assertions: 3
-Failed assertions: 0
-Unexpected exceptions: 0
-PASS: assert: actual=20, expected=20: message=x = 30; x;
-PASS: assert: actual=10, expected=10: message=x-=10
-PASS: assert: actual=20, expected=20: message=x
-# testmaker.js finished work for now
-```
-
-CST
-===
-
-```
-es6> function f() { /* 32 */ ; /* 3453 */ ; /* 34534 */ ; /* 6345 */ }
-undefined
-es6> f.toString()
-function f () {
-    ;undefined;
-    ;undefined;
-}
-es6>
-```
-
-Ok, that didn´t work. But with some change.
-
-```
-linux-dww5:/s : es6 extras.js 
--evaluating extras.js-
-function f () {
-       
-    /* 1 */;
-    /* 2 */;
-    /* 3 */
-    ;/*4*/
-    /*5*/;
-    /*6*//*7*//*8*/;/*9*/
-;
-}
-undefined
-es6> 
-```
-
+From the project directory, it´s currently not in npm.
 
 ```js
-
-function f() {
-    /* 1 */;
-    /* 2 */;/* 3 */
-    ;/*4*/
-    /*5*/;/*6*//*7*//*8*/;/*9*/
-}
-console.log(f.toString());
+npm install -g
 
 ```
 
+The generator functions are not working because of a design mistake to simply
+use the recursive evaluation by ast walking. A walk can not simply be suspended
+and resumed. On the other side, it will overflow the callstack on larger codes,
+i can grant for now, without having experienced it. The solution for both is,
+to put a stack under a main loop and to pop the nodes of the code stack and push
+the results onto the operand stack. That code eval state can simply be suspended
+and resumed, and comes with a small cost, maybe one call each function call, so 
+the stack is exactly as high as the function calls of the interpreted code plus
+one or two operations operating upon, and not a long list of functions waiting
+for the return of the Evaluate(node) call within.
 
-```js
-    builder.emptyStatement = function emptyStatement(loc, extras) {
-        var src = "";
-        if (extras && extras.before) src += callBuilder(extras.before);
-        src += ";";
-        if (extras && extras.after) src += callBuilder(extras.after);
-        return src;
-    };
-```
+This change will happen in the next time. I think then the AST interpreter is
+good. On the other hand, i started developing the compiler now, and will figure
+out a good bytecode. While collapsing the nodes over compilation i already figured
+out, that their node names can be replaced by better bytecode. That let´s us end up
+with something like JVM code, or simply Assembly.
 
-    
-```js
-    builder.whiteSpace = function (value, loc) {
-        return value;
-    };
-    builder.lineComment = function(value, loc) {
-        return value;
-    };
-    builder.multiLineComment= function (value, loc) {
-        return value;
-    };
-    builder.lineTerminator= function (value, loc) {
-        return value;
-    };
-```
+The parser performs in about 4x the time esprima takes to parse the same file.
+One of my goals is to make the AST input and output compatible to esprima and
+the other Parser_API parsers. 
 
-New: Old Tokenizer will go
-=========================
+History
+=======
 
-Mainly for my old syntax highlighter, the tokenizer pushed the tokens, whitespaces
-inclusive into an array. The parser processes the array, and my first lookahead function,
-i called it righthand wayback, skipped them twice instead of re-assigning the lookahead(1)
-to lookahead(0) (the current token we are exactly on). It was funny reading the code again.
-The Syntaxhighlighter depends on the whitespaces, else it produces spans without
-whitespaces.
+This thing is developed between a few minutes and an hour or two a day. Sometimes
+i do more, sometimes i give myself at last one or two tasks to solve before i go.
+That´s not too much, but i am also the only one motivating me.
 
-```js
+12/2012 - syntax.js was a 99 loc highlighter based on a few regex and css classes
+1/2013 - syntax.js had a tokenizer and a partially implemented parser api ast
+6/2013 - i decided to continue my syntax highlighter after our Pet Gizmo die
+7/2013 - i download the ecma 262 edition 6 release of july 15,
+8/2013 - i get a copy printed, i start figuring out, how ecmascript works
+9/2013 - i had to option to program without javascript objects and with heap
+12/2013 - i have already an ast interpreter, but broke the program this month 
+1/2014 - i continue with the loader, i still suffer from the broken project
+2/2014 - i program java and write parser and lexer in java with parser api like ast
+3/2014 - i continue writing this program from time to time, i spot the CST
+4/2014 - i continue over the month with testing and fixing bugs, still a plenty of left
+5/2014 - i start writing a bytecode compiler and runtime, typed, with constant pool
 
-// the old tokenizer tokenizes into an array (arrays are also lists in my cases)
-var arrayTokenizer = require("syntaxjs").tokenizeIntoArray;
-var tokens = arrayTokenizer(source); // currently produces whitespaces, will be removed
 
-// instead for whitespaces and tokens in a list, i improve with a new function
-var tokensWithWhiteSpaces = require("syntaxjs").tokenize.tokenizeIntoArrayWithWhiteSpaces(code);
 
-// the new tokenizer is stepwise by default
-var tokenize =  require("syntaxjs").tokenize
-var firstToken = tokenize(code);
-var nextToken;
-var ltNext;
-while (nextToken = tokenize.nextToken()) {
-    nextToken == tokenize.token; // the next token. (assigned to lookahead(1) in the parser)
-    ltNext = tokenize.ltNext;	// lineterminator between token
-}
 
-```
-
-The API is not complete. The exports are not clean yet. The new tokenizer fails
-some tests, for whatever reason of the skipped lineterminators it is. So i have
-still some lines to edit here.
