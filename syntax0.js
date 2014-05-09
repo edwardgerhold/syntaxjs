@@ -9158,7 +9158,7 @@ SLOTS.CODE = "Code";
 SLOTS.CALL = "Call";
 SLOTS.CONSTRUCT = "Construct";
 SLOTS.FORMALPARAMETERS = "FormalParameters";
-SLOTS.THISMODE = "ThisMode";
+SLOTS.THISMODE = SLOTS.THISMODE;
 SLOTS.STRICT = "Strict";
 SLOTS.FUNCTIONKIND = "FunctionKind";
 SLOTS.NEEDSSUPER = "NeedsSuper";
@@ -10159,7 +10159,7 @@ addMissingProperties(FunctionEnvironment.prototype, DeclarativeEnvironment.proto
 
 
 function NewFunctionEnvironment(F, T) {
-    Assert(getInternalSlot(F, "ThisMode") !== "lexical", "NewFunctionEnvironment: ThisMode is lexical");
+    Assert(getInternalSlot(F, SLOTS.THISMODE) !== "lexical", "NewFunctionEnvironment: ThisMode is lexical");
     var env = FunctionEnvironment(F, T); // ist Lexical Environment and environment record in eins
     env.thisValue = T;
     if (getInternalSlot(F, SLOTS.NEEDSSUPER) === true) {
@@ -11796,9 +11796,9 @@ function FunctionInitialize(F, kind, paramList, body, scope, strict, homeObject,
     if (homeObject) setInternalSlot(F, SLOTS.HOMEOBJECT, homeObject);
     if (methodName) setInternalSlot(F, SLOTS.METHODNAME, methodName);
     setInternalSlot(F, SLOTS.STRICT, strict);
-    if (kind === "arrow") setInternalSlot(F, "ThisMode", "lexical");
-    else if (strict) setInternalSlot(F, "ThisMode", "strict");
-    else setInternalSlot(F, "ThisMode", "global");
+    if (kind === "arrow") setInternalSlot(F, SLOTS.THISMODE, "lexical");
+    else if (strict) setInternalSlot(F, SLOTS.THISMODE, "strict");
+    else setInternalSlot(F, SLOTS.THISMODE, "global");
     return F;
 }
 
@@ -12028,7 +12028,7 @@ function cloneFunction (func) {
     setInternalSlot(newFunc, SLOTS.ENVIRONMENT, getInternalSlot(func, SLOTS.ENVIRONMENT));
     setInternalSlot(newFunc, SLOTS.CODE, getInternalSlot(func, SLOTS.CODE));
     setInternalSlot(newFunc, "FormalParameters", getInternalSlot(func, "FormalParameterList"));
-    setInternalSlot(newFunc, "ThisMode", getInternalSlot(func, "ThisMode"));
+    setInternalSlot(newFunc, SLOTS.THISMODE, getInternalSlot(func, SLOTS.THISMODE));
     setInternalSlot(newFunc, SLOTS.FUNCTIONKIND, getInternalSlot(func, SLOTS.FUNCTIONKIND));
     setInternalSlot(newFunc, SLOTS.STRICT, getInternalSlot(func, SLOTS.STRICT));
     return newFunc;
@@ -12060,7 +12060,7 @@ function RebindSuper(func, newHome) {
     setInternalSlot(nu, SLOTS.CODE, getInternalSlot(func, SLOTS.CODE));
     setInternalSlot(nu, SLOTS.FORMALPARAMETERS, getInternalSlot(func, SLOTS.FORMALPARAMETERS));
     setInternalSlot(nu, SLOTS.STRICT, getInternalSlot(func, SLOTS.STRICT));
-    setInternalSlot(nu, "ThisMode", getInternalSlot(func, "ThisMode"));
+    setInternalSlot(nu, SLOTS.THISMODE, getInternalSlot(func, SLOTS.THISMODE));
     setInternalSlot(nu, SLOTS.METHODNAME, getInternalSlot(func, SLOTS.METHODNAME));
     setInternalSlot(nu, SLOTS.REALM, getInternalSlot(func, SLOTS.REALM));
     setInternalSlot(nu, SLOTS.HOMEOBJECT, newHome);
@@ -15098,7 +15098,7 @@ setInternalSlot(DebugFunction, SLOTS.CALL, function debugfunc (thisArg, argList)
             var strict = getInternalSlot(O, SLOTS.STRICT);
             console.log(TAB+"[[Strict]]:" + strict);
 
-            var thisMode = getInternalSlot(O, "ThisMode");
+            var thisMode = getInternalSlot(O, SLOTS.THISMODE);
             console.log(TAB+"[[ThisMode]]: "+thisMode);
 
             var formals = getInternalSlot(O, SLOTS.FORMALPARAMETERS);
