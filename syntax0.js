@@ -9382,7 +9382,17 @@ INTRINSICS.EVENTTARGET = "%EventTarget%";
 INTRINSICS.EVENTPROTOTYPE = "%EventPrototype%";
 INTRINSICS.EVENTTARGETPROTOTYPE = "%EventTargetPrototype%";
 INTRINSICS.NOTIFIERPROTOTYPE = "%NotifierPrototype%";
-
+INTRINSICS.DEBUGFUNCTION = "%DebugFunction%";
+INTRINSICS.PRINTFUNCTION = "%PrintFunction%";
+INTRINSICS.MESSAGEPORT = "%MessagePort%";
+INTRINSICS.MESSAGEPORTPROTOTYPE = "%MessagePortPrototype%";
+INTRINSICS.THROWTYPEERROR = "%ThrowTypeError%";
+INTRINSICS.STRUCTTYPE = "%StructType%";
+INTRINSICS.STRUCTTYPEPROTOTYPE = "%StructTypePrototype%";
+INTRINSICS.TYPE = "%Type%";
+INTRINSICS.TYPEPROTOTYPE = "%TypePrototype%";
+INTRINSICS.ARRAYPROTO_VALUES = "%ArrayProto_values%";
+INTRINSICS.SETLANGUAGE = "%SetLanguage%";
 Object.freeze(INTRINSICS);
 
 /**
@@ -15074,17 +15084,17 @@ exports.float64 = float64;
         var EventPrototype = createIntrinsicPrototype(intrinsics, INTRINSICS.EVENTPROTOTYPE);
         var EventTargetConstructor = createIntrinsicConstructor(intrinsics, "EventTarget", 0, INTRINSICS.EVENTTARGET);
         var EventTargetPrototype = createIntrinsicPrototype(intrinsics, INTRINSICS.EVENTTARGETPROTOTYPE);
-        var MessagePortConstructor = createIntrinsicConstructor(intrinsics, "MessagePort", 0, "%MessagePort%");
-        var MessagePortPrototype = createIntrinsicPrototype(intrinsics, "%MessagePortPrototype%");
+        var MessagePortConstructor = createIntrinsicConstructor(intrinsics, "MessagePort", 0, INTRINSICS.MESSAGEPORT);
+        var MessagePortPrototype = createIntrinsicPrototype(intrinsics, INTRINSICS.MESSAGEPORTPROTOTYPE);
 	// EventTarget and MessagePort are just stubs yet.
-        var DebugFunction = createIntrinsicFunction(intrinsics, "debug", 1, "%DebugFunction%");
-        var PrintFunction = createIntrinsicFunction(intrinsics, "print", 1, "%PrintFunction%");
-        var StructTypeConstructor = createIntrinsicConstructor(intrinsics, "StructType", 0, "%StructType%");
-        var StructTypePrototype = createIntrinsicPrototype(intrinsics, "%StructTypePrototype%");
-        var TypeConstructor = createIntrinsicConstructor(intrinsics, "Type", 0, "%Type%");
-        var TypePrototype = createIntrinsicPrototype(intrinsics, "%TypePrototype%");
-        var ThrowTypeError = createIntrinsicFunction(intrinsics, "ThrowTypeError", 0, "%ThrowTypeError%");
-        var ArrayProto_values = createIntrinsicFunction(intrinsics, "values", 0, "%ArrayProto_values%");
+        var DebugFunction = createIntrinsicFunction(intrinsics, "debug", 1, INTRINSICS.DEBUGFUNCTION);
+        var PrintFunction = createIntrinsicFunction(intrinsics, "print", 1, INTRINSICS.PRINTFUNCTION);
+        var StructTypeConstructor = createIntrinsicConstructor(intrinsics, "StructType", 0, INTRINSICS.STRUCTTYPE);
+        var StructTypePrototype = createIntrinsicPrototype(intrinsics, INTRINSICS.STRUCTTYPEPROTOTYPE);
+        var TypeConstructor = createIntrinsicConstructor(intrinsics, "Type", 0, INTRINSICS.TYPE);
+        var TypePrototype = createIntrinsicPrototype(intrinsics, INTRINSICS.TYPEPROTOTYPE);
+        var ThrowTypeError = createIntrinsicFunction(intrinsics, "ThrowTypeError", 0, INTRINSICS.THROWTYPEERROR);
+        var ArrayProto_values = createIntrinsicFunction(intrinsics, "values", 0, INTRINSICS.ARRAYPROTO_VALUES);
         
         var VMObject = createIntrinsicObject(intrinsics,"%VM%"); // that i can play with from inside the shell, too.
                 
@@ -15115,7 +15125,7 @@ exports.float64 = float64;
                 catch (ex) {return newTypeError( ex.message);}
                 return NormalCompletion(undefined);
         };
-        var SetLanguage = createIntrinsicFunction(intrinsics, "setLanguage", 1, "%SetLanguage%")
+        var SetLanguage = createIntrinsicFunction(intrinsics, "setLanguage", 1, INTRINSICS.SETLANGUAGE)
         setInternalSlot(SetLanguage, SLOTS.CALL, SetLanguage_Call);
         setInternalSlot(SetLanguage, SLOTS.CONSTRUCT, undefined);
 
@@ -24756,7 +24766,7 @@ LazyDefineBuiltinFunction(VMObject, "heap", 1, VMObject_heap);
             DefineOwnProperty(globalThis, "Loader", GetOwnProperty(intrinsics, INTRINSICS.LOADER));
             DefineOwnProperty(globalThis, "Math", GetOwnProperty(intrinsics, INTRINSICS.MATH));
             DefineOwnProperty(globalThis, "Map", GetOwnProperty(intrinsics, INTRINSICS.MAP));
-            DefineOwnProperty(globalThis, "MessagePort", GetOwnProperty(intrinsics, "%MessagePort%"));
+            DefineOwnProperty(globalThis, "MessagePort", GetOwnProperty(intrinsics, INTRINSICS.MESSAGEPORT));
             DefineOwnProperty(globalThis, "Module", GetOwnProperty(intrinsics, INTRINSICS.MODULE));
             LazyDefineBuiltinConstant(globalThis, "NaN", NaN);
             DefineOwnProperty(globalThis, "Number", GetOwnProperty(intrinsics, INTRINSICS.NUMBER));
@@ -24765,7 +24775,7 @@ LazyDefineBuiltinFunction(VMObject, "heap", 1, VMObject_heap);
             DefineOwnProperty(globalThis, "Realm", GetOwnProperty(intrinsics, INTRINSICS.REALM));
             DefineOwnProperty(globalThis, "ReferenceError", GetOwnProperty(intrinsics, INTRINSICS.REFERENCEERROR));
             DefineOwnProperty(globalThis, "RegExp", GetOwnProperty(intrinsics, INTRINSICS.REGEXP));
-            DefineOwnProperty(globalThis, "StructType", GetOwnProperty(intrinsics, "%StructType%"));
+            DefineOwnProperty(globalThis, "StructType", GetOwnProperty(intrinsics, INTRINSICS.STRUCTTYPE));
             DefineOwnProperty(globalThis, "SyntaxError", GetOwnProperty(intrinsics, INTRINSICS.SYNTAXERROR));
             LazyDefineProperty(globalThis, "System", realm.loader);
             DefineOwnProperty(globalThis, "TypeError", GetOwnProperty(intrinsics, INTRINSICS.TYPEERROR));
@@ -24783,7 +24793,7 @@ LazyDefineBuiltinFunction(VMObject, "heap", 1, VMObject_heap);
             DefineOwnProperty(globalThis, "WeakMap", GetOwnProperty(intrinsics, INTRINSICS.MAP));
             DefineOwnProperty(globalThis, "WeakSet", GetOwnProperty(intrinsics, INTRINSICS.SET));
             DefineOwnProperty(globalThis, "console", GetOwnProperty(intrinsics, INTRINSICS.CONSOLE));
-            DefineOwnProperty(globalThis, "debug", GetOwnProperty(intrinsics, "%DebugFunction%"));
+            DefineOwnProperty(globalThis, "debug", GetOwnProperty(intrinsics, INTRINSICS.DEBUGFUNCTION));
             DefineOwnProperty(globalThis, "decodeURI", GetOwnProperty(intrinsics, INTRINSICS.DECODEURI));
             DefineOwnProperty(globalThis, "decodeURIComponent", GetOwnProperty(intrinsics, INTRINSICS.DECODEURICOMPONENT));
             DefineOwnProperty(globalThis, "encodeURI", GetOwnProperty(intrinsics, INTRINSICS.ENCODEURI));
@@ -24797,10 +24807,10 @@ LazyDefineBuiltinFunction(VMObject, "heap", 1, VMObject_heap);
 //            LazyDefineBuiltinConstant(globalThis, "null", null);
             DefineOwnProperty(globalThis, "parseInt", GetOwnProperty(intrinsics, INTRINSICS.PARSEINT));
             DefineOwnProperty(globalThis, "parseFloat", GetOwnProperty(intrinsics, INTRINSICS.PARSEFLOAT));
-            DefineOwnProperty(globalThis, "print", GetOwnProperty(intrinsics, "%PrintFunction%"));
+            DefineOwnProperty(globalThis, "print", GetOwnProperty(intrinsics, INTRINSICS.PRINTFUNCTION));
             DefineOwnProperty(globalThis, "request", GetOwnProperty(intrinsics, INTRINSICS.REQUEST));
             DefineOwnProperty(globalThis, "setTimeout", GetOwnProperty(intrinsics, INTRINSICS.SETTIMEOUT));
-            DefineOwnProperty(globalThis, "setLanguage", GetOwnProperty(intrinsics, "%SetLanguage%"));
+            DefineOwnProperty(globalThis, "setLanguage", GetOwnProperty(intrinsics, INTRINSICS.SETLANGUAGE));
             LazyDefineBuiltinConstant(globalThis, "undefined", undefined);
             DefineOwnProperty(globalThis, "unescape", GetOwnProperty(intrinsics, INTRINSICS.UNESCAPE));
             LazyDefineBuiltinConstant(globalThis, $$toStringTag, "syntaxjs");
