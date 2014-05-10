@@ -3319,7 +3319,7 @@ define("slower-static-semantics", function (require, exports) {
         for (var i = 0, j = defs.length; i < j; i++) {
             def = defs[i];
             if (def && def.type === "MethodDefinition") {
-                if (def.isProtototype) list.push(def);
+                if (def.isPrototype) list.push(def);
                 else if (!def.static && !def.isConstructor) list.push(def);
             }
         }
@@ -9299,7 +9299,8 @@ INTRINSICS.ERROR = "%Error%";
 INTRINSICS.ERRORPROTOTYPE = "%ErrorPrototype%";
 INTRINSICS.TYPEERROR = "%TypeError%";
 INTRINSICS.TYPEERRORPROTOTYPE = "%TypeErrorPrototype%";
-
+INTRINSICS.REFERENCEERROR = "%ReferenceError%";
+INTRINSICS.REFERENCEERRORPROTOTYPE = "%ReferenceErrorPrototype%";
 Object.freeze(INTRINSICS);
 
 /**
@@ -9673,7 +9674,7 @@ function isAbrupt(completion) {
 
 
 function newReferenceError(message) {
-    return Completion("throw", OrdinaryConstruct(getIntrinsic("%ReferenceError%"), [message]));
+    return Completion("throw", OrdinaryConstruct(getIntrinsic(INTRINSICS.REFERENCEERROR), [message]));
 }
 
 function newRangeError(message) {
@@ -14924,8 +14925,8 @@ exports.float64 = float64;
         var SymbolPrototype = createIntrinsicPrototype(intrinsics, "%SymbolPrototype%");
         var TypeErrorConstructor = createIntrinsicConstructor(intrinsics, "TypeError", 0, INTRINSICS.TYPEERROR);
         var TypeErrorPrototype = createIntrinsicPrototype(intrinsics, INTRINSICS.TYPEERRORPROTOTYPE);
-        var ReferenceErrorConstructor = createIntrinsicConstructor(intrinsics, "ReferenceError", 0, "%ReferenceError%");
-        var ReferenceErrorPrototype = createIntrinsicPrototype(intrinsics, "%ReferenceErrorPrototype%");
+        var ReferenceErrorConstructor = createIntrinsicConstructor(intrinsics, "ReferenceError", 0, INTRINSICS.REFERENCEERROR);
+        var ReferenceErrorPrototype = createIntrinsicPrototype(intrinsics, INTRINSICS.REFERENCEERRORPROTOTYPE);
         var SyntaxErrorConstructor = createIntrinsicConstructor(intrinsics, "SyntaxError", 0, "%SyntaxError%");
         var SyntaxErrorPrototype = createIntrinsicPrototype(intrinsics, "%SyntaxErrorPrototype%");
         var RangeErrorConstructor = createIntrinsicConstructor(intrinsics, "RangeError", 0, "%RangeError%");
@@ -24679,7 +24680,7 @@ LazyDefineBuiltinFunction(VMObject, "heap", 1, VMObject_heap);
             DefineOwnProperty(globalThis, "Proxy", GetOwnProperty(intrinsics, "%Proxy%"));
             DefineOwnProperty(globalThis, "RangeError", GetOwnProperty(intrinsics, "%RangeError%"));
             DefineOwnProperty(globalThis, "Realm", GetOwnProperty(intrinsics, "%Realm%"));
-            DefineOwnProperty(globalThis, "ReferenceError", GetOwnProperty(intrinsics, "%ReferenceError%"));
+            DefineOwnProperty(globalThis, "ReferenceError", GetOwnProperty(intrinsics, INTRINSICS.REFERENCEERROR));
             DefineOwnProperty(globalThis, "RegExp", GetOwnProperty(intrinsics, "%RegExp%"));
             DefineOwnProperty(globalThis, "StructType", GetOwnProperty(intrinsics, "%StructType%"));
             DefineOwnProperty(globalThis, "SyntaxError", GetOwnProperty(intrinsics, "%SyntaxError%"));
