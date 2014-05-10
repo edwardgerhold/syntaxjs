@@ -9772,11 +9772,11 @@ function newReferenceError(message) {
 }
 
 function newRangeError(message) {
-    return Completion("throw", OrdinaryConstruct(getIntrinsic("%RangeError%"), [message]));
+    return Completion("throw", OrdinaryConstruct(getIntrinsic(INTRINSICS.RANGEERROR), [message]));
 }
 
 function newSyntaxError(message) {
-    return Completion("throw", OrdinaryConstruct(getIntrinsic("%SyntaxError%"), [message]));
+    return Completion("throw", OrdinaryConstruct(getIntrinsic(INTRINSICS.SYNTAXERROR), [message]));
 }
 
 function newTypeError(message) {
@@ -9784,11 +9784,11 @@ function newTypeError(message) {
 }
 
 function newURIError(message) {
-    return Completion("throw", OrdinaryConstruct(getIntrinsic("%URIError%"), [message]));
+    return Completion("throw", OrdinaryConstruct(getIntrinsic(INTRINSICS.URIERROR), [message]));
 }
 
 function newEvalError(message) {
-    return Completion("throw", OrdinaryConstruct(getIntrinsic("%EvalError%"), [message]));
+    return Completion("throw", OrdinaryConstruct(getIntrinsic(INTRINSICS.EVALERROR), [message]));
 }
 
 function withError(type, message) {
@@ -10826,7 +10826,7 @@ function ToObject(V) {
     if (Type(V) === OBJECT) return V;
     if (V instanceof SymbolPrimitiveType) {
         var s = SymbolPrimitiveType();
-        setInternalSlot(s, SLOTS.PROTOTYPE, getIntrinsic("%SymbolPrototype%"));
+        setInternalSlot(s, SLOTS.PROTOTYPE, getIntrinsic(INTRINSICS.SYMBOLPROTOTYPE));
         setInternalSlot(s, SLOTS.SYMBOLDATA, V);
         return s;
     }
@@ -12050,7 +12050,7 @@ function OrdinaryHasInstance(C, O) {
 // ===========================================================================================================
 
 function AddRestrictedFunctionProperties(F) {
-    var thrower = getIntrinsic("%ThrowTypeError%");
+    var thrower = getIntrinsic(INTRINSICS.THROWTYPEERROR);
     var status = DefineOwnPropertyOrThrow(F, "caller", {
         get: thrower,
         set: thrower,
@@ -14227,7 +14227,7 @@ var LineTerminators = tables.LineTerminators;
 exports.RegExpCreate = RegExpCreate;
 
 function RegExpCreate(P, F) {
-    var obj = RegExpAllocate(getIntrinsic("%RegExp%"));
+    var obj = RegExpAllocate(getIntrinsic(INTRINSICS.REGEXP));
     if (isAbrupt(obj=ifAbrupt(obj))) return obj;
     return RegExpInitialize(obj, P, F);
 }
@@ -14267,7 +14267,7 @@ function RegExpInitialize(obj, pattern, flags) {
 
 function RegExpAllocate(constructor) {
 
-    var obj = OrdinaryCreateFromConstructor(constructor, "%RegExpPrototype%",[
+    var obj = OrdinaryCreateFromConstructor(constructor, INTRINSICS.REGEXPPROTOTYPE,[
         SLOTS.REGEXPMATCHER,
         SLOTS.ORIGINALSOURCE,
         SLOTS.ORIGINALFLAGS
@@ -14530,7 +14530,7 @@ function InternalStructuredClone (input, memory, targetRealm) {
         output = OrdinaryConstruct(getIntrinsic("%String%", targetRealm), [value]);
     }
     else if ((value = getInternalSlot(input, SLOTS.REGEXPMATCHER)) !== undefined) {
-        output = OrdinaryConstruct(getIntrinsic("%RegExp%", targetRealm), []);
+        output = OrdinaryConstruct(getIntrinsic(INTRINSICS.REGEXP, targetRealm), []);
         setInternalSlot(output, SLOTS.REGEXPMATCHER, value);
         setInternalSlot(output, SLOTS.ORIGINALSOURCE, getInternalSlot(input, SLOTS.ORIGINALSOURCE));
         setInternalSlot(output, SLOTS.ORIGINALFLAGS, getInternalSlot(input, SLOTS.ORIGINALFLAGS));
@@ -22316,12 +22316,12 @@ LazyDefineProperty(PromisePrototype, $$toStringTag, SLOTS.PROMISE);
  */
 
 function PromiseNew (executor) {
-    var promise = AllocatePromise(getIntrinsic("%Promise%"));
+    var promise = AllocatePromise(getIntrinsic(INTRINSICS.PROMISE));
     return InitializePromise(promise, executor);
 }
 function PromiseBuiltinCapability() {
-    var promise = AllocatePromise(getIntrinsic("%Promise%"));
-    return CreatePromiseCapabilityRecord(promise, getIntrinsic("%Promise%"));
+    var promise = AllocatePromise(getIntrinsic(INTRINSICS.PROMISE));
+    return CreatePromiseCapabilityRecord(promise, getIntrinsic(INTRINSICS.PROMISE));
 }
 function PromiseOf(value) {
     var capability = NewPromiseCapability();
@@ -23668,7 +23668,7 @@ function createTypedArrayVariant(_type, _bpe, _ctor, _proto, ctorName) {
         setInternalSlot(O, SLOTS.TYPEDARRAYNAME, _type + suffix);
         var F = this;
         var realmF = getInternalSlot(F, SLOTS.REALM);
-        var sup = Get(realmF.intrinsics, "%TypedArray%");
+        var sup = Get(realmF.intrinsics, INTRINSICS.TYPEDARRAY);
         var args = argList;
         return callInternalSlot(SLOTS.CALL, sup, O, args);
     });
@@ -24685,7 +24685,7 @@ var StructTypeConstructor_Construct = function (argList) {
 };
 var StructTypeConstructor_$$create = function (thisArg, argList) {
     var F = thisArg;
-    var proto = OrdinaryCreateFromConstructor(F, "%StructTypePrototype%", [ SLOTS.TYPEDESCRIPTOR, SLOTS.DIMENSIONS ]);
+    var proto = OrdinaryCreateFromConstructor(F, INTRINSICS.STRUCTTYPEPROTOTYPE, [ SLOTS.TYPEDESCRIPTOR, SLOTS.DIMENSIONS ]);
     if (isAbrupt(proto = ifAbrupt(proto))) return proto;
     return ObjectCreate(proto);
 };
