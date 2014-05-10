@@ -9303,7 +9303,7 @@ INTRINSICS.REFERENCEERROR = "%ReferenceError%";
 INTRINSICS.REFERENCEERRORPROTOTYPE = "%ReferenceErrorPrototype%";
 INTRINSICS.STRING = "%String%";
 INTRINSICS.STRINGPROTOTYPE = "%StringPrototype%";
-INTRINSICS.STRINGITERATORPROTOTYPE = "%StringIteratorPrototype%"
+INTRINSICS.STRINGITERATORPROTOTYPE = "%StringIteratorPrototype%";
 INTRINSICS.SETITERATORPROTOTYPE = "%SetIteratorPrototype%";
 INTRINSICS.MAPITERATORPROTOTYPE = "%MapIteratorPrototype%";
 INTRINSICS.MAP = "%Map%";
@@ -9393,6 +9393,8 @@ INTRINSICS.TYPE = "%Type%";
 INTRINSICS.TYPEPROTOTYPE = "%TypePrototype%";
 INTRINSICS.ARRAYPROTO_VALUES = "%ArrayProto_values%";
 INTRINSICS.SETLANGUAGE = "%SetLanguage%";
+INTRINSICS.VM = "%VM%";
+INTRINSICS.DOMWRAPPER = "%DOMWrapper%";
 Object.freeze(INTRINSICS);
 
 /**
@@ -13003,15 +13005,15 @@ var typedConstructors = {
 };
 
 var typedConstructorNames = {
-    "Float64": "%Float64ArrayPrototype%",
-    "Float32": "%Float32ArrayPrototype%",
-    "Int32": "%Int32ArrayPrototype%",
-    "Uint32": "%Uint32ArrayPrototype%",
-    "Int16": "%Int16ArrayPrototype%",
-    "Uint16": "%Uint16ArrayPrototype%",
-    "Int8": "%Int8ArrayPrototype%",
-    "Uint8": "%Uint8ArrayPrototype%",
-    "Uint8Clamped": "%Uint8ClampedArrayPrototype%"
+    "Float64": INTRINSICS.FLOAT64ARRAYPROTOTYPE,
+    "Float32": INTRINSICS.FLOAT32ARRAYPROTOTYPE,
+    "Int32": INTRINSICS.INT32ARRAYPROTOTYPE,
+    "Uint32": INTRINSICS.UINT32ARRAYPROTOTYPE,
+    "Int16": INTRINSICS.INT16ARRAYPROTOTYPE,
+    "Uint16": INTRINSICS.UINT16ARRAYPROTOTYPE,
+    "Int8": INTRINSICS.INT8ARRAYPROTOTYPE,
+    "Uint8": INTRINSICS.UINT8ARRAYPROTOTYPE,
+    "Uint8Clamped": INTRINSICS.UINT8CLAMPEDARRAYPROTOTYPE
 };
 
 /**
@@ -13588,7 +13590,7 @@ function thisBooleanValue(value) {
     
 function ProxyExoticObject(handler, target) {
     var P = Object.create(ProxyExoticObject.prototype);
-    setInternalSlot(P, SLOTS.PROTOTYPE, getIntrinsic("%ProxyPrototype%"));
+    setInternalSlot(P, SLOTS.PROTOTYPE, getIntrinsic(INTRINSICS.PROXYPROTOTYPE));
     setInternalSlot(P, SLOTS.EXTENSIBLE, true);
     setInternalSlot(P, SLOTS.PROXYHANDLER, handler);
     setInternalSlot(P, SLOTS.PROXYTARGET, target);
@@ -15096,7 +15098,7 @@ exports.float64 = float64;
         var ThrowTypeError = createIntrinsicFunction(intrinsics, "ThrowTypeError", 0, INTRINSICS.THROWTYPEERROR);
         var ArrayProto_values = createIntrinsicFunction(intrinsics, "values", 0, INTRINSICS.ARRAYPROTO_VALUES);
         
-        var VMObject = createIntrinsicObject(intrinsics,"%VM%"); // that i can play with from inside the shell, too.
+        var VMObject = createIntrinsicObject(intrinsics,INTRINSICS.VM); // that i can play with from inside the shell, too.
                 
         var ThrowTypeError_Call = function (thisArg, argList) {
             return newTypeError( "The system is supposed to throw a Type Error with %ThrowTypeError% here.");
@@ -19203,7 +19205,7 @@ setInternalSlot(BooleanConstructor, SLOTS.CONSTRUCT, function Construct(argList)
 MakeConstructor(BooleanConstructor, true, BooleanPrototype);
 DefineOwnProperty(BooleanConstructor, $$create, {
     value: CreateBuiltinFunction(realm, function (thisArg, argList) {
-        return OrdinaryCreateFromConstructor(thisArg, "%BooleanPrototype%",[SLOTS.BOOLEANDATA]);
+        return OrdinaryCreateFromConstructor(thisArg, INTRINSICS.BOOLEANPROTOTYPE,[SLOTS.BOOLEANDATA]);
     }),
     enumerable: false,
     writable: true,
@@ -19664,7 +19666,7 @@ DefineOwnProperty(DateConstructor, "now", {
 
 DefineOwnProperty(DateConstructor, $$create, {
     value: CreateBuiltinFunction(realm, function (thisArg, argList) {
-        var obj = OrdinaryCreateFromConstructor(DateConstructor, "%DatePrototype%", [
+        var obj = OrdinaryCreateFromConstructor(DateConstructor, INTRINSICS.DATEPROTOTYPE, [
            SLOTS.DATEVALUE
     ]);
         return obj;
@@ -20109,7 +20111,7 @@ setInternalSlot(NumberConstructor, SLOTS.CONSTRUCT, function (argList) {
 
 var NumberConstructor_$$create = function (thisArg, argList) {
     var F = thisArg;
-    var obj = OrdinaryCreateFromConstructor(F, "%NumberPrototype%", [ SLOTS.NUMBERDATA ]);
+    var obj = OrdinaryCreateFromConstructor(F, INTRINSICS.NUMBERPROTOTYPE, [ SLOTS.NUMBERDATA ]);
     return obj;
 };
 var NumberConstructor_isFinite = function (thisArg, argList) {
@@ -23419,14 +23421,14 @@ var TypedArrayConstructor_Call = function (thisArg, argList) {
 };
 
 var typedArrayPrototypeNames = {
-    "Float64Array": "%Float64ArrayPrototype%",
-    "Float32Array": "%Float32ArrayPrototype%",
-    "Int32Array": "%Int32ArrayPrototype%",
-    "Uint32Array": "%Uint32ArrayPrototype%",
-    "Int16Array": "%Int16ArrayPrototype%",
-    "Uint16Array": "%Uint16ArrayPrototype%",
-    "Int8Array": "%Int8ArrayPrototype%",
-    "Uint8Array": "%Uint8ArrayPrototype%",
+    "Float64Array": INTRINSICS.FLOAT64ARRAYPROTOTYPE,
+    "Float32Array": INTRINSICS.FLOAT32ARRAYPROTOTYPE,
+    "Int32Array": INTRINSICS.INT32ARRAYPROTOTYPE,
+    "Uint32Array": INTRINSICS.UINT32ARRAYPROTOTYPE,
+    "Int16Array": INTRINSICS.INT16ARRAYPROTOTYPE,
+    "Uint16Array": INTRINSICS.UINT16ARRAYPROTOTYPE,
+    "Int8Array": INTRINSICS.INT8ARRAYPROTOTYPE,
+    "Uint8Array": INTRINSICS.UINT8ARRAYPROTOTYPE,
     "Uint8Clamped": "%Uint8ClampedArrayProtoype%"
 };
 
@@ -23951,7 +23953,7 @@ LazyDefineBuiltinFunction(MapPrototype, $$iterator, 0, MapPrototype_entries);
 DefineOwnProperty(MapConstructor, $$create, {
     value: CreateBuiltinFunction(realm, function $$create(thisArg, argList) {
         var F = thisArg;
-        return OrdinaryCreateFromConstructor(F, "%MapPrototype%", [
+        return OrdinaryCreateFromConstructor(F, INTRINSICS.MAPPROTOTYPE, [
             SLOTS.MAPDATA,
             SLOTS.MAPCOMPARATOR
         ]);
@@ -24000,7 +24002,7 @@ function CreateMapIterator(map, kind) {
     if (isAbrupt(M = ifAbrupt(M))) return M;
     if (!hasInternalSlot(M, SLOTS.MAPDATA)) return newTypeError( "object has no internal MapData slot");
     var entries = getInternalSlot(M, SLOTS.MAPDATA);
-    var MapIteratorPrototype = Get(getIntrinsics(), "%MapIteratorPrototype%");
+    var MapIteratorPrototype = Get(getIntrinsics(), INTRINSICS.MAPITERATORPROTOTYPE);
     var iterator = ObjectCreate(MapIteratorPrototype, {
         "Map": undefined,
         "MapNextIndex": undefined,
@@ -24130,7 +24132,7 @@ setInternalSlot(SetConstructor, SLOTS.CONSTRUCT, function (argList) {
 DefineOwnProperty(SetConstructor, $$create, {
     value: CreateBuiltinFunction(realm, function $$create(thisArg, argList) {
         var F = thisArg;
-        return OrdinaryCreateFromConstructor(F, "%SetPrototype%", [
+        return OrdinaryCreateFromConstructor(F, INTRINSICS.SETPROTOTYPE, [
             SLOTS.SETDATA,
             SLOTS.SETCOMPARATOR
         ]);
@@ -24276,7 +24278,7 @@ function CreateSetIterator(set, kind) {
     if (isAbrupt(S = ifAbrupt(S))) return S;
     if (!hasInternalSlot(S, SLOTS.SETDATA)) return newTypeError( "object has no internal SetData slot");
     var origEntries = getInternalSlot(S, SLOTS.SETDATA);
-    var SetIteratorPrototype = Get(getIntrinsics(), "%SetIteratorPrototype%");
+    var SetIteratorPrototype = Get(getIntrinsics(), INTRINSICS.SETITERATORPROTOTYPE);
     var iterator = ObjectCreate(SetIteratorPrototype,
         [
             SLOTS.ITERATEDSET,
@@ -24814,11 +24816,11 @@ LazyDefineBuiltinFunction(VMObject, "heap", 1, VMObject_heap);
             LazyDefineBuiltinConstant(globalThis, "undefined", undefined);
             DefineOwnProperty(globalThis, "unescape", GetOwnProperty(intrinsics, INTRINSICS.UNESCAPE));
             LazyDefineBuiltinConstant(globalThis, $$toStringTag, "syntaxjs");
-            DefineOwnProperty(globalThis, "VM", GetOwnProperty(intrinsics, "%VM%"));
+            DefineOwnProperty(globalThis, "VM", GetOwnProperty(intrinsics, INTRINSICS.VM));
 
         if (typeof Java !== "function" && typeof load !== "function" && typeof print !== "function") {
 	
-	        LazyDefineProperty(intrinsics, "%DOMWrapper%", 
+	        LazyDefineProperty(intrinsics, INTRINSICS.DOMWRAPPER, 
 	        NativeJSObjectWrapper(
 	        typeof importScripts === "function" ? self : 
 	        typeof window === "object" ? window : 
@@ -24827,9 +24829,9 @@ LazyDefineBuiltinFunction(VMObject, "heap", 1, VMObject_heap);
 	        );
         
             if (typeof importScripts === "function") {
-                DefineOwnProperty(globalThis, "self", GetOwnProperty(intrinsics, "%DOMWrapper%"));
+                DefineOwnProperty(globalThis, "self", GetOwnProperty(intrinsics, INTRINSICS.DOMWRAPPER));
             } else if (typeof window === "object") {
-                DefineOwnProperty(globalThis, "window", GetOwnProperty(intrinsics, "%DOMWrapper%"));
+                DefineOwnProperty(globalThis, "window", GetOwnProperty(intrinsics, INTRINSICS.DOMWRAPPER));
                 DefineOwnProperty(globalThis, "document", {
                     configurable: true,
                     enumerable: true,
@@ -24838,7 +24840,7 @@ LazyDefineBuiltinFunction(VMObject, "heap", 1, VMObject_heap);
 
                 });
             } else if (typeof process === "object") {
-                DefineOwnProperty(globalThis, "process", GetOwnProperty(intrinsics, "%DOMWrapper%"));
+                DefineOwnProperty(globalThis, "process", GetOwnProperty(intrinsics, INTRINSICS.DOMWRAPPER));
             }
 
 	}
