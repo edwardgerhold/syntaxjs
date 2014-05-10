@@ -9274,6 +9274,7 @@ Object.freeze(SLOTS); // DOES A FREEZE HELP OPTIMIZING? The pointers can´t chan
  */
 
 var INTRINSICS = Object.create(null);
+
 INTRINSICS.OBJECT = "%Object%";
 INTRINSICS.OBJECTPROTOTYPE = "%ObjectPrototype%";
 INTRINSICS.FUNCTION = "%Function%";
@@ -9289,6 +9290,15 @@ INTRINSICS.REFLECT = "%Reflect%";
 INTRINSICS.LOADER = "%Loader%";
 INTRINSICS.LOADERPROTOTYPE = "%LoaderPrototype%";
 INTRINSICS.LOADERITERATORPROTOTYPE = "%LoaderIteratorPrototype%";
+INTRINSICS.GENERATORFUNCTION = "%GeneratorFunction%";
+INTRINSICS.ARRAYBUFFER = "%ArrayBuffer%";
+INTRINSICS.ARRAYBUFFERPROTOTYPE = "%ArrayBufferPrototype%";
+INTRINSICS.DATAVIEW = "%DataView%";
+INTRINSICS.DATAVIEWPROTOTYPE = "%DataViewPrototype%";
+INTRINSICS.ERROR = "%Error%";
+INTRINSICS.ERRORPROTOTYPE = "%ErrorPrototype%";
+INTRINSICS.TYPEERROR = "%TypeError%";
+INTRINSICS.TYPEERRORPROTOTYPE = "%TypeErrorPrototype%";
 
 Object.freeze(INTRINSICS);
 
@@ -9675,7 +9685,7 @@ function newSyntaxError(message) {
 }
 
 function newTypeError(message) {
-    return Completion("throw", OrdinaryConstruct(getIntrinsic("%TypeError%"), [message]));
+    return Completion("throw", OrdinaryConstruct(getIntrinsic(INTRINSICS.TYPEERROR), [message]));
 }
 
 function newURIError(message) {
@@ -12095,26 +12105,20 @@ function RebindSuper(func, newHome) {
 
 function ArgumentsExoticObject() {
     var O = Object.create(ArgumentsExoticObject.prototype);
-
     setInternalSlot(O, SLOTS.BINDINGS, Object.create(null));
     setInternalSlot(O, SLOTS.SYMBOLS, Object.create(null));
-
     setInternalSlot(O, SLOTS.PROTOTYPE, getIntrinsic(INTRINSICS.ARRAYPROTOTYPE));
-
     var map = ObjectCreate();
     setInternalSlot(map, "toString", function () {
         return "[object ParameterMap]";
     });
     setInternalSlot(O, SLOTS.PARAMETERMAP, map);
-
     return O;
 }
 ArgumentsExoticObject.prototype = {
-
     toString: function () {
         return "[object ArgumentsExoticObject]";
     },
-
     Get: function (P) {
         var ao = this;
         var map = getInternalSlot(ao, SLOTS.PARAMETERMAP);
@@ -12129,7 +12133,6 @@ ArgumentsExoticObject.prototype = {
         } else {
             return Get(map, P);
         }
-
     },
     GetOwnProperty: function (P) {
         var ao = this;
@@ -12140,21 +12143,15 @@ ArgumentsExoticObject.prototype = {
         if (isMapped) desc.value = Get(map, P);
         return desc;
     },
-
-
     DefineOwnProperty: function (P, Desc) {
         var ao = this;
         var map = getInternalSlot(ao, SLOTS.PARAMETERMAP);
         var isMapped = callInternalSlot(SLOTS.GETOWNPROPERTY, map, P);
         var allowed = OrdinaryDefineOwnProperty(ao, P, Desc);
-
         var putStatus;
         if (isAbrupt(allowed = ifAbrupt(allowed))) return allowed;
-
         if (!allowed) return allowed;
-
         if (isMapped) {
-
             if (IsAccessorDescriptor(Desc)) {
                 callInternalSlot("Delete", map, P);
             } else {
@@ -12173,7 +12170,6 @@ ArgumentsExoticObject.prototype = {
         if (result && isMapped) callInternalSlot("Delete", map, P);
 
     },
-
     constructor: ArgumentsExoticObject
 };
 
@@ -12787,7 +12783,7 @@ function SetArrayBufferData(arrayBuffer, bytes) {
 }
 
 function AllocateArrayBuffer(F) {
-    var obj = OrdinaryCreateFromConstructor(F, "%ArrayBufferPrototype%",
+    var obj = OrdinaryCreateFromConstructor(F, INTRINSICS.ARRAYBUFFERPROTOTYPE,
         [
             SLOTS.ARRAYBUFFERDATA,
             SLOTS.ARRAYBUFFERBYTELENGTH
@@ -14448,9 +14444,9 @@ function InternalStructuredClone (input, memory, targetRealm) {
         if (isAbrupt(output = ifAbrupt(output))) return output;
     } else if ((value = getInternalSlot(input, SLOTS.VIEWEDARRAYBUFFER)) !== undefined) {
         var arrayBuffer = value;
-        //if (OrdinaryHasInstance(getIntrinsic("%DataView%")), input) { // assumes i´m in source realm
+        //if (OrdinaryHasInstance(getIntrinsic(INTRINSICS.DATAVIEW)), input) { // assumes i´m in source realm
         if (!hasInternalSlot(input, SLOTS.TYPEDARRAYCONSTRUCTOR)) {
-            output = OrdinaryConstruct(getIntrinsicFromRealm("%DataView%", targetRealm), []);
+            output = OrdinaryConstruct(getIntrinsicFromRealm(INTRINSICS.DATAVIEW, targetRealm), []);
             setInternalSlot(output, SLOTS.VIEWEDARRAYBUFFER, getInternalSlot(input, SLOTS.VIEWEDARRAYBUFFER));
             setInternalSlot(output, SLOTS.BYTEOFFSET, getInternalSlot(input, SLOTS.BYTEOFFSET));
             setInternalSlot(output, SLOTS.BYTELENGTH, getInternalSlot(input, SLOTS.BYTELENGTH));
@@ -14512,7 +14508,7 @@ var Transfer_Call = function (thisArg, argList) {
 };
 
 function CopyArrayBufferToRealm(arrayBuffer, targetRealm) {
-    var ArrayBufferConstructor = getIntrinsicFromRealm("%ArrayBuffer%", targetRealm);
+    var ArrayBufferConstructor = getIntrinsicFromRealm(INTRINSICS.ARRAYBUFFER, targetRealm);
     var length = getInternalSlot(arrayBuffer, SLOTS.ARRAYBUFFERBYTELENGTH);
     var srcBlock = getInternalSlot(arrayBuffer, SLOTS.ARRAYBUFFERDATA);
     var result = OrdinaryConstruct(ArrayBufferConstructor, []);
@@ -14896,7 +14892,7 @@ exports.float64 = float64;
         var EscapeFunction = createIntrinsicFunction(intrinsics, "escape", 0, "%Escape%");
         var UnescapeFunction = createIntrinsicFunction(intrinsics, "unescape", 0, "%Unescape%");
         var EvalFunction = createIntrinsicFunction(intrinsics, "eval", 0, "%Eval%");
-        var GeneratorFunction = createIntrinsicFunction(intrinsics, "Generator", 0, "%GeneratorFunction%");
+        var GeneratorFunction = createIntrinsicFunction(intrinsics, "Generator", 0, INTRINSICS.GENERATORFUNCTION);
         var LoadFunction = createIntrinsicFunction(intrinsics, "load", 0, "%Load%");
         var RequestFunction = createIntrinsicFunction(intrinsics, "request", 0, "%Request%");
         var ModuleFunction = createIntrinsicFunction(intrinsics, "Module", 0, "%Module%");
@@ -14916,8 +14912,8 @@ exports.float64 = float64;
         var StringIteratorPrototype = createIntrinsicPrototype(intrinsics, "%StringIteratorPrototype%");
         var DateConstructor = createIntrinsicConstructor(intrinsics, "Date", 0, "%Date%");
         var DatePrototype = createIntrinsicPrototype(intrinsics, "%DatePrototype%");
-        var ErrorConstructor = createIntrinsicConstructor(intrinsics, "Error", 0, "%Error%");
-        var ErrorPrototype = createIntrinsicPrototype(intrinsics, "%ErrorPrototype%");
+        var ErrorConstructor = createIntrinsicConstructor(intrinsics, "Error", 0, INTRINSICS.ERROR);
+        var ErrorPrototype = createIntrinsicPrototype(intrinsics, INTRINSICS.ERRORPROTOTYPE);
         var ArrayConstructor = createIntrinsicConstructor(intrinsics, "Array", 0, INTRINSICS.ARRAY);
         var ArrayPrototype = createIntrinsicPrototype(intrinsics, INTRINSICS.ARRAYPROTOTYPE);
         var ArrayIteratorPrototype = createIntrinsicPrototype(intrinsics, INTRINSICS.ARRAYITERATORPROTOTYPE);
@@ -14926,8 +14922,8 @@ exports.float64 = float64;
         var GeneratorObject = createIntrinsicObject(intrinsics, INTRINSICS.GENERATOR);
         var ReflectObject = createIntrinsicObject(intrinsics, INTRINSICS.REFLECT);
         var SymbolPrototype = createIntrinsicPrototype(intrinsics, "%SymbolPrototype%");
-        var TypeErrorConstructor = createIntrinsicConstructor(intrinsics, "TypeError", 0, "%TypeError%");
-        var TypeErrorPrototype = createIntrinsicPrototype(intrinsics, "%TypeErrorPrototype%");
+        var TypeErrorConstructor = createIntrinsicConstructor(intrinsics, "TypeError", 0, INTRINSICS.TYPEERROR);
+        var TypeErrorPrototype = createIntrinsicPrototype(intrinsics, INTRINSICS.TYPEERRORPROTOTYPE);
         var ReferenceErrorConstructor = createIntrinsicConstructor(intrinsics, "ReferenceError", 0, "%ReferenceError%");
         var ReferenceErrorPrototype = createIntrinsicPrototype(intrinsics, "%ReferenceErrorPrototype%");
         var SyntaxErrorConstructor = createIntrinsicConstructor(intrinsics, "SyntaxError", 0, "%SyntaxError%");
@@ -14970,10 +14966,10 @@ exports.float64 = float64;
         var Uint32ArrayPrototype = createIntrinsicPrototype(intrinsics, "%Uint32ArrayPrototype%");
         var Float32ArrayPrototype = createIntrinsicPrototype(intrinsics, "%Float32ArrayPrototype%");
         var Float64ArrayPrototype = createIntrinsicPrototype(intrinsics, "%Float64ArrayPrototype%");
-        var ArrayBufferConstructor = createIntrinsicConstructor(intrinsics, "ArrayBuffer", 0, "%ArrayBuffer%");
-        var ArrayBufferPrototype = createIntrinsicPrototype(intrinsics, "%ArrayBufferPrototype%");
-        var DataViewConstructor = createIntrinsicConstructor(intrinsics, "DataView", 0, "%DataView%");
-        var DataViewPrototype = createIntrinsicPrototype(intrinsics, "%DataViewPrototype%");
+        var ArrayBufferConstructor = createIntrinsicConstructor(intrinsics, "ArrayBuffer", 0, INTRINSICS.ARRAYBUFFER);
+        var ArrayBufferPrototype = createIntrinsicPrototype(intrinsics, INTRINSICS.ARRAYBUFFERPROTOTYPE);
+        var DataViewConstructor = createIntrinsicConstructor(intrinsics, "DataView", 0, INTRINSICS.DATAVIEW);
+        var DataViewPrototype = createIntrinsicPrototype(intrinsics, INTRINSICS.DATAVIEWPROTOTYPE);
         var JSONObject = createIntrinsicObject(intrinsics, INTRINSICS.JSON);
         var MathObject = createIntrinsicObject(intrinsics, INTRINSICS.MATH);
         var ConsoleObject = createIntrinsicObject(intrinsics, "%Console%");
@@ -19248,7 +19244,7 @@ setInternalSlot(ErrorConstructor, SLOTS.CALL, function (thisArg, argList) {
     // This is different from the others in the spec
     if (!isObject || (isObject &&
         (!hasInternalSlot(O, "ErrorData") || (getInternalSlot(O, "ErrorData") === undefined)))) {
-        O = OrdinaryCreateFromConstructor(func, "%ErrorPrototype%", {
+        O = OrdinaryCreateFromConstructor(func, INTRINSICS.ERRORPROTOTYPE, {
             "ErrorData": undefined
         });
         if (isAbrupt(O = ifAbrupt(O))) return O;
@@ -19283,7 +19279,7 @@ setInternalSlot(ErrorConstructor, SLOTS.CONSTRUCT, function (argList) {
 DefineOwnProperty(ErrorConstructor, $$create, {
     value: CreateBuiltinFunction(realm, function (thisArg, argList) {
         var F = thisArg;
-        var obj = OrdinaryCreateFromConstructor(F, "%ErrorPrototype%", {
+        var obj = OrdinaryCreateFromConstructor(F, INTRINSICS.ERRORPROTOTYPE, {
             "ErrorData": undefined
         });
         return obj;
@@ -22974,7 +22970,7 @@ var DataViewConstructor_Construct = function (argList) {
 
 var DataViewConstructor_$$create = function (thisArg, argList) {
     var F = thisArg;
-    var obj = OrdinaryCreateFromConstructor(F, "%DataViewPrototype%", [
+    var obj = OrdinaryCreateFromConstructor(F, INTRINSICS.DATAVIEWPROTOTYPE, [
         SLOTS.DATAVIEW,
         SLOTS.VIEWEDARRAYBUFFER,
         SLOTS.BYTELENGTH,
@@ -23196,7 +23192,7 @@ var TypedArrayConstructor_Call = function (thisArg, argList) {
             if (isAbrupt(arrayLength=ifAbrupt(arrayLength))) return arrayLength;
             var elementLength = ToLength(arrayLength);
             if (isAbrupt(elementLength=ifAbrupt(elementLength))) return elementLength;
-            var data = AllocateArrayBuffer(getIntrinsic("%ArrayBuffer%"));
+            var data = AllocateArrayBuffer(getIntrinsic(INTRINSICS.ARRAYBUFFER));
             if (isAbrupt(data=ifAbrupt(data))) return data;
             var elementSize = TypedArrayElementSize[elementType];
             var byteLength = elementSize * elementLength;
@@ -23240,7 +23236,7 @@ var TypedArrayConstructor_Call = function (thisArg, argList) {
             } else {
                 var bufferConstructor = Get(srcBuffer, "constructor");
                 if (isAbrupt(bufferConstructor=ifAbrupt(bufferConstructor))) return bufferConstructor;
-                if (bufferConstructor === undefined) bufferConstructor = getIntrinsic("%ArrayBuffer%");
+                if (bufferConstructor === undefined) bufferConstructor = getIntrinsic(INTRINSICS.ARRAYBUFFER);
                 var data = AllocateArrayBuffer(bufferConstructor);
                 var status = SetArrayBufferData(data, byteLength);
                 if (isAbrupt(status=ifAbrupt(status))) return status;
@@ -23274,7 +23270,7 @@ var TypedArrayConstructor_Call = function (thisArg, argList) {
         elementLength = ToLength(numberLength);
         if (isAbrupt(elementLength = ifAbrupt(elementLength))) return elementLength;
         if (SameValueZero(numberLength, elementLength) === false) return newRangeError( "TypedArray: numberLength and elementLength are not equal");
-        data = AllocateArrayBuffer(getIntrinsic("%ArrayBuffer%"));
+        data = AllocateArrayBuffer(getIntrinsic(INTRINSICS.ARRAYBUFFER));
         if (isAbrupt(data = ifAbrupt(data))) return data;
         elementSize = TypedArrayElementSize[elementType];
         byteLength = elementSize * elementLength;
@@ -24655,19 +24651,19 @@ LazyDefineBuiltinFunction(VMObject, "heap", 1, VMObject_heap);
             SetPrototypeOf(globalThis, ObjectPrototype);
             setInternalSlot(globalThis, SLOTS.EXTENSIBLE, true);
             DefineOwnProperty(globalThis, "Array", GetOwnProperty(intrinsics, INTRINSICS.ARRAY));
-            DefineOwnProperty(globalThis, "ArrayBuffer", GetOwnProperty(intrinsics, "%ArrayBuffer%"));
+            DefineOwnProperty(globalThis, "ArrayBuffer", GetOwnProperty(intrinsics, INTRINSICS.ARRAYBUFFER));
             DefineOwnProperty(globalThis, "Boolean", GetOwnProperty(intrinsics, "%Boolean%"));
-            DefineOwnProperty(globalThis, "DataView", GetOwnProperty(intrinsics, "%DataView%"));
+            DefineOwnProperty(globalThis, "DataView", GetOwnProperty(intrinsics, INTRINSICS.DATAVIEW));
             DefineOwnProperty(globalThis, "Date", GetOwnProperty(intrinsics, "%Date%"));
             DefineOwnProperty(globalThis, "Emitter", GetOwnProperty(intrinsics, "%Emitter%"));
             DefineOwnProperty(globalThis, "Event", GetOwnProperty(intrinsics, "%Event%"));
             DefineOwnProperty(globalThis, "EventTarget", GetOwnProperty(intrinsics, "%EventTarget%"));
-            DefineOwnProperty(globalThis, "Error", GetOwnProperty(intrinsics, "%Error%"));
+            DefineOwnProperty(globalThis, "Error", GetOwnProperty(intrinsics, INTRINSICS.ERROR));
             DefineOwnProperty(globalThis, "EvalError", GetOwnProperty(intrinsics, "%EvalError%"));
             DefineOwnProperty(globalThis, "Function", GetOwnProperty(intrinsics, INTRINSICS.FUNCTION));
             DefineOwnProperty(globalThis, "Float32Array", GetOwnProperty(intrinsics, "%Float32Array%"));
             DefineOwnProperty(globalThis, "Float64Array", GetOwnProperty(intrinsics, "%Float64Array%"));
-            DefineOwnProperty(globalThis, "GeneratorFunction", GetOwnProperty(intrinsics, "%GeneratorFunction%"));
+            DefineOwnProperty(globalThis, "GeneratorFunction", GetOwnProperty(intrinsics, INTRINSICS.GENERATORFUNCTION));
             LazyDefineBuiltinConstant(globalThis, "Infinity", Infinity);
             DefineOwnProperty(globalThis, "Int8Array", GetOwnProperty(intrinsics, "%Int8Array%"));
             DefineOwnProperty(globalThis, "Int16Array", GetOwnProperty(intrinsics, "%Int16Array%"));
@@ -24688,7 +24684,7 @@ LazyDefineBuiltinFunction(VMObject, "heap", 1, VMObject_heap);
             DefineOwnProperty(globalThis, "StructType", GetOwnProperty(intrinsics, "%StructType%"));
             DefineOwnProperty(globalThis, "SyntaxError", GetOwnProperty(intrinsics, "%SyntaxError%"));
             LazyDefineProperty(globalThis, "System", realm.loader);
-            DefineOwnProperty(globalThis, "TypeError", GetOwnProperty(intrinsics, "%TypeError%"));
+            DefineOwnProperty(globalThis, "TypeError", GetOwnProperty(intrinsics, INTRINSICS.TYPEERROR));
             DefineOwnProperty(globalThis, "URIError", GetOwnProperty(intrinsics, "%URIError%"));
             DefineOwnProperty(globalThis, "Object", GetOwnProperty(intrinsics, INTRINSICS.OBJECT));
             DefineOwnProperty(globalThis, "Promise", GetOwnProperty(intrinsics, "%Promise%"));
@@ -27913,7 +27909,7 @@ define("runtime", function () {
         var fproto;
         if (node.generator) {
             var intrinsics = getIntrinsics();
-            fproto = Get(intrinsics, "%GeneratorFunction%");
+            fproto = Get(intrinsics, INTRINSICS.GENERATORFUNCTION);
         }
         var methodDef = DefineMethod(node, object, fproto);
         if (isAbrupt(methodDef = ifAbrupt(methodDef))) return methodDef;
@@ -30056,11 +30052,24 @@ define("vm", function (require, exports) {
 
     var r0, r1, r2, r3, r4, r5, r6, r7, r8, r9;
     var reg = Array(10);
-    var regs = [[],[],[],[],[],[]];
+    var regs = [[],[],[],[],[],[],[],[],[],[],[]];  // if you have no operand stack, you need to save the regs.
+                                                    // here i have to deal with javascript objects
+                                                    // for a while.
+
+                                            // hmm, maybe, i should next try to rewrite the object on the heap
+                                            // or just point outside to the pool, where the object will not be
+                                            // gc´ed. Btw. it could be watched if it needs deletion there, i think
+                                            // it was seen and forgotten. Delete from pool if it needs collection.
+
+                                    // well, ObjectCreate() shall no longer return an object ordinary object
+                                    // but a memory location with, e.g. first a const pool index, where the new
+                                    // object exists, so i can smuggle the HEAP32 into the running system on the
+                                    // AST. nobody will care for the ms. It´s anyways the slowest es6 available ;-)
 
     function pushReg(nr) {
         regs[nr].push(reg[nr]);
     }
+
     function popReg(nr) {
         reg[nr] = regs[nr].pop();
     }
@@ -30379,6 +30388,7 @@ define("vm", function (require, exports) {
                     break;
                 case WHILEBODY:
                     $0 = !!operands[sp--]; // may not be in here. operands is DYNAMIC TYPED.
+
                     if ($0) {
                         $1 = ip + 2;            // first
                         $3 = HEAP32[ip + 1];    // len
@@ -30396,6 +30406,7 @@ define("vm", function (require, exports) {
                     break;
                 case DOWHILECOND:
                     $0 = !!operands[sp--]; // this may not happen in here
+
                     if ($0) {
                         stack[pc++] = HEAP32[ip+1];
                     }
