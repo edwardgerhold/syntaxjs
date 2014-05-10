@@ -516,6 +516,8 @@ define("languages.de_DE", function (require, exports) {
     exports.S_IS_NOT_AN_OBJECT = "%s ist kein Object";
     exports.S_IS_NO_AVAILABLE_SLOT = "%s ist kein verfügbarer Slot.";
 
+    exports.TOSTRING_ERROR = "Argument kann nicht in einen String verwandelt werden.";
+
 
     exports.S_IS_NO_CONSTRUCTOR = "%s ist keine Konstruktorfunktion.";
     exports.NO_CONSTRUCTOR = "Kein Konstruktor.";
@@ -523,15 +525,17 @@ define("languages.de_DE", function (require, exports) {
     exports.S_IS_NOT_CALLABLE = "%s ist nicht aufrufbar.";
     exports.NOT_CALLABLE = "Keine Funktion";
 
-
     exports.NULL_NOT_COERCIBLE = "null is nicht erzwingbar durch die Testfunktion CheckObjectCoercible";
     exports.UNDEFINED_NOT_COERCIBLE = "undefined ist nicht erzwingbar durch die Testfunktion CheckObjectCoercible";
 
     exports.S_ALREADY_INITIALIZED = "%s ist bereits initialisiert.";
     exports.S_IS_NOT_INITIALIZED = "%s ist nicht richtig initialisiert.";
 
+    exports.EXPECTING_ARRAYLIKE = "Erwartete ein Array-artiges Objekt";
 
-    exports.NO_PARSER_ERROR_S = "Habe keinen Parser für %s";
+    exports.NO_PARSER_FOR_S = "Habe keine Parserfunktionen für %s";
+    exports.NO_COMPILER_FOR_S = "Habe keine Übersetzerfunktion for %s";
+
 
     exports.UNKNOWN_INSTRUCTION_S = "Unbekannte Instruktion: %s";
     exports.UNKNOWN_ERROR         = "Unbekannter Fehler";
@@ -576,6 +580,7 @@ define("languages.en_US", function (require, exports) {
     exports.UNRESOLVABLE_REFERENCE = "Unresolvable Reference";
 
     // Primitives
+    exports.TOSTRING_ERROR = "Can not cast argument into a string."
 
     // Objects
     exports.S_IS_NOT_AN_OBJECT = "%s is not an object";
@@ -599,11 +604,14 @@ define("languages.en_US", function (require, exports) {
     exports.OUT_OF_RANGE = "Out of range";
     exports.S_IS_OUT_OF_RANGE_S = "%s is out of range %s";
 
+    exports.EXPECTING_ARRAYLIKE = "Expected an array like object";
+
     // CheckObjectCoercible
     exports.NULL_NOT_COERCIBLE = "null is not coercible by the check function CheckObjectCoercible";
     exports.UNDEFINED_NOT_COERCIBLE = "undefined is not coercible by the check function CheckObjectCoercible";
 
-    exports.NO_PARSER_ERROR_S = "got no parser for %s";
+    exports.NO_PARSER_FOR_S = "Got no parser functions for %s";
+    exports.NO_COMPILER_FOR_S = "Got no compiler function for %s";
     // VM.eval
     exports.UNKNOWN_INSTRUCTION_S = "Unknown instruction: %s";
     exports.UNKNOWN_ERROR         = "Unknown Error";
@@ -9158,7 +9166,7 @@ SLOTS.CODE = "Code";
 SLOTS.CALL = "Call";
 SLOTS.CONSTRUCT = "Construct";
 SLOTS.FORMALPARAMETERS = "FormalParameters";
-SLOTS.THISMODE = SLOTS.THISMODE;
+SLOTS.THISMODE = "ThisMode";
 SLOTS.STRICT = "Strict";
 SLOTS.FUNCTIONKIND = "FunctionKind";
 SLOTS.NEEDSSUPER = "NeedsSuper";
@@ -9265,7 +9273,8 @@ SLOTS.RANK = "Rank";
 SLOTS.ARRAYDESCRIPTOR = "ArrayDescriptor";
 SLOTS.OPAQUEDESCRIPTOR = "OpaqueDescriptor";
 
-Object.freeze(SLOTS);
+Object.freeze(SLOTS); // DOES A FREEZE HELP OPTIMIZING? The pointers can´t change anymore, or?
+
 
 
 /**
@@ -9533,13 +9542,13 @@ function setCodeRealm(r) {  // CREATE REALM (API)
 
 function ExecutionContext(outerCtx, realm, state, generator) {
     "use strict";
-    var VarEnv = NewDeclarativeEnvironment((outerCtx && outerCtx.VarEnv)||null);
+    var VarEnv = NewDeclarativeEnvironment((outerCtx && outerCtx.LexEnv)||null);
     return {
         __proto__: ExecutionContext.prototype,
         state: [], // depr.
         stack: [],
-        pc: 0,
-        operandStack: [],
+        pc: 0,              //
+        operandStack: [],   // or use local variables and saveRegs() (nothing without a push to save)
         sp: -1,
         realm: realm,
         outer: outerCtx||null,
@@ -12069,10 +12078,6 @@ function RebindSuper(func, newHome) {
 
 
 
-// ===========================================================================================================
-// Arguments Object
-// ===========================================================================================================
-
 function ArgumentsExoticObject() {
     var O = Object.create(ArgumentsExoticObject.prototype);
 
@@ -12122,7 +12127,6 @@ ArgumentsExoticObject.prototype = {
     },
 
 
-    // Muss definitiv einen Bug haben.
     DefineOwnProperty: function (P, Desc) {
         var ao = this;
         var map = getInternalSlot(ao, SLOTS.PARAMETERMAP);
@@ -12152,6 +12156,7 @@ ArgumentsExoticObject.prototype = {
         var result = Delete(this, P);
         if (isAbrupt(result = ifAbrupt(result))) return result;
         if (result && isMapped) callInternalSlot("Delete", map, P);
+
     },
 
     constructor: ArgumentsExoticObject
@@ -12308,7 +12313,6 @@ function ArraySetLength(A, Desc) {
     }
     return true;
 }
-
 
 
 
@@ -13474,7 +13478,6 @@ function thisBooleanValue(value) {
     }
     return newTypeError( "thisBooleanValue: value is not a Boolean");
 }
-
 
 
 
@@ -29148,7 +29151,7 @@ define("asm-typechecker", function (require, exports){
 /**
  * this compiler deconstructs the ast into INT Code.
  * I hope to refactor it into BYTECODE.
- * later it should be valid numeric code to be run inside an asm js module.
+ * (much) later it should be valid numeric code to be run inside an asm js module.
  * the STACKTOP is count in BYTES.
  * the pointers are stored as STACKTOP >> 2 (means times 4) for INTs
  *
@@ -29156,10 +29159,21 @@ define("asm-typechecker", function (require, exports){
  * which take just two arguments can loose their heading code
  * and just store ptr to left, bytecode for load result into r1, ptr to right, bytecode to load result into r2, bytecode for operation of r1, r2
  * currently i emit another header int
+ *  (the instruction set can be refactored into regular assembly, i just got behind)
  *
  * i see, the "node.type" gets lost when creating bytecode.
  * repeating patterns just make some loads/register transfers necessary
  * which can be done with the same code
+ *
+ * i switched from registers back to stack machine and i am
+ * unsure which way to go, registers anyway make a pushreg and popreg
+ * necessary, and the operandstack has the same problem. otherwise
+ * sometimes i don´t need to save the registers ;)
+ * i don´t know exactly, what the outcome will be, but i am sure, that
+ * overworking the code will result in a typical bytecode with load,
+ * store, add, branch, ifeq, iflt, ifgt or what their names are and i
+ * think i´ll soon get it to design these codes.
+ *
  */
 
 define("asm-compiler", function (require, exports) {
@@ -29221,6 +29235,24 @@ define("asm-compiler", function (require, exports) {
     var ERROR = 0xFE;
     var HALT = 0xFF;
     var EMPTY = -0x01;  // negative can not point into something
+
+    /*
+            ???? - i need a better instruction set
+            the operations with the "nodes" can be
+            seen like regular bytecode, e.g. asm or
+            the jvm code, or python bytecode, i don´t
+            have node types then, but bring the result
+            here and there, and a few specialised definitions,
+
+            or, however, this instruction set is missing the
+            typical bytecode set now, but working with the
+            nodes means from beginning on "they look like they
+            can be rewritten" so that´s for sure, it will change
+            towards
+
+     */
+
+
 
     var tables = require("tables");
     var propDefKinds = tables.propDefKinds;
@@ -29453,7 +29485,7 @@ define("asm-compiler", function (require, exports) {
         var ptr = STACKTOP >> 2;
         STACKTOP += 12;
         if (node.prefix)
-        HEAP32[ptr] = UNARYEXPR;
+            HEAP32[ptr] = UNARYEXPR;
         HEAP32[ptr+1] = compile(node.argument);
         if (node.prefix) HEAP32[ptr+2] = UNARYOP;
         else HEAP32[ptr+2] = POSTFIXOP;
@@ -29499,7 +29531,7 @@ define("asm-compiler", function (require, exports) {
         STACKTOP += 16;
         HEAP32[ptr] = NEWEXPR;
         HEAP32[ptr+1] = compile(node.callee);
-        HEAP32[ptr+2] = compile(node.arguments);
+        HEAP32[ptr+2] = argumentList(node.arguments);
         HEAP32[ptr+3] = CONSTRUCT;
         //console.log("compiled new expr to " + ptr);
         return ptr;
@@ -29601,7 +29633,7 @@ define("asm-compiler", function (require, exports) {
         STACKTOP += 8;
         HEAP32[ptr] = RET;
         if (node.argument)
-        HEAP32[ptr+1] = compile(node.argument);
+            HEAP32[ptr+1] = compile(node.argument);
         else HEAP32[ptr+1] = EMPTY;
         //console.log("compiled return to " + ptr);
         return ptr;
@@ -29703,13 +29735,59 @@ define("asm-compiler", function (require, exports) {
      */
 
 
-    function switchStatement(node) {}
-    function switchCase(node) {}
-    function defaultClause(node) {}
+    function forStatement (node) {
+        var ptr = STACKTOP >> 2;
 
-    function tryStatement(node) {}
-    function catchClause(node) {}
-    function finally_(node) {}
+        return ptr;
+    }
+    function forInOfStatement (node) {
+        var ptr = STACKTOP >> 2;
+
+        return ptr;
+    }
+
+    function switchStatement(node) {
+        var ptr = STACKTOP >> 2;
+
+        return ptr;
+    }
+    function switchCase(node) {
+        var ptr = STACKTOP >> 2;
+
+        return ptr;
+    }
+    function defaultCase(node) {
+        var ptr = STACKTOP >> 2;
+
+        return ptr;
+    }
+
+    function tryStatement(node) {
+        var ptr = STACKTOP >> 2;
+
+        return ptr;
+    }
+    function catchClause(node) {
+        var ptr = STACKTOP >> 2;
+
+        return ptr;
+    }
+    function finally_(node) {
+        var ptr = STACKTOP >> 2;
+
+        return ptr;
+    }
+
+    function objectPattern(node) {
+        var ptr = STACKTOP >> 2;
+
+        return ptr;
+    }
+    function arrayPattern(node) {
+        var ptr = STACKTOP >> 2;
+
+        return ptr;
+    }
 
 
     function compile(ast) {
@@ -29739,21 +29817,17 @@ define("asm-compiler", function (require, exports) {
             case "PropertyDefinition":      return propertyDefinition(ast);
             case "ArrayExpression":         return arrayExpression(ast);
             case "Elision":                 return elision(ast);
-
-                /*
-
-                case "SwitchStatement": return switchStatement(ast);
-                case "SwitchCase": return switchCase(ast);
-                case "DefaultCase": return defaultCase(ast);
-                case "TryStatement":            return tryStatement(ast);
-                case "CatchClause":             return catchClause(ast);
-                case "Finally":                 return finally_(ast);
-
-
-
-                 */
+            case "SwitchStatement":         return switchStatement(ast);
+            case "SwitchCase":              return switchCase(ast);
+            case "DefaultCase":             return defaultCase(ast);
+            case "TryStatement":            return tryStatement(ast);
+            case "CatchClause":             return catchClause(ast);
+            case "Finally":                 return finally_(ast);
+            case "ForStatement":            return forStatement(ast);
+            case "ForInStatement":
+            case "ForOfStatement":          return forInOfStatement(ast);
             default:
-                return ERROR;
+                throw new TypeError(format("NO_COMPILER_FOR_S", ast && ast.type));
         }
     }
     /**
@@ -29832,21 +29906,47 @@ define("vm", function (require, exports) {
     var STACKTOP;
     var STACKSIZE;
 
-    var operands = new Array(1000);
-    var sp = -1;
-    
+
+    /**
+     * call frames (execution context)
+     * @type {Array}
+     */
     var frames =  new Array(1000);
     var fp = -1;
+    var frame;
 
     function newFrame() {
         "use strict";
-        frames[++fp] = ExecutionContext(frames[fp-1]);
+        frame = frames[++fp] = ExecutionContext(frames[fp-1]);
     }
+    function oldFrame() {
+        "use strict";
+        frame = frames[fp--];
+    }
+
+    /**
+     * global operandStack
+     * @type {Array}
+     */
+
+    var operands = new Array(1000);
+    var sp = -1;
+
 
     /**
      * global registers
      */
+
     var r0, r1, r2, r3, r4, r5, r6, r7, r8, r9;
+    var reg = Array(10);
+    var regs = [[],[],[],[],[],[]];
+
+    function pushReg(nr) {
+        regs[nr].push(reg[nr]);
+    }
+    function popReg(nr) {
+        reg[nr] = regs[nr].pop();
+    }
 
     /**
      * @type {number}
@@ -30064,7 +30164,6 @@ define("vm", function (require, exports) {
                     stack[pc++] = ip+2; // IFOP (compares r0 to true)
                     stack[pc++] = HEAP32[ip+1]; // eval test
                     break;
-
                 case IFOP:
                     $0 = operands[sp--];
                     if (!!$0) stack[pc++] = HEAP32[ip+1];
@@ -30252,6 +30351,7 @@ define("vm", function (require, exports) {
         realm = CreateRealm(); // this costs starting the thing a lot of ms to create all objects.
         ecma.saveCodeRealm();
         ecma.setCodeRealm(realm);
+        frame = frames[0] = ExecutionContext(null);
         main(pc);
         ecma.restoreCodeRealm();
         var $0 = operands[sp--];
