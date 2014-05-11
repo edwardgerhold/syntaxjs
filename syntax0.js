@@ -808,7 +808,7 @@ define("i18n", function (require, exports) {
      */
     function trans(index) {
         "use strict";
-        var s = exports.languages[exports.languages.lang][index];
+        var s = exports.languages.lang[index];
         if (s == undefined) return format("LANGUAGE_NOT_FOUND_S", lang);
         return s;
     }
@@ -4607,7 +4607,14 @@ define("parser", function () {
     var Contains = require("earlyerrors").Contains;
     var SymbolTable = require("symboltable").SymbolTable;
     var BoundNames = require("slower-static-semantics").BoundNames;
+
+    // JSON uses the api.
     var api, newSyntaxError, ifAbrupt, isAbrupt;
+    // separation of the independent parser
+    // should be reconsidered, or a wrap in
+    // a try/catch and a regular throw, then
+    // JSON otherwise is regularly usable from
+    // parseGoalSymbol
 
     var IsIteration = tables.IsIteration;
     var IsTemplateToken = tables.IsTemplateToken;
@@ -8757,6 +8764,15 @@ define("api", function (require, exports) {
     var globalThis;
     var stack;
     var eventQueue;
+
+    // watched the HIJS talk from jquery conf
+    // and read previously some erights es4 sources
+    // i think, it´s better to capture the few native functions then
+    // they prove it´s better :-)
+    var _call = Function.prototype.call;
+    var _bind = Function.prototype.bind;
+    var objectHasOwnProperty = _call.bind(Object.prototype.hasOwnProperty);
+    var arraySlice = _call.bind(Array.prototype.slice);
 
 
     /**
@@ -15185,7 +15201,7 @@ exports.float64 = float64;
                     var status = callInternalSlot(SLOTS.CALL, PrintFunction, undefined, [format("AVAILABLE_LANGUAGES")])
                     if (isAbrupt(status)) return status;
                     for (var lang in languages) {
-                        if (Object.prototype.hasOwnProperty.call(languages, lang)) {
+                        if (objectHasOwnProperty(languages, lang)) {
                             status = callInternalSlot(SLOTS.CALL, PrintFunction, undefined, [lang]);
                             if (isAbrupt(status)) return status;
                         }
@@ -17119,7 +17135,7 @@ DefineOwnProperty(ConsoleObject, "html", {
             var element = document.querySelector(selector);
         } else {
             if (typeof process !== "undefined") {
-                console.log.apply(console, argList.slice(1));
+                console.log.apply(console, arraySlice(argList, 1));
             } else
                 return newReferenceError( "Can not select element. document.querySelector is not supported in the current environment.");
         }
@@ -17733,7 +17749,7 @@ DefineOwnProperty(ArrayPrototype, "sort", {
 var ArrayPrototype_splice = function splice(thisArg, argList) {
     var start = argList[0];
     var deleteCount = argList[1];
-    var items = argList.slice(2);
+    var items = arraySlice(argList, 2);
     var O = ToObject(thisArg);
     if (isAbrupt(O = ifAbrupt(O))) return O;
     var lenVal = Get(O, "length");
@@ -18579,7 +18595,7 @@ var StringRawFunction = CreateBuiltinFunction(realm, function raw(thisArg, argLi
 
     var callSite = argList[0];
     // ,...substitions)
-    var substitutions = CreateArrayFromList(argList.slice(1));
+    var substitutions = CreateArrayFromList(arraySlice(argList, 1));
     var cooked = ToObject(callSite);
     if (isAbrupt(cooked = ifAbrupt(cooked))) return cooked;
     var rawValue = Get(cooked, "raw");
@@ -21718,7 +21734,7 @@ DefineOwnProperty(FunctionPrototype, "bind", {
     value: CreateBuiltinFunction(realm, function bind(thisArg, argList) {
         var boundTarget = thisArg;
         var thisArgument = argList[0];
-        var listOfArguments = argList.slice(1, argList.length - 1);
+        var listOfArguments = arraySlice(argList, 1, argList.length - 1);
         return BoundFunctionCreate(boundTarget, thisArgument, listOfArguments);
     }),
     writable: true,
@@ -21731,7 +21747,7 @@ DefineOwnProperty(FunctionPrototype, "call", {
         var func = thisArg;
         if (!IsCallable(func)) return newTypeError( "fproto.call: func is not callable");
         var T = ToObject(argList[0]);
-        var args = argList.slice(1);
+        var args = arraySlice(argList,1);
         return callInternalSlot(SLOTS.CALL, func, T, args);
     }),
     writable: true,
@@ -24612,7 +24628,7 @@ DefineOwnProperty(EmitterPrototype, "emit", {
         if (!hasInternalSlot(E, SLOTS.EVENTLISTENERS)) return newTypeError( "[[Listeners]] missing on this argument");
         else listeners = getInternalSlot(E, SLOTS.EVENTLISTENERS);
         event = argList[0];
-        values = argList.slice(1);
+        values = arraySlice(argList, 1);
         if (Type(event) !== STRING) return newTypeError( "Your argument 1 is not a event name string.");
         var list = listeners[event];
         if (list == undefined) return NormalCompletion(undefined);
