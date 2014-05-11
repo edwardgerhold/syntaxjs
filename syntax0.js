@@ -29463,7 +29463,7 @@ define("asm-compiler", function (require, exports) {
     var WHILEBODY = 0x64;
     var DOWHILESTMT = 0x65;
     var DOWHILECOND = 0x66;
-    var BLOCKSTMT = 0x70;
+    var BLOCKSTMT = 0x67;
     
     var ASSIGNEXPR  = 0xA0;
     var ASSIGNMENTOPERATOR = 0xA1;
@@ -29486,22 +29486,10 @@ define("asm-compiler", function (require, exports) {
     var HALT = 0xFF;
     var EMPTY = -0x01;  // negative can not point into something
 
-    /*
-            ???? - i need a better instruction set
-            the operations with the "nodes" can be
-            seen like regular bytecode, e.g. asm or
-            the jvm code, or python bytecode, i don´t
-            have node types then, but bring the result
-            here and there, and a few specialised definitions,
+    var PUSH = 0xE0;
+    var PUSH2 = 0xE1;
+    var PUSH3 = 0xE2;
 
-            or, however, this instruction set is missing the
-            typical bytecode set now, but working with the
-            nodes means from beginning on "they look like they
-            can be rewritten" so that´s for sure, it will change
-            towards
-
-     */
-    
     var ADD = 0x70; // +
     var SUB = 0x71; // -
     var MUL = 0x72; // *
@@ -29531,14 +29519,15 @@ define("asm-compiler", function (require, exports) {
     var A_SHL = 0x88;   // >>=
     var A_SSHR = 0x89;  // >>>=
     
-    var DOTS = 0x90; // rest and spread "..." ? own instruction is cool, or? if i don´t find a common replacement
-    
-    var ASS = 0xA1;
-    
-    var IFLT;   // if (??? < ???)
-    var IFGT;   // > 
-    var IFCMP;  // if ()
-    var IFNOTCMP;   // if(!)
+    var REST = 0x90; // rest and spread "..." ? own instruction is cool, or? if i don´t find a common replacement
+    var SPREAD = 0x91;
+    var ASSIGN = 0xA2;
+
+
+    var IFLT = 0x93;   // if (??? < ???)
+    var IFGT = 0x94;   // >
+    var IFCMP = 0x95;  // if ()
+    var IFNOTCMP = 0x96;   // if(!)
     
 
 
@@ -29772,7 +29761,7 @@ define("asm-compiler", function (require, exports) {
     /**
      * @param node
      */
-    function assignmentExpression(node) {
+    function assignmentExpression1(node) {
         var ptr = STACKTOP >> 2;
         STACKTOP += 20;
         HEAP32[ptr] = ASSIGNEXPR;
@@ -29781,6 +29770,24 @@ define("asm-compiler", function (require, exports) {
         HEAP32[ptr+3] = ASSIGNMENTOPERATOR;
         HEAP32[ptr+4] = codeForOperator[node.operator];
         //console.log("compiled assign expr to " + ptr);
+        return ptr;
+    }
+
+    function assignmentExpression(node) {
+        var ptr = STACKTOP >> 2;
+        STACKTOP += 16;
+        HEAP32[ptr] = PUSH3;
+        HEAP32[ptr+1] = compile(node.left);
+        HEAP32[ptr+2] = compile(node.right);
+        var code;
+        switch (node.operator) {
+            case "=": code = ASSIGN; break;
+            case "<<=": code = A_SHL; break;
+            case ">>=": code = A_SHR; break;
+            case ">>>=": code = A_SSHR; break;
+        }
+        HEAP32[ptr+3] = code;
+
         return ptr;
     }
 
@@ -29799,15 +29806,49 @@ define("asm-compiler", function (require, exports) {
     /**
      *
      */
-    function binaryExpression(node) {
+
+    function binaryExpression1(node) {
         var ptr = STACKTOP >> 2;
         STACKTOP += 20;
         HEAP32[ptr] = BINEXPR;
-        HEAP32[ptr+1] = compile(node.left);
-        HEAP32[ptr+2] = compile(node.right);
-        HEAP32[ptr+3] = BINOP;
-        HEAP32[ptr+4] = codeForOperator[node.operator];
-        //console.log("compiled binary expr to " + ptr);
+        HEAP32[ptr+1] = compile(node.right);
+        HEAP32[ptr+2] = compile(node.left);
+            HEAP32[ptr+3] = BINOP;
+                HEAP32[ptr+4] = codeForOperator[node.operator];
+                //console.log("compiled binary expr to " + ptr);
+                return ptr;
+        }
+
+
+    function binaryExpression(node) {
+        var ptr = STACKTOP >> 2;
+        STACKTOP += 16;
+        HEAP32[ptr] = PUSH3;
+        HEAP32[ptr+1] = compile(node.right);
+        HEAP32[ptr+2] = compile(node.left);
+        var code;
+        switch (node.operator) {
+            case "==": code = EQ; break;
+            case "===": code = STRICT_EQ; break;
+            case "!=": code = NOT_EQ; break;
+            case "!==": code = STRICT_NOT_EQ; break;
+            case "+": code = ADD; break;
+            case "-": code = SUB; break;
+            case "*": code = MUL; break;
+            case "/": code = DIV; break;
+            case "%": code = MOD; break;
+            case "<<": code = SHL; break;
+            case ">>": code = SHR; break;
+            case "|": code = OR; break;
+            case "&": code = AND; break;
+            case "&&": code = L_AND; break;
+            case "||": code = L_OR; break;
+            case "<": code = LT; break;
+            case ">": code = GT; break;
+            case ">=": code = GT_EQ; break;
+            case "<=": code = LT_EQ; break;
+        }
+        HEAP32[ptr+3] = code; // push3 loads the stack with the next 3 positions
         return ptr;
     }
     /**
@@ -29819,8 +29860,8 @@ define("asm-compiler", function (require, exports) {
         var ptr = STACKTOP >> 2;
         STACKTOP += 16;
         HEAP32[ptr] = CALLEXPR;
-        HEAP32[ptr+1] = compile(node.callee);
-        HEAP32[ptr+2] = compile(node.arguments);
+        HEAP32[ptr+1] = argumentList(node.arguments);
+        HEAP32[ptr+2] = compile(node.callee);
         HEAP32[ptr+3] = CALL;
         //console.log("compiled call expr to " + ptr);
         return ptr;
@@ -30208,7 +30249,7 @@ define("vm", function (require, exports) {
      * intl functions to translate messages from the beginning on
      * @type {Function|format}
      */
-        
+
     var format = require("i18n").format;
     var formatStr = require("i18n").formatStr;
     var trans = require("i18n").trans;
@@ -30265,18 +30306,18 @@ define("vm", function (require, exports) {
     var r0, r1, r2, r3, r4, r5, r6, r7, r8, r9;
     var reg = Array(10);
     var regs = [[],[],[],[],[],[],[],[],[],[],[]];  // if you have no operand stack, you need to save the regs.
-                                                    // here i have to deal with javascript objects
-                                                    // for a while.
+    // here i have to deal with javascript objects
+    // for a while.
 
-                                            // hmm, maybe, i should next try to rewrite the object on the heap
-                                            // or just point outside to the pool, where the object will not be
-                                            // gc´ed. Btw. it could be watched if it needs deletion there, i think
-                                            // it was seen and forgotten. Delete from pool if it needs collection.
+    // hmm, maybe, i should next try to rewrite the object on the heap
+    // or just point outside to the pool, where the object will not be
+    // gc´ed. Btw. it could be watched if it needs deletion there, i think
+    // it was seen and forgotten. Delete from pool if it needs collection.
 
-                                    // well, ObjectCreate() shall no longer return an object ordinary object
-                                    // but a memory location with, e.g. first a const pool index, where the new
-                                    // object exists, so i can smuggle the HEAP32 into the running system on the
-                                    // AST. nobody will care for the ms. It´s anyways the slowest es6 available ;-)
+    // well, ObjectCreate() shall no longer return an object ordinary object
+    // but a memory location with, e.g. first a const pool index, where the new
+    // object exists, so i can smuggle the HEAP32 into the running system on the
+    // AST. nobody will care for the ms. It´s anyways the slowest es6 available ;-)
 
     function pushReg(nr) {
         regs[nr].push(reg[nr]);
@@ -30289,10 +30330,11 @@ define("vm", function (require, exports) {
     /**
      * @type {number}
      */
+
     var PRG = 0x05;
     var SLIST = 0x06;
-    var STR = 0x10;
-    var NUM = 0x11;
+    var STR = 0x10;     // A Uint16 encoded with length first (about 8 bytes longer than the string)
+    var NUM = 0x11;       // A Float64 with alignment (about 12 bytes)
     var NUL = 0x12;
     var UNDEF = 0x13;
     var STRCONST = 0x15;  // load string from constant pool (index next nr)
@@ -30307,13 +30349,14 @@ define("vm", function (require, exports) {
     var UNARYOP = 0x37;
     var POSTFIXOP = 0x38;
     var VARDECL = 0x40;
-    var IFEXPR = 0x60;
-    var IFOP = 0x61;
+    var IFEXPR = 0x61;
+    var IFOP = 0x62;
     var WHILESTMT = 0x63;
     var WHILEBODY = 0x64;
     var DOWHILESTMT = 0x65;
     var DOWHILECOND = 0x66;
-    var BLOCKSTMT = 0x70;
+    var BLOCKSTMT = 0x67;
+
     var ASSIGNEXPR  = 0xA0;
     var ASSIGNMENTOPERATOR = 0xA1;
     var BINEXPR = 0xB0;
@@ -30325,18 +30368,59 @@ define("vm", function (require, exports) {
     var NEWEXPR = 0xC2;
     var CONSTRUCT = 0xC3;
     var FUNCDECL = 0xC4;
-
     var ARRAYEXPR = 0xD1;
     var ARRAYINIT = 0xD2;
     var OBJECTEXPR = 0xD4;
     var PROPDEF = 0xD5;
     var OBJECTINIT = 0xD6;
-
-
     var RET = 0xD0;
     var ERROR = 0xFE;
     var HALT = 0xFF;
+    var EMPTY = -0x01;  // negative can not point into something
 
+
+    var PUSH = 0xE0;
+    var PUSH2 = 0xE1;
+    var PUSH3 = 0xE2;
+
+    var ADD = 0x70; // +
+    var SUB = 0x71; // -
+    var MUL = 0x72; // *
+    var DIV = 0x73; // /
+    var MOD = 0x74; // %
+
+    var AND = 0x75; // &
+    var OR  = 0x76; // |
+    var NOT = 0x77; // !
+    var L_OR = 0x78; // ||
+    var L_AND = 0x79; // &&
+
+    var GT = 0x7A; // >
+    var LT = 0x7B  // <
+    var GT_EQ = 0x7C; // >=
+    var LT_EQ = 0x7D; // <=
+
+    var EQ =    0x80;   // ==
+    var STRICT_EQ = 0x81; // ===
+    var NOT_EQ = 0x82;  // !=
+    var STRICT_NOT_EQ = 0x83; // !==
+
+    var SHL = 0x84;     // <<
+    var SHR  = 0x85;    // >>
+    var SSHR = 0x86;    // >>>
+    var A_SHR = 0x87;   // <<=
+    var A_SHL = 0x88;   // >>=
+    var A_SSHR = 0x89;  // >>>=
+
+    var REST = 0x90; // rest and spread "..." ? own instruction is cool, or? if i don´t find a common replacement
+    var SPREAD = 0x91;
+    var ASSIGN = 0xA2;
+
+
+    var IFLT = 0x93;   // if (??? < ???)
+    var IFGT = 0x94;   // >
+    var IFCMP = 0x95;  // if ()
+    var IFNOTCMP = 0x96;   // if(!)
 
     /**
      * i knew from the beginning on, later i will replace them
@@ -30364,6 +30448,7 @@ define("vm", function (require, exports) {
     var applyAssignmentBinOp = ecma.applyAssignmentBinOp;
     var EvaluateCall = EvaluateCall;
     var GetValue = ecma.GetValue;
+    var ExecutionContext = ecma.ExecutionContext;
     function getReference(poolIndex) {
         var $0 = GetIdentifierReference(getLexEnv(), POOL[poolIndex], strict);
         operands[++sp] = $0;
@@ -30388,6 +30473,7 @@ define("vm", function (require, exports) {
         var $0 = ""+POOL[index];
         operands[++sp] = $0;
     }
+    /*
     function evaluateBinary(operator) {
         var $0,$1,$2;
         $2 = operands[sp--];
@@ -30407,7 +30493,8 @@ define("vm", function (require, exports) {
         else if (isAbrupt($2=ifAbrupt($2))) $0 = $2;
         else $0 = applyAssignmentBinOp(operatorForCode[operator], $1, $2);
         operands[++sp] = $0;
-    }
+    }*/
+
     function evaluateCall() {
         var $0,$1,$2;
         $2 = operands[sp--];
@@ -30461,21 +30548,42 @@ define("vm", function (require, exports) {
         operands[++sp] = $0;
     }
 
-    
+
     function main(pc) {
-        var $0, $1,$2,$3,$4;
+        var $0, $1,$2,$3,$4,$5,$6,$7,$8,$9,$10;
         "use strict";
 
         /*
-            the external functions will be as expensive as calling
-            a WhiteSpace()||LineTerminator()||Comment()||Expression()||
+         the external functions will be as expensive as calling
+         a WhiteSpace()||LineTerminator()||Comment()||Expression()||
+         */
+
+        /*
+                typed asm is impossible with the dynamic values
+                as long as there are regular js objects in use
+                later, when everything goes over the heap, it will
+                be, but until then, i work with dynamic types like
+                arrays within the loops to forget about the calls
+
+
          */
 
         do {
             var ip = stack[pc];
             var code = HEAP32[ip];
-
             switch (code) {
+                case PUSH:
+                    stack[pc++] = HEAP32[ip+1];
+                    break;
+                case PUSH2:
+                    stack[pc++] = ip+2;
+                    stack[pc++] = HEAP32[ip+1];
+                    break;
+                case PUSH3:
+                    stack[pc++] = ip+3;
+                    stack[pc++] = HEAP32[ip+2];
+                    stack[pc++] = HEAP32[ip+1];
+                    break;
                 case PRG:
                     strict = HEAP32[ip + 1];
                     $1 = ip + 3;                    // first
@@ -30483,6 +30591,412 @@ define("vm", function (require, exports) {
                     $2 = $1 + $3 - 1;               // last
                     for (; $2 >= $1; $2--) stack[pc++] = HEAP32[$2];
                     break;
+                case ADD:
+                    $1 = operands[sp--];
+                    $2 = GetValue($1);
+                    if (isAbrupt($2=ifAbrupt($2))) {
+                        operands[++sp] = $2;
+                        return;
+                    }
+                    $3 = operands[sp--];
+                    $4 = GetValue($3);
+                    if (isAbrupt($4=ifAbrupt($4))) {
+                        operands[++sp] = $2;
+                        return;
+                    }
+                    operands[++sp] = $4 + $2;
+                    break;
+                case SUB:
+                    $1 = operands[sp--];
+                    $2 = GetValue($1);
+                    if (isAbrupt($2=ifAbrupt($2))) {
+                        operands[++sp] = $2;
+                        return;
+                    }
+                    $3 = operands[sp--];
+                    $4 = GetValue($3);
+                    if (isAbrupt($4=ifAbrupt($4))) {
+                        operands[++sp] = $2;
+                        return;
+                    }
+                    operands[++sp] = $2 - $4;
+                    break;
+                case MUL:
+                    $1 = operands[sp--];
+                    $2 = GetValue($1);
+                    if (isAbrupt($2=ifAbrupt($2))) {
+                        operands[++sp] = $2;
+                        return;
+                    }
+                    $3 = operands[sp--];
+                    $4 = GetValue($3);
+                    if (isAbrupt($4=ifAbrupt($4))) {
+                        operands[++sp] = $2;
+                        return;
+                    }
+                    operands[++sp] = $2 * $4;
+                    break;
+                case DIV:
+                    $1 = operands[sp--];
+                    $2 = GetValue($1);
+                    if (isAbrupt($2=ifAbrupt($2))) {
+                        operands[++sp] = $2;
+                        return;
+                    }
+                    $3 = operands[sp--];
+                    $4 = GetValue($3);
+                    if (isAbrupt($4=ifAbrupt($4))) {
+                        operands[++sp] = $2;
+                        return;
+                    }
+                    operands[++sp] = $2 / $4;
+                    break;
+                case MOD:
+                    $1 = operands[sp--];
+                    $2 = GetValue($1);
+                    if (isAbrupt($2=ifAbrupt($2))) {
+                        operands[++sp] = $2;
+                        return;
+                    }
+                    $3 = operands[sp--];
+                    $4 = GetValue($3);
+                    if (isAbrupt($4=ifAbrupt($4))) {
+                        operands[++sp] = $2;
+                        return;
+                    }
+                    operands[++sp] = $2 % $4;
+                    break;
+                case AND:
+                    $1 = operands[sp--];
+                    $2 = GetValue($1);
+                    if (isAbrupt($2=ifAbrupt($2))) {
+                        operands[++sp] = $2;
+                        return;
+                    }
+                    $3 = operands[sp--];
+                    $4 = GetValue($3);
+                    if (isAbrupt($4=ifAbrupt($4))) {
+                        operands[++sp] = $2;
+                        return;
+                    }
+                    operands[++sp] = $2 & $4;
+                    break;
+                case OR :
+                    $1 = operands[sp--];
+                    $2 = GetValue($1);
+                    if (isAbrupt($2=ifAbrupt($2))) {
+                        operands[++sp] = $2;
+                        return;
+                    }
+                    $3 = operands[sp--];
+                    $4 = GetValue($3);
+                    if (isAbrupt($4=ifAbrupt($4))) {
+                        operands[++sp] = $2;
+                        return;
+                    }
+                    operands[++sp] = $2 | $4;
+                case NOT:
+                    $1 = operands[sp--];
+                    $2 = GetValue($1);
+                    if (isAbrupt($3=ifAbrupt($2))) {
+                        operands[++sp] = $3;
+                        return;
+                    }
+                    operands[++sp] = !$3;
+                    break;
+                case L_OR:
+                    $1 = operands[sp--];
+                    $2 = GetValue($1);
+                    if (isAbrupt($2=ifAbrupt($2))) {
+                        operands[++sp] = $2;
+                        return;
+                    }
+                    $3 = operands[sp--];
+                    $4 = GetValue($3);
+                    if (isAbrupt($4=ifAbrupt($4))) {
+                        operands[++sp] = $2;
+                        return;
+                    }
+                    operands[++sp] = $2 || $4;
+                    break;
+                case L_AND:
+                    $1 = operands[sp--];
+                    $2 = GetValue($1);
+                    if (isAbrupt($2=ifAbrupt($2))) {
+                        operands[++sp] = $2;
+                        return;
+                    }
+                    $3 = operands[sp--];
+                    $4 = GetValue($3);
+                    if (isAbrupt($4=ifAbrupt($4))) {
+                        operands[++sp] = $2;
+                        return;
+                    }
+                    operands[++sp] = $2 && $4;
+                    break;
+                case GT:
+                    $1 = operands[sp--];
+                    $2 = GetValue($1);
+                    if (isAbrupt($2=ifAbrupt($2))) {
+                        operands[++sp] = $2;
+                        return;
+                    }
+                    $3 = operands[sp--];
+                    $4 = GetValue($3);
+                    if (isAbrupt($4=ifAbrupt($4))) {
+                        operands[++sp] = $2;
+                        return;
+                    }
+                    operands[++sp] = $2 > $4;
+                    break;
+                case LT:
+                    $1 = operands[sp--];
+                    $2 = GetValue($1);
+                    if (isAbrupt($2=ifAbrupt($2))) {
+                        operands[++sp] = $2;
+                        return;
+                    }
+                    $3 = operands[sp--];
+                    $4 = GetValue($3);
+                    if (isAbrupt($4=ifAbrupt($4))) {
+                        operands[++sp] = $2;
+                        return;
+                    }
+                    operands[++sp] = $2 < $4;
+                    break;
+                case GT_EQ:
+                    $1 = operands[sp--];
+                    $2 = GetValue($1);
+                    if (isAbrupt($2=ifAbrupt($2))) {
+                        operands[++sp] = $2;
+                        return;
+                    }
+                    $3 = operands[sp--];
+                    $4 = GetValue($3);
+                    if (isAbrupt($4=ifAbrupt($4))) {
+                        operands[++sp] = $2;
+                        return;
+                    }
+                    operands[++sp] = $2 >= $4;
+                    break;
+                case LT_EQ:
+                    $1 = operands[sp--];
+                    $2 = GetValue($1);
+                    if (isAbrupt($2=ifAbrupt($2))) {
+                        operands[++sp] = $2;
+                        return;
+                    }
+                    $3 = operands[sp--];
+                    $4 = GetValue($3);
+                    if (isAbrupt($4=ifAbrupt($4))) {
+                        operands[++sp] = $2;
+                        return;
+                    }
+                    operands[++sp] = $1 + $2;
+                    break;
+                case EQ:
+                    $1 = operands[sp--];
+                    $2 = GetValue($1);
+                    if (isAbrupt($2=ifAbrupt($2))) {
+                        operands[++sp] = $2;
+                        return;
+                    }
+                    $3 = operands[sp--];
+                    $4 = GetValue($3);
+                    if (isAbrupt($4=ifAbrupt($4))) {
+                        operands[++sp] = $2;
+                        return;
+                    }
+                    operands[++sp] = $2 == $4;
+                    break;
+                case STRICT_EQ:
+                    $1 = operands[sp--];
+                    $2 = GetValue($1);
+                    if (isAbrupt($2=ifAbrupt($2))) {
+                        operands[++sp] = $2;
+                        return;
+                    }
+                    $3 = operands[sp--];
+                    $4 = GetValue($3);
+                    if (isAbrupt($4=ifAbrupt($4))) {
+                        operands[++sp] = $2;
+                        return;
+                    }
+                    operands[++sp] = $2 === $4;
+                    break;
+                case NOT_EQ:
+                    $1 = operands[sp--];
+                    $2 = GetValue($1);
+                    if (isAbrupt($2=ifAbrupt($2))) {
+                        operands[++sp] = $2;
+                        return;
+                    }
+                    $3 = operands[sp--];
+                    $4 = GetValue($3);
+                    if (isAbrupt($4=ifAbrupt($4))) {
+                        operands[++sp] = $2;
+                        return;
+                    }
+                    operands[++sp] = $2 != $4;
+                    break;
+                case STRICT_NOT_EQ:
+                    $1 = operands[sp--];
+                    $2 = GetValue($1);
+                    if (isAbrupt($2=ifAbrupt($2))) {
+                        operands[++sp] = $2;
+                        return;
+                    }
+                    $3 = operands[sp--];
+                    $4 = GetValue($3);
+                    if (isAbrupt($4=ifAbrupt($4))) {
+                        operands[++sp] = $2;
+                        return;
+                    }
+                    operands[++sp] = $2 !== $4;
+                    break;
+                case SHL:
+                    $1 = operands[sp--];
+                    $2 = GetValue($1);
+                    if (isAbrupt($2=ifAbrupt($2))) {
+                        operands[++sp] = $2;
+                        return;
+                    }
+                    $3 = operands[sp--];
+                    $4 = GetValue($3);
+                    if (isAbrupt($4=ifAbrupt($4))) {
+                        operands[++sp] = $2;
+                        return;
+                    }
+                    operands[++sp] = $2 << $4;
+                    break;
+                case SHR:
+                    $1 = operands[sp--];
+                    $2 = GetValue($1);
+                    if (isAbrupt($2=ifAbrupt($2))) {
+                        operands[++sp] = $2;
+                        return;
+                    }
+                    $3 = operands[sp--];
+                    $4 = GetValue($3);
+                    if (isAbrupt($4=ifAbrupt($4))) {
+                        operands[++sp] = $2;
+                        return;
+                    }
+                    operands[++sp] = $2 >> $4;
+                    break;
+                case SSHR:
+                    $1 = operands[sp--];
+                    $2 = GetValue($1);
+                    if (isAbrupt($2=ifAbrupt($2))) {
+                        operands[++sp] = $2;
+                        return;
+                    }
+                    $3 = operands[sp--];
+                    $4 = GetValue($3);
+                    if (isAbrupt($4=ifAbrupt($4))) {
+                        operands[++sp] = $2;
+                        return;
+                    }
+                    operands[++sp] = $1 >>> $2;
+                case A_SHR:
+                    $1 = operands[sp--];
+                    $2 = GetValue($1);
+                    if (isAbrupt($2=ifAbrupt($2))) {
+                        operands[++sp] = $2;
+                        return;
+                    }
+                    $3 = operands[sp--];
+                    $4 = GetValue($3);
+                    if (isAbrupt($4=ifAbrupt($4))) {
+                        operands[++sp] = $2;
+                        return;
+                    }
+                    // mit Assignment, heisst hier PutValue durchfuehren.
+                    $5 = $2 >> $4;
+
+                    $6 = PutValue($1, $5);
+                    if (isAbrupt($6)) {
+                        operands[++sp] = $6;
+                        return;
+                    }
+                    operands[++sp] = $5;
+                    break;
+                case A_SHL:
+                    $1 = operands[sp--];
+                    $2 = GetValue($1);
+                    if (isAbrupt($2=ifAbrupt($2))) {
+                        operands[++sp] = $2;
+                        return;
+                    }
+                    $3 = operands[sp--];
+                    $4 = GetValue($3);
+                    if (isAbrupt($4=ifAbrupt($4))) {
+                        operands[++sp] = $2;
+                        return;
+                    }
+                    $5 = $2 << $4;
+                    $6 = PutValue($1, $5);
+                    if (isAbrupt($6)) {
+                        operands[++sp] = $6;
+                        return;
+                    }
+                    operands[++sp] = $5;
+                    break;
+                case A_SSHR:
+                    $1 = operands[sp--];
+                    $2 = GetValue($1);
+                    if (isAbrupt($2=ifAbrupt($2))) {
+                        operands[++sp] = $2;
+                        return;
+                    }
+                    $3 = operands[sp--];
+                    $4 = GetValue($3);
+                    if (isAbrupt($4=ifAbrupt($4))) {
+                        operands[++sp] = $2;
+                        return;
+                    }
+                    $5 = $2 >>> $4;
+
+                    $6 = PutValue($1, $5);
+                    if (isAbrupt($6)) {
+                        operands[++sp] = $6;
+                        return;
+                    }
+                    operands[++sp] = $5;
+                    break;
+                case REST:
+                    // hier muessen erstmal ein paar "assembly flags"
+                    break;
+                case SPREAD:
+                    break;
+                case ASSIGN:
+                    $1 = operands[sp--];
+                    $2 = GetValue($1);
+                    if (isAbrupt($2=ifAbrupt($2))) {
+                        operands[++sp] = $2;
+                        return;
+                    }
+                    $3 = operands[sp--];
+                    $4 = GetValue($3);
+                    if (isAbrupt($4=ifAbrupt($4))) {
+                        operands[++sp] = $2;
+                        return;
+                    }
+                    $5 = $4;
+                    $6 = PutValue($1, $5);
+                    if (isAbrupt($6)) {
+                        operands[++sp] = $6;
+                        return;
+                    }
+                    operands[++sp] = $5;
+                    break;
+
+                    break;
+
+                case IFLT:break;
+                case IFGT:break;
+                case IFCMP:break;
+                case IFNOTCMP:break;
             /**
              * code,len,elems
              */
@@ -30495,7 +31009,7 @@ define("vm", function (require, exports) {
                     break;
                 /*
 
-                */
+                 */
                 case IFEXPR:
                     stack[pc++] = ip+2; // IFOP (compares r0 to true)
                     stack[pc++] = HEAP32[ip+1]; // eval test
@@ -30505,10 +31019,10 @@ define("vm", function (require, exports) {
                     if (!!$0) stack[pc++] = HEAP32[ip+1];
                     else stack[pc++] = HEAP32[ip+2];
                     break;
-                /**
-                 * expression statement
-                 * and parenthesized expression
-                 */
+            /**
+             * expression statement
+             * and parenthesized expression
+             */
                 case EXPRSTMT:
                 case PARENEXPR:
                     stack[pc++] = HEAP32[ip+1];
@@ -30539,14 +31053,20 @@ define("vm", function (require, exports) {
              * with real alignment and encoding
              *
              */
+
                 case STR:
-            	    $3 = (ip+2) << 1;
+
+                    $3 = (ip+2) << 1;
                     $2 = HEAP32[ip+1];
                     $1 = HEAPU16.subarray($3, $3+$2);
                     operands[++sp] = $1;
+
                     evaluateString();
+
                     break;
+
                 case NUM:
+
                     $0 = HEAPF64[(ip+1)>>1];
                     operands[++sp] = $0; // may not be in here.
                     // $0 can be argument? is numeric
@@ -30554,7 +31074,7 @@ define("vm", function (require, exports) {
 
             /**
              *  have the same order
-              */
+             */
                 case BINEXPR:
                 case ASSIGNEXPR:
                 case NEWEXPR:
@@ -30563,14 +31083,17 @@ define("vm", function (require, exports) {
                     stack[pc++] = HEAP32[ip+2]; // args
                     stack[pc++] = HEAP32[ip+1]; // callee
                     break;
-                case BINOP:
-                    $1 = HEAP32[ip+1]
+
+                // already tilt by regular operator bytecodes
+
+                /*case BINOP:
+                    $1 = HEAP32[ip+1];
                     evaluateBinary($1);
                     break;
                 case ASSIGNMENTOPERATOR:
-                    $1 = HEAP32[ip+1]
+                    $1 = HEAP32[ip+1];
                     evaluateAssignment($1);
-                    break;
+                    break;*/
                 case CALL:
                     evaluateCall();
                     break;
@@ -30611,11 +31134,11 @@ define("vm", function (require, exports) {
                     }
                     break;
                 case DOWHILESTMT:
-                        $1 = ip + 2;            // first
-                        $3 = HEAP32[ip + 1];    // len
-                        $2 = $1 + $3 - 1;       // last
-                        stack[pc++] = $2+1;     // dowhilebody
-                        for (; $2 >= $1; $2--) stack[pc++] = HEAP32[$2];
+                    $1 = ip + 2;            // first
+                    $3 = HEAP32[ip + 1];    // len
+                    $2 = $1 + $3 - 1;       // last
+                    stack[pc++] = $2+1;     // dowhilebody
+                    for (; $2 >= $1; $2--) stack[pc++] = HEAP32[$2];
                     break;
                 case DOWHILECOND:
                     $0 = !!operands[sp--]; // this may not happen in here
@@ -30623,7 +31146,7 @@ define("vm", function (require, exports) {
                     if ($0) {
                         stack[pc++] = HEAP32[ip+1];
                     }
-                break;
+                    break;
 
 
                 case ARRAYEXPR:
@@ -30687,14 +31210,17 @@ define("vm", function (require, exports) {
         stack = new Int32Array(stackBuffer);
         pc = 0;
         stack[pc] = STACKBASE; // ip to first bytecode at HEAP32[stack[0]]
-        realm = CreateRealm(); // this costs starting the thing a lot of ms to create all objects.
-        ecma.saveCodeRealm();
-        ecma.setCodeRealm(realm);
-        frame = frames[0] = ExecutionContext(null);
+      //  realm = CreateRealm(); // this costs starting the thing a lot of ms to create all objects.
+      //  ecma.saveCodeRealm();
+     //   ecma.setCodeRealm(realm);
+      //  frame = frames[0] = ExecutionContext(null);
         main(pc);
-        ecma.restoreCodeRealm();
+   //     ecma.restoreCodeRealm();
         var $0 = operands[sp--];
+        // NextTask(undefined, TimerTasks)
+        // ...
         if (isAbrupt($0=ifAbrupt($0))) return $0;
+
         return NormalCompletion($0);
     }
     exports.CompileAndRun = CompileAndRun;
