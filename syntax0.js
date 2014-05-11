@@ -554,6 +554,7 @@ define("languages.de_DE", function (require, exports) {
 
     exports.NO_PARSER_FOR_S = "Habe keine Parserfunktionen für %s";
     exports.NO_COMPILER_FOR_S = "Habe keine Übersetzerfunktion for %s";
+    exports.UNKNOWN_CHARACTER_S = "Unbekanntes Zeichen: %s";
 
 
     exports.UNKNOWN_INSTRUCTION_S = "Unbekannte Instruktion: %s";
@@ -668,6 +669,7 @@ define("languages.en_US", function (require, exports) {
 
     exports.NO_PARSER_FOR_S = "Got no parser functions for %s";
     exports.NO_COMPILER_FOR_S = "Got no compiler function for %s";
+    exports.UNKNOWN_CHARACTER_S = "Unknown character: %s";
 
     // VM.eval
     exports.UNKNOWN_INSTRUCTION_S = "Unknown instruction: %s";
@@ -11409,9 +11411,11 @@ function ValidateAndApplyPropertyDescriptor(O, P, extensible, Desc, current) {
 /**
  * Created by root on 30.03.14.
  */
+
+
 function Put(O, P, V, Throw) {
     Assert(Type(O) === OBJECT, "o has to be an object");
-    Assert(IsPropertyKey(P), "property key p expected");
+    Assert(IsPropertyKey(P), trans("P_HAS_TO_BE_A_VALID_PROPERTY_KEY"));
     Assert(Throw === true || Throw === false, "throw has to be false or true");
     var success = callInternalSlot(SLOTS.SET, O, P, V, O);
     if (isAbrupt(success = ifAbrupt(success))) return success;
@@ -11421,7 +11425,7 @@ function Put(O, P, V, Throw) {
 
 function DefineOwnPropertyOrThrow(O, P, D) {
     Assert(Type(O) === OBJECT, "object expected");
-    Assert(IsPropertyKey(P), format("P_HAS_TO_BE_A_VALID_PROPERTY_KEY"));
+    Assert(IsPropertyKey(P), trans("P_HAS_TO_BE_A_VALID_PROPERTY_KEY"));
     var success = callInternalSlot(SLOTS.DEFINEOWNPROPERTY, O, P, D);
     if (isAbrupt(success = ifAbrupt(success))) return success;
     if (success === false) return newTypeError( "DefinePropertyOrThrow: DefineOwnProperty has to return true. But success is false. At P="+P);
@@ -11430,7 +11434,7 @@ function DefineOwnPropertyOrThrow(O, P, D) {
 
 function DeletePropertyOrThrow(O, P) {
     Assert(Type(O) === OBJECT, "object expected");
-    Assert(IsPropertyKey(P), format("P_HAS_TO_BE_A_VALID_PROPERTY_KEY"));
+    Assert(IsPropertyKey(P), trans("P_HAS_TO_BE_A_VALID_PROPERTY_KEY"));
     var success = Delete(O, P);
     if (isAbrupt(success = ifAbrupt(success))) return success;
     if (success === false) return newTypeError( "DeletePropertyOrThrow: Delete failed.");
@@ -11448,7 +11452,7 @@ function GetOwnProperty(O, P) {
 }
 
 function OrdinaryGetOwnProperty(O, P) {
-    Assert(IsPropertyKey(P), format("P_HAS_TO_BE_A_VALID_PROPERTY_KEY"));
+    Assert(IsPropertyKey(P), trans("P_HAS_TO_BE_A_VALID_PROPERTY_KEY"));
     var D = Object.create(null); // value: undefined, writable: true, enumerable: true, configurable: true };
     var X = readPropertyDescriptor(O, P);
     if (X === undefined) return;
@@ -11529,6 +11533,8 @@ function OwnPropertyKeysAsList(O) {
 
 /*
     trying to fix es5id and Object.getOwnPropertySymbols
+    a) backref (a-)
+    b) second global registry (of all symbols, no matter what the user says)
 */
 
 function OwnPropertySymbols(O) {
@@ -13137,7 +13143,7 @@ function IntegerIndexedExoticObject() {
 IntegerIndexedExoticObject.prototype = assign(IntegerIndexedExoticObject.prototype, {
     DefineOwnProperty: function (P, Desc) {
         var O = this;
-        Assert(IsPropertyKey(P), format("P_HAS_TO_BE_A_VALID_PROPERTY_KEY"));
+        Assert(IsPropertyKey(P), trans("P_HAS_TO_BE_A_VALID_PROPERTY_KEY"));
         Assert(getInternalSlot(O,SLOTS.ARRAYBUFFERDATA) !== undefined, "[[ArrayBufferData]] must not be undefined");
         if (Type(P) === STRING) {
             var intIndex = ToInteger(P);
@@ -13177,7 +13183,7 @@ IntegerIndexedExoticObject.prototype = assign(IntegerIndexedExoticObject.prototy
     },
     Get: function (P, R) {
         var O = this;
-        Assert(IsPropertyKey(P), format("P_HAS_TO_BE_A_VALID_PROPERTY_KEY"));
+        Assert(IsPropertyKey(P), trans("P_HAS_TO_BE_A_VALID_PROPERTY_KEY"));
         if ((Type(P) === STRING) && SameValue(O, R)) {
             var intIndex = ToInteger(P);
             if (isAbrupt(intIndex = ifAbrupt(intIndex))) return intIndex;
@@ -13187,7 +13193,7 @@ IntegerIndexedExoticObject.prototype = assign(IntegerIndexedExoticObject.prototy
     },
     Set: function (P, V, R) {
         var O = this;
-        Assert(IsPropertyKey(P), format("P_HAS_TO_BE_A_VALID_PROPERTY_KEY"));
+        Assert(IsPropertyKey(P), trans("P_HAS_TO_BE_A_VALID_PROPERTY_KEY"));
         if ((Type(P) === STRING) && SameValue(O, R)) {
             var intIndex = ToInteger(P);
             if (isAbrupt(intIndex = ifAbrupt(intIndex))) return intIndex;
@@ -13198,7 +13204,7 @@ IntegerIndexedExoticObject.prototype = assign(IntegerIndexedExoticObject.prototy
     },
     GetOwnProperty: function (P) {
         var O = this;
-        Assert(IsPropertyKey(P), format("P_HAS_TO_BE_A_VALID_PROPERTY_KEY"));
+        Assert(IsPropertyKey(P), trans("P_HAS_TO_BE_A_VALID_PROPERTY_KEY"));
         Assert(getInternalSlot(O,SLOTS.ARRAYBUFFERDATA) !== undefined, "[[ArrayBufferData]] must not be undefined");
         if (Type(P) === STRING) {
             var intIndex = ToInteger(P);
@@ -13221,7 +13227,7 @@ IntegerIndexedExoticObject.prototype = assign(IntegerIndexedExoticObject.prototy
     },
     HasOwnProperty: function (P) {
         var O = this;
-        Assert(IsPropertyKey(P), format("P_HAS_TO_BE_A_VALID_PROPERTY_KEY"));
+        Assert(IsPropertyKey(P), trans("P_HAS_TO_BE_A_VALID_PROPERTY_KEY"));
         Assert(O.ArrayBufferData !== undefined, "arraybufferdata must not be undefined");
         if (Type(P) === STRING) {
             var intIndex = ToInteger(P);
@@ -13543,7 +13549,7 @@ function StringExoticObject() {
 
 StringExoticObject.prototype = assign(StringExoticObject.prototype, {
     HasOwnProperty: function (P) {
-        Assert(IsPropertyKey(P), format("P_HAS_TO_BE_A_VALID_PROPERTY_KEY"));
+        Assert(IsPropertyKey(P), trans("P_HAS_TO_BE_A_VALID_PROPERTY_KEY"));
         var has = HasOwnProperty(O, P);
         if (isAbrupt(has = ifAbrupt(has))) return has;
         if (has) return has;
@@ -13558,7 +13564,7 @@ StringExoticObject.prototype = assign(StringExoticObject.prototype, {
 
     },
     GetOwnProperty: function (P) {
-        Assert(IsPropertyKey(P), format("P_HAS_TO_BE_A_VALID_PROPERTY_KEY"));
+        Assert(IsPropertyKey(P), trans("P_HAS_TO_BE_A_VALID_PROPERTY_KEY"));
         var desc = OrdinaryGetOwnProperty(this, P);
         if (isAbrupt(desc = ifAbrupt(desc))) return desc;
         if (desc !== undefined) return desc;
