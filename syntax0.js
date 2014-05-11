@@ -9591,26 +9591,28 @@ function createPublicCodeRealm () {
         },
         evalAsync: function evalAsync() {
             return realm.evalAsync.apply(realm, arguments);
+        },
+        evalByteCode: function () {
+            return realm.evalByteCode.apply(realm, arguments);
         }
     };
 }
 
 function CodeRealm(intrinsics, gthis, genv, ldr) {
     "use strict";
-    var cr = Object.create(CodeRealm.prototype);
-    cr.intrinsics = intrinsics;
-    cr.globalThis = gthis;
-    cr.globalEnv = genv;
-    cr.directEvalTranslate = undefined;
-    cr.directEvalFallback = undefined;
-    cr.indirectEval = undefined;
-    cr.Function = undefined;
-    cr.loader = ldr;
-    // self defined:
-    cr.stack = [];
-    cr.eventQueue = [];
-    cr.xs = Object.create(null);
-    return cr;
+    return {
+        __proto__: CodeRealm.prototype,
+        intrinsics: intrinsics,
+        globalThis: gthis,
+        globalEnv: genv,
+        directEvalTranslate: undefined,
+        directEvalFallback: undefined,
+        indirectEval: undefined,
+        Function:undefined,
+        loader: ldr,
+        stack: [],
+        eventQueue:[]
+    };
 }
 CodeRealm.prototype.toString = CodeRealm_toString;
 CodeRealm.prototype.constructor = CodeRealm;
@@ -9669,6 +9671,24 @@ CodeRealm.prototype.evalAsync =
         }, function (err) {
             throw err;
         });
+    };
+
+    CodeRealm.prototype.evalByteCode = function (code) {
+        saveCodeRealm();
+        setCodeRealm(this);
+        var result = require("vm").CompileAndRun(this, code);
+        result = GetValue(result);
+        if (isAbrupt(result=ifAbrupt(result))) {
+            var error = result.value;
+            var ex = new Error(Get(error, "message"));
+            ex.name = Get(error, "name");
+            ex.stack = Get(error,"stack");
+            throw ex;
+        }
+        var PromiseTasks = getTasks(getRealm(), "PromiseTasks");
+        var taskResults = NextTask(undefined, PromiseTasks);
+        restoreCodeRealm();
+        return result;
     };
 
 function CodeRealm_toString() {
@@ -9748,15 +9768,6 @@ function setCodeRealm(r) {  // CREATE REALM (API)
         intrinsics = realm.intrinsics;
         globalEnv = realm.globalEnv;
         globalThis = realm.globalThis;
-    } else {
-        // solution: REMOVE stack, intr, global*
-        // in favor of realm.*, too. Until it´s
-        // finished and optimize THEN, not now.
-        realm = "check for bugs";
-        stack = "check for bugs";
-        intrinsics = "check for bugs";
-        globalEnv = "check for bugs";
-        globalThis = "check for bugs";
     }
     require("runtime").setCodeRealm(r);
 }
@@ -29428,6 +29439,8 @@ define("asm-typechecker", function (require, exports){
 define("asm-compiler", function (require, exports) {
 
     "use strict";
+    var format = require("i18n").format;
+
     var DEFAULT_SIZE = 2*1024*1024; // 2 Meg of RAM (string, id, num) should be big enough to run this program
     var POOL, pp;
     var MEMORY, HEAP8, HEAPU8, HEAP16, HEAPU16, HEAPU32, HEAP32, HEAPF32, HEAPF64;
@@ -31220,17 +31233,12 @@ define("vm", function (require, exports) {
         stack = new Int32Array(stackBuffer);
         pc = 0;
         stack[pc] = STACKBASE; // ip to first bytecode at HEAP32[stack[0]]
-      //  realm = CreateRealm(); // this costs starting the thing a lot of ms to create all objects.
-      //  ecma.saveCodeRealm();
-     //   ecma.setCodeRealm(realm);
-      //  frame = frames[0] = ExecutionContext(null);
+        var restore = false;
         main(pc);
-   //     ecma.restoreCodeRealm();
         var $0 = operands[sp--];
         // NextTask(undefined, TimerTasks)
         // ...
         if (isAbrupt($0=ifAbrupt($0))) return $0;
-
         return NormalCompletion($0);
     }
     exports.CompileAndRun = CompileAndRun;
