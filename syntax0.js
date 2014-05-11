@@ -510,26 +510,43 @@ define("filesystem", function (require, exports) {
 define("languages.de_DE", function (require, exports) {
     "use strict";
 
-    exports.REFERENCE_S_IS_UNRESOLVABLE = "Referenz %s ist unauflösbar";
+    exports.REFERENCE_S_UNRESOLVABLE = "Referenz %s ist unauflösbar";
     exports.NOT_A_REFERENCE = "Ist keine Referenz";
     exports.UNRESOLVABLE_REFERENCE = "Unaufloesbare Referenz";
-    exports.S_IS_NOT_AN_OBJECT = "%s ist kein Object";
-    exports.S_IS_NO_AVAILABLE_SLOT = "%s ist kein verfügbarer Slot.";
+    exports.SET_FAILED_IN_STRICTMODE = "[[Set]] ist im Strict Mode fehlgeschlagen."
+    exports.BASE_NEVER_NULL = "Referenz Basis ist hier sonst nie null oder undefined."
+
+
+    exports.S_NOT_AN_OBJECT = "%s ist kein Object";
+
+    exports.HAS_NO_SLOT_S = "Der Slot %s ist nicht verfügbar.";
+    exports.SLOT_NOT_AVAILABLE = "slot is not available";
+
+    exports.CREATEDATAPROPERTY_FAILED = "CreateDataProperty hat versagt."
+    exports.ARRAY_LENGTH_ERROR = "Fehler beim Überprüfen der Arraylängenwerte.";
 
     exports.TOSTRING_ERROR = "Argument kann nicht in einen String verwandelt werden.";
+    exports.SYMBOL_CREATE_ERROR = "The Symbol[@@create] Methode der Symbol Function ist aufgefordert einen TypeError zu werfen.";
+    exports.SYMBOL_TOPRIMITVE_ERROR = "Symbol.prototype[@@toPrimitive] ist dazu angehalten hier einen TypeError zu werfen!";
+    exports.GLOBAL_SYMBOL_REGISTRY_ERROR = "Zusicherungsfehler. Duplikat in GlobalSymbolRegistry, das nicht sein darf.";
+    exports.S_NOT_A_SYMBOL = "%s ist kein Symbol";
 
 
-    exports.S_IS_NO_CONSTRUCTOR = "%s ist keine Konstruktorfunktion.";
+    exports.SLOT_S_OF_INVALID_TYPE = "Der Slot %s ist von unzulässigen Typs.";
+    exports.SLOT_S_NOT_A_STRING = "Der Slot %s ist kein String.";
+
+
+    exports.S_NO_CONSTRUCTOR = "%s ist keine Konstruktorfunktion.";
     exports.NO_CONSTRUCTOR = "Kein Konstruktor.";
 
-    exports.S_IS_NOT_CALLABLE = "%s ist nicht aufrufbar.";
+    exports.S_NOT_CALLABLE = "%s ist nicht aufrufbar.";
     exports.NOT_CALLABLE = "Keine Funktion";
 
     exports.NULL_NOT_COERCIBLE = "null is nicht erzwingbar durch die Testfunktion CheckObjectCoercible";
     exports.UNDEFINED_NOT_COERCIBLE = "undefined ist nicht erzwingbar durch die Testfunktion CheckObjectCoercible";
 
     exports.S_ALREADY_INITIALIZED = "%s ist bereits initialisiert.";
-    exports.S_IS_NOT_INITIALIZED = "%s ist nicht richtig initialisiert.";
+    exports.S_NOT_INITIALIZED = "%s ist nicht richtig initialisiert.";
 
     exports.EXPECTING_ARRAYLIKE = "Erwartete ein Array-artiges Objekt";
 
@@ -542,11 +559,25 @@ define("languages.de_DE", function (require, exports) {
 
     // Ranges
     exports.OUT_OF_RANGE = "Nicht im Intervall";
-    exports.S_IS_OUT_OF_RANGE_S = "%s ist nicht im Intervall %s";
+    exports.S_OUT_OF_RANGE_S = "%s ist nicht im Intervall %s";
 
 
     exports.AVAILABLE_LANGUAGES = "Verfügbare Sprachen";
     exports.LANGUAGE_NOT_FOUND_S = "Sprache nicht gefunden: %s";
+
+    exports.THROW_TYPE_ERROR = "Das System ist dazu angehalten hier einen Fehler mit %ThrowTypeError% zu werfen.";
+
+
+    // thrown Exceptions by the system
+    exports.AN_EXCEPTION = "Eine Ausnahme wurde geworfen:";
+    exports.S_EXCEPTION_THROWN = "Eine %s Ausnahme wurde geworfen!";
+    exports.EXCEPTION_NAME_S = "Name: %s"
+    exports.EXCEPTION_MESSAGE_S = "Botschaft: %s";
+    exports.EXCEPTION_STACK_S = "Aufrufstapel: %s";
+    exports.LINE_S = "Zeile %s";
+    exports.COLUMN_S = "Spalte %s";
+    exports.AT_LINE_S_COLUMN_S = "in Zeile %s, Spalte %s";
+
 
     return exports;
 
@@ -574,35 +605,54 @@ define("languages.de_DE", function (require, exports) {
 define("languages.en_US", function (require, exports) {
     "use strict";
 
+
     // Reference
-    exports.REFERENCE_S_IS_UNRESOLVABLE = "Reference %s is unresolvable";
+    exports.REFERENCE_S_UNRESOLVABLE = "Reference %s is unresolvable";
     exports.NOT_A_REFERENCE = "Not a reference";
     exports.UNRESOLVABLE_REFERENCE = "Unresolvable Reference";
+    exports.SET_FAILED_IN_STRICTMODE = "[[Set]] failed in strict mode";
+    exports.BASE_NEVER_NULL = "Reference base may never be null or undefined here."
 
     // Primitives
     exports.TOSTRING_ERROR = "Can not cast argument into a string."
+    exports.SYMBOL_CREATE_ERROR = "The Symbol[@@create] method of the Symbol function is supposed to throw a Type Error";
+    exports.SYMBOL_TOPRIMITIVE_ERROR =  "Symbol.prototype[@@toPrimitive] is supposed to throw a Type Error!";
+    exports.GLOBAL_SYMBOL_REGISTRY_ERROR = "Assertion Error. Duplicate in GlobalSymbolRegistry which MUST NOT be.";
+    exports.S_NOT_A_SYMBOL = "%s is not a symbol";
+
+    exports.S_IS_FALSE = "%s is false, but shouldn´t";
+    exports.S_IS_TRUE = "%s is true, but shouldn´t";
+
+
+    // Arrays
+    exports.CREATEDATAPROPERTY_FAILED = "CreateDataProperty failed but shouldn´t."
+    exports.ARRAY_LENGTH_ERROR = "Error comparing array length values";
 
     // Objects
-    exports.S_IS_NOT_AN_OBJECT = "%s is not an object";
+    exports.S_NOT_AN_OBJECT = "%s is not an object";
 
     // Slots
     exports.S_ALREADY_INITIALIZED = "%s is already initialized.";
-    exports.S_IS_NOT_INITIALIZED = "%s is not properly initialized";
+    exports.S_NOT_INITIALIZED = "%s is not properly initialized";
 
-    exports.S_IS_NO_AVAILABLE_SLOT = "%s is no available slot.";
+
+    exports.SLOT_S_OF_INVALID_TYPE = "The slot %s is of an invalid type.";
+    exports.SLOT_S_NOT_A_STRING = "The slot %s contains no string.";
+
+    exports.HAS_NO_SLOT_S = "the slot %s is not available.";
     exports.SLOT_NOT_AVAILABLE = "slot is not available";
 
     // Constructor
-    exports.S_IS_NO_CONSTRUCTOR = "%s is not a constructor";
+    exports.S_NO_CONSTRUCTOR = "%s is not a constructor";
     exports.NO_CONSTRUCTOR = "Not a constructor";
 
     // Callable
-    exports.S_IS_NOT_CALLABLE = "%s is not a callable.";
+    exports.S_NOT_CALLABLE = "%s is not a callable.";
     exports.NOT_CALLABLE = "Not a function";
 
     // Ranges
     exports.OUT_OF_RANGE = "Out of range";
-    exports.S_IS_OUT_OF_RANGE_S = "%s is out of range %s";
+    exports.S_OUT_OF_RANGE_S = "%s is out of range %s";
 
     exports.EXPECTING_ARRAYLIKE = "Expected an array like object";
 
@@ -610,14 +660,30 @@ define("languages.en_US", function (require, exports) {
     exports.NULL_NOT_COERCIBLE = "null is not coercible by the check function CheckObjectCoercible";
     exports.UNDEFINED_NOT_COERCIBLE = "undefined is not coercible by the check function CheckObjectCoercible";
 
+
     exports.NO_PARSER_FOR_S = "Got no parser functions for %s";
     exports.NO_COMPILER_FOR_S = "Got no compiler function for %s";
+
     // VM.eval
     exports.UNKNOWN_INSTRUCTION_S = "Unknown instruction: %s";
     exports.UNKNOWN_ERROR         = "Unknown Error";
 
     exports.AVAILABLE_LANGUAGES = "Available Languages";
     exports.LANGUAGE_NOT_FOUND_S = "Language not found: %s";
+
+    exports.THROW_TYPE_ERROR = "The system is supposed to throw a Type Error with %ThrowTypeError% here.";
+
+
+    // thrown Exceptions by the system
+    exports.AN_EXCEPTION = "An Exception was thrown:";
+    exports.S_EXCEPTION_THROWN = "A %s Exception was thrown!";
+    exports.EXCEPTION_NAME_S = "name: %s"
+    exports.EXCEPTION_MESSAGE_S = "message: %s";
+    exports.EXCEPTION_STACK_S = "stack: %s";
+    exports.LINE_S = "line %s";
+    exports.COLUMN_S = "column %s";
+    exports.AT_LINE_S_COLUMN_S = "at line %s, column %s";
+
 
     return exports;
 });
@@ -8679,10 +8745,11 @@ define("js-codegen", function (require, exports, module) {
 
 
 define("api", function (require, exports) {
-
     "use strict";
 
     var realm;
+
+
     // should remove these shorthands
     // that´s stupid code
     var intrinsics;
@@ -8691,14 +8758,18 @@ define("api", function (require, exports) {
     var stack;
     var eventQueue;
 
+
     /**
      * i18n
      */
-    var format = require("i18n").format; // with %s and varargs, linear by characters and concat of out with +=;
-    var formatStr = require("i18n").formatStr;
-    var trans = require("i18n").trans; // no formatting of %s
+    var intl = require("i18n");
+    var format = intl.format; // with %s and varargs, linear by characters and concat of out with +=;
+    var formatStr = intl.formatStr; // for strings with %s without translation
+    var trans = intl.trans; // no formatting of %s
     // means to write return newTypeError( format("NOT_FOUND_ERR", filename));
     // withError will be globally replaced with newTypeError, etc, soon
+
+
 
     var all = {
         toString: function () {
@@ -8950,9 +9021,22 @@ function LazyDefineProperty(O, P, V, w, e, c) {
 /*
 
  getting context. stack, realm
+
+
+ realm is a local variable set
+ with setCodeRealm(realm)
+
+ and can be saved and restored with
+ saveCodeRealm()
+ restoreCodeRealm()
+ for interrupting the shared runtime
+
+ because of the "realm" variable, all
+ accesses to realm can be done with the
+ variable, everything else should be queried
+ functional at the moment. plans for local vars
+ where discarded, until it´s safe to redo.
  */
-
-
 
 
 function getContext() {
@@ -8964,17 +9048,14 @@ function getEventQueue() {
 }
 
 function getGlobalThis() {
-    //return globalThis;
     return realm.globalThis;
 }
 
 function getGlobalEnv() {
-    //return globalEnv;
     return realm.globalEnv;
 }
 
 function getIntrinsics() {
-    //return intrinsics;
     return realm.intrinsics;
 }
 
@@ -9011,9 +9092,6 @@ function getStack() {
 
 
 
-
-
-
 // ===========================================================================================================
 // Error Stack
 // ===========================================================================================================
@@ -9022,16 +9100,16 @@ function getStack() {
 function printException (error) {
     var name = Get(error, "name");
     var message = Get(error, "message");
-    var stack = Get(error, "stack");
-    var text = makeMyExceptionText(name, message, callstack);
+    var callstack = Get(error, "stack");
+    var text = createExceptionTextOutput(name, message, callstack);
     console.log(text);
 }
 
-function makeMyExceptionText(name, message, callstack) {
+function createExceptionTextOutput(name, message, callstack) {
     var text = "\n";
-    text += "An "+name+" exception was thrown!\n";
-    text += "message: '" + message + "'\n";
-    text += "callstack: " + callstack + "\n";
+    text += format("S_EXCEPTION_THROWN", name) + "\n";
+    text += format("EXCEPTION_MESSAGE_S", message) + "\n";
+    text += format("EXCEPTION_STACK_S", callstack) + "\n";
     return text;
 }
 
@@ -9041,8 +9119,8 @@ function stringifyErrorStack(type, message) {
     var frame = getContext();
     var start = 0;
     var node, ntype, line ,column, pos, fn, clr;
-    var stackTraceLimit = realm.xs.stackTraceLimit;
-    var url = realm.xs.scriptLocation;
+    var stackTraceLimit = realm.stackTraceLimit;
+    var url = realm.scriptLocation;
     var cnt = 1;
 
     if (type === undefined) {
@@ -9065,7 +9143,7 @@ function stringifyErrorStack(type, message) {
             fn = frame.callee;
             clr = frame.caller;
             stack += cnt + ". ";
-            stack += fn + " at " + ntype + "  at line " + line + ", column " + column + " ";
+            stack += fn + "/" + ntype + "  " + format("AT_LINE_S_COLUMN_S", line, column);
             stack += "[caller " + clr + " @ "+url+"]";
             stack += "\r\n";
             cnt = cnt + 1;
@@ -9094,7 +9172,7 @@ function makeNativeException (error) {
     var name = unwrap(Get(error, "name"));
     var message = unwrap(Get(error, "message"));
     var callstack = unwrap(Get(error, "stack"));
-    var text = makeMyExceptionText(name, message, callstack);
+    var text = createExceptionTextOutput(name, message, callstack);
 
     var nativeError = new Error(name);
     nativeError.name = name;
@@ -9802,14 +9880,22 @@ function withError(type, message) {
 // ===========================================================================================================
 
 function Reference(N, V, S, T) {
+    return {
+        __proto__: Reference.prototype,
+        name: N,
+        base: V,
+        strict: S,
+        thisValue: T
+    };
+}
+    /*
     var r = Object.create(Reference.prototype);
     r.name = N;
     r.base = V;
     r.strict = S;
     //if (T !== undefined)
     r.thisValue = T;
-    return r;
-}
+    return r;*/
 
 Reference.prototype = {
     constructor: Reference,
@@ -9853,8 +9939,6 @@ Reference.prototype = {
 };
 
 
-
-
 function GetValue(V) {
 
     if (isAbrupt(V = ifAbrupt(V))) return V;
@@ -9862,12 +9946,12 @@ function GetValue(V) {
 
     var base = V.base;
 
-    if (IsUnresolvableReference(V)) return newReferenceError( format("REFERENCE_S_IS_UNRESOLVABLE", V.name));
+    if (IsUnresolvableReference(V)) return newReferenceError( format("REFERENCE_S_UNRESOLVABLE", V.name));
 
     if (IsPropertyReference(V)) {
 
         if (HasPrimitiveBase(V)) {
-            Assert(base !== null && base !== undefined, "base never null or undefined");
+            Assert(base !== null && base !== undefined, trans("BASE_NEVER_NULL"));
             base = ToObject(base);
         }
 
@@ -9883,7 +9967,7 @@ function GetValue(V) {
 function PutValue(V, W) {
     if (isAbrupt(V = ifAbrupt(V))) return V;
     if (isAbrupt(W = ifAbrupt(W))) return W;
-    if (Type(V) !== REFERENCE) return newReferenceError( trans("NOT_A_REFERENCE"));
+    if (Type(V) !== REFERENCE) return newReferenceError(trans("NOT_A_REFERENCE"));
     var base = V.base;
 
     if (IsUnresolvableReference(V)) {
@@ -9898,16 +9982,13 @@ function PutValue(V, W) {
         if (HasPrimitiveBase(V)) {
             Assert(base !== null && base !== undefined, "PutValue: base is never null nor undefined");
             base = ToObject(base);
-            var succeeded = base.Set(V.name, W, GetThisValue(V));
+            var succeeded = callInternalSlot(SLOTS.SET, base, V.name, W, GetThisValue(V));
             if (isAbrupt(succeeded = ifAbrupt(succeeded))) return succeeded;
-            if (succeeded === false && V.strict) return newTypeError( "PutValue: succeeded false but strict true");
+            if (succeeded === false && V.strict) return newTypeError(format("SET_FAILED_IN_STRICTMODE"));
             return NormalCompletion();
         }
 
     } else {
-
-        debug("base setmutable " + V.name);
-
         return base.SetMutableBinding(V.name, W, V.strict);
     }
 
@@ -13218,21 +13299,12 @@ function IntegerIndexedObjectCreate(prototype) {
  */
 
 function TypedArrayFrom(constructor, target, items, mapfn, thisArg) {
-    "use strict";
-    var C = constructor;
-    Assert(IsConstructor(C), format("S_IS_NO_CONSTRUCTOR", "C"));
-    var newObj;
+    /*
 
-    //
-    // Assertions
-    // then,
-    var mapping;
-    if (mapfn === undefined) mapping = false;
-    else {
-        if (!IsCallable(mapfn)) return newTypeError(format("S_IS_NOT_CALLABLE", "mapfn"));
+        already defined in intrinics/typedarray.js in var ***_from
 
-    }
-    return newObj;
+        need to copy
+     */
 }
 /**
  * Created by root on 30.03.14.
@@ -14884,6 +14956,8 @@ function SameDimensions(d1, d2) {
     // SameDimensions(remainingDimensions1, remainingDimensions2)
 }
 
+
+
 exports.Nil = Nil;
 exports.TypeDescriptorExoticObject = TypeDescriptorExoticObject;
 exports.TypeExoticObject = TypeExoticObject;
@@ -14968,32 +15042,31 @@ exports.float64 = float64;
         setInternalSlot(ObjectPrototype, SLOTS.PROTOTYPE, null);
         var FunctionPrototype = createIntrinsicPrototype(intrinsics, INTRINSICS.FUNCTIONPROTOTYPE);
         setInternalSlot(FunctionPrototype, SLOTS.PROTOTYPE, ObjectPrototype);
-        var FunctionConstructor = createIntrinsicConstructor(intrinsics, "Function", 0, INTRINSICS.FUNCTION);
+        var FunctionConstructor = createIntrinsicConstructor(intrinsics, "Function", 1, INTRINSICS.FUNCTION);
 
         setInternalSlot(FunctionConstructor, SLOTS.PROTOTYPE, FunctionPrototype);
         var ObjectConstructor = createIntrinsicConstructor(intrinsics, "Object", 0, INTRINSICS.OBJECT);
 
         Assert(getInternalSlot(ObjectConstructor, SLOTS.PROTOTYPE) === FunctionPrototype, "ObjectConstructor and FunctionPrototype have to have a link");
 
-        var EncodeURIFunction = createIntrinsicFunction(intrinsics, "encodeURI", 0, INTRINSICS.ENCODEURI);
-        var DecodeURIFunction = createIntrinsicFunction(intrinsics, "ecodeURI", 0, INTRINSICS.DECODEURI);
-        var EncodeURIComponentFunction = createIntrinsicFunction(intrinsics, "encodeURIComponent", 0, INTRINSICS.ENCODEURICOMPONENT);
-        var DecodeURIComponentFunction = createIntrinsicFunction(intrinsics, "decodeURIComponent", 0, INTRINSICS.DECODEURICOMPONENT);
-        var SetTimeoutFunction = createIntrinsicFunction(intrinsics, "setTimeout", 0, INTRINSICS.SETTIMEOUT);
-        var SetImmediateFunction = createIntrinsicFunction(intrinsics, "setImmediate", 0, INTRINSICS.SETIMMEDIATE);
-        var IsNaNFunction = createIntrinsicFunction(intrinsics, "isNaN", 0, INTRINSICS.ISNAN);
-        var IsFiniteFunction = createIntrinsicFunction(intrinsics, "isFinite", 0, INTRINSICS.ISFINITE);
-        var ParseFloatFunction = createIntrinsicFunction(intrinsics, "parseFloat", 0, INTRINSICS.PARSEFLOAT);
-        var ParseIntFunction = createIntrinsicFunction(intrinsics, "parseInt", 0, INTRINSICS.PARSEINT);
-        var EscapeFunction = createIntrinsicFunction(intrinsics, "escape", 0, INTRINSICS.ESCAPE);
-        var UnescapeFunction = createIntrinsicFunction(intrinsics, "unescape", 0, INTRINSICS.UNESCAPE);
-        var EvalFunction = createIntrinsicFunction(intrinsics, "eval", 0, INTRINSICS.EVAL);
+        var EncodeURIFunction = createIntrinsicFunction(intrinsics, "encodeURI", 1, INTRINSICS.ENCODEURI);
+        var DecodeURIFunction = createIntrinsicFunction(intrinsics, "ecodeURI", 1, INTRINSICS.DECODEURI);
+        var EncodeURIComponentFunction = createIntrinsicFunction(intrinsics, "encodeURIComponent", 1, INTRINSICS.ENCODEURICOMPONENT);
+        var DecodeURIComponentFunction = createIntrinsicFunction(intrinsics, "decodeURIComponent", 1, INTRINSICS.DECODEURICOMPONENT);
+        var SetTimeoutFunction = createIntrinsicFunction(intrinsics, "setTimeout", 2, INTRINSICS.SETTIMEOUT);
+        var SetImmediateFunction = createIntrinsicFunction(intrinsics, "setImmediate", 1, INTRINSICS.SETIMMEDIATE);
+        var IsNaNFunction = createIntrinsicFunction(intrinsics, "isNaN", 1, INTRINSICS.ISNAN);
+        var IsFiniteFunction = createIntrinsicFunction(intrinsics, "isFinite", 1, INTRINSICS.ISFINITE);
+        var ParseFloatFunction = createIntrinsicFunction(intrinsics, "parseFloat", 1, INTRINSICS.PARSEFLOAT);
+        var ParseIntFunction = createIntrinsicFunction(intrinsics, "parseInt", 1, INTRINSICS.PARSEINT);
+        var EscapeFunction = createIntrinsicFunction(intrinsics, "escape", 1, INTRINSICS.ESCAPE);
+        var UnescapeFunction = createIntrinsicFunction(intrinsics, "unescape", 1, INTRINSICS.UNESCAPE);
+        var EvalFunction = createIntrinsicFunction(intrinsics, "eval", 1, INTRINSICS.EVAL);
         var GeneratorFunction = createIntrinsicFunction(intrinsics, "Generator", 0, INTRINSICS.GENERATORFUNCTION);
-        var LoadFunction = createIntrinsicFunction(intrinsics, "load", 0, INTRINSICS.LOAD);
+        var LoadFunction = createIntrinsicFunction(intrinsics, "load", 1, INTRINSICS.LOAD);
         var RequestFunction = createIntrinsicFunction(intrinsics, "request", 0, INTRINSICS.REQUEST);
         var ModuleFunction = createIntrinsicFunction(intrinsics, "Module", 0, INTRINSICS.MODULE);
         var SymbolFunction = createIntrinsicFunction(intrinsics, "Symbol", 0, INTRINSICS.SYMBOL);
-
         var RegExpConstructor = createIntrinsicConstructor(intrinsics, "RegExp", 0, INTRINSICS.REGEXP);
         var RegExpPrototype = createIntrinsicPrototype(intrinsics, INTRINSICS.REGEXPPROTOTYPE);
         var ProxyConstructor = createIntrinsicConstructor(intrinsics, "Proxy", 0, INTRINSICS.PROXY);
@@ -15003,7 +15076,6 @@ exports.float64 = float64;
         var NumberConstructor = createIntrinsicConstructor(intrinsics, "Number", 0, INTRINSICS.NUMBER);
         var NumberPrototype = createIntrinsicPrototype(intrinsics, INTRINSICS.NUMBERPROTOTYPE);
         var StringConstructor = createIntrinsicConstructor(intrinsics, "String", 0, INTRINSICS.STRING);
-
         var StringPrototype = createIntrinsicPrototype(intrinsics, INTRINSICS.STRINGPROTOTYPE);
         var StringIteratorPrototype = createIntrinsicPrototype(intrinsics, INTRINSICS.STRINGITERATORPROTOTYPE);
         var DateConstructor = createIntrinsicConstructor(intrinsics, "Date", 0, INTRINSICS.DATE);
@@ -15030,7 +15102,7 @@ exports.float64 = float64;
         var EvalErrorPrototype = createIntrinsicPrototype(intrinsics, INTRINSICS.EVALERRORPROTOTYPE);
         var URIErrorConstructor = createIntrinsicConstructor(intrinsics, "URIError", 0, INTRINSICS.URIERROR);
         var URIErrorPrototype = createIntrinsicPrototype(intrinsics, INTRINSICS.URIERRORPROTOTYPE);
-        var PromiseConstructor = createIntrinsicConstructor(intrinsics, "Promise", 0, INTRINSICS.PROMISE);
+        var PromiseConstructor = createIntrinsicConstructor(intrinsics, "Promise", 1, INTRINSICS.PROMISE);
         var PromisePrototype = createIntrinsicPrototype(intrinsics, INTRINSICS.PROMISEPROTOTYPE);
         var WeakMapConstructor = createIntrinsicConstructor(intrinsics, "WeakMap", 0, INTRINSICS.WEAKMAP);
         var WeakMapPrototype = createIntrinsicPrototype(intrinsics, INTRINSICS.WEAKMAPPROTOTYPE);
@@ -15044,15 +15116,15 @@ exports.float64 = float64;
         var SetIteratorPrototype = createIntrinsicPrototype(intrinsics, INTRINSICS.SETITERATORPROTOTYPE);
         var TypedArrayConstructor = createIntrinsicConstructor(intrinsics, "TypedArray", 0, INTRINSICS.TYPEDARRAY);
         var TypedArrayPrototype = createIntrinsicPrototype(intrinsics, INTRINSICS.TYPEDARRAYPROTOTYPE);
-        var Uint8ArrayConstructor = createIntrinsicConstructor(intrinsics, "Uint8Array", 0, INTRINSICS.UINT8ARRAY);
-        var Int8ArrayConstructor = createIntrinsicConstructor(intrinsics, "Int8Array", 0, INTRINSICS.INT8ARRAY);
-        var Uint8ClampedArrayConstructor = createIntrinsicConstructor(intrinsics, "Uint8ClampedArray", 0, INTRINSICS.UINT8CLAMPEDARRAY);
-        var Int16ArrayConstructor = createIntrinsicConstructor(intrinsics, "Int16Array", 0, INTRINSICS.INT16ARRAY);
-        var Uint16ArrayConstructor = createIntrinsicConstructor(intrinsics, "Uint16Array", 0, INTRINSICS.UINT16ARRAY);
-        var Int32ArrayConstructor = createIntrinsicConstructor(intrinsics, "Int32Array", 0, INTRINSICS.INT32ARRAY);
-        var Uint32ArrayConstructor = createIntrinsicConstructor(intrinsics, "Uint32Array", 0, INTRINSICS.UINT32ARRAY);
-        var Float32ArrayConstructor = createIntrinsicConstructor(intrinsics, "Float32Array", 0, INTRINSICS.FLOAT32ARRAY);
-        var Float64ArrayConstructor = createIntrinsicConstructor(intrinsics, "Float64Array", 0, INTRINSICS.FLOAT64ARRAY);
+        var Uint8ArrayConstructor = createIntrinsicConstructor(intrinsics, "Uint8Array", 1, INTRINSICS.UINT8ARRAY);
+        var Int8ArrayConstructor = createIntrinsicConstructor(intrinsics, "Int8Array", 1, INTRINSICS.INT8ARRAY);
+        var Uint8ClampedArrayConstructor = createIntrinsicConstructor(intrinsics, "Uint8ClampedArray", 1, INTRINSICS.UINT8CLAMPEDARRAY);
+        var Int16ArrayConstructor = createIntrinsicConstructor(intrinsics, "Int16Array", 1, INTRINSICS.INT16ARRAY);
+        var Uint16ArrayConstructor = createIntrinsicConstructor(intrinsics, "Uint16Array", 1, INTRINSICS.UINT16ARRAY);
+        var Int32ArrayConstructor = createIntrinsicConstructor(intrinsics, "Int32Array", 1, INTRINSICS.INT32ARRAY);
+        var Uint32ArrayConstructor = createIntrinsicConstructor(intrinsics, "Uint32Array", 1, INTRINSICS.UINT32ARRAY);
+        var Float32ArrayConstructor = createIntrinsicConstructor(intrinsics, "Float32Array", 1, INTRINSICS.FLOAT32ARRAY);
+        var Float64ArrayConstructor = createIntrinsicConstructor(intrinsics, "Float64Array", 1, INTRINSICS.FLOAT64ARRAY);
         var Uint8ArrayPrototype = createIntrinsicPrototype(intrinsics, INTRINSICS.UINT8ARRAYPROTOTYPE);
         var Int8ArrayPrototype = createIntrinsicPrototype(intrinsics, INTRINSICS.INT8ARRAYPROTOTYPE);
         var Uint8ClampedArrayPrototype = createIntrinsicPrototype(intrinsics, INTRINSICS.UINT8CLAMPEDARRAYPROTOTYPE);
@@ -15062,9 +15134,9 @@ exports.float64 = float64;
         var Uint32ArrayPrototype = createIntrinsicPrototype(intrinsics, INTRINSICS.UINT32ARRAYPROTOTYPE);
         var Float32ArrayPrototype = createIntrinsicPrototype(intrinsics, INTRINSICS.FLOAT32ARRAYPROTOTYPE);
         var Float64ArrayPrototype = createIntrinsicPrototype(intrinsics, INTRINSICS.FLOAT64ARRAYPROTOTYPE);
-        var ArrayBufferConstructor = createIntrinsicConstructor(intrinsics, "ArrayBuffer", 0, INTRINSICS.ARRAYBUFFER);
+        var ArrayBufferConstructor = createIntrinsicConstructor(intrinsics, "ArrayBuffer", 1, INTRINSICS.ARRAYBUFFER);
         var ArrayBufferPrototype = createIntrinsicPrototype(intrinsics, INTRINSICS.ARRAYBUFFERPROTOTYPE);
-        var DataViewConstructor = createIntrinsicConstructor(intrinsics, "DataView", 0, INTRINSICS.DATAVIEW);
+        var DataViewConstructor = createIntrinsicConstructor(intrinsics, "DataView", 1, INTRINSICS.DATAVIEW);
         var DataViewPrototype = createIntrinsicPrototype(intrinsics, INTRINSICS.DATAVIEWPROTOTYPE);
         var JSONObject = createIntrinsicObject(intrinsics, INTRINSICS.JSON);
         var MathObject = createIntrinsicObject(intrinsics, INTRINSICS.MATH);
@@ -15101,20 +15173,19 @@ exports.float64 = float64;
         var VMObject = createIntrinsicObject(intrinsics,INTRINSICS.VM); // that i can play with from inside the shell, too.
                 
         var ThrowTypeError_Call = function (thisArg, argList) {
-            return newTypeError( "The system is supposed to throw a Type Error with %ThrowTypeError% here.");
+            return newTypeError(format("THROW_TYPE_ERROR"));
         };
         setInternalSlot(ThrowTypeError, SLOTS.CALL, ThrowTypeError_Call);
         setInternalSlot(ThrowTypeError, SLOTS.CONSTRUCT, undefined);
 
-
         var SetLanguage_Call = function (thisArg, argList) {
                 try {var languages = require("i18n").languages;}
-                catch (ex) {return newTypeError( ex.message);}
+                catch (ex) {return newTypeError(ex.message);}
                 if (argList.length === 0) {
                     var status = callInternalSlot(SLOTS.CALL, PrintFunction, undefined, [format("AVAILABLE_LANGUAGES")])
                     if (isAbrupt(status)) return status;
                     for (var lang in languages) {
-                        if (Object.hasOwnProperty.call(languages, lang)) {
+                        if (Object.prototype.hasOwnProperty.call(languages, lang)) {
                             status = callInternalSlot(SLOTS.CALL, PrintFunction, undefined, [lang]);
                             if (isAbrupt(status)) return status;
                         }
@@ -15124,7 +15195,7 @@ exports.float64 = float64;
                 var lang = ToString(argList[0]);
                 if (isAbrupt(lang=ifAbrupt(lang))) return lang;
                 try {require("i18n").setLang(lang);}
-                catch (ex) {return newTypeError( ex.message);}
+                catch (ex) {return newTypeError(ex.message);}
                 return NormalCompletion(undefined);
         };
         var SetLanguage = createIntrinsicFunction(intrinsics, "setLanguage", 1, INTRINSICS.SETLANGUAGE)
@@ -17138,7 +17209,7 @@ var ArrayConstructor_call =  function (thisArg, argList) {
             intLen = 1;
         } else {
             intLen = ToUint32(len);
-            if (intLen != len) return newRangeError( "Array(len): intLen is not equal to len");
+            if (intLen != len) return newRangeError(trans("ARRAY_LENGTH_ERROR"));
         }
         putStatus = Put(array, "length", intLen, true);
         if (isAbrupt(putStatus)) return putStatus;
@@ -17256,7 +17327,7 @@ DefineOwnProperty(ArrayConstructor, "from", {
         if (mapfn == undefined) {
             mapping = true;
         } else {
-            if (!IsCallable(mapfn)) return newTypeError( "Array.from: mapfn is not callable.");
+            if (!IsCallable(mapfn)) return newTypeError(format("S_NOT_CALLABLE"), "Array.from: mapfn");
             if (thisArg2) T = thisArg2;
             else T = undefined;
             mapping = true;
@@ -17631,7 +17702,7 @@ DefineOwnProperty(ArrayPrototype, "slice", {
                 if (isAbrupt(kValue = ifAbrupt(kValue))) return kValue;
                 status = CreateDataProperty(A, ToString(n), kValue);
                 if (isAbrupt(status)) return status;
-                if (status === false) return newTypeError( "slice: CreateDataProperty on new Array returned false");
+                if (status === false) return newTypeError(format("CREATEDATAPROPERTY_FAILED"));
             }
             k = k + 1;
             n = n + 1;
@@ -17851,7 +17922,7 @@ DefineOwnProperty(ArrayPrototype, "forEach", {
         var lenVal = Get(O, "length");
         var len = ToUint32(lenVal);
         if (isAbrupt(len = ifAbrupt(len))) return len;
-        if (!IsCallable(callback)) return newTypeError( "forEach: callback is not a function.");
+        if (!IsCallable(callback)) return newTypeError(format("S_NOT_CALLABLE", "forEach: callback"));
         if (argList.length < 2) T = undefined;
         var k = 0;
         while (k < len) {
@@ -17881,7 +17952,7 @@ DefineOwnProperty(ArrayPrototype, "map", {
         if (isAbrupt(O = ifAbrupt(O))) return O;
         var lenVal = Get(O, "length");
         var len = ToUint32(lenVal);
-        if (!IsCallable(callback)) return newTypeError( "map: callback is not a function.");
+        if (!IsCallable(callback)) return newTypeError(format("S_NOT_CALLABLE", "map: callback"));
         if (argList.length < 2) T = undefined;
         var k = 0;
         var A = ArrayCreate(len);
@@ -17918,7 +17989,7 @@ DefineOwnProperty(ArrayPrototype, "filter", {
         if (isAbrupt(O = ifAbrupt(O))) return O;
         var lenVal = Get(O, "length");
         var len = ToUint32(lenVal);
-        if (!IsCallable(callback)) return newTypeError( "filter: callback is not a function.");
+        if (!IsCallable(callback)) return newTypeError(format("S_NOT_CALLABLE", "filter: callback"));
         if (argList.length < 2) T = undefined;
         var k = 0;
         var to = 0;
@@ -17961,7 +18032,7 @@ DefineOwnProperty(ArrayPrototype, "every", {
         if (isAbrupt(O = ifAbrupt(O))) return O;
         var lenVal = Get(O, "length");
         var len = ToUint32(lenVal);
-        if (!IsCallable(callback)) return newTypeError( "every: callback is not a function.");
+        if (!IsCallable(callback)) return newTypeError(format("S_NOT_CALLABLE", "every: callback"));
         if (argList.length < 2) T = undefined;
         var k = 0;
         while (k < len) {
@@ -17992,7 +18063,7 @@ DefineOwnProperty(ArrayPrototype, "some", {
         if (isAbrupt(O = ifAbrupt(O))) return O;
         var lenVal = Get(O, "length");
         var len = ToUint32(lenVal);
-        if (!IsCallable(callback)) return newTypeError( "some: callback is not a function.");
+        if (!IsCallable(callback)) return newTypeError(format("S_NOT_CALLABLE", "some: callback"));
         if (argList.length < 2) T = undefined;
         var k = 0;
         while (k < len) {
@@ -18146,7 +18217,7 @@ var ArrayPrototype_reduce = function reduce(thisArg, argList) {
     var lenValue = Get(O, "length");
     var len = ToLength(lenValue);
     if (isAbrupt(len=ifAbrupt(len))) return len;
-    if (!IsCallable(callback)) return newTypeError( "reduce: first argument should be a function");
+    if (!IsCallable(callback)) return newTypeError(format("S_NOT_CALLABLE", "reduce: first argument"));
     var k = 0;
     var accumulator;
     if (argList.length > 1) {
@@ -18163,7 +18234,7 @@ var ArrayPrototype_reduce = function reduce(thisArg, argList) {
             }
             k = k + 1;
         }
-        if (!kPresent) return newTypeError( "kPresent is still false");
+        if (!kPresent) return newTypeError(format("S_IS_FALSE", "kPresent"));
     }
     while (k < len) {
         Pk = ToString(k);
@@ -18186,7 +18257,7 @@ var ArrayPrototype_reduceRight = function reduceRight(thisArg, argList) {
     var lenValue = Get(O, "length");
     var len = ToLength(lenValue);
     if (isAbrupt(len=ifAbrupt(len))) return len;
-    if (!IsCallable(callback)) return newTypeError( "reduce: first argument should be a function");
+    if (!IsCallable(callback)) return newTypeError(format("S_NOT_CALLABLE", "reduce: first argument"));
     var accumulator;
     var k = len - 1;
     if (argList.length > 1) {
@@ -18203,7 +18274,7 @@ var ArrayPrototype_reduceRight = function reduceRight(thisArg, argList) {
             }
             k = k - 1;
         }
-        if (!kPresent) return newTypeError( "kPresent is still false");
+        if (!kPresent) return newTypeError(format("S_IS_FALSE", "kPresent"));
     }
     while (k >= 0) {
         Pk = ToString(k);
@@ -18268,7 +18339,7 @@ var ArrayPrototype_findIndex = function (thisArg, argList) {
     var lenValue = Get(O, "length");
     var len = ToLength(lenValue);
     if (isAbrupt(len=ifAbrupt(len))) return len;
-    if (!IsCallable(predicate)) return newTypeError( "findIndex: predicate argument has to be a function");
+    if (!IsCallable(predicate)) return newTypeError(format("S_NOT_CALLABLE", "findIndex: predicate"));
     var T;
     if (optThisArg != undefined) T = optThisArg; else T = undefined; // or just "optThisArg = T;"
     var k = 0;
@@ -18296,7 +18367,7 @@ var ArrayPrototype_find = function (thisArg, argList) {
     var lenValue = Get(O, "length");
     var len = ToLength(lenValue);
     if (isAbrupt(len=ifAbrupt(len))) return len;
-    if (!IsCallable(predicate)) return newTypeError( "findIndex: predicate argument has to be a function");
+    if (!IsCallable(predicate)) return newTypeError(format("S_NOT_CALLABLE", "findIndex: predicate"));
     var T;
     if (optThisArg != undefined) T = optThisArg; else T = undefined; // or just "optThisArg = T;"
     var k = 0;
@@ -19256,31 +19327,31 @@ var SymbolFunction_Construct = function Construct(argList) {
 };
 var SymbolPrototype_toString = function toString(thisArg, argList) {
     var s = thisArg;
-    if (hasInternalSlot(s, SLOTS.SYMBOLDATA)) return newTypeError( "The this argument has got no [[SymbolData]] property.");
+    if (hasInternalSlot(s, SLOTS.SYMBOLDATA)) return newTypeError(format("HAS_NO_SLOT_S", "[[SymbolData]]"));
     var sym = getInternalSlot(s, SLOTS.SYMBOLDATA);
     var desc = getInternalSlot(sym, SLOTS.DESCRIPTION);
     if (desc === undefined) desc = "";
-    Assert(Type(desc) === STRING, "The [[Description]] field of the symbol of the this argument is not a string");
+    Assert(Type(desc) === STRING, format("SLOT_S_NOT_A_STRING", "[[Description]]"));
     var result = "Symbol(" + desc + ")";
     return NormalCompletion(result);
 };
 
 var SymbolPrototype_valueOf = function valueOf(thisArg, argList) {
     var s = thisArg;
-    if (hasInternalSlot(s, SLOTS.SYMBOLDATA)) return newTypeError( "The this argument has got no [[SymbolData]] property.");
+    if (hasInternalSlot(s, SLOTS.SYMBOLDATA)) return newTypeError(format("HAS_NO_SLOT_S", "[[SymbolData]]"));
     var sym = getInternalSlot(s, SLOTS.SYMBOLDATA);
     return NormalCompletion(sym);
 };
 var SymbolPrototype_$$toPrimitive = function (thisArg, argList) {
-    return newTypeError( "Symbol.prototype[@@toPrimitive] is supposed to throw a Type Error!");
+    return newTypeError(format("SYMBOL_TOPRIMITVE_ERROR"));
 };
 var SymbolFunction_keyFor = function (thisArg, argList) {
     var sym = argList[0];
-    if (Type(sym) !== SYMBOL) return newTypeError( "keyFor: sym is not a symbol");
+    if (Type(sym) !== SYMBOL) return newTypeError(format("S_NOT_A_SYMBOL","keyFor: sym"));
     var key = getInternalSlot(sym, SLOTS.DESCRIPTION);
     var e = getRealm().GlobalSymbolRegistry[key];
     if (SameValue(e.Symbol, sym)) return NormalCompletion(e.Key);
-    Assert(getRealm().GlobalSymbolRegistry[key] === undefined, "GlobalSymbolRegistry must not contain an entry for sym");
+    Assert(getRealm().GlobalSymbolRegistry[key] === undefined, trans("GLOBAL_SYMBOL_REGISTRY_ERROR"));
     return NormalCompletion(undefined);
 };
 var SymbolFunction_for = function (thisArg, argList) {
@@ -19289,14 +19360,14 @@ var SymbolFunction_for = function (thisArg, argList) {
     if (isAbrupt(stringKey = ifAbrupt(stringKey))) return stringKey;
     var e = getRealm().GlobalSymbolRegistry[key];
     if (e !== undefined && SameValue(e.Key, stringKey)) return NormalCompletion(e.Symbol);
-    Assert(e === undefined, "GlobalSymbolRegistry must currently not contain an entry for stringKey");
+    Assert(e === undefined, trans("GLOBAL_SYMBOL_REGISTRY_ERROR"));
     var newSymbol = SymbolPrimitiveType();
     setInternalSlot(newSymbol, SLOTS.DESCRIPTION, stringKey);
     getRealm().GlobalSymbolRegistry[stringKey] = { Key: stringKey, Symbol: newSymbol };
     return NormalCompletion(newSymbol); // There is a Typo newSumbol in the Spec.
 };
 var SymbolFunction_$$create = function (thisArg, argList) {
-    return newTypeError( "The Symbol[@@create] method of the Symbol function is supposed to throw a Type Error");
+    return newTypeError( format("SYMBOL_CREATE_ERROR"));
 };
 MakeConstructor(SymbolFunction, true, SymbolPrototype);
 setInternalSlot(SymbolFunction, SLOTS.CALL, SymbolFunction_Call);
@@ -23456,7 +23527,7 @@ var TypedArrayConstructor_from = function from(thisArg, argList) {
     var C = thisArg;
     var newObj;
     var putStatus;
-    if (!IsConstructor(C)) return newTypeError(format("S_IS_NO_CONSTRUCTOR", "the this value"));
+    if (!IsConstructor(C)) return newTypeError(format("S_NO_CONSTRUCTOR", "the this value"));
     var items = ToObject(source);
     if (isAbrupt(items = ifAbrupt(items))) return items;
     var mapping;
@@ -23465,7 +23536,7 @@ var TypedArrayConstructor_from = function from(thisArg, argList) {
     if (mapfn === undefined) {
         mapping = false;
     } else {
-        if (!IsCallable(mapfn)) return newTypeError(format("S_IS_NOT_CALLABLE", "mapfn"));
+        if (!IsCallable(mapfn)) return newTypeError(format("S_NOT_CALLABLE", "mapfn"));
         T = tArg;
         mapping = true;
     }
@@ -24849,10 +24920,11 @@ LazyDefineBuiltinFunction(VMObject, "heap", 1, VMObject_heap);
 
         return intrinsics;
     };
-    
+
+
+
     exports.NextTask = NextTask;
     exports.getTasks = getTasks;
-    
     exports.OBJECT = OBJECT;
     exports.NUMBER = NUMBER;
     exports.STRING = STRING;
@@ -25071,7 +25143,7 @@ LazyDefineBuiltinFunction(VMObject, "heap", 1, VMObject_heap);
     exports.hasInternalSlot = hasInternalSlot;
     exports.callInternalSlot = callInternalSlot;
     exports.printException = printException;
-    exports.makeMyExceptionText = makeMyExceptionText;
+    exports.createExceptionTextOutput = createExceptionTextOutput;
     exports.stringifyErrorStack = stringifyErrorStack;
     exports.addMissingProperties = addMissingProperties;
 //    exports.List = List; // never used (should be removed from code base)
@@ -25306,7 +25378,7 @@ define("runtime", function () {
     var newReferenceError = ecma.newReferenceError;
 
     var printException = ecma.printException;
-    var makeMyExceptionText = ecma.makeMyExceptionText;
+    var createExceptionTextOutput = ecma.createExceptionTextOutput;
     var CheckObjectCoercible = ecma.CheckObjectCoercible;
     var line, column;
     var realm, intrinsics, globalEnv, globalThis;
@@ -25389,7 +25461,7 @@ define("runtime", function () {
     }
     function assign(obj, obj2) {
         for (var k in obj2) {
-            if (Object.hasOwnProperty.call(obj2, k)) obj[k] = obj2[k];
+            if (Object.prototype.hasOwnProperty.call(obj2, k)) obj[k] = obj2[k];
         }
         return obj;
     }
@@ -25397,16 +25469,19 @@ define("runtime", function () {
     function unquote(str) {
         return str.replace(/^("|')|("|')$/g, "");  //'
     }
+
     function repeatch(ch, times) {
         var str = "";
         for (var i = 0; i < times; i++) str += ch;
         return str;
     }
+
     function atLineCol() {
         var line = loc && loc.start.line;
         var column = loc && loc.start.column;
         return " at line "+line+", column "+column;
     }
+
     function banner(str) {
         if (hasConsole) {
             consoleLog(repeatch("-", 79));
@@ -28398,6 +28473,15 @@ define("runtime", function () {
         // untellExecutionContext();
         return NormalCompletion(V);
     }
+
+    function tellContext(node) {
+        var loc = node.loc;
+        var cx = getContext();
+        if (loc && loc.start) {
+            cx.line = loc.start.line;
+            cx.column = loc.start.column;
+        }
+    }
     ecma.Evaluate = Evaluate;
     function Evaluate(node, a, b, c) {
         var E, R;
@@ -28414,6 +28498,7 @@ define("runtime", function () {
         }
         // //debug("Evaluate(" + node.type + ")");
         if (E = evaluation[node.type]) {
+            tellContext(node);
             // tellExecutionContext(node, 0);
             R = E(node, a, b, c);
             // untellExecutionContext();
@@ -28704,7 +28789,7 @@ define("runtime", function () {
         } else {
             scriptLocation = "(worker)";
         }
-        realm.xs.scriptLocation = scriptLocation;
+        realm.scriptLocation = scriptLocation;
     }
 
 
@@ -28903,6 +28988,13 @@ define("runtime", function () {
     
     execute.evaluation = evaluation;
     execute.setCodeRealm = setCodeRealm;
+
+    // the big letters look ugly.
+    // i will replace globally for camelCase the days
+    // (only the specification names will be the same,
+    // but even there i think about lowering the first char,
+    // because i read, how confusing it is. i´m learning from
+    // my first project.)
     execute.Evaluate = Evaluate;
     execute.ExecuteAsync = ExecuteAsync;
     execute.ExecuteAsyncTransform = ExecuteAsyncTransform;
