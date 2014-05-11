@@ -11099,9 +11099,8 @@ exports.AbstractRelationalComparison = AbstractRelationalComparison;
 function readPropertyDescriptor(object, name) {
     if (IsSymbol(name)) {
         return object[SLOTS.SYMBOLS][name.es5id];
-    } else {
-        return object[SLOTS.BINDINGS][name];
     }
+    return object[SLOTS.BINDINGS][name];
     /*if (IsSymbol(name)) {
      return getInternalSlot(getInternalSlot(object, SLOTS.SYMBOLS), getInternalSlot(name,SLOTS.ES5ID));
      } else {
@@ -11121,9 +11120,9 @@ function writePropertyDescriptor(object, name, value) {
 
         return object[SLOTS.SYMBOLS][name.es5id] = value;
 
-    } else {
-        return object[SLOTS.BINDINGS][name] = value;
     }
+    return object[SLOTS.BINDINGS][name] = value;
+
     /*if (IsSymbol(name)) {
      return setInternalSlot(getInternalSlot(object, SLOTS.SYMBOLS), getInternalSlot(name,SLOTS.ES5ID),  value);
      } else {
@@ -30541,8 +30540,9 @@ define("vm", function (require, exports) {
              *
              */
                 case STR:
+            	    $3 = (ip+2) << 1;
                     $2 = HEAP32[ip+1];
-                    $1 = HEAPU16.subarray(((ip+2)<<1), (((ip+2)<<1)+$2));
+                    $1 = HEAPU16.subarray($3, $3+$2);
                     operands[++sp] = $1;
                     evaluateString();
                     break;
