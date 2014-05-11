@@ -517,6 +517,8 @@ define("languages.de_DE", function (require, exports) {
     exports.BASE_NEVER_NULL = "Referenz Basis ist hier sonst nie null oder undefined."
 
 
+    exports.P_HAS_TO_BE_A_VALID_PROPERTY_KEY = "P muss ein gültiger Eigenschaftsschlüssel sein";
+
     exports.S_NOT_AN_OBJECT = "%s ist kein Object";
 
     exports.HAS_NO_SLOT_S = "Der Slot %s ist nicht verfügbar.";
@@ -612,6 +614,9 @@ define("languages.en_US", function (require, exports) {
     exports.UNRESOLVABLE_REFERENCE = "Unresolvable Reference";
     exports.SET_FAILED_IN_STRICTMODE = "[[Set]] failed in strict mode";
     exports.BASE_NEVER_NULL = "Reference base may never be null or undefined here."
+
+    //Properties
+    exports.P_HAS_TO_BE_A_VALID_PROPERTY_KEY = "P has to be a valid property key";
 
     // Primitives
     exports.TOSTRING_ERROR = "Can not cast argument into a string."
@@ -11416,7 +11421,7 @@ function Put(O, P, V, Throw) {
 
 function DefineOwnPropertyOrThrow(O, P, D) {
     Assert(Type(O) === OBJECT, "object expected");
-    Assert(IsPropertyKey(P), "P has to be a valid property key");
+    Assert(IsPropertyKey(P), format("P_HAS_TO_BE_A_VALID_PROPERTY_KEY"));
     var success = callInternalSlot(SLOTS.DEFINEOWNPROPERTY, O, P, D);
     if (isAbrupt(success = ifAbrupt(success))) return success;
     if (success === false) return newTypeError( "DefinePropertyOrThrow: DefineOwnProperty has to return true. But success is false. At P="+P);
@@ -11425,7 +11430,7 @@ function DefineOwnPropertyOrThrow(O, P, D) {
 
 function DeletePropertyOrThrow(O, P) {
     Assert(Type(O) === OBJECT, "object expected");
-    Assert(IsPropertyKey(P), "P has to be a valid property key");
+    Assert(IsPropertyKey(P), format("P_HAS_TO_BE_A_VALID_PROPERTY_KEY"));
     var success = Delete(O, P);
     if (isAbrupt(success = ifAbrupt(success))) return success;
     if (success === false) return newTypeError( "DeletePropertyOrThrow: Delete failed.");
@@ -11443,7 +11448,7 @@ function GetOwnProperty(O, P) {
 }
 
 function OrdinaryGetOwnProperty(O, P) {
-    Assert(IsPropertyKey(P), "P has to be a valid property key");
+    Assert(IsPropertyKey(P), format("P_HAS_TO_BE_A_VALID_PROPERTY_KEY"));
     var D = Object.create(null); // value: undefined, writable: true, enumerable: true, configurable: true };
     var X = readPropertyDescriptor(O, P);
     if (X === undefined) return;
@@ -13132,7 +13137,7 @@ function IntegerIndexedExoticObject() {
 IntegerIndexedExoticObject.prototype = assign(IntegerIndexedExoticObject.prototype, {
     DefineOwnProperty: function (P, Desc) {
         var O = this;
-        Assert(IsPropertyKey(P), "P has to be a valid property key");
+        Assert(IsPropertyKey(P), format("P_HAS_TO_BE_A_VALID_PROPERTY_KEY"));
         Assert(getInternalSlot(O,SLOTS.ARRAYBUFFERDATA) !== undefined, "[[ArrayBufferData]] must not be undefined");
         if (Type(P) === STRING) {
             var intIndex = ToInteger(P);
@@ -13172,7 +13177,7 @@ IntegerIndexedExoticObject.prototype = assign(IntegerIndexedExoticObject.prototy
     },
     Get: function (P, R) {
         var O = this;
-        Assert(IsPropertyKey(P), "P has to be a valid property key");
+        Assert(IsPropertyKey(P), format("P_HAS_TO_BE_A_VALID_PROPERTY_KEY"));
         if ((Type(P) === STRING) && SameValue(O, R)) {
             var intIndex = ToInteger(P);
             if (isAbrupt(intIndex = ifAbrupt(intIndex))) return intIndex;
@@ -13182,7 +13187,7 @@ IntegerIndexedExoticObject.prototype = assign(IntegerIndexedExoticObject.prototy
     },
     Set: function (P, V, R) {
         var O = this;
-        Assert(IsPropertyKey(P), "P has to be a valid property key");
+        Assert(IsPropertyKey(P), format("P_HAS_TO_BE_A_VALID_PROPERTY_KEY"));
         if ((Type(P) === STRING) && SameValue(O, R)) {
             var intIndex = ToInteger(P);
             if (isAbrupt(intIndex = ifAbrupt(intIndex))) return intIndex;
@@ -13193,7 +13198,7 @@ IntegerIndexedExoticObject.prototype = assign(IntegerIndexedExoticObject.prototy
     },
     GetOwnProperty: function (P) {
         var O = this;
-        Assert(IsPropertyKey(P), "P has to be a valid property key");
+        Assert(IsPropertyKey(P), format("P_HAS_TO_BE_A_VALID_PROPERTY_KEY"));
         Assert(getInternalSlot(O,SLOTS.ARRAYBUFFERDATA) !== undefined, "[[ArrayBufferData]] must not be undefined");
         if (Type(P) === STRING) {
             var intIndex = ToInteger(P);
@@ -13216,7 +13221,7 @@ IntegerIndexedExoticObject.prototype = assign(IntegerIndexedExoticObject.prototy
     },
     HasOwnProperty: function (P) {
         var O = this;
-        Assert(IsPropertyKey(P), "P has to be a valid property key");
+        Assert(IsPropertyKey(P), format("P_HAS_TO_BE_A_VALID_PROPERTY_KEY"));
         Assert(O.ArrayBufferData !== undefined, "arraybufferdata must not be undefined");
         if (Type(P) === STRING) {
             var intIndex = ToInteger(P);
@@ -13538,7 +13543,7 @@ function StringExoticObject() {
 
 StringExoticObject.prototype = assign(StringExoticObject.prototype, {
     HasOwnProperty: function (P) {
-        Assert(IsPropertyKey(P), "P has to be a valid property key");
+        Assert(IsPropertyKey(P), format("P_HAS_TO_BE_A_VALID_PROPERTY_KEY"));
         var has = HasOwnProperty(O, P);
         if (isAbrupt(has = ifAbrupt(has))) return has;
         if (has) return has;
@@ -13553,7 +13558,7 @@ StringExoticObject.prototype = assign(StringExoticObject.prototype, {
 
     },
     GetOwnProperty: function (P) {
-        Assert(IsPropertyKey(P), "P has to be a valid property key");
+        Assert(IsPropertyKey(P), format("P_HAS_TO_BE_A_VALID_PROPERTY_KEY"));
         var desc = OrdinaryGetOwnProperty(this, P);
         if (isAbrupt(desc = ifAbrupt(desc))) return desc;
         if (desc !== undefined) return desc;
@@ -13654,10 +13659,8 @@ function thisNumberValue(value) {
         var b = getInternalSlot(value, SLOTS.NUMBERDATA);
         if (typeof b === "number") return b;
     }
-    return newTypeError( "thisNumberValue: value is not a Number");
+    return newTypeError("thisNumberValue: value is not a Number");
 }
-
-
 
 /**
  * Created by root on 31.03.14.
@@ -17093,14 +17096,14 @@ LazyDefineProperty(LoaderIteratorPrototype, $$toStringTag, "Loader Iterator");
 
 
 // ===========================================================================================================
-// Console (add-on, with console.log);
+// Console (add-on, with if (hasConsole) console.log);
 // ===========================================================================================================
 
 LazyDefineBuiltinConstant(ConsoleObject, $$toStringTag, "Console");
 
 DefineOwnProperty(ConsoleObject, "log", {
     value: CreateBuiltinFunction(realm, function log(thisArg, argList) {
-        console.log.apply(console, argList);
+        if (hasConsole) console.log.apply(console, argList);
     }),
     writable: true,
     enumerable: false,
@@ -17109,7 +17112,7 @@ DefineOwnProperty(ConsoleObject, "log", {
 });
 DefineOwnProperty(ConsoleObject, "dir", {
     value: CreateBuiltinFunction(realm, function dir(thisArg, argList) {
-        console.dir.apply(console, argList);
+        if (hasConsole) console.dir.apply(console, argList);
     }),
     writable: true,
     enumerable: false,
@@ -17119,7 +17122,7 @@ DefineOwnProperty(ConsoleObject, "dir", {
 
 DefineOwnProperty(ConsoleObject, "error", {
     value: CreateBuiltinFunction(realm, function error(thisArg, argList) {
-        console.error.apply(console, argList);
+        if (hasConsole) console.error.apply(console, argList);
     }),
     writable: true,
     enumerable: false,
@@ -17135,7 +17138,7 @@ DefineOwnProperty(ConsoleObject, "html", {
             var element = document.querySelector(selector);
         } else {
             if (typeof process !== "undefined") {
-                console.log.apply(console, arraySlice(argList, 1));
+                if (hasConsole) console.log.apply(console, argList.slice(1));
             } else
                 return newReferenceError( "Can not select element. document.querySelector is not supported in the current environment.");
         }
@@ -21684,7 +21687,7 @@ CreateDataProperty(FunctionPrototype, "toString", CreateBuiltinFunction(realm, f
     var codegen = require("js-codegen");
     var F = thisArg;
     if (!IsCallable(F)) return newTypeError( "Function.prototype.toString only applies to functions!");
-    var name = Get(F, "name") || "(anonymous)";
+    var name = Get(F, "name") || "anonymous";
     var P, C;
     P = getInternalSlot(F, SLOTS.FORMALPARAMETERS);
     C = getInternalSlot(F, SLOTS.CODE);
@@ -30837,7 +30840,9 @@ define("highlight", function (require, exports) {
 
 define("annotations.de_DE", function (require, exports) {
 
-    var ClassAnnotations= {
+
+
+    var classAnnotations= {
         "syntaxjs-comment": "Kommentar",
         "syntaxjs-string": "Ein Zeichenkette, String genannt",
         "syntaxjs-regexp": "Regulaerer Ausdruck",
@@ -30847,7 +30852,8 @@ define("annotations.de_DE", function (require, exports) {
         "syntaxjs-boolean": "Booleans stehen fuer 0 und 1 und koennen falsch oder wahr, false oder true sein. Damit kann man logische Verknuepfungen aufstellen.",
         "syntaxjs-identifier": "Identifier sind Bezeichner. Der Parser liest Labels, die mit einem Doppelpunkt enden als Identifier ein. Identifier sind in der Regel die Namen von Variablen, oder von Objekteigenschaften. Sie werden aufgeloest (sie zeigen auf einen Speicherbereich) und geben einen Datentypen zurueck. In JavaScript entweder einen Primitive Type wie true, false, null oder undefined, oder einen Reference Type wie Object. Identifier identifizieren Objekte oder Variablen."
     };
-    var ButtonNames = {
+
+    var buttonNames = {
         __proto__: null,
         "eval": "Eval (Browser)",
         "original": "OriginalText",
@@ -30926,9 +30932,9 @@ define("annotations.de_DE", function (require, exports) {
     annotations["JSRuntime"] = "JSRuntime ist die SpiderMonkey Laufzeitstruktur. Wird mit JSRuntime *rt = JS_CreateRuntime(bytes); gestartet. Mit der rt kann man dann den JSContext(rt, heapsize) erzeugen.";
 
    return {
-      Annotations: annotations,
-      ButtonNames: ButtonNames,
-      ClassAnnotations: ClassAnnotations
+      annotations: annotations,
+      buttonNames: buttonNames,
+      classAnnotations: classAnnotations,
    };
 
 });
@@ -30997,7 +31003,17 @@ if (typeof window != "undefined") {
 
     define("highlight-gui", function (require, exports) {
         "use strict";
+        
 
+        /*
+            maybe i should go soon with jquery.
+         */
+        /*
+            that means ie + mobile + effects for free.
+            and future for the code.
+         */
+        
+        
         var tables = require("tables");
         var tokenize = require("tokenizer").tokenizeIntoArrayWithWhiteSpaces;
         var parse = require("parser");
@@ -31043,7 +31059,8 @@ if (typeof window != "undefined") {
             "ss": "ss",
             "beauty": "syntaxjs-beautyfier-button",
             "shell-input": "syntaxjs-shell-input",
-            "shell": "syntaxjs-shell-button"
+            "shell": "syntaxjs-shell-button",
+            "language": "syntaxjs-language-button"
 
         };
 
@@ -31072,16 +31089,21 @@ if (typeof window != "undefined") {
             "none": true,
             "0": true
         };
-        var ButtonNames;
 
+        /* the above should move into an external package, too, to become highly configurable. */
+
+        /* and then i should rewrite the highlighter with a library to let it become attractive */
+
+        var buttonNames;
         var annotationDiv;
-        var ClassAnnotations;
+        var classAnnotations;
 
         var annotations = Object.create(null);
 
-        ClassAnnotations = hlIntl.ClassAnnotations;
-        ButtonNames = hlIntl.ButtonNames
-        annotations = hlIntl.Annotations;
+
+        classAnnotations = hlIntl.classAnnotations;
+        buttonNames = hlIntl.buttonNames
+        annotations = hlIntl.annotations;
 
 
         var development_version = "<br><sub>ohne Gew&auml;hr</sub>";
@@ -31140,7 +31162,7 @@ if (typeof window != "undefined") {
         function make_button(rec, cname, bname, clickhndlr, nopushbool) {
             var button = document.createElement("button");
             button.className = ClassNames[cname];
-            button.innerHTML = ButtonNames[bname];
+            button.innerHTML = buttonNames[bname];
             addEventListener(button, "click", clickhndlr);
             if (nopushbool) return button;
             return pushButton(rec, button)
@@ -31778,7 +31800,7 @@ if (typeof window != "undefined") {
                     // 2. Zeile annotation
                     if ((str = annotations[key])) html += str;
                     else {
-                        if (str = ClassAnnotations[className]) html += str + "<br>\n";
+                        if (str = classAnnotations[className]) html += str + "<br>\n";
                         else html += key + " wird demn&auml;chst hier n&auml;her erl&auml;utert.<br>\n";
                     }
                     /*
@@ -31796,9 +31818,53 @@ if (typeof window != "undefined") {
                 }
             }
         }
+
+
+        function setLanguage(lang) {
+            var pack = require("annotations."+lang);
+            classAnnotations = pack.classAnnotations;
+            annotations = pack.annotations;
+            buttonNames = pack.buttonNames;
+        }
+
+        function selectLanguage(e) {
+            var list = document.createElement("ol");
+            var languages = require("i18n").languages;
+            for (var key in languages) {
+                var node = document.createElement("li");
+                li.className = ClassNames["language-li"];
+                li.setAttribute("data-syntaxjs-value", key);
+                li.onclick = function (e) {
+                    setLanguage(lang);
+                };
+                li.innerHTML = key;
+                list.appendChild(li);
+            }
+            e.target.appendChild(list);
+            list.onclick = function() {
+                list.parentNode.removeChild(list);
+            }
+        }
+
+        function addLanguageButton(parentSelector) {
+            var parent = document.querySelector(parentSelector);
+            if (parent) {
+                var button = document.createElement("button");
+                button.className = ClassNames["language"];
+                button.innerHTML = buttonNames["language"];
+                button.onclick = selectLanguage;
+                parent.appendChild(button);
+            } else {
+                throw new TypeError("syntaxjs.highlighter.addLanguageButton() can not select element to add language button");
+            }
+        }
+
+
+        
         /*
          Startet den Highlighter *****
          */
+        
         function defaultOptions() {
             var options = Object.create(null);
             options["PRE"] = {
@@ -31811,6 +31877,7 @@ if (typeof window != "undefined") {
             };
             return options;
         }
+        
         function startHighlighterOnLoad() {
             var config;
             var script = document.querySelector("script[data-syntaxjs-config]");
@@ -31825,6 +31892,7 @@ if (typeof window != "undefined") {
         /* -------------------------------- */
         exports.startHighlighterOnLoad = startHighlighterOnLoad;
         exports.highlightElements = highlightElements;
+        exports.addLanguageButton = addLanguageButton;
         return exports;
 
     });
