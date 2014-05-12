@@ -16,9 +16,9 @@
     - anything included inside these files is not runnable alone and
       only and of course modularised for better maintainability
 
-    - lib/api.js includes lib/api/*.js and lib/intrinsics/*.js
+    - lib/api.js: includes lib/api/*.js and lib/intrinsics/*.js
       which are sub-packages separated by ECMA-262 definitions
-      in a just-cut-out format
+      in a just-cut-out format (i have to clean the code up)
 
 */
 
@@ -26,6 +26,7 @@ Error.stackTraceLimit = 3;
 
 var syntaxjs;
 
+/* moved outside (temp for experiments with self running) */
     /**
      * a poorly failing A+ or better A- Promise which fails in 1/3 of the tests.
      * The exports have the test adapter forgotten to be removed you can test it.
@@ -372,9 +373,32 @@ var syntaxjs;
     // first i create syntaxjs and
     // add define, require, modules (require.cache link) and makePromise
 
-    /* moved outside (temp for experiments with self running) */
+/**
+ * Created by root on 12.05.14.
+ */
+define("detector", function () {
+    var hasConsole = typeof console == "object" && console && typeof console.log === "function";
+    var hasPrint = typeof print === "function";
+    var isWindow = typeof window === "object";
+    var isJava = typeof Java !== "undefined";
+    var isWorker = typeof importScripts === "function" && typeof window === "undefined";
+    var isNode = typeof process !== "undefined" && typeof global !== "undefined";
+    var isBrowser = isWindow && !isWorker && !isNode && !isJava;
+    return {
+        hasConsole: hasConsole,
+        hasPrint: hasPrint,
+        isJava: isJava,
+        isNode:   isNode,
+        isWorker: isWorker,
+        isWindow: isWindow,
+        isBrowser: isBrowser
+    };
+});    
 
     // then i have some fs operations
+
+
+    
 
 // *******************************************************************************************************************************
 // file imports
@@ -505,10 +529,17 @@ define("filesystem", function (require, exports) {
 });
 
 
-    // soon back inside
+    // require("i18n").format("KEY", ...varags) translates from now on
+    
 //---#include "lib/intl/identifier-module.js"; // only loading takes longer, i need to learn more from m.bynens and norbert l. (seriously) and then go for Intl and Collator. :)
 define("languages.de_DE", function (require, exports) {
     "use strict";
+
+
+    exports.PUT_FAILS_AT_S = "Put versagt bei Eigenschaft %s";
+    exports.DEFPOT_FAILS_AT_S = "DefinePropertyOrThrow versagt bei Eigenschaft %s";
+    exports.DELPOT_FAILS_AT_S ="DeletePropertyOrThrow versagt bei Eigenschaft %s";
+
 
     exports.REFERENCE_S_UNRESOLVABLE = "Referenz %s ist unauflösbar";
     exports.NOT_A_REFERENCE = "Ist keine Referenz";
@@ -533,10 +564,14 @@ define("languages.de_DE", function (require, exports) {
     exports.GLOBAL_SYMBOL_REGISTRY_ERROR = "Zusicherungsfehler. Duplikat in GlobalSymbolRegistry, das nicht sein darf.";
     exports.S_NOT_A_SYMBOL = "%s ist kein Symbol";
 
-
+    exports.SLOT_CONTAINS_NO_S = "Der Slot beinhaltet keine %s";
     exports.SLOT_S_OF_INVALID_TYPE = "Der Slot %s ist von unzulässigen Typs.";
     exports.SLOT_S_NOT_A_STRING = "Der Slot %s ist kein String.";
 
+    exports.S_IS_FALSE = "%s ist false, sollte aber nicht."
+    exports.S_IS_TRUE = "%s is true, sollte aber nicht."
+    exports.S_IS_UNDEFINED = "%s ist undefined, sollte aber nicht."
+    exports.S_NOT_OBJECT = "%s ist kein Objekt";
 
     exports.S_NO_CONSTRUCTOR = "%s ist keine Konstruktorfunktion.";
     exports.NO_CONSTRUCTOR = "Kein Konstruktor.";
@@ -563,6 +598,7 @@ define("languages.de_DE", function (require, exports) {
     // Ranges
     exports.OUT_OF_RANGE = "Nicht im Intervall";
     exports.S_OUT_OF_RANGE_S = "%s ist nicht im Intervall %s";
+    exports.S_OUT_OF_RANGE = "%s ausserhalb des Bereichs.";
 
 
     exports.AVAILABLE_LANGUAGES = "Verfügbare Sprachen";
@@ -608,6 +644,11 @@ define("languages.de_DE", function (require, exports) {
 define("languages.en_US", function (require, exports) {
     "use strict";
 
+    exports.PUT_FAILS_AT_S = "Put fails at property %s";
+    exports.DEFPOT_FAILS_AT_S = "DefinePropertyOrThrow fails at property %s";
+    exports.DELPOT_FAILS_AT_S ="DeletePropertyOrThrow fails at property %s";
+
+    exports.CREATEDATAPROPERTYORTHROW_FAILED = "CreateDataPropertyOrThrow failed.";
 
     // Reference
     exports.REFERENCE_S_UNRESOLVABLE = "Reference %s is unresolvable";
@@ -629,6 +670,8 @@ define("languages.en_US", function (require, exports) {
     exports.S_IS_FALSE = "%s is false, but shouldn´t";
     exports.S_IS_TRUE = "%s is true, but shouldn´t";
 
+    exports.S_IS_UNDEFINED = "%s is undefined but shouldn´t."
+    exports.S_NOT_OBJECT = "%s is not an object.";
 
     // Arrays
     exports.CREATEDATAPROPERTY_FAILED = "CreateDataProperty failed but shouldn´t."
@@ -645,6 +688,7 @@ define("languages.en_US", function (require, exports) {
     exports.SLOT_S_OF_INVALID_TYPE = "The slot %s is of an invalid type.";
     exports.SLOT_S_NOT_A_STRING = "The slot %s contains no string.";
 
+    exports.SLOT_CONTAINS_NO_S = "slot is not containing %s";
     exports.HAS_NO_SLOT_S = "the slot %s is not available.";
     exports.SLOT_NOT_AVAILABLE = "slot is not available";
 
@@ -658,6 +702,7 @@ define("languages.en_US", function (require, exports) {
 
     // Ranges
     exports.OUT_OF_RANGE = "Out of range";
+    exports.S_OUT_OF_RANGE = "%s out of range.";
     exports.S_OUT_OF_RANGE_S = "%s is out of range %s";
 
     exports.EXPECTING_ARRAYLIKE = "Expected an array like object";
@@ -837,7 +882,8 @@ exports.NOT_FOUND_ERR = "i18n-failure: '%s' not found."
 
 
 
-// the lexer and parser api ast and tostring for es6 code
+    // the lexer and parser api ast and ast-to-string for es6 code
+    
 /**
  *
  *	These tables replace my first and follow sets
@@ -1279,7 +1325,7 @@ define("tables", function (require, exports, module) {
         "{": "}"
     };
 
-    var TypedArrayElementSize = {
+    var typedArrayElementSize = {
         "Float64": 8,
         "Float32": 4,
         "Int32": 4,
@@ -2557,7 +2603,7 @@ define("tables", function (require, exports, module) {
     exports.RPAREN = RPAREN;
     exports.LPARENOF = LPARENOF;
     exports.RPARENOF = RPAREN;
-    exports.TypedArrayElementSize = TypedArrayElementSize;
+    exports.typedArrayElementSize = typedArrayElementSize;
     exports.TypedArrayElementType = TypedArrayElementType;
     exports.BuildingPatterns = BuildingPatterns;
     exports.ForbiddenArgumentsInStrict = ForbiddenArgumentsInStrict;
@@ -8748,7 +8794,9 @@ define("js-codegen", function (require, exports, module) {
 });
 
 
-// ecma-262 operations and astnode evaluation
+    // ecma-262 operations and astnode evaluation
+    // lib/api.js #includes lib/api/*.js; lib/intrinsics/*.js
+    
 /*
     API contains ecma-262 specification devices
 
@@ -8820,7 +8868,13 @@ define("api", function (require, exports) {
     var parse = require("parser");
     var parseGoal = parse.parseGoal;
     var debugmode = false;
-    var hasConsole = typeof console !== "undefined" && typeof console == "object" && console && typeof console.log == "function";
+
+    var detector = require("detector");
+    var hasConsole = detector.hasConsole;
+    var hasPrint = detector.hasPrint;
+    var isNode = detector.isNode;
+    var isWindow = detector.isWindow;
+    var isWorker = detector.isWorker;
 
     function debug() {
         if (debugmode && hasConsole) console.log.apply(console, arguments);
@@ -8883,47 +8937,6 @@ function hasInternalSlot(O, N) {
 function callInternalSlot(name, object, a, b, c, d) {
     return object[name](a,b,c,d);
 }
-
-//
-//
-// This table is just the prequel of the original table
-// pointing from the typed memory to the object with the native functions
-// marked by a "native" flag and an offset into a hashtable with these objects
-// the tostrign is simulation and not just slowdown
-//
-
-var function_table = {
-    __proto__:null,
-    "[object OrdinaryObject]": OrdinaryObject.prototype, // rename to ordinaryobjectfunctions and fix (this) parameter and call in callInternalSlot
-    "[object ArrayExoticObject]": ArrayExoticObject.prototype,
-    "[object OrdinaryFunction]": OrdinaryFunction.prototype,
-    "[object ArgumentsExoticObject]": ArgumentsExoticObject.prototype,
-    "[object StringExoticObject]": StringExoticObject.prototype,
-    "[object ProxyExoticObject]": ProxyExoticObject.prototype,
-    "[object PromiseExoticObject]": OrdinaryObject.prototype,
-    "[object SymbolPrimitiveType]": SymbolPrimitiveType.prototype,
-    "[object EddiesDOMObjectWrapper]": NativeJSObjectWrapper.prototype,
-    "[object EddiesDOMFunctionWrapper]": NativeJSFunctionWrapper.prototype,
-    "[object IntegerIndexedExoticObject]": IntegerIndexedExoticObject.prototype,
-    "[object TypeExoticObject]": TypeExoticObject.prototype,
-    "[object TypeDescriptorExoticObject]": TypeDescriptorExoticObject.prototype
-};
-
-function getFunction(obj, name) {
-    var func;
-    console.log("name="+name);
-    var proto = function_table[obj.toString()];
-    if (proto && (func = proto[name])) return func;
-    proto = OrdinaryObject.prototype;
-    func = proto[name];
-    return func;
-}
-
-
-
-// ===========================================================================================================
-//
-// Some MakeConstructor like (delete)
 
 function assignConstructorAndPrototype(Function, Prototype) {
     setInternalSlot(Function, SLOTS.PROTOTYPE, Prototype);
@@ -9174,20 +9187,6 @@ function stringifyErrorStack(type, message) {
     }
     return stack;
 }
-
-function isWindow() {
-    return typeof window !== "undefined";
-}
-
-function isNode() {
-    return typeof process !== "undefined";
-}
-
-function isWorker() {
-    return typeof importScripts === "function" && !isWindow();
-}
-
-
 
 
 function makeNativeException (error) {
@@ -11103,55 +11102,20 @@ exports.AbstractEqualityComparison = AbstractEqualityComparison;
 exports.AbstractRelationalComparison = AbstractRelationalComparison;
 
 
-// ===========================================================================================================
-// raw read and write property descriptor (string and symbol assign to bindings/symbol)
-// ===========================================================================================================
 
 function readPropertyDescriptor(object, name) {
-    if (IsSymbol(name)) {
-        return object[SLOTS.SYMBOLS][name.es5id];
-    }
+    if (IsSymbol(name)) return object[SLOTS.SYMBOLS][name.es5id];
     return object[SLOTS.BINDINGS][name];
-    /*if (IsSymbol(name)) {
-     return getInternalSlot(getInternalSlot(object, SLOTS.SYMBOLS), getInternalSlot(name,SLOTS.ES5ID));
-     } else {
-     return getInternalSlot(getInternalSlot(object,SLOTS.BINDINGS),name);
-     }*/
 }
-
 exports.writePropertyDescriptor = writePropertyDescriptor;
 
 function writePropertyDescriptor(object, name, value) {
-    if (IsSymbol(name)) {
-
-        // adding a backref to the symbol
-        // value.symbol = name;
-        // i can not list them if i don´t (Object.getOwnPropertySymbols)
-        // (until i can be sure that globalsymbolregistry got them all)
-
-        return object[SLOTS.SYMBOLS][name.es5id] = value;
-
-    }
+    if (IsSymbol(name))    return object[SLOTS.SYMBOLS][name.es5id] = value;
     return object[SLOTS.BINDINGS][name] = value;
-
-    /*if (IsSymbol(name)) {
-     return setInternalSlot(getInternalSlot(object, SLOTS.SYMBOLS), getInternalSlot(name,SLOTS.ES5ID),  value);
-     } else {
-     return setInternalSlot(getInternalSlot(object,SLOTS.BINDINGS), name, value);
-     }*/
 }
-
-
-/**
- * Created by root on 30.03.14.
- */
-    // ===========================================================================================================
-    // CreateDataProperty
-    // ===========================================================================================================
-
 function CreateOwnAccessorProperty(O, P, G, S) {
-    Assert(Type(O) === OBJECT, "CreateAccessorProperty: first argument has to be an object.");
-    Assert(IsPropertyKey(P), "CreateAccessorProperty: second argument has to be a valid property key.");
+    Assert(Type(O) === OBJECT, "CreateAccessorProperty1");
+    Assert(IsPropertyKey(P), "CreateAccessorProperty2");
     var D = Object.create(null);
     D.get = G;
     D.set = S;
@@ -11161,8 +11125,8 @@ function CreateOwnAccessorProperty(O, P, G, S) {
 }
 
 function CreateDataProperty(O, P, V) {
-    Assert(Type(O) === OBJECT, "CreateDataProperty: first argument has to be an object.");
-    Assert(IsPropertyKey(P), "CreateDataProperty: second argument has to be a valid property key.");
+    Assert(Type(O) === OBJECT, "CreateDataProperty1");
+    Assert(IsPropertyKey(P), "CreateDataProperty2");
     var newDesc = Object.create(null);
     newDesc.value = V;
     newDesc.writable = true;
@@ -11172,11 +11136,11 @@ function CreateDataProperty(O, P, V) {
 }
 
 function CreateDataPropertyOrThrow(O, P, V) {
-    Assert(Type(O) === OBJECT, "CreateDataPropertyOrThrow: first argument has to be an object.");
-    Assert(IsPropertyKey(P), "CreateDataPropertyOrThrow: second argument has to be a valid property key.");
+    Assert(Type(O) === OBJECT, "CreateDataPropertyOrThrow1");
+    Assert(IsPropertyKey(P), "CreateDataPropertyOrThrow2");
     var success = CreateDataProperty(O, P, V);
     if (isAbrupt(success = ifAbrupt(success))) return success;
-    if (success === false) return newTypeError( "CreateDataPropertyOrThrow: CreateDataProperty failed and returned false.");
+    if (success === false) return newTypeError(format("CREATEDATAPROPERTYORTHROW_FAILED"));
     return success;
 }
 
@@ -11232,7 +11196,7 @@ function FromPropertyDescriptor(desc) {
 
 function ToPropertyDescriptor(O) {
     if (isAbrupt(O = ifAbrupt(O))) return O;
-    if (Type(O) !== OBJECT) return newTypeError( "ToPropertyDescriptor: argument is not an object");
+    if (Type(O) !== OBJECT) return newTypeError(format("S_NOT_OBJECT", "ToPropertyDescriptor: argument"));
     var desc = Object.create(null);
 
     if (HasProperty(O, "enumerable")) {
@@ -11368,7 +11332,9 @@ function ValidateAndApplyPropertyDescriptor(O, P, extensible, Desc, current) {
             if (current.configurable === false) {
                 if (("set" in Desc) && (Desc.set !== current.set)) return false;
                 if (("get" in Desc) && (Desc.get !== current.get)) return false;
-            }/* else {
+            }
+
+            /* else {
              if (Desc.set === undefined) Desc.set === current.set;
              if (Desc.get === undefined) Desc.get === current.get;
              writePropertyDescriptor(O, P, Desc);
@@ -11404,16 +11370,13 @@ function ValidateAndApplyPropertyDescriptor(O, P, extensible, Desc, current) {
 
         if (O !== undefined) {
             if (isDataDesc && !current.writable) return false;
-
             for (d in Desc) {
                 if (Object.hasOwnProperty.call(Desc, d)) {
                     current[d] = Desc[d];
                 }
             }
             writePropertyDescriptor(O, P, current);
-
         }
-
         return true;
     }
 }
@@ -11425,29 +11388,29 @@ function ValidateAndApplyPropertyDescriptor(O, P, extensible, Desc, current) {
 
 function Put(O, P, V, Throw) {
     Assert(Type(O) === OBJECT, "o has to be an object");
-    Assert(IsPropertyKey(P), trans("P_HAS_TO_BE_A_VALID_PROPERTY_KEY"));
+    Assert(IsPropertyKey(P));
     Assert(Throw === true || Throw === false, "throw has to be false or true");
     var success = callInternalSlot(SLOTS.SET, O, P, V, O);
     if (isAbrupt(success = ifAbrupt(success))) return success;
-    if (success === false && Throw === true) return newTypeError( "Put: success false and throw true at P=" + P);
+    if (success === false && Throw === true) return newTypeError(format("PUT_FAILS_AT_S", P));
     return success;
 }
 
 function DefineOwnPropertyOrThrow(O, P, D) {
     Assert(Type(O) === OBJECT, "object expected");
-    Assert(IsPropertyKey(P), trans("P_HAS_TO_BE_A_VALID_PROPERTY_KEY"));
+    Assert(IsPropertyKey(P));
     var success = callInternalSlot(SLOTS.DEFINEOWNPROPERTY, O, P, D);
     if (isAbrupt(success = ifAbrupt(success))) return success;
-    if (success === false) return newTypeError( "DefinePropertyOrThrow: DefineOwnProperty has to return true. But success is false. At P="+P);
+    if (success === false) return newTypeError(format("DEFPOT_FAILS_AT_S", P));
     return success;
 }
 
 function DeletePropertyOrThrow(O, P) {
     Assert(Type(O) === OBJECT, "object expected");
-    Assert(IsPropertyKey(P), trans("P_HAS_TO_BE_A_VALID_PROPERTY_KEY"));
+    Assert(IsPropertyKey(P));
     var success = Delete(O, P);
     if (isAbrupt(success = ifAbrupt(success))) return success;
-    if (success === false) return newTypeError( "DeletePropertyOrThrow: Delete failed.");
+    if (success === false) return newTypeError(format("DELPOT_FAILS_AT_S", P));
     return success;
 }
 
@@ -11462,7 +11425,7 @@ function GetOwnProperty(O, P) {
 }
 
 function OrdinaryGetOwnProperty(O, P) {
-    Assert(IsPropertyKey(P), trans("P_HAS_TO_BE_A_VALID_PROPERTY_KEY"));
+    Assert(IsPropertyKey(P));
     var D = Object.create(null); // value: undefined, writable: true, enumerable: true, configurable: true };
     var X = readPropertyDescriptor(O, P);
     if (X === undefined) return;
@@ -12975,7 +12938,7 @@ function CreateListIterator(list) {
 
 function CreateByteDataBlock(bytes) {
     var dataBlock = new ArrayBuffer(bytes);
-    return dataBlock;
+    return { block: dataBlock, dv: new DataView(dataBlock) }
 }
 
 function CopyDataBlockBytes(toBlock, toIndex, fromBlock, fromIndex, count) {
@@ -12987,8 +12950,8 @@ function CreateByteArrayBlock(bytes) {
 }
 
 function SetArrayBufferData(arrayBuffer, bytes) {
-    Assert(hasInternalSlot(arrayBuffer, SLOTS.ARRAYBUFFERDATA), "[[ArrayBufferData]] has to exist");
-    Assert(bytes > 0, "bytes must be a positive integer");
+    Assert(hasInternalSlot(arrayBuffer, SLOTS.ARRAYBUFFERDATA), "[[ArrayBufferData]]");
+    Assert(bytes > 0, "bytes != positive int");
     var block = CreateByteArrayBlock(bytes); // hehe
     setInternalSlot(arrayBuffer, SLOTS.ARRAYBUFFERDATA, block);
     setInternalSlot(arrayBuffer, SLOTS.ARRAYBUFFERBYTELENGTH, bytes);
@@ -13010,69 +12973,41 @@ function AllocateArrayBuffer(F) {
 
 
 function GetValueFromBuffer(arrayBuffer, byteIndex, type, isLittleEndian) {
-    var length = getInternalSlot(arrayBuffer, SLOTS.ARRAYBUFFERBYTELENGTH);
-    var block = getInternalSlot(arrayBuffer, SLOTS.ARRAYBUFFERDATA);
-    if (block === undefined || block === null) return newTypeError( "[[ArrayBufferData]] is not initialized or available.");
-    
-    var elementSize = arrayType2elementSize[type];
+    //var length = getInternalSlot(arrayBuffer, SLOTS.ARRAYBUFFERBYTELENGTH);    var block = getInternalSlot(arrayBuffer, SLOTS.ARRAYBUFFERDATA);
+    if (block === undefined || block === null) return newTypeError(format("SLOT_NOT_AVAILABLE_S", "[[ArrayBufferData]]"));
+    //var elementSize = arrayType2elementSize[type];
     var rawValue, intValue;
-    
-    var dv = new DataView(block);
-    rawValue = dv["get"+type](byteIndex, isLittleEndian);
-
+    rawValue = block.dv["get"+type](byteIndex, isLittleEndian);
     return NormalCompletion(rawValue);
 }
 
 function SetValueInBuffer(arrayBuffer, byteIndex, type, value, isLittleEndian) {
-    var length = getInternalSlot(arrayBuffer, SLOTS.BYTELENGTH);
+    //var length = getInternalSlot(arrayBuffer, SLOTS.BYTELENGTH);
     var block = getInternalSlot(arrayBuffer, SLOTS.ARRAYBUFFERDATA);
-    if (block === undefined || block === null) return newTypeError( "[[ArrayBufferData]] is not initialized or available.");
-    var elementSize = arrayType2elementSize[type];
+    if (block === undefined || block === null) return newTypeError(format("SLOT_NOT_AVAILABLE_S", "[[ArrayBufferData]]"));
+    //var elementSize = arrayType2elementSize[type];
     var numValue = +value;
-/*
-    switch(type) {
-	case "Int8":
-	    numValue = ToInt8(value);
-	    break;
-	case "Uint8":
-	    numValue = ToUint8(value);
-	    break;
-	case "Int32":
-	    numValue = ToInt32(value);
-	    break;
-	case "Float32":
-	    numValue = ToNumber(value);
-	    break;
-	case "Float64":
-	    numValue = ToNumber(value);
-	    break;
-	default:
-	    break;
-    }
-    */
     if (isAbrupt(numValue = ifAbrupt(numValue))) return numValue;
-    var dv = new DataView(block);
-    dv["set"+type](byteIndex, numValue, isLittleEndian);
+    block.dv["set"+type](byteIndex, numValue, isLittleEndian);
     return NormalCompletion(undefined);
-    
 }
 
 function SetViewValue(view, requestIndex, isLittleEndian, type, value) {
     var v = ToObject(view);
     if (isAbrupt(v = ifAbrupt(v))) return v;
-    if (!hasInternalSlot(v, SLOTS.DATAVIEW)) return newTypeError( "object has no [[ArrayBufferData]]");
+    if (!hasInternalSlot(v, SLOTS.DATAVIEW)) return newTypeError(format("HAS_NO_SLOT_S", "[[ArrayBufferData]]"));
     var buffer = getInternalSlot(v, SLOTS.VIEWEDARRAYBUFFER);
-    if (buffer === undefined) return newTypeError( "buffer is undefined");
+    if (buffer === undefined) return newTypeError(format("S_IS_UNDEFINED", "buffer"));
     var numberIndex = ToNumber(requestIndex);
     var getIndex = ToInteger(numberIndex);
     if (isAbrupt(getIndex = ifAbrupt(getIndex))) return getIndex;
-    if ((numberIndex !== getIndex) || (getIndex < 0)) return newRangeError( "index out of range");
+    if ((numberIndex !== getIndex) || (getIndex < 0)) return newRangeError(format("S_OUT_OF_RANGE", "index"));
     var littleEndian = ToBoolean(isLittleEndian);
     if (isAbrupt(littleEndian = ifAbrupt(littleEndian))) return littleEndian;
     var viewOffset = getInternalSlot(v, SLOTS.BYTEOFFSET);
     var viewSize = getInternalSlot(v, SLOTS.BYTELENGTH);
-    var elementSize = TypedArrayElementSize[type];
-    if (getIndex + elementSize > viewSize) return newRangeError( "out of range larger viewsize");
+    var elementSize = typedArrayElementSize[type];
+    if (getIndex + elementSize > viewSize) return newRangeError(format("S_OUT_OF_RANGE", "viewsize"));
     var bufferIndex = getIndex + viewOffset;
     return SetValueInBuffer(buffer, bufferIndex, type, value, littleEndian);
 }
@@ -13080,19 +13015,19 @@ function SetViewValue(view, requestIndex, isLittleEndian, type, value) {
 function GetViewValue(view, requestIndex, isLittleEndian, type) {
     var v = ToObject(view);
     if (isAbrupt(v = ifAbrupt(v))) return v;
-    if (!hasInternalSlot(v, SLOTS.DATAVIEW)) return newTypeError( "not a ArrayBufferData");
+    if (!hasInternalSlot(v, SLOTS.DATAVIEW)) return newTypeError(format("SLOT_CONTAINS_NO_S", "[[ArrayBufferData]]"));
     var buffer = getInternalSlot(v, SLOTS.VIEWEDARRAYBUFFER);
-    if (buffer === undefined) return newTypeError( "buffer is undefined");
+    if (buffer === undefined) return newTypeError(format("S_IS_UNDEFINED", "buffer"));
     var numberIndex = ToNumber(requestIndex);
     var getIndex = ToInteger(numberIndex);
     if (isAbrupt(getIndex = ifAbrupt(getIndex))) return getIndex;
-    if ((numberIndex !== getIndex) || (getIndex < 0)) return newRangeError( "index out of range");
+    if ((numberIndex !== getIndex) || (getIndex < 0)) return newRangeError(format("S_OUT_OF_RANGE", "index"));
     var littleEndian = ToBoolean(isLittleEndian);
     if (isAbrupt(littleEndian = ifAbrupt(littleEndian))) return littleEndian;
     var viewOffset = getInternalSlot(v, SLOTS.BYTEOFFSET);
     var viewSize = getInternalSlot(v, SLOTS.BYTELENGTH);
-    var elementSize = TypedArrayElementSize[type];
-    if (getIndex + elementSize > viewSize) return newRangeError( "out of range larger viewsize");
+    var elementSize = typedArrayElementSize[type];
+    if (getIndex + elementSize > viewSize) return newRangeError(format("S_OUT_OF_RANGE", "viewsize"));
     var bufferIndex = getIndex + viewOffset;
     return GetValueFromBuffer(buffer, bufferIndex, type, littleEndian);
 }
@@ -13273,7 +13208,7 @@ function IntegerIndexedElementGet(O, index) {
     if (index < 0 || index >= length) return undefined;
     var offset = getInternalSlot(O,SLOTS.BYTEOFFSET);
     var arrayTypeName = getInternalSlot(O,SLOTS.TYPEDARRAYNAME);
-    var elementSize = ToNumber(TypedArrayElementSize[arrayTypeName]);
+    var elementSize = ToNumber(typedArrayElementSize[arrayTypeName]);
     var indexedPosition = (index * elementSize) + offset;
     var elementType = TypedArrayElementType[arrayTypeName];
     return GetValueFromBuffer(buffer, indexedPosition, elementType);
@@ -13292,7 +13227,7 @@ function IntegerIndexedElementSet(O, index, value) {
     if (index < 0 || index >= length) return numValue;
     var offset = getInternalSlot(O,SLOTS.BYTEOFFSET);
     var arrayTypeName = getInternalSlot(O,SLOTS.TYPEDARRAYNAME);
-    var elementSize = ToNumber(TypedArrayElementSize[arrayTypeName]);
+    var elementSize = ToNumber(typedArrayElementSize[arrayTypeName]);
     var indexedPosition = (index * elementSize) + offset;
     var elementType = TypedArrayElementType[arrayTypeName];
     var status = SetValueInBuffer(buffer, indexedPosition, elementType, numValue);
@@ -13300,7 +13235,7 @@ function IntegerIndexedElementSet(O, index, value) {
     return numValue;
 }
 
-var TypedArrayElementSize = {
+var typedArrayElementSize = {
     "Float64Array": 8,
     "Float32Array": 4,
     "Int32Array": 4,
@@ -15450,7 +15385,9 @@ setInternalSlot(LoadFunction, SLOTS.CALL, function load(thisArg, argList) {
     setInternalSlot(RequestFunction, SLOTS.CALL, function request(thisArg, argList) {
         var url = argList[0];
         var d, p;
-        if (isWindow()) {
+
+
+        if (isWindow) {
 
             var handler = CreateBuiltinFunction(realm, function handler(thisArg, argList) {
                 var resolve = argList[0];
@@ -15469,9 +15406,9 @@ setInternalSlot(LoadFunction, SLOTS.CALL, function load(thisArg, argList) {
 
             return xhr.responseText;
 
-        } else if (isNode()) {
+        } else if (isNode) {
 
-        } else if (isWorker()) {
+        } else if (isWorker) {
 
         } else {
             return newTypeError( "Unknown architecture. Request function not available.");
@@ -23396,7 +23333,7 @@ var TypedArrayConstructor_Call = function (thisArg, argList) {
             if (isAbrupt(elementLength=ifAbrupt(elementLength))) return elementLength;
             var data = AllocateArrayBuffer(getIntrinsic(INTRINSICS.ARRAYBUFFER));
             if (isAbrupt(data=ifAbrupt(data))) return data;
-            var elementSize = TypedArrayElementSize[elementType];
+            var elementSize = typedArrayElementSize[elementType];
             var byteLength = elementSize * elementLength;
             var status = SetArrayBufferData(data, byteLength);
             if (isAbrupt(status)) return status;
@@ -23427,10 +23364,10 @@ var TypedArrayConstructor_Call = function (thisArg, argList) {
             var elementLength = getInternalSlot(srcArray, SLOTS.ARRAYLENGTH);
             var srcName = getInternalSlot(srcArray, SLOTS.TYPEDARRAYNAME);
             var srcType = TypedArrayElementType[srcName];
-            var srcElementSize = TypedArrayElementSize[srcType];
+            var srcElementSize = typedArrayElementSize[srcType];
             var srcData = getInternalSlot(srcArray, SLOTS.VIEWEDARRAYBUFFER);
             var srcByteOffset = getInternalSlot(srcArray, SLOTS.BYTEOFFSET);
-            var elementSize = TypedArrayElementSize[constructorName];
+            var elementSize = typedArrayElementSize[constructorName];
             var byteLength = elementSize * elementLength;
             if (SameValue(elementType, srcType)) {
                 var data = CloneArrayBuffer(srcData, srcByteOffset);
@@ -23474,7 +23411,7 @@ var TypedArrayConstructor_Call = function (thisArg, argList) {
         if (SameValueZero(numberLength, elementLength) === false) return newRangeError( "TypedArray: numberLength and elementLength are not equal");
         data = AllocateArrayBuffer(getIntrinsic(INTRINSICS.ARRAYBUFFER));
         if (isAbrupt(data = ifAbrupt(data))) return data;
-        elementSize = TypedArrayElementSize[elementType];
+        elementSize = typedArrayElementSize[elementType];
         byteLength = elementSize * elementLength;
         status = SetArrayBufferData(data, byteLength);
         if (isAbrupt(status = ifAbrupt(status))) return status;
@@ -23499,7 +23436,7 @@ var TypedArrayConstructor_Call = function (thisArg, argList) {
         if (typedArrayName === undefined) return newTypeError( "O has to have a well defined [[TypedArrayName]]");
         constructorName = getInternalSlot(O, SLOTS.TYPEDARRAYNAME);
         elementType = TypedArrayElementType[constructorName];
-        elementSize = TypedArrayElementSize[elementType];
+        elementSize = typedArrayElementSize[elementType];
         var offset = ToInteger(byteOffset);
         if (isAbrupt(offset = ifAbrupt(offset))) return offset;
         if (offset < 0) return newRangeError( "offset is smaller 0");
@@ -26789,12 +26726,10 @@ define("runtime", function () {
     function EmptyStatement(node) {
         return NormalCompletion(empty);
     }
-    evaluation.EmptyStatement = EmptyStatement;
-    function DebuggerStatement(node) {
-        var loc = node.loc;
-        var line = loc && loc.start ? loc.start.line : "bug";
-        var column = loc && loc.start ? loc.start.column : "bug";
-        banner("DebuggerStatement at line " + (line) + ", " + (column) + "\n");
+    
+    
+    ecma.debuggerOutput = debuggerOutput;
+    function debuggerOutput() {
         banner("stack");
         if (hasConsole) console.dir(getStack());
         else if (hasPrint) print(getStack());
@@ -26807,6 +26742,15 @@ define("runtime", function () {
         banner("realm");
         if (hasConsole) console.dir(getRealm());
         else if (hasPrint) print(getRealm());
+    }
+    
+    evaluation.EmptyStatement = EmptyStatement;
+    function DebuggerStatement(node) {
+        var loc = node.loc;
+        var line = loc && loc.start ? loc.start.line : "bug";
+        var column = loc && loc.start ? loc.start.column : "bug";
+        banner("DebuggerStatement at line " + (line) + ", " + (column) + "\n");
+	debuggerOutput();
         banner("DebuggerStatement end");
         return NormalCompletion(undefined);
     }
@@ -29044,19 +28988,9 @@ define("runtime", function () {
 
 
 
-// experimental typed memory and compiler (development)
-//--#include "lib/heap/heap.js"; // too high level (would be too slow)
-//--#include "lib/compile/jvm-bytecode.js"; // good documented
-//--#include "lib/compile/compiler.js";	// miss
-//--#include "lib/compile/arraycompiler.js";	// previous miss
-//--#include "lib/compile/vm.js";		// little stack
-
-// This will make sure that i have to rewrite
-    // my essential functions like i expected them to
-    // to work with typed memory objects
-    // which will have to move over time
-    // but first i´ll just compile and use
-    // a constant pool for help
+    // experimental typed memory and compiler (development)
+    //--#include "lib/heap/heap.js"; // too high level (would be too slow)
+    
 /**
  * asm-typechecker
  *
@@ -29442,7 +29376,7 @@ define("asm-compiler", function (require, exports) {
     var format = require("i18n").format;
 
     var DEFAULT_SIZE = 2*1024*1024; // 2 Meg of RAM (string, id, num) should be big enough to run this program
-    var POOL, pp;
+    var POOL, pp, poolDupeMap;
     var MEMORY, HEAP8, HEAPU8, HEAP16, HEAPU16, HEAPU32, HEAP32, HEAPF32, HEAPF64;
     var STACKBASE, STACKSIZE, STACKTOP;
     /**
@@ -29495,6 +29429,8 @@ define("asm-compiler", function (require, exports) {
     var PROPDEF = 0xD5;
     var OBJECTINIT = 0xD6;
     var RET = 0xD0;
+    var DEBUGGER = 0xFA;
+
     var ERROR = 0xFE;
     var HALT = 0xFF;
     var EMPTY = -0x01;  // negative can not point into something
@@ -29562,6 +29498,7 @@ define("asm-compiler", function (require, exports) {
     function init(stackSize, poolSize) {
         POOL = Array(poolSize||10000);
         pp = -1;
+        poolDupeMap = Object.create(null); // dupe check for identifiers, etc.
         MEMORY = new ArrayBuffer(stackSize||1024*1024);
         HEAP8 = new Int8Array(MEMORY);
         HEAPU8 = new Uint8Array(MEMORY);
@@ -29584,6 +29521,7 @@ define("asm-compiler", function (require, exports) {
         return {
             POOL: POOL,
             pp: pp,
+            poolDupeMap: poolDupeMap,
             MEMORY: MEMORY,
             HEAP8: HEAP8,
             HEAPU8: HEAPU8,
@@ -29612,15 +29550,17 @@ define("asm-compiler", function (require, exports) {
      * @returns {number}
      */
     function addToConstantPool(value) {
-        return POOL[++pp];
+        var poolIndex;
+        if (poolIndex=poolDupeMap[value]) return poolIndex;
+        POOL[++pp] = value;
+        return pp;
     }
     /**
      * @param node
      * @returns {*}
      */
     function identifier (node) {
-        POOL[++pp] = node.name;
-        var poolIndex = pp;
+        var poolIndex = addToConstantPool(node.name);
         var ptr = STACKTOP >> 2;
         HEAP32[ptr] = IDCONST;
         HEAP32[ptr+1] = poolIndex;
@@ -29633,8 +29573,7 @@ define("asm-compiler", function (require, exports) {
      * @returns {*}
      */
     function numericLiteralPool (node) {
-        POOL[++pp] = node.value;
-        var poolIndex = pp;
+        var poolIndex = addToConstantPool(node.value);
         var ptr = STACKTOP >> 2;
         HEAP32[ptr] = NUMCONST;
         HEAP32[ptr+1] = poolIndex;
@@ -29698,7 +29637,7 @@ define("asm-compiler", function (require, exports) {
      * @param node
      */
     function stringLiteralPool (node) {
-        POOL[++pp] = node.computed;
+        addToConstantPool(node.computed);
         var poolIndex = pp;
         var ptr = STACKTOP >> 2;
         HEAP32[ptr] = STRCONST;
@@ -30168,6 +30107,12 @@ define("asm-compiler", function (require, exports) {
         return ptr;
     }
 
+    function debuggerStatement(node) {
+        var ptr = STACKTOP >> 2;
+        HEAP32[ptr] = DEBUGGER;
+        return ptr;
+    }
+
 
     function compile(ast) {
         if (!ast) return -1;
@@ -30211,6 +30156,7 @@ define("asm-compiler", function (require, exports) {
             case "ThrowStatement":          return throwStatement(ast);
             case "BreakStatement":          return breakStatement(ast);
             case "ContinueStatement":       return continueStatement(ast);
+            case "DebuggerStatement":       return debuggerStatement(ast);
             default:
                 throw new TypeError(format("NO_COMPILER_FOR_S", ast && ast.type));
         }
@@ -30263,6 +30209,8 @@ define("vm", function (require, exports) {
     var operatorForCode = tables.operatorForCode;
     var unaryOperatorFromCode = tables.unaryOperatorFromCode;
     var propDefCodes = tables.propDefCodes;
+    var detector = require("detector");
+    var hasConsole = detector.hasConsole;
 
     /**
      * intl functions to translate messages from the beginning on
@@ -30278,6 +30226,7 @@ define("vm", function (require, exports) {
      */
     var POOL;
     var pp;
+    var poolDupeMap;
     var MEMORY;
     var HEAP8;
     var HEAPU8;
@@ -30299,15 +30248,6 @@ define("vm", function (require, exports) {
     var frames =  new Array(1000);
     var fp = -1;
     var frame;
-
-    function newFrame() {
-        "use strict";
-        frame = frames[++fp] = ExecutionContext(frames[fp-1]);
-    }
-    function oldFrame() {
-        "use strict";
-        frame = frames[fp--];
-    }
 
     /**
      * global operandStack
@@ -30393,6 +30333,8 @@ define("vm", function (require, exports) {
     var PROPDEF = 0xD5;
     var OBJECTINIT = 0xD6;
     var RET = 0xD0;
+
+    var DEBUGGER = 0xFA;
     var ERROR = 0xFE;
     var HALT = 0xFF;
     var EMPTY = -0x01;  // negative can not point into something
@@ -30534,6 +30476,21 @@ define("vm", function (require, exports) {
                     $2 = $1 + $3 - 1;               // last
                     for (; $2 >= $1; $2--) stack[pc++] = HEAP32[$2];
                     break;
+
+                case STR:
+
+                    $3 = (ip+2) << 1;
+                    $2 = HEAP32[ip+1];
+                    $1 = HEAPU16.subarray($3, $3+$2);
+                    $0 = String.fromCharCode.apply(undefined, $1);
+                    operands[++sp] = $0;
+                    break;
+
+                case NUM:
+                    $0 = HEAPF64[(ip+1)>>1];
+                    operands[++sp] = $0;
+                    break;
+
                 case ADD:
                     $1 = operands[sp--];
                     $2 = GetValue($1);
@@ -30977,11 +30934,10 @@ define("vm", function (require, exports) {
                     }
                     operands[++sp] = $5;
                     break;
-
-
-                    break;
-
                 case IFLT:
+                    $1 = operands[sp--];
+                    $2 = operands[sp--];
+
                     break;
                 case IFGT:
                     break;
@@ -31048,26 +31004,6 @@ define("vm", function (require, exports) {
                     break;
                 case FALSEBOOL:
                     operands[++sp] = false;
-                    break;
-            /**
-             * str and num
-             * with real alignment and encoding
-             *
-             */
-
-                case STR:
-
-                    $3 = (ip+2) << 1;
-                    $2 = HEAP32[ip+1];
-                    $1 = HEAPU16.subarray($3, $3+$2);
-                    $0 = String.fromCharCode.apply(undefined, $1);
-                    operands[++sp] = $0;
-                    break;
-
-                case NUM:
-                    $0 = HEAPF64[(ip+1)>>1];
-                    operands[++sp] = $0; // may not be in here.
-                    // $0 can be argument? is numeric
                     break;
 
             /**
@@ -31187,9 +31123,11 @@ define("vm", function (require, exports) {
                 case VARDECL:
                     break;
 
-            /**
-             * first
-             */
+                case DEBUGGER:
+                    ecma.debuggerOutput();
+                    break;
+
+
                 case HALT:
                     return;
                 case ERROR:
@@ -31210,12 +31148,11 @@ define("vm", function (require, exports) {
      * @returns {*}
      * @constructor
      */
-    function CompileAndRun(realm, src) {
-        var ast;
-        try {ast = parse(src)} catch (ex) {return newSyntaxError( ex.message)}
-        var unit = compiler.compileUnit(ast);
+
+    function set(unit) {
         POOL = unit.POOL;
         pp = unit.pp;
+        poolDupeMap = unit.poolDupeMap;
         MEMORY = unit.MEMORY;
         HEAP8 = unit.HEAP8;
         HEAPU8 = unit.HEAPU8;
@@ -31228,23 +31165,49 @@ define("vm", function (require, exports) {
         STACKBASE = unit.STACKBASE;
         STACKTOP = unit.STACKTOP;
         STACKSIZE = unit.STACKSIZE;
-        r0 = undefined;
+    }
+
+    function init() {   // callstack up
         stackBuffer = new ArrayBuffer(4096 * 16);
         stack = new Int32Array(stackBuffer);
+        ++fp;
+        frame = frames[fp] = ExecutionContext(frames[fp-1]);
+        frame.stackBuffer = stackBuffer;
+        frame.stack = stack;
+        frame.pc = pc;
+    }
+
+    function restore() {    // callstack down
+        frame = frames[--fp];
+        if (frame) {
+            stack = frame.stack;
+            stackBuffer = frame.stackBuffer;
+            pc = frame.pc;
+        }
+    }
+
+
+    function CompileAndRun(realm, src) {
+        var ast;
+        try {ast = parse(src)} catch (ex) {return newSyntaxError(ex.message)}
+        var unit = compiler.compileUnit(ast);
+        set(unit);
+        init();
         pc = 0;
         stack[pc] = STACKBASE; // ip to first bytecode at HEAP32[stack[0]]
-        var restore = false;
         main(pc);
         var $0 = operands[sp--];
-        // NextTask(undefined, TimerTasks)
-        // ...
         if (isAbrupt($0=ifAbrupt($0))) return $0;
         return NormalCompletion($0);
     }
     exports.CompileAndRun = CompileAndRun;
-});
 
-// syntax highlighter
+});	// is not asm. but renamable.
+
+    // syntax highlighter (the original application of syntax.js)
+    // will be rewritten soon, 
+    // maybe with jquery for max effect with same simplicity
+
 
 // *******************************************************************************************************************************
 // Highlight (UI Independent Function translating JS into a string of spans)
@@ -31383,10 +31346,6 @@ define("highlight", function (require, exports) {
     return exports;
 
 });
-
-
-    // now easily translatable.
-    // i will add i18n mapping to the engine very soon
 
 define("annotations.de_DE", function (require, exports) {
 
@@ -32449,7 +32408,9 @@ if (typeof window != "undefined") {
 
 }
 
-// evaluation in web workers should save some of the ux
+
+    // evaluation in web workers should save some of the ux
+    
 /*
  *
  *  syntax.js web worker module
@@ -32530,7 +32491,9 @@ define("syntaxjs-worker", function (require, exports, module) {
 });
 
 
-// the commandline shell is my favorite playtoy
+
+    // the commandline shell is my favorite playtoy
+    
 
 define("syntaxjs-shell", function (require, exports) {
     
@@ -32799,27 +32762,24 @@ define("syntaxjs-shell", function (require, exports) {
 
         if (typeof exports !== "undefined") exports.syntaxjs = syntaxjs;
         syntaxjs.system = "node";
-
         syntaxjs_public_api_readonly.nodeShell = pdmacro(require("syntaxjs-shell"));// <-- needs exports fixed
-
         Object.defineProperties(exports, syntaxjs_public_api_readonly);
         Object.defineProperties(exports, syntaxjs_highlighter_api);
 
     } else if (typeof load == "function" && typeof print == "function") {
-
         if (typeof version === "function")  syntaxjs.system = "spidermonkey";
         if (typeof Java === "object")       syntaxjs.system = "nashorn";
         if (typeof exports !== "undefined") exports.syntaxjs = syntaxjs;
-
     }
 
     // ASSIGN properties to a SYNTAXJS object (all platforms)
     Object.defineProperties(syntaxjs, syntaxjs_public_api_readonly);
     Object.defineProperties(syntaxjs, syntaxjs_highlighter_api);
 
-    require("i18n").addLang("de_DE");
-    require("i18n").addLang("en_US");
-    require("i18n").setLang("en_US");
+    var i18n = require("i18n");
+    i18n.addLang("de_DE");// requires("languages.de_DE") and add exports to require("i18n").languages["de_DE"];
+    i18n.addLang("en_US");// requires("languages.en_US") and add exports to require("i18n").languages["en_US"];
+    i18n.setLang("en_US");// sets i18n.languages.lang to i18n.languages.en_US; (lang is the default key)
 
 // });
 /*
