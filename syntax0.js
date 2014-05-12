@@ -622,6 +622,7 @@ define("languages.de_DE", function (require, exports) {
 
 });
 
+
 /**
  *
  * syntax.js Language Packs
@@ -11102,17 +11103,19 @@ exports.AbstractEqualityComparison = AbstractEqualityComparison;
 exports.AbstractRelationalComparison = AbstractRelationalComparison;
 
 
-
 function readPropertyDescriptor(object, name) {
     if (IsSymbol(name)) return object[SLOTS.SYMBOLS][name.es5id];
     return object[SLOTS.BINDINGS][name];
 }
-exports.writePropertyDescriptor = writePropertyDescriptor;
 
 function writePropertyDescriptor(object, name, value) {
     if (IsSymbol(name))    return object[SLOTS.SYMBOLS][name.es5id] = value;
     return object[SLOTS.BINDINGS][name] = value;
 }
+exports.writePropertyDescriptor = writePropertyDescriptor;
+exports.readPropertyDescriptor = readPropertyDescriptor;
+
+
 function CreateOwnAccessorProperty(O, P, G, S) {
     Assert(Type(O) === OBJECT, "CreateAccessorProperty1");
     Assert(IsPropertyKey(P), "CreateAccessorProperty2");
@@ -11387,22 +11390,22 @@ function ValidateAndApplyPropertyDescriptor(O, P, extensible, Desc, current) {
 
 
 function Put(O, P, V, Throw) {
-    Assert(Type(O) === OBJECT, "o has to be an object");
+    Assert(Type(O) === OBJECT, "O != OBJECT");
     Assert(IsPropertyKey(P));
-    Assert(Throw === true || Throw === false, "throw has to be false or true");
+    Throw = !!Throw;
     var success = callInternalSlot(SLOTS.SET, O, P, V, O);
     if (isAbrupt(success = ifAbrupt(success))) return success;
     if (success === false && Throw === true) return newTypeError(format("PUT_FAILS_AT_S", P));
-    return success;
+    return NormalCompletion(success);
 }
 
 function DefineOwnPropertyOrThrow(O, P, D) {
-    Assert(Type(O) === OBJECT, "object expected");
+    Assert(Type(O) === OBJECT, "O != OBJECT");
     Assert(IsPropertyKey(P));
     var success = callInternalSlot(SLOTS.DEFINEOWNPROPERTY, O, P, D);
     if (isAbrupt(success = ifAbrupt(success))) return success;
     if (success === false) return newTypeError(format("DEFPOT_FAILS_AT_S", P));
-    return success;
+    return NormalCompletion(success);
 }
 
 function DeletePropertyOrThrow(O, P) {
@@ -11411,7 +11414,7 @@ function DeletePropertyOrThrow(O, P) {
     var success = Delete(O, P);
     if (isAbrupt(success = ifAbrupt(success))) return success;
     if (success === false) return newTypeError(format("DELPOT_FAILS_AT_S", P));
-    return success;
+    return NormalCompleion(success);
 }
 
 function OrdinaryDefineOwnProperty(O, P, D) {
@@ -11419,6 +11422,8 @@ function OrdinaryDefineOwnProperty(O, P, D) {
     var extensible = getInternalSlot(O, SLOTS.EXTENSIBLE);
     return ValidateAndApplyPropertyDescriptor(O, P, extensible, D, current);
 }
+
+//var GetOwnProperty = OrdinaryGetOwnProperty;
 
 function GetOwnProperty(O, P) {
     return OrdinaryGetOwnProperty(O, P);
@@ -11460,7 +11465,7 @@ function GetOwnPropertyKeys(O, type) {
     } else if (type === "string") {
         keys = OwnPropertyKeys(O);
     }
-    
+
     if (isAbrupt(keys = ifAbrupt(keys))) return keys;
     var nameList = [];
     var gotAllNames = false;
@@ -12237,7 +12242,7 @@ function cloneFunction (func) {
     var newFunc = OrdinaryFunction();
     setInternalSlot(newFunc, SLOTS.ENVIRONMENT, getInternalSlot(func, SLOTS.ENVIRONMENT));
     setInternalSlot(newFunc, SLOTS.CODE, getInternalSlot(func, SLOTS.CODE));
-    setInternalSlot(newFunc, "FormalParameters", getInternalSlot(func, "FormalParameterList"));
+    setInternalSlot(newFunc, SLOTS.FORMALPARAMETERS, getInternalSlot(func, SLOTS.FORMALPARAMETERS));
     setInternalSlot(newFunc, SLOTS.THISMODE, getInternalSlot(func, SLOTS.THISMODE));
     setInternalSlot(newFunc, SLOTS.FUNCTIONKIND, getInternalSlot(func, SLOTS.FUNCTIONKIND));
     setInternalSlot(newFunc, SLOTS.STRICT, getInternalSlot(func, SLOTS.STRICT));
@@ -29423,6 +29428,8 @@ define("asm-compiler", function (require, exports) {
     var NEWEXPR = 0xC2;
     var CONSTRUCT = 0xC3;
     var FUNCDECL = 0xC4;
+    var ARGLIST = 0xC6;
+
     var ARRAYEXPR = 0xD1;
     var ARRAYINIT = 0xD2;
     var OBJECTEXPR = 0xD4;
@@ -29814,10 +29821,11 @@ define("asm-compiler", function (require, exports) {
      * @param node
      * @returns {*}
      */
+
     function callExpression(node) {
         var ptr = STACKTOP >> 2;
         STACKTOP += 16;
-        HEAP32[ptr] = CALLEXPR;
+        HEAP32[ptr] = PUSH3;
         HEAP32[ptr+1] = argumentList(node.arguments);
         HEAP32[ptr+2] = compile(node.callee);
         HEAP32[ptr+3] = CALL;
@@ -29839,27 +29847,38 @@ define("asm-compiler", function (require, exports) {
         return ptr;
     }
 
+    /*
     function argumentList(list) {
         var len = list.length;
         var ptr = STACKTOP >> 2;
-        HEAP32[ptr] = len|0;
-        STACKTOP += 4 + (len << 2);
+        HEAP32[ptr] = ARGLIST;
+        HEAP32[ptr+1] = len|0;
+        STACKTOP += 8 + (len << 2);
         for (var i = 0; i < len; i++) {
             HEAP32[ptr+i] = compile(list[i]);
         }
         //console.log("compiled arguments List with length of "+len+ " to "+ ptr)
         return ptr;
     }
+    */
+
+    function argumentList(list) {
+        var poolIndex = ++pp;
+        POOL[pp] = list;
+        var ptr = STACKTOP >> 2;
+        STACKTOP += 8;
+        HEAP32[ptr] = ARGLIST;
+        HEAP32[ptr+1] = poolIndex;
+        return ptr;
+    }
+
 
     function formalParameters(list) {
-        var len = list.length;
+        var poolIndex = ++pp;
+        POOL[pp] = list;
         var ptr = STACKTOP >> 2;
-        HEAP32[ptr] = len|0;
-        STACKTOP += 4 + (len << 2);
-        for (var i = 0; i < len; i++) {
-            HEAP32[ptr+i] = compile(list[i]);
-        }
-        //console.log("compiled formalParameterList with length of "+len+ " to "+ ptr)
+        STACKTOP += 4;
+        HEAP32[ptr] = poolIndex;
         return ptr;
     }
 
@@ -30327,6 +30346,7 @@ define("vm", function (require, exports) {
     var NEWEXPR = 0xC2;
     var CONSTRUCT = 0xC3;
     var FUNCDECL = 0xC4;
+    var ARGLIST = 0xC6;
     var ARRAYEXPR = 0xD1;
     var ARRAYINIT = 0xD2;
     var OBJECTEXPR = 0xD4;
@@ -30433,25 +30453,27 @@ define("vm", function (require, exports) {
         operands[++sp] = $0;
     }
 
+    // state (the big loop may need flags like in asm)
+
+    var states = [];    // save
+    var MAINBODY = 2;
+    var FUNCTIONCALL = 4;
+    var GENERATOR = 8;
+    var METHOD = 16;
+    var CLASS = 32;
+    var ARGLIST = 64;
+    var ASSIGNMENT = 128;
+    var OBJECTLITERAL = 256;
+    var ARRAYLITERAL = 512;
+
 
     function main(pc) {
-        var $0, $1,$2,$3,$4,$5,$6,$7,$8,$9,$10;
         "use strict";
+        // local registers
 
-        /*
-         the external functions will be as expensive as calling
-         a WhiteSpace()||LineTerminator()||Comment()||Expression()||
-         */
+        var $0,$1,$2,$3,$4,$5,$6,$7,$8,$9,$A,$B,$C,$D,$E,$F;
 
-        /*
-                typed asm is impossible with the dynamic values
-                as long as there are regular js objects in use
-                later, when everything goes over the heap, it will
-                be, but until then, i work with dynamic types like
-                arrays within the loops to forget about the calls
-
-
-         */
+        //  var state = 0;
 
         do {
             var ip = stack[pc];
@@ -30985,22 +31007,22 @@ define("vm", function (require, exports) {
                  * from the constant pool
                  */
                 case STRCONST:
-                    $1 = HEAP32[ip + 1]
+                    $1 = HEAP32[ip + 1];
                     $0 = "" + POOL[$1];
                     operands[++sp] = $0;
                     break;
                 case NUMCONST:
-                    $1 = HEAP32[ip + 1]
+                    $1 = HEAP32[ip + 1];
                     $0 = +POOL[$1];
                     operands[++sp] = $0;
                     break;
                 case IDCONST:
-                    $1 = HEAP32[ip + 1]
+                    $1 = HEAP32[ip + 1];
                     $0 = GetIdentifierReference(getLexEnv(), POOL[$1], strict);
                     operands[++sp] = $0; // uses pool outside of the block
                     break;
                 case TRUEBOOL:
-                    operands[++sp] = true;
+                    operands[++sp] = true;  // JVM uses 0 and 1 integers for boolean
                     break;
                 case FALSEBOOL:
                     operands[++sp] = false;
@@ -31014,27 +31036,54 @@ define("vm", function (require, exports) {
                 case NEWEXPR:
                 case CALLEXPR:
                     stack[pc++] = ip+3;         // call
-                    stack[pc++] = HEAP32[ip+2]; // args
+                    stack[pc++] = HEAP32[ip+2]; // ^args
                     stack[pc++] = HEAP32[ip+1]; // callee
                     break;
 
-                // already tilt by regular operator bytecodes
 
-                /*case BINOP:
-                    $1 = HEAP32[ip+1];
-                    evaluateBinary($1);
+
+                /* case ARGLIST:
+                    state = ARG;
+
+                    $1 = HEAP32[ptr+1];
+                    $2 = ptr+2;
+                    $3 = ptr+2+len-1;
+                    for (;$3 >= $2; $3--) stack[pc++] = HEAP32[ip+1];
+                    break; */
+
+                case ARGLIST:
+                    $1 = HEAP32[ptr+1]
+                    operands[++sp] = POOL[$1];
                     break;
-                case ASSIGNMENTOPERATOR:
-                    $1 = HEAP32[ip+1];
-                    evaluateAssignment($1);
-                    break;*/
+
                 case CALL:
-                    $2 = operands[sp--];
-                    $1 = operands[sp--];
-                    if (isAbrupt($1 = ifAbrupt($1))) $0 = $1;
-                    else if (isAbrupt($2 = ifAbrupt($2))) $0 = $2;
-                    else $0 = EvaluateCall($1, $2, tailCall);
-                    operands[++sp] = $0;
+                    // tailCall = HEAP32[ptr+1];
+
+                    $1 = operands[sp--]; // callee
+                    if (isAbrupt($1 = ifAbrupt($1))) {
+                        operands[++sp] = $1;
+                        return;
+                    }
+
+                    $2 = operands[sp--]; // args;
+                    if (isAbrupt($2 = ifAbrupt($2))) {
+                        operands[++sp] = $2;
+                        return;
+                    }
+
+                    operands[++sp] = EvaluateCall($1, $2, tailCall);
+
+                    // that EvaluateCall can be replaced with a simpler
+                    // version of updating the frame pointer and
+                    // instantiating the function
+                    // and evaluating the main body loop
+                    // with some hardcode here.
+
+                    // i should have learned from writing in the code
+                    // for some weeks, how to write an improvised own
+                    // version, thus the builtins can be reworked a little
+                    // to use both machines.
+
                     break;
                 case CONSTRUCT:
                     $2 = operands[sp--];
