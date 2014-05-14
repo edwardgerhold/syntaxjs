@@ -6161,6 +6161,12 @@ define("parser", function () {
     function VariableStatement() {
         var node, decl, l1, l2;
         if (v === "var" || v === "let" || v === "const") {
+
+            if (v == "const" && lkhdVal == "class") {
+                match("const");
+                return this.ConstClassDeclaration();
+            }
+
             l1 = loc.start;
             node = Node("VariableDeclaration");
             node.declarations = [];
@@ -6182,7 +6188,13 @@ define("parser", function () {
         isIn = inStack.pop();
         return node;
     }
-    function ClassDeclaration(isExpr) {
+
+
+    function ConstClassDeclaration() {
+        return this.ClassDeclaration(false, true);
+    }
+
+    function ClassDeclaration(isExpr, isConst) {
         var node, m;
         if (v === "class") {
             //pushDecls();
@@ -7517,7 +7529,7 @@ define("parser", function () {
     parser.ExpressionStatement = ExpressionStatement;
     parser.StartAssignmentExpression = StartAssignmentExpression;
     parser.StartAssignmentExpressionNoIn = StartAssignmentExpressionNoIn;
-
+    parser.ConstClassDeclaration = ConstClassDeclaration;
     parser.JSONText = JSONText;
     parser.JSONValue = JSONValue;
     parser.JSONString = JSONString;
@@ -8899,6 +8911,9 @@ define("api", function (require, exports) {
 	These include files include the main ecma 262 abstract operations.
     */
     
+var DefineOwnProperty = OrdinaryDefineOwnProperty;
+var GetOwnProperty = OrdinaryGetOwnProperty;
+
 function Push(array, data) {
     return array.push(data);
 }
@@ -11380,11 +11395,11 @@ function OrdinaryDefineOwnProperty(O, P, D) {
     return ValidateAndApplyPropertyDescriptor(O, P, extensible, D, current);
 }
 
-//var GetOwnProperty = OrdinaryGetOwnProperty;
-
+/*
 function GetOwnProperty(O, P) {
     return OrdinaryGetOwnProperty(O, P);
 }
+*/
 
 function OrdinaryGetOwnProperty(O, P) {
     Assert(IsPropertyKey(P));
@@ -11486,11 +11501,6 @@ function OwnPropertySymbols(O) {
 }
 
 
-/**
- * Created by root on 30.03.14.
- */
-
-
 function GetMethod(O, P) {
     Assert(Type(O) === OBJECT && IsPropertyKey(P) === true, "o has to be object and p be a valid key");
     var method = callInternalSlot(SLOTS.GET, O, P, O);
@@ -11498,9 +11508,6 @@ function GetMethod(O, P) {
     if (IsCallable(method)) return method;
     else return newTypeError( "GetMethod: " + P + " can not be retrieved");
 }
-
-
-
 
 function SetIntegrityLevel(O, level) {
     Assert(Type(O) === OBJECT, "object expected");
@@ -11595,12 +11602,6 @@ function TestIntegrityLevel(O, level) {
     if (level === "frozen" && writable) return false;
     if (configurable) return false;
 }
-
-
-
-// ===========================================================================================================
-// essential methods
-// ===========================================================================================================
 
 function GetPrototypeOf(V) {
     if (Type(V) !== OBJECT) return newTypeError( "argument is not an object");
@@ -11739,9 +11740,12 @@ function OrdinaryObjectInvoke(O, P, A, R) {
     return method.Call(R, A);
 }
 
+
+/*
 function DefineOwnProperty(O, P, Desc) {
     return OrdinaryDefineOwnProperty(O, P, Desc);
 }
+*/
 
 function HasOwnProperty(O, P) {
     Assert(Type(O) === OBJECT, "GetOwnProperty: first argument has to be an object");
@@ -11771,11 +11775,8 @@ function Enumerate(O) {
     }
     // read the list backwards, coz O is the index 0 in the list.
     for (var k = chain.length-1; k >= 0; k--) {
-
         var obj = chain[k];
-
         bindings = obj.Bindings;
-
         for (name in bindings) {
             if (Type(name) === STRING) {
 
@@ -11803,14 +11804,13 @@ function Enumerate(O) {
     return MakeListIterator(propList);
 }
 
-
 function IsExtensible(O) {
     if (Type(O) === OBJECT) return getInternalSlot(O, SLOTS.EXTENSIBLE);
     return false;
 }
 
 function PreventExtensions(O) {
-    setInternalSlot(O, SLOTS.EXTENSIBLE, false);
+    if (Type(O) === OBJECT) setInternalSlot(O, SLOTS.EXTENSIBLE, false);
 }
 
 /**
@@ -30376,24 +30376,13 @@ define("vm", function (require, exports) {
      * stack - contains the ip to the next instruction
      * should grow each statement list, and shrink each instruction
      * the program should halt (or run nextTask) if the stack is empty.
+     *
+     * This will be replaced by smarter calculations of offsets
+     *
      */
+
     var stackBuffer, stack, pc;
 
-
-    /**
-     *
-     * @param code
-     */
-    function unknownInstruction(code) {
-        var $0 = newTypeError(format("UNKNOWN_INSTRUCTION_S", code));
-        operands[++sp] = $0;
-    }
-    function unknownError() {
-        var $0 = newTypeError(format("UNKNOWN_ERROR"));
-        operands[++sp] = $0;
-    }
-
-    // state (the big loop may need flags like in asm)
 
     var states = [];    // save
     var MAINBODY = 2;
@@ -30447,7 +30436,27 @@ define("vm", function (require, exports) {
                     $0 = String.fromCharCode.apply(undefined, $1);
                     operands[++sp] = $0;
                     break;
-
+                case STRCONST:
+                    $1 = HEAP32[ip + 1];
+                    $0 = "" + POOL[$1];
+                    operands[++sp] = $0;
+                    break;
+                case NUMCONST:
+                    $1 = HEAP32[ip + 1];
+                    $0 = +POOL[$1];
+                    operands[++sp] = $0;
+                    break;
+                case IDCONST:
+                    $1 = HEAP32[ip + 1];
+                    $0 = GetIdentifierReference(getLexEnv(), POOL[$1], strict);
+                    operands[++sp] = $0; // uses pool outside of the block
+                    break;
+                case TRUEBOOL:
+                    operands[++sp] = true;  // JVM uses 0 and 1 integers for boolean
+                    break;
+                case FALSEBOOL:
+                    operands[++sp] = false;
+                    break;
                 case NUM:
                     $0 = HEAPF64[(ip+1)>>1];
                     operands[++sp] = $0;
@@ -30463,7 +30472,7 @@ define("vm", function (require, exports) {
                     $3 = operands[sp--];
                     $4 = GetValue($3);
                     if (isAbrupt($4=ifAbrupt($4))) {
-                        operands[++sp] = $2;
+                        operands[++sp] = $4;
                         return;
                     }
                     operands[++sp] = $4 + $2;
@@ -30478,7 +30487,7 @@ define("vm", function (require, exports) {
                     $3 = operands[sp--];
                     $4 = GetValue($3);
                     if (isAbrupt($4=ifAbrupt($4))) {
-                        operands[++sp] = $2;
+                        operands[++sp] = $4;
                         return;
                     }
                     operands[++sp] = $2 - $4;
@@ -30493,7 +30502,7 @@ define("vm", function (require, exports) {
                     $3 = operands[sp--];
                     $4 = GetValue($3);
                     if (isAbrupt($4=ifAbrupt($4))) {
-                        operands[++sp] = $2;
+                        operands[++sp] = $4;
                         return;
                     }
                     operands[++sp] = $2 * $4;
@@ -30508,7 +30517,7 @@ define("vm", function (require, exports) {
                     $3 = operands[sp--];
                     $4 = GetValue($3);
                     if (isAbrupt($4=ifAbrupt($4))) {
-                        operands[++sp] = $2;
+                        operands[++sp] = $4;
                         return;
                     }
                     operands[++sp] = $2 / $4;
@@ -30523,7 +30532,7 @@ define("vm", function (require, exports) {
                     $3 = operands[sp--];
                     $4 = GetValue($3);
                     if (isAbrupt($4=ifAbrupt($4))) {
-                        operands[++sp] = $2;
+                        operands[++sp] = $4;
                         return;
                     }
                     operands[++sp] = $2 % $4;
@@ -30538,7 +30547,7 @@ define("vm", function (require, exports) {
                     $3 = operands[sp--];
                     $4 = GetValue($3);
                     if (isAbrupt($4=ifAbrupt($4))) {
-                        operands[++sp] = $2;
+                        operands[++sp] = $4;
                         return;
                     }
                     operands[++sp] = $2 & $4;
@@ -30553,7 +30562,7 @@ define("vm", function (require, exports) {
                     $3 = operands[sp--];
                     $4 = GetValue($3);
                     if (isAbrupt($4=ifAbrupt($4))) {
-                        operands[++sp] = $2;
+                        operands[++sp] = $4;
                         return;
                     }
                     operands[++sp] = $2 | $4;
@@ -30577,7 +30586,7 @@ define("vm", function (require, exports) {
                     $3 = operands[sp--];
                     $4 = GetValue($3);
                     if (isAbrupt($4=ifAbrupt($4))) {
-                        operands[++sp] = $2;
+                        operands[++sp] = $4;
                         return;
                     }
                     operands[++sp] = $2 || $4;
@@ -30592,7 +30601,7 @@ define("vm", function (require, exports) {
                     $3 = operands[sp--];
                     $4 = GetValue($3);
                     if (isAbrupt($4=ifAbrupt($4))) {
-                        operands[++sp] = $2;
+                        operands[++sp] = $4;
                         return;
                     }
                     operands[++sp] = $2 && $4;
@@ -30607,7 +30616,7 @@ define("vm", function (require, exports) {
                     $3 = operands[sp--];
                     $4 = GetValue($3);
                     if (isAbrupt($4=ifAbrupt($4))) {
-                        operands[++sp] = $2;
+                        operands[++sp] = $4;
                         return;
                     }
                     operands[++sp] = $2 > $4;
@@ -30622,7 +30631,7 @@ define("vm", function (require, exports) {
                     $3 = operands[sp--];
                     $4 = GetValue($3);
                     if (isAbrupt($4=ifAbrupt($4))) {
-                        operands[++sp] = $2;
+                        operands[++sp] = $4;
                         return;
                     }
                     operands[++sp] = $2 < $4;
@@ -30637,7 +30646,7 @@ define("vm", function (require, exports) {
                     $3 = operands[sp--];
                     $4 = GetValue($3);
                     if (isAbrupt($4=ifAbrupt($4))) {
-                        operands[++sp] = $2;
+                        operands[++sp] = $4;
                         return;
                     }
                     operands[++sp] = $2 >= $4;
@@ -30652,7 +30661,7 @@ define("vm", function (require, exports) {
                     $3 = operands[sp--];
                     $4 = GetValue($3);
                     if (isAbrupt($4=ifAbrupt($4))) {
-                        operands[++sp] = $2;
+                        operands[++sp] = $4;
                         return;
                     }
                     operands[++sp] = $1 + $2;
@@ -30667,7 +30676,7 @@ define("vm", function (require, exports) {
                     $3 = operands[sp--];
                     $4 = GetValue($3);
                     if (isAbrupt($4=ifAbrupt($4))) {
-                        operands[++sp] = $2;
+                        operands[++sp] = $4;
                         return;
                     }
                     operands[++sp] = $2 == $4;
@@ -30682,7 +30691,7 @@ define("vm", function (require, exports) {
                     $3 = operands[sp--];
                     $4 = GetValue($3);
                     if (isAbrupt($4=ifAbrupt($4))) {
-                        operands[++sp] = $2;
+                        operands[++sp] = $4;
                         return;
                     }
                     operands[++sp] = $2 === $4;
@@ -30697,7 +30706,7 @@ define("vm", function (require, exports) {
                     $3 = operands[sp--];
                     $4 = GetValue($3);
                     if (isAbrupt($4=ifAbrupt($4))) {
-                        operands[++sp] = $2;
+                        operands[++sp] = $4;
                         return;
                     }
                     operands[++sp] = $2 != $4;
@@ -30712,7 +30721,7 @@ define("vm", function (require, exports) {
                     $3 = operands[sp--];
                     $4 = GetValue($3);
                     if (isAbrupt($4=ifAbrupt($4))) {
-                        operands[++sp] = $2;
+                        operands[++sp] = $4;
                         return;
                     }
                     operands[++sp] = $2 !== $4;
@@ -30727,7 +30736,7 @@ define("vm", function (require, exports) {
                     $3 = operands[sp--];
                     $4 = GetValue($3);
                     if (isAbrupt($4=ifAbrupt($4))) {
-                        operands[++sp] = $2;
+                        operands[++sp] = $4;
                         return;
                     }
                     operands[++sp] = $2 << $4;
@@ -30742,7 +30751,7 @@ define("vm", function (require, exports) {
                     $3 = operands[sp--];
                     $4 = GetValue($3);
                     if (isAbrupt($4=ifAbrupt($4))) {
-                        operands[++sp] = $2;
+                        operands[++sp] = $4;
                         return;
                     }
                     operands[++sp] = $2 >> $4;
@@ -30757,7 +30766,7 @@ define("vm", function (require, exports) {
                     $3 = operands[sp--];
                     $4 = GetValue($3);
                     if (isAbrupt($4=ifAbrupt($4))) {
-                        operands[++sp] = $2;
+                        operands[++sp] = $4;
                         return;
                     }
                     operands[++sp] = $1 >>> $2;
@@ -30772,7 +30781,7 @@ define("vm", function (require, exports) {
                     $3 = operands[sp--];
                     $4 = GetValue($3);
                     if (isAbrupt($4=ifAbrupt($4))) {
-                        operands[++sp] = $2;
+                        operands[++sp] = $4;
                         return;
                     }
                     // mit Assignment, heisst hier PutValue durchfuehren.
@@ -30795,7 +30804,7 @@ define("vm", function (require, exports) {
                     $3 = operands[sp--];
                     $4 = GetValue($3);
                     if (isAbrupt($4=ifAbrupt($4))) {
-                        operands[++sp] = $2;
+                        operands[++sp] = $4;
                         return;
                     }
                     $5 = $2 << $4;
@@ -30816,7 +30825,7 @@ define("vm", function (require, exports) {
                     $3 = operands[sp--];
                     $4 = GetValue($3);
                     if (isAbrupt($4=ifAbrupt($4))) {
-                        operands[++sp] = $2;
+                        operands[++sp] = $4;
                         return;
                     }
                     $5 = $2 >>> $4;
@@ -30828,11 +30837,6 @@ define("vm", function (require, exports) {
                     }
                     operands[++sp] = $5;
                     break;
-                case REST:
-                    // hier muessen erstmal ein paar "assembly flags"
-                    break;
-                case SPREAD:
-                    break;
                 case ASSIGN:
                     $1 = operands[sp--];
                     $2 = GetValue($1);
@@ -30843,7 +30847,7 @@ define("vm", function (require, exports) {
                     $3 = operands[sp--];
                     $4 = GetValue($3);
                     if (isAbrupt($4=ifAbrupt($4))) {
-                        operands[++sp] = $2;
+                        operands[++sp] = $4;
                         return;
                     }
                     $5 = $4;
@@ -30864,7 +30868,7 @@ define("vm", function (require, exports) {
                     $3 = operands[sp--];
                     $4 = GetValue($3);
                     if (isAbrupt($4=ifAbrupt($4))) {
-                        operands[++sp] = $2;
+                        operands[++sp] = $4;
                         return;
                     }
                     $5 = $2 + $4;
@@ -30885,7 +30889,7 @@ define("vm", function (require, exports) {
                     $3 = operands[sp--];
                     $4 = GetValue($3);
                     if (isAbrupt($4=ifAbrupt($4))) {
-                        operands[++sp] = $2;
+                        operands[++sp] = $4;
                         return;
                     }
                     $5 = $2 - $4;
@@ -30907,11 +30911,6 @@ define("vm", function (require, exports) {
                     break;
                 case IFNOTCMP:
                     break;
-            /**
-             * code,len,elems
-             *
-             * will be refactored with better labeling
-             */
                 case BLOCKSTMT:
                 case SEQEXPR:
                     $1 = ip + 2;
@@ -30919,13 +30918,6 @@ define("vm", function (require, exports) {
                     $2 = $1 + $3 - 1;
                     for (; $2 >= $1; $2--) stack[pc++] = HEAP32[$2];
                     break;
-                /*
-
-
-                    if will be replaced with jumps into the blocks
-                    (same goes here, but the opcode name changes)
-
-                 */
                 case IFEXPR:
                     stack[pc++] = ip+2; // IFOP (compares r0 to true)
                     stack[pc++] = HEAP32[ip+1]; // eval test
@@ -30935,42 +30927,10 @@ define("vm", function (require, exports) {
                     if (!!$0) stack[pc++] = HEAP32[ip+1];
                     else stack[pc++] = HEAP32[ip+2];
                     break;
-            /**
-             * expression statement
-             * and parenthesized expression
-             */
                 case EXPRSTMT:
                 case PARENEXPR:
                     stack[pc++] = HEAP32[ip+1];
                     break;
-                /*
-                 * from the constant pool
-                 */
-                case STRCONST:
-                    $1 = HEAP32[ip + 1];
-                    $0 = "" + POOL[$1];
-                    operands[++sp] = $0;
-                    break;
-                case NUMCONST:
-                    $1 = HEAP32[ip + 1];
-                    $0 = +POOL[$1];
-                    operands[++sp] = $0;
-                    break;
-                case IDCONST:
-                    $1 = HEAP32[ip + 1];
-                    $0 = GetIdentifierReference(getLexEnv(), POOL[$1], strict);
-                    operands[++sp] = $0; // uses pool outside of the block
-                    break;
-                case TRUEBOOL:
-                    operands[++sp] = true;  // JVM uses 0 and 1 integers for boolean
-                    break;
-                case FALSEBOOL:
-                    operands[++sp] = false;
-                    break;
-
-            /**
-             *  have the same order
-             */
                 case BINEXPR:
                 case ASSIGNEXPR:
                 case NEWEXPR:
@@ -30979,52 +30939,25 @@ define("vm", function (require, exports) {
                     stack[pc++] = HEAP32[ip+2]; // ^args
                     stack[pc++] = HEAP32[ip+1]; // callee
                     break;
-
-
-
-                /* case ARGLIST:
-                    state = ARG;
-
-                    $1 = HEAP32[ptr+1];
-                    $2 = ptr+2;
-                    $3 = ptr+2+len-1;
-                    for (;$3 >= $2; $3--) stack[pc++] = HEAP32[ip+1];
-                    break; */
-
                 case ARGLIST:
                     $1 = HEAP32[ptr+1]
                     operands[++sp] = POOL[$1];
                     break;
-
                 case CALL:
                     // tailCall = HEAP32[ptr+1];
-
                     $1 = operands[sp--]; // callee
                     if (isAbrupt($1 = ifAbrupt($1))) {
                         operands[++sp] = $1;
                         return;
                     }
-
                     $2 = operands[sp--]; // args;
                     if (isAbrupt($2 = ifAbrupt($2))) {
                         operands[++sp] = $2;
                         return;
                     }
-
                     operands[++sp] = EvaluateCall($1, $2, tailCall);
-
-                    // that EvaluateCall can be replaced with a simpler
-                    // version of updating the frame pointer and
-                    // instantiating the function
-                    // and evaluating the main body loop
-                    // with some hardcode here.
-
-                    // i should have learned from writing in the code
-                    // for some weeks, how to write an improvised own
-                    // version, thus the builtins can be reworked a little
-                    // to use both machines.
-
                     break;
+
                 case CONSTRUCT:
                     $2 = operands[sp--];
                     $1 = operands[sp--];
@@ -31033,16 +30966,7 @@ define("vm", function (require, exports) {
                     else $0 = OrdinaryConstruct($1, $2);
                     operands[++sp] = $0;
                     break;
-            /**
-             * unary expression code blocks
-             *
-             *
-             * time to redo the unary operators with
-             * PUSH2 and the Operator´s code
-             *
-             * that here is the first idea ever (and same lousy it is)
-             *
-             */
+
                 case UNARYEXPR:
                     stack[pc++] = ip+2;         // prefix/postifx
                     stack[pc++] = HEAP32[ip+1]; // .arg
@@ -31063,9 +30987,7 @@ define("vm", function (require, exports) {
                     else $0 = applyUnaryOp(unaryOperatorFromCode[$1], false, $3);
                     operands[++sp] = $0;
                     break;
-            /**
-             * while
-             */
+
                 case WHILESTMT:
                     stack[pc++] = ip+2;         // 2. goto whilebody
                     stack[pc++] = HEAP32[ip+1]; // 1. condition
@@ -31090,7 +31012,6 @@ define("vm", function (require, exports) {
                     break;
                 case DOWHILECOND:
                     $0 = !!operands[sp--]; // this may not happen in here
-
                     if ($0) {
                         stack[pc++] = HEAP32[ip+1];
                     }
@@ -31119,11 +31040,13 @@ define("vm", function (require, exports) {
 
                 case HALT:
                     return;
+
                 case ERROR:
-                    unknownError();
+                    operands[++sp] = newTypeError(format("UNKNOWN_ERROR"));
                     return;
+
                 default:
-                    unknownInstruction(code);
+                    operands[++sp] = newTypeError(format("UNKNOWN_INSTRUCTION_S", code));
                     return;
             }
             pc = pc - 1;
