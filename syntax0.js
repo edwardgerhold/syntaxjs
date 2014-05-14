@@ -4752,7 +4752,6 @@ define("parser", function () {
     var generatorParameterStack = [];
     var isReturn = false;
     var returnStack = [];
-
     var strictStack = [];
     var isStrict = false;
 
@@ -5458,7 +5457,7 @@ define("parser", function () {
         throw new SyntaxError("invalid property key in definition"+atLineCol());
 
     }
-    function PropertyDefinitionList(parent) {
+    function PropertyDefinitionList() {
         var list = [];
         list.type = "PropertyDefinitionList";
         var id;
@@ -5472,7 +5471,7 @@ define("parser", function () {
 
                 node = Node("PropertyDefinition");
                 node.kind = v;
-                method = this.MethodDefinition(parent, true);
+                method = this.MethodDefinition(true); // isObjectMethod = true
                 if (!method) throw new SyntaxError("Error parsing MethodDefinition in ObjectExpression");
                 node.key = method.id;
                 node.value = method;
@@ -5525,7 +5524,7 @@ define("parser", function () {
                     } else if (computedPropertyName && v == "(") {
 
                         node.kind = "method";
-                        method = this.MethodDefinition(parent, true, computedPropertyName);
+                        method = this.MethodDefinition(true, computedPropertyName);
                         if (!method) throw new SyntaxError("Error parsing method definition in ObjectExpression"+atLineCol());
                         node.key = method.id;
                         node.computed = method.computed;
@@ -5535,7 +5534,7 @@ define("parser", function () {
                     } else if (((v == "[" || BindingIdentifiers[t] || v === "constructor") && lkhdVal === "(") || (v === "*" && (lkhdVal == "[" || BindingIdentifiers[lkhdTyp] || lkhdVal === "constructor"))) {
 
                         node.kind = "method";
-                        method = this.MethodDefinition(parent, true);
+                        method = this.MethodDefinition(true);
                         if (!method) throw new SyntaxError("Error parsing method definition in ObjectExpression"+atLineCol());
                         node.key = method.id;
                         node.computed = method.computed;
@@ -6202,9 +6201,12 @@ define("parser", function () {
             node.id = null;
             node.strict = true;
             node.expression = !! isExpr;
+            if (isConst) node.const = true;
             node.extends = null;
             node.elements = [];
+            
             pushStrict(true);
+            
             match("class");
             var id = this.Identifier();
             node.id = id.name;
@@ -6214,78 +6216,97 @@ define("parser", function () {
             }
             match("{");
             while (v !== "}") {
-                m = this.MethodDefinition(node);
+                m = this.MethodDefinition();
                 node.elements.push(m);
             }
             match("}");
+            
             popStrict();
             if (compile) return compiler(node);
             return node;
         }
         return null;
     }
-    function MethodDefinition(parent, isObjectMethod, computedPropertyName) {
+    function MethodDefinition(isObjectMethod, computedPropertyName) {
         var l1, l2;
         var node;
+
         var isStaticMethod = false;
         var isGenerator = false;
         var isGetter = false;
         var isSetter = false;
         var specialMethod = false;
-        if (v === "}") return null;
+        
+        
+        if (v === "}") return null; // end of the class body, or the object body
+
         l1 = loc.start;
+
         if (v === ";") {
             if (!isObjectMethod) match(";");
             else throw new SyntaxError("invalid ; in object literal");
         }
+        
+        
         if (v === "static") {
             if (!isObjectMethod) {
                 isStaticMethod = true;
                 match(v);
             } else throw new SyntaxError("static is not allowed in objects");
         }
+
+        
         if (v === "*") {
             isGenerator = true;
             match(v);
         } else if (v === "get") {
-            specialMethod = isGetter = true;
+            isGetter = true;
             match(v);
             // get c() {}
         } else if (v === "set") {
-            specialMethod = isSetter = true;
+            isSetter = true;
             match(v);
             // set c() {}
         }
+
+
         node = Node("MethodDefinition");
+        
         nodeStack.push(currentNode);
         currentNode = node;
+
+
         if (computedPropertyName) {
     	    node.id = computedPropertyName;
     	    node.computed = true;
         } else if (v =="[") {
     	    node.id = this.ComputedPropertyName();
     	    node.computed = true;
-    	} else node.id = this.PropertyKey();
-    	
+    	} else {
+    	    node.id = this.PropertyKey();
+	}
     	
         if (isStrict && ForbiddenArgumentsInStrict[node.id.name]) throw new SyntaxError(node.id.name + " is not a valid method identifier in strict mode");
         node.generator = isGenerator;
         if (!isObjectMethod) node.static = isStaticMethod;
+        
         if (isGetter) node.kind = "get";
-        if (isSetter) node.kind = "set";
-        node.strict = true;
+        else if (isSetter) node.kind = "set";
+
         match("(");
         node.params = this.FormalParameterList();
         match(")");
         match("{");
         node.body = this.FunctionBody(node);
         match("}");
-        node.specialMethod = specialMethod;
+
         l2 = loc.end;
         node.loc = makeLoc(l1, l2);
         currentNode = nodeStack.pop();
+
         if (compile) return compiler(node);
         return node;
+
     }
     function RestParameter() {
         if (v === "...") {
@@ -6557,7 +6578,7 @@ define("parser", function () {
             if (compile) return compiler(node);
             return node;
         }
-        return null;
+        return null; 
     }
     function ContinueStatement() {
         var node, l1, l2;
@@ -9391,6 +9412,10 @@ SLOTS.DIMENSIONS = "Dimensions";
 SLOTS.RANK = "Rank";
 SLOTS.ARRAYDESCRIPTOR = "ArrayDescriptor";
 SLOTS.OPAQUEDESCRIPTOR = "OpaqueDescriptor";
+// Structured Clones
+SLOTS.TRANSFER = "Transfer";
+SLOTS.ONSUCCESSFULTRANSFER = "OnSuccessfulTransfer";
+
 Object.freeze(SLOTS); // DOES A FREEZE HELP OPTIMIZING? The pointers can´t change anymore, or?
 
 /**
