@@ -11538,6 +11538,7 @@ function SetIntegrityLevel(O, level) {
     Assert(Type(O) === OBJECT, "object expected");
     Assert(level === "sealed" || level === "frozen", "level must be sealed or frozen");
     var desc;
+    
     if (level === "sealed" || level === "frozen") {
         var pendingException;
         var keys = OwnPropertyKeysAsList(O); // Array statt iterator
@@ -28051,6 +28052,8 @@ define("runtime", function () {
         var FunctionPrototype = getIntrinsic(INTRINSICS.FUNCTIONPROTOTYPE);
         var className = node.id;
         var isExtending = node.extends;
+        var isConst = !!node.const;
+        var isExpr = !!node.expr;
         var constructorParent;
         var Proto;
         var decl;
@@ -28075,7 +28078,7 @@ define("runtime", function () {
         if (isAbrupt(Proto=ifAbrupt(Proto))) return Proto;
         var lex = getLexEnv();
         var scope = NewDeclarativeEnvironment(lex);
-        if (className) {
+        if (className && !isExpr) {
             lex.CreateMutableBinding(className);
         }
         var caller = cx.callee;
@@ -28121,11 +28124,15 @@ define("runtime", function () {
         }
         MakeConstructor(F, false, Proto);
         if (className) {
-            var status = SetFunctionName(F, className);
+            status = SetFunctionName(F, className);
             if (isAbrupt(status)) return status;
-            lex.InitializeBinding(className, F);
+            if (!isExpr) lex.InitializeBinding(className, F);
         }
         getContext().LexEnv = lex;
+        if (isConst) {
+    	    status = SetIntegrityLevel(F, "frozen");
+    	    if (isAbrupt(status)) return status;
+        }
         return NormalCompletion(F);
     }
     function SuperExpression(node) {
