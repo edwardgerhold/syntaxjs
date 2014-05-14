@@ -28085,9 +28085,10 @@ define("runtime", function () {
         getContext().LexEnv = scope;
         cx.callee = className;
         cx.caller = caller;
-        getContext().LexEnv = scope;
+
         var F = FunctionCreate("normal", [], null, scope, true, FunctionPrototype, constructorParent);
         if (isAbrupt(F=ifAbrupt(F))) return F;
+        
         if (!constructor) {
             if (isExtending) {
                 setInternalSlot(F, SLOTS.FORMALPARAMETERS, defaultClassConstructorFormalParameters);
@@ -28101,10 +28102,7 @@ define("runtime", function () {
             SetFunctionLength(F, ExpectedArgumentCount(constructor.params));
             setInternalSlot(F, SLOTS.CODE, constructor.body);
         }
-        setInternalSlot(F, SLOTS.CONSTRUCT, function (argList) {
-            var F = this;
-            return OrdinaryConstruct(F, argList);
-        });
+
         var i, j;
         for (i = 0, j = protoMethods.length; i < j; i++) {
             if (decl = protoMethods[i]) {
@@ -28123,6 +28121,16 @@ define("runtime", function () {
             setInternalSlot(F, SLOTS.METHODNAME, "constructor");
         }
         MakeConstructor(F, false, Proto);
+
+        setInternalSlot(F, SLOTS.CONSTRUCT, function (argList) {
+            var O = OrdinaryConstruct(this, argList);
+            if (isConst) {
+    		status = SetIntegrityLevel(O, "frozen");
+    		if (isAbrupt(status)) return status;
+    	    }
+    	    return O;
+        });
+
         if (className) {
             status = SetFunctionName(F, className);
             if (isAbrupt(status)) return status;
@@ -28135,6 +28143,7 @@ define("runtime", function () {
         }
         return NormalCompletion(F);
     }
+
     function SuperExpression(node) {
         return NormalCompletion(empty);
     }
