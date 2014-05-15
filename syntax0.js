@@ -16837,6 +16837,54 @@ ProxyExoticObject.prototype = {
         return newObj;
     }
 };
+
+
+function isProxy(o) {
+    return o instanceof ProxyExoticObject;
+}
+
+function ProxyCreate(target, handler) {
+    var proxy = ProxyExoticObject();
+    setInternalSlot(proxy, SLOTS.PROTOTYPE, ProxyPrototype);
+    setInternalSlot(proxy, SLOTS.PROXYTARGET, target);
+    setInternalSlot(proxy, SLOTS.PROXYHANDLER, handler);
+    if (!IsConstructor(target)) setInternalSlot(proxy, SLOTS.CONSTRUCT, undefined);
+    return proxy;
+}
+
+
+var ProxyConstructor_revocable = function revocable(thisArg, argList) {
+    var target = argList[0];
+    var handler = argList[1];
+
+    var revoker = CreateBuiltinFunction(realm, function revoke(thisArg, argList) {
+        var p = getInternalSlot(revoker, SLOTS.REVOKABLEPROXY);
+        if (p === null) return NormalCompletion(undefined);
+        setInternalSlot(revoker, SLOTS.REVOKABLEPROXY, null);
+        Assert(isProxy(p), "revoke: object is not a proxy");
+        setInternalSlot(p, SLOTS.PROXYTARGET, null);
+        setInternalSlot(p, SLOTS.PROXYHANDLER, null);
+        return NormalCompletion(undefined);
+    });
+
+    var proxy = ProxyCreate(target, handler);
+    setInternalSlot(revoker, SLOTS.REVOKABLEPROXY, proxy);
+    var result = ObjectCreate();
+    CreateDataProperty(result, "proxy", proxy);
+    CreateDataProperty(result, "revoke", revoker);
+    return NormalCompletion(result);
+};
+
+var ProxyConstructor_Call = function (thisArg, argList) {
+    return newTypeError(format("PROXY_CALL_ERROR"));
+};
+
+var ProxyConstructor_Construct = function (argList) {
+    var target = argList[0];
+    var handler = argList[1];
+    return ProxyCreate(target, handler);
+};
+
 /**
  * Created by root on 31.03.14.
  */
@@ -18669,6 +18717,7 @@ function RegExpAllocate(constructor) {
 function RegExpExec (R, S, ignore) {
     Assert(getInternalSlot(R, SLOTS.REGEXPMATCHER) != undefined, "RegExpExec: R must be a initialized RegExp instance");
     Assert(Type(S) === STRING);
+    Assert(Type(S) === STRING);
     Assert(ignore !== undefined ? Type(ignore) === BOOLEAN : true, "ignore has to be a bool if ignore is provided");
     var length = S.length;
     var global, sticky, matcher, flags, matchSucceeded, e, fullUnicode, putStatus, eUTF;
@@ -18867,6 +18916,296 @@ function Assertion(node) {
         return c.call(this, x);
     };
 }
+
+var RegExp_$$create = function (thisArg, argList) {
+    return RegExpAllocate(thisArg);
+};
+var RegExp_Call = function (thisArg, argList) {
+    var func = this;
+    var pattern = argList[0];
+    var flags = argList[1];
+    var O = thisArg;
+    var P, F, testP;
+    if (!hasInternalSlot(O, SLOTS.REGEXPMATCHER) || getInternalSlot(O, SLOTS.REGEXPMATCHER) !== undefined) {
+        if (testP=(Type(pattern) === OBJECT && hasInternalSlot(pattern, SLOTS.REGEXPMATCHER))) return pattern;
+        O = RegExpAllocate(func);
+        if (isAbrupt(O = ifAbrupt(O))) return O;
+    }
+    if (testP) {
+        if (getInternalSlot(pattern, SLOTS.REGEXPMATCHER) !== undefined) return newTypeError( "patterns [[RegExpMatcher]] isnt undefined");
+        if (flags != undefined) return newTypeError( "flag should be undefined for this call");
+        P = getInternalSlot(pattern, SLOTS.ORIGINALSOURCE);
+        F = getInternalSlot(pattern, SLOTS.ORIGINALFLAGS);
+    } else {
+        P = pattern;
+        F = flags;
+    }
+    return RegExpInitialize(O, P, F);
+};
+var RegExp_Construct = function (argList) {
+    return Construct(this, argList);
+};
+var RegExpPrototype_get_global = function (thisArg, argList) {
+    var R = thisArg;
+    if (Type(R) !== OBJECT) return newTypeError( "this value is no object");
+    if (!hasInternalSlot(R, SLOTS.ORIGINALFLAGS)) return newTypeError( "this value has no [[OriginalFlags]]");
+    var flags = getInternalSlot(R, SLOTS.ORIGINALFLAGS);
+    return NormalCompletion(flags.indexOf("g") > -1);
+};
+var RegExpPrototype_get_multiline = function (thisArg, argList) {
+    var R = thisArg;
+    if (Type(R) !== OBJECT) return newTypeError( "this value is no object");
+    if (!hasInternalSlot(R, SLOTS.ORIGINALFLAGS)) return newTypeError( "this value has no [[OriginalFlags]]");
+    var flags = getInternalSlot(R, SLOTS.ORIGINALFLAGS);
+    return NormalCompletion(flags.indexOf("m") > -1);
+};
+var RegExpPrototype_get_ignoreCase = function (thisArg, argList) {
+    var R = thisArg;
+    if (Type(R) !== OBJECT) return newTypeError( "this value is no object");
+    if (!hasInternalSlot(R, SLOTS.ORIGINALFLAGS)) return newTypeError( "this value has no [[OriginalFlags]]");
+    var flags = getInternalSlot(R, SLOTS.ORIGINALFLAGS);
+    return NormalCompletion(flags.indexOf("i") > -1);
+};
+var RegExpPrototype_get_sticky = function (thisArg, argList) {
+    var R = thisArg;
+    if (Type(R) !== OBJECT) return newTypeError( "this value is no object");
+    if (!hasInternalSlot(R, SLOTS.ORIGINALFLAGS)) return newTypeError( "this value has no [[OriginalFlags]]");
+    var flags = getInternalSlot(R, SLOTS.ORIGINALFLAGS);
+    return NormalCompletion(flags.indexOf("y") > -1);
+};
+
+var RegExpPrototype_get_unicode = function (thisArg, argList) {
+    var R = thisArg;
+    if (Type(R) !== OBJECT) return newTypeError( "this value is no object");
+    if (!hasInternalSlot(R, SLOTS.ORIGINALFLAGS)) return newTypeError( "this value has no [[OriginalFlags]]");
+    var flags = getInternalSlot(R, SLOTS.ORIGINALFLAGS);
+    return NormalCompletion(flags.indexOf("u") > -1);
+};
+
+var RegExpPrototype_get_source = function (thisArg, argList) {
+    var R = thisArg;
+    if (Type(R) !== OBJECT) return newTypeError( "this value is no object");
+    if (!hasInternalSlot(R, SLOTS.ORIGINALSOURCE)) return newTypeError( "this value has no [[OriginalSource]]");
+    if (!hasInternalSlot(R, SLOTS.ORIGINALFLAGS)) return newTypeError( "this value has no [[OriginalFlags]]");
+    var source =getInternalSlot(R, SLOTS.ORIGINALSOURCE);
+    var flags = getInternalSlot(R, SLOTS.ORIGINALFLAGS);
+    if (source === undefined || flags === undefined) return newTypeError( "source and flags may not be undefined");
+    return EscapeRegExpPattern(source, flags);
+};
+
+
+var RegExpPrototype_exec = function (thisArg, argList) {
+    var R = thisArg;
+    var string = argList[0];
+    var S;
+    if (Type(R) !== OBJECT) return newTypeError( "this value is not an object");
+    if (!hasInternalSlot(R, SLOTS.REGEXPMATCHER)) return newTypeError( "this value has not [[RegExpMatcher]] internal slot");
+    if (getInternalSlot(R, SLOTS.REGEXPMATCHER) === undefined) return newTypeError( "this value has not [[RegExpMatcher]] internal slot defined");
+    S = ToString(string);
+    if (isAbrupt(S=ifAbrupt(S))) return S;
+    return RegExpExec(R,S);
+};
+
+var RegExpPrototype_search = function (thisArg, argList) {
+    var rx = thisArg;
+    var S = argList[0];
+    if (Type(rx) !== OBJECT) return newTypeError( "this value is not an obect");
+    if (!hasInternalSlot(rx, SLOTS.REGEXPMATCHER)) return newTypeError( "this value has no [[RegExpMatcher]] internal slot");
+    var matcher = getInternalSlot(rx, SLOTS.REGEXPMATCHER);
+    var string = ToString(S);
+    if (isAbrupt(string=ifAbrupt(string))) return string;
+    var result = RegExpExec(rx, string, true);
+    if (isAbrupt(result=ifAbrupt(result))) return result;
+    if (result == null) return -1;
+    return Get(result, "index");
+};
+var RegExpPrototype_match = function (thisArg, argList) {
+    var rx = thisArg;
+    var string = argList[0];
+    var S;
+    if (Type(rx) !== OBJECT) return newTypeError( "this value is not an object");
+    if (!hasInternalSlot(rx, SLOTS.REGEXPMATCHER)) return newTypeError( "this value has not [[RegExpMatcher]] internal slot");
+    if (getInternalSlot(rx, SLOTS.REGEXPMATCHER) === undefined) return newTypeError( "this value has not [[RegExpMatcher]] internal slot defined");
+    S = ToString(string);
+    if (isAbrupt(S=ifAbrupt(S))) return S;
+    var global = ToBoolean(Get(rx, "global"));
+    if (isAbrupt(global=ifAbrupt(global))) return global;
+    if (!global) {
+        return RegExpExec(rx, S);
+    } else {
+        var putStatus = Put(rx, "lastIndex", 0, true);
+        if (isAbrupt(putStatus)) return putStatus;
+        var A = ArrayCreate(0);
+        var previousLastIndex = 0;
+        var n = 0;
+        var lastMatch = true;
+        while (lastMatch) {
+            var result = RegExpExec(rx, S);
+            if (isAbrupt(result=ifAbrupt(result))) return result;
+            if (result === null) lastMatch = false;
+            else {
+                var thisIndex = ToInteger(Get(rx, "lastIndex"));
+                if (isAbrupt(thisIndex=ifAbrupt(thisIndex))) return thisIndex;
+                if (thisIndex === previousLastIndex) {
+                    putStatus = Put(rx, "lastIndex", thisIndex + 1, true);
+                    if (isAbrupt(putStatus)) return putStatus;
+                    previousLastIndex = thisIndex + 1;
+                } else {
+                    previousLastIndex = thisIndex;
+                }
+                var matchStr = Get(result, "0");
+                var defineStatus = CreateDataPropertyOrThrow(A, ToString(n), matchStr);
+                if (isAbrupt(defineStatus)) return defineStatus;
+                n =  n + 1;
+            }
+        }
+        if (n === 0) return NormalCompletion(null);
+        return NormalCompletion(A);
+    }
+};
+
+var RegExpPrototype_test = function (thisArg, argList) {
+    var R = thisArg;
+    var string = argList[0];
+    if (Type(R) !== OBJECT) return newTypeError( "this value is no object");
+    var match = Invoke(R, "exec", [string]);
+    if (isAbrupt(match=ifAbrupt(match))) return match;
+    return NormalCompletion(match !== null);
+};
+
+
+var RegExpPrototype_compile = function (thisArg, argList) {
+
+
+
+};
+var RegExpPrototype_split = function (thisArg, argList) {
+
+};
+
+var RegExpPrototype_replace = function (thisArg, argList) {
+    var string = argList[0];
+    var replaceValue = argList[1];
+    var rx = thisArg;
+    var S;
+    if (Type(rx) !== OBJECT) return newTypeError( "this value is not an object");
+    if (!hasInternalSlot(rx, SLOTS.REGEXPMATCHER)) return newTypeError( "this value has not [[RegExpMatcher]] internal slot");
+    if (getInternalSlot(rx, SLOTS.REGEXPMATCHER) === undefined) return newTypeError( "this value has not [[RegExpMatcher]] internal slot defined");
+
+    var nCaptures = rx.NCapturingParens;
+    S = ToString(string);
+    if (isAbrupt(S=ifAbrupt(S))) return S;
+    var functionalReplace = IsCallable(replaceValue);
+    var global = ToBoolean(Get(rx, "global"));
+    if (isAbrupt(global=ifAbrupt(global))) return global;
+    var accumulatedResult = "";
+    var nextSrcPosition = 0;
+    if (global) {
+        var putStatus = Put(rx, "lastIndex", 0, true);
+        if (isAbrupt(putStatus)) return putStatus;
+    }
+    previousLastIndex = 0;
+    var done = false;
+    accumulatedResult = "";
+    nextSrcPosition = 0;
+    var previousLastIndex;
+    while (!done) {
+        var result = RegExpExec(rx, S);
+        if (isAbrupt(result=ifAbrupt(result))) return result;
+        if (result === null) done = true;
+        else {
+            if (global) {
+                var thisIndex = ToInteger(Get(rx, "lastIndex"));
+                if (isAbrupt(thisIndex = ifAbrupt(thisIndex))) return thisIndex;
+                if (thisIndex === previousLastIndex) {
+                    putStatus = Put(rx, "lastIndex", thisIndex + 1, true);
+                    if (isAbrupt(putStatus)) return putStatus;
+                    previousLastIndex = thisIndex + 1;
+                } else {
+                    previousLastIndex = thisIndex;
+                }
+            }
+            var sub = GetRegExpSubstitution(result);
+            var matched = Get(result, "0");
+            if (isAbrupt(matched=ifAbrupt(matched))) return matched;
+            var position = Get(result, "index");
+            if (isAbrupt(position = ifAbrupt(position))) return position;
+            var n = 0;
+            var captures = [];
+            while (n < nCaptures) {
+                var capN = Get(result, ToString(n));
+                if(isAbrupt(capN=ifAbrupt(capN))) return capN;
+                captures.push(capN);
+                n = n + 1;
+            }
+            if (functionalReplace === true) {
+                var replacerArgs = [matched];
+                replacerArgs = replacerArgs.concat(captures);
+                var replValue = callInternalSlot(SLOTS.CALL, replaceValue, undefined, replacerArgs);
+                var replacement = ToString(replValue);
+            } else {
+                replacement = GetReplaceSubstitution(matched, string, position, captures);
+            }
+            if (isAbrupt(replacement=ifAbrupt(replacement))) return replacement;
+            var matchLength = matched.length;
+            var replStr = ToString(replacement);
+            if (isAbrupt(replStr=ifAbrupt(replStr))) return replStr;
+
+
+            /*
+
+             Achtung: Dokument pruefen
+
+             Steps verschoben ???
+
+
+             */
+            /*
+             return {
+             position: position,
+             matchLength: matchLength,
+             replacement: replString
+             }; */
+
+            accumulatedResult = accumulatedResult + S.substr(nextSrcPosition, position - nextSrcPosition);
+            nextSrcPosition = position + matchLength;
+        }
+
+    }
+
+    return NormalCompletion( accumulatedResult + S.substr(nextSrcPosition, S.length - nextSrcPosition) );
+};
+
+
+var RegExpPrototype_toString = function (thisArg, argList) {
+    var R = thisArg;
+    if (Type(R) !== OBJECT) return newTypeError( "this value is not an object");
+    if (!hasInternalSlot(R, SLOTS.REGEXPMATCHER)) return newTypeError( "this value has not [[RegExpMatcher]] internal slot");
+    if (getInternalSlot(R, SLOTS.REGEXPMATCHER) === undefined) return newTypeError( "this value has not [[RegExpMatcher]] internal slot defined");
+    var pattern = ToString(Get(R, "source"));
+    if (isAbrupt(pattern=ifAbrupt(pattern))) return pattern;
+    var result = "/" + pattern + "/";
+    var global = ToBoolean(Get(R, "global"));
+    if (isAbrupt(global=ifAbrupt(global))) return global;
+    if (global) result += "g";
+
+    var ignoreCase = ToBoolean(Get(R, "ignoreCase"));
+    if (isAbrupt(ignoreCase=ifAbrupt(ignoreCase))) return ignoreCase;
+    if (ignoreCase) result += "i";
+
+    var multiline = ToBoolean(Get(R, "multiline"));
+    if (isAbrupt(multiline=ifAbrupt(multiline))) return multiline;
+    if (multiline) result += "m";
+
+    var unicode = ToBoolean(Get(R, "unicode"));
+    if (isAbrupt(unicode=ifAbrupt(unicode))) return unicode;
+    if (unicode) result += "u";
+
+    var sticky = ToBoolean(Get(R, "sticky"));
+    if (isAbrupt(sticky=ifAbrupt(sticky))) return sticky;
+    if (sticky) result += "y";
+    return NormalCompletion(result);
+};
 
 
     // Structured Clone Algorithms
@@ -21957,8 +22296,8 @@ DefineOwnProperty(ArrayPrototype, $$iterator, {
     configurable: true
 });
 
-DefineOwnProperty(ArrayPrototype, $$unscopables, {
-    value: (function () {
+
+LazyDefineProperty(ArrayPrototype, $$unscopables, (function () {
         var blackList = ObjectCreate();
         CreateDataProperty(blackList, "find", true);
         CreateDataProperty(blackList, "findIndex", true);
@@ -21968,13 +22307,7 @@ DefineOwnProperty(ArrayPrototype, $$unscopables, {
         CreateDataProperty(blackList, "keys", true);
         CreateDataProperty(blackList, "values", true);
         return blackList;
-    }()),
-    enumerable: false,
-    writable: true,
-    configurable: true
-});
-
-
+}()));
 
 setInternalSlot(ArrayProto_values, SLOTS.CALL, ArrayPrototype_values);
 setInternalSlot(ArrayProto_values, SLOTS.CONSTRUCT, undefined);
@@ -22323,12 +22656,10 @@ DefineOwnProperty(BooleanPrototype, "valueOf", {
     writable: true,
     configurable: true
 });
-
 MakeConstructor(SymbolFunction, true, SymbolPrototype);
 setInternalSlot(SymbolFunction, SLOTS.CALL, SymbolFunction_Call);
 setInternalSlot(SymbolFunction, SLOTS.CONSTRUCT, SymbolFunction_Construct);
 setInternalSlot(SymbolPrototype, SLOTS.PROTOTYPE, ObjectPrototype);
-
 LazyDefineBuiltinConstant(SymbolFunction, $$create, CreateBuiltinFunction(realm, SymbolFunction_$$create, 0, "[Symbol.create]"));
 LazyDefineBuiltinConstant(SymbolFunction, "create", $$create);
 LazyDefineBuiltinFunction(SymbolFunction, "for", 1, SymbolFunction_for);
@@ -22929,11 +23260,8 @@ setInternalSlot(UnescapeFunction, SLOTS.CALL, function (thisArg, argList) {
 });
 
 
-
 setInternalSlot(ParseIntFunction, SLOTS.CALL, ParseIntFunction_call);
-
 setInternalSlot(ParseFloatFunction, SLOTS.CALL, ParseFloatFunction_call);
-
 
 setInternalSlot(MathObject, SLOTS.MATHTAG, true);
 setInternalSlot(MathObject, SLOTS.PROTOTYPE, ObjectPrototype);
@@ -22989,53 +23317,8 @@ LazyDefineBuiltinFunction(NumberPrototype, "toString", 0, NumberPrototype_toStri
 LazyDefineBuiltinFunction(NumberPrototype, "valueOf", 0, NumberPrototype_valueOf);
 LazyDefineBuiltinConstant(NumberPrototype, $$toStringTag, "Number");
 
-function isProxy(o) {
-    return o instanceof ProxyExoticObject;
-}
-
-function ProxyCreate(target, handler) {
-    var proxy = ProxyExoticObject();
-    setInternalSlot(proxy, SLOTS.PROTOTYPE, ProxyPrototype);
-    setInternalSlot(proxy, SLOTS.PROXYTARGET, target);
-    setInternalSlot(proxy, SLOTS.PROXYHANDLER, handler);
-    if (!IsConstructor(target)) setInternalSlot(proxy, SLOTS.CONSTRUCT, undefined);
-    return proxy;
-}
 
 MakeConstructor(ProxyConstructor, true, ProxyPrototype);
-
-var ProxyConstructor_revocable = function revocable(thisArg, argList) {
-    var target = argList[0];
-    var handler = argList[1];
-
-    var revoker = CreateBuiltinFunction(realm, function revoke(thisArg, argList) {
-        var p = getInternalSlot(revoker, SLOTS.REVOKABLEPROXY);
-        if (p === null) return NormalCompletion(undefined);
-        setInternalSlot(revoker, SLOTS.REVOKABLEPROXY, null);
-        Assert(isProxy(p), "revoke: object is not a proxy");
-        setInternalSlot(p, SLOTS.PROXYTARGET, null);
-        setInternalSlot(p, SLOTS.PROXYHANDLER, null);
-        return NormalCompletion(undefined);
-    });
-
-    var proxy = ProxyCreate(target, handler);
-    setInternalSlot(revoker, SLOTS.REVOKABLEPROXY, proxy);
-    var result = ObjectCreate();
-    CreateDataProperty(result, "proxy", proxy);
-    CreateDataProperty(result, "revoke", revoker);
-    return NormalCompletion(result);
-};
-
-var ProxyConstructor_Call = function (thisArg, argList) {
-    return newTypeError(format("PROXY_CALL_ERROR"));
-};
-
-var ProxyConstructor_Construct = function (argList) {
-    var target = argList[0];
-    var handler = argList[1];
-    return ProxyCreate(target, handler);
-};
-
 LazyDefineBuiltinFunction(ProxyConstructor, "revocable", 2, ProxyConstructor_revocable);
 setInternalSlot(ProxyConstructor, SLOTS.CALL, ProxyConstructor_Call);
 setInternalSlot(ProxyConstructor, SLOTS.CONSTRUCT, ProxyConstructor_Construct);
@@ -23579,11 +23862,6 @@ DefineOwnProperty(JSONObject, $$toStringTag, {
 setInternalSlot(JSONObject, SLOTS.PROTOTYPE, ObjectPrototype);
 setInternalSlot(JSONObject, SLOTS.JSONTAG, true);
 
-
-
-
-
-//SetFunctionName(PromiseConstructor, SLOTS.PROMISE);
 MakeConstructor(PromiseConstructor, true, PromisePrototype);
 setInternalSlot(PromiseConstructor, SLOTS.CALL, PromiseConstructor_call);
 setInternalSlot(PromiseConstructor, SLOTS.CONSTRUCT, PromiseConstructor_Construct);
@@ -23598,301 +23876,9 @@ LazyDefineProperty(PromisePrototype, "catch", CreateBuiltinFunction(realm, Promi
 LazyDefineProperty(PromisePrototype, "constructor", PromiseConstructor);
 LazyDefineProperty(PromisePrototype, $$toStringTag, SLOTS.PROMISE);
 
-// ===========================================================================================================
-// Regular Expressiong	
-// ===========================================================================================================
 
 MakeConstructor(RegExpConstructor, true, RegExpPrototype);
 
-var RegExp_$$create = function (thisArg, argList) {
-    return RegExpAllocate(thisArg);
-};
-var RegExp_Call = function (thisArg, argList) {
-    var func = RegExpConstructor;
-    var pattern = argList[0];
-    var flags = argList[1];
-    var O = thisArg;
-    var P, F, testP;
-    if (!hasInternalSlot(O, SLOTS.REGEXPMATCHER) || getInternalSlot(O, SLOTS.REGEXPMATCHER) !== undefined) {
-        if (testP=(Type(pattern) === OBJECT && hasInternalSlot(pattern, SLOTS.REGEXPMATCHER))) return pattern;
-        O = RegExpAllocate(func);
-        if (isAbrupt(O = ifAbrupt(O))) return O;
-    }
-    if (testP) {
-        if (getInternalSlot(pattern, SLOTS.REGEXPMATCHER) !== undefined) return newTypeError( "patterns [[RegExpMatcher]] isnt undefined");
-        if (flags != undefined) return newTypeError( "flag should be undefined for this call");
-        P = getInternalSlot(pattern, SLOTS.ORIGINALSOURCE);
-        F = getInternalSlot(pattern, SLOTS.ORIGINALFLAGS);
-    } else {
-        P = pattern;
-        F = flags;
-    }
-    return RegExpInitialize(O, P, F);
-};
-var RegExp_Construct = function (argList) {
-    return Construct(this, argList);
-};
-var RegExpPrototype_get_global = function (thisArg, argList) {
-    var R = thisArg;
-    if (Type(R) !== OBJECT) return newTypeError( "this value is no object");
-    if (!hasInternalSlot(R, SLOTS.ORIGINALFLAGS)) return newTypeError( "this value has no [[OriginalFlags]]");
-    var flags = getInternalSlot(R, SLOTS.ORIGINALFLAGS);
-    return NormalCompletion(flags.indexOf("g") > -1);
-};
-var RegExpPrototype_get_multiline = function (thisArg, argList) {
-    var R = thisArg;
-    if (Type(R) !== OBJECT) return newTypeError( "this value is no object");
-    if (!hasInternalSlot(R, SLOTS.ORIGINALFLAGS)) return newTypeError( "this value has no [[OriginalFlags]]");
-    var flags = getInternalSlot(R, SLOTS.ORIGINALFLAGS);
-    return NormalCompletion(flags.indexOf("m") > -1);
-};
-var RegExpPrototype_get_ignoreCase = function (thisArg, argList) {
-    var R = thisArg;
-    if (Type(R) !== OBJECT) return newTypeError( "this value is no object");
-    if (!hasInternalSlot(R, SLOTS.ORIGINALFLAGS)) return newTypeError( "this value has no [[OriginalFlags]]");
-    var flags = getInternalSlot(R, SLOTS.ORIGINALFLAGS);
-    return NormalCompletion(flags.indexOf("i") > -1);
-};
-var RegExpPrototype_get_sticky = function (thisArg, argList) {
-    var R = thisArg;
-    if (Type(R) !== OBJECT) return newTypeError( "this value is no object");
-    if (!hasInternalSlot(R, SLOTS.ORIGINALFLAGS)) return newTypeError( "this value has no [[OriginalFlags]]");
-    var flags = getInternalSlot(R, SLOTS.ORIGINALFLAGS);
-    return NormalCompletion(flags.indexOf("y") > -1);
-};
-
-var RegExpPrototype_get_unicode = function (thisArg, argList) {
-    var R = thisArg;
-    if (Type(R) !== OBJECT) return newTypeError( "this value is no object");
-    if (!hasInternalSlot(R, SLOTS.ORIGINALFLAGS)) return newTypeError( "this value has no [[OriginalFlags]]");
-    var flags = getInternalSlot(R, SLOTS.ORIGINALFLAGS);
-    return NormalCompletion(flags.indexOf("u") > -1);
-};
-
-var RegExpPrototype_get_source = function (thisArg, argList) {
-    var R = thisArg;
-    if (Type(R) !== OBJECT) return newTypeError( "this value is no object");
-    if (!hasInternalSlot(R, SLOTS.ORIGINALSOURCE)) return newTypeError( "this value has no [[OriginalSource]]");
-    if (!hasInternalSlot(R, SLOTS.ORIGINALFLAGS)) return newTypeError( "this value has no [[OriginalFlags]]");
-    var source =getInternalSlot(R, SLOTS.ORIGINALSOURCE);
-    var flags = getInternalSlot(R, SLOTS.ORIGINALFLAGS);
-    if (source === undefined || flags === undefined) return newTypeError( "source and flags may not be undefined");
-    return EscapeRegExpPattern(source, flags);
-};
-
-
-var RegExpPrototype_exec = function (thisArg, argList) {
-    var R = thisArg;
-    var string = argList[0];
-    var S;
-    if (Type(R) !== OBJECT) return newTypeError( "this value is not an object");
-    if (!hasInternalSlot(R, SLOTS.REGEXPMATCHER)) return newTypeError( "this value has not [[RegExpMatcher]] internal slot");
-    if (getInternalSlot(R, SLOTS.REGEXPMATCHER) === undefined) return newTypeError( "this value has not [[RegExpMatcher]] internal slot defined");
-    S = ToString(string);
-    if (isAbrupt(S=ifAbrupt(S))) return S;
-    return RegExpExec(R,S);
-};
-
-var RegExpPrototype_search = function (thisArg, argList) {
-    var rx = thisArg;
-    var S = argList[0];
-    if (Type(rx) !== OBJECT) return newTypeError( "this value is not an obect");
-    if (!hasInternalSlot(rx, SLOTS.REGEXPMATCHER)) return newTypeError( "this value has no [[RegExpMatcher]] internal slot");
-    var matcher = getInternalSlot(rx, SLOTS.REGEXPMATCHER);
-    var string = ToString(S);
-    if (isAbrupt(string=ifAbrupt(string))) return string;
-    var result = RegExpExec(rx, string, true);
-    if (isAbrupt(result=ifAbrupt(result))) return result;
-    if (result == null) return -1;
-    return Get(result, "index");
-};
-var RegExpPrototype_match = function (thisArg, argList) {
-    var rx = thisArg;
-    var string = argList[0];
-    var S;
-    if (Type(rx) !== OBJECT) return newTypeError( "this value is not an object");
-    if (!hasInternalSlot(rx, SLOTS.REGEXPMATCHER)) return newTypeError( "this value has not [[RegExpMatcher]] internal slot");
-    if (getInternalSlot(rx, SLOTS.REGEXPMATCHER) === undefined) return newTypeError( "this value has not [[RegExpMatcher]] internal slot defined");
-    S = ToString(string);
-    if (isAbrupt(S=ifAbrupt(S))) return S;
-    var global = ToBoolean(Get(rx, "global"));
-    if (isAbrupt(global=ifAbrupt(global))) return global;
-    if (!global) {
-        return RegExpExec(rx, S);
-    } else {
-        var putStatus = Put(rx, "lastIndex", 0, true);
-        if (isAbrupt(putStatus)) return putStatus;
-        var A = ArrayCreate(0);
-        var previousLastIndex = 0;
-        var n = 0;
-        var lastMatch = true;
-        while (lastMatch) {
-            var result = RegExpExec(rx, S);
-            if (isAbrupt(result=ifAbrupt(result))) return result;
-            if (result === null) lastMatch = false;
-            else {
-                var thisIndex = ToInteger(Get(rx, "lastIndex"));
-                if (isAbrupt(thisIndex=ifAbrupt(thisIndex))) return thisIndex;
-                if (thisIndex === previousLastIndex) {
-                    putStatus = Put(rx, "lastIndex", thisIndex + 1, true);
-                    if (isAbrupt(putStatus)) return putStatus;
-                    previousLastIndex = thisIndex + 1;
-                } else {
-                    previousLastIndex = thisIndex;
-                }
-                var matchStr = Get(result, "0");
-                var defineStatus = CreateDataPropertyOrThrow(A, ToString(n), matchStr);
-                if (isAbrupt(defineStatus)) return defineStatus;
-                n =  n + 1;
-            }
-        }
-        if (n === 0) return NormalCompletion(null);
-        return NormalCompletion(A);
-    }
-};
-
-var RegExpPrototype_test = function (thisArg, argList) {
-    var R = thisArg;
-    var string = argList[0];
-    if (Type(R) !== OBJECT) return newTypeError( "this value is no object");
-    var match = Invoke(R, "exec", [string]);
-    if (isAbrupt(match=ifAbrupt(match))) return match;
-    return NormalCompletion(match !== null);
-};
-
-
-var RegExpPrototype_compile = function (thisArg, argList) {
-
-
-
-};
-var RegExpPrototype_split = function (thisArg, argList) {
-
-};
-
-var RegExpPrototype_replace = function (thisArg, argList) {
-    var string = argList[0];
-    var replaceValue = argList[1];
-    var rx = thisArg;
-    var S;
-    if (Type(rx) !== OBJECT) return newTypeError( "this value is not an object");
-    if (!hasInternalSlot(rx, SLOTS.REGEXPMATCHER)) return newTypeError( "this value has not [[RegExpMatcher]] internal slot");
-    if (getInternalSlot(rx, SLOTS.REGEXPMATCHER) === undefined) return newTypeError( "this value has not [[RegExpMatcher]] internal slot defined");
-
-    var nCaptures = rx.NCapturingParens;
-    S = ToString(string);
-    if (isAbrupt(S=ifAbrupt(S))) return S;
-    var functionalReplace = IsCallable(replaceValue);
-    var global = ToBoolean(Get(rx, "global"));
-    if (isAbrupt(global=ifAbrupt(global))) return global;
-    var accumulatedResult = "";
-    var nextSrcPosition = 0;
-    if (global) {
-        var putStatus = Put(rx, "lastIndex", 0, true);
-        if (isAbrupt(putStatus)) return putStatus;
-    }
-    previousLastIndex = 0;
-    var done = false;
-    accumulatedResult = "";
-    nextSrcPosition = 0;
-    var previousLastIndex;
-    while (!done) {
-        var result = RegExpExec(rx, S);
-        if (isAbrupt(result=ifAbrupt(result))) return result;
-        if (result === null) done = true;
-        else {
-            if (global) {
-                var thisIndex = ToInteger(Get(rx, "lastIndex"));
-                if (isAbrupt(thisIndex = ifAbrupt(thisIndex))) return thisIndex;
-                if (thisIndex === previousLastIndex) {
-                    putStatus = Put(rx, "lastIndex", thisIndex + 1, true);
-                    if (isAbrupt(putStatus)) return putStatus;
-                    previousLastIndex = thisIndex + 1;
-                } else {
-                    previousLastIndex = thisIndex;
-                }
-            }
-            var sub = GetRegExpSubstitution(result);
-            var matched = Get(result, "0");
-            if (isAbrupt(matched=ifAbrupt(matched))) return matched;
-            var position = Get(result, "index");
-            if (isAbrupt(position = ifAbrupt(position))) return position;
-            var n = 0;
-            var captures = [];
-            while (n < nCaptures) {
-                var capN = Get(result, ToString(n));
-                if(isAbrupt(capN=ifAbrupt(capN))) return capN;
-                captures.push(capN);
-                n = n + 1;
-            }
-            if (functionalReplace === true) {
-                var replacerArgs = [matched];
-                replacerArgs = replacerArgs.concat(captures);
-                var replValue = callInternalSlot(SLOTS.CALL, replaceValue, undefined, replacerArgs);
-                var replacement = ToString(replValue);
-            } else {
-                replacement = GetReplaceSubstitution(matched, string, position, captures);
-            }
-            if (isAbrupt(replacement=ifAbrupt(replacement))) return replacement;
-            var matchLength = matched.length;
-            var replStr = ToString(replacement);
-            if (isAbrupt(replStr=ifAbrupt(replStr))) return replStr;
-
-
-            /*
-
-             Achtung: Dokument pruefen
-
-             Steps verschoben ???
-
-
-             */
-        /*
-            return {
-                position: position,
-                matchLength: matchLength,
-                replacement: replString
-            }; */
-
-            accumulatedResult = accumulatedResult + S.substr(nextSrcPosition, position - nextSrcPosition);
-            nextSrcPosition = position + matchLength;
-        }
-
-    }
-
-    return NormalCompletion( accumulatedResult + S.substr(nextSrcPosition, S.length - nextSrcPosition) );
-};
-
-
-var RegExpPrototype_toString = function (thisArg, argList) {
-    var R = thisArg;
-    if (Type(R) !== OBJECT) return newTypeError( "this value is not an object");
-    if (!hasInternalSlot(R, SLOTS.REGEXPMATCHER)) return newTypeError( "this value has not [[RegExpMatcher]] internal slot");
-    if (getInternalSlot(R, SLOTS.REGEXPMATCHER) === undefined) return newTypeError( "this value has not [[RegExpMatcher]] internal slot defined");
-    var pattern = ToString(Get(R, "source"));
-    if (isAbrupt(pattern=ifAbrupt(pattern))) return pattern;
-    var result = "/" + pattern + "/";
-    var global = ToBoolean(Get(R, "global"));
-    if (isAbrupt(global=ifAbrupt(global))) return global;
-    if (global) result += "g";
-
-    var ignoreCase = ToBoolean(Get(R, "ignoreCase"));
-    if (isAbrupt(ignoreCase=ifAbrupt(ignoreCase))) return ignoreCase;
-    if (ignoreCase) result += "i";
-
-    var multiline = ToBoolean(Get(R, "multiline"));
-    if (isAbrupt(multiline=ifAbrupt(multiline))) return multiline;
-    if (multiline) result += "m";
-
-    var unicode = ToBoolean(Get(R, "unicode"));
-    if (isAbrupt(unicode=ifAbrupt(unicode))) return unicode;
-    if (unicode) result += "u";
-
-    var sticky = ToBoolean(Get(R, "sticky"));
-    if (isAbrupt(sticky=ifAbrupt(sticky))) return sticky;
-    if (sticky) result += "y";
-    return NormalCompletion(result);
-};
 
 
 setInternalSlot(RegExpConstructor, SLOTS.CALL, RegExp_Call);
@@ -24440,89 +24426,6 @@ LazyDefineBuiltinFunction(MessagePortPrototype, "open", 0, MessagePortPrototype_
 LazyDefineBuiltinFunction(MessagePortPrototype, "postMessage", 0, MessagePortPrototype_postMessage);
 
 
-/**
- * Created by root on 04.04.14.
- */
-var TypePrototypePrototype_get = function (thisArg, argList) {
-    var O = thisArg;
-    if (!hasInternalSlot(O, SLOTS.TYPEDESCRIPTOR)) return newTypeError( "has no type descriptor");
-    return NormalCompletion(getInternalSlot(O, SLOTS.TYPEDESCRIPTOR));
-};
-var TypePrototype_arrayType = function (thisArg, argList) {
-    var O = thisArg;
-    var length = argList[0];
-    if (!TypeObject(O)) return newTypeError( "not a typed object");
-    var typeDescriptor = getInternalSlot(O, SLOTS.TYPEDESCRIPTOR);
-    var numberLength = ToNumber(length);
-    var elementLength = ToLength(numberLength);
-    if (isAbrupt(elementLength=ifAbrupt(elementLength))) return elementLength;
-    if (SameValueZero(numberLength, elementLength)) return newRangeError( "numberLength is not elementLength");
-    var arrayDescriptor = GetOrCreateArrayTypeDescriptor(typeDescriptor);
-    if (isAbrupt(arrayDescriptor=ifAbrupt(arrayDescriptor))) return arrayDescriptor;
-    var R = TypeExoticObject();
-    setInternalSlot(R, SLOTS.TYPEDESCRIPTOR, arrayDescriptor);
-    var newDimensions = Cons(N, dimension);
-    setInternalSlot(R, SLOTS.DIMENSIONS, newDimensions);
-    return NormalCompletion(R);
-};
-var TypePrototype_opaqueType = function (thisArg, argList) {
-    var O = thisArg;
-    if (!IsTypeObject(O)) return newTypeError("is not a typed object");
-    var typeDescriptor = getInternalSlot(O, SLOTS.TYPEDESCRIPTOR);
-    var dimensions = setInternalSlot(O, SLOTS.DIMENSIONS);
-    var opaqueDescriptor = GetOrCreateOpaqueTypeDescriptor(typeDescriptor);
-    if (isAbrupt(opaqueDescriptor = ifAbrupt(opaqueDescriptor))) return opaqueDescriptor;
-    var R = TypeObject();
-    setInternalSlot(R, SLOTS.TYPEDESCRIPTOR, opaqueDescriptor);
-    setInternalSlot(R, SLOTS.DIMENSIONS, dimensions);
-    return NormalCompletion(R);
-};
-var StructTypeConstructor_Call = function (thisArg, argList) {
-    var object = argList[0];
-    if (Type(object) !== OBJECT) return newTypeError( "first argument is not an object");
-
-    var O = thisArg;
-    if (!IsTypeObject(O)) return newTypeError( "O is no TypeObject");
-    var currentOffset = 0;
-    var maxAlignment = 1;
-    var structure = [];
-    for (var P in object.Bindings) {
-        var fieldType = Get(object, P);
-        if (isAbrupt(fieldType=ifAbrupt(fieldType))) return fieldType;
-        if (!IsTypeObject(fieldType)) return newTypeError( "fieldType is no TypeObject");
-        var alignment = Alignment(fieldType);
-        maxAlignment = Math.max(alignment, maxAlignment);
-        currentOffset = AlignTo(currentOffset, alignment);
-
-        var r = FieldRecord(fieldName, byteOffset, currentOffset, fieldType);
-        structure.push(r);
-        var s = Size(fieldType);
-        if (isAbrupt(s=ifAbrupt(s))) return s;
-        currentOffset = currentOffset + s;
-    }
-    var size = AlignTo(currentOffset, maxAlignment);
-    var typeDescriptor = CreateStructTypeDescriptor(structure);
-    setInternalSlot(O, SLOTS.TYPEDESCRIPTOR, typeDescriptor);
-    OrdinaryDefineOwnProperty(O, "prototype", {
-        configurable: false,
-        enumerable: false,
-        value: typeDescriptor,
-        writable: false
-    });
-    return NormalCompletion(O);
-};
-var StructTypeConstructor_Construct = function (argList) {
-    return OrdinaryConstruct(this, argList);
-};
-var StructTypeConstructor_$$create = function (thisArg, argList) {
-    var F = thisArg;
-    var proto = OrdinaryCreateFromConstructor(F, INTRINSICS.STRUCTTYPEPROTOTYPE, [ SLOTS.TYPEDESCRIPTOR, SLOTS.DIMENSIONS ]);
-    if (isAbrupt(proto = ifAbrupt(proto))) return proto;
-    return ObjectCreate(proto);
-};
-
-// The above must be moved out of intrinsics/ into api for more speed creating realms.
-// that all "objects" gonna be refactored for typed memory is some other topic.
 
 // StructType
 setInternalSlot(StructTypeConstructor, SLOTS.CALL, StructTypeConstructor_Call);
@@ -24535,13 +24438,7 @@ LazyDefineBuiltinFunction(TypePrototype, "arrayType", 1, TypePrototype_arrayType
 LazyDefineBuiltinFunction(TypePrototype, "opaqueType", 1, TypePrototype_opaqueType);
 
 
-/*
 
-    This is a small interface for the upcoming virtual machine implementation,
-    that i can execute VM.eval(code[, realm]) from the es6> prompt and don´t
-    have to switch to node for calling the functions.
-    
-*/
 var VMObject_eval = function (thisArg, argList) {
     var code = argList[0];
     var realm = argList[1];
@@ -24551,21 +24448,7 @@ var VMObject_eval = function (thisArg, argList) {
     return require("vm").CompileAndRun(realmObject, code);
 };
 
-var VMObject_heap = function (thisArg, argList) {
-    var size = argList[0];
-    var realm = argList[1];
-    var realmObject;
-    if (realm === undefined) realmObject = getRealm();
-    else if (!(realmObject = getInternalSlot(realm, "RealmObject"))) return newTypeError( "Sorry, only realm objects are accepted as realm object");
-    var Heap = require("heap").Heap;
-    var heap = new Heap(size);
-    var O = NativeJSObjectWrapper(heap);
-    setInternalSlot(O, "Heap", heap);    
-    LazyDefineProperty(O, $$toStringTag, "HeapWrapper");    
-    return NormalCompletion(O);
-};
 LazyDefineBuiltinFunction(VMObject, "eval", 1, VMObject_eval);
-LazyDefineBuiltinFunction(VMObject, "heap", 1, VMObject_heap);
 
 
 
