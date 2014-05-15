@@ -9439,6 +9439,9 @@ SLOTS.UNIQUEMAPANDSETES5KEY = "UniqueMapAndSetES5Key";
 // Map
 SLOTS.MAPDATA = "MapData";
 SLOTS.MAPCOMPARATOR = "MapComparator";
+SLOTS.MAP = "Map";
+SLOTS.MAPNEXTINDEX = "MapNextIndex";
+SLOTS.MAPITERATIONKIND = "MapIterationKind";
 // Realm
 SLOTS.REALM = "Realm";
 SLOTS.REALMRECORD = "RealmRecord";
@@ -14176,17 +14179,13 @@ function CreateListIterator(list) {
     return iterator;
 }
 
-
-
 function CopyDataBlockBytes(toBlock, toIndex, fromBlock, fromIndex, count) {
     for (var i = fromIndex, j = fromIndex + count, k = toIndex; i < j; i++, k++) toBlock[k] = fromBlock[i];
 }
-
 function CreateByteArrayBlock(bytes) {
     var dataBlock = new ArrayBuffer(bytes);
     return { block: dataBlock, dv: new DataView(dataBlock) }
 }
-
 function SetArrayBufferData(arrayBuffer, bytes) {
     Assert(hasInternalSlot(arrayBuffer, SLOTS.ARRAYBUFFERDATA), "[[ArrayBufferData]]");
     Assert(bytes > 0, "bytes != positive int");
@@ -14215,7 +14214,6 @@ function GetValueFromBuffer(arrayBuffer, byteIndex, type, isLittleEndian) {
     rawValue = block.dv["get"+type](byteIndex, isLittleEndian);
     return NormalCompletion(rawValue);
 }
-
 function SetValueInBuffer(arrayBuffer, byteIndex, type, value, isLittleEndian) {
     //var length = getInternalSlot(arrayBuffer, SLOTS.BYTELENGTH);
     var block = getInternalSlot(arrayBuffer, SLOTS.ARRAYBUFFERDATA);
@@ -14226,7 +14224,6 @@ function SetValueInBuffer(arrayBuffer, byteIndex, type, value, isLittleEndian) {
     block.dv["set"+type](byteIndex, numValue, isLittleEndian);
     return NormalCompletion(undefined);
 }
-
 function SetViewValue(view, requestIndex, isLittleEndian, type, value) {
     var v = ToObject(view);
     if (isAbrupt(v = ifAbrupt(v))) return v;
@@ -14246,7 +14243,6 @@ function SetViewValue(view, requestIndex, isLittleEndian, type, value) {
     var bufferIndex = getIndex + viewOffset;
     return SetValueInBuffer(buffer, bufferIndex, type, value, littleEndian);
 }
-
 function GetViewValue(view, requestIndex, isLittleEndian, type) {
     var v = ToObject(view);
     if (isAbrupt(v = ifAbrupt(v))) return v;
@@ -14266,8 +14262,6 @@ function GetViewValue(view, requestIndex, isLittleEndian, type) {
     var bufferIndex = getIndex + viewOffset;
     return GetValueFromBuffer(buffer, bufferIndex, type, littleEndian);
 }
-
-
 var arrayType2elementSize = {
     "Float64": 8,
     "Float32": 4,
@@ -14279,7 +14273,6 @@ var arrayType2elementSize = {
     "Uint8": 1,
     "Uint8Clamped": 1
 };
-
 var typedConstructors = {
     "Float64": Float64Array,
     "Float32": Float32Array,
@@ -14291,7 +14284,6 @@ var typedConstructors = {
     "Uint8": Uint8Array,
     "Uint8Clamped": Uint8ClampedArray
 };
-
 var typedConstructorNames = {
     "Float64": INTRINSICS.FLOAT64ARRAYPROTOTYPE,
     "Float32": INTRINSICS.FLOAT32ARRAYPROTOTYPE,
@@ -14302,6 +14294,41 @@ var typedConstructorNames = {
     "Int8": INTRINSICS.INT8ARRAYPROTOTYPE,
     "Uint8": INTRINSICS.UINT8ARRAYPROTOTYPE,
     "Uint8Clamped": INTRINSICS.UINT8CLAMPEDARRAYPROTOTYPE
+};
+var ArrayBufferConstructor_call = function (thisArg, argList) {
+    var length = argList[0];
+    var O = thisArg;
+    if (Type(O) !== OBJECT || (!hasInternalSlot(O, SLOTS.ARRAYBUFFERDATA)) || (getInternalSlot(O, SLOTS.ARRAYBUFFERDATA) !== undefined)) {
+        return newTypeError( "Can not initialize the this argument as an ArrayBuffer or it is already initialized!");
+    }
+    Assert(getInternalSlot(O, SLOTS.ARRAYBUFFERDATA) === undefined, "ArrayBuffer has already to be initialized here but it is not.");
+    var numberLength = ToNumber(length);
+    var byteLength = ToInteger(numberLength);
+    if (isAbrupt(byteLength = ifAbrupt(byteLength))) return byteLength;
+    if ((numberLength != byteLength) || (byteLength < 0)) return newRangeError( "invalid byteLength");
+    return SetArrayBufferData(O, byteLength);
+};
+var ArrayBufferConstructor_construct = function (argList) {
+    return OrdinaryConstruct(this, argList);
+};
+var ArrayBufferConstructor_isView = function (thisArg, argList) {
+    var arg = argList[0];
+    if (Type(arg) !== OBJECT) return false;
+    return hasInternalSlot(arg, SLOTS.VIEWEDARRAYBUFFER);
+};
+var ArrayBufferConstructor_$$create = function (thisArg, argList) {
+    return AllocateArrayBuffer(thisArg);
+};
+var ArrayBufferPrototype_get_byteLength = function (thisArg, argList) {
+    var O = thisArg;
+    if (!hasInternalSlot(O, SLOTS.ARRAYBUFFERDATA)) return newTypeError( "The this argument has no [[ArrayBufferData]]");
+    if (getInternalSlot(O, SLOTS.ARRAYBUFFERDATA) === undefined) return newTypeError( "The this arguments [[ArrayBufferData]] is not initialized");
+    var length = getInternalSlot(O, SLOTS.ARRAYBUFFERBYTELENGTH);
+    return length;
+};
+var ArrayBufferPrototype_slice = function (thisArg, argList) {
+    var start = argList[0];
+    var end = argList[1];
 };
 
 /**
@@ -15768,6 +15795,50 @@ var StringPrototype_at = function (thisArg, argList) {
     return NormalCompletion(String.fromCharCode(cuFirst, cuSecond));
 };
 
+/**
+ * Created by root on 15.05.14.
+ */
+var StringIteratorPrototype_next = function (thisArg, argList) {
+    var O = thisArg;
+    if (Type(O) !== OBJECT)
+        return newTypeError( "the this value is not an object");
+    if (!hasInternalSlot(O, SLOTS.ITERATEDSTRING) || !hasInternalSlot(O, SLOTS.ITERATORNEXTINDEX) || !hasInternalSlot(O, SLOTS.ITERATIONKIND))
+        return newTypeError( "iterator has not all of the required internal properties");
+    var string = getInternalSlot(O, SLOTS.ITERATEDSTRING);
+    var kind = getInternalSlot(O, SLOTS.ITERATIONKIND);
+    var index = getInternalSlot(O, SLOTS.ITERATORNEXTINDEX);
+    var result;
+    string = ToString(string);
+    var len = string.length;
+    if (index < len) {
+        var ch = string[index];
+        setInternalSlot(O, SLOTS.ITERATORNEXTINDEX, index + 1);
+        if (kind === "key") result = index;
+        else if (kind === "value") result = ch;
+        else {
+            Assert(kind === "key+value", "string iteration kind has to be key+value");
+            var result = ArrayCreate(2);
+            CreateDataProperty(result, "0", index);
+            CreateDataProperty(result, "1", ch);
+        }
+        return CreateItrResultObject(result, false);
+    }
+    return CreateItrResultObject(undefined, true);
+};
+function CreateStringIterator(string, kind) {
+    var iterator = ObjectCreate(getIntrinsic(INTRINSICS.STRINGITERATORPROTOTYPE), [
+        SLOTS.ITERATEDSTRING,
+        SLOTS.ITERATORNEXTINDEX,
+        SLOTS.ITERATIONKIND
+    ]);
+    // for-of before worked without. there must be a mistake somewhere (found in ToPrimitive)
+    // if (string instanceof StringExoticObject) string = getInternalSlot(string, SLOTS.STRINGDATA);
+    // ---
+    setInternalSlot(iterator, SLOTS.ITERATEDSTRING, string);
+    setInternalSlot(iterator, SLOTS.ITERATORNEXTINDEX, 0);
+    setInternalSlot(iterator, SLOTS.ITERATIONKIND, kind);
+    return iterator;
+}
 /**
  * Created by root on 31.03.14.
  */
@@ -18617,7 +18688,6 @@ var StructTypeConstructor_$$create = function (thisArg, argList) {
 /**
  * Created by root on 15.05.14.
  */
-
 function reflect_parse_transformASTtoOrdinaries(node, options) {
     var success;
     var newNode;
@@ -18646,8 +18716,6 @@ function reflect_parse_transformASTtoOrdinaries(node, options) {
     }
     return newNode;
 }
-
-
 var ReflectObject_parse = function (thisArg, argList) {
     var parse = require("parser");
     var parseGoal = parse.parseGoal;
@@ -18665,7 +18733,6 @@ var ReflectObject_parse = function (thisArg, argList) {
     if (isAbrupt(newAst = ifAbrupt(newAst))) return newAst;
     return NormalCompletion(newAst);
 };
-
 var ReflectObject_parseGoal = function (thisArg, argList) {
     var parse = require("parser");
     var parseGoal = parse.parseGoal;
@@ -18685,15 +18752,12 @@ var ReflectObject_parseGoal = function (thisArg, argList) {
     if (isAbrupt(newAst = ifAbrupt(newAst))) return newAst;
     return NormalCompletion(newAst);
 };
-
-
 var ReflectObject_getPrototypeOf = function (thisArg, argList) {
     var target = argList[0];
     var obj = ToObject(target);
     if (isAbrupt(obj = ifAbrupt(obj))) return obj;
     return GetPrototypeOf(obj);
 };
-
 var ReflectObject_setPrototypeOf = function (thisArg, argList) {
     var target = argList[0];
     var proto = argList[1];
@@ -18702,15 +18766,12 @@ var ReflectObject_setPrototypeOf = function (thisArg, argList) {
     if (Type(proto) !== OBJECT && proto !== null) return newTypeError( "Reflect.setPrototypeOf: proto is neither an object nor null!");
     return SetPrototypeOf(obj, proto);
 };
-
-
 var ReflectObject_isExtensible = function (thisArg, argList) {
     var target = argList[0];
     var obj = ToObject(target);
     if (isAbrupt(obj = ifAbrupt(obj))) return obj;
     return IsExtensible(obj);
 };
-
 var ReflectObject_preventExtensions = function (thisArg, argList) {
     var target = argList[0];
     var obj = ToObject(target);
@@ -18735,7 +18796,6 @@ var ReflectObject_hasOwn = function (thisArg, argList) {
     if (isAbrupt(key = ifAbrupt(key))) return key;
     return HasOwnProperty(obj, key);
 };
-
 var ReflectObject_getOwnPropertyDescriptor = function (thisArg, argList) {
     var target = argList[0];
     var propertyKey = argList[1];
@@ -18747,7 +18807,6 @@ var ReflectObject_getOwnPropertyDescriptor = function (thisArg, argList) {
     if (isAbrupt(desc = ifAbrupt(desc))) return desc;
     return FromPropertyDescriptor(desc);
 };
-
 var ReflectObject_get = function (thisArg, argList) {
     var target = argList[0];
     var propertyKey = argList[1];
@@ -18759,7 +18818,6 @@ var ReflectObject_get = function (thisArg, argList) {
     if (receiver === undefined) receiver = target;
     return obj.Get(key, receiver);
 };
-
 var ReflectObject_set =function (thisArg, argList) {
     var target = argList[0];
     var propertyKey = argList[1];
@@ -18823,7 +18881,6 @@ var ReflectObject_getIntrinsic = function (thisArg, argList) {
     if (isAbrupt(intrinsic=ifAbrupt(intrinsic))) return intrinsic;
     return getIntrinsic(intrinsic);
 };
-
 var ReflectObject_createSelfHostingFunction = function(thisArg, argList) {
     var parseGoal = require("parser").parseGoal;
     var source = argList[0];
@@ -21821,65 +21878,9 @@ DefineOwnProperty(StringPrototype, "entries", {
     enumerable: false,
     configurable: false
 });
-// ===========================================================================================================
-// String Iterator
-// ===========================================================================================================
 
 
-DefineOwnProperty(StringIteratorPrototype, "next", {
-    value: CreateBuiltinFunction(realm, function next(thisArg, argList) {
-        var O = thisArg;
-        if (Type(O) !== OBJECT)
-            return newTypeError( "the this value is not an object");
-
-        if (!hasInternalSlot(O, SLOTS.ITERATEDSTRING) || !hasInternalSlot(O, SLOTS.ITERATORNEXTINDEX) || !hasInternalSlot(O, SLOTS.ITERATIONKIND))
-            return newTypeError( "iterator has not all of the required internal properties");
-
-        var string = getInternalSlot(O, SLOTS.ITERATEDSTRING);
-        var kind = getInternalSlot(O, SLOTS.ITERATIONKIND);
-        var index = getInternalSlot(O, SLOTS.ITERATORNEXTINDEX);
-        var result;
-
-
-        string = ToString(string);
-        var len = string.length;
-
-        if (index < len) {
-            var ch = string[index];
-            setInternalSlot(O, SLOTS.ITERATORNEXTINDEX, index + 1);
-            if (kind === "key") result = index;
-            else if (kind === "value") result = ch;
-            else {
-                Assert(kind === "key+value", "string iteration kind has to be key+value");
-                var result = ArrayCreate(2);
-                CreateDataProperty(result, "0", index);
-                CreateDataProperty(result, "1", ch);
-            }
-            return CreateItrResultObject(result, false);
-        }
-        return CreateItrResultObject(undefined, true);
-    }),
-    enumerable: false,
-    configurable: false,
-    writable: false
-});
-
-function CreateStringIterator(string, kind) {
-    var iterator = ObjectCreate(StringIteratorPrototype, [
-        SLOTS.ITERATEDSTRING,
-        SLOTS.ITERATORNEXTINDEX,
-        SLOTS.ITERATIONKIND
-    ]);
-    // for-of before worked without. there must be a mistake somewhere (found in ToPrimitive)
-    // if (string instanceof StringExoticObject) string = getInternalSlot(string, SLOTS.STRINGDATA);
-    // ---
-    setInternalSlot(iterator, SLOTS.ITERATEDSTRING, string);
-    setInternalSlot(iterator, SLOTS.ITERATORNEXTINDEX, 0);
-    setInternalSlot(iterator, SLOTS.ITERATIONKIND, kind);
-    return iterator;
-}
-
-
+LazyDefineBuiltinFunction(StringIteratorPrototype, "next", 0, StringIteratorPrototype_next);
 LazyDefineBuiltinConstant(StringIteratorPrototype, $$toStringTag, "String Iterator");
 
 
@@ -22595,10 +22596,8 @@ setInternalSlot(ParseIntFunction, SLOTS.CALL, ParseIntFunction_call);
 setInternalSlot(ParseFloatFunction, SLOTS.CALL, ParseFloatFunction_call);
 
 
-
 setInternalSlot(MathObject, SLOTS.MATHTAG, true);
 setInternalSlot(MathObject, SLOTS.PROTOTYPE, ObjectPrototype);
-
 LazyDefineBuiltinConstant(MathObject, "PI", PI);
 LazyDefineBuiltinConstant(MathObject, "LOG2E", LOG2E);
 LazyDefineBuiltinConstant(MathObject, "SQRT1_2", SQRT1_2);
@@ -22608,7 +22607,6 @@ LazyDefineBuiltinConstant(MathObject, "LN2", LN2);
 LazyDefineBuiltinConstant(MathObject, "E", E);
 LazyDefineBuiltinConstant(MathObject, "LOG10E", LOG10E);
 LazyDefineBuiltinConstant(MathObject, $$toStringTag, "Math");
-
 LazyDefineBuiltinFunction(MathObject, "atan", 2, MathObject_atan);
 LazyDefineBuiltinFunction(MathObject, "atan2", 1, MathObject_atan2);
 LazyDefineBuiltinFunction(MathObject, "ceil", 1, MathObject_ceil);
@@ -22627,8 +22625,6 @@ LazyDefineBuiltinFunction(MathObject, "sin", 1, MathObject_sin);
 LazyDefineBuiltinFunction(MathObject, "sign", 1, MathObject_sign);
 LazyDefineBuiltinFunction(MathObject, "tan", 1, MathObject_tan);
 LazyDefineBuiltinFunction(MathObject, "random", 0, MathObject_random);
-
-
 
 // ===========================================================================================================
 // Number
@@ -23808,95 +23804,17 @@ LazyDefineBuiltinFunction(RegExpPrototype, "toString", 1, RegExpPrototype_toStri
 
 
 
-
-
-// ===========================================================================================================
-// ArrayBuffer
-// ===========================================================================================================
-
-setInternalSlot(ArrayBufferConstructor, SLOTS.CALL, function (thisArg, argList) {
-    var length = argList[0];
-    var O = thisArg;
-    if (Type(O) !== OBJECT || (!hasInternalSlot(O, SLOTS.ARRAYBUFFERDATA)) || (getInternalSlot(O, SLOTS.ARRAYBUFFERDATA) !== undefined)) {
-        return newTypeError( "Can not initialize the this argument as an ArrayBuffer or it is already initialized!");
-    }
-    Assert(getInternalSlot(O, SLOTS.ARRAYBUFFERDATA) === undefined, "ArrayBuffer has already to be initialized here but it is not.");
-    var numberLength = ToNumber(length);
-    var byteLength = ToInteger(numberLength);
-    if (isAbrupt(byteLength = ifAbrupt(byteLength))) return byteLength;
-    if ((numberLength != byteLength) || (byteLength < 0)) return newRangeError( "invalid byteLength");
-    return SetArrayBufferData(O, byteLength);
-});
-
-setInternalSlot(ArrayBufferConstructor, SLOTS.CONSTRUCT, function (argList) {
-    var F = ArrayBufferConstructor;
-    return OrdinaryConstruct(F, argList);
-});
-
-
+setInternalSlot(ArrayBufferConstructor, SLOTS.CALL, ArrayBufferConstructor_call);
+setInternalSlot(ArrayBufferConstructor, SLOTS.CONSTRUCT, ArrayBufferConstructor_construct);
 setInternalSlot(ArrayBufferConstructor, SLOTS.PROTOTYPE, FunctionPrototype);
-DefineOwnProperty(ArrayBufferConstructor, "prototype", {
-    value: ArrayBufferPrototype,
-    writable: false,
-    enumerable: false,
-    configurable: false
-});
-
-DefineOwnProperty(ArrayBufferConstructor, "isView", {
-    value: CreateBuiltinFunction(realm, function (thisArg, argList) {
-        var arg = argList[0];
-        if (Type(arg) !== OBJECT) return false;
-        return hasInternalSlot(arg, SLOTS.VIEWEDARRAYBUFFER);
-
-    }),
-    writable: false,
-    enumerable: false,
-    configurable: false
-});
-DefineOwnProperty(ArrayBufferConstructor, $$create, {
-    value: CreateBuiltinFunction(realm, function (thisArg, argList) {
-        var F = thisArg;
-        return AllocateArrayBuffer(F);
-    }),
-    writable: false,
-    enumerable: false,
-    configurable: false
-});
-DefineOwnProperty(ArrayBufferPrototype, "constructor", {
-    value: ArrayBufferConstructor,
-    writable: false,
-    enumerable: false,
-    configurable: false
-});
-DefineOwnProperty(ArrayBufferPrototype, $$toStringTag, {
-    value: "ArrayBuffer",
-    writable: false,
-    enumerable: false,
-    configurable: false
-});
+LazyDefineBuiltinConstant(ArrayBufferConstructor, "prototype", ArrayBufferPrototype);
+LazyDefineBuiltinFunction(ArrayBufferConstructor, "isView", 1, ArrayBufferConstructor_isView);
+LazyDefineBuiltinConstant(ArrayBufferPrototype, "constructor", ArrayBufferConstructor);
+LazyDefineBuiltinConstant(ArrayBufferPrototype, $$toStringTag, "ArrayBuffer");
+LazyDefineBuiltinFunction(ArrayBufferConstructor, $$create, 1, ArrayBufferConstructor_$$create)
 setInternalSlot(ArrayBufferPrototype, SLOTS.PROTOTYPE, ObjectPrototype);
-DefineOwnProperty(ArrayBufferPrototype, "byteLength", {
-    get: CreateBuiltinFunction(realm, function (thisArg, argList) {
-        var O = thisArg;
-        if (!hasInternalSlot(O, SLOTS.ARRAYBUFFERDATA)) return newTypeError( "The this argument hasnÂ´t [[ArrayBufferData]]");
-        if (getInternalSlot(O, SLOTS.ARRAYBUFFERDATA) === undefined) return newTypeError( "The this arguments [[ArrayBufferData]] is not initialized");
-        var length = getInternalSlot(O, SLOTS.ARRAYBUFFERBYTELENGTH);
-        return length;
-    }),
-    set: undefined,
-    enumerable: false,
-    configurable: false
-});
-DefineOwnProperty(ArrayBufferPrototype, "slice", {
-    value: CreateBuiltinFunction(realm, function (thisArg, argList) {
-        var start = argList[0];
-        var end = argList[1];
-    }),
-    writable: false,
-    enumerable: false,
-    configurable: false
-});
-
+LazyDefineAccessorFunction(ArrayBufferPrototype, "byteLength", 0, ArrayBufferPrototype_get_byteLength);
+LazyDefineBuiltinFunction(ArrayBufferPrototype, "slice", 1, ArrayBufferPrototype_slice);
 
 
 
@@ -24026,24 +23944,6 @@ LazyDefineBuiltinConstant(MapPrototype, $$toStringTag, "Map");
 // Map Iterator
 //
 
-function CreateMapIterator(map, kind) {
-    var M = ToObject(map);
-    if (isAbrupt(M = ifAbrupt(M))) return M;
-    if (!hasInternalSlot(M, SLOTS.MAPDATA)) return newTypeError( "object has no internal MapData slot");
-    var entries = getInternalSlot(M, SLOTS.MAPDATA);
-    var MapIteratorPrototype = Get(getIntrinsics(), INTRINSICS.MAPITERATORPROTOTYPE);
-    var iterator = ObjectCreate(MapIteratorPrototype, {
-        "Map": undefined,
-        "MapNextIndex": undefined,
-        "MapIterationKind": undefined
-    });
-    setInternalSlot(iterator, "Map", entries);
-    setInternalSlot(iterator, "MapNextIndex", 0);
-    setInternalSlot(iterator, "MapIterationKind", kind);
-    return iterator;
-}
-
-
 DefineOwnProperty(MapIteratorPrototype, $$toStringTag, {
     value: "Map Iterator",
     writable: false,
@@ -24109,39 +24009,6 @@ LazyDefineBuiltinFunction(SetPrototype, "values", 0, SetPrototype_values);
 LazyDefineBuiltinFunction(SetPrototype, "entries", 0, SetPrototype_entries);
 LazyDefineBuiltinFunction(SetPrototype, "forEach", 0, SetPrototype_forEach);
 LazyDefineBuiltinFunction(SetPrototype, $$iterator, 0, SetPrototype_values);
-/**
- *
- * @param set
- * @param kind
- * @returns {*}
- * @constructor
- */
-function CreateSetIterator(set, kind) {
-    var S = ToObject(set);
-    if (isAbrupt(S = ifAbrupt(S))) return S;
-    if (!hasInternalSlot(S, SLOTS.SETDATA)) return newTypeError( "object has no internal SetData slot");
-    var origEntries = getInternalSlot(S, SLOTS.SETDATA);
-    var SetIteratorPrototype = Get(getIntrinsics(), INTRINSICS.SETITERATORPROTOTYPE);
-    var iterator = ObjectCreate(SetIteratorPrototype,
-        [
-            SLOTS.ITERATEDSET,
-            SLOTS.SETNEXTINDEX,
-            SLOTS.SETITERATIONKIND
-        ]
-    );
-    /* price of creating my es5 iterator is a pre-run of O(n) to
-        translate the set into some array (currently)
-     */
-    var entries = [];
-    for (var keys in origEntries) entries.push(origEntries[keys]);
-    /*
-
-     */
-    setInternalSlot(iterator, SLOTS.ITERATEDSET, entries);
-    setInternalSlot(iterator, SLOTS.SETNEXTINDEX, 0);
-    setInternalSlot(iterator, SLOTS.SETITERATIONKIND, kind);
-    return iterator;
-}
 
 
 LazyDefineBuiltinConstant(SetIteratorPrototype, "constructor", undefined);
@@ -24643,7 +24510,7 @@ LazyDefineBuiltinFunction(VMObject, "heap", 1, VMObject_heap);
             DefineOwnProperty(globalThis, "eval", GetOwnProperty(intrinsics, INTRINSICS.EVAL));
             LazyDefineBuiltinConstant(globalThis, "global", globalThis);
             DefineOwnProperty(globalThis, "isFinite", GetOwnProperty(intrinsics, INTRINSICS.ISFINITE));
-        DefineOwnProperty(globalThis, "isNaN", GetOwnProperty(intrinsics, INTRINSICS.ISNAN));
+            DefineOwnProperty(globalThis, "isNaN", GetOwnProperty(intrinsics, INTRINSICS.ISNAN));
             DefineOwnProperty(globalThis, "load", GetOwnProperty(intrinsics, INTRINSICS.LOAD));
 //            LazyDefineBuiltinConstant(globalThis, "null", null);
             DefineOwnProperty(globalThis, "parseInt", GetOwnProperty(intrinsics, INTRINSICS.PARSEINT));
