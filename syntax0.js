@@ -556,6 +556,9 @@ define("languages.de_DE", function (require, exports) {
     
     exports.S_IS_FROZEN = "%s ist bereits eingefroren.";
 
+    exports.FUNCTION_TOSTRING_ERROR = "Function.prototype.toString geht nur mit Funktionen!";
+
+
     exports.S_NOT_UNDEFINED = "%s ist nicht undefined."
     exports.S_NOT_COMPLETE = "%s hat nicht alle intrinsic properties."
 
@@ -720,6 +723,7 @@ define("languages.en_US", function (require, exports) {
     exports.S_NOT_CALLABLE = "%s is not a callable.";
     exports.NOT_CALLABLE = "Not a function";
 
+    exports.FUNCTION_TOSTRING_ERROR = "Function.prototype.toString only applies to functions!";
 
     //Super
 
@@ -1982,7 +1986,7 @@ define("tables", function (require, exports, module) {
         "false": "BooleanLiteral",
         "NaN": "NumericLiteral",
         "Infinity": "NumericLiteral",
-        "undefined": "Identifier",
+        "undefined": "Identifier"
         //"async": "Keyword",
         //"await": "Keyword",
     };
@@ -10379,7 +10383,7 @@ function ObjectCreate(proto, internalDataList) {
      */
     if (internalDataList && typeof internalDataList === "object") {
         for (var k in internalDataList) {
-            if (Object.hasOwnProperty.call(internalDataList, k)) {
+            if (objectHasOwnProperty(internalDataList, k)) {
                 O[k] = internalDataList[k];
             }
         }
@@ -10488,16 +10492,11 @@ var ObjectConstructor_defineProperties = function (thisArg, argList) {
     var Properties = argList[1];
     return ObjectDefineProperties(O, Properties);
 };
-
-
-
-
 var ObjectConstructor_call = function Call(thisArg, argList) {
     var value = argList[0];
     if (value === null || value === undefined) return ObjectCreate();
     return ToObject(value);
 };
-
 var ObjectConstructor_construct = function (argList) {
     var value = argList[0];
     var type = Type(value);
@@ -10512,7 +10511,6 @@ var ObjectConstructor_construct = function (argList) {
     }
     return ObjectCreate();
 };
-
 var ObjectConstructor_seal = function (thisArg, argList) {
     var O;
     O = argList[0];
@@ -10522,8 +10520,6 @@ var ObjectConstructor_seal = function (thisArg, argList) {
     if (status === false) return newTypeError( "seal: can not seal object");
     return O;
 };
-
-
 var ObjectConstructor_freeze =function (thisArg, argList) {
     var O;
     O = argList[0];
@@ -10544,15 +10540,17 @@ var ObjectConstructor_getOwnPropertyDescriptor = function (thisArg, argList) {
     if (isAbrupt(desc = ifAbrupt(desc))) return desc;
     return FromPropertyDescriptor(desc);
 };
+
 var ObjectConstructor_getOwnPropertyNames = function (thisArg, argList) {
     var O = argList[0];
     return GetOwnPropertyKeys(O, "string");
 };
 
-var ObjectConstructor_getOwnPropertySymbols =     function (thisArg, argList) {
+var ObjectConstructor_getOwnPropertySymbols = function (thisArg, argList) {
     var O = argList[0];
     return GetOwnPropertyKeys(O, "symbol");
 };
+
 var ObjectConstructor_getPrototypeOf = function (thisArg, argList) {
     var O = argList[0];
     var obj = ToObject(O);
@@ -10569,20 +10567,16 @@ var ObjectConstructor_isExtensible = function (thisArg, argList) {
     if (Type(O) !== OBJECT) return false;
     return IsExtensible(O);
 };
-
 var ObjectConstructor_isSealed = function (thisArg, argList) {
     var O = argList[0];
     if (Type(O) !== OBJECT) return true;
     return TestIntegrityLevel(O, "sealed");
 };
-
 var ObjectConstructor_isFrozen = function (thisArg, argList) {
     var O = argList[0];
     if (Type(O) !== OBJECT) return true;
     return TestIntegrityLevel(O, "frozen");
 };
-
-
 var ObjectConstructor_preventExtensions = function (thisArg, argList) {
     var O = argList[0];
     if (Type(O) !== OBJECT) return newTypeError( "argument is not an object");
@@ -10591,15 +10585,12 @@ var ObjectConstructor_preventExtensions = function (thisArg, argList) {
     if (status === false) return newTypeError( "can not prevent extensions");
     return O;
 };
-
-
 var ObjectConstructor_keys = function (thisArg, argList) {
     var O = argList[0];
     var obj = ToObject(O);
     if (isAbrupt(obj = ifAbrupt(obj))) return obj;
     var keys = OwnPropertyKeys(O);
     if (isAbrupt(keys = ifAbrupt(keys))) return keys;
-
     var nameList = [];
     var gotAllNames = false;
     var next, nextKey, desc;
@@ -10615,12 +10606,10 @@ var ObjectConstructor_keys = function (thisArg, argList) {
                 nameList.push(nextKey);
             }
         }
-
         if (IteratorComplete(next)) gotAllNames = true;
     }
     return CreateArrayFromList(nameList);
 };
-
 var ObjectConstructor_mixin = function (thisArg, argList) {
     var target = argList[0];
     var source = argList[1];
@@ -10630,7 +10619,6 @@ var ObjectConstructor_mixin = function (thisArg, argList) {
     if (isAbrupt(from = ifAbrupt(from))) return from;
     return MixinProperties(to, from);
 };
-
 
 
 function MixinProperties(target, source) {
@@ -10684,7 +10672,6 @@ function MixinProperties(target, source) {
     if (pendingException) return pendingException;
     return target;
 }
-
 var ObjectConstructor_getOwnPropertyDescriptors = function (thisArg, argList) {
     /*
      http://gist.github.com/WebReflection/9353781
@@ -10717,6 +10704,116 @@ var ObjectConstructor_getOwnPropertyDescriptors = function (thisArg, argList) {
     return descriptors;
 };
 
+
+
+var ObjectPrototype_$$create = function (thisArg, argList) {
+    var F = thisArg;
+    var proto = GetPrototypeFromConstructor(F, INTRINSICS.OBJECTPROTOTYPE);
+    if (isAbrupt(proto = ifAbrupt(proto))) return proto;
+    return ObjectCreate(proto);
+};
+var ObjectPrototype_hasOwnProperty = function (thisArg, argList) {
+    var P = ToPropertyKey(argList[0]);
+    if (isAbrupt(P = ifAbrupt(P))) return P;
+    var O = ToObject(thisArg);
+    if (isAbrupt(O = ifAbrupt(O))) return O;
+    return HasOwnProperty(O, P);
+};
+var ObjectPrototype_isPrototypeOf = function (thisArg, argList) {
+    var V = argList[0];
+    if (Type(O) !== OBJECT) return false;
+    var O = ToObject(thisArg);
+    if (isAbrupt(O = ifAbrupt(O))) return O;
+    for (;;) {
+        V = GetPrototypeOf(V);
+        if (V == null) return false;
+        if (SameValue(O, V)) return true;
+    }
+};
+var ObjectPrototype_propertyIsEnumerable = function (thisArg, argList) {
+    var V = argList[0];
+    var P = ToString(V);
+    if (isAbrupt(P = ifAbrupt(P))) return P;
+    var O = ToObject(thisArg);
+    if (isAbrupt(O = ifAbrupt(O))) return O;
+    var desc = GetOwnProperty(O, P);
+    if (desc === undefined) return false;
+    return desc.enumerable;
+};
+var OneOfTheseTags = {
+    __proto__: null,
+    "Arguments": true,
+    "Array": true,
+    "Boolean": true,
+    "Date": true,
+    "Error": true,
+    "Function": true,
+    "JSON": true,
+    "Math": true,
+    "Number": true,
+    "RegExp": true,
+    "String": true
+};
+var builtinTagsByToString = {
+    "[object ArrayExoticObject]": "Array",
+    "[object ProxyExoticObject]": "Proxy",
+    "[object ArgumentsExoticObject]": "Arguments",
+    "[object OrdinaryFunction]": "Function",
+    "[object StringExoticObject]": "String"
+};
+var ObjectPrototype_toString = function toString(thisArg, argList) {
+    var i = 0;
+    if (thisArg === undefined) return "[object Undefined]";
+    if (thisArg === null) return "[object Null]";
+    var O = ToObject(thisArg);
+    var builtinTag, tag;
+    var intrToStr = O.toString();
+    if (builtinTag = builtinTagsByToString[intrToStr]) {
+    } else if (hasInternalSlot(O, SLOTS.SYMBOLDATA)) builtinTag = "Symbol";
+    else if (hasInternalSlot(O, SLOTS.STRINGDATA)) builtinTag = "String";
+    else if (hasInternalSlot(O, SLOTS.ERRORDATA)) builtinTag = "Error";
+    else if (hasInternalSlot(O, SLOTS.BOOLEANDATA)) builtinTag = "Boolean";
+    else if (hasInternalSlot(O, SLOTS.NUMBERDATA)) builtinTag = "Number";
+    else if (hasInternalSlot(O, SLOTS.DATEVALUE)) builtinTag = "Date";
+    else if (hasInternalSlot(O, SLOTS.REGEXPMATCHER)) builtinTag = "RegExp";
+    else if (hasInternalSlot(O, SLOTS.MATHTAG)) builtinTag = "Math";
+    else if (hasInternalSlot(O, SLOTS.JSONTAG)) builtinTag = "JSON";
+    else builtinTag = "Object";
+
+    var hasTag = HasProperty(O, $$toStringTag);
+    if (isAbrupt(hasTag = ifAbrupt(hasTag))) return hasTag;
+    if (!hasTag) tag = builtinTag;
+    else {
+        tag = Get(O, $$toStringTag);
+        if (isAbrupt(tag)) tag = NormalCompletion("???");
+        tag = unwrap(tag);
+        if (Type(tag) !== STRING) tag = "???";
+        if (OneOfTheseTags[tag] && (!SameValue(tag, builtinTag))) tag = "~" + tag;
+    }
+    return "[object " + tag + "]";
+};
+var ObjectPrototype_valueOf = function valueOf(thisArg, argList) {
+    var O = ToObject(thisArg);
+    return O;
+};
+// B.2.2.1  Object.prototype.__proto__
+var ObjectPrototype_get_proto = function (thisArg, argList) {
+    var O = ToObject(thisArg);
+    if (isAbrupt(O = ifAbrupt(O))) return O;
+    return callInternalSlot(SLOTS.GETPROTOTYPEOF, O);
+};
+var ObjectPrototype_set_proto = function (thisArg, argList) {
+    var proto = argList[0];
+    var O = CheckObjectCoercible(thisArg);
+    if (isAbrupt(O = ifAbrupt(O))) return O;
+    var protoType = Type(proto);
+    if (protoType !== OBJECT && protoType !== null) return proto;
+    if (Type(O) !== OBJECT) return proto;
+    var status = callInternalSlot(SLOTS.SETPROTOTYPEOF, O, proto);
+    if (isAbrupt(status = ifAbrupt(status))) return status;
+    if (status === false) return newTypeError( "__proto__: SetPrototypeOf failed.");
+    return proto;
+};
 function DeclarativeEnvironment(outer) {
     var de = Object.create(DeclarativeEnvironment.prototype);
     de.Bindings = Object.create(null);
@@ -12557,12 +12654,6 @@ var ObjectConstructor_getNotifier = function (thisArg, argList) {
 };
 
 
-/**
- * Created by root on 30.03.14.
- */
-// ===========================================================================================================
-    // Ordinary Function
-    // ===========================================================================================================
 
 function OrdinaryFunction() {
     var F = Object.create(OrdinaryFunction.prototype);
@@ -12603,11 +12694,6 @@ OrdinaryFunction.prototype = {
     }
 };
 addMissingProperties(OrdinaryFunction.prototype, OrdinaryObject.prototype);
-
-
-// ===========================================================================================================
-// BoundFunctionCreate
-// ===========================================================================================================
 
 function BoundFunctionCreate(B, T, argList) {
     var F = OrdinaryFunction();
@@ -12831,11 +12917,6 @@ function OrdinaryHasInstance(C, O) {
     return false;
 }
 
-
-// ===========================================================================================================
-// AddRestricted FPs
-// ===========================================================================================================
-
 function AddRestrictedFunctionProperties(F) {
     var thrower = getIntrinsic(INTRINSICS.THROWTYPEERROR);
     var status = DefineOwnPropertyOrThrow(F, "caller", {
@@ -12853,14 +12934,9 @@ function AddRestrictedFunctionProperties(F) {
     });
 }
 
-// ===========================================================================================================
-// Create Builtin (Intrinsic Module)
-// ===========================================================================================================
-
 function CreateBuiltinFunction(realm, steps, len, name, internalSlots) {
-
     var tmp;
-    var realm = getRealm();
+    realm = realm || getRealm();
     var F = OrdinaryFunction();
 
     // this is probably/oc unneccessary, coz all builtins have make no use of the environments anyways
@@ -12904,6 +12980,164 @@ function CreateBuiltinFunction(realm, steps, len, name, internalSlots) {
     }    
     return F;
 }
+
+var FunctionPrototype_apply = function (thisArg, argList) {
+    var func = thisArg;
+    if (!IsCallable(func)) return newTypeError( "fproto.apply: func is not callable");
+    var T;
+    if (T !== undefined && T !== null) T = ToObject(argList[0]);
+    else T = argList[0];
+    var argArray = argList[1] || ArrayCreate(0);
+    var argList2 = CreateListFromArrayLike(argArray);
+    if (isAbrupt(argList2 = ifAbrupt(argList2))) return argList2;
+    return callInternalSlot(SLOTS.CALL, func, T, argList2);
+};
+
+var FunctionPrototype_bind = function (thisArg, argList) {
+    var boundTarget = thisArg;
+    var thisArgument = argList[0];
+    var listOfArguments = arraySlice(argList, 1, argList.length - 1);
+    return BoundFunctionCreate(boundTarget, thisArgument, listOfArguments);
+};
+
+var FunctionPrototype_call = function (thisArg, argList) {
+    var func = thisArg;
+    if (!IsCallable(func)) return newTypeError( "fproto.call: func is not callable");
+    var T = ToObject(argList[0]);
+    var args = arraySlice(argList,1);
+    return callInternalSlot(SLOTS.CALL, func, T, args);
+};
+
+var FunctionPrototype_$$hasInstance = function (thisArg, argList) {
+    var V = argList[0];
+    var F = thisArg;
+    return OrdinaryHasInstance(F, V);
+};
+
+var FunctionPrototype_toMethod = function (thisArg, argList) {
+    var superBinding = argList[0];
+    var methodName = argList[1];
+    if (!IsCallable(thisArg)) return newTypeError( "this value is not callable");
+    if (Type(superBinding) !== OBJECT) return newTypeError( "superBinding is not an object");
+    if (methodName !== undefined) {
+        methodName = ToPropertyKey(methodName);
+        if (isAbrupt(methodName = ifAbrupt(methodName))) return methodName;
+    }
+    return CloneMethod(thisArg, superBinding, methodName);
+};
+
+
+var FunctionPrototype_valueOf = function valueOf(thisArg, argList) {
+    return thisArg;
+};
+
+var FunctionPrototype_call = function (thisArg, argList) {
+
+    var argCount = argList.length;
+    var P = "";
+    var bodyText;
+    var firstArg, nextArg;
+
+    if (argCount === 0) bodyText = "";
+    else if (argCount === 1) bodyText = argList[0];
+    else if (argCount > 1) {
+        firstArg = argList[0];
+        P = ToString(firstArg);
+        if (isAbrupt(firstArg = ifAbrupt(firstArg))) return firstArg;
+        var k = 1;
+        while (k < argCount - 1) {
+            nextArg = argList[k];
+            nextArg = ToString(nextArg);
+            if (isAbrupt(nextArg = ifAbrupt(nextArg))) return nextArg;
+            P = P + "," + nextArg;
+            k += 1;
+        }
+        bodyText = argList[argCount - 1];
+    }
+
+    bodyText = ToString(bodyText);
+    if (isAbrupt(bodyText = ifAbrupt(bodyText))) return bodyText;
+    var parameters = parseGoal("FormalParameterList", P); // () sind fehlerhaft bei
+    var funcBody = parseGoal("FunctionBody", bodyText);
+
+
+    /* old and from july draf */
+    var boundNames = BoundNames(parameters);
+    if (!IsSimpleParameterList(parameters)) {
+        if (dupesInTheTwoLists(boundNames, VarDeclaredNames(funcBody))) return newSyntaxError( "Duplicate Identifier in Parameters and VarDeclaredNames of funcBody");
+    }
+    if (dupesInTheTwoLists(boundNames, LexicallyDeclaredNames(funcBody))) return newSyntaxError( "Duplicate Identifier in Parameters and LexicallyDeclaredNames of funcBody");
+    /* one of the few edge cases to recall static semantics */
+
+    var scope = getRealm().globalEnv;
+    var F = thisArg;
+    if (F === undefined || !hasInternalSlot(F, SLOTS.CODE)) {
+        var C = FunctionConstructor;
+        var proto = GetPrototypeFromConstructor(C, INTRINSICS.FUNCTIONPROTOTYPE);
+        if (isAbrupt(proto = ifAbrupt(proto))) return proto;
+        F = FunctionAllocate(C);
+    }
+
+    if (getInternalSlot(F, SLOTS.FUNCTIONKIND) !== "normal") return newTypeError( "function object not a 'normal' function");
+    FunctionInitialize(F, "normal", parameters, funcBody, scope, true);
+    proto = ObjectCreate();
+    var status = MakeConstructor(F);
+    if (isAbrupt(status)) return status;
+    SetFunctionName(F, "anonymous");
+    return NormalCompletion(F);
+
+};
+
+var FunctionConstructor_construct = function (argList) {
+    var F = this;
+    return OrdinaryConstruct(F, argList);
+};
+
+var FunctionConstructor_$$create = function (thisArg, argList) {
+    var F = thisArg;
+    var proto = GetPrototypeFromConstructor(F, INTRINSICS.FUNCTIONPROTOTYPE);
+    if (isAbrupt(proto = ifAbrupt(proto))) return proto;
+    var obj = FunctionAllocate(proto);
+    return obj;
+};
+
+var FunctionPrototype_$$create = function (thisArg, argList) {
+    return OrdinaryCreateFromConstructor(thisArg, INTRINSICS.OBJECTPROTOTYPE);
+};
+
+var FunctionPrototype_toString = function (thisArg, argList) {
+    var codegen = require("js-codegen");
+    var F = thisArg;
+    if (!IsCallable(F)) return newTypeError(format("FUNCTION_TOSTRING_ERROR"));
+
+    var name = Get(F, "name") || "anonymous";
+    var P, C;
+    P = getInternalSlot(F, SLOTS.FORMALPARAMETERS);
+    C = getInternalSlot(F, SLOTS.CODE);
+    var kind = getInternalSlot(F, SLOTS.FUNCTIONKIND);
+    var star = kind === "generator" ? "*" : "";
+    var callfn;
+    if (!C && (callfn=getInternalSlot(F, SLOTS.CALL))) {
+        var code = "// [[Builtin Function native JavaScript Code]]\r\n";
+        // createbuiltin wraps the builtin
+        if (callfn.steps) callfn = callfn.steps;
+        // setinternalslot call has no wrapper
+        // this requires a double check here
+        code += callfn.toString();
+        return code;
+    }
+    var paramString, bodyString;
+    paramString = codegen.builder.formalParameters(P);
+    if (kind === "arrow") {
+        if (Array.isArray(C)) {
+            bodyString = codegen.builder.functionBody(C);
+        } else bodyString = codegen.callBuilder(C);
+        return paramString + " => " + bodyString;
+    } else {
+        bodyString = codegen.builder.functionBody(C);
+        return "function" + star + " " + name + " " + paramString + " " + bodyString;
+    }
+};
 
 
 /**
@@ -14710,6 +14944,510 @@ function thisStringValue(value) {
     }
     return newTypeError( "thisStringValue: value is not a String");
 }
+
+
+
+
+var StringConstructor_call = function Call(thisArg, argList) {
+    var O = thisArg;
+    var s;
+    if (!argList.length) s = "";
+    else s = ToString(argList[0]);
+    if (isAbrupt(s = ifAbrupt(s))) return s;
+    if (Type(O) === OBJECT && hasInternalSlot(O, SLOTS.STRINGDATA) && getInternalSlot(O, SLOTS.STRINGDATA) === undefined) {
+        var length = s.length;
+        var status = DefineOwnPropertyOrThrow(O, "length", {
+            value: length,
+            writable: false,
+            enumerable: false,
+            configurable: false
+        });
+        if (isAbrupt(status = ifAbrupt(status))) return status;
+        setInternalSlot(O, SLOTS.STRINGDATA, s);
+        return O;
+    }
+    return s;
+};
+var StringConstructor_construct = function Construct(argList) {
+    var F = StringConstructor;
+    return OrdinaryConstruct(F, argList);
+};
+
+
+
+
+
+
+var normalizeOneOfs = {
+    "NFC":true,
+    "NFD":true,
+    "NFKC":true,
+    "NFKD":true
+};
+
+var StringPrototype_normalize = function (thisArg, argList) {
+    var from = argList[0];
+    var S = CheckObjectCoercible(thisArg);
+    if (isAbrupt(S = ifAbrupt(S))) return S;
+    S = ToString(S);
+    if (isAbrupt(S = ifAbrupt(S))) return S;
+    if (from === undefined) from = "NFC";
+    var f = ToString(from);
+    if ((f = ifAbrupt(f)) && ifAbrupt(f)) return f;
+    if (!normalizeOneOfs[f]) return newRangeError( "f is not one of nfc, nfd, nfkc, nfkd.");
+    if (S.normalize) {
+        // powers of native es.
+        var ns = S.normalize(f);
+    } else {
+        // off point, but a fill-in
+        ns = ""+S;
+    }
+    return NormalCompletion(ns);
+};
+
+var StringPrototype_replace = function (thisArg, argList) {
+    var searchValue = argList[0];
+    var replaceValue = argList[1];
+    var S = CheckObjectCoercible(thisArg);
+    if (isAbrupt(S = ifAbrupt(S))) return S;
+    S = ToString(S);
+    if (isAbrupt(S = ifAbrupt(S))) return S;
+    if (Type(searchValue) === OBJECT && HasProperty(searchValue, $$isRegExp)) {
+        return Invoke(searchValue, "replace", [string, replaceValue]);
+    }
+    var searchString = ToString(searchValue);
+    if (isAbrupt(searchString = ifAbrupt(searchString))) return searchString;
+    var i = 0;
+    var len = S.length;
+    var searchLen = searchString.length;
+    while (i < len) {
+        if ((S[i] == searchString[0]) && (S[i+searchLen-1] == searchString[searchLen-1])) {
+            var k = 0;
+            var match = true;
+            while (k < searchLen) {
+                if (S[k] !== searchString[k]) {
+                    match = false;
+                    break;
+                }
+                k = k + 1;
+            }
+
+            if (match) {
+                var matched = searchString;
+                if (IsCallable(replaceValue)) {
+                    var replValue = callInternalSlot(SLOTS.CALL, replaceValue, undefined, [matched, pos, string]);
+                    if (isAbrupt(replValue = ifAbrupt(replValue))) return replValue;
+                    var replStr = ToString(replValue);
+                    if (isAbrupt(replStr = ifAbrupt(replStr))) return replStr;
+
+                } else {
+                    var capstures = [];
+                    var replStr = GetReplaceSubstitution(matched, string, pos, captures);
+
+                }
+                var tailPos = pos - matched.length;
+                var newString;
+
+
+            }
+        }
+        i = i + 1;
+    }
+    return NormalCompletion(string);
+};
+var StringPrototype_match = function (thisArg, argList) {
+    var regexp = argList[0];
+    var S = CheckObjectCoercible(thisArg);
+    if (isAbrupt(S = ifAbrupt(S))) return S;
+    S = ToString(S);
+    if (isAbrupt(S = ifAbrupt(S))) return S;
+    var rx;
+    if (Type(regexp) === OBJECT && HasProperty(regexp, $$isRegExp)) {
+        rx = regexp;
+    } else {
+        rx = RegExpCreate(regexp, undefined);
+    }
+    if (isAbrupt(rx = ifAbrupt(rx))) return rx;
+    return Invoke(rx, "match", []);
+};
+var StringPrototype_repeat = function (thisArg, argList) {
+    var count = argList[0];
+    var S = CheckObjectCoercible(thisArg);
+    if (isAbrupt(S = ifAbrupt(S))) return S;
+    S = ToString(S);
+    if (isAbrupt(S = ifAbrupt(S))) return S;
+    var n = ToInteger(count);
+    if (isAbrupt(n = ifAbrupt(n))) return n;
+    if (n < 0) return newRangeError( "n is less than 0");
+    if (n === Infinity) return newRangeError( "n is infinity");
+    var T = "";
+    for (var i = 0; i < n; i++) T+=S;
+    return NormalCompletion(T);
+};
+
+var StringPrototype_contains = function (thisArg, argList) {
+    var searchString = argList[0];
+    var position = argList[1];
+    var S = CheckObjectCoercible(thisArg);
+    if (isAbrupt(S = ifAbrupt(S))) return S;
+    S = ToString(S);
+    if (isAbrupt(S = ifAbrupt(S))) return S;
+    var searchStr = ToString(searchString);
+    var pos = ToInteger(position);
+    var len = S.length;
+    var start = min(max(pos, 0), len);
+    var searchLen = searchStr.length;
+    var i = start;
+    var j = len;
+    var result = false;
+    while (i < len-searchLen) {
+
+        if ((searchStr[0] === S[i]) && (searchStr[searchLen-1] === S[i+searchLen-1])) {
+            result = true;
+            for (var k = i+1, l = i+searchLen-1, m = 1; k < l; k++, m++) {
+                if (searchStr[m] !== S[k]) result = false;
+            }
+            if (result) return true;
+        }
+
+        i = i+1;
+    }
+    return false;
+};
+
+var StringPrototype_startsWith = function (thisArg, argList) {
+    var searchString = argList[0];
+    var position = argList[1];
+    var S = CheckObjectCoercible(thisArg);
+    if (isAbrupt(S = ifAbrupt(S))) return S;
+    S = ToString(S);
+    if (isAbrupt(S = ifAbrupt(S))) return S;
+    var searchStr = ToString(searchString);
+    var pos = ToInteger(position);
+    var len = S.length;
+    var start = min(max(pos, 0), len);
+    var searchLength = searchString.length;
+    if (searchLength+start > len) return false;
+    var result = true;
+    for (var k = 0, i = start, j = searchLength+start; i < j; i++, k++) {
+        if (searchStr[k] !== S[i]) { result = false; break; }
+    }
+    return result;
+};
+var StringPrototype_endsWith = function (thisArg, argList) {
+    var searchString = argList[0];
+    var endPosition = argList[1];
+    var S = CheckObjectCoercible(thisArg);
+    if (isAbrupt(S = ifAbrupt(S))) return S;
+    S = ToString(S);
+    if (isAbrupt(S = ifAbrupt(S))) return S;
+    var searchStr = ToString(searchString);
+    var pos = endPosition === undefined ? len : ToInteger(endPosition);
+    var len = S.length;
+    var end = min(max(pos, 0), len);
+    var searchLength = searchString.length;
+    var start = end - searchLength;
+    if (start < 0) return false;
+    var result = true;
+    for (var i = start, j = start + searchLength, k = 0; i < j; i++, k++) {
+        if (searchString[k] !== S[i]) { result = false; break; }
+    }
+    return result;
+};
+var StringPrototype_valueOf = function valueOf(thisArg, argList) {
+    var x = thisStringValue(thisArg);
+    return x;
+};
+var StringPrototype_toArray = function (thisArg, argList) {
+    var S = CheckObjectCoercible(thisArg);
+    if (isAbrupt(S = ifAbrupt(S))) return S;
+    S = ToString(S);
+    var array = ArrayCreate(0);
+    var len = S.length;
+    var n = 0;
+    while (n < len) {
+        var c = S[n];
+        callInternalSlot(SLOTS.DEFINEOWNPROPERTY, array, ToString(n), {
+            configurable: true,
+            enumerable: true,
+            value: c,
+            writable: true
+        }, false);
+        n = n + 1;
+    }
+    return NormalCompletion(array);
+
+};
+
+var trim_leading_space_expr = /^([\s]*)/;
+var trim_trailing_space_expr = /([\s]*)$/;
+// 31.1.
+var StringPrototype_trim = function (thisArg, argList) {
+    var O = CheckObjectCoercible(thisArg);
+    if (isAbrupt(O = ifAbrupt(O))) return O;
+    var S = ToString(O);
+    if (isAbrupt(S = ifAbrupt(S))) return S;
+    var T;
+    T = S.replace(trim_leading_space_expr, "");
+    T = T.replace(trim_trailing_space_expr, "");
+    return NormalCompletion(T);
+};
+
+// 31.1.
+var StringPrototype_search = function (thisArg, argList) {
+    var regexp = argList[0];
+    var O = CheckObjectCoercible(thisArg);
+    if (isAbrupt(O = ifAbrupt(O))) return O;
+    var S = ToString(O);
+    if (isAbrupt(S = ifAbrupt(S))) return S;
+    var rx;
+    if (Type(regexp) === OBJECT  && HasProperty(regexp, $$isRegExp)) {
+        rx = regexp;
+    } else {
+        rx = RegExpCreate(regexp, undefined);
+    }
+    if (isAbrupt(rx = ifAbrupt(rx))) return rx;
+    return Invoke(rx, "search", [S]);
+};
+// 31.1.
+var StringPrototype_toUpperCase = function (thisArg, argList) {
+    var O = CheckObjectCoercible(thisArg);
+    if (isAbrupt(O = ifAbrupt(O))) return O;
+    var S = ToString(O);
+    if (isAbrupt(S = ifAbrupt(S))) return S;
+    var U = S.toUpperCase();
+    return NormalCompletion(U);
+};
+
+// 31.1.
+var StringPrototype_toLowerCase = function (thisArg, argList) {
+    var O = CheckObjectCoercible(thisArg);
+    if (isAbrupt(O = ifAbrupt(O))) return O;
+    var S = ToString(O);
+    if (isAbrupt(S = ifAbrupt(S))) return S;
+    var L = S.toLowerCase();
+    return NormalCompletion(L);
+};
+
+var StringPrototype_charAt = function (thisArg, argList) {
+    var index = argList[0];
+    index = index|0;
+    var O = CheckObjectCoercible(thisArg);
+    if (isAbrupt(O = ifAbrupt(O))) return O;
+    var S = ToString(O);
+    if (isAbrupt(S = ifAbrupt(S))) return S;
+    var V = S.charAt(index);
+    return NormalCompletion(V);
+};
+var StringPrototype_charCodeAt = function (thisArg, argList) {
+    var index = argList[0];
+    index = index|0;
+    var O = CheckObjectCoercible(thisArg);
+    if (isAbrupt(O = ifAbrupt(O))) return O;
+    var S = ToString(O);
+    if (isAbrupt(S = ifAbrupt(S))) return S;
+    if (index < 0) return NormalCompletion(NaN);
+    if (index >= S.length) return NormalCompletion(NaN);
+    var C = S.charCodeAt(index);
+    return NormalCompletion(C);
+};
+
+var StringPrototype_split = function (thisArg, argList) {
+    var separator = argList[0];
+    var limit = argList[1];
+    var O = CheckObjectCoercible(thisArg);
+    if (isAbrupt(O = ifAbrupt(O))) return O;
+    if (Type(separator) === OBJECT && HasProperty(separator, $$isRegExp)) {
+        return Invoke(separator, "split", [O, limit]);
+    }
+    var S = ToString(O);
+    if (isAbrupt(S = ifAbrupt(S))) return S;
+    var A = ArrayCreate(0);
+    var lengthA = 0;
+    var lim;
+    if (limit === undefined) lim = Math.pow(2,53)-1;
+    else lim = ToLength(limit);
+    var s = S.length;
+    var p = 0;
+    var R = ToString(separator);
+
+};
+
+// http://wiki.ecmascript.org/doku.php?id=strawman:strawman
+// 29.1. i have read a post about es7 timeline and one
+// said for es7 we should look into the strawman namespace except
+// for observe which is in harmony. Here is string_extensions
+// http://wiki.ecmascript.org/doku.php?id=strawman:string_extensions
+// the document defines lpad and rpad
+var StringPrototype_lpad = function (thisArg, argList) {
+    var minLength = argList[0];
+    var fillStr = argList[1];
+    var O = CheckObjectCoercible(thisArg);
+    var S = ToString(O);
+    if (isAbrupt(S = ifAbrupt(S))) return S;
+    var intMinLength = ToInteger(minLength);
+    if (isAbrupt(intMinLength = ifAbrupt(intMinLength))) return intMinLength;
+    if (intMinLength === undefined) return NormalCompletion(S);
+    var fillLen = intMinLength - S.length;
+    if (fillLen < 0) return newRangeError( "lpad: fillLen is smaller than the string"); // maybe auto cut just the string. too?
+    if (fillLen == Infinity) return newRangeError( "lpad: fillLen is Infinity");
+    var sFillStr;
+    if (fillStr === undefined) sFillStr = " ";
+    else sFillStr = ""+fillStr;
+    var sFillVal = sFillStr;
+    var sFillLen;
+    do { sFillVal += sFillStr; } while ((sFillLen = (sFillVal.length - S.length)) < fillLen);
+    if (sFillLen > fillLen) sFillVal = sFillVal.substr(0, fillLen);
+    return NormalCompletion(sFillVal + S)
+};
+var StringPrototype_rpad = function (thisArg, argList) {
+    var minLength = argList[0];
+    var fillStr = argList[1];
+    var O = CheckObjectCoercible(thisArg);
+    var S = ToString(O);
+    if (isAbrupt(S = ifAbrupt(S))) return S;
+    var intMinLength = ToInteger(minLength);
+    if (isAbrupt(intMinLength = ifAbrupt(intMinLength))) return intMinLength;
+    if (intMinLength === undefined) return NormalCompletion(S);
+    var fillLen = intMinLength - S.length;
+    if (fillLen < 0) return newRangeError( "lpad: fillLen is smaller than the string");
+    if (fillLen == Infinity) return newRangeError( "lpad: fillLen is Infinity");
+    var sFillStr;
+    if (fillStr === undefined) sFillStr = " ";
+    else sFillStr = ""+fillStr;
+    var sFillVal = sFillStr;
+    var sFillLen;
+    do { sFillVal += sFillStr; } while ((sFillLen = (sFillVal.length - S.length)) < fillLen);
+    if (sFillLen > fillLen) sFillVal = sFillVal.substr(0, fillLen);
+    return NormalCompletion(S + sFillVal);
+};
+
+
+var StringPrototype_codePointAt = function (thisArg, argList) {
+    var O = CheckObjectCoercible(thisArg);
+    if (isAbrupt(O = ifAbrupt(O))) return O;
+    var S = ToString(O);
+    if (isAbrupt(S = ifAbrupt(S))) return S;
+    var position = ToInteger(pos);
+    var size = S.length;
+    if (position < 0 || position >= size) return NormalCompletion(undefined);
+    var first = S.charCodeAt(position);
+    if (first < 0xD800 || first > 0xDBFF || (position+1===size)) return S;
+    var second = S.charCodeAt(position+1);
+    if (second < 0xDC00 || second > 0xDFFF) return NormalCompletion(first);
+    var result = (((first - 0xD800)*1024) + (second - 0xDC00)) + 0x10000;
+    return NormalCompletion(result);
+};
+
+var StringPrototype_concat = function (thisArg, argList) {
+    var O = CheckObjectCoercible(thisArg);
+    if (isAbrupt(O = ifAbrupt(O))) return O;
+    var S = ToString(O);
+    if (isAbrupt(S = ifAbrupt(S))) return S;
+    var R = S;
+    var next;
+    for (var i = 0, j = argList.length; i < j; i++ ) {
+        next = argList[i];
+        var nextString = ToString(next);
+        if (isAbrupt(nextString = ifAbrupt(nextString))) return nextString;
+        R = R + next;
+    }
+    return NormalCompletion(R);
+};
+
+var StringPrototype_indexOf = function (thisArg, argList) {
+    var searchString = argList[0];
+    var position = argList[1];
+    var O = CheckObjectCoercible(thisArg);
+    if (isAbrupt(O = ifAbrupt(O))) return O;
+    var S = ToString(O);
+    if (isAbrupt(S = ifAbrupt(S))) return S;
+    var searchStr = ToString(searchString);
+    var pos = position | 0;
+    var len = S.length;
+    var start = min(max(pos, 0), len);
+    var searchLen = searchStr.length;
+    outer:
+        for (var i = 0, j = (S.length-searchLen); i < j; i++) {
+            var ch = S[i];
+            if (ch === searchStr[0]) {
+                var k = 0;
+                while (k < searchLen) {
+                    if (S[i+k] !== searchStr[k]) continue outer;
+                    k = k + 1;
+                }
+                return NormalCompletion(i);
+            }
+        }
+    return NormalCompletion(-1);
+
+};
+
+
+var StringPrototype_lastIndexOf = function (thisArg, argList)   {
+    var searchString = argList[0];
+    var position = argList[1];
+    var O = CheckObjectCoercible(thisArg);
+    if (isAbrupt(O = ifAbrupt(O))) return O;
+    var S = ToString(O);
+    if (isAbrupt(S = ifAbrupt(S))) return S;
+    var searchStr = ToString(searchString);
+    if (isAbrupt(searchStr=ifAbrupt(searchStr))) return searchStr;
+    var numPos = ToNumber(position);
+    if (isAbrupt(numPos = ifAbrupt(numPos))) return numPos;
+    var pos;
+    if (numPos !== numPos) pos = Infinity;
+    else pos = numPos|0;
+    var len = S.length;
+    var start = min(pos, len);
+    var searchLen = searchStr.length;
+    //return S.lastIndexOf(searchStr, position);
+
+    outer:
+        for (var j = 0, i = start; j >= i; i--) {
+            var ch = S[i];
+            if (ch === searchStr[0]) {
+                var k = 0;
+                while (k < searchLen) {
+                    if (S[i+k] !== searchStr[k]) continue outer;
+                    k = k + 1;
+                }
+                return NormalCompletion(i);
+            }
+        }
+    return NormalCompletion(-1);
+
+};
+
+var StringPrototype_localeCompare = function (thisArg, argList) {
+    var that = argList[0];
+    var O = CheckObjectCoercible(thisArg);
+    if (isAbrupt(O = ifAbrupt(O))) return O;
+    var S = ToString(O);
+    if (isAbrupt(S = ifAbrupt(S))) return S;
+    var That = ToString(that);
+    if (isAbrupt(that = ifAbrupt(that))) return that;
+    return NormalCompletion(undefined);
+};
+
+var StringPrototype_at = function (thisArg, argList) {
+    var position = argList[0];
+    var O = CheckObjectCoercible(thisArg);
+    var S = ToString(O);
+    if (isAbrupt(S=ifAbrupt(S))) return S;
+    var pos = ToInteger(position);
+    if (isAbrupt(pos=ifAbrupt(pos))) return pos;
+    var size = S.length;
+    //if (pos < size || pos > size) return NormalCompletion("");
+    var first = S[position];
+    var cuFirst = s.charCodeAt(0);
+    if (cuFirst < 0xD800 || cuFirst > 0xDBFF || (position + 1 === size)) return NormalCompletion(first);
+    var cuSecond = S.charCodeAt[position+1];
+    if (cuSecond < 0xDC00 || cuSecond > 0xDFFF) return NormalCompletion(String.fromCharCode(cuFirst));
+    var second = S.charCodeAt[position+1];
+    var cp = (first - 0xD800) * 0x400+(second-0xDC00)+0x1000;
+    return NormalCompletion(String.fromCharCode(cuFirst, cuSecond));
+};
 
 /**
  * Created by root on 31.03.14.
@@ -17044,10 +17782,10 @@ function StructuredClone (input, transferList, targetRealm) {
     var memory = []; //mapping
     for (var i = 0, j = transferList.length; i< j; i++) {
         var transferable = transferList[i];
-        if (!hasInternalSlot(transferable, "Transfer")) {
+        if (!hasInternalSlot(transferable, SLOTS.TRANSFER)) {
             return newRangeError( "DataCloneError: transferable has no [[Transfer]] slot");
         }
-        var Transfer = getInternalSlot(transferable, "Transfer");
+        var Transfer = getInternalSlot(transferable, SLOTS.TRANSFER);
         var transferResult = callInternalSlot(SLOTS.CALL, Transfer, transferable, [targetRealm]);
         if (isAbrupt(transferResult = ifAbrupt(transferResult))) return transferResult;
         memory.push({ input: transferable, output: transferResult });
@@ -17069,7 +17807,7 @@ function InternalStructuredClone (input, memory, targetRealm) {
     for (var i = 0, j = memory.length; i < j; i++) {
         if (memory[i].transferable === input) return NormalCompletion(memory[i].output);
     }
-    if (getInternalSlot(input, "Transfer") === "neutered") return newRangeError( "DataCloneError: inputs [[Transfer]] is neutered.");
+    if (getInternalSlot(input, SLOTS.TRANSFER) === "neutered") return newRangeError( "DataCloneError: inputs [[Transfer]] is neutered.");
     var value;
     if ((value = getInternalSlot(input, SLOTS.BOOLEANDATA)) !== undefined) {
         output = OrdinaryConstruct(getIntrinsic(INTRINSICS.BOOLEAN, targetRealm), [value]);
@@ -17173,7 +17911,7 @@ var OnSuccessfulTransfer_Call = function (thisArg, argList) {
     if (hasInternalProperty(object, SLOTS.ARRAYBUFFERDATA)) {
         var neuteringResult = SetArrayBufferData(object, 0);
         if (isAbrupt(neuteringResult = ifAbrupt(neuteringResult))) return neuteringResult;
-        setInternalSlot(object, "Transfer", "neutered");
+        setInternalSlot(object, SLOTS.TRANSFER, "neutered");
     }
 };
 
@@ -17469,6 +18207,784 @@ exports.int32 = int32;
 exports.uint32 = uint32;
 exports.float32 = float32;
 exports.float64 = float64;
+
+
+
+
+/**
+ * Created by root on 04.04.14.
+ */
+var TypePrototypePrototype_get = function (thisArg, argList) {
+    var O = thisArg;
+    if (!hasInternalSlot(O, SLOTS.TYPEDESCRIPTOR)) return newTypeError( "has no type descriptor");
+    return NormalCompletion(getInternalSlot(O, SLOTS.TYPEDESCRIPTOR));
+};
+var TypePrototype_arrayType = function (thisArg, argList) {
+    var O = thisArg;
+    var length = argList[0];
+    if (!TypeObject(O)) return newTypeError( "not a typed object");
+    var typeDescriptor = getInternalSlot(O, SLOTS.TYPEDESCRIPTOR);
+    var numberLength = ToNumber(length);
+    var elementLength = ToLength(numberLength);
+    if (isAbrupt(elementLength=ifAbrupt(elementLength))) return elementLength;
+    if (SameValueZero(numberLength, elementLength)) return newRangeError( "numberLength is not elementLength");
+    var arrayDescriptor = GetOrCreateArrayTypeDescriptor(typeDescriptor);
+    if (isAbrupt(arrayDescriptor=ifAbrupt(arrayDescriptor))) return arrayDescriptor;
+    var R = TypeExoticObject();
+    setInternalSlot(R, SLOTS.TYPEDESCRIPTOR, arrayDescriptor);
+    var newDimensions = Cons(N, dimension);
+    setInternalSlot(R, SLOTS.DIMENSIONS, newDimensions);
+    return NormalCompletion(R);
+};
+var TypePrototype_opaqueType = function (thisArg, argList) {
+    var O = thisArg;
+    if (!IsTypeObject(O)) return newTypeError("is not a typed object");
+    var typeDescriptor = getInternalSlot(O, SLOTS.TYPEDESCRIPTOR);
+    var dimensions = setInternalSlot(O, SLOTS.DIMENSIONS);
+    var opaqueDescriptor = GetOrCreateOpaqueTypeDescriptor(typeDescriptor);
+    if (isAbrupt(opaqueDescriptor = ifAbrupt(opaqueDescriptor))) return opaqueDescriptor;
+    var R = TypeObject();
+    setInternalSlot(R, SLOTS.TYPEDESCRIPTOR, opaqueDescriptor);
+    setInternalSlot(R, SLOTS.DIMENSIONS, dimensions);
+    return NormalCompletion(R);
+};
+var StructTypeConstructor_Call = function (thisArg, argList) {
+    var object = argList[0];
+    if (Type(object) !== OBJECT) return newTypeError( "first argument is not an object");
+
+    var O = thisArg;
+    if (!IsTypeObject(O)) return newTypeError( "O is no TypeObject");
+    var currentOffset = 0;
+    var maxAlignment = 1;
+    var structure = [];
+    for (var P in object.Bindings) {
+        var fieldType = Get(object, P);
+        if (isAbrupt(fieldType=ifAbrupt(fieldType))) return fieldType;
+        if (!IsTypeObject(fieldType)) return newTypeError( "fieldType is no TypeObject");
+        var alignment = Alignment(fieldType);
+        maxAlignment = Math.max(alignment, maxAlignment);
+        currentOffset = AlignTo(currentOffset, alignment);
+
+        var r = FieldRecord(fieldName, byteOffset, currentOffset, fieldType);
+        structure.push(r);
+        var s = Size(fieldType);
+        if (isAbrupt(s=ifAbrupt(s))) return s;
+        currentOffset = currentOffset + s;
+    }
+    var size = AlignTo(currentOffset, maxAlignment);
+    var typeDescriptor = CreateStructTypeDescriptor(structure);
+    setInternalSlot(O, SLOTS.TYPEDESCRIPTOR, typeDescriptor);
+    OrdinaryDefineOwnProperty(O, "prototype", {
+        configurable: false,
+        enumerable: false,
+        value: typeDescriptor,
+        writable: false
+    });
+    return NormalCompletion(O);
+};
+var StructTypeConstructor_Construct = function (argList) {
+    return OrdinaryConstruct(this, argList);
+};
+var StructTypeConstructor_$$create = function (thisArg, argList) {
+    var F = thisArg;
+    var proto = OrdinaryCreateFromConstructor(F, INTRINSICS.STRUCTTYPEPROTOTYPE, [ SLOTS.TYPEDESCRIPTOR, SLOTS.DIMENSIONS ]);
+    if (isAbrupt(proto = ifAbrupt(proto))) return proto;
+    return ObjectCreate(proto);
+};
+
+// The above must be moved out of intrinsics/ into api for more speed creating realms.
+// that all "objects" gonna be refactored for typed memory is some other topic.
+
+/**
+ * Created by root on 15.05.14.
+ */
+
+function reflect_parse_transformASTtoOrdinaries(node, options) {
+    var success;
+    var newNode;
+    var loc = options && options.loc;
+    if (Array.isArray(node)) newNode = ArrayCreate(0);
+    else newNode = ObjectCreate();
+    var current;
+    var value;
+    for (var k in node) {
+        if (!loc && k === "loc") continue;
+        if (Object.hasOwnProperty.call(node, k)) {
+            current = node[k];
+            if (current && typeof current === "object") {
+                value = reflect_parse_transformASTtoOrdinaries(current);
+            } else {
+                value = current;
+            }
+            success = DefineOwnProperty(newNode, k, {
+                value: value,
+                writable: true,
+                enumerable: true,
+                configurable: true
+            });
+            if (isAbrupt(success)) return success;
+        }
+    }
+    return newNode;
+}
+
+
+var ReflectObject_parse = function (thisArg, argList) {
+    var parse = require("parser");
+    var parseGoal = parse.parseGoal;
+    var source = argList[0];
+    var options = argList[1];
+    var jsAst, newAst, message;
+    if (Type(source) !== STRING) return newTypeError( "String to parse expected");
+    try {
+        jsAst = parse(source);
+    } catch (ex) {
+        message = ex.message;
+        return newSyntaxError( message);
+    }
+    newAst = reflect_parse_transformASTtoOrdinaries(jsAst, options);
+    if (isAbrupt(newAst = ifAbrupt(newAst))) return newAst;
+    return NormalCompletion(newAst);
+};
+
+var ReflectObject_parseGoal = function (thisArg, argList) {
+    var parse = require("parser");
+    var parseGoal = parse.parseGoal;
+    var source = argList[1];
+    var goal = argList[0];
+    var jsAst, newAst, message;
+
+    if (Type(goal) !== STRING) return newTypeError( "Goal to parse expected");
+    if (Type(source) !== STRING) return newTypeError( "String to parse expected");
+    try {
+        jsAst = parseGoal(goal, source);
+    } catch (ex) {
+        message = ex.message;
+        return newSyntaxError( message);
+    }
+    newAst = reflect_parse_transformASTtoOrdinaries(jsAst);
+    if (isAbrupt(newAst = ifAbrupt(newAst))) return newAst;
+    return NormalCompletion(newAst);
+};
+
+
+var ReflectObject_getPrototypeOf = function (thisArg, argList) {
+    var target = argList[0];
+    var obj = ToObject(target);
+    if (isAbrupt(obj = ifAbrupt(obj))) return obj;
+    return GetPrototypeOf(obj);
+};
+
+var ReflectObject_setPrototypeOf = function (thisArg, argList) {
+    var target = argList[0];
+    var proto = argList[1];
+    var obj = ToObject(target);
+    if (isAbrupt(obj = ifAbrupt(obj))) return obj;
+    if (Type(proto) !== OBJECT && proto !== null) return newTypeError( "Reflect.setPrototypeOf: proto is neither an object nor null!");
+    return SetPrototypeOf(obj, proto);
+};
+
+
+var ReflectObject_isExtensible = function (thisArg, argList) {
+    var target = argList[0];
+    var obj = ToObject(target);
+    if (isAbrupt(obj = ifAbrupt(obj))) return obj;
+    return IsExtensible(obj);
+};
+
+var ReflectObject_preventExtensions = function (thisArg, argList) {
+    var target = argList[0];
+    var obj = ToObject(target);
+    if (isAbrupt(obj = ifAbrupt(obj))) return obj;
+    return PreventExtensions(obj);
+};
+var ReflectObject_has = function (thisArg, argList) {
+    var target = argList[0];
+    var propertyKey = argList[1];
+    var obj = ToObject(target);
+    if (isAbrupt(obj = ifAbrupt(obj))) return obj;
+    var key = ToPropertyKey(propertyKey);
+    if (isAbrupt(key = ifAbrupt(key))) return key;
+    return HasProperty(obj, key);
+};
+var ReflectObject_hasOwn = function (thisArg, argList) {
+    var target = argList[0];
+    var propertyKey = argList[1];
+    var obj = ToObject(target);
+    if (isAbrupt(obj = ifAbrupt(obj))) return obj;
+    var key = ToPropertyKey(propertyKey);
+    if (isAbrupt(key = ifAbrupt(key))) return key;
+    return HasOwnProperty(obj, key);
+};
+
+var ReflectObject_getOwnPropertyDescriptor = function (thisArg, argList) {
+    var target = argList[0];
+    var propertyKey = argList[1];
+    var obj = ToObject(target);
+    if (isAbrupt(obj = ifAbrupt(obj))) return obj;
+    var key = ToPropertyKey(propertyKey);
+    if (isAbrupt(key = ifAbrupt(key))) return key;
+    var desc = GetOwnProperty(obj, key);
+    if (isAbrupt(desc = ifAbrupt(desc))) return desc;
+    return FromPropertyDescriptor(desc);
+};
+
+var ReflectObject_get = function (thisArg, argList) {
+    var target = argList[0];
+    var propertyKey = argList[1];
+    var receiver = argList[2];
+    var obj = ToObject(target);
+    if (isAbrupt(obj = ifAbrupt(obj))) return obj;
+    var key = ToPropertyKey(propertyKey);
+    if (isAbrupt(key = ifAbrupt(key))) return key;
+    if (receiver === undefined) receiver = target;
+    return obj.Get(key, receiver);
+};
+
+var ReflectObject_set =function (thisArg, argList) {
+    var target = argList[0];
+    var propertyKey = argList[1];
+    var V = argList[2];
+    var receiver = argList[3];
+    var obj = ToObject(target);
+    if (isAbrupt(obj = ifAbrupt(obj))) return obj;
+    var key = ToPropertyKey(propertyKey);
+    if (isAbrupt(key = ifAbrupt(key))) return key;
+    if (receiver === undefined) receiver = target;
+    return callInternalSlot(SLOTS.SET, obj, key, V, receiver);
+};
+var ReflectObject_invoke = function (thisArg, argList) {
+    var target = argList[0];
+    var propertyKey = argList[1];
+    var argumentList = argList[2];
+    var receiver = argList[3];
+    var obj = ToObject(target);
+    if (isAbrupt(obj = ifAbrupt(obj))) return obj;
+    var key = ToPropertyKey(propertyKey);
+    if (isAbrupt(key = ifAbrupt(key))) return key;
+    if (receiver === undefined) receiver = target;
+    var A = CreateListFromArrayLike(argumentList);
+    return obj.Invoke(key, A, receiver);
+};
+var ReflectObject_deleteProperty = function (thisArg, argList) {
+    var target = argList[0];
+    var propertyKey = argList[1];
+    var obj = ToObject(target);
+    if (isAbrupt(obj = ifAbrupt(obj))) return obj;
+    var key = ToPropertyKey(propertyKey);
+    if (isAbrupt(key = ifAbrupt(key))) return key;
+    return callInternalSlot("Delete", obj, key);
+};
+var ReflectObject_defineProperty = function (thisArg, argList) {
+    var target = argList[0];
+    var propertyKey = argList[1];
+    var attributes = argList[2];
+    var obj = ToObject(target);
+    if (isAbrupt(obj = ifAbrupt(obj))) return obj;
+    var key = ToPropertyKey(propertyKey);
+    if (isAbrupt(key = ifAbrupt(key))) return key;
+    var desc = ToPropertyDescriptor(attributes);
+    if (isAbrupt(desc = ifAbrupt(desc))) return desc;
+    return callInternalSlot(SLOTS.DEFINEOWNPROPERTY, obj,key, desc);
+};
+var ReflectObject_enumerate = function (thisArg, argList) {
+    var target = argList[0];
+    var obj = ToObject(target);
+    if (isAbrupt(obj = ifAbrupt(obj))) return obj;
+    return callInternalSlot(SLOTS.ENUMERATE, obj);
+};
+var ReflectObject_ownKeys = function (thisArg, argList) {
+    var target = argList[0];
+    var obj = ToObject(target);
+    if (isAbrupt(obj = ifAbrupt(obj))) return obj;
+    return callInternalSlot("OwnPropertyKeys", obj);
+};
+var ReflectObject_getIntrinsic = function (thisArg, argList) {
+    var intrinsic = ToString(argList[0]);
+    if (isAbrupt(intrinsic=ifAbrupt(intrinsic))) return intrinsic;
+    return getIntrinsic(intrinsic);
+};
+
+var ReflectObject_createSelfHostingFunction = function(thisArg, argList) {
+    var parseGoal = require("parser").parseGoal;
+    var source = argList[0];
+    var realm = argList[1];
+    try {
+        var fn = parseGoal("FunctionDeclaration", source);
+    } catch (ex) {
+        return newSyntaxError( ex.message);
+    }
+    var realmObject = realm === undefined ? getRealm() : getInternalSlot(realm, "RealmObject");
+    var F = OrdinaryFunction();
+    setInternalSlot(F, SLOTS.CODE, fn.body);
+    setInternalSlot(F, SLOTS.FORMALPARAMETERS, fn.params);
+    setInternalSlot(F, SLOTS.STRICT, !!fn.strict);
+    setInternalSlot(F, SLOTS.REALM, realmObject);
+    return NormalCompletion(F);
+};
+
+/**
+ * Created by root on 15.05.14.
+ */
+
+var PromiseConstructor_call = function (thisArg, argList) {
+    var executor = argList[0];
+    var promise = thisArg;
+    if (Type(promise) !== OBJECT) return newTypeError( "promise is not an object");
+    if (!IsCallable(executor)) return newTypeError( "executor argument is not a callable");
+    if (!hasInternalSlot(promise, SLOTS.PROMISESTATE)) return newTypeError( "promise has no PromiseState Property");
+    if (getInternalSlot(promise, SLOTS.PROMISESTATE) !== undefined) return newTypeError( "promise´s PromiseState is not undefined");
+    return InitializePromise(promise, executor);
+};
+var PromiseConstructor_Construct = function (argList) {
+    return Construct(this, argList);
+};
+var PromiseConstructor_$$create = function (thisArg, argList) {
+    return AllocatePromise(thisArg);
+};
+var PromiseConstructor_resolve = function (thisArg, argList) {
+    var x = argList[0];
+    var C = thisArg;
+    if (IsPromise(x)) {
+        var constructor = getInternalSlot(x, SLOTS.PROMISECONSTRUCTOR);
+        if (SameValue(x, C)) return x;
+    }
+    var promiseCapability = NewPromiseCapability(C);
+    if (isAbrupt(promiseCapability = ifAbrupt(promiseCapability))) return promiseCapability;
+    var resolveResult = callInternalSlot(SLOTS.CALL, promiseCapability.Resolve, undefined, [x]);
+    if (isAbrupt(resolveResult = ifAbrupt(resolveResult))) return resolveResult;
+    return NormalCompletion(promiseCapability.Promise);
+};
+var PromiseConstructor_reject = function (thisArg, argList) {
+    var r = argList[0];
+    var C = thisArg;
+    var promiseCapability = NewPromiseCapability(C);
+    if (isAbrupt(promiseCapability = ifAbrupt(promiseCapability))) return promiseCapability;
+    var rejectResult = callInternalSlot(SLOTS.CALL, promiseCapability.Reject, undefined, [r]);
+    if (isAbrupt(rejectResult = ifAbrupt(rejectResult))) return rejectResult;
+    return NormalCompletion(promiseCapability.Promise)
+};
+var PromiseConstructor_cast = function (thisArg, argList) {
+    var x = argList[0];
+    var C = thisArg;
+    if (IsPromise(x)) {
+        var constructor = getInternalSlot(x, SLOTS.PROMISECONSTRUCTOR);
+        if (SameValue(constructor, C)) return NormalCompletion(x);
+    }
+    var promiseCapability = NewPromiseCapability(C);
+    if (isAbrupt(promiseCapability = ifAbrupt(promiseCapability))) return promiseCapability;
+    var resolveResult = callInternalSlot(SLOTS.CALL, promiseCapability.Resolve, undefined, [x]);
+    if (isAbrupt(resolveResult = ifAbrupt(resolveResult))) return resolveResult;
+    return NormalCompletion(promiseCapability.Promise);
+};
+var PromiseConstructor_race = function (thisArg, argList) {
+    var iterable = argList[0];
+    var C = thisArg;
+    var promiseCapability = NewPromiseCapability(C);
+    if (isAbrupt(promiseCapability = ifAbrupt(promiseCapability))) return promiseCapability;
+    var iterator = GetIterator(iterable);
+    iterator = IfAbruptRejectPromise(iterator, promiseCapability);
+    if (isAbrupt(iterator)) return iterator;
+    for (;;) {
+        var next = IteratorStep(iterator);
+        if (isAbrupt(next = ifAbrupt(next))) return next;
+        if ((next = IfAbruptRejectPromise(next, promiseCapability)) &&isAbrupt(next)) return next;
+        if (next === false) return NormalCompletion(promiseCapability.Promise);
+        var nextValue = IteratorValue(next);
+        if ((nextValue=IfAbruptRejectPromise(nextValue, promiseCapability)) && isAbrupt(nextValue)) return nextValue;
+        var nextPromise = Invoke(C, "cast", [nextValue]);
+        if ((nextPromise=IfAbruptRejectPromise(nextPromise, promiseCapability)) && isAbrupt(nextPromise)) return nextPromise;
+        var result = Invoke(nextPromise, "then", [promiseCapability.Resolve, promiseCapability.Reject]);
+        if ((result = IfAbruptRejectPromise(result, promiseCapability)) && isAbrupt(result)) return result;
+    }
+
+};
+function makePromiseAllResolveElementsFunction () {
+    var PromiseAllResolveElements_call = function (thisArg, argList) {
+        var x = argList[0];
+        var index = getInternalSlot(F, SLOTS.INDEX);
+        var values = getInternalSlot(F, SLOTS.VALUES);
+        var promiseCapability = getInternalSlot(F, SLOTS.CAPABILITY);
+        var remainingElementsCount = getInternalSlot(F, SLOTS.REMAININGELEMENTS);
+        var result = CreateDataProperty(values, ToString(index), x);
+        if ((result = IfAbruptRejectPromise(result, promiseCapability)) && isAbrupt(result)) return result;
+        remainingElementsCount.value -= 1;
+        if (remainingElementsCount.value === 0) {
+            return callInternalSlot(SLOTS.CALL, promiseCapability.Resolve, undefined, [values]);
+        }
+        return NormalCompletion(undefined);
+    };
+    //var F = CreateBuiltinFunction(getRealm(), "Promise.all Resolve Elements", 1, PromiseAllResolveElements_call);
+    var F = OrdinaryFunction();
+    setInternalSlot(F, SLOTS.CALL, PromiseAllResolveElements_call);
+    return F;
+}
+var PromiseConstructor_all = function (thisArg, argList) {
+    var iterable = argList[0];
+    var C = thisArg;
+    var promiseCapability = NewPromiseCapability(C);
+    if (isAbrupt(promiseCapability = ifAbrupt(promiseCapability))) return promiseCapability;
+    var iterator = GetIterator(iterable);
+    if ((iterator=IfAbruptRejectPromise(iterator, promiseCapability)) && isAbrupt(iterator)) return iterator;
+    var values = ArrayCreate(0);
+    var remainingElementsCount = { value: 0 };
+    var index = 0;
+    for (;;) {
+        var next = IteratorStep(iterator);
+        if (isAbrupt(next = ifAbrupt(next))) return next;
+        if ((next=IfAbruptRejectPromise(next, promiseCapability)) && isAbrupt(next)) return next;
+        if (next === false) {
+            if (index == 0) {
+                var resolveResult = callInternalSlot(SLOTS.CALL, promiseCapability.Resolve, undefined, [values]);
+                if (isAbrupt(resolveResult = ifAbrupt(resolveResult))) return resolveResult;
+            }
+            return NormalCompletion(promiseCapability.Promise)
+        }
+        var nextValue = IteratorValue(next);
+        if (isAbrupt(nextValue = IfAbruptRejectPromise(nextValue, promiseCapability)))  return nextValue;
+        var nextPromise = Invoke(C, "cast", [nextValue]);
+        if (isAbrupt(nextPromise=IfAbruptRejectPromise(nextPromise, promiseCapability))) return nextPromise;
+        var resolveElement = makePromiseAllResolveElementsFunction();
+        setInternalSlot(resolveElement, SLOTS.INDEX, index);
+        setInternalSlot(resolveElement, SLOTS.VALUES, values);
+        setInternalSlot(resolveElement, SLOTS.CAPABILITY, resolveElement, promiseCapability);
+        setInternalSlot(resolveElement, SLOTS.REMAININGELEMENTS, remainingElementsCount);
+        var result = Invoke(nextPromise, "then", [resolveElement, promiseCapability.Reject]);
+        if (isAbrupt(result = IfAbruptRejectPromise(result, promiseCapability))) return result;
+        index = index + 1;
+        remainingElementsCount.value += 1;
+    }
+};
+var PromisePrototype_then = function (thisArg, argList) {
+    var onFulfilled = argList[0];
+    var onRejected = argList[1];
+    var promise = thisArg;
+    if (!IsPromise(promise)) return newTypeError( "then: this is not a promise object");
+    if (onFulfilled === undefined || onFulfilled === null) onFulfilled = makeIdentityFunction();
+    if (onRejected === undefined || onRejected === null) onRejected = makeThrowerFunction();
+    var C = Get(promise, "constructor");
+    if (isAbrupt(C = ifAbrupt(C))) return C;
+
+    var promiseCapability = NewPromiseCapability(C);
+    if (isAbrupt(promiseCapability = ifAbrupt(promiseCapability))) return promiseCapability;
+
+    var resolveReaction = PromiseReaction(promiseCapability, onFulfilled);
+    var rejectReaction = PromiseReaction(promiseCapability, onRejected);
+
+    var PromiseState = getInternalSlot(promise, SLOTS.PROMISESTATE);
+    if (PromiseState === "pending") {
+        getInternalSlot(promise, SLOTS.PROMISERESOLVEREACTIONS).push(resolveReaction);
+        getInternalSlot(promise, SLOTS.PROMISEREJECTREACTIONS).push(rejectReaction);
+
+    } else if (PromiseState === "fulfilled") {
+        var resolution = getInternalSlot(promise, SLOTS.PROMISERESULT);
+        EnqueueTask("PromiseTasks", PromiseReactionTask(), [resolveReaction, resolution]);
+    } else if (PromiseState === "rejected") {
+        var reason = getInternalSlot(promise, SLOTS.PROMISERESULT);
+        EnqueueTask("PromiseTasks", PromiseReactionTask(), [rejectReaction, reason]);
+    }
+    return NormalCompletion(promiseCapability.Promise);
+};
+var PromisePrototype_catch = function (thisArg, argList) {
+    var onRejected = argList[0];
+    return Invoke(thisArg, "then", [undefined, onRejected]);
+};
+
+/*
+ move into lib/api/promise.js
+ */
+
+function PromiseNew (executor) {
+    var promise = AllocatePromise(getIntrinsic(INTRINSICS.PROMISE));
+    return InitializePromise(promise, executor);
+}
+function PromiseBuiltinCapability() {
+    var promise = AllocatePromise(getIntrinsic(INTRINSICS.PROMISE));
+    return CreatePromiseCapabilityRecord(promise, getIntrinsic(INTRINSICS.PROMISE));
+}
+function PromiseOf(value) {
+    var capability = NewPromiseCapability();
+    if (isAbrupt(capability = ifAbrupt(capability))) return capability;
+    var resolveResult = callInternalSlot(SLOTS.CALL, capability.Resolve, undefined, [value]);
+    if (isAbrupt(resolveResult = ifAbrupt(resolveResult))) return resolveResult;
+    return NormalCompletion(capability.Promise);
+}
+function PromiseCapability(promise, resolve, reject) {
+    var pc = Object.create(PromiseCapability.prototype);
+    pc.Promise = promise;
+    pc.Resolve = resolve;
+    pc.Reject = reject;
+    return pc;
+}
+PromiseCapability.prototype.toString = function () {
+    return "[object PromiseCapability]";
+};
+function makePromiseReaction(capabilites, handler) {
+    return PromiseReaction(capabilites, handler);
+}
+function PromiseReaction(caps, hdl) {
+    var pr = Object.create(PromiseReaction.prototype);
+    pr.Capability = caps;
+    pr.Handler = hdl;
+    return pr;
+}
+PromiseReaction.prototype.toString = function () {
+    return "[object PromiseReaction]";
+};
+function UpdatePromiseFromPotentialThenable(x, promiseCapability) {
+    if (Type(x) !== OBJECT) return NormalCompletion("not a thenable");
+    var then = Get(x, "then");
+    if (isAbrupt(then = ifAbrupt(then))) {
+        var rejectResult = callInternalSlot(SLOTS.CALL, promiseCapability.Reject, undefined, [then.value]);
+        if (isAbrupt(rejectResult = ifAbrupt(rejectResult))) return rejectResult;
+        return NormalCompletion(null);
+    }
+    if (!IsCallable(then)) return NormalCompletion("not a thenable");
+    var thenCallResult = callInternalSlot(SLOTS.CALL, then, x, [promiseCapability.Resolve, promiseCapability.Reject]);
+    if (isAbrupt(thenCallResult = ifAbrupt(thenCallResult))) {
+        rejectResult = callInternalSlot(SLOTS.CALL, promiseCapability.Reject, undefined, [thenCallResult.value]);
+        if (isAbrupt(rejectResult = ifAbrupt(rejectResult))) return rejectResult;
+    }
+    return NormalCompletion(null);
+}
+function TriggerPromiseReactions(reactions, argument) {
+    if (Array.isArray(reactions)) {
+        for (var i = 0, j = reactions.length; i < j; i++) {
+            var reaction = reactions[i];
+            EnqueueTask("PromiseTasks", PromiseReactionTask(), [reaction, argument])
+        }
+    }
+    return NormalCompletion(undefined);
+}
+function PromiseReactionTask() {
+    var F;
+    var PromiseReactionTask_call = function (thisArg, argList) {
+        var reaction = argList[0];
+        var argument = argList[1];
+        Assert(reaction && reaction.Capability && reaction.Handler, "reaction must be a PromiseReaction record");
+        var promiseCapability = reaction.Capability;
+        var handler = reaction.Handler;
+        var PromiseTaskQueue = getTasks(getRealm(), SLOTS.PROMISE);
+        var handlerResult = callInternalSlot(SLOTS.CALL, handler, undefined, [argument]);
+        if (isAbrupt(handlerResult = ifAbrupt(handlerResult))) {
+            var status = callInternalSlot(SLOTS.CALL, promiseCapability.Reject, undefined, [handlerResult.value]);
+            return NextTask(status, PromiseTaskQueue);
+        }
+        status = callInternalSlot(SLOTS.CALL, promiseCapability.Resolve, undefined, [handlerResult]);
+        return NextTask(status, PromiseTaskQueue);
+    };
+    F = CreateBuiltinFunction(getRealm(), PromiseReactionTask_call, "PromiseReactionTask", 2);
+    return F;
+}
+function IfAbruptRejectPromise(value, capability) {
+    if (isAbrupt(value=ifAbrupt(value))) {
+        var rejectedResult = callInternalSlot(SLOTS.CALL, capability.Reject, undefined, [value.value]);
+        if (isAbrupt(rejectedResult = ifAbrupt(rejectedResult))) return rejectedResult;
+        return NormalCompletion(capability.Promise);
+    }
+    return value;
+}
+function makePromiseRejectFunction() {
+    var F = OrdinaryFunction();
+    SetFunctionName(F, "reject");
+    SetFunctionLength(F, 1);
+    var PromiseRejectFunction_call = function (thisArg, argList) {
+        Assert(Type(getInternalSlot(F, SLOTS.PROMISE)) === OBJECT, "[[Promise]] has to be an object");
+        var reason = argList[0];
+        var promise = getInternalSlot(F, SLOTS.PROMISE);
+        var alreadyResolved = getInternalSlot(F, SLOTS.ALREADYRESOLVED);
+        if (alreadyResolved.value === true) return NormalCompletion(undefined);
+        alreadyResolved.value = true;
+        return RejectPromise(promise, reason);
+    };
+    setInternalSlot(F, SLOTS.CALL, PromiseRejectFunction_call);
+    return F;
+}
+function makePromiseResolveFunction() {
+    var F = OrdinaryFunction();
+    SetFunctionName(F, "resolve");
+    SetFunctionLength(F, 1);
+
+    var PromiseResolveFunction_call = function (thisArg, argList) {
+        Assert(Type(getInternalSlot(F, SLOTS.PROMISE)) === OBJECT, "[[Promise]] has to be an object");
+        var resolution = argList[0];
+        var promise = getInternalSlot(F, SLOTS.PROMISE);
+        var alreadyResolved = getInternalSlot(F, SLOTS.ALREADYRESOLVED);
+        alreadyResolved.value = true;
+        if (SameValue(resolution, promise)) {
+            var selfResolutionError = newTypeError( "self resolution handler");
+            return RejectPromise(promise, selfResolutionError);
+        }
+        if (Type(resolution) !== OBJECT) {
+            return FulfillPromise(promise, resolution);
+        }
+        var then = Get(resolution, "then");
+        if (isAbrupt(then=ifAbrupt(then))) {
+            return RejectPromise(promise, then.value);
+        }
+        if (!IsCallable(then)) {
+            return FulfillPromise(promise, resolution);
+        }
+        var resolvingFunctions = CreateResolvingFunctions(promise);
+        var thenCallResult = callInternalSlot(SLOTS.CALL, then, resolution, [resolvingFunctions.Resolve, resolvingFunctions.Reject]);
+
+        if (isAbrupt(thenCallResult=ifAbrupt(thenCallResult))) {
+            return callInternalSlot(SLOTS.CALL, resolvingFunctions.Reject, undefined, [thenCallResult.value]);
+        }
+
+        return NormalCompletion(thenCallResult);
+
+    };
+    setInternalSlot(F, SLOTS.CALL, PromiseResolveFunction_call);
+    return F;
+}
+function CreateResolvingFunctions (promise) {
+    var alreadyResolved = {value:false};
+    var resolve = makePromiseResolveFunction();
+    setInternalSlot(resolve, SLOTS.PROMISE, promise);
+    setInternalSlot(resolve, SLOTS.ALREADYRESOLVED, alreadyResolved);
+    var reject = makePromiseRejectFunction();
+    setInternalSlot(reject, SLOTS.PROMISE, promise);
+    setInternalSlot(reject, SLOTS.ALREADYRESOLVED, alreadyResolved);
+    return { Resolve: resolve, Reject: reject };
+}
+function FulfillPromise (promise, value) {
+    Assert(getInternalSlot(promise, SLOTS.PROMISESTATE) === "pending", "[[PromiseState]] must be pending");
+    var reactions = getInternalSlot(promise, SLOTS.PROMISERESOLVEREACTIONS);
+    setInternalSlot(promise, SLOTS.PROMISERESULT, value);
+    setInternalSlot(promise, SLOTS.PROMISERESOLVEREACTIONS, []);
+    setInternalSlot(promise, SLOTS.PROMISEREJECTREACTIONS, []);
+    setInternalSlot(promise, SLOTS.PROMISESTATE, "fulfilled");
+    return TriggerPromiseReactions(reactions, value);
+}
+function RejectPromise (promise, reason) {
+    Assert(getInternalSlot(promise, SLOTS.PROMISESTATE) === "pending", "[[PromiseState]] must not be pending");
+    var reactions = getInternalSlot(promise, SLOTS.PROMISEREJECTREACTIONS);
+    setInternalSlot(promise, SLOTS.PROMISERESULT, reason);
+    setInternalSlot(promise, SLOTS.PROMISERESOLVEREACTIONS, []);
+    setInternalSlot(promise, SLOTS.PROMISEREJECTREACTIONS, []);
+    setInternalSlot(promise, SLOTS.PROMISESTATE, "rejected");
+    return TriggerPromiseReactions(reactions, reason);
+}
+function NewPromiseCapability(C) {
+    if (!IsConstructor(C)) return newTypeError( "C is no constructor");
+    // Assertion Step 2 missing 25.4.3.1
+    var promise = CreateFromConstructor(C);
+    if (isAbrupt(promise = ifAbrupt(promise))) return promise;
+    return CreatePromiseCapabilityRecord(promise, C);
+}
+function CreatePromiseCapabilityRecord(promise, constructor) {
+    var promiseCapability = PromiseCapability(promise, undefined, undefined);
+    var executor = GetCapabilitiesExecutor();
+    setInternalSlot(executor, SLOTS.CAPABILITY, promiseCapability);
+    var constructorResult = callInternalSlot(SLOTS.CALL, constructor, promise, [executor]);
+    if (isAbrupt(constructorResult = ifAbrupt(constructorResult))) return constructorResult;
+    if (!IsCallable(promiseCapability.Resolve)) return newTypeError( "capability.[[Resolve]] is not a function");
+    if (!IsCallable(promiseCapability.Reject)) return newTypeError( "capability.[[Reject]] is not a function");
+    if (Type(constructorResult) === OBJECT && (SameValue(promise, constructorResult) === false)) return newTypeError("constructorResult is not the same as promise");
+    return promiseCapability;
+}
+function GetCapabilitiesExecutor () {
+    var F = OrdinaryFunction();
+    var GetCapabilitiesExecutor_call = function (thisArg, argList) {
+        var resolve = argList[0];
+        var reject = argList[1];
+        var promiseCapability = getInternalSlot(F, SLOTS.CAPABILITY);
+        Assert(promiseCapability !== undefined, "executor has to have a capability slot");
+        if (promiseCapability.Resolve !== undefined) return newTypeError( "promiseCapability has to have some undefined fields");
+        if (promiseCapability.Reject !== undefined) return newTypeError( "promiseCapability has to have some undefined fields");
+        promiseCapability.Resolve = resolve;
+        promiseCapability.Reject = reject;
+        return NormalCompletion(undefined);
+    };
+    setInternalSlot(F, SLOTS.CALL, GetCapabilitiesExecutor_call);
+    return F;
+}
+function InitializePromise(promise, executor) {
+    Assert(hasInternalSlot(promise, SLOTS.PROMISESTATE) && (getInternalSlot(promise, SLOTS.PROMISESTATE) === undefined), "InitializePromise: PromiseState doesnt exist or isnt undefined");
+    Assert(IsCallable(executor), "executor has to be callable");
+    setInternalSlot(promise, SLOTS.PROMISESTATE, "pending");
+    setInternalSlot(promise, SLOTS.PROMISERESOLVEREACTIONS, []);
+    setInternalSlot(promise, SLOTS.PROMISEREJECTREACTIONS, []);
+    var resolvingFunctions = CreateResolvingFunctions(promise);
+    var completion = callInternalSlot(SLOTS.CALL, executor, undefined, [resolvingFunctions.Resolve, resolvingFunctions.Reject]);
+    if (isAbrupt(completion=ifAbrupt(completion))) {
+        var status = callInternalSlot(SLOTS.CALL, resolvingFunctions.Reject, undefined, [completion.value]);
+        if (isAbrupt(status)) return status;
+    }
+    return NormalCompletion(promise);
+}
+function AllocatePromise(constructor) {
+    var obj = OrdinaryCreateFromConstructor(constructor, INTRINSICS.PROMISEPROTOTYPE, [
+        SLOTS.PROMISESTATE,
+        SLOTS.PROMISECONSTRUCTOR,
+        SLOTS.PROMISERESULT,
+        SLOTS.PROMISERESOLVEREACTIONS,
+        SLOTS.PROMISEREJECTREACTIONS
+    ]);
+    setInternalSlot(obj, "toString", function () {
+        return "[object PromiseExoticObject]";
+    }); // all tostrings will be removed when typed memory comes (there is no tostring but a serialisation)
+    setInternalSlot(obj, SLOTS.PROMISECONSTRUCTOR, constructor);
+    return obj;
+}
+function IsPromise(x) {
+    if (Type(x) !== OBJECT) return false;
+    if (!hasInternalSlot(x, SLOTS.PROMISESTATE)) return false;
+    return getInternalSlot(x, SLOTS.PROMISESTATE) !== undefined;
+}
+function makeIdentityFunction () {
+    var F = OrdinaryFunction();
+    var Identity_call = function (thisArg, argList) {
+        var x = argList[0];
+        return NormalCompletion(x);
+    };
+    setInternalSlot(F, SLOTS.CALL, Identity_call);
+    SetFunctionName(F, "IdentityFunction");
+    SetFunctionLength(F, 1);
+    return F;
+}
+function makeResolutionHandlerFunction () {
+    var handler = OrdinaryFunction();
+    var handler_call = function (thisArg, argList) {
+        var x = argList[0];
+        var promise = getInternalSlot(handler, SLOTS.PROMISE);
+        var fulfillmentHandler = getInternalSlot(handler, SLOTS.FULFILLMENTHANDLER);
+        var rejectionHandler = getInternalSlot(handler, SLOTS.REJECTIONHANDLER);
+        if (SameValue(x, promise)) {
+            var selfResolutionError = newTypeError( "selfResolutionError");
+            return callInternalSlot(SLOTS.CALL, rejectionHandler, undefined, [selfResolutionError]);
+        }
+        var C = getInternalSlot(promise, SLOTS.PROMISECONSTRUCTOR);
+        var promiseCapability = NewPromiseCapability(C);
+        if (isAbrupt(promiseCapability = ifAbrupt(promiseCapability))) return promiseCapability;
+        var updateResult = UpdatePromiseFromPotentialThenable(x, promiseCapability);
+        if (isAbrupt(updateResult = ifAbrupt(updateResult))) return updateResult;
+        if (updateResult !== "not a thenable") {
+            return Invoke(promiseCapability.Promise, "then", [fulfillmentHandler, rejectionHandler]);
+        }
+        return callInternalSlot(SLOTS.CALL, fulfillmentHandler, undefined, [x]);
+    };
+    setInternalSlot(handler, SLOTS.CALL, handler_call);
+    return handler;
+}
+function makeThrowerFunction () {
+    var F = OrdinaryFunction();
+    var ThrowerFunction_call = function (thisArg, argList) {
+        var e = argList[0];
+        return Completion("throw", e, empty);
+    };
+    setInternalSlot(F, SLOTS.CALL, ThrowerFunction_call);
+    SetFunctionName(F, "ThrowerFunction");
+    SetFunctionLength(F, 1);
+    return F;
+}
+function PromiseAll(promiseList) {
+}
+function PromiseCatch(promise, rejectedAction) {
+}
+function PromiseThen(promise, resolvedAction, rejectedAction) {
+}
 
 
 
@@ -19484,37 +21000,9 @@ DefineOwnProperty(ArrayIteratorPrototype, "next", {
     configurable: false
 });
 
-// ===========================================================================================================
-// String Constructor and Prototype
-// ===========================================================================================================
-// ===========================================================================================================
-// String Constructor and Prototype
-// ===========================================================================================================
 
-setInternalSlot(StringConstructor, SLOTS.CALL, function Call(thisArg, argList) {
-    var O = thisArg;
-    var s;
-    if (!argList.length) s = "";
-    else s = ToString(argList[0]);
-    if (isAbrupt(s = ifAbrupt(s))) return s;
-    if (Type(O) === OBJECT && hasInternalSlot(O, SLOTS.STRINGDATA) && getInternalSlot(O, SLOTS.STRINGDATA) === undefined) {
-        var length = s.length;
-        var status = DefineOwnPropertyOrThrow(O, "length", {
-            value: length,
-            writable: false,
-            enumerable: false,
-            configurable: false
-        });
-        if (isAbrupt(status = ifAbrupt(status))) return status;
-        setInternalSlot(O, SLOTS.STRINGDATA, s);
-        return O;
-    }
-    return s;
-});
-setInternalSlot(StringConstructor, SLOTS.CONSTRUCT, function Construct(argList) {
-    var F = StringConstructor;
-    return OrdinaryConstruct(F, argList);
-});
+setInternalSlot(StringConstructor, SLOTS.CALL, StringConstructor_call);
+setInternalSlot(StringConstructor, SLOTS.CONSTRUCT, StringConstructor_construct);
 
 DefineOwnProperty(StringConstructor, $$create, {
     value: CreateBuiltinFunction(realm, function $$create(thisArg, argList) {
@@ -19622,476 +21110,6 @@ function GetReplaceSubstitution (matched, string, postion, captures) {
     return result;
 }
 
-var normalizeOneOfs = {
-    "NFC":true,
-    "NFD":true,
-    "NFKC":true,
-    "NFKD":true
-};
-
-var StringPrototype_normalize = function (thisArg, argList) {
-    var from = argList[0];
-    var S = CheckObjectCoercible(thisArg);
-    if (isAbrupt(S = ifAbrupt(S))) return S;
-    S = ToString(S);
-    if (isAbrupt(S = ifAbrupt(S))) return S;
-    if (from === undefined) from = "NFC";
-    var f = ToString(from);
-    if ((f = ifAbrupt(f)) && ifAbrupt(f)) return f;
-    if (!normalizeOneOfs[f]) return newRangeError( "f is not one of nfc, nfd, nfkc, nfkd.");
-    if (S.normalize) {
-        // powers of native es.
-        var ns = S.normalize(f);
-    } else {
-        // off point, but a fill-in
-        ns = ""+S;
-    }
-    return NormalCompletion(ns);
-};
-
-var StringPrototype_replace = function (thisArg, argList) {
-    var searchValue = argList[0];
-    var replaceValue = argList[1];
-    var S = CheckObjectCoercible(thisArg);
-    if (isAbrupt(S = ifAbrupt(S))) return S;
-    S = ToString(S);
-    if (isAbrupt(S = ifAbrupt(S))) return S;
-    if (Type(searchValue) === OBJECT && HasProperty(searchValue, $$isRegExp)) {
-        return Invoke(searchValue, "replace", [string, replaceValue]);
-    }
-    var searchString = ToString(searchValue);
-    if (isAbrupt(searchString = ifAbrupt(searchString))) return searchString;
-    var i = 0;
-    var len = S.length;
-    var searchLen = searchString.length;
-    while (i < len) {
-        if ((S[i] == searchString[0]) && (S[i+searchLen-1] == searchString[searchLen-1])) {
-            var k = 0;
-            var match = true;
-            while (k < searchLen) {
-                if (S[k] !== searchString[k]) {
-                    match = false;
-                    break;
-                }
-                k = k + 1;
-            }
-
-            if (match) {
-                var matched = searchString;
-                if (IsCallable(replaceValue)) {
-                    var replValue = callInternalSlot(SLOTS.CALL, replaceValue, undefined, [matched, pos, string]);
-                    if (isAbrupt(replValue = ifAbrupt(replValue))) return replValue;
-                    var replStr = ToString(replValue);
-                    if (isAbrupt(replStr = ifAbrupt(replStr))) return replStr;
-
-                } else {
-                    var capstures = [];
-                    var replStr = GetReplaceSubstitution(matched, string, pos, captures);
-
-                }
-                var tailPos = pos - matched.length;
-                var newString;
-
-
-            }
-        }
-        i = i + 1;
-    }
-    return NormalCompletion(string);
-};
-var StringPrototype_match = function (thisArg, argList) {
-    var regexp = argList[0];
-    var S = CheckObjectCoercible(thisArg);
-    if (isAbrupt(S = ifAbrupt(S))) return S;
-    S = ToString(S);
-    if (isAbrupt(S = ifAbrupt(S))) return S;
-    var rx;
-    if (Type(regexp) === OBJECT && HasProperty(regexp, $$isRegExp)) {
-        rx = regexp;
-    } else {
-        rx = RegExpCreate(regexp, undefined);
-    }
-    if (isAbrupt(rx = ifAbrupt(rx))) return rx;
-    return Invoke(rx, "match", []);
-};
-var StringPrototype_repeat = function (thisArg, argList) {
-    var count = argList[0];
-    var S = CheckObjectCoercible(thisArg);
-    if (isAbrupt(S = ifAbrupt(S))) return S;
-    S = ToString(S);
-    if (isAbrupt(S = ifAbrupt(S))) return S;
-    var n = ToInteger(count);
-    if (isAbrupt(n = ifAbrupt(n))) return n;
-    if (n < 0) return newRangeError( "n is less than 0");
-    if (n === Infinity) return newRangeError( "n is infinity");
-    var T = "";
-    for (var i = 0; i < n; i++) T+=S;
-    return NormalCompletion(T);
-};
-
-var StringPrototype_contains = function (thisArg, argList) {
-    var searchString = argList[0];
-    var position = argList[1];
-    var S = CheckObjectCoercible(thisArg);
-    if (isAbrupt(S = ifAbrupt(S))) return S;
-    S = ToString(S);
-    if (isAbrupt(S = ifAbrupt(S))) return S;
-    var searchStr = ToString(searchString);
-    var pos = ToInteger(position);
-    var len = S.length;
-    var start = min(max(pos, 0), len);
-    var searchLen = searchStr.length;
-    var i = start;
-    var j = len;
-    var result = false;
-    while (i < len-searchLen) {
-
-        if ((searchStr[0] === S[i]) && (searchStr[searchLen-1] === S[i+searchLen-1])) {
-            result = true;
-            for (var k = i+1, l = i+searchLen-1, m = 1; k < l; k++, m++) {
-                if (searchStr[m] !== S[k]) result = false;
-            }
-            if (result) return true;
-        }
-
-        i = i+1;
-    }
-    return false;
-};
-
-var StringPrototype_startsWith = function (thisArg, argList) {
-    var searchString = argList[0];
-    var position = argList[1];
-    var S = CheckObjectCoercible(thisArg);
-    if (isAbrupt(S = ifAbrupt(S))) return S;
-    S = ToString(S);
-    if (isAbrupt(S = ifAbrupt(S))) return S;
-    var searchStr = ToString(searchString);
-    var pos = ToInteger(position);
-    var len = S.length;
-    var start = min(max(pos, 0), len);
-    var searchLength = searchString.length;
-    if (searchLength+start > len) return false;
-    var result = true;
-    for (var k = 0, i = start, j = searchLength+start; i < j; i++, k++) {
-        if (searchStr[k] !== S[i]) { result = false; break; }
-    }
-    return result;
-};
-var StringPrototype_endsWith = function (thisArg, argList) {
-    var searchString = argList[0];
-    var endPosition = argList[1];
-    var S = CheckObjectCoercible(thisArg);
-    if (isAbrupt(S = ifAbrupt(S))) return S;
-    S = ToString(S);
-    if (isAbrupt(S = ifAbrupt(S))) return S;
-    var searchStr = ToString(searchString);
-    var pos = endPosition === undefined ? len : ToInteger(endPosition);
-    var len = S.length;
-    var end = min(max(pos, 0), len);
-    var searchLength = searchString.length;
-    var start = end - searchLength;
-    if (start < 0) return false;
-    var result = true;
-    for (var i = start, j = start + searchLength, k = 0; i < j; i++, k++) {
-        if (searchString[k] !== S[i]) { result = false; break; }
-    }
-    return result;
-};
-var StringPrototype_valueOf = function valueOf(thisArg, argList) {
-    var x = thisStringValue(thisArg);
-    return x;
-};
-var StringPrototype_toArray = function (thisArg, argList) {
-    var S = CheckObjectCoercible(thisArg);
-    if (isAbrupt(S = ifAbrupt(S))) return S;
-    S = ToString(S);
-    var array = ArrayCreate(0);
-    var len = S.length;
-    var n = 0;
-    while (n < len) {
-        var c = S[n];
-        callInternalSlot(SLOTS.DEFINEOWNPROPERTY, array, ToString(n), {
-            configurable: true,
-            enumerable: true,
-            value: c,
-            writable: true
-        }, false);
-        n = n + 1;
-    }
-    return NormalCompletion(array);
-
-};
-
-var trim_leading_space_expr = /^([\s]*)/;
-var trim_trailing_space_expr = /([\s]*)$/;
-// 31.1.
-var StringPrototype_trim = function (thisArg, argList) {
-    var O = CheckObjectCoercible(thisArg);
-    if (isAbrupt(O = ifAbrupt(O))) return O;
-    var S = ToString(O);
-    if (isAbrupt(S = ifAbrupt(S))) return S;
-    var T;
-    T = S.replace(trim_leading_space_expr, "");
-    T = T.replace(trim_trailing_space_expr, "");
-    return NormalCompletion(T);
-};
-
-// 31.1.
-var StringPrototype_search = function (thisArg, argList) {
-    var regexp = argList[0];
-    var O = CheckObjectCoercible(thisArg);
-    if (isAbrupt(O = ifAbrupt(O))) return O;
-    var S = ToString(O);
-    if (isAbrupt(S = ifAbrupt(S))) return S;
-    var rx;
-    if (Type(regexp) === OBJECT  && HasProperty(regexp, $$isRegExp)) {
-        rx = regexp;
-    } else {
-        rx = RegExpCreate(regexp, undefined);
-    }
-    if (isAbrupt(rx = ifAbrupt(rx))) return rx;
-    return Invoke(rx, "search", [S]);
-};
-// 31.1.
-var StringPrototype_toUpperCase = function (thisArg, argList) {
-    var O = CheckObjectCoercible(thisArg);
-    if (isAbrupt(O = ifAbrupt(O))) return O;
-    var S = ToString(O);
-    if (isAbrupt(S = ifAbrupt(S))) return S;
-    var U = S.toUpperCase();
-    return NormalCompletion(U);
-};
-
-// 31.1.
-var StringPrototype_toLowerCase = function (thisArg, argList) {
-    var O = CheckObjectCoercible(thisArg);
-    if (isAbrupt(O = ifAbrupt(O))) return O;
-    var S = ToString(O);
-    if (isAbrupt(S = ifAbrupt(S))) return S;
-    var L = S.toLowerCase();
-    return NormalCompletion(L);
-};
-
-var StringPrototype_charAt = function (thisArg, argList) {
-    var index = argList[0];
-    index = index|0;
-    var O = CheckObjectCoercible(thisArg);
-    if (isAbrupt(O = ifAbrupt(O))) return O;
-    var S = ToString(O);
-    if (isAbrupt(S = ifAbrupt(S))) return S;
-    var V = S.charAt(index);
-    return NormalCompletion(V);
-};
-var StringPrototype_charCodeAt = function (thisArg, argList) {
-    var index = argList[0];
-    index = index|0;
-    var O = CheckObjectCoercible(thisArg);
-    if (isAbrupt(O = ifAbrupt(O))) return O;
-    var S = ToString(O);
-    if (isAbrupt(S = ifAbrupt(S))) return S;
-    if (index < 0) return NormalCompletion(NaN);
-    if (index >= S.length) return NormalCompletion(NaN);
-    var C = S.charCodeAt(index);
-    return NormalCompletion(C);
-};
-
-var StringPrototype_split = function (thisArg, argList) {
-    var separator = argList[0];
-    var limit = argList[1];
-    var O = CheckObjectCoercible(thisArg);
-    if (isAbrupt(O = ifAbrupt(O))) return O;
-    if (Type(separator) === OBJECT && HasProperty(separator, $$isRegExp)) {
-        return Invoke(separator, "split", [O, limit]);
-    }
-    var S = ToString(O);
-    if (isAbrupt(S = ifAbrupt(S))) return S;
-    var A = ArrayCreate(0);
-    var lengthA = 0;
-    var lim;
-    if (limit === undefined) lim = Math.pow(2,53)-1;
-    else lim = ToLength(limit);
-    var s = S.length;
-    var p = 0;
-    var R = ToString(separator);
-
-};
-
-// http://wiki.ecmascript.org/doku.php?id=strawman:strawman
-// 29.1. i have read a post about es7 timeline and one
-// said for es7 we should look into the strawman namespace except
-// for observe which is in harmony. Here is string_extensions
-// http://wiki.ecmascript.org/doku.php?id=strawman:string_extensions
-// the document defines lpad and rpad
-var StringPrototype_lpad = function (thisArg, argList) {
-    var minLength = argList[0];
-    var fillStr = argList[1];
-    var O = CheckObjectCoercible(thisArg);
-    var S = ToString(O);
-    if (isAbrupt(S = ifAbrupt(S))) return S;
-    var intMinLength = ToInteger(minLength);
-    if (isAbrupt(intMinLength = ifAbrupt(intMinLength))) return intMinLength;
-    if (intMinLength === undefined) return NormalCompletion(S);
-    var fillLen = intMinLength - S.length;
-    if (fillLen < 0) return newRangeError( "lpad: fillLen is smaller than the string"); // maybe auto cut just the string. too?
-    if (fillLen == Infinity) return newRangeError( "lpad: fillLen is Infinity");
-    var sFillStr;
-    if (fillStr === undefined) sFillStr = " ";
-    else sFillStr = ""+fillStr;
-    var sFillVal = sFillStr;
-    var sFillLen;
-    do { sFillVal += sFillStr; } while ((sFillLen = (sFillVal.length - S.length)) < fillLen);
-    if (sFillLen > fillLen) sFillVal = sFillVal.substr(0, fillLen);
-    return NormalCompletion(sFillVal + S)
-};
-var StringPrototype_rpad = function (thisArg, argList) {
-    var minLength = argList[0];
-    var fillStr = argList[1];
-    var O = CheckObjectCoercible(thisArg);
-    var S = ToString(O);
-    if (isAbrupt(S = ifAbrupt(S))) return S;
-    var intMinLength = ToInteger(minLength);
-    if (isAbrupt(intMinLength = ifAbrupt(intMinLength))) return intMinLength;
-    if (intMinLength === undefined) return NormalCompletion(S);
-    var fillLen = intMinLength - S.length;
-    if (fillLen < 0) return newRangeError( "lpad: fillLen is smaller than the string");
-    if (fillLen == Infinity) return newRangeError( "lpad: fillLen is Infinity");
-    var sFillStr;
-    if (fillStr === undefined) sFillStr = " ";
-    else sFillStr = ""+fillStr;
-    var sFillVal = sFillStr;
-    var sFillLen;
-    do { sFillVal += sFillStr; } while ((sFillLen = (sFillVal.length - S.length)) < fillLen);
-    if (sFillLen > fillLen) sFillVal = sFillVal.substr(0, fillLen);
-    return NormalCompletion(S + sFillVal);
-};
-
-
-var StringPrototype_codePointAt = function (thisArg, argList) {
-    var O = CheckObjectCoercible(thisArg);
-    if (isAbrupt(O = ifAbrupt(O))) return O;
-    var S = ToString(O);
-    if (isAbrupt(S = ifAbrupt(S))) return S;
-    var position = ToInteger(pos);
-    var size = S.length;
-    if (position < 0 || position >= size) return NormalCompletion(undefined);
-    var first = S.charCodeAt(position);
-    if (first < 0xD800 || first > 0xDBFF || (position+1===size)) return S;
-    var second = S.charCodeAt(position+1);
-    if (second < 0xDC00 || second > 0xDFFF) return NormalCompletion(first);
-    var result = (((first - 0xD800)*1024) + (second - 0xDC00)) + 0x10000;
-    return NormalCompletion(result);
-};
-
-var StringPrototype_concat = function (thisArg, argList) {
-    var O = CheckObjectCoercible(thisArg);
-    if (isAbrupt(O = ifAbrupt(O))) return O;
-    var S = ToString(O);
-    if (isAbrupt(S = ifAbrupt(S))) return S;
-    var R = S;
-    var next;
-    for (var i = 0, j = argList.length; i < j; i++ ) {
-        next = argList[i];
-        var nextString = ToString(next);
-        if (isAbrupt(nextString = ifAbrupt(nextString))) return nextString;
-        R = R + next;
-    }
-    return NormalCompletion(R);
-};
-
-var StringPrototype_indexOf = function (thisArg, argList) {
-    var searchString = argList[0];
-    var position = argList[1];
-    var O = CheckObjectCoercible(thisArg);
-    if (isAbrupt(O = ifAbrupt(O))) return O;
-    var S = ToString(O);
-    if (isAbrupt(S = ifAbrupt(S))) return S;
-    var searchStr = ToString(searchString);
-    var pos = position | 0;
-    var len = S.length;
-    var start = min(max(pos, 0), len);
-    var searchLen = searchStr.length;
-    outer:
-        for (var i = 0, j = (S.length-searchLen); i < j; i++) {
-            var ch = S[i];
-            if (ch === searchStr[0]) {
-                var k = 0;
-                while (k < searchLen) {
-                    if (S[i+k] !== searchStr[k]) continue outer;
-                    k = k + 1;
-                }
-                return NormalCompletion(i);
-            }
-        }
-    return NormalCompletion(-1);
-    
-};
-
-
-var StringPrototype_lastIndexOf = function (thisArg, argList)   {
-    var searchString = argList[0];
-    var position = argList[1];
-    var O = CheckObjectCoercible(thisArg);
-    if (isAbrupt(O = ifAbrupt(O))) return O;
-    var S = ToString(O);
-    if (isAbrupt(S = ifAbrupt(S))) return S;
-    var searchStr = ToString(searchString);
-    if (isAbrupt(searchStr=ifAbrupt(searchStr))) return searchStr;
-    var numPos = ToNumber(position);
-    if (isAbrupt(numPos = ifAbrupt(numPos))) return numPos;
-    var pos;
-    if (numPos !== numPos) pos = Infinity;
-    else pos = numPos|0;
-    var len = S.length;
-    var start = min(pos, len);
-    var searchLen = searchStr.length;
-    //return S.lastIndexOf(searchStr, position);
-    
-    outer:
-        for (var j = 0, i = start; j >= i; i--) {
-            var ch = S[i];
-            if (ch === searchStr[0]) {
-                var k = 0;
-                while (k < searchLen) {
-                    if (S[i+k] !== searchStr[k]) continue outer;
-                    k = k + 1;
-                }
-                return NormalCompletion(i);
-            }
-        }
-        return NormalCompletion(-1);
-    
-};
-
-var StringPrototype_localeCompare = function (thisArg, argList) {
-    var that = argList[0];
-    var O = CheckObjectCoercible(thisArg);
-    if (isAbrupt(O = ifAbrupt(O))) return O;
-    var S = ToString(O);
-    if (isAbrupt(S = ifAbrupt(S))) return S;
-    var That = ToString(that);
-    if (isAbrupt(that = ifAbrupt(that))) return that;
-    return NormalCompletion(undefined);
-};
-
-var StringPrototype_at = function (thisArg, argList) {
-    var position = argList[0];
-    var O = CheckObjectCoercible(thisArg);
-    var S = ToString(O);
-    if (isAbrupt(S=ifAbrupt(S))) return S;
-    var pos = ToInteger(position);
-    if (isAbrupt(pos=ifAbrupt(pos))) return pos;
-    var size = S.length;
-    //if (pos < size || pos > size) return NormalCompletion("");
-    var first = S[position];
-    var cuFirst = s.charCodeAt(0);
-    if (cuFirst < 0xD800 || cuFirst > 0xDBFF || (position + 1 === size)) return NormalCompletion(first);
-    var cuSecond = S.charCodeAt[position+1];
-    if (cuSecond < 0xDC00 || cuSecond > 0xDFFF) return NormalCompletion(String.fromCharCode(cuFirst));
-    var second = S.charCodeAt[position+1];
-    var cp = (first - 0xD800) * 0x400+(second-0xDC00)+0x1000;
-    return NormalCompletion(String.fromCharCode(cuFirst, cuSecond));
-};
 
 LazyDefineBuiltinFunction(StringPrototype, "at", 1, StringPrototype_at);
 LazyDefineBuiltinFunction(StringPrototype, "charAt", 1, StringPrototype_charAt);
@@ -21356,209 +22374,6 @@ LazyDefineBuiltinFunction(ProxyConstructor, "revocable", 2, ProxyConstructor_rev
 setInternalSlot(ProxyConstructor, SLOTS.CALL, ProxyConstructor_Call);
 setInternalSlot(ProxyConstructor, SLOTS.CONSTRUCT, ProxyConstructor_Construct);
 
-
-function reflect_parse_transformASTtoOrdinaries(node, options) {
-    var success;
-    var newNode;
-    var loc = options && options.loc;
-    if (Array.isArray(node)) newNode = ArrayCreate(0);
-    else newNode = ObjectCreate();
-    var current;
-    var value;
-    for (var k in node) {
-        if (!loc && k === "loc") continue;
-        if (Object.hasOwnProperty.call(node, k)) {
-            current = node[k];
-            if (current && typeof current === "object") {
-                value = reflect_parse_transformASTtoOrdinaries(current);
-            } else {
-                value = current;
-            }
-            success = DefineOwnProperty(newNode, k, {
-                value: value,
-                writable: true,
-                enumerable: true,
-                configurable: true
-            });
-            if (isAbrupt(success)) return success;
-        }
-    }
-    return newNode;
-}
-
-
-var ReflectObject_parse = function (thisArg, argList) {
-    var parse = require("parser");
-    var parseGoal = parse.parseGoal;
-    var source = argList[0];
-    var options = argList[1];
-    var jsAst, newAst, message;
-    if (Type(source) !== STRING) return newTypeError( "String to parse expected");
-    try {
-        jsAst = parse(source);
-    } catch (ex) {
-        message = ex.message;
-        return newSyntaxError( message);
-    }
-    newAst = reflect_parse_transformASTtoOrdinaries(jsAst, options);
-    if (isAbrupt(newAst = ifAbrupt(newAst))) return newAst;
-    return NormalCompletion(newAst);
-};
-
-var ReflectObject_parseGoal = function (thisArg, argList) {
-    var parse = require("parser");
-    var parseGoal = parse.parseGoal;
-    var source = argList[1];
-    var goal = argList[0];
-    var jsAst, newAst, message;
-
-    if (Type(goal) !== STRING) return newTypeError( "Goal to parse expected");
-    if (Type(source) !== STRING) return newTypeError( "String to parse expected");
-    try {
-        jsAst = parseGoal(goal, source);
-    } catch (ex) {
-        message = ex.message;
-        return newSyntaxError( message);
-    }
-    newAst = reflect_parse_transformASTtoOrdinaries(jsAst);
-    if (isAbrupt(newAst = ifAbrupt(newAst))) return newAst;
-    return NormalCompletion(newAst);
-};
-
-
-var ReflectObject_getPrototypeOf = function (thisArg, argList) {
-    var target = argList[0];
-    var obj = ToObject(target);
-    if (isAbrupt(obj = ifAbrupt(obj))) return obj;
-    return GetPrototypeOf(obj);
-};
-
-var ReflectObject_setPrototypeOf = function (thisArg, argList) {
-    var target = argList[0];
-    var proto = argList[1];
-    var obj = ToObject(target);
-    if (isAbrupt(obj = ifAbrupt(obj))) return obj;
-    if (Type(proto) !== OBJECT && proto !== null) return newTypeError( "Reflect.setPrototypeOf: proto is neither an object nor null!");
-    return SetPrototypeOf(obj, proto);
-};
-
-
-var ReflectObject_isExtensible = function (thisArg, argList) {
-    var target = argList[0];
-    var obj = ToObject(target);
-    if (isAbrupt(obj = ifAbrupt(obj))) return obj;
-    return IsExtensible(obj);
-};
-
-var ReflectObject_preventExtensions = function (thisArg, argList) {
-    var target = argList[0];
-    var obj = ToObject(target);
-    if (isAbrupt(obj = ifAbrupt(obj))) return obj;
-    return PreventExtensions(obj);
-};
-var ReflectObject_has = function (thisArg, argList) {
-    var target = argList[0];
-    var propertyKey = argList[1];
-    var obj = ToObject(target);
-    if (isAbrupt(obj = ifAbrupt(obj))) return obj;
-    var key = ToPropertyKey(propertyKey);
-    if (isAbrupt(key = ifAbrupt(key))) return key;
-    return HasProperty(obj, key);
-};
-var ReflectObject_hasOwn = function (thisArg, argList) {
-    var target = argList[0];
-    var propertyKey = argList[1];
-    var obj = ToObject(target);
-    if (isAbrupt(obj = ifAbrupt(obj))) return obj;
-    var key = ToPropertyKey(propertyKey);
-    if (isAbrupt(key = ifAbrupt(key))) return key;
-    return HasOwnProperty(obj, key);
-};
-
-var ReflectObject_getOwnPropertyDescriptor = function (thisArg, argList) {
-    var target = argList[0];
-    var propertyKey = argList[1];
-    var obj = ToObject(target);
-    if (isAbrupt(obj = ifAbrupt(obj))) return obj;
-    var key = ToPropertyKey(propertyKey);
-    if (isAbrupt(key = ifAbrupt(key))) return key;
-    var desc = GetOwnProperty(obj, key);
-    if (isAbrupt(desc = ifAbrupt(desc))) return desc;
-    return FromPropertyDescriptor(desc);
-};
-
-var ReflectObject_get = function (thisArg, argList) {
-    var target = argList[0];
-    var propertyKey = argList[1];
-    var receiver = argList[2];
-    var obj = ToObject(target);
-    if (isAbrupt(obj = ifAbrupt(obj))) return obj;
-    var key = ToPropertyKey(propertyKey);
-    if (isAbrupt(key = ifAbrupt(key))) return key;
-    if (receiver === undefined) receiver = target;
-    return obj.Get(key, receiver);
-};
-
-var ReflectObject_set =function (thisArg, argList) {
-    var target = argList[0];
-    var propertyKey = argList[1];
-    var V = argList[2];
-    var receiver = argList[3];
-    var obj = ToObject(target);
-    if (isAbrupt(obj = ifAbrupt(obj))) return obj;
-    var key = ToPropertyKey(propertyKey);
-    if (isAbrupt(key = ifAbrupt(key))) return key;
-    if (receiver === undefined) receiver = target;
-    return callInternalSlot(SLOTS.SET, obj, key, V, receiver);
-};
-var ReflectObject_invoke = function (thisArg, argList) {
-    var target = argList[0];
-    var propertyKey = argList[1];
-    var argumentList = argList[2];
-    var receiver = argList[3];
-    var obj = ToObject(target);
-    if (isAbrupt(obj = ifAbrupt(obj))) return obj;
-    var key = ToPropertyKey(propertyKey);
-    if (isAbrupt(key = ifAbrupt(key))) return key;
-    if (receiver === undefined) receiver = target;
-    var A = CreateListFromArrayLike(argumentList);
-    return obj.Invoke(key, A, receiver);
-};
-var ReflectObject_deleteProperty = function (thisArg, argList) {
-    var target = argList[0];
-    var propertyKey = argList[1];
-    var obj = ToObject(target);
-    if (isAbrupt(obj = ifAbrupt(obj))) return obj;
-    var key = ToPropertyKey(propertyKey);
-    if (isAbrupt(key = ifAbrupt(key))) return key;
-    return callInternalSlot("Delete", obj, key);
-};
-var ReflectObject_defineProperty = function (thisArg, argList) {
-    var target = argList[0];
-    var propertyKey = argList[1];
-    var attributes = argList[2];
-    var obj = ToObject(target);
-    if (isAbrupt(obj = ifAbrupt(obj))) return obj;
-    var key = ToPropertyKey(propertyKey);
-    if (isAbrupt(key = ifAbrupt(key))) return key;
-    var desc = ToPropertyDescriptor(attributes);
-    if (isAbrupt(desc = ifAbrupt(desc))) return desc;
-    return callInternalSlot(SLOTS.DEFINEOWNPROPERTY, obj,key, desc);
-};
-var ReflectObject_enumerate = function (thisArg, argList) {
-    var target = argList[0];
-    var obj = ToObject(target);
-    if (isAbrupt(obj = ifAbrupt(obj))) return obj;
-    return callInternalSlot(SLOTS.ENUMERATE, obj);
-};
-var ReflectObject_ownKeys = function (thisArg, argList) {
-    var target = argList[0];
-    var obj = ToObject(target);
-    if (isAbrupt(obj = ifAbrupt(obj))) return obj;
-    return callInternalSlot("OwnPropertyKeys", obj);
-};
-
-
 LazyDefineBuiltinFunction(ReflectObject, "defineProperty", 2, ReflectObject_defineProperty);
 LazyDefineBuiltinFunction(ReflectObject, "deleteProperty", 3, ReflectObject_deleteProperty);
 LazyDefineBuiltinFunction(ReflectObject, "enumerate", 1, ReflectObject_enumerate);
@@ -21578,35 +22393,8 @@ LazyDefineProperty(ReflectObject, SLOTS.REALM, RealmConstructor);
 LazyDefineBuiltinFunction(ReflectObject, "set", 3, ReflectObject_set);
 LazyDefineBuiltinFunction(ReflectObject, "setPrototypeOf", 2, ReflectObject_setPrototypeOf);
 LazyDefineBuiltinConstant(ReflectObject, $$toStringTag, "Reflect");
-
-var ReflectObject_getIntrinsic = function (thisArg, argList) {
-    var intrinsic = ToString(argList[0]);
-    if (isAbrupt(intrinsic=ifAbrupt(intrinsic))) return intrinsic;
-    return getIntrinsic(intrinsic);
-};
-
 LazyDefineBuiltinFunction(ReflectObject, "getIntrinsic", 1, ReflectObject_getIntrinsic);
-
-var ReflectObject_createSelfHostingFunction = function(thisArg, argList) {
-   var parseGoal = require("parser").parseGoal;
-   var source = argList[0];
-   var realm = argList[1];
-   try {
-       var fn = parseGoal("FunctionDeclaration", source);
-   } catch (ex) {
-       return newSyntaxError( ex.message);
-   }
-   var realmObject = realm === undefined ? getRealm() : getInternalSlot(realm, "RealmObject");
-   var F = OrdinaryFunction();
-   setInternalSlot(F, SLOTS.CODE, fn.body);
-   setInternalSlot(F, SLOTS.FORMALPARAMETERS, fn.params);
-   setInternalSlot(F, SLOTS.STRICT, !!fn.strict);
-   setInternalSlot(F, SLOTS.REALM, realmObject);
-   return NormalCompletion(F);
-};
 LazyDefineBuiltinFunction(ReflectObject, "createSelfHostingFunction", 2, ReflectObject_createSelfHostingFunction);
-
-
 // ===========================================================================================================
 // IsNaN
 // ===========================================================================================================
@@ -21625,139 +22413,9 @@ IsFiniteFunction = CreateBuiltinFunction(realm, function isFinite(thisArg, argLi
     return  !(number == Infinity || number == -Infinity || number != number);
 }, 1, "isFinite");
 
-
 LazyDefineBuiltinFunction(ObjectConstructor, "getOwnPropertyDescriptors", 1, ObjectConstructor_getOwnPropertyDescriptors);
-
-// ===========================================================================================================
-// ObjectPrototype
-// ===========================================================================================================
-
 MakeConstructor(ObjectConstructor, true, ObjectPrototype);
 setInternalSlot(ObjectPrototype, SLOTS.PROTOTYPE, null);
-
-var ObjectPrototype_$$create = function (thisArg, argList) {
-    var F = thisArg;
-    var proto = GetPrototypeFromConstructor(F, INTRINSICS.OBJECTPROTOTYPE);
-    if (isAbrupt(proto = ifAbrupt(proto))) return proto;
-    return ObjectCreate(proto);
-};
-
-var ObjectPrototype_hasOwnProperty = function (thisArg, argList) {
-    var P = ToPropertyKey(argList[0]);
-    if (isAbrupt(P = ifAbrupt(P))) return P;
-    var O = ToObject(thisArg);
-    if (isAbrupt(O = ifAbrupt(O))) return O;
-    return HasOwnProperty(O, P);
-};
-
-var ObjectPrototype_isPrototypeOf = function (thisArg, argList) {
-    var V = argList[0];
-    if (Type(O) !== OBJECT) return false;
-    var O = ToObject(thisArg);
-    if (isAbrupt(O = ifAbrupt(O))) return O;
-    for (;;) {
-        V = GetPrototypeOf(V);
-        if (V == null) return false;
-        if (SameValue(O, V)) return true;
-    }
-
-};
-
-
-var ObjectPrototype_propertyIsEnumerable = function (thisArg, argList) {
-    var V = argList[0];
-    var P = ToString(V);
-    if (isAbrupt(P = ifAbrupt(P))) return P;
-    var O = ToObject(thisArg);
-    if (isAbrupt(O = ifAbrupt(O))) return O;
-    var desc = GetOwnProperty(O, P);
-    if (desc === undefined) return false;
-    return desc.enumerable;
-};
-
-var OneOfTheseTags = {
-    __proto__: null,
-    "Arguments": true,
-    "Array": true,
-    "Boolean": true,
-    "Date": true,
-    "Error": true,
-    "Function": true,
-    "JSON": true,
-    "Math": true,
-    "Number": true,
-    "RegExp": true,
-    "String": true
-};
-
-var builtinTagsByToString = {
-    "[object ArrayExoticObject]": "Array",
-    "[object ProxyExoticObject]": "Proxy",
-    "[object ArgumentsExoticObject]": "Arguments",
-    "[object OrdinaryFunction]": "Function",
-    "[object StringExoticObject]": "String"
-};
-
-
-var ObjectPrototype_toString = function toString(thisArg, argList) {
-    var i = 0;
-    if (thisArg === undefined) return "[object Undefined]";
-    if (thisArg === null) return "[object Null]";
-
-    var O = ToObject(thisArg);
-    var builtinTag, tag;
-
-    var intrToStr = O.toString();
-
-    if (builtinTag = builtinTagsByToString[intrToStr]) {}
-    else if (hasInternalSlot(O, SLOTS.SYMBOLDATA)) builtinTag = "Symbol";
-    else if (hasInternalSlot(O, SLOTS.STRINGDATA)) builtinTag = "String";
-    else if (hasInternalSlot(O, SLOTS.ERRORDATA)) builtinTag = "Error";
-    else if (hasInternalSlot(O, SLOTS.BOOLEANDATA)) builtinTag = "Boolean";
-    else if (hasInternalSlot(O, SLOTS.NUMBERDATA)) builtinTag = "Number";
-    else if (hasInternalSlot(O, SLOTS.DATEVALUE)) builtinTag = "Date";
-    else if (hasInternalSlot(O, SLOTS.REGEXPMATCHER)) builtinTag = "RegExp";
-    else if (hasInternalSlot(O, SLOTS.MATHTAG)) builtinTag = "Math";
-    else if (hasInternalSlot(O, SLOTS.JSONTAG)) builtinTag = "JSON";
-    else builtinTag = "Object";
-
-    var hasTag = HasProperty(O, $$toStringTag);
-    if (isAbrupt(hasTag = ifAbrupt(hasTag))) return hasTag;
-    if (!hasTag) tag = builtinTag;
-    else {
-        tag = Get(O, $$toStringTag);
-        if (isAbrupt(tag)) tag = NormalCompletion("???");
-        tag = unwrap(tag);
-        if (Type(tag) !== STRING) tag = "???";
-        if (OneOfTheseTags[tag] && (!SameValue(tag, builtinTag))) tag = "~" + tag;
-    }
-    return "[object " + tag + "]";
-};
-
-var ObjectPrototype_valueOf = function valueOf(thisArg, argList) {
-    var O = ToObject(thisArg);
-    return O;
-};
-
-// B.2.2.1  Object.prototype.__proto__
-
-var ObjectPrototype_get_proto = function (thisArg, argList) {
-    var O = ToObject(thisArg);
-    if (isAbrupt(O = ifAbrupt(O))) return O;
-    return callInternalSlot(SLOTS.GETPROTOTYPEOF, O);
-};
-var ObjectPrototype_set_proto = function (thisArg, argList) {
-    var proto = argList[0];
-    var O = CheckObjectCoercible(thisArg);
-    if (isAbrupt(O = ifAbrupt(O))) return O;
-    var protoType = Type(proto);
-    if (protoType !== OBJECT && protoType !== null) return proto;
-    if (Type(O) !== OBJECT) return proto;
-    var status = callInternalSlot(SLOTS.SETPROTOTYPEOF, O, proto);
-    if (isAbrupt(status = ifAbrupt(status))) return status;
-    if (status === false) return newTypeError( "__proto__: SetPrototypeOf failed.");
-    return proto;
-};
 var ObjectPrototype_proto_ = {
     __proto__:null,
     configurable: true,
@@ -21765,14 +22423,9 @@ var ObjectPrototype_proto_ = {
     get: CreateBuiltinFunction(realm, ObjectPrototype_get_proto, "get __proto__", 0),
     set: CreateBuiltinFunction(realm, ObjectPrototype_set_proto, "set __proto___", 0)
 };
-
 DefineOwnProperty(ObjectPrototype, "__proto__", ObjectPrototype_proto_);
-
 setInternalSlot(ObjectConstructor, SLOTS.CALL, ObjectConstructor_call);
 setInternalSlot(ObjectConstructor, SLOTS.CONSTRUCT, ObjectConstructor_construct);
-
-//SetFunctionName(ObjectConstructor, "Object");
-//SetFunctionLength(ObjectConstructor, 1);
 LazyDefineBuiltinFunction(ObjectConstructor, "assign", 2, ObjectConstructor_assign);
 LazyDefineBuiltinFunction(ObjectConstructor, "create", 0, ObjectConstructor_create);
 LazyDefineBuiltinFunction(ObjectConstructor, "defineProperty", 0, ObjectConstructor_defineProperty);
@@ -21790,7 +22443,6 @@ LazyDefineBuiltinFunction(ObjectConstructor, "isSealed", 1, ObjectConstructor_is
 LazyDefineBuiltinFunction(ObjectConstructor, "isFrozen", 1, ObjectConstructor_isFrozen);
 LazyDefineBuiltinFunction(ObjectConstructor, "preventExtensions", 1, ObjectConstructor_preventExtensions);
 LazyDefineBuiltinFunction(ObjectConstructor, "seal", 2, ObjectConstructor_seal);
-
 LazyDefineBuiltinFunction(ObjectPrototype, $$create, 0, ObjectPrototype_$$create);
 LazyDefineBuiltinFunction(ObjectPrototype, "hasOwnProperty", 0, ObjectPrototype_hasOwnProperty);
 LazyDefineBuiltinFunction(ObjectPrototype, "isPrototypeOf", 0, ObjectPrototype_isPrototypeOf);
@@ -21798,7 +22450,6 @@ LazyDefineBuiltinFunction(ObjectPrototype, "propertyIsEnumerable", 0, ObjectProt
 LazyDefineBuiltinFunction(ObjectPrototype, "toString", 0, ObjectPrototype_toString);
 LazyDefineBuiltinFunction(ObjectPrototype, "valueOf", 0, ObjectPrototype_valueOf);
 LazyDefineProperty(ObjectPrototype, $$toStringTag, "Object");
-
 
 // this shall be in lib/intrinsics
 LazyDefineBuiltinFunction(NotifierPrototype, "notify", 1, NotifierPrototype_notify);
@@ -21808,212 +22459,20 @@ LazyDefineBuiltinFunction(ObjectConstructor, "unobserve", 1, ObjectConstructor_u
 LazyDefineBuiltinFunction(ObjectConstructor, "deliverChangeRecords", 1, ObjectConstructor_deliverChangeRecords);
 LazyDefineBuiltinFunction(ObjectConstructor, "getNotifier", 1, ObjectConstructor_getNotifier);
 
-// ==========================rc=================================================================================
-// Function
-// ===========================================================================================================
-
-//
-// Function
-//
-
 MakeConstructor(FunctionConstructor, true, FunctionPrototype);
 setInternalSlot(FunctionPrototype, SLOTS.PROTOTYPE, ObjectPrototype);
 LazyDefineProperty(FunctionPrototype, $$toStringTag, "Function");
-
-LazyDefineBuiltinFunction(FunctionPrototype, "valueOf", 0, function valueOf(thisArg, argList) {
-    return thisArg;
-});
-
-setInternalSlot(FunctionConstructor, SLOTS.CALL, function (thisArg, argList) {
-
-    var argCount = argList.length;
-    var P = "";
-    var bodyText;
-    var firstArg, nextArg;
-
-    if (argCount === 0) bodyText = "";
-    else if (argCount === 1) bodyText = argList[0];
-    else if (argCount > 1) {
-        firstArg = argList[0];
-        P = ToString(firstArg);
-        if (isAbrupt(firstArg = ifAbrupt(firstArg))) return firstArg;
-        var k = 1;
-        while (k < argCount - 1) {
-            nextArg = argList[k];
-            nextArg = ToString(nextArg);
-            if (isAbrupt(nextArg = ifAbrupt(nextArg))) return nextArg;
-            P = P + "," + nextArg;
-            k += 1;
-        }
-        bodyText = argList[argCount - 1];
-    }
-
-    bodyText = ToString(bodyText);
-    if (isAbrupt(bodyText = ifAbrupt(bodyText))) return bodyText;
-    var parameters = parseGoal("FormalParameterList", P); // () sind fehlerhaft bei
-    var funcBody = parseGoal("FunctionBody", bodyText);
-
-
-    /* old and from july draf */
-    var boundNames = BoundNames(parameters);
-    if (!IsSimpleParameterList(parameters)) {
-        if (dupesInTheTwoLists(boundNames, VarDeclaredNames(funcBody))) return newSyntaxError( "Duplicate Identifier in Parameters and VarDeclaredNames of funcBody");
-    }
-    if (dupesInTheTwoLists(boundNames, LexicallyDeclaredNames(funcBody))) return newSyntaxError( "Duplicate Identifier in Parameters and LexicallyDeclaredNames of funcBody");
-    /* one of the few edge cases to recall static semantics */
-
-    var scope = getRealm().globalEnv;
-    var F = thisArg;
-    if (F === undefined || !hasInternalSlot(F, SLOTS.CODE)) {
-        var C = FunctionConstructor;
-        var proto = GetPrototypeFromConstructor(C, INTRINSICS.FUNCTIONPROTOTYPE);
-        if (isAbrupt(proto = ifAbrupt(proto))) return proto;
-        F = FunctionAllocate(C);
-    }
-
-    if (getInternalSlot(F, SLOTS.FUNCTIONKIND) !== "normal") return newTypeError( "function object not a 'normal' function");
-    FunctionInitialize(F, "normal", parameters, funcBody, scope, true);
-    proto = ObjectCreate();
-    var status = MakeConstructor(F);
-    if (isAbrupt(status)) return status;
-    SetFunctionName(F, "anonymous");
-    return NormalCompletion(F);
-
-});
-
-setInternalSlot(FunctionConstructor, SLOTS.CONSTRUCT, function (argList) {
-    var F = this;
-    return OrdinaryConstruct(F, argList);
-});
-
-DefineOwnProperty(FunctionConstructor, $$create, {
-    value: CreateBuiltinFunction(realm, function (thisArg, argList) {
-        var F = thisArg;
-        var proto = GetPrototypeFromConstructor(F, INTRINSICS.FUNCTIONPROTOTYPE);
-        if (isAbrupt(proto = ifAbrupt(proto))) return proto;
-        var obj = FunctionAllocate(proto);
-        return obj;
-    }),
-    enumerable: false,
-    writable: false,
-    configurable: true
-});
-
-LazyDefineProperty(FunctionPrototype, $$create, CreateBuiltinFunction(realm, function $$create(thisArg, argList) {
-    var F = thisArg;
-    return OrdinaryCreateFromConstructor(F, INTRINSICS.OBJECTPROTOTYPE);
-}));
-
-DefineOwnProperty(FunctionPrototype, "constructor", {
-    value: FunctionConstructor,
-    enumerable: false,
-    configurable: true,
-    writable: true
-});
-
-// ===
-// Function.prototype.toString uses codegen module ===>>> var codegen = require("js-codegen");
-// ====
-
-CreateDataProperty(FunctionPrototype, "toString", CreateBuiltinFunction(realm, function (thisArg, argList) {
-    var codegen = require("js-codegen");
-    var F = thisArg;
-    if (!IsCallable(F)) return newTypeError( "Function.prototype.toString only applies to functions!");
-    var name = Get(F, "name") || "anonymous";
-    var P, C;
-    P = getInternalSlot(F, SLOTS.FORMALPARAMETERS);
-    C = getInternalSlot(F, SLOTS.CODE);
-    var kind = getInternalSlot(F, SLOTS.FUNCTIONKIND);
-    var star = kind === "generator" ? "*" : "";
-    var callfn;
-    if (!C && (callfn=getInternalSlot(F, SLOTS.CALL))) {
-        var code = "// [[Builtin Function native JavaScript Code]]\r\n";
-        // createbuiltin wraps the builtin
-        if (callfn.steps) callfn = callfn.steps;
-        // setinternalslot call has no wrapper
-        // this requires a double check here
-        code += callfn.toString();
-        return code;
-    }
-    var paramString, bodyString;
-    paramString = codegen.builder.formalParameters(P);
-    if (kind === "arrow") {
-        if (Array.isArray(C)) {
-            bodyString = codegen.builder.functionBody(C);
-        } else bodyString = codegen.callBuilder(C);
-        return paramString + " => " + bodyString;
-    } else {
-        bodyString = codegen.builder.functionBody(C);
-        return "function" + star + " " + name + " " + paramString + " " + bodyString;
-    }
-}));
-
-
-DefineOwnProperty(FunctionPrototype, "apply", {
-    value: CreateBuiltinFunction(realm, function apply(thisArg, argList) {
-        var func = thisArg;
-        if (!IsCallable(func)) return newTypeError( "fproto.apply: func is not callable");
-        var T;
-        if (T !== undefined && T !== null) T = ToObject(argList[0]);
-        else T = argList[0];
-        var argArray = argList[1] || ArrayCreate(0);
-        var argList2 = CreateListFromArrayLike(argArray);
-        if (isAbrupt(argList2 = ifAbrupt(argList2))) return argList2;
-        return callInternalSlot(SLOTS.CALL, func, T, argList2);
-    }),
-    enumerable: false,
-    configurable: true,
-    writable: true
-});
-DefineOwnProperty(FunctionPrototype, "bind", {
-    value: CreateBuiltinFunction(realm, function bind(thisArg, argList) {
-        var boundTarget = thisArg;
-        var thisArgument = argList[0];
-        var listOfArguments = arraySlice(argList, 1, argList.length - 1);
-        return BoundFunctionCreate(boundTarget, thisArgument, listOfArguments);
-    }),
-    writable: true,
-    enumerable: false,
-    configurable: true
-
-});
-DefineOwnProperty(FunctionPrototype, "call", {
-    value: CreateBuiltinFunction(realm, function call(thisArg, argList) {
-        var func = thisArg;
-        if (!IsCallable(func)) return newTypeError( "fproto.call: func is not callable");
-        var T = ToObject(argList[0]);
-        var args = arraySlice(argList,1);
-        return callInternalSlot(SLOTS.CALL, func, T, args);
-    }),
-    writable: true,
-    enumerable: false,
-    configurable: true
-});
-
-DefineOwnProperty(FunctionPrototype, $$hasInstance, {
-    value: CreateBuiltinFunction(realm, function $$hasInstance(thisArg, argList) {
-        var V = argList[0];
-        var F = thisArg;
-        return OrdinaryHasInstance(F, V);
-    }, 1, "[Symbol.hasInstance]"),
-    writable: true,
-    enumerable: false,
-    configurable: true
-
-});
-
-var FunctionPrototype_toMethod = function (thisArg, argList) {
-    var superBinding = argList[0];
-    var methodName = argList[1];
-    if (!IsCallable(thisArg)) return newTypeError( "this value is not callable");
-    if (Type(superBinding) !== OBJECT) return newTypeError( "superBinding is not an object");
-    if (methodName !== undefined) {
-        methodName = ToPropertyKey(methodName);
-        if (isAbrupt(methodName = ifAbrupt(methodName))) return methodName;
-    }
-    return CloneMethod(thisArg, superBinding, methodName);
-};
-
+LazyDefineBuiltinFunction(FunctionPrototype, "valueOf", 0, FunctionPrototype_valueOf);
+setInternalSlot(FunctionConstructor, SLOTS.CALL, FunctionPrototype_call);
+setInternalSlot(FunctionConstructor, SLOTS.CONSTRUCT, FunctionConstructor_construct);
+LazyDefineProperty(FunctionConstructor, $$create, CreateBuiltinFunction(realm, FunctionConstructor_$$create, 1, "[Symbol.create]"));
+LazyDefineProperty(FunctionPrototype, $$create, CreateBuiltinFunction(realm, FunctionPrototype_$$create, 1, "[Symbol.create]"));
+LazyDefineProperty(FunctionPrototype, "constructor", FunctionConstructor);
+LazyDefineBuiltinFunction(FunctionPrototype, "toString", 0, FunctionPrototype_toString);
+LazyDefineBuiltinFunction(FunctionPrototype, "apply", 1, FunctionPrototype_apply);
+LazyDefineBuiltinFunction(FunctionPrototype, "bind", 1, FunctionPrototype_bind);
+LazyDefineBuiltinFunction(FunctionPrototype, "call", 1, FunctionPrototype_call);
+LazyDefineProperty(FunctionPrototype, $$hasInstance, CreateBuiltinFunction(realm, FunctionPrototype_$$hasInstance, 1, "[Symbol.hasInstance]"));
 LazyDefineBuiltinFunction(FunctionPrototype, "toMethod", 1, FunctionPrototype_toMethod /*, realm  !!!*/);
 
 
@@ -22455,168 +22914,9 @@ setInternalSlot(JSONObject, SLOTS.PROTOTYPE, ObjectPrototype);
 setInternalSlot(JSONObject, SLOTS.JSONTAG, true);
 
 
-var PromiseConstructor_call = function (thisArg, argList) {
-    var executor = argList[0];
-    var promise = thisArg;
-    if (Type(promise) !== OBJECT) return newTypeError( "promise is not an object");
-    if (!IsCallable(executor)) return newTypeError( "executor argument is not a callable");
-    if (!hasInternalSlot(promise, SLOTS.PROMISESTATE)) return newTypeError( "promise has no PromiseState Property");
-    if (getInternalSlot(promise, SLOTS.PROMISESTATE) !== undefined) return newTypeError( "promise´s PromiseState is not undefined");
-    return InitializePromise(promise, executor);
-};
-var PromiseConstructor_Construct = function (argList) {
-    return Construct(this, argList);
-};
-var PromiseConstructor_$$create = function (thisArg, argList) {
-    return AllocatePromise(thisArg);
-};
-var PromiseConstructor_resolve = function (thisArg, argList) {
-    var x = argList[0];
-    var C = thisArg;
-    if (IsPromise(x)) {
-        var constructor = getInternalSlot(x, SLOTS.PROMISECONSTRUCTOR);
-        if (SameValue(x, C)) return x;
-    }
-    var promiseCapability = NewPromiseCapability(C);
-    if (isAbrupt(promiseCapability = ifAbrupt(promiseCapability))) return promiseCapability;
-    var resolveResult = callInternalSlot(SLOTS.CALL, promiseCapability.Resolve, undefined, [x]);
-    if (isAbrupt(resolveResult = ifAbrupt(resolveResult))) return resolveResult;
-    return NormalCompletion(promiseCapability.Promise);
-};
-var PromiseConstructor_reject = function (thisArg, argList) {
-    var r = argList[0];
-    var C = thisArg;
-    var promiseCapability = NewPromiseCapability(C);
-    if (isAbrupt(promiseCapability = ifAbrupt(promiseCapability))) return promiseCapability;
-    var rejectResult = callInternalSlot(SLOTS.CALL, promiseCapability.Reject, undefined, [r]);
-    if (isAbrupt(rejectResult = ifAbrupt(rejectResult))) return rejectResult;
-    return NormalCompletion(promiseCapability.Promise)
-};
-var PromiseConstructor_cast = function (thisArg, argList) {
-    var x = argList[0];
-    var C = thisArg;
-    if (IsPromise(x)) {
-        var constructor = getInternalSlot(x, SLOTS.PROMISECONSTRUCTOR);
-        if (SameValue(constructor, C)) return NormalCompletion(x);
-    }
-    var promiseCapability = NewPromiseCapability(C);
-    if (isAbrupt(promiseCapability = ifAbrupt(promiseCapability))) return promiseCapability;
-    var resolveResult = callInternalSlot(SLOTS.CALL, promiseCapability.Resolve, undefined, [x]);
-    if (isAbrupt(resolveResult = ifAbrupt(resolveResult))) return resolveResult;
-    return NormalCompletion(promiseCapability.Promise);
-};
-var PromiseConstructor_race = function (thisArg, argList) {
-    var iterable = argList[0];
-    var C = thisArg;
-    var promiseCapability = NewPromiseCapability(C);
-    if (isAbrupt(promiseCapability = ifAbrupt(promiseCapability))) return promiseCapability;
-    var iterator = GetIterator(iterable);
-    iterator = IfAbruptRejectPromise(iterator, promiseCapability);
-    if (isAbrupt(iterator)) return iterator;
-    for (;;) {
-        var next = IteratorStep(iterator);
-        if (isAbrupt(next = ifAbrupt(next))) return next;
-        if ((next = IfAbruptRejectPromise(next, promiseCapability)) &&isAbrupt(next)) return next;
-        if (next === false) return NormalCompletion(promiseCapability.Promise);
-        var nextValue = IteratorValue(next);
-        if ((nextValue=IfAbruptRejectPromise(nextValue, promiseCapability)) && isAbrupt(nextValue)) return nextValue;
-        var nextPromise = Invoke(C, "cast", [nextValue]);
-        if ((nextPromise=IfAbruptRejectPromise(nextPromise, promiseCapability)) && isAbrupt(nextPromise)) return nextPromise;
-        var result = Invoke(nextPromise, "then", [promiseCapability.Resolve, promiseCapability.Reject]);
-        if ((result = IfAbruptRejectPromise(result, promiseCapability)) && isAbrupt(result)) return result;
-    }
 
-};
-function makePromiseAllResolveElementsFunction () {
-    var PromiseAllResolveElements_call = function (thisArg, argList) {
-        var x = argList[0];
-        var index = getInternalSlot(F, SLOTS.INDEX);
-        var values = getInternalSlot(F, SLOTS.VALUES);
-        var promiseCapability = getInternalSlot(F, SLOTS.CAPABILITY);
-        var remainingElementsCount = getInternalSlot(F, SLOTS.REMAININGELEMENTS);
-        var result = CreateDataProperty(values, ToString(index), x);
-        if ((result = IfAbruptRejectPromise(result, promiseCapability)) && isAbrupt(result)) return result;
-        remainingElementsCount.value -= 1;
-        if (remainingElementsCount.value === 0) {
-            return callInternalSlot(SLOTS.CALL, promiseCapability.Resolve, undefined, [values]);
-        }
-        return NormalCompletion(undefined);
-    };
-    //var F = CreateBuiltinFunction(getRealm(), "Promise.all Resolve Elements", 1, PromiseAllResolveElements_call);
-    var F = OrdinaryFunction();
-    setInternalSlot(F, SLOTS.CALL, PromiseAllResolveElements_call);
-    return F;
-}
-var PromiseConstructor_all = function (thisArg, argList) {
-    var iterable = argList[0];
-    var C = thisArg;
-    var promiseCapability = NewPromiseCapability(C);
-    if (isAbrupt(promiseCapability = ifAbrupt(promiseCapability))) return promiseCapability;
-    var iterator = GetIterator(iterable);
-    if ((iterator=IfAbruptRejectPromise(iterator, promiseCapability)) && isAbrupt(iterator)) return iterator;
-    var values = ArrayCreate(0);
-    var remainingElementsCount = { value: 0 };
-    var index = 0;
-    for (;;) {
-        var next = IteratorStep(iterator);
-        if (isAbrupt(next = ifAbrupt(next))) return next;
-        if ((next=IfAbruptRejectPromise(next, promiseCapability)) && isAbrupt(next)) return next;
-        if (next === false) {
-            if (index == 0) {
-                var resolveResult = callInternalSlot(SLOTS.CALL, promiseCapability.Resolve, undefined, [values]);
-                if (isAbrupt(resolveResult = ifAbrupt(resolveResult))) return resolveResult;
-            }
-            return NormalCompletion(promiseCapability.Promise)
-        }
-        var nextValue = IteratorValue(next);
-        if (isAbrupt(nextValue = IfAbruptRejectPromise(nextValue, promiseCapability)))  return nextValue;
-        var nextPromise = Invoke(C, "cast", [nextValue]);
-        if (isAbrupt(nextPromise=IfAbruptRejectPromise(nextPromise, promiseCapability))) return nextPromise;
-        var resolveElement = makePromiseAllResolveElementsFunction();
-        setInternalSlot(resolveElement, SLOTS.INDEX, index);
-        setInternalSlot(resolveElement, SLOTS.VALUES, values);
-        setInternalSlot(resolveElement, SLOTS.CAPABILITY, resolveElement, promiseCapability);
-        setInternalSlot(resolveElement, SLOTS.REMAININGELEMENTS, remainingElementsCount);
-        var result = Invoke(nextPromise, "then", [resolveElement, promiseCapability.Reject]);
-        if (isAbrupt(result = IfAbruptRejectPromise(result, promiseCapability))) return result;
-        index = index + 1;
-        remainingElementsCount.value += 1;
-    }
-};
-var PromisePrototype_then = function (thisArg, argList) {
-    var onFulfilled = argList[0];
-    var onRejected = argList[1];
-    var promise = thisArg;
-    if (!IsPromise(promise)) return newTypeError( "then: this is not a promise object");
-    if (onFulfilled === undefined || onFulfilled === null) onFulfilled = makeIdentityFunction();
-    if (onRejected === undefined || onRejected === null) onRejected = makeThrowerFunction();
-    var C = Get(promise, "constructor");
-    if (isAbrupt(C = ifAbrupt(C))) return C;
 
-    var promiseCapability = NewPromiseCapability(C);
-    if (isAbrupt(promiseCapability = ifAbrupt(promiseCapability))) return promiseCapability;
 
-    var resolveReaction = PromiseReaction(promiseCapability, onFulfilled);
-    var rejectReaction = PromiseReaction(promiseCapability, onRejected);
-
-    var PromiseState = getInternalSlot(promise, SLOTS.PROMISESTATE);
-    if (PromiseState === "pending") {
-        getInternalSlot(promise, SLOTS.PROMISERESOLVEREACTIONS).push(resolveReaction);
-        getInternalSlot(promise, SLOTS.PROMISEREJECTREACTIONS).push(rejectReaction);
-
-    } else if (PromiseState === "fulfilled") {
-        var resolution = getInternalSlot(promise, SLOTS.PROMISERESULT);
-        EnqueueTask("PromiseTasks", PromiseReactionTask(), [resolveReaction, resolution]);
-    } else if (PromiseState === "rejected") {
-        var reason = getInternalSlot(promise, SLOTS.PROMISERESULT);
-        EnqueueTask("PromiseTasks", PromiseReactionTask(), [rejectReaction, reason]);
-    }
-    return NormalCompletion(promiseCapability.Promise);
-};
-var PromisePrototype_catch = function (thisArg, argList) {
-    var onRejected = argList[0];
-    return Invoke(thisArg, "then", [undefined, onRejected]);
-};
 //SetFunctionName(PromiseConstructor, SLOTS.PROMISE);
 MakeConstructor(PromiseConstructor, true, PromisePrototype);
 setInternalSlot(PromiseConstructor, SLOTS.CALL, PromiseConstructor_call);
@@ -22632,302 +22932,6 @@ LazyDefineProperty(PromisePrototype, "catch", CreateBuiltinFunction(realm, Promi
 LazyDefineProperty(PromisePrototype, "constructor", PromiseConstructor);
 LazyDefineProperty(PromisePrototype, $$toStringTag, SLOTS.PROMISE);
 
-
-/*
-    move into lib/api/promise.js
- */
-
-function PromiseNew (executor) {
-    var promise = AllocatePromise(getIntrinsic(INTRINSICS.PROMISE));
-    return InitializePromise(promise, executor);
-}
-function PromiseBuiltinCapability() {
-    var promise = AllocatePromise(getIntrinsic(INTRINSICS.PROMISE));
-    return CreatePromiseCapabilityRecord(promise, getIntrinsic(INTRINSICS.PROMISE));
-}
-function PromiseOf(value) {
-    var capability = NewPromiseCapability();
-    if (isAbrupt(capability = ifAbrupt(capability))) return capability;
-    var resolveResult = callInternalSlot(SLOTS.CALL, capability.Resolve, undefined, [value]);
-    if (isAbrupt(resolveResult = ifAbrupt(resolveResult))) return resolveResult;
-    return NormalCompletion(capability.Promise);
-}
-function PromiseCapability(promise, resolve, reject) {
-    var pc = Object.create(PromiseCapability.prototype);
-    pc.Promise = promise;
-    pc.Resolve = resolve;
-    pc.Reject = reject;
-    return pc;
-}
-PromiseCapability.prototype.toString = function () {
-    return "[object PromiseCapability]";
-};
-function makePromiseReaction(capabilites, handler) {
-    return PromiseReaction(capabilites, handler);
-}
-function PromiseReaction(caps, hdl) {
-    var pr = Object.create(PromiseReaction.prototype);
-    pr.Capability = caps;
-    pr.Handler = hdl;
-    return pr;
-}
-PromiseReaction.prototype.toString = function () {
-    return "[object PromiseReaction]";
-};
-function UpdatePromiseFromPotentialThenable(x, promiseCapability) {
-    if (Type(x) !== OBJECT) return NormalCompletion("not a thenable");
-    var then = Get(x, "then");
-    if (isAbrupt(then = ifAbrupt(then))) {
-        var rejectResult = callInternalSlot(SLOTS.CALL, promiseCapability.Reject, undefined, [then.value]);
-        if (isAbrupt(rejectResult = ifAbrupt(rejectResult))) return rejectResult;
-        return NormalCompletion(null);
-    }
-    if (!IsCallable(then)) return NormalCompletion("not a thenable");
-    var thenCallResult = callInternalSlot(SLOTS.CALL, then, x, [promiseCapability.Resolve, promiseCapability.Reject]);
-    if (isAbrupt(thenCallResult = ifAbrupt(thenCallResult))) {
-        rejectResult = callInternalSlot(SLOTS.CALL, promiseCapability.Reject, undefined, [thenCallResult.value]);
-        if (isAbrupt(rejectResult = ifAbrupt(rejectResult))) return rejectResult;
-    }
-    return NormalCompletion(null);
-}
-function TriggerPromiseReactions(reactions, argument) {
-    if (Array.isArray(reactions)) {
-        for (var i = 0, j = reactions.length; i < j; i++) {
-            var reaction = reactions[i];
-            EnqueueTask("PromiseTasks", PromiseReactionTask(), [reaction, argument])
-        }
-	}
-    return NormalCompletion(undefined);
-}
-function PromiseReactionTask() {
-    var F;
-    var PromiseReactionTask_call = function (thisArg, argList) {
-        var reaction = argList[0];
-        var argument = argList[1];
-        Assert(reaction && reaction.Capability && reaction.Handler, "reaction must be a PromiseReaction record");
-        var promiseCapability = reaction.Capability;
-        var handler = reaction.Handler;
-        var PromiseTaskQueue = getTasks(getRealm(), SLOTS.PROMISE);
-        var handlerResult = callInternalSlot(SLOTS.CALL, handler, undefined, [argument]);
-        if (isAbrupt(handlerResult = ifAbrupt(handlerResult))) {
-            var status = callInternalSlot(SLOTS.CALL, promiseCapability.Reject, undefined, [handlerResult.value]);
-            return NextTask(status, PromiseTaskQueue);
-        }
-        status = callInternalSlot(SLOTS.CALL, promiseCapability.Resolve, undefined, [handlerResult]);
-        return NextTask(status, PromiseTaskQueue);
-    };
-    F = CreateBuiltinFunction(getRealm(), PromiseReactionTask_call, "PromiseReactionTask", 2);
-    return F;
-}
-function IfAbruptRejectPromise(value, capability) {
-    if (isAbrupt(value=ifAbrupt(value))) {
-        var rejectedResult = callInternalSlot(SLOTS.CALL, capability.Reject, undefined, [value.value]);
-        if (isAbrupt(rejectedResult = ifAbrupt(rejectedResult))) return rejectedResult;
-        return NormalCompletion(capability.Promise);
-    }
-    return value;
-}
-function makePromiseRejectFunction() {
-    var F = OrdinaryFunction();
-    SetFunctionName(F, "reject");
-    SetFunctionLength(F, 1);
-    var PromiseRejectFunction_call = function (thisArg, argList) {
-        Assert(Type(getInternalSlot(F, SLOTS.PROMISE)) === OBJECT, "[[Promise]] has to be an object");
-        var reason = argList[0];
-        var promise = getInternalSlot(F, SLOTS.PROMISE);
-        var alreadyResolved = getInternalSlot(F, SLOTS.ALREADYRESOLVED);
-        if (alreadyResolved.value === true) return NormalCompletion(undefined);
-        alreadyResolved.value = true;
-        return RejectPromise(promise, reason);
-    };
-    setInternalSlot(F, SLOTS.CALL, PromiseRejectFunction_call);
-    return F;
-}
-function makePromiseResolveFunction() {
-    var F = OrdinaryFunction();
-    SetFunctionName(F, "resolve");
-    SetFunctionLength(F, 1);
-
-    var PromiseResolveFunction_call = function (thisArg, argList) {
-        Assert(Type(getInternalSlot(F, SLOTS.PROMISE)) === OBJECT, "[[Promise]] has to be an object");
-        var resolution = argList[0];
-        var promise = getInternalSlot(F, SLOTS.PROMISE);
-        var alreadyResolved = getInternalSlot(F, SLOTS.ALREADYRESOLVED);
-        alreadyResolved.value = true;
-        if (SameValue(resolution, promise)) {
-            var selfResolutionError = newTypeError( "self resolution handler");
-            return RejectPromise(promise, selfResolutionError);
-        }
-        if (Type(resolution) !== OBJECT) {
-            return FulfillPromise(promise, resolution);
-        }
-        var then = Get(resolution, "then");
-        if (isAbrupt(then=ifAbrupt(then))) {
-            return RejectPromise(promise, then.value);
-        }
-        if (!IsCallable(then)) {
-            return FulfillPromise(promise, resolution);
-        }
-        var resolvingFunctions = CreateResolvingFunctions(promise);
-        var thenCallResult = callInternalSlot(SLOTS.CALL, then, resolution, [resolvingFunctions.Resolve, resolvingFunctions.Reject]);
-
-        if (isAbrupt(thenCallResult=ifAbrupt(thenCallResult))) {
-            return callInternalSlot(SLOTS.CALL, resolvingFunctions.Reject, undefined, [thenCallResult.value]);
-        }
-
-        return NormalCompletion(thenCallResult);
-
-    };
-    setInternalSlot(F, SLOTS.CALL, PromiseResolveFunction_call);
-    return F;
-}
-function CreateResolvingFunctions (promise) {
-    var alreadyResolved = {value:false};
-    var resolve = makePromiseResolveFunction();
-    setInternalSlot(resolve, SLOTS.PROMISE, promise);
-    setInternalSlot(resolve, SLOTS.ALREADYRESOLVED, alreadyResolved);
-    var reject = makePromiseRejectFunction();
-    setInternalSlot(reject, SLOTS.PROMISE, promise);
-    setInternalSlot(reject, SLOTS.ALREADYRESOLVED, alreadyResolved);
-    return { Resolve: resolve, Reject: reject };
-}
-function FulfillPromise (promise, value) {
-    Assert(getInternalSlot(promise, SLOTS.PROMISESTATE) === "pending", "[[PromiseState]] must be pending");
-    var reactions = getInternalSlot(promise, SLOTS.PROMISERESOLVEREACTIONS);
-    setInternalSlot(promise, SLOTS.PROMISERESULT, value);
-    setInternalSlot(promise, SLOTS.PROMISERESOLVEREACTIONS, []);
-    setInternalSlot(promise, SLOTS.PROMISEREJECTREACTIONS, []);
-    setInternalSlot(promise, SLOTS.PROMISESTATE, "fulfilled");
-    return TriggerPromiseReactions(reactions, value);
-}
-function RejectPromise (promise, reason) {
-    Assert(getInternalSlot(promise, SLOTS.PROMISESTATE) === "pending", "[[PromiseState]] must not be pending");
-    var reactions = getInternalSlot(promise, SLOTS.PROMISEREJECTREACTIONS);
-    setInternalSlot(promise, SLOTS.PROMISERESULT, reason);
-    setInternalSlot(promise, SLOTS.PROMISERESOLVEREACTIONS, []);
-    setInternalSlot(promise, SLOTS.PROMISEREJECTREACTIONS, []);
-    setInternalSlot(promise, SLOTS.PROMISESTATE, "rejected");
-    return TriggerPromiseReactions(reactions, reason);
-}
-function NewPromiseCapability(C) {
-    if (!IsConstructor(C)) return newTypeError( "C is no constructor");
-    // Assertion Step 2 missing 25.4.3.1
-    var promise = CreateFromConstructor(C);
-    if (isAbrupt(promise = ifAbrupt(promise))) return promise;
-    return CreatePromiseCapabilityRecord(promise, C);
-}
-function CreatePromiseCapabilityRecord(promise, constructor) {
-    var promiseCapability = PromiseCapability(promise, undefined, undefined);
-    var executor = GetCapabilitiesExecutor();
-    setInternalSlot(executor, SLOTS.CAPABILITY, promiseCapability);
-    var constructorResult = callInternalSlot(SLOTS.CALL, constructor, promise, [executor]);
-    if (isAbrupt(constructorResult = ifAbrupt(constructorResult))) return constructorResult;
-    if (!IsCallable(promiseCapability.Resolve)) return newTypeError( "capability.[[Resolve]] is not a function");
-    if (!IsCallable(promiseCapability.Reject)) return newTypeError( "capability.[[Reject]] is not a function");
-    if (Type(constructorResult) === OBJECT && (SameValue(promise, constructorResult) === false)) return newTypeError("constructorResult is not the same as promise");
-    return promiseCapability;
-}
-function GetCapabilitiesExecutor () {
-    var F = OrdinaryFunction();
-    var GetCapabilitiesExecutor_call = function (thisArg, argList) {
-        var resolve = argList[0];
-        var reject = argList[1];
-        var promiseCapability = getInternalSlot(F, SLOTS.CAPABILITY);
-        Assert(promiseCapability !== undefined, "executor has to have a capability slot");
-        if (promiseCapability.Resolve !== undefined) return newTypeError( "promiseCapability has to have some undefined fields");
-        if (promiseCapability.Reject !== undefined) return newTypeError( "promiseCapability has to have some undefined fields");
-        promiseCapability.Resolve = resolve;
-        promiseCapability.Reject = reject;
-        return NormalCompletion(undefined);
-    };
-    setInternalSlot(F, SLOTS.CALL, GetCapabilitiesExecutor_call);
-    return F;
-}
-function InitializePromise(promise, executor) {
-    Assert(hasInternalSlot(promise, SLOTS.PROMISESTATE) && (getInternalSlot(promise, SLOTS.PROMISESTATE) === undefined), "InitializePromise: PromiseState doesnt exist or isnt undefined");
-    Assert(IsCallable(executor), "executor has to be callable");
-    setInternalSlot(promise, SLOTS.PROMISESTATE, "pending");
-    setInternalSlot(promise, SLOTS.PROMISERESOLVEREACTIONS, []);
-    setInternalSlot(promise, SLOTS.PROMISEREJECTREACTIONS, []);
-    var resolvingFunctions = CreateResolvingFunctions(promise);
-    var completion = callInternalSlot(SLOTS.CALL, executor, undefined, [resolvingFunctions.Resolve, resolvingFunctions.Reject]);
-    if (isAbrupt(completion=ifAbrupt(completion))) {
-        var status = callInternalSlot(SLOTS.CALL, resolvingFunctions.Reject, undefined, [completion.value]);
-        if (isAbrupt(status)) return status;
-    }
-    return NormalCompletion(promise);
-}
-function AllocatePromise(constructor) {
-    var obj = OrdinaryCreateFromConstructor(constructor, INTRINSICS.PROMISEPROTOTYPE, [
-        SLOTS.PROMISESTATE,
-        SLOTS.PROMISECONSTRUCTOR,
-        SLOTS.PROMISERESULT,
-        SLOTS.PROMISERESOLVEREACTIONS,
-        SLOTS.PROMISEREJECTREACTIONS
-    ]);
-    setInternalSlot(obj, "toString", function () {
-            return "[object PromiseExoticObject]";
-    }); // all tostrings will be removed when typed memory comes (there is no tostring but a serialisation)
-    setInternalSlot(obj, SLOTS.PROMISECONSTRUCTOR, constructor);
-    return obj;
-}
-function IsPromise(x) {
-    if (Type(x) !== OBJECT) return false;
-    if (!hasInternalSlot(x, SLOTS.PROMISESTATE)) return false;
-    return getInternalSlot(x, SLOTS.PROMISESTATE) !== undefined;
-}
-function makeIdentityFunction () {
-    var F = OrdinaryFunction();
-    var Identity_call = function (thisArg, argList) {
-        var x = argList[0];
-        return NormalCompletion(x);
-    };
-    setInternalSlot(F, SLOTS.CALL, Identity_call);
-    SetFunctionName(F, "IdentityFunction");
-    SetFunctionLength(F, 1);
-    return F;
-}
-function makeResolutionHandlerFunction () {
-    var handler = OrdinaryFunction();
-    var handler_call = function (thisArg, argList) {
-        var x = argList[0];
-        var promise = getInternalSlot(handler, SLOTS.PROMISE);
-        var fulfillmentHandler = getInternalSlot(handler, SLOTS.FULFILLMENTHANDLER);
-        var rejectionHandler = getInternalSlot(handler, SLOTS.REJECTIONHANDLER);
-        if (SameValue(x, promise)) {
-            var selfResolutionError = newTypeError( "selfResolutionError");
-            return callInternalSlot(SLOTS.CALL, rejectionHandler, undefined, [selfResolutionError]);
-        }
-        var C = getInternalSlot(promise, SLOTS.PROMISECONSTRUCTOR);
-        var promiseCapability = NewPromiseCapability(C);
-        if (isAbrupt(promiseCapability = ifAbrupt(promiseCapability))) return promiseCapability;
-        var updateResult = UpdatePromiseFromPotentialThenable(x, promiseCapability);
-        if (isAbrupt(updateResult = ifAbrupt(updateResult))) return updateResult;
-        if (updateResult !== "not a thenable") {
-            return Invoke(promiseCapability.Promise, "then", [fulfillmentHandler, rejectionHandler]);
-        }
-        return callInternalSlot(SLOTS.CALL, fulfillmentHandler, undefined, [x]);
-    };
-    setInternalSlot(handler, SLOTS.CALL, handler_call);
-    return handler;
-}
-function makeThrowerFunction () {
-    var F = OrdinaryFunction();
-    var ThrowerFunction_call = function (thisArg, argList) {
-        var e = argList[0];
-        return Completion("throw", e, empty);
-    };
-    setInternalSlot(F, SLOTS.CALL, ThrowerFunction_call);
-    SetFunctionName(F, "ThrowerFunction");
-    SetFunctionLength(F, 1);
-    return F;
-}
-function PromiseAll(promiseList) {
-}
-function PromiseCatch(promise, rejectedAction) {
-}
-function PromiseThen(promise, resolvedAction, rejectedAction) {
-}
 // ===========================================================================================================
 // Regular Expressiong	
 // ===========================================================================================================
@@ -24645,11 +24649,7 @@ var StructTypeConstructor_$$create = function (thisArg, argList) {
 setInternalSlot(StructTypeConstructor, SLOTS.CALL, StructTypeConstructor_Call);
 setInternalSlot(StructTypeConstructor, SLOTS.CONSTRUCT, StructTypeConstructor_Construct);
 LazyDefineBuiltinFunction(StructTypePrototype, $$create, 1, StructTypeConstructor_$$create)
-
 // StructType.prototype
-
-
-
 // Type.prototype
 LazyDefineAccessor(TypePrototype, "prototype", TypePrototypePrototype_get);
 LazyDefineBuiltinFunction(TypePrototype, "arrayType", 1, TypePrototype_arrayType);
