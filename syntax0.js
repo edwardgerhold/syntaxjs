@@ -553,6 +553,8 @@ define("languages.de_DE", function (require, exports) {
     exports.S_NOT_AN_OBJECT = "%s ist kein Object";
 
     exports.S_HAS_NO_S = "%s hat kein %s";
+    
+    exports.S_IS_FROZEN = "%s ist bereits eingefroren.";
 
     exports.S_NOT_UNDEFINED = "%s ist nicht undefined."
     exports.S_NOT_COMPLETE = "%s hat nicht alle intrinsic properties."
@@ -686,6 +688,10 @@ define("languages.en_US", function (require, exports) {
         exports.S_NOT_COMPLETE = "%s is not complete with all intrinsic properties."
 
     exports.S_HAS_NO_S = "%s has no %s";
+    
+    
+    exports.S_IS_FROZEN = "%s is frozen.";
+    
 
     // Arrays
     exports.CREATEDATAPROPERTY_FAILED = "CreateDataProperty failed but shouldn´t."
@@ -4679,6 +4685,9 @@ define("parser", function () {
     var tables = require("tables");
     var tokenize = require("tokenizer").tokenizeIntoArray; // around one return nextToken() to go to replace
 
+    var i18n = require("i18n");
+    var format = i18n.format;
+
     var Contains = require("earlyerrors").Contains;
     var SymbolTable = require("symboltable").SymbolTable;
     var BoundNames = require("slower-static-semantics").BoundNames;
@@ -4871,10 +4880,10 @@ define("parser", function () {
         return work(node);
     }
     function rotate_binexps(node) {
-	if (node.right) {
-    	    var tmp,
-            prec = OperatorPrecedence[node.operator],
-            rPrec = OperatorPrecedence[node.right.operator] || Infinity;
+        if (node.right) {
+            var tmp,
+                prec = OperatorPrecedence[node.operator],
+                rPrec = OperatorPrecedence[node.right.operator] || Infinity;
             if (prec > rPrec) {
                 tmp = node;
                 node = node.right;
@@ -5101,7 +5110,7 @@ define("parser", function () {
             case "VariableDeclaration":
                 return {type:type,_id_:++nodeId,kind:undefined,declarations:undefined,loc:undefined,extras:undefined};
             case "VariableDeclarator":
-               return {type:type,_id_:++nodeId,kind:undefined,id:undefined,init:undefined};
+                return {type:type,_id_:++nodeId,kind:undefined,id:undefined,init:undefined};
             case "FunctionDeclaration":
             case "FunctionExpression":
             case "GeneratorDeclaration":
@@ -5429,7 +5438,7 @@ define("parser", function () {
     function StrictFormalParameters() {
         return this.FormalParameterList.apply(this, arguments);
     }
-    
+
     function ComputedPropertyName() {
         var propertyName;
         if (v === "[") {
@@ -5741,7 +5750,7 @@ define("parser", function () {
                     if (v === "...") arg = this.SpreadExpression();
                     else arg = this.AssignmentExpression();
                     if (arg)
-                    args.push(arg);
+                        args.push(arg);
 
                     if (v === ",") match(",");
                     else if (v != ")" && v != undefined) throw new SyntaxError("illegal argument list"+atLineCol());
@@ -6162,7 +6171,6 @@ define("parser", function () {
         if (v === "var" || v === "let" || v === "const") {
 
             if (v == "const" && lkhdVal == "class") {
-                match("const");
                 return this.ConstClassDeclaration();
             }
 
@@ -6190,6 +6198,7 @@ define("parser", function () {
 
 
     function ConstClassDeclaration() {
+        match("const");
         return this.ClassDeclaration(false, true);
     }
 
@@ -6201,12 +6210,12 @@ define("parser", function () {
             node.id = null;
             node.strict = true;
             node.expression = !! isExpr;
-            if (isConst) node.const = true;
+            node.const = !! isConst;
             node.extends = null;
             node.elements = [];
-            
+
             pushStrict(true);
-            
+
             match("class");
             var id = this.Identifier();
             node.id = id.name;
@@ -6220,7 +6229,7 @@ define("parser", function () {
                 node.elements.push(m);
             }
             match("}");
-            
+
             popStrict();
             if (compile) return compiler(node);
             return node;
@@ -6236,8 +6245,8 @@ define("parser", function () {
         var isGetter = false;
         var isSetter = false;
         var specialMethod = false;
-        
-        
+
+
         if (v === "}") return null; // end of the class body, or the object body
 
         l1 = loc.start;
@@ -6246,8 +6255,8 @@ define("parser", function () {
             if (!isObjectMethod) match(";");
             else throw new SyntaxError("invalid ; in object literal");
         }
-        
-        
+
+
         if (v === "static") {
             if (!isObjectMethod) {
                 isStaticMethod = true;
@@ -6255,7 +6264,7 @@ define("parser", function () {
             } else throw new SyntaxError("static is not allowed in objects");
         }
 
-        
+
         if (v === "*") {
             isGenerator = true;
             match(v);
@@ -6271,25 +6280,25 @@ define("parser", function () {
 
 
         node = Node("MethodDefinition");
-        
+
         nodeStack.push(currentNode);
         currentNode = node;
 
 
         if (computedPropertyName) {
-    	    node.id = computedPropertyName;
-    	    node.computed = true;
+            node.id = computedPropertyName;
+            node.computed = true;
         } else if (v =="[") {
-    	    node.id = this.ComputedPropertyName();
-    	    node.computed = true;
-    	} else {
-    	    node.id = this.PropertyKey();
-	}
-    	
+            node.id = this.ComputedPropertyName();
+            node.computed = true;
+        } else {
+            node.id = this.PropertyKey();
+        }
+
         if (isStrict && ForbiddenArgumentsInStrict[node.id.name]) throw new SyntaxError(node.id.name + " is not a valid method identifier in strict mode");
         node.generator = isGenerator;
         if (!isObjectMethod) node.static = isStaticMethod;
-        
+
         if (isGetter) node.kind = "get";
         else if (isSetter) node.kind = "set";
 
@@ -6578,7 +6587,7 @@ define("parser", function () {
             if (compile) return compiler(node);
             return node;
         }
-        return null; 
+        return null;
     }
     function ContinueStatement() {
         var node, l1, l2;
@@ -6984,7 +6993,7 @@ define("parser", function () {
 
         if (!node && (v === "function")) {
             if (isStrict)
-            throw new SyntaxError("FunctionDeclarations are not allowed outside of the Top-Level in strict mode");
+                throw new SyntaxError("FunctionDeclarations are not allowed outside of the Top-Level in strict mode");
             else node = this.FunctionDeclaration();
         }
 
@@ -7248,9 +7257,9 @@ define("parser", function () {
         if (v === ";") {
             node = Node("EmptyStatement");
             node.loc = makeLoc(loc.start, loc.end);
-        //  dumpExtras2(node, "before");
+            //  dumpExtras2(node, "before");
             match(";");
-         //   dumpExtras2(node, "after");
+            //   dumpExtras2(node, "after");
             if (compile) return compiler(node);
             return node;
         }
@@ -9396,7 +9405,7 @@ SLOTS.REALMRECORD = "RealmRecord";
 // observe
 SLOTS.NOTIFIER = "Notifier";
 SLOTS.CHANGEOBSERVERS = "ChangeObservers";
-SLOTS.ACTIVECHANGE = "ActiveChange";
+SLOTS.ACTIVECHANGES = "ActiveChanges";
 SLOTS.TARGET = "Target";
 SLOTS.PENDINGCHANGERECORDS = "PendingChangeRecords";
 // Generator
@@ -9659,7 +9668,8 @@ function CodeRealm(intrinsics, gthis, genv, ldr) {
         Function:undefined,
         loader: ldr,
         stack: [],
-        eventQueue:[]
+        eventQueue:[],
+        ObserverCallbacks: []
     };
 }
 CodeRealm.prototype.toString = CodeRealm_toString;
@@ -11099,20 +11109,14 @@ exports.StrictEqualityComparison = StrictEqualityComparison;
 exports.AbstractEqualityComparison = AbstractEqualityComparison;
 exports.AbstractRelationalComparison = AbstractRelationalComparison;
 
-
 function readPropertyDescriptor(object, name) {
     if (IsSymbol(name)) return object[SLOTS.SYMBOLS][name.es5id];
     return object[SLOTS.BINDINGS][name];
 }
-
 function writePropertyDescriptor(object, name, value) {
     if (IsSymbol(name))    return object[SLOTS.SYMBOLS][name.es5id] = value;
     return object[SLOTS.BINDINGS][name] = value;
 }
-exports.writePropertyDescriptor = writePropertyDescriptor;
-exports.readPropertyDescriptor = readPropertyDescriptor;
-
-
 function CreateOwnAccessorProperty(O, P, G, S) {
     Assert(Type(O) === OBJECT, "CreateAccessorProperty1");
     Assert(IsPropertyKey(P), "CreateAccessorProperty2");
@@ -11123,7 +11127,6 @@ function CreateOwnAccessorProperty(O, P, G, S) {
     D.configurable = true;
     return callInternalSlot(SLOTS.DEFINEOWNPROPERTY, O, P, D);
 }
-
 function CreateDataProperty(O, P, V) {
     Assert(Type(O) === OBJECT, "CreateDataProperty1");
     Assert(IsPropertyKey(P), "CreateDataProperty2");
@@ -11134,7 +11137,6 @@ function CreateDataProperty(O, P, V) {
     newDesc.configurable = true;
     return callInternalSlot(SLOTS.DEFINEOWNPROPERTY, O, P, newDesc);
 }
-
 function CreateDataPropertyOrThrow(O, P, V) {
     Assert(Type(O) === OBJECT, "CreateDataPropertyOrThrow1");
     Assert(IsPropertyKey(P), "CreateDataPropertyOrThrow2");
@@ -11143,13 +11145,11 @@ function CreateDataPropertyOrThrow(O, P, V) {
     if (success === false) return newTypeError(format("CREATEDATAPROPERTYORTHROW_FAILED"));
     return success;
 }
-
 function IsPropertyKey(P) {
     if (typeof P === "string") return true;
     return P instanceof SymbolPrimitiveType;
 
 }
-
 function PropertyDescriptor(V, W, E, C) {
     var D = Object.create(null); //Object.create(null);
     D.value = V;
@@ -11158,29 +11158,22 @@ function PropertyDescriptor(V, W, E, C) {
     D.configurable =  C !== undefined ? C : true;
     return D;
 }
-
 function IsAccessorDescriptor(desc) {
     if (desc == null) return false;
     if (typeof desc !== "object") return false;
     return ("get" in desc) || ("set" in desc);
-
 }
-
 function IsDataDescriptor(desc) {
     if (desc == null) return false;
     if (typeof desc !== "object") return false;
     return ("value" in desc) || ("writable" in desc);
-
 }
-
 function IsGenericDescriptor(desc) {    // hat nur enum oder config props
     if (desc === null) return false;
     if (typeof desc !== "object") return false;
     return !IsAccessorDescriptor(desc) && !IsDataDescriptor(desc) &&
         (("configurable" in desc) || ("enumerable" in desc));
-
 }
-
 function FromPropertyDescriptor(desc) {
     if (desc == undefined) return undefined;
     if (desc.Origin) return desc.Origin;
@@ -11193,12 +11186,10 @@ function FromPropertyDescriptor(desc) {
     callInternalSlot(SLOTS.DEFINEOWNPROPERTY, obj,"configurable", PropertyDescriptor(desc.configurable, true, true, true));
     return obj;
 }
-
 function ToPropertyDescriptor(O) {
     if (isAbrupt(O = ifAbrupt(O))) return O;
     if (Type(O) !== OBJECT) return newTypeError(format("S_NOT_OBJECT", "ToPropertyDescriptor: argument"));
     var desc = Object.create(null);
-
     if (HasProperty(O, "enumerable")) {
         var enume = Get(O, "enumerable");
         if (isAbrupt(enume = ifAbrupt(enume))) return enume;
@@ -11219,7 +11210,6 @@ function ToPropertyDescriptor(O) {
         if (isAbrupt(value = ifAbrupt(value))) return value;
         desc.value = value;
     }
-
     if (HasProperty(O, "get")) {
         var get = Get(O, "get");
         if (isAbrupt(get = ifAbrupt(get))) return get;
@@ -11233,11 +11223,9 @@ function ToPropertyDescriptor(O) {
     desc.Origin = O;
     return desc;
 }
-
 function IsCompatiblePropertyDescriptor(extensible, Desc, current) {
     return ValidateAndApplyPropertyDescriptor(undefined, undefined, extensible, Desc, current);
 }
-
 function CompletePropertyDescriptor(Desc, LikeDesc) {
     Assert(typeof LikeDesc === "object" || LikeDesc === undefined, "LikeDesc has to be object or undefined");
     Assert(typeof Desc === "object");
@@ -11260,39 +11248,31 @@ function CompletePropertyDescriptor(Desc, LikeDesc) {
     if (typeof Desc.configurable === "undefined") Desc.configurable = LikeDesc.configurable;
     return Desc;
 }
-
 function ValidateAndApplyPropertyDescriptor(O, P, extensible, Desc, current) {
     var same = true, d;
     var isDataDesc = IsDataDescriptor(Desc);
     var isGenericDesc = IsGenericDescriptor(Desc);
     var isAccessorDesc = IsAccessorDescriptor(Desc);
-
     if (O) Assert(IsPropertyKey(P), "ValidateAndApplyPropertyDescriptor: expecting property key if object is present");
-
     Assert(typeof Desc === "object", "ValidateAndApplyPropertyDescriptor: Desc must be a descriptor object (btw. current is " + ( !! current) + ")");
-
     var changeType = "reconfigure"; // o.observe
-
     if (!current) {
-
         if (!extensible) return false;
-        
         Assert(extensible, "object has to be extensible");
-
         if (isGenericDesc || isDataDesc || isAccessorDesc) {
             if (O !== undefined) {
                 writePropertyDescriptor(O, P, Desc);
             }
         }
-        //  var R = CreateChangeRecord("add", O, P, current, Desc);
+        // observe start
+        //       var R = CreateChangeRecord("add", O, P, current, Desc);
+        // EnqueueChangeRecord(O, R);
+        // observe end
         return true;
-
     } else if (current && Desc) {
-
         var isDataCurrent = IsDataDescriptor(current);
         var isGenericCurrent = IsGenericDescriptor(current);
         var isAccessorCurrent = IsAccessorDescriptor(current);
-
         if (Desc.get === undefined &&
             Desc.set === undefined &&
             Desc.writable === undefined &&
@@ -11301,46 +11281,27 @@ function ValidateAndApplyPropertyDescriptor(O, P, extensible, Desc, current) {
             Desc.value === undefined) {
             return true;
         }
-
         for (d in Desc) {
             if (Object.hasOwnProperty.call(Desc, d))
                 if (current[d] !== Desc[d]) same = false;
         }
         if (same) return true;
-
         if (current.configurable === false) {
             if (Desc.configurable === true) return false;
             if (Desc.enumerable === !current.enumerable) return false;
         }
-
         if (isDataCurrent && isDataDesc) {
-
             if (current.configurable === false) {
                 if (!current.writable === Desc.writable) return false;
                 if (!current.writable) {
                     if (("value" in Desc) && (current.value !== Desc.value)) return false;
                 }
             }
-
-            /*if (current.writable) {
-             writePropertyDescriptor(O, P, Desc);
-             return true;
-             }*/
-
         } else if (isAccessorCurrent && isAccessorDesc) {
-
             if (current.configurable === false) {
                 if (("set" in Desc) && (Desc.set !== current.set)) return false;
                 if (("get" in Desc) && (Desc.get !== current.get)) return false;
             }
-
-            /* else {
-             if (Desc.set === undefined) Desc.set === current.set;
-             if (Desc.get === undefined) Desc.get === current.get;
-             writePropertyDescriptor(O, P, Desc);
-             return true;
-             }*/
-
         } else if (isGenericDesc) {
             if (current.configurable === false) return false;
             // convert to accessor
@@ -11367,7 +11328,6 @@ function ValidateAndApplyPropertyDescriptor(O, P, extensible, Desc, current) {
                 }
             }
         }
-
         if (O !== undefined) {
             if (isDataDesc && !current.writable) return false;
             for (d in Desc) {
@@ -11837,6 +11797,166 @@ function IsExtensible(O) {
 
 function PreventExtensions(O) {
     if (Type(O) === OBJECT) setInternalSlot(O, SLOTS.EXTENSIBLE, false);
+}
+
+
+function GetNotifier(O) {
+    var proto;
+    var notifier = getInternalSlot(O, SLOTS.NOTIFIER);
+    if (notifier === undefined) {
+        proto = getIntrinsic(INTRINSICS.NOTIFIERPROTOTYPE);
+        notifier = ObjectCreate(proto);
+        setInternalSlot(notifier, SLOTS.TARGET, O);
+        setInternalSlot(notifier, SLOTS.CHANGEOBSERVERS, []);
+        setInternalSlot(notifier, SLOTS.ACTIVECHANGES, ObjectCreate(null));
+        setInternalSlot(O, SLOTS.NOTIFIER, notifier);
+    }
+    return notifier;
+}
+function BeginChange(O,changeType) {
+    var notifier = GetNotifier(O);
+    var activeChanges = getInternalSlot(notifier, SLOTS.ACTIVECHANGES);
+    var changeCount = Get(activeChanges, changeType);
+    if (changeCount === undefined) changeCount = 1;
+    else changeCount = changeCount + 1;
+    CreateDataProperty(activeChanges, changeType, changeCount);
+}
+function EndChange(O, changeType) {
+    var notifier = GetNotifier(O);
+    var activeChanges = getInternalSlot(notifier, SLOTS.ACTIVECHANGES);
+    var changeCount = Get(activeChanges, changeType);
+    Assert(changeCount > 0, "changeCount has to be bigger than 0");
+    changeCount = changeCount - 1;
+    CreateDataProperty(activeChanges, changeType, changeCount);
+}
+function ShouldDeliverToObserver(activeChanges, acceptList, changeType) {
+    var doesAccept = false;
+    for (var i = 0, j = acceptList.length; i < j; i++) {
+        var accept = acceptList[i];
+        if (Get(activeChanges,accept) > 0) return false;
+        if (accept === changeType) doesAccept = true;
+    }
+    return doesAccept;
+}
+function EnqueueChangeRecord(O, changeRecord) {
+    var notifier = GetNotifier(O);
+    var changeType = Get(changeRecord, "type");
+    var activeChanges = getInternalSlot(notifier, SLOTS.ACTIVECHANGES);
+    var changeObservers = getInternalSlot(notifier, SLOTS.CHANGEOBSERVERS);
+    var observerRecord;
+    for (var i = 0, j = changeObservers.length; i < j; i++) {
+        if (observerRecord = changeObservers[i]) {
+            var acceptList = Get(observerRecord, "accept");
+            var deliver = ShouldDeliverToObserver(activeChanges, acceptList, changeType);
+            if (deliver === false) continue;
+            var observer = Get(observerRecord, "callback");
+            var pendingRecords = getInternalSlot(observer, SLOTS.PENDINGCHANGERECORDS);
+            pendingRecords.push(changeRecord);
+        }
+    }
+}
+function DeliverChangeRecords(C) {
+    var changeRecords = getInternalSlot(C, SLOTS.PENDINGCHANGERECORDS);
+    setInternalSlot(C, SLOTS.PENDINGCHANGERECORDS, []);
+    var array = ArrayCreate(0);
+    var n = 0;
+    var status;
+    var record;
+    for (var i = 0, j = changeRecords.length; i < j; i++) {
+        if (record = changeRecords[i]) {
+            status = callInternalSlot(SLOTS.DEFINEOWNPROPERTY, array, ToString(n), {
+                value: record,
+                writable: true,
+                enumerable: true,
+                configurable: true
+            });
+            n = n + 1;
+        }
+    }
+    if (Get(array, "length") === 0) return false;
+    callInternalSlot(SLOTS.CALL, C, undefined, [array]);
+    return true;
+}
+function DeliverAllChangeRecords() {
+    var observers = getRealm().ObserverCallbacks;
+    var anyWorkDone = false;
+    var observer;
+    for (var i = 0, j = observers.length; i < j; i++) {
+        if (observer = observers[i]) {
+            var result = DeliverChangeRecords(observer);
+            if (result === true) anyWorkDone = true;
+        }
+    }
+    return anyWorkDone;
+}
+function CreateChangeRecord(type, object, name, oldDesc, newDesc) {
+    var changeRecord = ObjectCreate();
+    var status;
+    status = callInternalSlot(SLOTS.DEFINEOWNPROPERTY, changeRecord, "type", {
+        value: type,
+        writable: false,
+        enumerable: true,
+        configurable: false
+    });
+    status = callInternalSlot(SLOTS.DEFINEOWNPROPERTY, changeRecord, "object", {
+        value: object,
+        writable: false,
+        enumerable: true,
+        configurable: false
+    });
+    if (Type(name) === STRING) {
+        status = callInternalSlot(SLOTS.DEFINEOWNPROPERTY, changeRecord, "name", {
+            value: name,
+            writable: false,
+            enumerable: true,
+            configurable: false
+        });
+    }
+    if (IsDataDescriptor(oldDesc)) {
+        if (!IsDataDescriptor(newDesc) || !SameValue(oldDesc.value, newDesc.value)) {
+            status = callInternalSlot(SLOTS.DEFINEOWNPROPERTY, changeRecord, "oldValue", {
+                value: oldDesc,
+                writable: false,
+                enumerable: true,
+                configurable: false
+            });
+        }
+    }
+    setInternalSlot(changeRecord, SLOTS.EXTENSIBLE, false);
+    return changeRecord;
+}
+function CreateSpliceChanceRecord(object, index, removed, addedCount) {
+    var changeRecord = ObjectCreate();
+    var status = callInternalSlot(SLOTS.DEFINEOWNPROPERTY, changeRecord, "type", {
+        value: "splice",
+        writable: false,
+        enumerable: true,
+        configurable: false
+    });
+    status = callInternalSlot(SLOTS.DEFINEOWNPROPERTY, changeRecord, "object", {
+        value: object,
+        writable: false,
+        enumerable: true,
+        configurable: false
+    });
+    status = callInternalSlot(SLOTS.DEFINEOWNPROPERTY, changeRecord, "index", {
+        value: index,
+        writable: false,
+        enumerable: true,
+        configurable: false
+    });
+    status = callInternalSlot(SLOTS.DEFINEOWNPROPERTY, changeRecord, "removed", {
+        value: removed,
+        writable: false,
+        enumerable: true,
+        configurable: false
+    });
+    status = callInternalSlot(SLOTS.DEFINEOWNPROPERTY, changeRecord, "addedCount", {
+        value: addedCount,
+        writable: false,
+        enumerable: true,
+        configurable: false
+    });
 }
 
 /**
@@ -15090,7 +15210,7 @@ exports.float64 = float64;
         var EmitterPrototype = createIntrinsicPrototype(intrinsics, INTRINSICS.EMITTERPROTOTYPE);
         // Object.observe
         var NotifierPrototype = createIntrinsicPrototype(intrinsics, INTRINSICS.NOTIFIERPROTOTYPE);
-        var ObserverCallbacks = [];
+        // Loader
         var LoaderConstructor = createIntrinsicConstructor(intrinsics, "Loader", 0, INTRINSICS.LOADER);
         var LoaderPrototype = createIntrinsicPrototype(intrinsics, INTRINSICS.LOADERPROTOTYPE);
         var LoaderIteratorPrototype = createIntrinsicPrototype(intrinsics, INTRINSICS.LOADERITERATORPROTOTYPE);
@@ -21137,365 +21257,159 @@ LazyDefineBuiltinFunction(ObjectPrototype, "toString", 0, ObjectPrototype_toStri
 LazyDefineBuiltinFunction(ObjectPrototype, "valueOf", 0, ObjectPrototype_valueOf);
 LazyDefineProperty(ObjectPrototype, $$toStringTag, "Object");
 
-// ===========================================================================================================
-// Object.observe
-// ===========================================================================================================
-
-// Object.observe
-// http://wiki.ecmascript.org/doku.php?id=harmony:observe
-// var NotifierPrototype is defined with all other intrinsics above
-
-DefineOwnProperty(NotifierPrototype, "notify", {
-    value: CreateBuiltinFunction(realm, function notify(thisArg, argList) {
-        var changeRecord = argList[0];
-        var notifier = thisArg;
-        if (Type(notifier) !== OBJECT) return newTypeError( "Notifier is not an object.");
-        var target = getInternalSlot(notifier, SLOTS.TARGET);
-        var newRecord = ObjectCreate();
-        var status = callInternalSlot(SLOTS.DEFINEOWNPROPERTY, newRecord, "object", {
-            value: target,
-            writable: false,
-            enumerable: true,
-            configurable: false
-        });
-        //if (isAbrupt(status)) return status;
-
-        var bindings = getInternalSlot(changeRecord, SLOTS.BINDINGS);
-        var value;
-        for (var N in bindings) {
-            if (Object.hasOwnProperty.call(bindings, N)) {
-                if (N !== "object") {
-                    value = callInternalSlot(SLOTS.GET, changeRecord, N, changeRecord);
-                    if (isAbrupt(value = ifAbrupt(value))) return value;
-                    status = callInternalSlot(SLOTS.DEFINEOWNPROPERTY, newRecord, N, {
-                        value: value,
-                        writable: false,
-                        enumerable: true,
-                        configurable: false
-                    });
-                    //if (isAbrupt(status)) return status;
-                }
-
+var NotifierPrototype_notify = function notify(thisArg, argList) {
+    var changeRecord = argList[0];
+    var notifier = thisArg;
+    if (Type(notifier) !== OBJECT) return newTypeError( "Notifier is not an object.");
+    var target = getInternalSlot(notifier, SLOTS.TARGET);
+    var newRecord = ObjectCreate();
+    var status = callInternalSlot(SLOTS.DEFINEOWNPROPERTY, newRecord, "object", {
+        value: target,
+        writable: false,
+        enumerable: true,
+        configurable: false
+    });
+    //if (isAbrupt(status)) return status;
+    var bindings = getInternalSlot(changeRecord, SLOTS.BINDINGS);
+    var value;
+    for (var N in bindings) {
+        if (Object.hasOwnProperty.call(bindings, N)) {
+            if (N !== "object") {
+                value = callInternalSlot(SLOTS.GET, changeRecord, N, changeRecord);
+                if (isAbrupt(value = ifAbrupt(value))) return value;
+                status = callInternalSlot(SLOTS.DEFINEOWNPROPERTY, newRecord, N, {
+                    value: value,
+                    writable: false,
+                    enumerable: true,
+                    configurable: false
+                });
+                //if (isAbrupt(status)) return status;
             }
         }
-        setInternalSlot(newRecord, SLOTS.EXTENSIBLE, false);
-        status = EnqueueChangeRecord(target, newRecord);
-        //if (isAbrupt(status)) return status;
-        return NormalCompletion();
-    }),
-    writable: false,
-    enumerable: false,
-    configurable: false
-});
-
-DefineOwnProperty(NotifierPrototype, "performChange", {
-    value: CreateBuiltinFunction(realm, function notify(thisArg, argList) {
-        var changeType = argList[0];
-        var changeFn = argList[1];
-        var notifier = thisArg;
-        var status;
-        if (Type(notifier) !== OBJECT) return newTypeError( "notifier is not an object");
-        var target = getInternalSlot(notifier, SLOTS.TARGET);
-        if (target === undefined) return NormalCompletion(undefined);
-        if (Type(changeType) !== STRING) return newTypeError( "changeType has to be a string");
-        if (!IsCallable(changeFn)) return newTypeError( "changeFn is not a callable");
-        status = BeginChange(target, changeType);
-        var changeRecord = callInternalSlot(SLOTS.CALL, changeFn, undefined, []);
-        status = EndChange(target, changeType);
-        var changeObservers = getInternalSlot(notifier, SLOTS.CHANGEOBSERVERS);
-        if (!changeObservers.length) return NormalCompletion();
-        var newRecord = ObjectCreate();
-        status = callInternalSlot(SLOTS.DEFINEOWNPROPERTY, newRecord, "object", {
-            value: target,
-            writable: false,
-            enumerable: true,
-            configurable: false
-        });
-        status = callInternalSlot(SLOTS.DEFINEOWNPROPERTY, newRecord, "type", {
-            value: changeType,
-            writable: false,
-            enumerable: true,
-            configurable: false
-        });
-        var bindings = getInternalSlot(changeRecord, SLOTS.BINDINGS);
-        var value;
-        for (var N in bindings) {
-            if (Object.hasOwnProperty.call(bindings, N)) {
-                if (N !== "object" && N !== "type") {
-                    value = callInternalSlot(SLOTS.GET, changeRecord, N, changeRecord);
-                    if (isAbrupt(value = ifAbrupt(value))) return value;
-                    status = callInternalSlot(SLOTS.DEFINEOWNPROPERTY, newRecord, N, {
-                        value: value,
-                        writable: false,
-                        enumerable: true,
-                        configurable: false
-                    });
-                    //if (isAbrupt(status)) return status;
-                }
-            }
-        }
-        setInternalSlot(newRecord, SLOTS.EXTENSIBLE, false);
-        status = EnqueueChangeRecord(target, newRecord);
-        return NormalCompletion(undefined);
-    }),
-    writable: false,
-    enumerable: false,
-    configurable: false
-});
-
-function GetNotifier(O) {
-    var proto;
-    var notifier = getInternalSlot(O, SLOTS.NOTIFIER);
-    if (notifier === undefined) {
-        proto = Get(getIntrinsics(), "NotifierPrototype%");
-        notifier = ObjectCreate(proto);
-        setInternalSlot(notifier, SLOTS.TARGET, O);
-        setInternalSlot(notifier, SLOTS.CHANGEOBSERVERS, []);
-        setInternalSlot(notifier, SLOTS.ACTIVECHANGES, ObjectCreate(null));
-        setInternalSlot(O, SLOTS.NOTIFIER, notifier);
     }
-    return notifier;
-}
-
-function BeginChange(O, changeType) {
-    var notifier = GetNotifier(O);
-    var activeChanges = getInternalSlot(notifier, SLOTS.ACTIVECHANGES);
-    var changeCount = Get(activeChanges, changeType);
-    if (changeCount === undefined) changeCount = 1;
-    else changeCount = changeCount + 1;
-    CreateDataProperty(activeChanges, changeType, changeCount);
-}
-
-function EndChange(O, changeType) {
-    var notifier = GetNotifier(O);
-    var activeChanges = getInternalSlot(notifier, SLOTS.ACTIVECHANGES);
-    var changeCount = Get(activeChanges, changeType);
-    Assert(changeCount > 0, "changeCount has to be bigger than 0");
-    changeCount = changeCount - 1;
-    CreateDataProperty(activeChanges, changeType, changeCount);
-}
-
-function ShouldDeliverToObserver(activeChanges, acceptList, changeType) {
-    var doesAccept = false;
-    for (var i = 0, j = acceptList.length; i < j; i++) {
-        var accept = acceptList[i];
-        if (activeChanges[accept] > 0) return false;
-        if (accept === changeType) doesAccept = true;
-    }
-    return doesAccept;
-}
-
-function EnqueueChangeRecord(O, changeRecord) {
-    var notifier = GetNotifier(O);
-    var changeType = Get(changeRecord, "type");
-    var activeChanges = getInternalSlot(notifier, SLOTS.ACTIVECHANGES);
+    setInternalSlot(newRecord, SLOTS.EXTENSIBLE, false);
+    status = EnqueueChangeRecord(target, newRecord);
+    //if (isAbrupt(status)) return status;
+    return NormalCompletion();
+};
+var NotifierPrototype_performChange =  function performChange(thisArg, argList) {
+    var changeType = argList[0];
+    var changeFn = argList[1];
+    var notifier = thisArg;
+    var status;
+    if (Type(notifier) !== OBJECT) return newTypeError( "notifier is not an object");
+    var target = getInternalSlot(notifier, SLOTS.TARGET);
+    if (target === undefined) return NormalCompletion(undefined);
+    if (Type(changeType) !== STRING) return newTypeError( "changeType has to be a string");
+    if (!IsCallable(changeFn)) return newTypeError( "changeFn is not a callable");
+    status = BeginChange(target, changeType);
+    var changeRecord = callInternalSlot(SLOTS.CALL, changeFn, undefined, []);
+    status = EndChange(target, changeType);
     var changeObservers = getInternalSlot(notifier, SLOTS.CHANGEOBSERVERS);
-    var observerRecord;
-    for (var i = 0, j = changeObservers.length; i < j; i++) {
-        if (observerRecord = changeObservers[i]) {
-            var acceptList = Get(oserverRecord, "accept");
-            var deliver = ShouldDeliverToObserver(activeChanges, acceptList, changeType);
-            if (deliver === false) continue;
-            var observer = Get(observerRecord, "callback");
-            var pendingRecords = getInternalSlot(observer, SLOTS.PENDINGCHANGERECORDS);
-            pendingRecords.push(changeRecord);
-        }
-    }
-}
-
-function DeliverChangeRecords(C) {
-    var changeRecords = getInternalSlot(C, SLOTS.PENDINGCHANGERECORDS);
-    setInternalSlot(C, SLOTS.PENDINGCHANGERECORDS, []);
-    var array = ArrayCreate(0);
-    var n = 0;
-    var status;
-    var record;
-    for (var i = 0, j = changeRecords.length; i < j; i++) {
-        if (record = changeRecords[i]) {
-            status = callInternalSlot(SLOTS.DEFINEOWNPROPERTY, array, ToString(n), {
-                value: record,
-                writable: true,
-                enumerable: true,
-                configurable: true
-            });
-            n = n + 1;
-        }
-    }
-    if (Get(array, "length") === 0) return false;
-    callInternalSlot(SLOTS.CALL, C, undefined, [array]);
-    return true;
-}
-
-function DeliverAllChangeRecords() {
-    var observers = ObserverCallbacks;
-    var anyWorkDone = false;
-    var observer;
-    for (var i = 0, j = observers.length; i < j; i++) {
-        if (observer = observers[i]) {
-            var result = DeliverChangeRecords(observer);
-            if (result === true) anyWorkDone = true;
-        }
-    }
-    return anyWorkDone;
-}
-
-function CreateChangeRecord(type, object, name, oldDesc, newDesc) {
-    var changeRecord = ObjectCreate();
-    var status;
-    status = callInternalSlot(SLOTS.DEFINEOWNPROPERTY, changeRecord, "type", {
-        value: type,
+    if (!changeObservers.length) return NormalCompletion();
+    var newRecord = ObjectCreate();
+    status = callInternalSlot(SLOTS.DEFINEOWNPROPERTY, newRecord, "object", {
+        value: target,
         writable: false,
         enumerable: true,
         configurable: false
     });
-    status = callInternalSlot(SLOTS.DEFINEOWNPROPERTY, changeRecord, "object", {
-        value: object,
+    status = callInternalSlot(SLOTS.DEFINEOWNPROPERTY, newRecord, "type", {
+        value: changeType,
         writable: false,
         enumerable: true,
         configurable: false
     });
-    if (Type(name) === STRING) {
-        status = callInternalSlot(SLOTS.DEFINEOWNPROPERTY, changeRecord, "name", {
-            value: name,
-            writable: false,
-            enumerable: true,
-            configurable: false
-        });
-    }
-    if (IsDataDescriptor(oldDesc)) {
-        if (!IsDataDescriptor(newDesc) || !SameValue(oldDesc.value, newDesc.value)) {
-            status = callInternalSlot(SLOTS.DEFINEOWNPROPERTY, changeRecord, "oldValue", {
-                value: oldDesc,
-                writable: false,
-                enumerable: true,
-                configurable: false
-            });
-        }
-    }
-    setInternalSlot(changeRecord, SLOTS.EXTENSIBLE, false);
-    return changeRecord;
-}
-
-function CreateSpliceChanceRecord(object, index, removed, addedCount) {
-    var changeRecord = ObjectCreate();
-    var status = callInternalSlot(SLOTS.DEFINEOWNPROPERTY, changeRecord, "type", {
-        value: "splice",
-        writable: false,
-        enumerable: true,
-        configurable: false
-    });
-    status = callInternalSlot(SLOTS.DEFINEOWNPROPERTY, changeRecord, "object", {
-        value: object,
-        writable: false,
-        enumerable: true,
-        configurable: false
-    });
-    status = callInternalSlot(SLOTS.DEFINEOWNPROPERTY, changeRecord, "index", {
-        value: index,
-        writable: false,
-        enumerable: true,
-        configurable: false
-    });
-    status = callInternalSlot(SLOTS.DEFINEOWNPROPERTY, changeRecord, "removed", {
-        value: removed,
-        writable: false,
-        enumerable: true,
-        configurable: false
-    });
-    status = callInternalSlot(SLOTS.DEFINEOWNPROPERTY, changeRecord, "addedCount", {
-        value: addedCount,
-        writable: false,
-        enumerable: true,
-        configurable: false
-    });
-}
-
-DefineOwnProperty(ObjectConstructor, "observe", {
-    value: CreateBuiltinFunction(realm, function (thisArg, argList) {
-        var O = argList[0];
-        var callback = argList[1];
-        var accept = argList[2];
-        if (Type(O) !== OBJECT) return newTypeError( "first argument is not an object");
-        if (!IsCallable(callback)) return newTypeError( "second argument is not callable");
-        if (TestIntegrityLevel(callback, "frozen")) return newTypeError( "second argument is frozen");
-        if (accept === undefined) {
-            accept = ["add", "updata", "delete", "reconfigure", "setPrototype", "preventExtensions"];
-        } else {
-            accept = CreateListFromArray(accept);
-        }
-        var notifier = GetNotifier(O);
-        var changeObservers = getInternalSlot(notifier, SLOTS.CHANGEOBSERVERS);
-        var observer;
-        for (var i = 0, j = changeObservers.length; i < j; i++) {
-            if (observer = changeObservers[i]) {
-                if (Get(observer, "callback") === callback) {
-                    CreateDataProperty(record, "accept", acceptList);
-                    return NormalCompletion(O);
-                }
+    var bindings = getInternalSlot(changeRecord, SLOTS.BINDINGS);
+    var value;
+    for (var N in bindings) {
+        if (Object.hasOwnProperty.call(bindings, N)) {
+            if (N !== "object" && N !== "type") {
+                value = callInternalSlot(SLOTS.GET, changeRecord, N, changeRecord);
+                if (isAbrupt(value = ifAbrupt(value))) return value;
+                status = callInternalSlot(SLOTS.DEFINEOWNPROPERTY, newRecord, N, {
+                    value: value,
+                    writable: false,
+                    enumerable: true,
+                    configurable: false
+                });
             }
         }
-        var observerRecord = ObjectCreate();
-        CreateDataProperty(observerRecord, "callback", callback);
-        CreateDataProperty(observerRecord, "accept", acceptList);
-        changeObservers.push(observerRecord);
-        var observerCallbacks = ObserverCallbacks;
-        if (observerCallbacks.indexOf(callback)) return NormalCompletion(O);
-        observerCallbacks.push(calllback);
-        return NormalCompletion(O);
-    }),
-    writable: true,
-    enumerable: true,
-    configurable: true
-});
-
-DefineOwnProperty(ObjectConstructor, "unobserve", {
-    value: CreateBuiltinFunction(realm, function (thisArg, argList) {
-        var O = argList[0];
-        var callback = argList[1];
-        if (Type(O) !== OBJECT) return newTypeError( "first argument is not an object");
-        if (!IsCallable(callback)) return newTypeError( "second argument is not callable");
-        var notifier = GetNotifier(O);
-        var changeObservers = getInternalSlot(notifier, SLOTS.CHANGEOBSERVERS);
-        changeObservers = changeObservers.filter(function (record) {
-            return (Get(record, "callback") !== callback);
-        });
-        return NormalCompletion(O);
-    }),
-    writable: true,
-    enumerable: true,
-    configurable: true
-});
-
-DefineOwnProperty(ObjectConstructor, "deliverChangeRecords", {
-    value: CreateBuiltinFunction(realm, function (thisArg, argList) {
-        var callback = argList[0];
-        if (!IsCallable(callback)) return newTypeError( "first argument is not callable.");
-        var status;
-        for (;;) {
-            status = DeliverChangeRecords(callback);
-            status = ifAbrupt(status);
-            if (status === false || isAbrupt(status)) break;
+    }
+    setInternalSlot(newRecord, SLOTS.EXTENSIBLE, false);
+    status = EnqueueChangeRecord(target, newRecord);
+    return NormalCompletion(undefined);
+};
+var ObjectConstructor_observe = function (thisArg, argList) {
+    var O = argList[0];
+    var callback = argList[1];
+    var accept = argList[2];
+    if (Type(O) !== OBJECT) return newTypeError(format("S_NOT_OBJECT", "arg0"));
+    if (!IsCallable(callback)) return newTypeError("S_NOT_CALLABLE", "arg1");
+    if (TestIntegrityLevel(callback, "frozen")) return newTypeError("S_IS_FROZEN", "arg1");
+    if (accept === undefined) {
+        accept = ["add", "updata", "delete", "reconfigure", "setPrototype", "preventExtensions"];
+    } else {
+        accept = CreateListFromArray(accept);
+    }
+    var notifier = GetNotifier(O);
+    var changeObservers = getInternalSlot(notifier, SLOTS.CHANGEOBSERVERS);
+    var observer;
+    for (var i = 0, j = changeObservers.length; i < j; i++) {
+        if (observer = changeObservers[i]) {
+            if (Get(observer, "callback") === callback) {
+                CreateDataProperty(record, "accept", acceptList);
+                return NormalCompletion(O);
+            }
         }
-        if (isAbrupt(status)) return status;
-        return NormalCompletion(undefined);
-    }),
-    writable: true,
-    enumerable: true,
-    configurable: true
-});
-
-DefineOwnProperty(ObjectConstructor, "getNotifier", {
-    value: CreateBuiltinFunction(realm, function (thisArg, argList) {
-        var O = argList[0];
-        if (Type(O) !== OBJECT) return newTypeError( "first argument is not an object");
-        if (TestIntegrityLevel(O, "frozen")) return NormalCompletion(null);
-        return GetNotifier(O);
-    }),
-    writable: true,
-    enumerable: true,
-    configurable: true
-});
-
+    }
+    var observerRecord = ObjectCreate();
+    CreateDataProperty(observerRecord, "callback", callback);
+    CreateDataProperty(observerRecord, "accept", acceptList);
+    changeObservers.push(observerRecord);
+    var observerCallbacks = getRealm().ObserverCallbacks;
+    if (observerCallbacks.indexOf(callback)) return NormalCompletion(O);
+    observerCallbacks.push(calllback);
+    return NormalCompletion(O);
+};
+var ObjectConstructor_unobserve = function (thisArg, argList) {
+    var O = argList[0];
+    var callback = argList[1];
+    if (Type(O) !== OBJECT) return newTypeError( "first argument is not an object");
+    if (!IsCallable(callback)) return newTypeError( "second argument is not callable");
+    var notifier = GetNotifier(O);
+    var changeObservers = getInternalSlot(notifier, SLOTS.CHANGEOBSERVERS);
+    changeObservers = changeObservers.filter(function (record) {
+        return (Get(record, "callback") !== callback);
+    });
+    setInternalSlot(notifier, SLOTS.CHANGEOBSERVERS, changeObservers);
+    return NormalCompletion(O);
+};
+var ObjectConstructor_deliverChangeRecords = function (thisArg, argList) {
+    var callback = argList[0];
+    if (!IsCallable(callback)) return newTypeError( "first argument is not callable.");
+    var status;
+    for (;;) {
+        status = DeliverChangeRecords(callback);
+        status = ifAbrupt(status);
+        if (status === false || isAbrupt(status)) break;
+    }
+    if (isAbrupt(status)) return status;
+    return NormalCompletion(undefined);
+};
+var ObjectConstructor_getNotifier = function (thisArg, argList) {
+    var O = argList[0];
+    if (Type(O) !== OBJECT) return newTypeError( "first argument is not an object");
+    if (TestIntegrityLevel(O, "frozen")) return NormalCompletion(null);
+    return GetNotifier(O);
+};
+// this shall be in lib/intrinsics
+LazyDefineBuiltinFunction(NotifierPrototype, "notify", 1, NotifierPrototype_notify);
+LazyDefineBuiltinFunction(NotifierPrototype, "performChange", 2, NotifierPrototype_performChange);
+LazyDefineBuiltinFunction(ObjectConstructor, "observe", 3, ObjectConstructor_observe);
+LazyDefineBuiltinFunction(ObjectConstructor, "unobserve", 1, ObjectConstructor_unobserve);
+LazyDefineBuiltinFunction(ObjectConstructor, "deliverChangeRecords", 1, ObjectConstructor_deliverChangeRecords);
+LazyDefineBuiltinFunction(ObjectConstructor, "getNotifier", 1, ObjectConstructor_getNotifier);
 
 // ==========================rc=================================================================================
 // Function
@@ -24952,6 +24866,8 @@ LazyDefineBuiltinFunction(VMObject, "heap", 1, VMObject_heap);
     exports.ToPropertyDescriptor = ToPropertyDescriptor;
     exports.CompletePropertyDescriptor = CompletePropertyDescriptor;
     exports.ValidateAndApplyPropertyDescriptor = ValidateAndApplyPropertyDescriptor;
+    exports.writePropertyDescriptor = writePropertyDescriptor;
+    exports.readPropertyDescriptor = readPropertyDescriptor;
     exports.OrdinaryObject = OrdinaryObject;
     exports.ObjectCreate = ObjectCreate;
     exports.IsCallable = IsCallable;
