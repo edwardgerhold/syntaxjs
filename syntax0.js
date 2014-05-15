@@ -9434,6 +9434,8 @@ SLOTS.MATHTAG = "MathTag";
 // Set
 SLOTS.SETDATA = "SetData";
 SLOTS.SETCOMPARATOR = "SetComparator";
+// key for objects in map and set
+SLOTS.UNIQUEMAPANDSETES5KEY = "UniqueMapAndSetES5Key";
 // Map
 SLOTS.MAPDATA = "MapData";
 SLOTS.MAPCOMPARATOR = "MapComparator";
@@ -9462,6 +9464,8 @@ SLOTS.OPAQUEDESCRIPTOR = "OpaqueDescriptor";
 // Structured Clones
 SLOTS.TRANSFER = "Transfer";
 SLOTS.ONSUCCESSFULTRANSFER = "OnSuccessfulTransfer";
+
+
 
 Object.freeze(SLOTS); // DOES A FREEZE HELP OPTIMIZING? The pointers can´t change anymore, or?
 
@@ -9642,6 +9646,106 @@ function _max() {
 
 
 
+
+var PI = Math.PI;
+var LOG2E = Math.LOG2E;
+var SQRT1_2 = Math.SQRT1_2;
+var SQRT2 = Math.SQRT2;
+var LN10 = Math.LN10;
+var LN2 = Math.LN2;
+var LOG10E = Math.LOG10E;
+var E = Math.E;
+
+var MathObject_sign = function (thisArg, argList) {
+    var x = ToNumber(argList[0]);
+    if (isAbrupt(x)) return x;
+    return NormalCompletion(x > 0 ? 1 : -1);
+};
+
+var MathObject_random = function (thisArg, argList) {
+    return NormalCompletion(Math.random());
+};
+
+var MathObject_log = function (thisArg, argList) {
+    var x = +argList[0];
+    return NormalCompletion(Math.log(x));
+};
+var MathObject_ceil = function (thisArg, argList) {
+    var x = +argList[0];
+    return NormalCompletion(Math.ceil(x));
+};
+var MathObject_floor = function (thisArg, argList) {
+    var x = +argList[0];
+    return NormalCompletion(Math.floor(x));
+};
+var MathObject_abs = function (thisArg, argList) {
+    var a = +argList[0];
+    return NormalCompletion(Math.abs(a));
+};
+
+var MathObject_pow = function (thisArg, argList) {
+    var b = +argList[0];
+    var e = +argList[1];
+    return NormalCompletion(Math.pow(b, e));
+};
+var MathObject_sin = function (thisArg, argList) {
+    var x = +argList[0];
+    return NormalCompletion(Math.sin(x));
+};
+var MathObject_cos = function (thisArg, argList) {
+    var x = +argList[0];
+    return NormalCompletion(Math.cos(x));
+};
+var MathObject_atan = function (thisArg, argList) {
+    var x = +argList[0];
+    return NormalCompletion(Math.atan(x));
+};
+var MathObject_atan2 = function (thisArg, argList) {
+    var x = +argList[0];
+    var y = +argList[1];
+    return NormalCompletion(Math.atan2(x,y));
+};
+var MathObject_max = function (thisArg, argList) {
+    var args = CreateListFromArray(argList);
+    if (isAbrupt(args)) return args;
+    return NormalCompletion(Math.max.apply(Math, args));
+};
+var MathObject_min = function (thisArg, argList) {
+    var args = CreateListFromArray(argList);
+    if (isAbrupt(args)) return args;
+    return NormalCompletion(Math.min.apply(Math, args));
+};
+var MathObject_tan = function (thisArg, argList) {
+    var x = +argList[0];
+    return NormalCompletion(Math.tan(x));
+};
+var MathObject_exp = function (thisArg, argList) {
+    var x = argList[0];
+    return NormalCompletion(Math.exp(x));
+};
+var MathObject_hypot = function (thisArg, argList) {
+
+};
+var MathObject_imul = function (thisArg, argList) {
+
+};
+
+var MathObject_log1p = function (thisArg, argList) {
+
+};
+
+var MathObject_clz = function (thisArg, argList) {
+    var x = argList[0];
+    x = ToNumber(x);
+    if (isAbrupt(x = ifAbrupt(x))) return x;
+    var n = ToUint32(x);
+    if (isAbrupt(n = ifAbrupt(n))) return n;
+    if (n < 0) return 0;
+    if (n == 0) return 32;
+    var bitlen = Math.ceil(Math.log(Math.pow(n, Math.LOG2E)));
+    var p = 32 - bitlen;
+    return NormalCompletion(p);
+};
 
 /**
  * Created by root on 31.03.14.
@@ -10369,6 +10473,7 @@ OrdinaryObject.prototype = {
 
 function ObjectCreate(proto, internalDataList) {
     if (proto === undefined) proto = Get(getIntrinsics(), INTRINSICS.OBJECTPROTOTYPE);
+
     var O = OrdinaryObject(proto);
     /*
         new
@@ -10377,11 +10482,11 @@ function ObjectCreate(proto, internalDataList) {
         for (var i = 0, j = internalDataList.length; i < j; i++) {
             O[internalDataList[i]] = undefined;
         }
-    }else
+    }
     /*
         legacy
      */
-    if (internalDataList && typeof internalDataList === "object") {
+    else if (internalDataList && typeof internalDataList === "object") {
         for (var k in internalDataList) {
             if (objectHasOwnProperty(internalDataList, k)) {
                 O[k] = internalDataList[k];
@@ -13652,6 +13757,220 @@ function TimeClip(time) {
 function WeekDay (t) {
     return ((Day(t) + 4) % 7);
 }
+
+/**
+ * Created by root on 15.05.14.
+ */
+var DataViewConstructor_Call= function (thisArg, argList) {
+    var O = thisArg;
+    var buffer = argList[0];
+    var byteOffset = argList[1];
+    var byteLength = argList[2];
+    if (byteOffset === undefined) byteOffset = 0;
+    if (Type(O) !== OBJECT || !hasInternalSlot(O, SLOTS.DATAVIEW)) return newTypeError( "DataView object expected");
+    Assert(hasInternalSlot(O, SLOTS.VIEWEDARRAYBUFFER), "O has to have a ViewedArrayBuffer slot.");
+    var viewedArrayBuffer = getInternalSlot(O, SLOTS.VIEWEDARRAYBUFFER);
+    if (viewedArrayBuffer !== undefined) return newTypeError( "ViewedArrayBuffer of DataView has to be undefined.");
+    if (Type(buffer) !== OBJECT) return newTypeError( "buffer has to be an arraybuffer object");
+    var arrayBufferData;
+    if (!hasInternalSlot(buffer, SLOTS.ARRAYBUFFERDATA)) return newTypeError( "In DataView(buffer), buffer has to have ArrayBufferData slot");
+    arrayBufferData = getInternalSlot(buffer, SLOTS.ARRAYBUFFERDATA);
+    if (arrayBufferData === undefined) return newTypeError( "arrayBufferData of buffer may not be undefined");
+    var numberOffset = ToNumber(byteOffset);
+    var offset = ToInteger(numberOffset);
+    if (isAbrupt(offset=ifAbrupt(offset))) return offset;
+    if (numberOffset !== offset || offset < 0) return newRangeError( "numberOffset is not equal to offset or is less than 0.");
+    var byteBufferLength = getInternalSlot(buffer, SLOTS.ARRAYBUFFERBYTELENGTH);
+    if (offset > byteBufferLength) return newRangeError( "offset > byteBufferLength");
+    if (byteLength === undefined) {
+        var viewByteLength = byteBufferLength - offset;
+    } else {
+        var numberLength = ToNumber(byteLength);
+        var viewLength = ToInteger(numberLength);
+        if (isAbrupt(viewLength=ifAbrupt(viewLength))) return viewLength;
+        if ((numberLength != viewLength) || viewLength < 0) return newRangeError("numberLength != viewLength or viewLength < 0");
+        var viewByteLength = viewLength;
+        if ((offset+viewByteLength) > byteBufferLength) return newRangeError("offset + viewByteLength > byteBufferLength");
+    }
+    if (getInternalSlot(O, SLOTS.VIEWEDARRAYBUFFER) !== undefined) return newTypeError( "ViewedArrayBuffer of O has to be undefined here");
+    setInternalSlot(O, SLOTS.VIEWEDARRAYBUFFER, buffer);
+    setInternalSlot(O, SLOTS.BYTELENGTH, viewByteLength);
+    setInternalSlot(O, SLOTS.BYTEOFFSET, offset);
+    return NormalCompletion(O);
+};
+
+var DataViewConstructor_Construct = function (argList) {
+    return OrdinaryConstruct(this, argList);
+};
+
+var DataViewConstructor_$$create = function (thisArg, argList) {
+    var F = thisArg;
+    var obj = OrdinaryCreateFromConstructor(F, INTRINSICS.DATAVIEWPROTOTYPE, [
+        SLOTS.DATAVIEW,
+        SLOTS.VIEWEDARRAYBUFFER,
+        SLOTS.BYTELENGTH,
+        SLOTS.BYTEOFFSET
+    ]);
+    setInternalSlot(obj, SLOTS.DATAVIEW, true);
+    return obj;
+};
+
+var DataViewPrototype_get_buffer = function (thisArg, argList) {
+    var O = thisArg;
+    if (Type(O) !== OBJECT) return newTypeError( "O is not an object");
+    if (!hasInternalSlot(O, SLOTS.VIEWEDARRAYBUFFER)) return newTypeError( "O has no ViewedArrayBuffer slot");
+    var buffer = getInternalSlot(O, SLOTS.VIEWEDARRAYBUFFER);
+    if (buffer === undefined) return newTypeError( "buffer is undefined but must not");
+    return NormalCompletion(buffer);
+};
+
+var DataViewPrototype_get_byteLength = function (thisArg, argList) {
+    var O = thisArg;
+    if (Type(O) !== OBJECT) return newTypeError( "O is not an object");
+    if (!hasInternalSlot(O, SLOTS.VIEWEDARRAYBUFFER)) return newTypeError( "O has no ViewedArrayBuffer property");
+    var buffer = getInternalSlot(O, SLOTS.VIEWEDARRAYBUFFER);
+    if (buffer === undefined) return newTypeError( "buffer is undefined");
+    var size = getInternalSlot(O, SLOTS.BYTELENGTH);
+    return NormalCompletion(size);
+};
+
+var DataViewPrototype_get_byteOffset = function (thisArg, argList) {
+    var O = thisArg;
+    if (Type(O) !== OBJECT) return newTypeError( "O is not an object");
+    if (!hasInternalSlot(O, SLOTS.VIEWEDARRAYBUFFER)) return newTypeError( "O has no ViewedArrayBuffer property");
+    var buffer = getInternalSlot(O, SLOTS.VIEWEDARRAYBUFFER);
+    if (buffer === undefined) return newTypeError( "buffer is undefined");
+    var offset = getInternalSlot(O, SLOTS.BYTEOFFSET);
+    return NormalCompletion(offset);
+};
+
+
+var DataViewPrototype_getFloat32 = function (thisArg, argList) {
+    var v = thisArg;
+    var byteOffset = argList[0];
+    var littleEndian = argList[1];
+    if (littleEndian == undefined) littleEndian = false;
+    return GetViewValue(v, byteOffset, littleEndian, "Float32");
+};
+
+var DataViewPrototype_getFloat64 = function (thisArg, argList) {
+    var v = thisArg;
+    var byteOffset = argList[0];
+    var littleEndian = argList[1];
+    if (littleEndian == undefined) littleEndian = false;
+    return GetViewValue(v, byteOffset, littleEndian, "Float64");
+};
+
+var DataViewPrototype_getInt8 = function (thisArg, argList) {
+    var byteOffset = argList[0];
+    var v = thisArg;
+    return GetViewValue(v, byteOffset, undefined, "Int8");
+};
+
+var DataViewPrototype_getInt16 = function (thisArg, argList) {
+    var v = thisArg;
+    var byteOffset = argList[0];
+    var littleEndian = argList[1];
+    if (littleEndian == undefined) littleEndian = false;
+    return GetViewValue(v, byteOffset, littleEndian, "Int16");
+};
+
+
+var DataViewPrototype_getInt32 = function (thisArg, argList) {
+    var v = thisArg;
+    var byteOffset = argList[0];
+    var littleEndian = argList[1];
+    if (littleEndian == undefined) littleEndian = false;
+    return GetViewValue(v, byteOffset, littleEndian, "Int32");
+};
+
+
+var DataViewPrototype_getUint8 = function (thisArg, argList) {
+    var byteOffset = argList[0];
+    var v = thisArg;
+    return GetViewValue(v, byteOffset, undefined, "Uint8");
+};
+
+var DataViewPrototype_getUint16 = function (thisArg, argList) {
+    var v = thisArg;
+    var byteOffset = argList[0];
+    var littleEndian = argList[1];
+    if (littleEndian == undefined) littleEndian = false;
+    return GetViewValue(v, byteOffset, littleEndian, "Uint16");
+};
+var DataViewPrototype_getUint32 = function (thisArg, argList) {
+    var v = thisArg;
+    var byteOffset = argList[0];
+    var littleEndian = argList[1];
+    if (littleEndian == undefined) littleEndian = false;
+    return GetViewValue(v, byteOffset, littleEndian, "Uint32");
+};
+
+var DataViewPrototype_setFloat32 = function (thisArg, argList) {
+    var v = thisArg;
+    var byteOffset = argList[0];
+    var value = argList[1];
+    var littleEndian = argList[2];
+    if (littleEndian == undefined) littleEndian = false;
+    return SetViewValue(v, byteOffset, littleEndian, "Float32", value);
+};
+
+var DataViewPrototype_setFloat64 = function (thisArg, argList) {
+    var v = thisArg;
+    var byteOffset = argList[0];
+    var value = argList[1];
+    var littleEndian = argList[2];
+    if (littleEndian == undefined) littleEndian = false;
+    return SetViewValue(v, byteOffset, littleEndian, "Float64", value);
+};
+
+var DataViewPrototype_setInt8 = function (thisArg, argList) {
+    var v = thisArg;
+    var byteOffset = argList[0];
+    var value = argList[1];
+    return SetViewValue(v, byteOffset, undefined, "Int8", value);
+};
+var DataViewPrototype_setInt16 = function (thisArg, argList) {
+    var v = thisArg;
+    var byteOffset = argList[0];
+    var value = argList[1];
+    var littleEndian = argList[2];
+    if (littleEndian == undefined) littleEndian = false;
+    return SetViewValue(v, byteOffset, littleEndian, "Int16", value);
+};
+
+var DataViewPrototype_setInt32 = function (thisArg, argList) {
+    var v = thisArg;
+    var byteOffset = argList[0];
+    var value = argList[1];
+    var littleEndian = argList[2];
+    if (littleEndian == undefined) littleEndian = false;
+    return SetViewValue(v, byteOffset, littleEndian, "Int32", value);
+};
+
+var DataViewPrototype_setUint8 = function (thisArg, argList) {
+    var v = thisArg;
+    var byteOffset = argList[0];
+    var value = argList[1];
+    return SetViewValue(v, byteOffset, undefined, "Uint8", value);
+};
+var DataViewPrototype_setUint16 = function (thisArg, argList) {
+    var v = thisArg;
+    var byteOffset = argList[0];
+    var value = argList[1];
+    var littleEndian = argList[2];
+    if (littleEndian == undefined) littleEndian = false;
+    return SetViewValue(v, byteOffset, littleEndian, "Uint16", value);
+};
+
+var DataViewPrototype_setUint32 = function (thisArg, argList) {
+    var v = thisArg;
+    var byteOffset = argList[0];
+    var value = argList[1];
+    var littleEndian = argList[2];
+    if (littleEndian == undefined) littleEndian = false;
+    return SetViewValue(v, byteOffset, littleEndian, "Uint32", value);
+};
 
 function BetterComplicatedResumableEvaluationAlgorithmForASTVisitorsWithoutStack(generator, body) {
     /*
@@ -18987,6 +19306,332 @@ function PromiseThen(promise, resolvedAction, rejectedAction) {
 }
 
 
+/**
+ * Created by root on 15.05.14.
+ */
+
+var UniqueMapAndSetES5Counter = 0;
+function __checkInternalUniqueKey(value, writeIfUndefined) {
+    var internalKey;
+    if (Type(value) === OBJECT) {
+        internalKey = getInternalSlot(value, SLOTS.UNIQUEMAPANDSETES5KEY);
+        if (internalKey === undefined) {
+            internalKey = (++UniqueMapAndSetES5Counter) + Math.random();
+            if (writeIfUndefined) setInternalSlot(value, SLOTS.UNIQUEMAPANDSETES5KEY, internalKey);
+        }
+        return internalKey;
+    }
+    internalKey = value;
+    if (typeof value === "string") internalKey = "str_" + internalKey;
+    if (typeof value === "number") internalKey = "num_" + internalKey;
+    if (typeof value === "boolean") internalKey = "" + internalKey;
+    if (typeof value === "undefined") internalKey = "" + internalKey;
+    if (value === null) internalKey = internalKey + "" + internalKey;
+    return internalKey;
+}
+
+
+var MapConstructor_call = function Call(thisArg, argList) {
+
+    var iterable = argList[0];
+    var comparator = argList[1];
+    var map = thisArg;
+
+    if (Type(map) !== OBJECT) return newTypeError( "map is not an object");
+    if (!hasInternalSlot(map, SLOTS.MAPDATA)) return newTypeError( "MapData property missing on object");
+    if (getInternalSlot(map, SLOTS.MAPDATA) !== undefined) return newTypeError( "MapData property already initialized");
+
+    var iter;
+    var hasValues, adder;
+    if (iterable === undefined || iterable === null) iter = undefined;
+    else {
+        hasValues = HasProperty(iterable, "entries");
+        if (isAbrupt(hasValues = ifAbrupt(hasValues))) return hasValues;
+        if (hasValues) iter = Invoke(iterable, "entries");
+        else iter = GetIterator(iterable);
+        adder = Get(map, "set");
+        if (isAbrupt(adder = ifAbrupt(adder))) return adder;
+        if (!IsCallable(adder)) return newTypeError( "map adder (the set function) is not callable");
+    }
+    if (comparator !== undefined) {
+        if (comparator !== "is") return newRangeError( "comparator argument has currently to be 'undefined' or 'is'");
+    }
+
+    setInternalSlot(map, SLOTS.MAPDATA, Object.create(null));
+    setInternalSlot(map, SLOTS.MAPCOMPARATOR, comparator);
+
+    if (iter === undefined) return NormalCompletion(map);
+
+    var next, nextItem, done, k, v, status;
+    for (;;) {
+        next = IteratorNext(iter);
+        if (isAbrupt(next = ifAbrupt(next))) return next;
+        done = IteratorComplete(next);
+        if (isAbrupt(done = ifAbrupt(done))) return done;
+        if (done) return NormalCompletion(map);
+        nextItem = IteratorValue(next);
+        if (isAbrupt(nextItem = ifAbrupt(nextItem))) return nextItem;
+        k = Get(nextItem, "0");
+        if (isAbrupt(k = ifAbrupt(k))) return k;
+        v = Get(nextItem, "1");
+        if (isAbrupt(v = ifAbrupt(v))) return v;
+        status = callInternalSlot(SLOTS.CALL, adder, map, [k, v]);
+        if (isAbrupt(status)) return status;
+    }
+};
+
+var MapConstructor_construct = function (argList) {
+    var F = this;
+    var args = argList;
+    return OrdinaryConstruct(F, args);
+};
+
+var MapPrototype_has = function has(thisArg, argList) {
+
+    var same;
+    var key = argList[0];
+    var M = thisArg;
+
+    if (Type(M) !== OBJECT) return newTypeError( "this argument is not an object");
+    if (!hasInternalSlot(M, SLOTS.MAPDATA)) return newTypeError( "this argument has no map data internal slot");
+
+    var entries = getInternalSlot(M, SLOTS.MAPDATA);
+    var comparator = getInternalSlot(M, SLOTS.MAPCOMPARATOR);
+
+    if (comparator === undefined) same = SameValueZero;
+    else same = SameValue;
+    var internalKey;
+    internalKey = __checkInternalUniqueKey(key);
+    var record = entries[internalKey];
+    if (record) {
+        return NormalCompletion(true);
+    }
+    return NormalCompletion(false);
+};
+
+var MapPrototype_get = function (thisArg, argList) {
+    var key = argList[0];
+    var M = thisArg;
+    var same;
+    if (Type(M) !== OBJECT) return newTypeError( "this argument is not an object");
+    if (!hasInternalSlot(M, SLOTS.MAPDATA)) return newTypeError( "this argument has no map data internal slot");
+    var entries = getInternalSlot(M, SLOTS.MAPDATA);
+    var comparator = getInternalSlot(M, SLOTS.MAPCOMPARATOR);
+    if (comparator === undefined) same = SameValueZero;
+    else same = SameValue;
+    var internalKey;
+    internalKey = __checkInternalUniqueKey(key);
+    var record = entries[internalKey];
+    if (record) {
+        var value = record.value;
+        return NormalCompletion(value);
+    }
+    return NormalCompletion(undefined);
+};
+
+var MapPrototype_set = function (thisArg, argList) {
+    var key = argList[0];
+    var value = argList[1];
+    var M = thisArg;
+    var same;
+    if (Type(M) !== OBJECT) return newTypeError( "this argument is not an object");
+    if (!hasInternalSlot(M, SLOTS.MAPDATA)) return newTypeError( "this argument has no map data internal slot");
+    var entries = getInternalSlot(M, SLOTS.MAPDATA);
+    var comparator = getInternalSlot(M, SLOTS.MAPCOMPARATOR);
+    if (comparator === undefined) same = SameValueZero;
+    else same = SameValue;
+    var internalKey;
+    internalKey = __checkInternalUniqueKey(key, true);
+    var record = entries[internalKey];
+    if (!record) {
+        entries[internalKey] = {
+            key: key,
+            value: value
+        };
+    } else {
+        record.value = value;
+    }
+    return NormalCompletion(M);
+};
+
+var MapPrototype_delete = function (thisArg, argList) {
+    var key = argList[0];
+    var M = thisArg;
+    var same;
+    if (Type(M) !== OBJECT) return newTypeError( "this argument is not an object");
+    if (!hasInternalSlot(M, SLOTS.MAPDATA)) return newTypeError( "this argument has no map data internal slot");
+    var entries = getInternalSlot(M, SLOTS.MAPDATA);
+    var comparator = getInternalSlot(M, SLOTS.MAPCOMPARATOR);
+    if (comparator === undefined) same = SameValueZero;
+    else same = SameValue;
+
+    var internalKey;
+
+    internalKey = __checkInternalUniqueKey(key);
+
+    var record = entries[internalKey];
+    if (record) {
+        entries[internalKey] = undefined;
+        delete entries[internalKey];
+        return NormalCompletion(true);
+    }
+
+    return NormalCompletion(false);
+};
+
+var MapPrototype_keys = function (thisArg, argList) {
+    var O = thisArg;
+    return CreateMapIterator(O, "key");
+};
+
+var MapPrototype_values = function (thisArg, argList) {
+    var O = thisArg;
+    return CreateMapIterator(O, "value");
+};
+
+var MapPrototype_entries = function (thisArg, argList) {
+    var O = thisArg;
+    return CreateMapIterator(O, "key+value");
+};
+
+
+var MapPrototype_forEach = function (thisArg, argList) {};
+var MapPrototype_clear = function (thisArg, argList) {};
+
+var MapConstructor_$$create = function $$create(thisArg, argList) {
+    var F = thisArg;
+    return OrdinaryCreateFromConstructor(F, INTRINSICS.MAPPROTOTYPE, [
+        SLOTS.MAPDATA,
+        SLOTS.MAPCOMPARATOR
+    ]);
+};
+
+/**
+ * Created by root on 15.05.14.
+ */
+
+var SetConstructor_call = function Call(thisArg, argList) {
+    var iterable = argList[0];
+    var comparator = argList[1];
+    var set = thisArg;
+    if (Type(set) !== OBJECT) return newTypeError( "set is not an object");
+    if (!hasInternalSlot(set, SLOTS.SETDATA)) return newTypeError( "SetData property missing on object");
+    if (getInternalSlot(set, SLOTS.SETDATA) !== undefined) return newTypeError( "SetData property already initialized");
+    var iter;
+    var hasValues, adder;
+    if (iterable === undefined || iterable === null) iter = undefined;
+    else {
+        hasValues = HasProperty(iterable, "entries");
+        if (isAbrupt(hasValues = ifAbrupt(hasValues))) return hasValues;
+        if (hasValues) iter = Invoke(iterable, "entries");
+        else iter = GetIterator(iterable);
+        adder = Get(set, "set");
+        if (isAbrupt(adder = ifAbrupt(adder))) return adder;
+        if (!IsCallable(adder)) return newTypeError( "set adder (the set function) is not callable");
+    }
+    if (comparator !== undefined) {
+        if (comparator !== "is") return newRangeError( "comparator argument has currently to be 'undefined' or 'is'");
+    }
+    setInternalSlot(set, SLOTS.SETDATA, Object.create(null));
+    setInternalSlot(set, SLOTS.SETCOMPARATOR, comparator);
+    if (iter === undefined) return NormalCompletion(set);
+    var next, nextItem, done, k, v, status;
+    for (;;) {
+        next = IteratorNext(iter);
+        if (isAbrupt(next = ifAbrupt(next))) return next;
+        done = IteratorComplete(next);
+        if (isAbrupt(done = ifAbrupt(done))) return done;
+        if (done) return NormalCompletion(set);
+        nextItem = IteratorValue(next);
+        if (isAbrupt(nextItem = ifAbrupt(nextItem))) return nextItem;
+        k = Get(nextItem, "0");
+        if (isAbrupt(k = ifAbrupt(k))) return k;
+        v = Get(nextItem, "1");
+        if (isAbrupt(v = ifAbrupt(v))) return v;
+        status = callInternalSlot(SLOTS.CALL, adder, set, [v]);
+        if (isAbrupt(status)) return status;
+    }
+
+
+};
+var SetConstructor_construct = function (argList) {
+    return OrdinaryConstruct(this, argList);
+};
+
+var SetConstructor_$$create = function $$create(thisArg, argList) {
+    var F = thisArg;
+    return OrdinaryCreateFromConstructor(F, INTRINSICS.SETPROTOTYPE, [
+        SLOTS.SETDATA,
+        SLOTS.SETCOMPARATOR
+    ]);
+};
+var SetPrototype_clear = function clear(thisArg, argList) {};
+
+var SetPrototype_set = function (thisArg, argList) {
+    var value = argList[0];
+    var S = thisArg;
+    var same;
+    if (Type(S) !== OBJECT) return newTypeError( "this argument is not an object");
+    if (!hasInternalSlot(S, SLOTS.SETDATA)) return newTypeError( "this argument has no set data internal slot");
+    var entries = getInternalSlot(S, SLOTS.SETDATA);
+    var comparator = getInternalSlot(S, SLOTS.SETCOMPARATOR);
+    if (comparator === undefined) same = SameValueZero;
+    else same = SameValue;
+    var internalKey;
+    internalKey = __checkInternalUniqueKey(value, true);
+    entries[internalKey] = value;
+    return NormalCompletion(S);
+};
+var SetPrototype_has = function (thisArg, argList) {
+    var value = argList[0];
+    var S = thisArg;
+    var same;
+    if (Type(S) !== OBJECT) return newTypeError( "this argument is not an object");
+    if (!hasInternalSlot(S, SLOTS.SETDATA)) return newTypeError( "this argument has no map data internal slot");
+    var entries = getInternalSlot(S, SLOTS.SETDATA);
+    var comparator = getInternalSlot(S, SLOTS.SETCOMPARATOR);
+    if (comparator === undefined) same = SameValueZero;
+    else same = SameValue;
+    var internalKey;
+    internalKey = __checkInternalUniqueKey(value);
+    if (entries[internalKey] === value) return NormalCompletion(true);
+    return NormalCompletion(false);
+};
+
+var SetPrototype_delete = function (thisArg, argList) {
+    var value = argList[0];
+    var S = thisArg;
+    var same;
+    if (Type(S) !== OBJECT) return newTypeError( "this argument is not an object");
+    if (!hasInternalSlot(S, SLOTS.SETDATA)) return newTypeError( "this argument has no map data internal slot");
+    var entries = getInternalSlot(S, SLOTS.SETDATA);
+    var comparator = getInternalSlot(S, SLOTS.SETCOMPARATOR);
+    if (comparator === undefined) same = SameValueZero;
+    else same = SameValue;
+    var internalKey;
+    internalKey = __checkInternalUniqueKey(value);
+    if (entries[internalKey] === value) {
+        entries[internalKey] = undefined;
+        delete entries[internalKey];
+        return NormalCompletion(true);
+    }
+    return NormalCompletion(false);
+};
+var SetPrototype_entries = function (thisArg, argList) {
+    return CreateSetIterator(thisArg, "key+value");
+};
+var SetPrototype_keys = function (thisArg, argList) {
+    return CreateSetIterator(thisArg, "key");
+};
+var SetPrototype_values = function (thisArg, argList) {
+    return CreateSetIterator(thisArg, "value");
+};
+var SetPrototype_forEach = function (thisArg, argList) {
+
+};
+
+
+
 
     var createGlobalThis, createIntrinsics;
 
@@ -19027,7 +19672,9 @@ function PromiseThen(promise, resolvedAction, rejectedAction) {
     }
 
     /*
+     
      Here goes the big wrapping closure for createIntrinsics();    (tmp)
+     
      */
     createIntrinsics = function createIntrinsics(realm) {
 
@@ -19208,6 +19855,9 @@ function PromiseThen(promise, resolvedAction, rejectedAction) {
 	[[Call]] Operations of the Builtins have to move into the upper block
 	together with a few helper functions, e.g. when writing the loader in
 	january i had put the operations all together.
+	
+	update: currently i am doing this and move them
+	
 	The [[Call]] and the helpers belong into the include file list above.
 	Here they waste time instantiating the realms, because the (never modified)
 	[[Call]] Operations are newly compiled instantiated each time a realm is 
@@ -19220,6 +19870,8 @@ function PromiseThen(promise, resolvedAction, rejectedAction) {
 	LazyDefineBuiltinFunction to remove the repeating property descriptors. For
 	that i wanted to write a tool, refactorDOP.js in /tools, some day. Apropos
 	/tools the important files are testmaker.js, tester.js, inlinefiles.js
+	
+	maybe i´ll do it by hand while moving.
 	
     */
 
@@ -21312,6 +21964,7 @@ LazyDefineBuiltinFunction(SymbolPrototype, "toString", 0, SymbolPrototype_toStri
 LazyDefineBuiltinConstant(SymbolPrototype, $$toStringTag, "Symbol");
 LazyDefineBuiltinFunction(SymbolPrototype, "valueOf", 0, SymbolPrototype_valueOf);
 
+
 // ===========================================================================================================
 // Error
 // ===========================================================================================================
@@ -21942,110 +22595,6 @@ setInternalSlot(ParseIntFunction, SLOTS.CALL, ParseIntFunction_call);
 setInternalSlot(ParseFloatFunction, SLOTS.CALL, ParseFloatFunction_call);
 
 
-
-//===========================================================================================================
-// Math
-//============================================================================================================
-
-var PI = Math.PI;
-var LOG2E = Math.LOG2E;
-var SQRT1_2 = Math.SQRT1_2;
-var SQRT2 = Math.SQRT2;
-var LN10 = Math.LN10;
-var LN2 = Math.LN2;
-var LOG10E = Math.LOG10E;
-var E = Math.E;
-
-var MathObject_sign = function (thisArg, argList) {
-    var x = ToNumber(argList[0]);
-    if (isAbrupt(x)) return x;
-    return NormalCompletion(x > 0 ? 1 : -1);
-};
-
-var MathObject_random = function (thisArg, argList) {
-    return NormalCompletion(Math.random());
-};
-
-var MathObject_log = function (thisArg, argList) {
-    var x = +argList[0];
-    return NormalCompletion(Math.log(x));
-};
-var MathObject_ceil = function (thisArg, argList) {
-    var x = +argList[0];
-    return NormalCompletion(Math.ceil(x));
-};
-var MathObject_floor = function (thisArg, argList) {
-    var x = +argList[0];
-    return NormalCompletion(Math.floor(x));
-};
-var MathObject_abs = function (thisArg, argList) {
-    var a = +argList[0];
-    return NormalCompletion(Math.abs(a));
-};
-
-var MathObject_pow = function (thisArg, argList) {
-    var b = +argList[0];
-    var e = +argList[1];
-    return NormalCompletion(Math.pow(b, e));
-};
-var MathObject_sin = function (thisArg, argList) {
-    var x = +argList[0];
-    return NormalCompletion(Math.sin(x));
-};
-var MathObject_cos = function (thisArg, argList) {
-    var x = +argList[0];
-    return NormalCompletion(Math.cos(x));
-};
-var MathObject_atan = function (thisArg, argList) {
-    var x = +argList[0];
-    return NormalCompletion(Math.atan(x));
-};
-var MathObject_atan2 = function (thisArg, argList) {
-    var x = +argList[0];
-    var y = +argList[1];
-    return NormalCompletion(Math.atan2(x,y));
-};
-var MathObject_max = function (thisArg, argList) {
-    var args = CreateListFromArray(argList);
-    if (isAbrupt(args)) return args;
-    return NormalCompletion(Math.max.apply(Math, args));
-};
-var MathObject_min = function (thisArg, argList) {
-    var args = CreateListFromArray(argList);
-    if (isAbrupt(args)) return args;
-    return NormalCompletion(Math.min.apply(Math, args));
-};
-var MathObject_tan = function (thisArg, argList) {
-    var x = +argList[0];
-    return NormalCompletion(Math.tan(x));
-};
-var MathObject_exp = function (thisArg, argList) {
-    var x = argList[0];
-    return NormalCompletion(Math.exp(x));
-};
-var MathObject_hypot = function (thisArg, argList) {
-
-};
-var MathObject_imul = function (thisArg, argList) {
-
-};
-
-var MathObject_log1p = function (thisArg, argList) {
-
-};
-
-var MathObject_clz = function (thisArg, argList) {
-    var x = argList[0];
-    x = ToNumber(x);
-    if (isAbrupt(x = ifAbrupt(x))) return x;
-    var n = ToUint32(x);
-    if (isAbrupt(n = ifAbrupt(n))) return n;
-    if (n < 0) return 0;
-    if (n == 0) return 32;
-    var bitlen = Math.ceil(Math.log(Math.pow(n, Math.LOG2E)));
-    var p = 32 - bitlen;
-    return NormalCompletion(p);
-};
 
 setInternalSlot(MathObject, SLOTS.MATHTAG, true);
 setInternalSlot(MathObject, SLOTS.PROTOTYPE, ObjectPrototype);
@@ -23348,216 +23897,6 @@ DefineOwnProperty(ArrayBufferPrototype, "slice", {
     configurable: false
 });
 
-var DataViewConstructor_Call= function (thisArg, argList) {
-    var O = thisArg;
-    var buffer = argList[0];
-    var byteOffset = argList[1];
-    var byteLength = argList[2];
-    if (byteOffset === undefined) byteOffset = 0;
-    if (Type(O) !== OBJECT || !hasInternalSlot(O, SLOTS.DATAVIEW)) return newTypeError( "DataView object expected");
-    Assert(hasInternalSlot(O, SLOTS.VIEWEDARRAYBUFFER), "O has to have a ViewedArrayBuffer slot.");
-    var viewedArrayBuffer = getInternalSlot(O, SLOTS.VIEWEDARRAYBUFFER);
-    if (viewedArrayBuffer !== undefined) return newTypeError( "ViewedArrayBuffer of DataView has to be undefined.");
-    if (Type(buffer) !== OBJECT) return newTypeError( "buffer has to be an arraybuffer object");
-    var arrayBufferData;
-    if (!hasInternalSlot(buffer, SLOTS.ARRAYBUFFERDATA)) return newTypeError( "In DataView(buffer), buffer has to have ArrayBufferData slot");
-    arrayBufferData = getInternalSlot(buffer, SLOTS.ARRAYBUFFERDATA);
-    if (arrayBufferData === undefined) return newTypeError( "arrayBufferData of buffer may not be undefined");
-    var numberOffset = ToNumber(byteOffset);
-    var offset = ToInteger(numberOffset);
-    if (isAbrupt(offset=ifAbrupt(offset))) return offset;
-    if (numberOffset !== offset || offset < 0) return newRangeError( "numberOffset is not equal to offset or is less than 0.");
-    var byteBufferLength = getInternalSlot(buffer, SLOTS.ARRAYBUFFERBYTELENGTH);
-    if (offset > byteBufferLength) return newRangeError( "offset > byteBufferLength");
-    if (byteLength === undefined) {
-        var viewByteLength = byteBufferLength - offset;
-    } else {
-        var numberLength = ToNumber(byteLength);
-        var viewLength = ToInteger(numberLength);
-        if (isAbrupt(viewLength=ifAbrupt(viewLength))) return viewLength;
-        if ((numberLength != viewLength) || viewLength < 0) return newRangeError("numberLength != viewLength or viewLength < 0");
-        var viewByteLength = viewLength;
-        if ((offset+viewByteLength) > byteBufferLength) return newRangeError("offset + viewByteLength > byteBufferLength");
-    }
-    if (getInternalSlot(O, SLOTS.VIEWEDARRAYBUFFER) !== undefined) return newTypeError( "ViewedArrayBuffer of O has to be undefined here");
-    setInternalSlot(O, SLOTS.VIEWEDARRAYBUFFER, buffer);
-    setInternalSlot(O, SLOTS.BYTELENGTH, viewByteLength);
-    setInternalSlot(O, SLOTS.BYTEOFFSET, offset);
-    return NormalCompletion(O);
-};
-
-var DataViewConstructor_Construct = function (argList) {
-    return OrdinaryConstruct(this, argList);
-};
-
-var DataViewConstructor_$$create = function (thisArg, argList) {
-    var F = thisArg;
-    var obj = OrdinaryCreateFromConstructor(F, INTRINSICS.DATAVIEWPROTOTYPE, [
-        SLOTS.DATAVIEW,
-        SLOTS.VIEWEDARRAYBUFFER,
-        SLOTS.BYTELENGTH,
-        SLOTS.BYTEOFFSET
-    ]);
-    setInternalSlot(obj, SLOTS.DATAVIEW, true);
-    return obj;
-};
-
-var DataViewPrototype_get_buffer = function (thisArg, argList) {
-    var O = thisArg;
-    if (Type(O) !== OBJECT) return newTypeError( "O is not an object");
-    if (!hasInternalSlot(O, SLOTS.VIEWEDARRAYBUFFER)) return newTypeError( "O has no ViewedArrayBuffer slot");
-    var buffer = getInternalSlot(O, SLOTS.VIEWEDARRAYBUFFER);
-    if (buffer === undefined) return newTypeError( "buffer is undefined but must not");
-    return NormalCompletion(buffer);
-};
-
-var DataViewPrototype_get_byteLength = function (thisArg, argList) {
-    var O = thisArg;
-    if (Type(O) !== OBJECT) return newTypeError( "O is not an object");
-    if (!hasInternalSlot(O, SLOTS.VIEWEDARRAYBUFFER)) return newTypeError( "O has no ViewedArrayBuffer property");
-    var buffer = getInternalSlot(O, SLOTS.VIEWEDARRAYBUFFER);
-    if (buffer === undefined) return newTypeError( "buffer is undefined");
-    var size = getInternalSlot(O, SLOTS.BYTELENGTH);
-    return NormalCompletion(size);
-};
-
-var DataViewPrototype_get_byteOffset = function (thisArg, argList) {
-    var O = thisArg;
-    if (Type(O) !== OBJECT) return newTypeError( "O is not an object");
-    if (!hasInternalSlot(O, SLOTS.VIEWEDARRAYBUFFER)) return newTypeError( "O has no ViewedArrayBuffer property");
-    var buffer = getInternalSlot(O, SLOTS.VIEWEDARRAYBUFFER);
-    if (buffer === undefined) return newTypeError( "buffer is undefined");
-    var offset = getInternalSlot(O, SLOTS.BYTEOFFSET);
-    return NormalCompletion(offset);
-};
-
-
-var DataViewPrototype_getFloat32 = function (thisArg, argList) {
-    var v = thisArg;
-    var byteOffset = argList[0];
-    var littleEndian = argList[1];
-    if (littleEndian == undefined) littleEndian = false;
-    return GetViewValue(v, byteOffset, littleEndian, "Float32");
-};
-
-var DataViewPrototype_getFloat64 = function (thisArg, argList) {
-    var v = thisArg;
-    var byteOffset = argList[0];
-    var littleEndian = argList[1];
-    if (littleEndian == undefined) littleEndian = false;
-    return GetViewValue(v, byteOffset, littleEndian, "Float64");
-};
-
-var DataViewPrototype_getInt8 = function (thisArg, argList) {
-    var byteOffset = argList[0];
-    var v = thisArg;
-    return GetViewValue(v, byteOffset, undefined, "Int8");
-};
-
-var DataViewPrototype_getInt16 = function (thisArg, argList) {
-    var v = thisArg;
-    var byteOffset = argList[0];
-    var littleEndian = argList[1];
-    if (littleEndian == undefined) littleEndian = false;
-    return GetViewValue(v, byteOffset, littleEndian, "Int16");
-};
-
-
-var DataViewPrototype_getInt32 = function (thisArg, argList) {
-    var v = thisArg;
-    var byteOffset = argList[0];
-    var littleEndian = argList[1];
-    if (littleEndian == undefined) littleEndian = false;
-    return GetViewValue(v, byteOffset, littleEndian, "Int32");
-};
-
-
-var DataViewPrototype_getUint8 = function (thisArg, argList) {
-    var byteOffset = argList[0];
-    var v = thisArg;
-    return GetViewValue(v, byteOffset, undefined, "Uint8");
-};
-
-var DataViewPrototype_getUint16 = function (thisArg, argList) {
-    var v = thisArg;
-    var byteOffset = argList[0];
-    var littleEndian = argList[1];
-    if (littleEndian == undefined) littleEndian = false;
-    return GetViewValue(v, byteOffset, littleEndian, "Uint16");
-};
-var DataViewPrototype_getUint32 = function (thisArg, argList) {
-    var v = thisArg;
-    var byteOffset = argList[0];
-    var littleEndian = argList[1];
-    if (littleEndian == undefined) littleEndian = false;
-    return GetViewValue(v, byteOffset, littleEndian, "Uint32");
-};
-
-var DataViewPrototype_setFloat32 = function (thisArg, argList) {
-    var v = thisArg;
-    var byteOffset = argList[0];
-    var value = argList[1];
-    var littleEndian = argList[2];
-    if (littleEndian == undefined) littleEndian = false;
-    return SetViewValue(v, byteOffset, littleEndian, "Float32", value);
-};
-
-var DataViewPrototype_setFloat64 = function (thisArg, argList) {
-    var v = thisArg;
-    var byteOffset = argList[0];
-    var value = argList[1];
-    var littleEndian = argList[2];
-    if (littleEndian == undefined) littleEndian = false;
-    return SetViewValue(v, byteOffset, littleEndian, "Float64", value);
-};
-
-var DataViewPrototype_setInt8 = function (thisArg, argList) {
-    var v = thisArg;
-    var byteOffset = argList[0];
-    var value = argList[1];
-    return SetViewValue(v, byteOffset, undefined, "Int8", value);
-};
-var DataViewPrototype_setInt16 = function (thisArg, argList) {
-    var v = thisArg;
-    var byteOffset = argList[0];
-    var value = argList[1];
-    var littleEndian = argList[2];
-    if (littleEndian == undefined) littleEndian = false;
-    return SetViewValue(v, byteOffset, littleEndian, "Int16", value);
-};
-
-var DataViewPrototype_setInt32 = function (thisArg, argList) {
-    var v = thisArg;
-    var byteOffset = argList[0];
-    var value = argList[1];
-    var littleEndian = argList[2];
-    if (littleEndian == undefined) littleEndian = false;
-    return SetViewValue(v, byteOffset, littleEndian, "Int32", value);
-};
-
-var DataViewPrototype_setUint8 = function (thisArg, argList) {
-    var v = thisArg;
-    var byteOffset = argList[0];
-    var value = argList[1];
-    return SetViewValue(v, byteOffset, undefined, "Uint8", value);
-};
-var DataViewPrototype_setUint16 = function (thisArg, argList) {
-    var v = thisArg;
-    var byteOffset = argList[0];
-    var value = argList[1];
-    var littleEndian = argList[2];
-    if (littleEndian == undefined) littleEndian = false;
-    return SetViewValue(v, byteOffset, littleEndian, "Uint16", value);
-};
-
-var DataViewPrototype_setUint32 = function (thisArg, argList) {
-    var v = thisArg;
-    var byteOffset = argList[0];
-    var value = argList[1];
-    var littleEndian = argList[2];
-    if (littleEndian == undefined) littleEndian = false;
-    return SetViewValue(v, byteOffset, littleEndian, "Uint32", value);
-};
 
 
 
@@ -23663,285 +24002,23 @@ setInternalSlot(SetTimeoutFunction, SLOTS.CALL, function (thisArg, argList) {
     return task;
 });
 
-// ===========================================================================================================
-// Map
-// ===========================================================================================================
-
-//
-// Map, WeakMap, Set
 
 setInternalSlot(MapConstructor, SLOTS.PROTOTYPE, FunctionPrototype);
 setInternalSlot(MapPrototype, SLOTS.PROTOTYPE, ObjectPrototype);
-
-setInternalSlot(MapConstructor, SLOTS.CALL, function Call(thisArg, argList) {
-
-    var iterable = argList[0];
-    var comparator = argList[1];
-    var map = thisArg;
-
-    if (Type(map) !== OBJECT) return newTypeError( "map is not an object");
-    if (!hasInternalSlot(map, SLOTS.MAPDATA)) return newTypeError( "MapData property missing on object");
-    if (getInternalSlot(map, SLOTS.MAPDATA) !== undefined) return newTypeError( "MapData property already initialized");
-
-    var iter;
-    var hasValues, adder;
-    if (iterable === undefined || iterable === null) iter = undefined;
-    else {
-        hasValues = HasProperty(iterable, "entries");
-        if (isAbrupt(hasValues = ifAbrupt(hasValues))) return hasValues;
-        if (hasValues) iter = Invoke(iterable, "entries");
-        else iter = GetIterator(iterable);
-        adder = Get(map, "set");
-        if (isAbrupt(adder = ifAbrupt(adder))) return adder;
-        if (!IsCallable(adder)) return newTypeError( "map adder (the set function) is not callable");
-    }
-    if (comparator !== undefined) {
-        if (comparator !== "is") return newRangeError( "comparator argument has currently to be 'undefined' or 'is'");
-    }
-
-    setInternalSlot(map, SLOTS.MAPDATA, Object.create(null));
-    setInternalSlot(map, SLOTS.MAPCOMPARATOR, comparator);
-
-    if (iter === undefined) return NormalCompletion(map);
-
-    var next, nextItem, done, k, v, status;
-    for (;;) {
-        next = IteratorNext(iter);
-        if (isAbrupt(next = ifAbrupt(next))) return next;
-        done = IteratorComplete(next);
-        if (isAbrupt(done = ifAbrupt(done))) return done;
-        if (done) return NormalCompletion(map);
-        nextItem = IteratorValue(next);
-        if (isAbrupt(nextItem = ifAbrupt(nextItem))) return nextItem;
-        k = Get(nextItem, "0");
-        if (isAbrupt(k = ifAbrupt(k))) return k;
-        v = Get(nextItem, "1");
-        if (isAbrupt(v = ifAbrupt(v))) return v;
-        status = callInternalSlot(SLOTS.CALL, adder, map, [k, v]);
-        if (isAbrupt(status)) return status;
-    }
-});
-
-setInternalSlot(MapConstructor, SLOTS.CONSTRUCT, function Construct(argList) {
-    var F = this;
-    var args = argList;
-    return OrdinaryConstruct(F, args);
-});
-
-DefineOwnProperty(MapConstructor, "prototype", {
-    value: MapPrototype,
-    writable: false,
-    enumerable: false,
-    configurable: false
-});
-
-DefineOwnProperty(MapPrototype, "constructor", {
-    value: MapConstructor,
-    writable: false,
-    enumerable: false,
-    configurable: false
-});
-DefineOwnProperty(MapPrototype, "has", {
-    value: CreateBuiltinFunction(realm, function has(thisArg, argList) {
-
-        var same;
-        var key = argList[0];
-        var M = thisArg;
-
-        if (Type(M) !== OBJECT) return newTypeError( "this argument is not an object");
-        if (!hasInternalSlot(M, SLOTS.MAPDATA)) return newTypeError( "this argument has no map data internal slot");
-
-        var entries = getInternalSlot(M, SLOTS.MAPDATA);
-        var comparator = getInternalSlot(M, SLOTS.MAPCOMPARATOR);
-
-        if (comparator === undefined) same = SameValueZero;
-        else same = SameValue;
-
-        var internalKey;
-
-        internalKey = __checkInternalUniqueKey(key);
-
-        var record = entries[internalKey];
-        if (record) {
-            return NormalCompletion(true);
-        }
-        return NormalCompletion(false);
-    }),
-    writable: false,
-    enumerable: false,
-    configurable: false
-});
-DefineOwnProperty(MapPrototype, "get", {
-    value: CreateBuiltinFunction(realm, function get(thisArg, argList) {
-        var key = argList[0];
-        var M = thisArg;
-        var same;
-        if (Type(M) !== OBJECT) return newTypeError( "this argument is not an object");
-        if (!hasInternalSlot(M, SLOTS.MAPDATA)) return newTypeError( "this argument has no map data internal slot");
-        var entries = getInternalSlot(M, SLOTS.MAPDATA);
-        var comparator = getInternalSlot(M, SLOTS.MAPCOMPARATOR);
-        if (comparator === undefined) same = SameValueZero;
-        else same = SameValue;
-
-        var internalKey;
-
-        internalKey = __checkInternalUniqueKey(key);
-
-        var record = entries[internalKey];
-        if (record) {
-            var value = record.value;
-            return NormalCompletion(value);
-        }
-        return NormalCompletion(undefined);
-
-    }),
-    writable: false,
-    enumerable: false,
-    configurable: false
-});
-
-DefineOwnProperty(MapPrototype, "set", {
-    value: CreateBuiltinFunction(realm, function set(thisArg, argList) {
-        var key = argList[0];
-        var value = argList[1];
-        var M = thisArg;
-        var same;
-        if (Type(M) !== OBJECT) return newTypeError( "this argument is not an object");
-        if (!hasInternalSlot(M, SLOTS.MAPDATA)) return newTypeError( "this argument has no map data internal slot");
-
-        var entries = getInternalSlot(M, SLOTS.MAPDATA);
-
-        var comparator = getInternalSlot(M, SLOTS.MAPCOMPARATOR);
-        if (comparator === undefined) same = SameValueZero;
-        else same = SameValue;
-
-
-        var internalKey;
-
-        internalKey = __checkInternalUniqueKey(key, true);
-
-        var record = entries[internalKey];
-        if (!record) {
-            entries[internalKey] = {
-                key: key,
-                value: value
-            };
-        } else {
-            record.value = value;
-        }
-        return NormalCompletion(M);
-
-    }),
-    writable: false,
-    enumerable: false,
-    configurable: false
-});
-DefineOwnProperty(MapPrototype, "delete", {
-    value: CreateBuiltinFunction(realm, function _delete(thisArg, argList) {
-        var key = argList[0];
-        var M = thisArg;
-        var same;
-        if (Type(M) !== OBJECT) return newTypeError( "this argument is not an object");
-        if (!hasInternalSlot(M, SLOTS.MAPDATA)) return newTypeError( "this argument has no map data internal slot");
-        var entries = getInternalSlot(M, SLOTS.MAPDATA);
-        var comparator = getInternalSlot(M, SLOTS.MAPCOMPARATOR);
-        if (comparator === undefined) same = SameValueZero;
-        else same = SameValue;
-
-        var internalKey;
-
-        internalKey = __checkInternalUniqueKey(key);
-
-        var record = entries[internalKey];
-        if (record) {
-            entries[internalKey] = undefined;
-            delete entries[internalKey];
-            return NormalCompletion(true);
-        }
-
-        return NormalCompletion(false);
-    }, 1, "delete"),
-    writable: false,
-    enumerable: false,
-    configurable: false
-});
-DefineOwnProperty(MapPrototype, "forEach", {
-    value: CreateBuiltinFunction(realm, function forEach(thisArg, argList) {
-
-    }),
-    writable: false,
-    enumerable: false,
-    configurable: false
-});
-
-DefineOwnProperty(MapPrototype, "clear", {
-    value: CreateBuiltinFunction(realm, function clear(thisArg, argList) {}),
-    writable: false,
-    enumerable: false,
-    configurable: false
-});
-
-
-var MapPrototype_keys = function (thisArg, argList) {
-        var O = thisArg;
-        return CreateMapIterator(O, "key");
-};
-
-var MapPrototype_values = function (thisArg, argList) {
-        var O = thisArg;
-        return CreateMapIterator(O, "value");
-};
-
-var MapPrototype_entries = function (thisArg, argList) {
-        var O = thisArg;
-        return CreateMapIterator(O, "key+value");
-};
-
+setInternalSlot(MapConstructor, SLOTS.CALL, MapConstructor_call);
+setInternalSlot(MapConstructor, SLOTS.CONSTRUCT, MapConstructor_construct);
+LazyDefineProperty(MapConstructor, $$create, CreateBuiltinFunction(realm, MapConstructor_$$create, 1, "[Symbol.create]"));
+LazyDefineBuiltinConstant(MapConstructor, "prototype", MapPrototype);
+LazyDefineBuiltinFunction(MapPrototype, "get", 1, MapPrototype_get);
+LazyDefineBuiltinFunction(MapPrototype, "has", 1, MapPrototype_has);
+LazyDefineBuiltinFunction(MapPrototype, "set", 2, MapPrototype_set);
+LazyDefineBuiltinFunction(MapPrototype, "delete", 1, MapPrototype_delete);
+LazyDefineBuiltinConstant(MapPrototype, "constructor", MapConstructor);
 LazyDefineBuiltinFunction(MapPrototype, "entries", 0, MapPrototype_entries);
 LazyDefineBuiltinFunction(MapPrototype, "keys", 0, MapPrototype_keys);
 LazyDefineBuiltinFunction(MapPrototype, "values", 0, MapPrototype_values);
 LazyDefineBuiltinFunction(MapPrototype, $$iterator, 0, MapPrototype_entries);
-
-DefineOwnProperty(MapConstructor, $$create, {
-    value: CreateBuiltinFunction(realm, function $$create(thisArg, argList) {
-        var F = thisArg;
-        return OrdinaryCreateFromConstructor(F, INTRINSICS.MAPPROTOTYPE, [
-            SLOTS.MAPDATA,
-            SLOTS.MAPCOMPARATOR
-        ]);
-    }),
-    writable: false,
-    enumerable: false,
-    configurable: false
-});
-
-DefineOwnProperty(MapPrototype, $$toStringTag, {
-    value: "Map",
-    writable: false,
-    enumerable: false,
-    configurable: false
-});
-
-var UniqueMapAndSetES5Counter = 0;
-function __checkInternalUniqueKey(value, writeIfUndefined) {
-    var internalKey;
-    if (Type(value) === OBJECT) {
-        internalKey = getInternalSlot(value, "UniqueMapAndSetES5Key");
-        if (internalKey === undefined) {
-            internalKey = (++UniqueMapAndSetES5Counter) + Math.random();
-            if (writeIfUndefined) setInternalSlot(value, "UniqueMapAndSetES5Key", internalKey);
-        }
-        return internalKey;
-    }
-    internalKey = value;
-    if (typeof value === "string") internalKey = "str_" + internalKey;
-    if (typeof value === "number") internalKey = "num_" + internalKey;
-    if (typeof value === "boolean") internalKey = "" + internalKey;
-    if (typeof value === "undefined") internalKey = "" + internalKey;
-    if (value === null) internalKey = internalKey + "" + internalKey;
-    return internalKey;
-}
-
+LazyDefineBuiltinConstant(MapPrototype, $$toStringTag, "Map");
 
 
 
@@ -24017,202 +24094,16 @@ DefineOwnProperty(MapIteratorPrototype, "next", {
     configurable: false
 });
 
-// ===========================================================================================================
-// Set
-// ===========================================================================================================
-
-//
-// Set
-//
-
 setInternalSlot(SetConstructor, SLOTS.PROTOTYPE, FunctionPrototype);
 setInternalSlot(SetPrototype, SLOTS.PROTOTYPE, ObjectPrototype);
-
-setInternalSlot(SetConstructor, SLOTS.CALL, function Call(thisArg, argList) {
-    var iterable = argList[0];
-    var comparator = argList[1];
-    var set = thisArg;
-
-    if (Type(set) !== OBJECT) return newTypeError( "set is not an object");
-    if (!hasInternalSlot(set, SLOTS.SETDATA)) return newTypeError( "SetData property missing on object");
-    if (getInternalSlot(set, SLOTS.SETDATA) !== undefined) return newTypeError( "SetData property already initialized");
-
-    var iter;
-    var hasValues, adder;
-    if (iterable === undefined || iterable === null) iter = undefined;
-    else {
-        hasValues = HasProperty(iterable, "entries");
-        if (isAbrupt(hasValues = ifAbrupt(hasValues))) return hasValues;
-        if (hasValues) iter = Invoke(iterable, "entries");
-        else iter = GetIterator(iterable);
-        adder = Get(set, "set");
-        if (isAbrupt(adder = ifAbrupt(adder))) return adder;
-        if (!IsCallable(adder)) return newTypeError( "set adder (the set function) is not callable");
-    }
-    if (comparator !== undefined) {
-        if (comparator !== "is") return newRangeError( "comparator argument has currently to be 'undefined' or 'is'");
-    }
-
-    setInternalSlot(set, SLOTS.SETDATA, Object.create(null));
-    setInternalSlot(set, SLOTS.SETCOMPARATOR, comparator);
-
-    if (iter === undefined) return NormalCompletion(set);
-
-    var next, nextItem, done, k, v, status;
-    for (;;) {
-        next = IteratorNext(iter);
-        if (isAbrupt(next = ifAbrupt(next))) return next;
-        done = IteratorComplete(next);
-        if (isAbrupt(done = ifAbrupt(done))) return done;
-        if (done) return NormalCompletion(set);
-        nextItem = IteratorValue(next);
-        if (isAbrupt(nextItem = ifAbrupt(nextItem))) return nextItem;
-        k = Get(nextItem, "0");
-        if (isAbrupt(k = ifAbrupt(k))) return k;
-        v = Get(nextItem, "1");
-        if (isAbrupt(v = ifAbrupt(v))) return v;
-        status = callInternalSlot(SLOTS.CALL, adder, set, [v]);
-        if (isAbrupt(status)) return status;
-    }
-
-
-});
-setInternalSlot(SetConstructor, SLOTS.CONSTRUCT, function (argList) {
-    return OrdinaryConstruct(this, argList);
-});
-
-DefineOwnProperty(SetConstructor, $$create, {
-    value: CreateBuiltinFunction(realm, function $$create(thisArg, argList) {
-        var F = thisArg;
-        return OrdinaryCreateFromConstructor(F, INTRINSICS.SETPROTOTYPE, [
-            SLOTS.SETDATA,
-            SLOTS.SETCOMPARATOR
-        ]);
-    }),
-    writable: false,
-    enumerable: false,
-    configurable: false
-});
-
-DefineOwnProperty(SetPrototype, $$toStringTag, {
-    value: SLOTS.SET,
-    writable: false,
-    enumerable: false,
-    configurable: false
-});
-
-DefineOwnProperty(SetPrototype, "clear", {
-    value: CreateBuiltinFunction(realm, function clear(thisArg, argList) {}),
-    writable: false,
-    enumerable: false,
-    configurable: false
-});
-
-DefineOwnProperty(SetPrototype, "set", {
-    value: CreateBuiltinFunction(realm, function set(thisArg, argList) {
-        var value = argList[0];
-        var S = thisArg;
-        var same;
-        if (Type(S) !== OBJECT) return newTypeError( "this argument is not an object");
-        if (!hasInternalSlot(S, SLOTS.SETDATA)) return newTypeError( "this argument has no set data internal slot");
-
-        var entries = getInternalSlot(S, SLOTS.SETDATA);
-
-        var comparator = getInternalSlot(S, SLOTS.SETCOMPARATOR);
-        if (comparator === undefined) same = SameValueZero;
-        else same = SameValue;
-
-
-        var internalKey;
-
-        internalKey = __checkInternalUniqueKey(value, true);
-
-        entries[internalKey] = value;
-
-        return NormalCompletion(S);
-
-    }),
-    writable: false,
-    enumerable: false,
-    configurable: false
-});
-
-DefineOwnProperty(SetPrototype, "has", {
-    value: CreateBuiltinFunction(realm, function has(thisArg, argList) {
-        var value = argList[0];
-        var S = thisArg;
-        var same;
-        if (Type(S) !== OBJECT) return newTypeError( "this argument is not an object");
-        if (!hasInternalSlot(S, SLOTS.SETDATA)) return newTypeError( "this argument has no map data internal slot");
-
-        var entries = getInternalSlot(S, SLOTS.SETDATA);
-
-        var comparator = getInternalSlot(S, SLOTS.SETCOMPARATOR);
-        if (comparator === undefined) same = SameValueZero;
-        else same = SameValue;
-
-
-        var internalKey;
-
-        internalKey = __checkInternalUniqueKey(value);
-
-        if (entries[internalKey] === value) return NormalCompletion(true);
-
-        return NormalCompletion(false);
-
-    }),
-    writable: false,
-    enumerable: false,
-    configurable: false
-});
-DefineOwnProperty(SetPrototype, "delete", {
-    value: CreateBuiltinFunction(realm, function _delete(thisArg, argList) {
-        var value = argList[0];
-        var S = thisArg;
-        var same;
-        if (Type(S) !== OBJECT) return newTypeError( "this argument is not an object");
-        if (!hasInternalSlot(S, SLOTS.SETDATA)) return newTypeError( "this argument has no map data internal slot");
-
-        var entries = getInternalSlot(S, SLOTS.SETDATA);
-
-        var comparator = getInternalSlot(S, SLOTS.SETCOMPARATOR);
-        if (comparator === undefined) same = SameValueZero;
-        else same = SameValue;
-
-
-        var internalKey;
-
-        internalKey = __checkInternalUniqueKey(value);
-
-        if (entries[internalKey] === value) {
-            entries[internalKey] = undefined;
-            delete entries[internalKey];
-            return NormalCompletion(true);
-        }
-        return NormalCompletion(false);
-
-    }),
-    writable: false,
-    enumerable: false,
-    configurable: false
-});
-
-
-var SetPrototype_entries = function (thisArg, argList) {
-    return CreateSetIterator(thisArg, "key+value");
-};
-var SetPrototype_keys = function (thisArg, argList) {
-    return CreateSetIterator(thisArg, "key");
-};
-var SetPrototype_values = function (thisArg, argList) {
-    return CreateSetIterator(thisArg, "value");
-};
-
-var SetPrototype_forEach = function (thisArg, argList) {
-
-};
-
-
+setInternalSlot(SetConstructor, SLOTS.CALL, SetConstructor_call);
+setInternalSlot(SetConstructor, SLOTS.CONSTRUCT, SetConstructor_construct);
+LazyDefineProperty (SetConstructor, $$create, CreateBuiltinFunction(realm, SetConstructor_$$create, 1, "[Symbol.create]"));
+LazyDefineBuiltinConstant(SetPrototype, $$toStringTag, "Set");
+LazyDefineBuiltinFunction(SetPrototype, "clear", 0, SetPrototype_clear);
+LazyDefineBuiltinFunction(SetPrototype, "set", 1, SetPrototype_set);
+LazyDefineBuiltinFunction(SetPrototype, "has", 1, SetPrototype_has);
+LazyDefineBuiltinFunction(SetPrototype, "delete", 1, SetPrototype_delete);
 LazyDefineBuiltinFunction(SetPrototype, "keys", 0, SetPrototype_keys);
 LazyDefineBuiltinFunction(SetPrototype, "values", 0, SetPrototype_values);
 LazyDefineBuiltinFunction(SetPrototype, "entries", 0, SetPrototype_entries);
