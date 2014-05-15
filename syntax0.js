@@ -13400,9 +13400,6 @@ ArgumentsExoticObject.prototype = {
 
 addMissingProperties(ArgumentsExoticObject.prototype, OrdinaryObject.prototype);
 
-/**
- * Created by root on 31.03.14.
- */
 function CreateArrayFromList(list) {
     var array = ArrayCreate(list.length);
     for (var i = 0, j = list.length; i < j; i++) {
@@ -13427,6 +13424,387 @@ function CreateArrayIterator(array, kind) {
     setInternalSlot(iterator, SLOTS.ARRAYITERATIONKIND, kind);
     return iterator;
 }
+
+function IsSparseArray(A) {
+    var len = Get(A, "length");
+    var elem;
+    for (var i = 0, j = ToUint32(len); i < j; i++) {
+        elem = Get(A, ToString(i));
+        if (isAbrupt(elem = ifAbrupt(elem))) return elem;
+        if (elem === undefined) return true;
+    }
+    return false;
+}
+
+function IsArray(A) {
+    return A instanceof ArrayExoticObject;
+}
+
+
+var ArrayConstructor_call =  function (thisArg, argList) {
+    var O = thisArg;
+    var array;
+    var intLen;
+    var F, proto;
+    var defineStatus;
+    var len;
+    var k;
+    var putStatus;
+    var numberOfArgs;
+    var Pk, itemK;
+    var items;
+    numberOfArgs = argList.length;
+
+    if (numberOfArgs === 1) {
+        len = GetValue(argList[0]);
+        if (Type(O) === OBJECT && !getInternalSlot(O, SLOTS.ARRAYINITIALISATIONSTATE)) {
+            setInternalSlot(O, SLOTS.ARRAYINITIALISATIONSTATE, true);
+            array = O;
+        } else {
+            F = this;
+            proto = OrdinaryCreateFromConstructor(F, INTRINSICS.ARRAYPROTOTYPE);
+            if (isAbrupt(proto)) return proto;
+            proto = ifAbrupt(proto);
+            array = ArrayCreate(0, proto);
+        }
+        array = ifAbrupt(array);
+        if (isAbrupt(array)) return array;
+        if (Type(len) !== NUMBER) {
+            defineStatus = DefineOwnPropertyOrThrow(array, "0", {
+                value: len,
+                writable: true,
+                enumerable: true,
+                configurable: true
+            });
+            if (isAbrupt(defineStatus)) return defineStatus;
+            intLen = 1;
+        } else {
+            intLen = ToUint32(len);
+            if (intLen != len) return newRangeError(trans("ARRAY_LENGTH_ERROR"));
+        }
+        putStatus = Put(array, "length", intLen, true);
+        if (isAbrupt(putStatus)) return putStatus;
+        return NormalCompletion(array);
+
+    } else {
+        len = GetValue(argList[0]);
+        if (Type(O) === OBJECT && !getInternalSlot(O, SLOTS.ARRAYINITIALISATIONSTATE)) {
+            setInternalSlot(O, SLOTS.ARRAYINITIALISATIONSTATE, true);
+            array = O;
+        } else {
+            F = this;
+            proto = OrdinaryCreateFromConstructor(F, INTRINSICS.ARRAYPROTOTYPE);
+            if (isAbrupt(proto)) return proto;
+            proto = ifAbrupt(proto);
+            array = ArrayCreate(0, proto);
+        }
+
+        array = ifAbrupt(array);
+        if (isAbrupt(array)) return array;
+        k = 0;
+        items = argList;
+
+        while (k < numberOfArgs) {
+            Pk = ToString(k);
+            itemK = items[k];
+            defineStatus = DefineOwnPropertyOrThrow(array, Pk, {
+                value: itemK,
+                writable: true,
+                enumerable: true,
+                configurable: true
+
+            });
+            if (isAbrupt(defineStatus)) return defineStatus;
+            k = k + 1;
+        }
+        putStatus = Put(array, "length", numberOfArgs, true);
+        if (isAbrupt(putStatus)) return putStatus;
+        return NormalCompletion(array);
+    }
+
+};
+var ArrayConstructor_construct = function (argList) {
+    var F = this;
+    var argumentsList = argList;
+    return OrdinaryConstruct(F, argumentsList);
+};
+
+
+
+
+var ArrayPrototype_toLocaleString = function toLocaleString(thisArg, argList) {
+
+};
+
+
+var ArrayPrototype_copyWithin = function (thisArg, argList) {
+    var target = argList[0];
+    var start = argList[1];
+    var end = argList[2];
+    var O = ToObject(thisArg);
+    if (isAbrupt(O=ifAbrupt(O))) return O;
+    var lenVal = Get(O, "length");
+    var len = ToLength(lenVal);
+    if (isAbrupt(len=ifAbrupt(len))) return len;
+    var relativeTarget = ToInteger(target);
+    if (isAbrupt(relativeTarget=ifAbrupt(relativeTarget))) return relativeTarget;
+    var from, to, final;
+    if (relativeTarget < 0) to = max((len+relativeTarget), 0);
+    else to = min(relativeTarget, len);
+    var relativeStart = ToInteger(start);
+    if (isAbrupt(relativeStart=ifAbrupt(relativeStart))) return relativeStart;
+    if (relativeStart < 0) from = max((len+relativeStart), 0);
+    else from = min(relativeStart, len);
+    var relativeEnd;
+    if (end === undefined) relativeEnd = len;
+    else relativeEnd = ToInteger(end);
+    if (isAbrupt(relativeEnd=ifAbrupt(relativeEnd))) return relativeEnd;
+    if (relativeEnd < 0) final = max((len+relativeEnd),0);
+    else final = min(relativeEnd, len);
+    var count = min(final-from, len-to);
+    var direction;
+    if (from < to && (to < from+count)) {
+        direction = -1;
+        from = from + count - 1;
+        to = to + count - 1;
+    } else {
+        direction = 1;
+    }
+    while (count > 0) {
+        var fromKey = ToString(from);
+        var toKey = ToString(to);
+        var fromPresent = HasProperty(O, fromKey);
+        if (isAbrupt(fromPresent=ifAbrupt(fromPresent))) return fromPresent;
+        if (fromPresent === true) {
+            var fromVal = Get(O, fromKey);
+            if (isAbrupt(fromVal = ifAbrupt(fromVal))) return fromVal;
+            var putStatus = Put(O, toKey, fromVal, true);
+            if (isAbrupt(putStatus)) return putStatus;
+        } else {
+            var deleteStatus = DeletePropertyOrThrow(O, toKey);
+            if (isAbrupt(deleteStatus)) return deleteStatus;
+        }
+        from = from + direction;
+        to = to + direction;
+        count = count - 1;
+    }
+    return NormalCompletion(O);
+};
+
+var ArrayPrototype_reduce = function reduce(thisArg, argList) {
+    var callback = argList[0];
+    var initialValue = argList[1];
+    var O = ToObject(thisArg);
+    if (isAbrupt(O=ifAbrupt(O))) return O;
+    var lenValue = Get(O, "length");
+    var len = ToLength(lenValue);
+    if (isAbrupt(len=ifAbrupt(len))) return len;
+    if (!IsCallable(callback)) return newTypeError(format("S_NOT_CALLABLE", "reduce: first argument"));
+    var k = 0;
+    var accumulator;
+    if (argList.length > 1) {
+        accumulator = initialValue;
+    } else {
+        var kPresent = false;
+        while (!kPresent && (k < len)) {
+            var Pk = ToString(k);
+            var kPresent = HasProperty(O, Pk);
+            if (isAbrupt(kPresent=ifAbrupt(kPresent))) return kPresent;
+            if (kPresent) {
+                accumulator = Get(O, Pk);
+                if (isAbrupt(accumulator=ifAbrupt(accumulator))) return accumulator;
+            }
+            k = k + 1;
+        }
+        if (!kPresent) return newTypeError(format("S_IS_FALSE", "kPresent"));
+    }
+    while (k < len) {
+        Pk = ToString(k);
+        kPresent = HasProperty(O, Pk);
+        if (kPresent) {
+            var kValue = Get(O, Pk);
+            if (isAbrupt(kPresent = ifAbrupt(kPresent))) return kPresent;
+            accumulator = callInternalSlot(SLOTS.CALL, callback, undefined, [accumulator, kValue, k, O]);
+            if (isAbrupt(accumulator=ifAbrupt(accumulator))) return accumulator;
+        }
+        k = k + 1;
+    }
+    return NormalCompletion(accumulator);
+};
+var ArrayPrototype_reduceRight = function reduceRight(thisArg, argList) {
+    var callback = argList[0];
+    var initialValue = argList[1];
+    var O = ToObject(thisArg);
+    if (isAbrupt(O=ifAbrupt(O))) return O;
+    var lenValue = Get(O, "length");
+    var len = ToLength(lenValue);
+    if (isAbrupt(len=ifAbrupt(len))) return len;
+    if (!IsCallable(callback)) return newTypeError(format("S_NOT_CALLABLE", "reduce: first argument"));
+    var accumulator;
+    var k = len - 1;
+    if (argList.length > 1) {
+        accumulator = initialValue;
+    } else {
+        var kPresent = false;
+        while (!kPresent && (k >= 0)) {
+            var Pk = ToString(k);
+            kPresent = HasProperty(O, Pk);
+            if (isAbrupt(kPresent=ifAbrupt(kPresent))) return kPresent;
+            if (kPresent) {
+                accumulator = Get(O, Pk);
+                if (isAbrupt(accumulator=ifAbrupt(accumulator))) return accumulator;
+            }
+            k = k - 1;
+        }
+        if (!kPresent) return newTypeError(format("S_IS_FALSE", "kPresent"));
+    }
+    while (k >= 0) {
+        Pk = ToString(k);
+        kPresent = HasProperty(O, Pk);
+        if (kPresent) {
+            var kValue = Get(O, Pk);
+            if (isAbrupt(kPresent = ifAbrupt(kPresent))) return kPresent;
+            accumulator = callInternalSlot(SLOTS.CALL, callback, undefined, [accumulator, kValue, k, O]);
+            if (isAbrupt(accumulator=ifAbrupt(accumulator))) return accumulator;
+        }
+        k = k - 1;
+    }
+    return NormalCompletion(accumulator);
+};
+var ArrayPrototype_unshift = function unshift(thisArg, argList) {
+    var items = argList;
+    var O = ToObject(thisArg);
+    if (isAbrupt(O=ifAbrupt(O))) return O;
+    var lenValue = Get(O, "length");
+    var len = ToLength(lenValue);
+    if (isAbrupt(len=ifAbrupt(len))) return len;
+    var argCount = argList.length;
+    var k = len;
+    // first move 0...n to k+1..n+k+1
+    while (k > 0) {
+        var from = ToString(k-1);
+        var to = ToString(k+argCount-1);
+        var fromPresent = HasProperty(O,from);
+        if (isAbrupt(fromPresent=ifAbrupt(fromPresent))) return fromPresent;
+        if (fromPresent === true) {
+            var fromValue = Get(O, from);
+            if (isAbrupt(fromValue=ifAbrupt(fromValue))) return fromValue;
+            var putStatus = Put(O, to, fromValue, true);
+            if (isAbrupt(putStatus)) return putStatus;
+        } else {
+            var deleteStatus = DeletePropertyOrThrow(O, to);
+            if (isAbrupt(deleteStatus)) return deleteStatus;
+        }
+        k = k - 1;
+    }
+    var j = 0;
+    var i = 0;
+    // secondly insert new 0..k before [k+1..n+k+1]
+    while (i < items.length) {
+        var E = items[i];
+        var putStatus = Put(O, ToString(j), E, true);
+        if(isAbrupt(putStatus)) return putSttus;
+        i = i + 1;
+        j = j + 1;
+    }
+    putStatus = Put(O, "length", len+argCount, true);
+    if (isAbrupt(putStatus)) return putStatus;
+    // thats unshift (renumber the old, prepend the new) == O(n) total copy and define
+    return NormalCompletion(len+argCount);
+};
+
+var ArrayPrototype_findIndex = function (thisArg, argList) {
+    var predicate = argList[0];
+    var optThisArg = argList[1];
+    var O = ToObject(thisArg);
+    if (isAbrupt(O=ifAbrupt(O))) return O;
+    var lenValue = Get(O, "length");
+    var len = ToLength(lenValue);
+    if (isAbrupt(len=ifAbrupt(len))) return len;
+    if (!IsCallable(predicate)) return newTypeError(format("S_NOT_CALLABLE", "findIndex: predicate"));
+    var T;
+    if (optThisArg != undefined) T = optThisArg; else T = undefined; // or just "optThisArg = T;"
+    var k = 0;
+    while (k < len) {
+        var Pk = ToString(k);
+        var kPresent = HasProperty(O, Pk);
+        if (isAbrupt(kPresent=ifAbrupt(kPresent))) return kPresent;
+        if (kPresent === true) {
+            var kValue = Get(O, Pk);
+            if (isAbrupt(kValue=ifAbrupt(kValue))) return kValue;
+            var testResult = callInternalSlot(SLOTS.CALL, predicate, T, [kValue, k, O]);
+            if (isAbrupt(testResult=ifAbrupt(testResult))) return testResult;
+            if (ToBoolean(testResult) === true) return NormalCompletion(k);
+        }
+        k = k + 1;
+    }
+    return NormalCompletion(-1);
+};
+
+var ArrayPrototype_find = function (thisArg, argList) {
+    var predicate = argList[0];
+    var optThisArg = argList[1];
+    var O = ToObject(thisArg);
+    if (isAbrupt(O=ifAbrupt(O))) return O;
+    var lenValue = Get(O, "length");
+    var len = ToLength(lenValue);
+    if (isAbrupt(len=ifAbrupt(len))) return len;
+    if (!IsCallable(predicate)) return newTypeError(format("S_NOT_CALLABLE", "findIndex: predicate"));
+    var T;
+    if (optThisArg != undefined) T = optThisArg; else T = undefined; // or just "optThisArg = T;"
+    var k = 0;
+    while (k < len) {
+        var Pk = ToString(k);
+        var kPresent = HasProperty(O, Pk);
+        if (isAbrupt(kPresent=ifAbrupt(kPresent))) return kPresent;
+        if (kPresent === true) {
+            var kValue = Get(O, Pk);
+            if (isAbrupt(kValue=ifAbrupt(kValue))) return kValue;
+            var testResult = callInternalSlot(SLOTS.CALL, predicate, T, [kValue, k, O]);
+            if (isAbrupt(testResult=ifAbrupt(testResult))) return testResult;
+            if (ToBoolean(testResult) === true) return NormalCompletion(kValue);
+        }
+        k = k + 1;
+    }
+    return NormalCompletion(-1);
+};
+
+var ArrayPrototype_fill = function (thisArg, argList) {
+    var value = argList[0];
+    var start = argList[1];
+    var end = argList[2];
+    var O = ToObject(thisArg);
+    if (isAbrupt(O=ifAbrupt(O))) return O;
+    var lenVal = Get(O, "length");
+    var len = ToLength(lenVal);
+    if (isAbrupt(len=ifAbrupt(len))) return len;
+    var k, final;
+    var relativeStart = ToInteger(start);
+    if (isAbrupt(relativeStart=ifAbrupt(relativeStart))) return relativeStart;
+    if (relativeStart < 0) k = max((len+relativeStart), 0);
+    else k = min(relativeStart, len);
+    var relativeEnd;
+    if (end === undefined) relativeEnd = len;
+    else relativeEnd = ToInteger(end);
+    if (isAbrupt(relativeEnd=ifAbrupt(relativeEnd))) return relativeEnd;
+    if (relativeEnd < 0) final = max((len+relativeEnd),0);
+    else final = min(relativeEnd, len);
+    while (k < final) {
+        var Pk = ToString(k);
+        var putStatus = Put(O, Pk, value, true);
+        if (isAbrupt(putStatus)) return putStatus;
+        k = k + 1;
+    }
+    return NormalCompletion(O);
+};
+
+// %ArrayProto_values === Array.prototype.values
+var ArrayPrototype_values = function (thisArg, argList) {
+    var O = ToObject(thisArg);
+    if (isAbrupt(O)) return O;
+    return CreateArrayIterator(O, "value");
+};
+
 function ArrayExoticObject(proto) {
     var A = Object.create(ArrayExoticObject.prototype);
     setInternalSlot(A, SLOTS.BINDINGS,Object.create(null));
@@ -13616,6 +13994,39 @@ function Decode(string, reservedSet) {
         k = k + 1;
     }
 }
+
+
+
+var EncodeURIFunction_call = function (thisArg, argList) {
+    var uri = argList[0];
+    var uriString = ToString(uri);
+    if (isAbrupt(uriString = ifAbrupt(uriString))) return uriString;
+    var unescapedUriSet = "" + uriReserved + uriUnescaped + "#";
+    return Encode(uriString, unescapedUriSet);
+};
+var EncodeURIComponentFunction_call = function (thisArg, argList) {
+    var uriComponent = argList[0];
+    var uriComponentString = ToString(uriComponent);
+    if (isAbrupt(uriComponentString = ifAbrupt(uriComponentString))) return uriComponentString;
+    var unescapedUriComponentSet = "" + uriUnescaped;
+    return Encode(uriComponentString, unescapedUriComponentSet);
+};
+
+var DecodeURIFunction_call = function (thisArg, argList) {
+    var encodedUri = argList[0];
+    var uriString = ToString(encodedUri);
+    if (isAbrupt(uriString = ifAbrupt(uriString))) return uriString;
+    var reservedUriSet = "" + uriReserved + "#";
+    return Decode(uriString, reservedUriSet);
+};
+
+var DecodeURIComponentFunction_call = function (thisArg, argList) {
+    var encodedUriComponent = argList[0];
+    var uriComponentString = ToString(encodedUriComponent);
+    if (isAbrupt(uriComponentString = ifAbrupt(uriComponentString))) return uriComponentString;
+    var reservedUriComponentSet = "";
+    return Decode(uriComponentString, reservedUriComponentSet);
+};
 
 
 var msPerDay = 1000 * 60 * 60 * 24;
@@ -15854,6 +16265,250 @@ function thisNumberValue(value) {
     return newTypeError("thisNumberValue: value is not a Number");
 }
 
+
+var MIN_INTEGER = Number.MIN_INTEGER;
+var MAX_INTEGER = Number.MAX_INTEGER;
+var EPSILON = Number.EPSILON;
+var MIN_VALUE = Number.MIN_VALUE;
+var MAX_VALUE = Number.MAX_VALUE;
+var NAN = NaN;
+var POSITIVE_INFINITY = Infinity;
+var NEGATIVE_INFINITY = -Infinity;
+
+var NumberConstructor_call = function (thisArg, argList) {
+    var value = argList[0];
+    var O = thisArg;
+    var n;
+    if (argList.length === 0) n = +0;
+    else n = ToNumber(value);
+    if (isAbrupt(n = ifAbrupt(n))) return n;
+    if (Type(O) === OBJECT && hasInternalSlot(O, SLOTS.NUMBERDATA) && getInternalSlot(O, SLOTS.NUMBERDATA) === undefined) {
+        setInternalSlot(O, SLOTS.NUMBERDATA, n);
+        return O;
+    }
+    return n;
+};
+
+var NumberConstructor_construct = function (argList) {
+    var F = NumberConstructor;
+    return OrdinaryConstruct(F, argList);
+}
+
+var NumberConstructor_$$create = function (thisArg, argList) {
+    var F = thisArg;
+    var obj = OrdinaryCreateFromConstructor(F, INTRINSICS.NUMBERPROTOTYPE, [ SLOTS.NUMBERDATA ]);
+    return obj;
+};
+var NumberConstructor_isFinite = function (thisArg, argList) {
+    var number = argList[0];
+    if (Type(number) !== NUMBER) return NormalCompletion(false);
+    if ((number != number) || number === Infinity || number === -Infinity) return NormalCompletion(false);
+    return NormalCompletion(true);
+};
+var NumberConstructor_isNaN = function (thisArg, argList) {
+    var number = argList[0];
+    if (Type(number) !== NUMBER) return NormalCompletion(false);
+    if (number != number) return NormalCompletion(true);
+    return NormalCompletion(false);
+};
+
+var NumberConstructor_isInteger = function (thisArg, argList) {
+    var number = argList[0];
+    if (Type(number) !== NUMBER) return NormalCompletion(false);
+    if ((number != number) ||
+        number === +Infinity || number === -Infinity) return NormalCompletion(false);
+    return NormalCompletion(true);
+};
+
+var NumberPrototype_clz = function (thisArg, argList) {
+    var x = thisNumberValue(thisArg);
+    if (isAbrupt(x = ifAbrupt(x))) return x;
+    var n = ToUint32(x);
+    if (isAbrupt(n = ifAbrupt(n))) return n;
+    if (n < 0) return 0;
+    if (n === 0) return 32;
+    var bitlen = Math.floor(Math.log(Math.pow(n, Math.LOG2E))) + 1;
+    var p = 32 - bitlen;
+    return NormalCompletion(p);
+};
+var NumberPrototype_toString = function (thisArg, argList) {
+    var radix = argList[0];
+    var radixNumber;
+    var x = thisNumberValue(thisArg);
+    var s = "";
+    if (radix === undefined) radixNumber = 10;
+    else radixNumber = ToInteger(radix);
+    if (isAbrupt(radixNumber=ifAbrupt(radixNumber))) return radixNumber;
+    if (radixNumber < 2 || radixNumber > 36) return newRangeError( "radixNumber has to be between 2 and 36");
+    if (radixNumber === 10) return ToString(x);
+    else s = ToString(x);
+
+    /*
+     var parts = s.split(".");
+     var i = 0;
+     var result = "";
+     while ((i < 2) && (s = parts[i])) {
+     s = parts[i];
+     if (i == 1) result += ".";
+     var d = Math.floor((+s) / radixNumber);
+     var r = (+s) % radixNumber;
+     s = ""+d;
+     if (r > 10) s += String.fromCharCode(("a").charCodeAt(0) + r - 10);
+     else if (r > 0) s += r;
+     result += s;
+     i += 1;
+     }
+     */
+    var result = x.toString(radixNumber);
+
+    return NormalCompletion(result);
+};
+var NumberPrototype_valueOf = function (thisArg, argList) {
+    var x = thisNumberValue(thisArg);
+    return NormalCompletion(x);
+};
+var NumberPrototype_toPrecision = function (thisArg, argList) {
+    var precision = argList[0];
+    var x = thisNumberValue(thisArg);
+    if (isAbrupt(x = ifAbrupt(x))) return x;
+    if (precision === undefined) return ToString(x);
+    var p = ToInteger(precision);
+    if (isAbrupt(p = ifAbrupt(p))) return p;
+    if (x !== x) return "NaN";
+    var s = "";
+    if (x < 0) {
+        s = "-";
+        x = -x;
+    }
+    if (x === +Infinity || x === -Infinity) {
+        return NormalCompletion(s + "Infinity");
+    }
+
+    var result = +x.toPrecision(precision);
+    return NormalCompletion(result);
+};
+
+function repeatString (str, times) {
+    var concat = "";
+    for (var i = 0; i < times; i++) {
+        concat += str;
+    }
+    return concat;
+}
+
+var NumberPrototype_toFixed = function (thisArg, argList) {
+    var fractionDigits = argList[0];
+    var x = thisNumberValue(thisArg);
+    if (isAbrupt(x = ifAbrupt(x))) return x;
+    if (fractionDigits === undefined) return ToString(x);
+    var f = ToInteger(fractionDigits);
+    if (isAbrupt(f = ifAbrupt(f))) return f;
+    if ((f < 0) || (f > 20)) return newRangeError( "fractionDigits is less or more than 20");
+    if (x !== x) return "NaN";
+    var s = "";
+    if (x < 0) {
+        s = "-";
+        x = -x;
+    }
+    if (x >= 1021) {
+        var m = ToString(x);
+    } else {
+        var n;
+        if (n === 0) m = "0";
+        else m = ""+n;
+        if (f != 0) {
+            var k = Math.ceil(Math.log(Math.pow(n, Math.LOG2E))); // = number of elements in n
+            if (k <= f)  {
+                var z = repeatString(0x0030, f+1-k);
+                m = z + m;
+                k = f + 1;
+            }
+            var a = m.substr(0, k-f);
+            var b = m.substr(k-f);
+            m = a + "." + b;
+        }
+    }
+    var result = +x.toFixed(fractionDigits);
+    return NormalCompletion(result);
+    //return NormalCompletion(s + m);
+};
+var NumberPrototype_toExponential = function (thisArg, argList) {
+    var fractionDigits = argList[0];
+    var x = thisNumberValue(thisArg);
+    if (isAbrupt(x = ifAbrupt(x))) return x;
+    var f = ToInteger(fractionDigits);
+    if (isAbrupt(f = ifAbrupt(f))) return f;
+    if (x !== x) return "NaN";
+    var s = "";
+    if (x < 0) {
+        s = "-";
+        x = -x;
+    }
+    var n;
+    if (x === Infinity || s === -Infinity) {
+        return s + "Infinity";
+    }
+    if (fractionDigits !== undefined && ((f < 0) || (f > 20))) return newRangeError( "toExponential: fractionDigits < 0 or > 20");
+    if (x === 0) {
+        if (fractionDigits === undefined) f = 0;
+        var m = stringRepeat(0x0030, f+1);
+        var e = 0;
+    } else {
+        if (fractionDigits !== undefined) {
+
+            // ich konnte das im mcview nicht lesen ob 10f oder 10^f
+            // ich hab das unterwegs geschrieben, todo
+            e;
+            n;
+        } else {
+            e;
+            n;
+        }
+        m = ""+n;
+    }
+    if (f != 0) {
+        var a = m.substr(m, 1);
+        var b = m.substr(1);
+    }
+    if (e === 0) {
+        var c = "+";
+        var d = "0";
+    } else {
+        if (e > 0) c = "+";
+        else if (e <= 0) {
+            c = "-";
+            e = -e;
+        }
+        d = ""+e;
+        m = m + "e" + c + d;
+    }
+
+    var result = +x.toExponential(fractionDigits)
+    return NormalCompletion(result);
+
+    // return NormalCompletion(s + m)
+};
+
+
+/**
+ * Created by root on 15.05.14.
+ */
+
+var ParseIntFunction_call = function (thisArg, argList) {
+    try {
+        return parseInt("" + argList[0], +argList[1]);
+    } catch (ex) {
+        return newTypeError(ex.message);
+    }
+};
+
+var ParseFloatFunction_call = function (thisArg, argList) {
+    try {
+        return parseFloat("" + argList[0]);
+    } catch(ex) {
+        return newTypeError(ex.message);
+    }
+};
 /**
  * Created by root on 31.03.14.
  */
@@ -17714,6 +18369,54 @@ var LoaderPrototype_newModule = function(thisArg, argList) {
 
 var LoaderPrototype_$$iterator = LoaderPrototype_entries;
 
+/**
+ * Created by root on 15.05.14.
+ */
+var EvalFunction_call = function (thisArg, argList) {
+    var input, strict, direct, strictCaller, evalRealm, directCallToEval,
+        ctx, value, result, script, evalCxt, LexEnv, VarEnv, strictVarEnv,
+        strictScript;
+    var Evaluate = require("runtime").Evaluate;
+
+    input = GetValue(argList[0]);
+    if (isAbrupt(input=ifAbrupt(input))) return input;
+
+    if (Type(input) !== STRING) return input;
+    try {script = parse(input);} catch (ex) {return newSyntaxError(ex.message);}
+    if (script.type !== "Program") return undefined;
+    if (script.strict) strictScript = strict = true;
+    if (directCallToEval) direct = true;
+    strictCaller = !!direct;
+    ctx = getContext();
+    if (strict) ctx.strict = true;
+    evalRealm = ctx.realm;
+    if (direct) {
+        // 1. if the code that made the call is function code
+        // and ValidInFunction is false throw SyntaxError
+        // 2. If the code is module code and
+        // ValidInModule ist false throw SyntaxError
+    }
+    if (direct) {
+        LexEnv = ctx.LexEnv;
+        VarEnv = ctx.VarEnv;
+    } else {
+        LexEnv = evalRealm.globalEnv;
+        VarEnv = evalRealm.globalEnv;
+    }
+    if (strictScript || (direct && strictCaller)) {
+        strictVarEnv = NewDeclarativeEnvironment(LexEnv);
+        LexEnv = strictVarEnv;
+        VarEnv = strictVarEnv;
+    }
+    evalCxt = ExecutionContext(getContext());
+    evalCxt.realm = evalRealm;
+    evalCxt.VarEnv = VarEnv;
+    evalCxt.LexEnv = LexEnv;
+    getStack().push(evalCxt);
+    result = Evaluate(script);
+    getStack().pop();
+    return result;
+};
 /**
  * Created by root on 31.03.14.
  */
@@ -19751,6 +20454,7 @@ function CreateSetIterator(set, kind) {
 
 
 
+
     var createGlobalThis, createIntrinsics;
 
     function define_intrinsic(intrinsics, intrinsicName, value) {
@@ -20230,16 +20934,11 @@ LazyDefineProperty(RealmPrototype, "eval", CreateBuiltinFunction(realm,RealmProt
 LazyDefineProperty(RealmPrototype, $$toStringTag, "Reflect.Realm");
 
 
-
-// Loader
 setInternalSlot(LoaderConstructor, SLOTS.PROTOTYPE, FunctionPrototype);
 setInternalSlot(LoaderConstructor, SLOTS.CALL, LoaderConstructor_Call);
 setInternalSlot(LoaderConstructor, SLOTS.CONSTRUCT, LoaderConstructor_Construct);
 LazyDefineProperty(LoaderConstructor, $$create, CreateBuiltinFunction(realm,LoaderConstructor_$$create, 0, "[Symbol.create]"));
 MakeConstructor(LoaderConstructor, false, LoaderPrototype);
-//SetFunctionName(LoaderConstructor, SLOTS.LOADER);
-
-// Loader.prototype
 LazyDefineProperty(LoaderPrototype, "entries", CreateBuiltinFunction(realm,LoaderPrototype_entries, 0, "entries"));
 LazyDefineProperty(LoaderPrototype, "values", CreateBuiltinFunction(realm,LoaderPrototype_values, 0, "values"));
 LazyDefineProperty(LoaderPrototype, "keys", CreateBuiltinFunction(realm,LoaderPrototype_keys, 0, "keys"));
@@ -20248,7 +20947,6 @@ LazyDefineProperty(LoaderPrototype, "get", CreateBuiltinFunction(realm,LoaderPro
 LazyDefineProperty(LoaderPrototype, "set", CreateBuiltinFunction(realm,LoaderPrototype_set, 0, "set"));
 LazyDefineProperty(LoaderPrototype, "delete", CreateBuiltinFunction(realm,LoaderPrototype_delete, 0, "delete"));
 LazyDefineProperty(LoaderPrototype, "define", CreateBuiltinFunction(realm,LoaderPrototype_define, 2, "define"));
-
 LazyDefineProperty(LoaderPrototype, "load", CreateBuiltinFunction(realm,LoaderPrototype_load,    1, "load"));
 LazyDefineProperty(LoaderPrototype, "module", CreateBuiltinFunction(realm,LoaderPrototype_module, 1, "module"));
 LazyDefineProperty(LoaderPrototype, "import", CreateBuiltinFunction(realm,LoaderPrototype_import, 0, "import"));
@@ -20261,7 +20959,6 @@ LazyDefineProperty(LoaderPrototype, "instantiate", CreateBuiltinFunction(realm,L
 LazyDefineProperty(LoaderPrototype, $$iterator, CreateBuiltinFunction(realm,LoaderPrototype_$$iterator, 0, "[Symbol.iterator]"));
 LazyDefineProperty(LoaderPrototype, $$toStringTag, SLOTS.LOADER);
 LazyDefineBuiltinFunction(LoaderPrototype, "newModule", 1, LoaderPrototype_newModule);
-
 // ##################################################################
 // Der Loader Iterator
 // ##################################################################
@@ -20384,21 +21081,6 @@ DefineOwnProperty(ConsoleObject, "html", {
 });
 
 
-function IsSparseArray(A) {
-    var len = Get(A, "length");
-    var elem;
-    for (var i = 0, j = ToUint32(len); i < j; i++) {
-        elem = Get(A, ToString(i));
-        if (isAbrupt(elem = ifAbrupt(elem))) return elem;
-        if (elem === undefined) return true;
-    }
-    return false;
-}
-
-function IsArray(A) {
-    return A instanceof ArrayExoticObject;
-}
-
 
 DefineOwnProperty(ArrayConstructor, $$create, {
     value: CreateBuiltinFunction(realm, function $$create(thisArg, argList) {
@@ -20412,94 +21094,6 @@ DefineOwnProperty(ArrayConstructor, $$create, {
     writable: true,
     configurable: true
 });
-
-var ArrayConstructor_call =  function (thisArg, argList) {
-    var O = thisArg;
-    var array;
-    var intLen;
-    var F, proto;
-    var defineStatus;
-    var len;
-    var k;
-    var putStatus;
-    var numberOfArgs;
-    var Pk, itemK;
-    var items;
-    numberOfArgs = argList.length;
-
-    if (numberOfArgs === 1) {
-        len = GetValue(argList[0]);
-        if (Type(O) === OBJECT && !getInternalSlot(O, SLOTS.ARRAYINITIALISATIONSTATE)) {
-            setInternalSlot(O, SLOTS.ARRAYINITIALISATIONSTATE, true);
-            array = O;
-        } else {
-            F = this;
-            proto = OrdinaryCreateFromConstructor(F, INTRINSICS.ARRAYPROTOTYPE);
-            if (isAbrupt(proto)) return proto;
-            proto = ifAbrupt(proto);
-            array = ArrayCreate(0, proto);
-        }
-        array = ifAbrupt(array);
-        if (isAbrupt(array)) return array;
-        if (Type(len) !== NUMBER) {
-            defineStatus = DefineOwnPropertyOrThrow(array, "0", {
-                value: len,
-                writable: true,
-                enumerable: true,
-                configurable: true
-            });
-            if (isAbrupt(defineStatus)) return defineStatus;
-            intLen = 1;
-        } else {
-            intLen = ToUint32(len);
-            if (intLen != len) return newRangeError(trans("ARRAY_LENGTH_ERROR"));
-        }
-        putStatus = Put(array, "length", intLen, true);
-        if (isAbrupt(putStatus)) return putStatus;
-        return NormalCompletion(array);
-
-    } else {
-        len = GetValue(argList[0]);
-        if (Type(O) === OBJECT && !getInternalSlot(O, SLOTS.ARRAYINITIALISATIONSTATE)) {
-            setInternalSlot(O, SLOTS.ARRAYINITIALISATIONSTATE, true);
-            array = O;
-        } else {
-            F = this;
-            proto = OrdinaryCreateFromConstructor(F, INTRINSICS.ARRAYPROTOTYPE);
-            if (isAbrupt(proto)) return proto;
-            proto = ifAbrupt(proto);
-            array = ArrayCreate(0, proto);
-        }
-
-        array = ifAbrupt(array);
-        if (isAbrupt(array)) return array;
-        k = 0;
-        items = argList;
-
-        while (k < numberOfArgs) {
-            Pk = ToString(k);
-            itemK = items[k];
-            defineStatus = DefineOwnPropertyOrThrow(array, Pk, {
-                value: itemK,
-                writable: true,
-                enumerable: true,
-                configurable: true
-
-            });
-            if (isAbrupt(defineStatus)) return defineStatus;
-            k = k + 1;
-        }
-        putStatus = Put(array, "length", numberOfArgs, true);
-        if (isAbrupt(putStatus)) return putStatus;
-        return NormalCompletion(array);
-    }
-
-};
-var ArrayConstructor_construct = function (argList) {
-    var F = this;
-    var argumentsList = argList;
-    return OrdinaryConstruct(F, argumentsList);
-};
 
 
 
@@ -21351,17 +21945,6 @@ DefineOwnProperty(ArrayPrototype, "keys", {
 });
 
 
-// %ArrayProto_values === Array.prototype.values
-
-var ArrayPrototype_values = function (thisArg, argList) {
-        var O = ToObject(thisArg);
-        if (isAbrupt(O)) return O;
-        return CreateArrayIterator(O, "value");
-};
-setInternalSlot(ArrayProto_values, SLOTS.CALL, ArrayPrototype_values);
-setInternalSlot(ArrayProto_values, SLOTS.CONSTRUCT, undefined);
-LazyDefineProperty(ArrayPrototype, "values", ArrayProto_values);
-
 
 DefineOwnProperty(ArrayPrototype, $$iterator, {
     value: CreateBuiltinFunction(realm, function $$iterator(thisArg, argList) {
@@ -21393,271 +21976,9 @@ DefineOwnProperty(ArrayPrototype, $$unscopables, {
 
 
 
-var ArrayPrototype_toLocaleString = function toLocaleString(thisArg, argList) {
-
-};
-
-
-var ArrayPrototype_copyWithin = function (thisArg, argList) {
-    var target = argList[0];
-    var start = argList[1];
-    var end = argList[2];
-    var O = ToObject(thisArg);
-    if (isAbrupt(O=ifAbrupt(O))) return O;
-    var lenVal = Get(O, "length");
-    var len = ToLength(lenVal);
-    if (isAbrupt(len=ifAbrupt(len))) return len;
-    var relativeTarget = ToInteger(target);
-    if (isAbrupt(relativeTarget=ifAbrupt(relativeTarget))) return relativeTarget;
-    var from, to, final;
-    if (relativeTarget < 0) to = max((len+relativeTarget), 0);
-    else to = min(relativeTarget, len);
-    var relativeStart = ToInteger(start);
-    if (isAbrupt(relativeStart=ifAbrupt(relativeStart))) return relativeStart;
-    if (relativeStart < 0) from = max((len+relativeStart), 0);
-    else from = min(relativeStart, len);
-    var relativeEnd;
-    if (end === undefined) relativeEnd = len;
-    else relativeEnd = ToInteger(end);
-    if (isAbrupt(relativeEnd=ifAbrupt(relativeEnd))) return relativeEnd;
-    if (relativeEnd < 0) final = max((len+relativeEnd),0);
-    else final = min(relativeEnd, len);
-    var count = min(final-from, len-to);
-    var direction;
-    if (from < to && (to < from+count)) {
-        direction = -1;
-        from = from + count - 1;
-        to = to + count - 1;
-    } else {
-        direction = 1;
-    }
-    while (count > 0) {
-        var fromKey = ToString(from);
-        var toKey = ToString(to);
-        var fromPresent = HasProperty(O, fromKey);
-        if (isAbrupt(fromPresent=ifAbrupt(fromPresent))) return fromPresent;
-        if (fromPresent === true) {
-            var fromVal = Get(O, fromKey);
-            if (isAbrupt(fromVal = ifAbrupt(fromVal))) return fromVal;
-            var putStatus = Put(O, toKey, fromVal, true);
-            if (isAbrupt(putStatus)) return putStatus;
-        } else {
-            var deleteStatus = DeletePropertyOrThrow(O, toKey);
-            if (isAbrupt(deleteStatus)) return deleteStatus;
-        }
-        from = from + direction;
-        to = to + direction;
-        count = count - 1;
-    }
-    return NormalCompletion(O);
-};
-
-var ArrayPrototype_reduce = function reduce(thisArg, argList) {
-    var callback = argList[0];
-    var initialValue = argList[1];
-    var O = ToObject(thisArg);
-    if (isAbrupt(O=ifAbrupt(O))) return O;
-    var lenValue = Get(O, "length");
-    var len = ToLength(lenValue);
-    if (isAbrupt(len=ifAbrupt(len))) return len;
-    if (!IsCallable(callback)) return newTypeError(format("S_NOT_CALLABLE", "reduce: first argument"));
-    var k = 0;
-    var accumulator;
-    if (argList.length > 1) {
-        accumulator = initialValue;
-    } else {
-        var kPresent = false;
-        while (!kPresent && (k < len)) {
-            var Pk = ToString(k);
-            var kPresent = HasProperty(O, Pk);
-            if (isAbrupt(kPresent=ifAbrupt(kPresent))) return kPresent;
-            if (kPresent) {
-                accumulator = Get(O, Pk);
-                if (isAbrupt(accumulator=ifAbrupt(accumulator))) return accumulator;
-            }
-            k = k + 1;
-        }
-        if (!kPresent) return newTypeError(format("S_IS_FALSE", "kPresent"));
-    }
-    while (k < len) {
-        Pk = ToString(k);
-        kPresent = HasProperty(O, Pk);
-        if (kPresent) {
-            var kValue = Get(O, Pk);
-            if (isAbrupt(kPresent = ifAbrupt(kPresent))) return kPresent;
-            accumulator = callInternalSlot(SLOTS.CALL, callback, undefined, [accumulator, kValue, k, O]);
-            if (isAbrupt(accumulator=ifAbrupt(accumulator))) return accumulator;
-        }
-        k = k + 1;
-    }
-    return NormalCompletion(accumulator);
-};
-var ArrayPrototype_reduceRight = function reduceRight(thisArg, argList) {
-    var callback = argList[0];
-    var initialValue = argList[1];
-    var O = ToObject(thisArg);
-    if (isAbrupt(O=ifAbrupt(O))) return O;
-    var lenValue = Get(O, "length");
-    var len = ToLength(lenValue);
-    if (isAbrupt(len=ifAbrupt(len))) return len;
-    if (!IsCallable(callback)) return newTypeError(format("S_NOT_CALLABLE", "reduce: first argument"));
-    var accumulator;
-    var k = len - 1;
-    if (argList.length > 1) {
-        accumulator = initialValue;
-    } else {
-        var kPresent = false;
-        while (!kPresent && (k >= 0)) {
-            var Pk = ToString(k);
-            kPresent = HasProperty(O, Pk);
-            if (isAbrupt(kPresent=ifAbrupt(kPresent))) return kPresent;
-            if (kPresent) {
-                accumulator = Get(O, Pk);
-                if (isAbrupt(accumulator=ifAbrupt(accumulator))) return accumulator;
-            }
-            k = k - 1;
-        }
-        if (!kPresent) return newTypeError(format("S_IS_FALSE", "kPresent"));
-    }
-    while (k >= 0) {
-        Pk = ToString(k);
-        kPresent = HasProperty(O, Pk);
-        if (kPresent) {
-            var kValue = Get(O, Pk);
-            if (isAbrupt(kPresent = ifAbrupt(kPresent))) return kPresent;
-            accumulator = callInternalSlot(SLOTS.CALL, callback, undefined, [accumulator, kValue, k, O]);
-            if (isAbrupt(accumulator=ifAbrupt(accumulator))) return accumulator;
-        }
-        k = k - 1;
-    }
-    return NormalCompletion(accumulator);
-};
-var ArrayPrototype_unshift = function unshift(thisArg, argList) {
-    var items = argList;
-    var O = ToObject(thisArg);
-    if (isAbrupt(O=ifAbrupt(O))) return O;
-    var lenValue = Get(O, "length");
-    var len = ToLength(lenValue);
-    if (isAbrupt(len=ifAbrupt(len))) return len;
-    var argCount = argList.length;
-    var k = len;
-    // first move 0...n to k+1..n+k+1
-    while (k > 0) {
-        var from = ToString(k-1);
-        var to = ToString(k+argCount-1);
-        var fromPresent = HasProperty(O,from);
-        if (isAbrupt(fromPresent=ifAbrupt(fromPresent))) return fromPresent;
-        if (fromPresent === true) {
-            var fromValue = Get(O, from);
-            if (isAbrupt(fromValue=ifAbrupt(fromValue))) return fromValue;
-            var putStatus = Put(O, to, fromValue, true);
-            if (isAbrupt(putStatus)) return putStatus;
-        } else {
-            var deleteStatus = DeletePropertyOrThrow(O, to);
-            if (isAbrupt(deleteStatus)) return deleteStatus;
-        }
-        k = k - 1;
-    }
-    var j = 0;
-    var i = 0;
-    // secondly insert new 0..k before [k+1..n+k+1]
-    while (i < items.length) {
-        var E = items[i];
-        var putStatus = Put(O, ToString(j), E, true);
-        if(isAbrupt(putStatus)) return putSttus;
-        i = i + 1;
-        j = j + 1;
-    }
-    putStatus = Put(O, "length", len+argCount, true);
-    if (isAbrupt(putStatus)) return putStatus;
-    // thats unshift (renumber the old, prepend the new) == O(n) total copy and define
-    return NormalCompletion(len+argCount);
-};
-
-var ArrayPrototype_findIndex = function (thisArg, argList) {
-    var predicate = argList[0];
-    var optThisArg = argList[1];
-    var O = ToObject(thisArg);
-    if (isAbrupt(O=ifAbrupt(O))) return O;
-    var lenValue = Get(O, "length");
-    var len = ToLength(lenValue);
-    if (isAbrupt(len=ifAbrupt(len))) return len;
-    if (!IsCallable(predicate)) return newTypeError(format("S_NOT_CALLABLE", "findIndex: predicate"));
-    var T;
-    if (optThisArg != undefined) T = optThisArg; else T = undefined; // or just "optThisArg = T;"
-    var k = 0;
-    while (k < len) {
-        var Pk = ToString(k);
-        var kPresent = HasProperty(O, Pk);
-        if (isAbrupt(kPresent=ifAbrupt(kPresent))) return kPresent;
-        if (kPresent === true) {
-            var kValue = Get(O, Pk);
-            if (isAbrupt(kValue=ifAbrupt(kValue))) return kValue;
-            var testResult = callInternalSlot(SLOTS.CALL, predicate, T, [kValue, k, O]);
-            if (isAbrupt(testResult=ifAbrupt(testResult))) return testResult;
-            if (ToBoolean(testResult) === true) return NormalCompletion(k);
-        }
-        k = k + 1;
-    }
-    return NormalCompletion(-1);
-};
-
-var ArrayPrototype_find = function (thisArg, argList) {
-    var predicate = argList[0];
-    var optThisArg = argList[1];
-    var O = ToObject(thisArg);
-    if (isAbrupt(O=ifAbrupt(O))) return O;
-    var lenValue = Get(O, "length");
-    var len = ToLength(lenValue);
-    if (isAbrupt(len=ifAbrupt(len))) return len;
-    if (!IsCallable(predicate)) return newTypeError(format("S_NOT_CALLABLE", "findIndex: predicate"));
-    var T;
-    if (optThisArg != undefined) T = optThisArg; else T = undefined; // or just "optThisArg = T;"
-    var k = 0;
-    while (k < len) {
-        var Pk = ToString(k);
-        var kPresent = HasProperty(O, Pk);
-        if (isAbrupt(kPresent=ifAbrupt(kPresent))) return kPresent;
-        if (kPresent === true) {
-            var kValue = Get(O, Pk);
-            if (isAbrupt(kValue=ifAbrupt(kValue))) return kValue;
-            var testResult = callInternalSlot(SLOTS.CALL, predicate, T, [kValue, k, O]);
-            if (isAbrupt(testResult=ifAbrupt(testResult))) return testResult;
-            if (ToBoolean(testResult) === true) return NormalCompletion(kValue);
-        }
-        k = k + 1;
-    }
-    return NormalCompletion(-1);
-};
-
-var ArrayPrototype_fill = function (thisArg, argList) {
-    var value = argList[0];
-    var start = argList[1];
-    var end = argList[2];
-    var O = ToObject(thisArg);
-    if (isAbrupt(O=ifAbrupt(O))) return O;
-    var lenVal = Get(O, "length");
-    var len = ToLength(lenVal);
-    if (isAbrupt(len=ifAbrupt(len))) return len;
-    var k, final;
-    var relativeStart = ToInteger(start);
-    if (isAbrupt(relativeStart=ifAbrupt(relativeStart))) return relativeStart;
-    if (relativeStart < 0) k = max((len+relativeStart), 0);
-    else k = min(relativeStart, len);
-    var relativeEnd;
-    if (end === undefined) relativeEnd = len;
-    else relativeEnd = ToInteger(end);
-    if (isAbrupt(relativeEnd=ifAbrupt(relativeEnd))) return relativeEnd;
-    if (relativeEnd < 0) final = max((len+relativeEnd),0);
-    else final = min(relativeEnd, len);
-    while (k < final) {
-        var Pk = ToString(k);
-        var putStatus = Put(O, Pk, value, true);
-        if (isAbrupt(putStatus)) return putStatus;
-        k = k + 1;
-    }
-    return NormalCompletion(O);
-};
+setInternalSlot(ArrayProto_values, SLOTS.CALL, ArrayPrototype_values);
+setInternalSlot(ArrayProto_values, SLOTS.CONSTRUCT, undefined);
+LazyDefineProperty(ArrayPrototype, "values", ArrayProto_values);
 
 MakeConstructor(ArrayConstructor, true, ArrayPrototype);
 setInternalSlot(ArrayConstructor, SLOTS.CALL, ArrayConstructor_call);
@@ -22207,16 +22528,10 @@ createNativeError("Range", RangeErrorConstructor, RangeErrorPrototype);
 createNativeError("URI", URIErrorConstructor, URIErrorPrototype);
 createNativeError("Eval", EvalErrorConstructor, EvalErrorPrototype);
 
-// ===========================================================================================================
-// eval("let x = 10"); Function calls the parser and exports.Evaluate
-// ===========================================================================================================
-
-setInternalSlot(EvalFunction, SLOTS.CALL, function (thisArg, argList) {
-
+var EvalFunction_call = function (thisArg, argList) {
     var input, strict, direct, strictCaller, evalRealm, directCallToEval,
         ctx, value, result, script, evalCxt, LexEnv, VarEnv, strictVarEnv,
         strictScript;
-
     var Evaluate = require("runtime").Evaluate;
 
     input = GetValue(argList[0]);
@@ -22269,8 +22584,9 @@ setInternalSlot(EvalFunction, SLOTS.CALL, function (thisArg, argList) {
     result = Evaluate(script);
     getStack().pop();
     return result;
-});
+};
 
+setInternalSlot(EvalFunction, SLOTS.CALL, EvalFunction_call);
 setInternalSlot(EvalFunction, SLOTS.CONSTRUCT, null);
 
 
@@ -22594,41 +22910,10 @@ DefineOwnProperty(DatePrototype, "", {
 LazyDefineBuiltinConstant(DatePrototype, $$toStringTag, "Date");
 
 
-// ===========================================================================================================
-// encodeURI, decodeURI functions
-// ===========================================================================================================
-
-setInternalSlot(EncodeURIFunction, SLOTS.CALL, function (thisArg, argList) {
-    var uri = argList[0];
-    var uriString = ToString(uri);
-    if (isAbrupt(uriString = ifAbrupt(uriString))) return uriString;
-    var unescapedUriSet = "" + uriReserved + uriUnescaped + "#";
-    return Encode(uriString, unescapedUriSet);
-});
-
-setInternalSlot(EncodeURIComponentFunction, SLOTS.CALL, function (thisArg, argList) {
-    var uriComponent = argList[0];
-    var uriComponentString = ToString(uriComponent);
-    if (isAbrupt(uriComponentString = ifAbrupt(uriComponentString))) return uriComponentString;
-    var unescapedUriComponentSet = "" + uriUnescaped;
-    return Encode(uriComponentString, unescapedUriComponentSet);
-});
-
-setInternalSlot(DecodeURIFunction, SLOTS.CALL, function (thisArg, argList) {
-    var encodedUri = argList[0];
-    var uriString = ToString(encodedUri);
-    if (isAbrupt(uriString = ifAbrupt(uriString))) return uriString;
-    var reservedUriSet = "" + uriReserved + "#";
-    return Decode(uriString, reservedUriSet);
-});
-
-setInternalSlot(DecodeURIComponentFunction, SLOTS.CALL, function (thisArg, argList) {
-    var encodedUriComponent = argList[0];
-    var uriComponentString = ToString(encodedUriComponent);
-    if (isAbrupt(uriComponentString = ifAbrupt(uriComponentString))) return uriComponentString;
-    var reservedUriComponentSet = "";
-    return Decode(uriComponentString, reservedUriComponentSet);
-});
+setInternalSlot(EncodeURIFunction, SLOTS.CALL, EncodeURIFunction_call);
+setInternalSlot(EncodeURIComponentFunction, SLOTS.CALL, EncodeURIComponentFunction_call);
+setInternalSlot(DecodeURIFunction, SLOTS.CALL, DecodeURIFunction_call);
+setInternalSlot(DecodeURIComponentFunction, SLOTS.CALL, DecodeURIComponentFunction_call);
 
 
 // ===========================================================================================================
@@ -22645,13 +22930,6 @@ setInternalSlot(UnescapeFunction, SLOTS.CALL, function (thisArg, argList) {
 
 
 
-var ParseIntFunction_call = function (thisArg, argList) {
-    return parseInt(""+argList[0], +argList[1]);
-};
-
-var ParseFloatFunction_call = function (thisArg, argList) {
-    return parseFloat(""+argList[0]);
-};
 setInternalSlot(ParseIntFunction, SLOTS.CALL, ParseIntFunction_call);
 
 setInternalSlot(ParseFloatFunction, SLOTS.CALL, ParseFloatFunction_call);
@@ -22687,227 +22965,10 @@ LazyDefineBuiltinFunction(MathObject, "sign", 1, MathObject_sign);
 LazyDefineBuiltinFunction(MathObject, "tan", 1, MathObject_tan);
 LazyDefineBuiltinFunction(MathObject, "random", 0, MathObject_random);
 
-// ===========================================================================================================
-// Number
-// ===========================================================================================================
-
 MakeConstructor(NumberConstructor, true, NumberPrototype);
 
-var MIN_INTEGER = Number.MIN_INTEGER;
-var MAX_INTEGER = Number.MAX_INTEGER;
-var EPSILON = Number.EPSILON;
-var MIN_VALUE = Number.MIN_VALUE;
-var MAX_VALUE = Number.MAX_VALUE;
-var NAN = NaN;
-var POSITIVE_INFINITY = Infinity;
-var NEGATIVE_INFINITY = -Infinity;
-
-setInternalSlot(NumberConstructor, SLOTS.CALL, function (thisArg, argList) {
-    var value = argList[0];
-    var O = thisArg;
-    var n;
-    if (argList.length === 0) n = +0;
-    else n = ToNumber(value);
-    if (isAbrupt(n = ifAbrupt(n))) return n;
-    if (Type(O) === OBJECT && hasInternalSlot(O, SLOTS.NUMBERDATA) && getInternalSlot(O, SLOTS.NUMBERDATA) === undefined) {
-        setInternalSlot(O, SLOTS.NUMBERDATA, n);
-        return O;
-    }
-    return n;
-});
-
-setInternalSlot(NumberConstructor, SLOTS.CONSTRUCT, function (argList) {
-    var F = NumberConstructor;
-    return OrdinaryConstruct(F, argList);
-});
-
-var NumberConstructor_$$create = function (thisArg, argList) {
-    var F = thisArg;
-    var obj = OrdinaryCreateFromConstructor(F, INTRINSICS.NUMBERPROTOTYPE, [ SLOTS.NUMBERDATA ]);
-    return obj;
-};
-var NumberConstructor_isFinite = function (thisArg, argList) {
-    var number = argList[0];
-    if (Type(number) !== NUMBER) return NormalCompletion(false);
-    if ((number != number) || number === Infinity || number === -Infinity) return NormalCompletion(false);
-    return NormalCompletion(true);
-};
-var NumberConstructor_isNaN = function (thisArg, argList) {
-    var number = argList[0];
-    if (Type(number) !== NUMBER) return NormalCompletion(false);
-    if (number != number) return NormalCompletion(true);
-    return NormalCompletion(false);
-};
-
-var NumberConstructor_isInteger = function (thisArg, argList) {
-    var number = argList[0];
-    if (Type(number) !== NUMBER) return NormalCompletion(false);
-    if ((number != number) ||
-        number === +Infinity || number === -Infinity) return NormalCompletion(false);
-    return NormalCompletion(true);
-};
-
-var NumberPrototype_clz = function (thisArg, argList) {
-    var x = thisNumberValue(thisArg);
-    if (isAbrupt(x = ifAbrupt(x))) return x;
-    var n = ToUint32(x);
-    if (isAbrupt(n = ifAbrupt(n))) return n;
-    if (n < 0) return 0;
-    if (n === 0) return 32;
-    var bitlen = Math.floor(Math.log(Math.pow(n, Math.LOG2E))) + 1;
-    var p = 32 - bitlen;
-    return NormalCompletion(p);
-};
-var NumberPrototype_toString = function (thisArg, argList) {
-    var radix = argList[0];
-    var radixNumber;
-    var x = thisNumberValue(thisArg);
-    var s = "";
-    if (radix === undefined) radixNumber = 10;
-    else radixNumber = ToInteger(radix);
-    if (isAbrupt(radixNumber=ifAbrupt(radixNumber))) return radixNumber;
-    if (radixNumber < 2 || radixNumber > 36) return newRangeError( "radixNumber has to be between 2 and 36");
-    if (radixNumber === 10) return ToString(x);
-    else s = ToString(x);
-
-    /*
-    var parts = s.split(".");
-    var i = 0;
-    var result = "";
-    while ((i < 2) && (s = parts[i])) {    
-	s = parts[i];
-	if (i == 1) result += ".";
-        var d = Math.floor((+s) / radixNumber);
-	var r = (+s) % radixNumber;
-        s = ""+d;
-        if (r > 10) s += String.fromCharCode(("a").charCodeAt(0) + r - 10);
-	else if (r > 0) s += r;
-        result += s;
-	i += 1;
-    }
-    */
-    var result = x.toString(radixNumber);
-    
-    return NormalCompletion(result);
-};
-var NumberPrototype_valueOf = function (thisArg, argList) {
-    var x = thisNumberValue(thisArg);
-    return NormalCompletion(x);
-};
-var NumberPrototype_toPrecision = function (thisArg, argList) {
-    var precision = argList[0];
-    var x = thisNumberValue(thisArg);
-    if (isAbrupt(x = ifAbrupt(x))) return x;
-    if (precision === undefined) return ToString(x);
-    var p = ToInteger(precision);
-    if (isAbrupt(p = ifAbrupt(p))) return p;
-    if (x !== x) return "NaN";
-    var s = "";
-    if (x < 0) {
-        s = "-";
-        x = -x;
-    }
-    if (x === +Infinity || x === -Infinity) {
-        return NormalCompletion(s + "Infinity");
-    }
-
-};
-
-function repeatString (str, times) {
-    var concat = "";
-    for (var i = 0; i < times; i++) {
-        concat += str;
-    }
-    return concat;
-}
-
-var NumberPrototype_toFixed = function (thisArg, argList) {
-    var fractionDigits = argList[0];
-    var x = thisNumberValue(thisArg);
-    if (isAbrupt(x = ifAbrupt(x))) return x;
-    if (fractionDigits === undefined) return ToString(x);
-    var f = ToInteger(fractionDigits);
-    if (isAbrupt(f = ifAbrupt(f))) return f;
-    if ((f < 0) || (f > 20)) return newRangeError( "fractionDigits is less or more than 20");
-    if (x !== x) return "NaN";
-    var s = "";
-    if (x < 0) {
-        s = "-";
-        x = -x;
-    }
-    if (x >= 1021) {
-        var m = ToString(x);
-    } else {
-        var n;
-        if (n === 0) m = "0";
-        else m = ""+n;
-        if (f != 0) {
-            var k = Math.ceil(Math.log(Math.pow(n, Math.LOG2E))); // = number of elements in n
-            if (k <= f)  {
-                var z = repeatString(0x0030, f+1-k);
-                m = z + m;
-                k = f + 1;
-            }
-            var a = m.substr(0, k-f);
-            var b = m.substr(k-f);
-            m = a + "." + b;
-        }
-    }
-    return NormalCompletion(s + m);
-};
-var NumberPrototype_toExponential = function (thisArg, argList) {
-    var fractionDigits = argList[0];
-    var x = thisNumberValue(thisArg);
-    if (isAbrupt(x = ifAbrupt(x))) return x;
-    var f = ToInteger(fractionDigits);
-    if (isAbrupt(f = ifAbrupt(f))) return f;
-    if (x !== x) return "NaN";
-    var s = "";
-    if (x < 0) {
-        s = "-";
-        x = -x;
-    }
-    var n;
-    if (x === Infinity || s === -Infinity) {
-        return s + "Infinity";
-    }
-    if (fractionDigits !== undefined && ((f < 0) || (f > 20))) return newRangeError( "toExponential: fractionDigits < 0 or > 20");
-    if (x === 0) {
-        if (fractionDigits === undefined) f = 0;
-        var m = stringRepeat(0x0030, f+1);
-        var e = 0;
-    } else {
-        if (fractionDigits !== undefined) {
-
-            // ich konnte das im mcview nicht lesen ob 10f oder 10^f
-            // ich hab das unterwegs geschrieben, todo
-            e;
-            n;
-        } else {
-            e;
-            n;
-        }
-        m = ""+n;
-    }
-    if (f != 0) {
-        var a = m.substr(m, 1);
-        var b = m.substr(1);
-    }
-    if (e === 0) {
-        var c = "+";
-        var d = "0";
-    } else {
-        if (e > 0) c = "+";
-        else if (e <= 0) {
-            c = "-";
-            e = -e;
-        }
-        d = ""+e;
-        m = m + "e" + c + d;
-    }
-    return NormalCompletion(s + m)
-};
-
+setInternalSlot(NumberConstructor, SLOTS.CALL, NumberConstructor_call);
+setInternalSlot(NumberConstructor, SLOTS.CONSTRUCT, NumberConstructor_construct);
 LazyDefineBuiltinFunction(NumberConstructor, "isFinite", 0, NumberConstructor_isFinite);
 LazyDefineBuiltinFunction(NumberConstructor, "isNaN", 0, NumberConstructor_isNaN);
 LazyDefineBuiltinFunction(NumberConstructor, "isInteger", 0, NumberConstructor_isInteger);
@@ -22918,15 +22979,14 @@ LazyDefineBuiltinConstant(NumberConstructor, "MIN_VALUE", MIN_VALUE);
 LazyDefineBuiltinConstant(NumberConstructor, "MAX_INTEGER", MAX_INTEGER);
 LazyDefineBuiltinConstant(NumberConstructor, "MAX_VALUE", MAX_VALUE);
 LazyDefineBuiltinConstant(NumberConstructor, "NaN", NAN);
+LazyDefineBuiltinConstant(NumberConstructor, "POSITIVE_INFINITY", POSITIVE_INFINITY);
 LazyDefineBuiltinConstant(NumberConstructor, "NEGATIVE_INFINITY", NEGATIVE_INFINITY);
-
 LazyDefineBuiltinFunction(NumberPrototype, "clz", 0, NumberPrototype_clz);
 LazyDefineBuiltinFunction(NumberPrototype, "toExponential", 0, NumberPrototype_toExponential);
 LazyDefineBuiltinFunction(NumberPrototype, "toFixed", 0, NumberPrototype_toFixed);
 LazyDefineBuiltinFunction(NumberPrototype, "toPrecision", 0, NumberPrototype_toPrecision);
 LazyDefineBuiltinFunction(NumberPrototype, "toString", 0, NumberPrototype_toString);
 LazyDefineBuiltinFunction(NumberPrototype, "valueOf", 0, NumberPrototype_valueOf);
-
 LazyDefineBuiltinConstant(NumberPrototype, $$toStringTag, "Number");
 
 function isProxy(o) {
