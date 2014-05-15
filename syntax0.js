@@ -991,6 +991,19 @@ define("tables", function (require, exports, module) {
         "enum":true
     };
 
+    var forbiddenIdentifierNamesInStrictMode = {
+        __proto__:null,
+        "implements":true,
+        "package":true,
+        "interface":true,
+        "let":true,
+        "private":true,
+        "protected":true,
+        "public":true,
+        "static":true
+    };
+
+
     var ForbiddenArgumentsInStrict = {
         __proto__: null,
         "eval": true,
@@ -1931,7 +1944,12 @@ define("tables", function (require, exports, module) {
         "in": "Keyword",
 //        "of": "Keyword",
         "instanceof": "Keyword",
-        "let": "Keyword",
+
+
+    // "let": "Keyword",
+        "let": "Identifier",
+
+
         "new": "Keyword",
         "return": "Keyword",
         "super": "Keyword",
@@ -1946,13 +1964,18 @@ define("tables", function (require, exports, module) {
         "with": "Keyword",
         "enum": "Keyword",
         "extends": "Keyword",
-        "implements": "Keyword",
-        "interface": "Keyword",
-        "package": "Keyword",
-        "private": "Keyword",
-        "protected": "Keyword",
-        "public": "Keyword",
-        "static": "Keyword",
+
+
+        "implements": "Identifier",//"Keyword",
+        "interface": "Identifier",//"Keyword",
+        "package": "Identifier",//"Keyword",
+        "private": "Identifier",//"Keyword",
+        "protected": "Identifier",//"Keyword",
+        "public": "Identifier",//"Keyword",
+        "static": "Identifier",//"Keyword",
+
+
+
         "yield": "Keyword",
         "null": "NullLiteral",
         "true": "BooleanLiteral",
@@ -2248,8 +2271,7 @@ define("tables", function (require, exports, module) {
         "(": 80
 
     };
-    
-    exports.UnaryOperatorPrecedence = UnaryOperatorPrecedence;
+
     var UnaryOperatorPrecedence = {
 	__proto__: null,
 	    "-":70,   
@@ -2549,6 +2571,8 @@ define("tables", function (require, exports, module) {
     };
 
 
+
+    exports.forbiddenIdentifierNamesInStrictMode = forbiddenIdentifierNamesInStrictMode;
     exports.isDirective = isDirective;
     exports.isStrictDirective = isStrictDirective;
     exports.isAsmDirective = isAsmDirective;
@@ -2641,7 +2665,7 @@ define("tables", function (require, exports, module) {
     exports.AllowedLastChars = AllowedLastChars;
     exports.PunctOrLT = PunctOrLT;
     exports.StartOfThreeFourPunctuators = StartOfThreeFourPunctuators;
-
+    exports.UnaryOperatorPrecedence = UnaryOperatorPrecedence;
 
     exports.codeForOperator = codeForOperator;
     exports.operatorForCode = operatorForCode;
@@ -2649,6 +2673,7 @@ define("tables", function (require, exports, module) {
     exports.unaryOperatorFromString = unaryOperatorFromString;
     exports.propDefKinds = propDefKinds;
     exports.propDefCodes = propDefCodes;
+
 
     return exports;
 
@@ -4700,6 +4725,7 @@ define("parser", function () {
     // JSON otherwise is regularly usable from
     // parseGoalSymbol
 
+    var forbiddenIdentifierNamesInStrictMode = tables.forbiddenIdentifierNamesInStrictMode;
     var IsIteration = tables.IsIteration;
     var IsTemplateToken = tables.IsTemplateToken;
     var FinishStatementList = tables.FinishStatementList;
@@ -5251,17 +5277,25 @@ define("parser", function () {
         }
         return null;
     }
+
+
     function Identifier() {
         if (t === "Identifier" || (v === "yield" && isYieldId) || (v === "default" && isDefaultId)) {
             var node = Node("Identifier");
             node.name = v;
             node.loc = token.loc;
+            if (isStrict && forbiddenIdentifierNamesInStrictMode[v]) {
+                throw new SyntaxError(v+" is no valid identifier name in strict mode");
+            }
             match(v);
+
+
             if (compile) return compiler(node);
             return node;
         }
         return null;
     }
+
     function ComprehensionForList() {
         var list = [], el, binding, ae;
         while (v === "for") {
@@ -9830,6 +9864,128 @@ function setCodeRealm(r) {  // CREATE REALM (API)
     require("runtime").setCodeRealm(r);
 }
 
+
+
+
+
+var RealmPrototype_get_global = function (thisArg, argList) {
+    var RealmConstructor = thisArg;
+    if (Type(RealmConstructor) !== OBJECT || !hasInternalSlot(RealmConstructor, SLOTS.REALM)) return newTypeError(format("S_HAS_NO_S", "thisValue", "[[Realm]]"));
+    var realm = getInternalSlot(RealmConstructor, SLOTS.REALM);
+    var globalThis = realm.globalThis;
+    return globalThis;
+};
+
+var RealmPrototype_eval = function (thisArg, argList) {
+    var source = argList[0];
+    var RealmConstructor = thisArg;
+    if (Type(RealmConstructor) !== OBJECT || !hasInternalSlot(RealmConstructor, SLOTS.REALM)) return newTypeError(format("S_HAS_NO_S", "thisValue", "[[Realm]]"));
+    return IndirectEval(getInternalSlot(RealmConstructor, SLOTS.REALM), source);
+};
+
+var RealmConstructor_Call = function (thisArg, argList) {
+    var RealmConstructor = thisArg;
+    var options = argList[0];
+    var initializer = argList[1];
+    if (Type(RealmConstructor) !== OBJECT) return newTypeError(format("S_NOT_OBJECT", "thisValue"));
+    if (!hasInternalSlot(RealmConstructor, SLOTS.REALM)) return newTypeError(format("S_NOT_COMPLETE", "thisValue"));
+    if (getInternalSlot(RealmConstructor, SLOTS.REALM) !== undefined) return newTypeError(format("S_NOT_UNDEFINED", "[[Realm]]"));
+    if (options === undefined) options = ObjectCreate(null);
+    else if (Type(options) !== OBJECT) return newTypeError(format("S_NOT_OBJECT", "options"));
+    var realm = CreateRealm();
+    var evalHooks = Get(options, "eval");
+    if (isAbrupt(evalHooks = ifAbrupt(evalHooks))) return evalHooks;
+    if (evalHooks === undefined) evalHooks = ObjectCreate();
+    var directEval = Get(evalHooks, "directEval");
+    if (isAbrupt(directEval = ifAbrupt(directEval))) return directEval;
+    if (directEval === undefined) directEval = ObjectCreate();
+    else if (Type(directEval) !== OBJECT) return newTypeError(format("S_NOT_OBJECT", "directEval"));
+    var translate = Get(directEval, "translate");
+    if (isAbrupt(translate = ifAbrupt(translate))) return translate;
+    if ((translate !== undefined) && !IsCallable(translate)) return newTypeError(format("S_NOT_CALLABLE", "translate"));
+    setInternalSlot(realm, "translateDirectEvalHook", translate);
+    var fallback = Get(directEval, "fallback");
+    if (isAbrupt(fallback = ifAbrupt(fallback))) return fallback;
+    setInternalSlot(realm, "fallbackDirectEvalHook", fallback);
+    var indirectEval = Get(options, "indirect");
+    if (isAbrupt(indirectEval = ifAbrupt(indirectEval))) return indirectEval;
+    if ((indirectEval !== undefined) && !IsCallable(indirectEval)) return newTypeError(format("S_NOT_CALLABLE", "indirectEval"));
+    setInternalSlot(realm, "indirectEvalHook", indirectEval);
+    var Function = Get(options, "Function");
+    if (isAbrupt(Function = ifAbrupt(Function))) return Function;
+    if ((Function !== undefined) && !IsCallable(Function)) return newTypeError(format("S_NOT_CALLABLE", "Function"));
+    setInternalSlot(realm, "FunctionHook", Function);
+    setInternalSlot(RealmConstructor, SLOTS.REALM, realm);
+
+    realm.directEvalTranslate = translate;
+    realm.directEvalFallback = fallback;
+    realm.indirectEval = indirectEval;
+    realm.Function = Function;
+
+    if (initializer !== undefined) {
+        if (!IsCallable(initializer)) return newTypeError(format("S_NOT_CALLABLE", "initializer"));
+        var builtins = ObjectCreate();
+        DefineBuiltinProperties(realm, builtins);
+        var status = callInternalSlot(SLOTS.CALL, initializer, RealmConstructor, [builtins]);
+        if (isAbrupt(status)) return status;
+    }
+    return RealmConstructor;
+};
+
+var RealmConstructor_Construct = function (argList) {
+    var F = this;
+    var args = argList;
+    return Construct(F, argList);
+};
+
+var RealmConstructor_$$create = function (thisArg, argList) {
+    return OrdinaryCreateFromConstructor(thisArg, INTRINSICS.REALMPROTOTYPE, [
+        SLOTS.REALM
+    ]);
+};
+
+
+var RealmPrototype_stdlib_get = function (thisArg, argList) {
+    var RealmConstructor = thisArg;
+    var source = argList[0];
+    if (Type(RealmConstructor) !== OBJECT || !hasInternalSlot(RealmConstructor, SLOTS.REALM)) return newTypeError("S_HAS_NO_S", "thisValue", "[[Realm]]");    var realm = getInternalSlot(RealmConstructor, SLOTS.REALM);
+    if (realm === undefined) return newTypeError(format("S_IS_UNDEFINED", "[[Realm]]"));
+    var props = ObjectCreate(getIntrinsic(INTRINSICS.OBJECTPROTOTYPE));
+    var bindings = getInternalSlot(getGlobalThis(), SLOTS.BINDINGS);
+    var symbols = getInternalSlot(getGlobalThis(), SLOTS.SYMBOLS);
+    function forEachProperty(props, bindings) {
+        for (var P in bindings) {
+            var desc = bindings[P];
+            var newDesc = {
+                value: desc.value,
+                enumerable: desc.enumerable,
+                configurable: desc.configurable,
+                writable: desc.writable
+            };
+            var status = DefineOwnPropertyOrThrow(props, P, newDesc);
+            if (isAbrupt(status)) return status;
+        }
+    }
+    forEachProperty(props, bindings);
+    forEachProperty(props, symbols);
+
+};
+var RealmPrototype_intrinsics = function (thisArg, argList) {
+};
+var RealmPrototype_initGlobal = function (thisArg, argList) {
+};
+var RealmPrototype_directEval = function (thisArg, argList) {
+};
+var RealmPrototype_indirectEval = function (thisArg, argList) {
+    var RealmConstructor = thisArg;
+    var source = argList[0];
+    if (Type(RealmConstructor) !== OBJECT || !hasInternalSlot(RealmConstructor, SLOTS.REALM)) return newTypeError(format("S_HAS_NO_S", "thisValue", "[[Realm]]"));
+    var realm = getInternalSlot(RealmConstructor, SLOTS.REALM);
+    if (realm === undefined) return newTypeError(format("S_IS_UNDEFINED", "[[Realm]]"));
+    return IndirectEval(realm, source);
+};
+
+
 function ExecutionContext(outerCtx, realm, state, generator) {
     "use strict";
     var VarEnv = NewDeclarativeEnvironment((outerCtx && outerCtx.LexEnv)||null);
@@ -10271,6 +10427,295 @@ function ObjectDefineProperties(O, Properties) {
 }
 
 
+var ObjectConstructor_assign = function (thisArg, argList) {
+    var target = argList[0];
+    var source = argList[1];
+    var to = ToObject(target);
+    if (isAbrupt(to = ifAbrupt(to))) return to;
+    var from = ToObject(source);
+    if (isAbrupt(source = ifAbrupt(source))) return source;
+    var keys = OwnPropertyKeys(source);
+    if (isAbrupt(keys = ifAbrupt(keys))) return keys;
+    var gotAllNames = false;
+    var pendingException = undefined;
+    var next, nextKey, desc, propValue, status;
+    while (!gotAllNames) {
+        next = IteratorStep(keys);
+        if (isAbrupt(next = ifAbrupt(next))) return next;
+        if (!next) gotAllNames = true;
+        else {
+            nextKey = IteratorValue(next);
+            if (isAbrupt(nextKey = ifAbrupt(nextKey))) return nextKey;
+            desc = GetOwnProperty(from, nextKey);
+            if (isAbrupt(desc)) pendingException = desc;
+            else if (desc !== undefined && desc.enumerable === true) {
+                propValue = Get(from, nextKey);
+                if (isAbrupt(propValue)) pendingException = propValue;
+                else {
+                    status = Put(to, nextKey, propValue, true);
+                    if (isAbrupt(status)) pendingException = status;
+                }
+            }
+        }
+    }
+    if (pendingException !== undefined) return pendingException;
+    return to;
+};
+var ObjectConstructor_create = function (thisArg, argList) {
+    var O = argList[0];
+    var Properties = argList[1];
+    if (Type(O) !== OBJECT && Type(O) !== NULL) return newTypeError( "create: argument is not an object or null");
+    var obj = ObjectCreate(O);
+    if (Properties !== undefined) {
+        return ObjectDefineProperties(obj, Properties);
+    }
+    return obj;
+};
+var ObjectConstructor_defineProperty = function (thisArg, argList) {
+    var O = argList[0];
+    var P = argList[1];
+    var Attributes = argList[2];
+    if (Type(O) !== OBJECT) return newTypeError( "defineProperty: argument 1 is not an object");
+    var key = ToPropertyKey(P);
+    var desc = ToPropertyDescriptor(Attributes);
+    if (isAbrupt(desc = ifAbrupt(desc))) return desc;
+    var success = DefineOwnPropertyOrThrow(O, key, desc);
+    if (isAbrupt(success = ifAbrupt(success))) return success;
+    return O;
+};
+var ObjectConstructor_defineProperties = function (thisArg, argList) {
+    var O = argList[0];
+    var Properties = argList[1];
+    return ObjectDefineProperties(O, Properties);
+};
+
+
+
+
+var ObjectConstructor_call = function Call(thisArg, argList) {
+    var value = argList[0];
+    if (value === null || value === undefined) return ObjectCreate();
+    return ToObject(value);
+};
+
+var ObjectConstructor_construct = function (argList) {
+    var value = argList[0];
+    var type = Type(value);
+    switch (type) {
+        case OBJECT:
+            return value;
+        case STRING:
+        case NUMBER:
+        case SYMBOL:
+        case BOOLEAN:
+            return ToObject(value);
+    }
+    return ObjectCreate();
+};
+
+var ObjectConstructor_seal = function (thisArg, argList) {
+    var O;
+    O = argList[0];
+    if (Type(O) !== OBJECT) return newTypeError( "First argument is object");
+    var status = SetIntegrityLevel(O, "sealed");
+    if (isAbrupt(status = ifAbrupt(status))) return status;
+    if (status === false) return newTypeError( "seal: can not seal object");
+    return O;
+};
+
+
+var ObjectConstructor_freeze =function (thisArg, argList) {
+    var O;
+    O = argList[0];
+    if (Type(O) !== OBJECT) return newTypeError( "First argument is object");
+    var status = SetIntegrityLevel(O, "frozen");
+    if (isAbrupt(status = ifAbrupt(status))) return status;
+    if (status === false) return newTypeError( "freeze: can not freeze object");
+    return O;
+};
+
+var ObjectConstructor_getOwnPropertyDescriptor = function (thisArg, argList) {
+    var O = argList[0];
+    var P = argList[1];
+    var obj = ToObject(O);
+    if (isAbrupt(obj = ifAbrupt(obj))) return obj;
+    var key = ToPropertyKey(P);
+    var desc = GetOwnProperty(obj, key);
+    if (isAbrupt(desc = ifAbrupt(desc))) return desc;
+    return FromPropertyDescriptor(desc);
+};
+var ObjectConstructor_getOwnPropertyNames = function (thisArg, argList) {
+    var O = argList[0];
+    return GetOwnPropertyKeys(O, "string");
+};
+
+var ObjectConstructor_getOwnPropertySymbols =     function (thisArg, argList) {
+    var O = argList[0];
+    return GetOwnPropertyKeys(O, "symbol");
+};
+var ObjectConstructor_getPrototypeOf = function (thisArg, argList) {
+    var O = argList[0];
+    var obj = ToObject(O);
+    if (isAbrupt(obj = ifAbrupt(obj))) return obj;
+    return GetPrototypeOf(obj);
+};
+var ObjectConstructor_is = function (thisArg, argList) {
+    var value1 = argList[0];
+    var value2 = argList[1];
+    return SameValue(value1, value2);
+};
+var ObjectConstructor_isExtensible = function (thisArg, argList) {
+    var O = argList[0];
+    if (Type(O) !== OBJECT) return false;
+    return IsExtensible(O);
+};
+
+var ObjectConstructor_isSealed = function (thisArg, argList) {
+    var O = argList[0];
+    if (Type(O) !== OBJECT) return true;
+    return TestIntegrityLevel(O, "sealed");
+};
+
+var ObjectConstructor_isFrozen = function (thisArg, argList) {
+    var O = argList[0];
+    if (Type(O) !== OBJECT) return true;
+    return TestIntegrityLevel(O, "frozen");
+};
+
+
+var ObjectConstructor_preventExtensions = function (thisArg, argList) {
+    var O = argList[0];
+    if (Type(O) !== OBJECT) return newTypeError( "argument is not an object");
+    var status = PreventExtensions(O);
+    if (isAbrupt(status = ifAbrupt(status))) return status;
+    if (status === false) return newTypeError( "can not prevent extensions");
+    return O;
+};
+
+
+var ObjectConstructor_keys = function (thisArg, argList) {
+    var O = argList[0];
+    var obj = ToObject(O);
+    if (isAbrupt(obj = ifAbrupt(obj))) return obj;
+    var keys = OwnPropertyKeys(O);
+    if (isAbrupt(keys = ifAbrupt(keys))) return keys;
+
+    var nameList = [];
+    var gotAllNames = false;
+    var next, nextKey, desc;
+    while (!gotAllNames) {
+        next = IteratorNext(keys);
+        if (isAbrupt(next = ifAbrupt(next))) return next;
+        nextKey = IteratorValue(next);
+        if (isAbrupt(nextKey = ifAbrupt(nextKey))) return nextKey;
+        if (Type(nextKey) === STRING) {
+            desc = GetOwnProperty(O, nextKey);
+            if (isAbrupt(desc = ifAbrupt(desc))) return desc;
+            if (desc !== undefined && desc.enumerable === true) {
+                nameList.push(nextKey);
+            }
+        }
+
+        if (IteratorComplete(next)) gotAllNames = true;
+    }
+    return CreateArrayFromList(nameList);
+};
+
+var ObjectConstructor_mixin = function (thisArg, argList) {
+    var target = argList[0];
+    var source = argList[1];
+    var to = ToObject(target);
+    if (isAbrupt(to = ifAbrupt(to))) return to;
+    var from = ToObject(source);
+    if (isAbrupt(from = ifAbrupt(from))) return from;
+    return MixinProperties(to, from);
+};
+
+
+
+function MixinProperties(target, source) {
+    Assert(Type(target) === OBJECT);
+    Assert(Type(source) === OBJECT);
+    var keys = OwnPropertyKeys(source);
+    if (isAbrupt(keys = ifAbrupt(keys))) return keys;
+    var gotAllNames = false;
+    var pendingException = undefined;
+    var next, nextKey, desc, propValue, newFunc;
+    var pendingException, getter, setter;
+    while (!gotAllNames) {
+        next = IteratorStep(next);
+        if (isAbrupt(next = ifAbrupt(next))) return next;
+        //    if ((=ifAbrupt()) && isAbrupt()) return ;
+        if (!next) gotAllNames = true;
+        else {
+            nextKey = IteratorValue(next);
+            if (isAbrupt(nextKey = ifAbrupt(nextKey))) return nextKey;
+            var desc = GetOwnProperty(source, nextKey);
+            if (isAbrupt(desc)) pendingException = desc;
+            else if (desc !== undefined && desc.enumerable === true) {
+                // possibly neccessary (if desc isnt fresh)
+                // desc = assign({}, desc);
+                if (IsDataDescriptor(desc)) {
+                    propValue = desc.Value;
+                    if (SameValue(GetSuperBinding(propValue), source)) {
+                        newFunc = MixinProperties(RebindSuper(propValue, target), propValue);
+                        if (isAbrupt(newFunc)) pendingException = newFunc;
+                        else desc.Value = newFunc;
+                    }
+                } else {
+                    getter = desc.get;
+                    if (SameValue(GetSuperBinding(getter), source)) {
+                        newFunc = MixinProperties(RebindSuper(propValue, target), getter);
+                        if (isAbrupt(newFunc)) pendingException = newFunc;
+                        else desc.get = newFunc;
+                    }
+                    setter = desc.set;
+                    if (SameValue(GetSuperBinding(setter), source)) {
+                        newFunc = MixinProperties(RebindSuper(propValue, target), setter);
+                        if (isAbrupt(newFunc)) pendingException = newFunc;
+                        else desc.set = newFunc;
+                    }
+                }
+                var status = DefineOwnPropertyOrThrow(target, nextKey, desc);
+                if (isAbrupt(status)) pendingException = status;
+            }
+        }
+    }
+    if (pendingException) return pendingException;
+    return target;
+}
+
+var ObjectConstructor_getOwnPropertyDescriptors = function (thisArg, argList) {
+    /*
+     http://gist.github.com/WebReflection/9353781
+     Object.getOwnPropertyDescriptors
+     */
+    var O = argList[0];
+    var obj = ToObject(O);
+    if (isAbrupt(obj = ifAbrupt(obj))) return obj;
+    var keys = OwnPropertyKeys(obj);
+    if (isAbrupt(keys = ifAbrupt(keys))) return keys;
+    var descriptors = ObjectCreate(getIntrinsic(INTRINSICS.OBJECTPROTOTYPE));
+    var gotAllNames = false;
+    while (gotAllNames === false) {
+        var next = IteratorStep(keys);
+        if (isAbrupt(next=ifAbrupt(next))) return next;
+        if (next === false) gotAllNames = true;
+        else {
+            var nextKey = IteratorValue(next);
+            nextKey = ToPropertyKey(nextKey);
+            if (isAbrupt(nextKey=ifAbrupt(nextKey))) return nextKey;
+            var desc = callInternalSlot(SLOTS.GETOWNPROPERTY, obj, nextKey);
+            if (isAbrupt(desc=ifAbrupt(desc))) return desc;
+            var descriptor = FromPropertyDescriptor(desc);
+            if (isAbrupt(descriptor=ifAbrupt(descriptor))) return descriptor;
+            var status = CreateDataProperty(descriptors, nextKey, descriptor);
+            // Assert(!isAbrupt(status));
+            if (isAbrupt(status)) return status;
+        }
+    }
+    return descriptors;
+};
 
 function DeclarativeEnvironment(outer) {
     var de = Object.create(DeclarativeEnvironment.prototype);
@@ -11800,6 +12245,9 @@ function PreventExtensions(O) {
 }
 
 
+
+
+
 function GetNotifier(O) {
     var proto;
     var notifier = getInternalSlot(O, SLOTS.NOTIFIER);
@@ -11958,6 +12406,156 @@ function CreateSpliceChanceRecord(object, index, removed, addedCount) {
         configurable: false
     });
 }
+
+
+
+var NotifierPrototype_notify = function notify(thisArg, argListdgn) {
+    var changeRecord = argList[0];
+    var notifier = thisArg;
+    if (Type(notifier) !== OBJECT) return newTypeError( "Notifier is not an object.");
+    var target = getInternalSlot(notifier, SLOTS.TARGET);
+    var newRecord = ObjectCreate();
+    var status = callInternalSlot(SLOTS.DEFINEOWNPROPERTY, newRecord, "object", {
+        value: target,
+        writable: false,
+        enumerable: true,
+        configurable: false
+    });
+    //if (isAbrupt(status)) return status;
+    var bindings = getInternalSlot(changeRecord, SLOTS.BINDINGS);
+    var value;
+    for (var N in bindings) {
+        if (Object.hasOwnProperty.call(bindings, N)) {
+            if (N !== "object") {
+                value = callInternalSlot(SLOTS.GET, changeRecord, N, changeRecord);
+                if (isAbrupt(value = ifAbrupt(value))) return value;
+                status = callInternalSlot(SLOTS.DEFINEOWNPROPERTY, newRecord, N, {
+                    value: value,
+                    writable: false,
+                    enumerable: true,
+                    configurable: false
+                });
+                //if (isAbrupt(status)) return status;
+            }
+        }
+    }
+    setInternalSlot(newRecord, SLOTS.EXTENSIBLE, false);
+    status = EnqueueChangeRecord(target, newRecord);
+    //if (isAbrupt(status)) return status;
+    return NormalCompletion();
+};
+var NotifierPrototype_performChange =  function performChange(thisArg, argList) {
+    var changeType = argList[0];
+    var changeFn = argList[1];
+    var notifier = thisArg;
+    var status;
+    if (Type(notifier) !== OBJECT) return newTypeError( "notifier is not an object");
+    var target = getInternalSlot(notifier, SLOTS.TARGET);
+    if (target === undefined) return NormalCompletion(undefined);
+    if (Type(changeType) !== STRING) return newTypeError( "changeType has to be a string");
+    if (!IsCallable(changeFn)) return newTypeError( "changeFn is not a callable");
+    status = BeginChange(target, changeType);
+    var changeRecord = callInternalSlot(SLOTS.CALL, changeFn, undefined, []);
+    status = EndChange(target, changeType);
+    var changeObservers = getInternalSlot(notifier, SLOTS.CHANGEOBSERVERS);
+    if (!changeObservers.length) return NormalCompletion();
+    var newRecord = ObjectCreate();
+    status = callInternalSlot(SLOTS.DEFINEOWNPROPERTY, newRecord, "object", {
+        value: target,
+        writable: false,
+        enumerable: true,
+        configurable: false
+    });
+    status = callInternalSlot(SLOTS.DEFINEOWNPROPERTY, newRecord, "type", {
+        value: changeType,
+        writable: false,
+        enumerable: true,
+        configurable: false
+    });
+    var bindings = getInternalSlot(changeRecord, SLOTS.BINDINGS);
+    var value;
+    for (var N in bindings) {
+        if (Object.hasOwnProperty.call(bindings, N)) {
+            if (N !== "object" && N !== "type") {
+                value = callInternalSlot(SLOTS.GET, changeRecord, N, changeRecord);
+                if (isAbrupt(value = ifAbrupt(value))) return value;
+                status = callInternalSlot(SLOTS.DEFINEOWNPROPERTY, newRecord, N, {
+                    value: value,
+                    writable: false,
+                    enumerable: true,
+                    configurable: false
+                });
+            }
+        }
+    }
+    setInternalSlot(newRecord, SLOTS.EXTENSIBLE, false);
+    status = EnqueueChangeRecord(target, newRecord);
+    return NormalCompletion(undefined);
+};
+var ObjectConstructor_observe = function (thisArg, argList) {
+    var O = argList[0];
+    var callback = argList[1];
+    var accept = argList[2];
+    if (Type(O) !== OBJECT) return newTypeError(format("S_NOT_OBJECT", "arg0"));
+    if (!IsCallable(callback)) return newTypeError("S_NOT_CALLABLE", "arg1");
+    if (TestIntegrityLevel(callback, "frozen")) return newTypeError("S_IS_FROZEN", "arg1");
+    if (accept === undefined) {
+        accept = ["add", "updata", "delete", "reconfigure", "setPrototype", "preventExtensions"];
+    } else {
+        accept = CreateListFromArray(accept);
+    }
+    var notifier = GetNotifier(O);
+    var changeObservers = getInternalSlot(notifier, SLOTS.CHANGEOBSERVERS);
+    var observer;
+    for (var i = 0, j = changeObservers.length; i < j; i++) {
+        if (observer = changeObservers[i]) {
+            if (Get(observer, "callback") === callback) {
+                CreateDataProperty(record, "accept", acceptList);
+                return NormalCompletion(O);
+            }
+        }
+    }
+    var observerRecord = ObjectCreate();
+    CreateDataProperty(observerRecord, "callback", callback);
+    CreateDataProperty(observerRecord, "accept", acceptList);
+    changeObservers.push(observerRecord);
+    var observerCallbacks = getRealm().ObserverCallbacks;
+    if (observerCallbacks.indexOf(callback)) return NormalCompletion(O);
+    observerCallbacks.push(calllback);
+    return NormalCompletion(O);
+};
+var ObjectConstructor_unobserve = function (thisArg, argList) {
+    var O = argList[0];
+    var callback = argList[1];
+    if (Type(O) !== OBJECT) return newTypeError( "first argument is not an object");
+    if (!IsCallable(callback)) return newTypeError( "second argument is not callable");
+    var notifier = GetNotifier(O);
+    var changeObservers = getInternalSlot(notifier, SLOTS.CHANGEOBSERVERS);
+    changeObservers = changeObservers.filter(function (record) {
+        return (Get(record, "callback") !== callback);
+    });
+    setInternalSlot(notifier, SLOTS.CHANGEOBSERVERS, changeObservers);
+    return NormalCompletion(O);
+};
+var ObjectConstructor_deliverChangeRecords = function (thisArg, argList) {
+    var callback = argList[0];
+    if (!IsCallable(callback)) return newTypeError( "first argument is not callable.");
+    var status;
+    for (;;) {
+        status = DeliverChangeRecords(callback);
+        status = ifAbrupt(status);
+        if (status === false || isAbrupt(status)) break;
+    }
+    if (isAbrupt(status)) return status;
+    return NormalCompletion(undefined);
+};
+var ObjectConstructor_getNotifier = function (thisArg, argList) {
+    var O = argList[0];
+    if (Type(O) !== OBJECT) return newTypeError( "first argument is not an object");
+    if (TestIntegrityLevel(O, "frozen")) return NormalCompletion(null);
+    return GetNotifier(O);
+};
+
 
 /**
  * Created by root on 30.03.14.
@@ -13350,18 +13948,379 @@ function IntegerIndexedObjectCreate(prototype) {
     return O;
 }
 
-/**
- * Created by root on 07.05.14.
- */
 
-function TypedArrayFrom(constructor, target, items, mapfn, thisArg) {
-    /*
+var TypedArrayConstructor_Call = function (thisArg, argList) {
+    var array, typedArray, length;
+    array = argList[0];
+    var O;
+    var elementType;
+    var numberLength;
+    var elementLength;
+    var elementSize;
+    var byteLength;
+    var status;
+    var data;
+    var constructorName;
+    if (Type(array) === OBJECT) {
+        if (IsArray(array)) {
+            Assert((Type(array) === OBJECT) && !hasInternalSlot(array, SLOTS.TYPEDARRAYNAME) && !hasInternalSlot(array, SLOTS.ARRAYBUFFERDATA),
+                "array has to be an object without [[TypedArrayName]] or [[ArrayBufferData]] slots");
+            O = thisArg;
+            var srcArray = array;
+            if (Type(O) != OBJECT || !hasInternalSlot(O, SLOTS.TYPEDARRAYNAME)) return withError(
+                "Type", "this value is no object or has no [[TypedArrayName]] slot"
+            );
+            Assert(hasInternalSlot(O, SLOTS.VIEWEDARRAYBUFFER), "this value has no [[ViewedArrayBuffer]] slot");
+            var constructorName = getInternalSlot(O, SLOTS.TYPEDARRAYNAME);
+            var elementType = TypedArrayElementType[constructorName];
+            var arrayLength = Get(srcArray, "length");
+            if (isAbrupt(arrayLength=ifAbrupt(arrayLength))) return arrayLength;
+            var elementLength = ToLength(arrayLength);
+            if (isAbrupt(elementLength=ifAbrupt(elementLength))) return elementLength;
+            var data = AllocateArrayBuffer(getIntrinsic(INTRINSICS.ARRAYBUFFER));
+            if (isAbrupt(data=ifAbrupt(data))) return data;
+            var elementSize = typedArrayElementSize[elementType];
+            var byteLength = elementSize * elementLength;
+            var status = SetArrayBufferData(data, byteLength);
+            if (isAbrupt(status)) return status;
+            var k = 0;
+            while (k < elementLength) {
+                var Pk = ToString(k);
+                var kValue = Get(srcArray, Pk);
+                var kNumber = ToNumber(k);
+                if (isAbrupt(kNumber=ifAbrupt(kNumber))) return kNumber;
+                SetValueInBuffer(data, k * elementSize, elementType, kNumber);
+                k = k + 1;
+            }
+            if (getInternalSlot(O, SLOTS.VIEWEDARRAYBUFFER) !== undefined) return newTypeError( "the this values [[ViewedArrayBuffer]] may not be initialized here");
+            setInternalSlot(O, SLOTS.VIEWEDARRAYBUFFER, data);
+            setInternalSlot(O, SLOTS.BYTELENGTH, byteLength);
+            setInternalSlot(O, SLOTS.BYTEOFFSET, 0);
+            setInternalSlot(O, SLOTS.ARRAYLENGTH, elementLength);
+            return NormalCompletion(O);
+        } else if ((typedArray = array) instanceof IntegerIndexedExoticObject) {
+            Assert((Type(typedArray) === OBJECT) && hasInternalSlot(typedArray, SLOTS.TYPEDARRAYNAME), "typedArray has to be an object and to have a TypedArrayName slot");
+            var srcArray = typedArray;
+            O = thisArg;
+            if ((Type(O) !== OBJECT) || getInternalSlot(O, SLOTS.TYPEDARRAYNAME)===undefined) return newTypeError( "this value has to be object and to have a defined TypedArrayName slot");
+            Assert(hasInternalSlot(O, SLOTS.VIEWEDARRAYBUFFER), "this value has to have a ViewedArrayBuffer slot");
+            if (getInternalSlot(O, SLOTS.VIEWEDARRAYBUFFER) === undefined) return newTypeError( "ViewedArrayBuffer may not be undefined");
+            var constructorName = getInternalSlot(O, SLOTS.TYPEDARRAYNAME);
+            var elementType = TypedArrayElementType[constructorName];
+            var elementLength = getInternalSlot(srcArray, SLOTS.ARRAYLENGTH);
+            var srcName = getInternalSlot(srcArray, SLOTS.TYPEDARRAYNAME);
+            var srcType = TypedArrayElementType[srcName];
+            var srcElementSize = typedArrayElementSize[srcType];
+            var srcData = getInternalSlot(srcArray, SLOTS.VIEWEDARRAYBUFFER);
+            var srcByteOffset = getInternalSlot(srcArray, SLOTS.BYTEOFFSET);
+            var elementSize = typedArrayElementSize[constructorName];
+            var byteLength = elementSize * elementLength;
+            if (SameValue(elementType, srcType)) {
+                var data = CloneArrayBuffer(srcData, srcByteOffset);
+                if (isAbrupt(data=ifAbrupt(data))) return data;
+            } else {
+                var bufferConstructor = Get(srcBuffer, "constructor");
+                if (isAbrupt(bufferConstructor=ifAbrupt(bufferConstructor))) return bufferConstructor;
+                if (bufferConstructor === undefined) bufferConstructor = getIntrinsic(INTRINSICS.ARRAYBUFFER);
+                var data = AllocateArrayBuffer(bufferConstructor);
+                var status = SetArrayBufferData(data, byteLength);
+                if (isAbrupt(status=ifAbrupt(status))) return status;
+                var srcByteIndex = srcByteOffset;
+                var targetByteIndex = 0;
+                var count = elementLength;
+                while (count > 0) {
+                    var value = GetValueFromBuffer(srcData, srcByteIndex, srcType);
+                    status = SetValueInBuffer(data, targetByteIndex, elementType, value);
+                    srcByteIndex = srcByteIndex + srcElementSize;
+                    targetByteIndex = targetByteIndex + elementSize;
+                    count = count - 1;
+                }
+            }
+            if (getInternalSlot(O, SLOTS.VIEWEDARRAYBUFFER) !== undefined) return newTypeError( "ViewedArrayBuffer may not be defined at this point");
+            setInternalSlot(O, SLOTS.VIEWEDARRAYBUFFER, data);
+            setInternalSlot(O, SLOTS.BYTELENGTH, byteLength);
+            setInternalSlot(O, SLOTS.BYTEOFFSET, 0);
+            setInternalSlot(O, SLOTS.ARRAYLENGTH, elementLength);
+            return NormalCompletion(O);
+        }
+    } else if (typeof (length = array) == "number") {
+        O = thisArg;
+        if (Type(O) !== OBJECT) return newTypeError( "this value is not an object");
+        if (!hasInternalSlot(O, SLOTS.TYPEDARRAYNAME)) return newTypeError( "object has no TypedArrayName property");
+        Assert(hasInternalSlot(O, SLOTS.VIEWEDARRAYBUFFER), "object has to have a ViewedArrayBuffer property");
+        if (getInternalSlot(O, SLOTS.VIEWEDARRAYBUFFER) === undefined) return newTypeError( "object has to have a well defined ViewedArrayBuffer property");
+        constructorName = getInternalSlot(O, SLOTS.TYPEDARRAYNAME);
+        elementType = TypedArrayElementType[constructorName];
+        numberLength = ToNumber(length);
+        elementLength = ToLength(numberLength);
+        if (isAbrupt(elementLength = ifAbrupt(elementLength))) return elementLength;
+        if (SameValueZero(numberLength, elementLength) === false) return newRangeError( "TypedArray: numberLength and elementLength are not equal");
+        data = AllocateArrayBuffer(getIntrinsic(INTRINSICS.ARRAYBUFFER));
+        if (isAbrupt(data = ifAbrupt(data))) return data;
+        elementSize = typedArrayElementSize[elementType];
+        byteLength = elementSize * elementLength;
+        status = SetArrayBufferData(data, byteLength);
+        if (isAbrupt(status = ifAbrupt(status))) return status;
+        setInternalSlot(O, SLOTS.VIEWEDARRAYBUFFER, data);
+        setInternalSlot(O, SLOTS.BYTELENGTH, byteLength);
+        setInternalSlot(O, SLOTS.BYTEOFFSET, 0);
+        setInternalSlot(O, SLOTS.ARRAYLENGTH, elementLength);
+        return NormalCompletion(O);
+    } else {
+        Assert(hasInternalSlot(O, SLOTS.VIEWEDARRAYBUFFER), "O has to have [[ViewedArrayBuffer]]");
+        var buffer = argList[0];
+        var byteOffset = argList[1];
+        if (byteOffset === undefined) byteOffset = 0;
+        length = argList[2];
+        Assert((Type(buffer) === OBJECT) && hasInternalSlot(buffer, SLOTS.ARRAYBUFFERDATA), "buffer has to be an object and to have [[ArrayBufferData]]");
+        O = thisArg;
+        var arrayBufferData = getInternalSlot(buffer, SLOTS.ARRAYBUFFERDATA);
+        if (arrayBufferData === undefined) return newTypeError( "[[ArrayBufferData]] is undefined");
+        if (Type(O) !== OBJECT || !hasInternalSlot(O, SLOTS.TYPEDARRAYNAME)) return newTypeError( "O has to be object and to have [[TypedArrayName]]");
+        var viewedArrayBuffer = getInternalSlot(O, SLOTS.VIEWEDARRAYBUFFER);
+        var typedArrayName = getInternalSlot(O, SLOTS.TYPEDARRAYNAME);
+        if (typedArrayName === undefined) return newTypeError( "O has to have a well defined [[TypedArrayName]]");
+        constructorName = getInternalSlot(O, SLOTS.TYPEDARRAYNAME);
+        elementType = TypedArrayElementType[constructorName];
+        elementSize = typedArrayElementSize[elementType];
+        var offset = ToInteger(byteOffset);
+        if (isAbrupt(offset = ifAbrupt(offset))) return offset;
+        if (offset < 0) return newRangeError( "offset is smaller 0");
+        if ((offset % elementSize) !== 0) return newRangeError( "offset mod elementSize is not 0");
+        var byteBufferLength = getInternalSlot(buffer, SLOTS.ARRAYBUFFERBYTELENGTH);
+        if (offset + elementSize >= byteBufferLength) return newRangeError( "offset + elementSize is >= byteBufferLength");
+        var newByteLength;
+        if (length === undefined) {
+            if (byteBufferLength % elementSize !== 0) return newRangeError( "byteBufferLength mod elementSize is not 0");
+            newByteLength = byteBufferLength + offset;
+            if (newByteLength < 0) return newRangeError( "newByteLength < 0 underflow when adding offset to byteBufferLength");
+        } else {
+            var newLength = ToLength(length);
+            if (isAbrupt(newLength = ifAbrupt(newLength))) return newLength;
+            newByteLength = newLength * elementSize;
+            if (offset + newByteLength > byteBufferLength) return newRangeError( "offset + newByteLength is larger than byteBufferLength");
+        }
+        if (viewedArrayBuffer !== undefined) return newTypeError( "the [[ViewedArrayBuffer]] of O is not empty");
+        setInternalSlot(O, SLOTS.VIEWEDARRAYBUFFER, buffer);
+        setInternalSlot(O, SLOTS.BYTELENGTH, newByteLength);
+        setInternalSlot(O, SLOTS.BYTEOFFSET, offset);
+        setInternalSlot(O, SLOTS.ARRAYLENGTH, Math.floor(newByteLength / elementSize));
+    }
+    return NormalCompletion(O);
+};
 
-        already defined in intrinics/typedarray.js in var ***_from
+var typedArrayPrototypeNames = {
+    "Float64Array": INTRINSICS.FLOAT64ARRAYPROTOTYPE,
+    "Float32Array": INTRINSICS.FLOAT32ARRAYPROTOTYPE,
+    "Int32Array": INTRINSICS.INT32ARRAYPROTOTYPE,
+    "Uint32Array": INTRINSICS.UINT32ARRAYPROTOTYPE,
+    "Int16Array": INTRINSICS.INT16ARRAYPROTOTYPE,
+    "Uint16Array": INTRINSICS.UINT16ARRAYPROTOTYPE,
+    "Int8Array": INTRINSICS.INT8ARRAYPROTOTYPE,
+    "Uint8Array": INTRINSICS.UINT8ARRAYPROTOTYPE,
+    "Uint8Clamped": "%Uint8ClampedArrayProtoype%"
+};
 
-        need to copy
-     */
-}
+var TypedArrayConstructor_$$create = function $$create(thisArg, argList) {
+    var F = thisArg;
+    if (Type(F) !== OBJECT) return newTypeError( "the this value is not an object");
+    if (!hasInternalSlot(F, SLOTS.TYPEDARRAYCONSTRUCTOR)) return newTypeError( "The this value has no [[TypedArrayConstructor]] property");
+    var proto = GetPrototypeFromConstructor(F, typedArrayPrototypeNames[getInternalSlot(F, SLOTS.TYPEDARRAYCONSTRUCTOR)]);
+    if (isAbrupt(proto = ifAbrupt(proto))) return proto;
+    var obj = IntegerIndexedObjectCreate(proto);
+    setInternalSlot(obj, SLOTS.VIEWEDARRAYBUFFER, undefined);
+    setInternalSlot(obj, SLOTS.TYPEDARRAYNAME, getInternalSlot(F, SLOTS.TYPEDARRAYCONSTRUCTOR));
+    setInternalSlot(obj, SLOTS.BYTELENGTH, 0);
+    setInternalSlot(obj, SLOTS.BYTEOFFSET, 0);
+    setInternalSlot(obj, SLOTS.ARRAYLENGTH, 0);
+    return obj;
+};
+
+var TypedArrayConstructor_from = function from(thisArg, argList) {
+    "use strict";
+    var source = argList[0];
+    var mapfn = argList[1];
+    var tArg = argList[2];
+    var T;
+    var C = thisArg;
+    var newObj;
+    var putStatus;
+    if (!IsConstructor(C)) return newTypeError(format("S_NO_CONSTRUCTOR", "the this value"));
+    var items = ToObject(source);
+    if (isAbrupt(items = ifAbrupt(items))) return items;
+    var mapping;
+    var k;
+    var nextValue, kValue, Pk;
+    if (mapfn === undefined) {
+        mapping = false;
+    } else {
+        if (!IsCallable(mapfn)) return newTypeError(format("S_NOT_CALLABLE", "mapfn"));
+        T = tArg;
+        mapping = true;
+    }
+    var usingIterator = HasProperty(items, $$iterator);
+    if (isAbrupt(usingIterator = ifAbrupt(usingIterator))) return usingIterator;
+    if (usingIterator) {
+        var iterator = Get(items, $$iterator);
+        iterator = unwrap(iterator);
+        var values = [];
+        var next = true;
+        while (next != false) {
+            next = IteratorStept(iterator);
+            if (next !== false) {
+                nextValue = IteratorValue(next);
+                if (isAbrupt(nextValue = ifAbrupt(nextValue))) return nextValue;
+                values.push(nextValue);
+            }
+        }
+        var len = values.length;
+        newObj = callInternalSlot(SLOTS.CONSTRUCT, C, C, [len]);
+        if (isAbrupt(newObj = ifAbrupt(newObj))) return newObj;
+        k = 0;
+        while (k < len) {
+            Pk = ToString(k);
+            kValue = values[k];
+            if (mapping) {
+                mappedValue = callInternalSlot(SLOTS.CALL, mapfn, T, [kValue]);
+                if (isAbrupt(mappedValue = ifAbrupt(mappedValue))) return mappedValue;
+            } else mappedValue = kValue;
+            putStatus = Put(newObj, Pk, mappedValue, true);
+            if (isAbrupt(putStatus)) return putStatus;
+            k = k + 1;
+        }
+        return NormalCompletion(newObj);
+    }
+    Assert(HasProperty(items, "length"), format("EXPECTING_ARRAYLIKE"));
+    var lenValue = Get(items, "length");
+    len = ToLength(lenValue);
+    if (isAbrupt(len = ifAbrupt(len))) return len;
+    newObj = callInternalSlot(SLOTS.CONSTRUCT, C, C, [len]);
+    if (isAbrupt(newObj = ifAbrupt(newObj))) return newObj;
+
+    var mappedValue;
+    k = 0;
+    while (k < len) {
+        Pk = ToString(k);
+        kValue = Get(items, Pk);
+        if (isAbrupt(kValue = ifAbrupt(kValue))) return kValue;
+        if (mapping) {
+            mappedValue = callInternalSlot(SLOTS.CALL, mapfn, T, [kValue, k, items]);
+            if (isAbrupt(mappedValue = ifAbrupt(mappedValue))) return mappedValue;
+        } else {
+            mappedValue = kValue;
+        }
+        putStatus = Put(newObj, Pk, mappedValue, true);
+        if (isAbrupt(putStatus)) return putStatus;
+        k = k + 1;
+    }
+    return NormalCompletion(newObj);
+};
+var TypedArrayConstructor_of = function of(thisArg, argList) {
+    var items = CreateArrayFromList(argList);
+    var lenValue = Get(items, "length");
+    var len = ToLength(lenValue);
+    if (isAbrupt(len=ifAbrupt(length))) return length;
+    var C = thisArg;
+    if (IsConstructor(C)) {
+        var newObj = callInternalSlot(SLOTS.CONSTRUCT, C, C, [len]);
+        if (isAbrupt(newObj = ifAbrupt(newObj))) return newObj;
+    } else {
+        return newTypeError( "The thisValue has to be a constructor");
+    }
+    var k = 0;
+    var status;
+    var Pk, kValue;
+    while (k < len) {
+        Pk = ToString(k);
+        kValue = Get(items, Pk);
+        //if (isAbrupt(kValue = ifAbrupt(kValue))) return kValue;
+        status = Put(newObj, Pk, kValue, true);
+        if (isAbrupt(status = ifAbrupt(status))) return status;
+        k = k + 1;
+    }
+    return NormalCompletion(newObj);
+};
+
+var TypedArrayPrototype_get_byteLength = function (thisArg, argList) {
+    var O = thisArg;
+    if (Type(O) !== OBJECT) return newTypeError( "this value is not an object");
+    if (!hasInternalSlot(O, SLOTS.VIEWEDARRAYBUFFER)) return newTypeError( "has no ViewedArrayBuffer slot");
+    var buffer = getInternalSlot(O, SLOTS.VIEWEDARRAYBUFFER);
+    if (buffer === undefined) return newTypeError( "slot value for viewed array buffer is undefined");
+    var length = getInternalSlot(O, SLOTS.BYTELENGTH);
+    return NormalCompletion(length);
+};
+var TypedArrayPrototype_get_byteOffset = function (thisArg, argList) {
+    var O = thisArg;
+    if (Type(O) !== OBJECT) return newTypeError( "this value is not an object");
+    if (!hasInternalSlot(O, SLOTS.VIEWEDARRAYBUFFER)) return newTypeError( "has no ViewedArrayBuffer slot");
+    var buffer = getInternalSlot(O, SLOTS.VIEWEDARRAYBUFFER);
+    if (buffer === undefined) return newTypeError( "slot value for viewed array buffer is undefined");
+    var offset = getInternalSlot(O, SLOTS.BYTEOFFSET);
+    return NormalCompletion(offset);
+};
+var TypedArrayPrototype_get_buffer = function (thisArg, argList) {
+    var O = thisArg;
+    if (Type(O) !== OBJECT) return newTypeError( "this value is not an object");
+    if (!hasInternalSlot(O, SLOTS.VIEWEDARRAYBUFFER)) return newTypeError( "has no ViewedArrayBuffer slot");
+    var buffer = getInternalSlot(O, SLOTS.VIEWEDARRAYBUFFER);
+    if (buffer === undefined) return newTypeError( "slot value for viewed array buffer is undefined");
+    return NormalCompletion(buffer);
+};
+
+var TypedArrayPrototype_filter = function subarray(thisArg, argList) {
+};
+var TypedArrayPrototype_find = function subarray(thisArg, argList) {
+};
+var TypedArrayPrototype_findIndex = function subarray(thisArg, argList) {
+};
+var TypedArrayPrototype_forEach = function subarray(thisArg, argList) {
+};
+var TypedArrayPrototype_indexOf = function subarray(thisArg, argList) {
+};
+var TypedArrayPrototype_join = function subarray(thisArg, argList) {
+};
+var TypedArrayPrototype_keys = function subarray(thisArg, argList) {
+};
+var TypedArrayPrototype_lastIndexOf = function subarray(thisArg, argList) {
+};
+var TypedArrayPrototype_length = function subarray(thisArg, argList) {
+};
+var TypedArrayPrototype_map = function subarray(thisArg, argList) {
+};
+var TypedArrayPrototype_reduce = function subarray(thisArg, argList) {
+};
+var TypedArrayPrototype_reduceRight = function subarray(thisArg, argList) {
+};
+var TypedArrayPrototype_reverse = function subarray(thisArg, argList) {
+};
+var TypedArrayPrototype_set = function subarray(thisArg, argList) {
+};
+var TypedArrayPrototype_slice = function subarray(thisArg, argList) {
+};
+var TypedArrayPrototype_some = function subarray(thisArg, argList) {
+};
+var TypedArrayPrototype_sort = function subarray(thisArg, argList) {
+};
+
+var TypedArrayPrototype_subarray = function subarray(thisArg, argList) {
+};
+
+
+var TypedArrayPrototype_$$iterator = function iterator(thisArg, argList) {
+    return CreateArrayIterator(thisArg, "value");
+};
+
+// $$toStringTag
+var TypedArrayPrototype_get_$$toStringTag = function get_toStringTag(thisArg, argList) {
+    var O = thisArg;
+    if (Type(O) !== OBJECT) return newTypeError( "the this value is not an object");
+    if (!hasInternalSlot(O, SLOTS.TYPEDARRAYNAME)) return newTypeError( "the this value has no [[TypedArrayName]] slot");
+    var name = getInternalSlot(O, SLOTS.TYPEDARRAYNAME);
+    Assert(Type(name) == STRING, "name has to be a string value");
+    return NormalCompletion(name);
+};
+
 /**
  * Created by root on 30.03.14.
  */
@@ -13572,6 +14531,65 @@ function thisSymbolValue(value) {
     return newTypeError( "thisSymbolValue: value is not a Symbol");
 }
 
+
+
+
+var SymbolFunction_Call = function Call(thisArg, argList) {
+    var descString;
+    var description = argList[0];
+    if (description !== undefined) descString = ToString(description);
+    if (isAbrupt(descString = ifAbrupt(descString))) return descString;
+    var symbol = SymbolPrimitiveType();
+    setInternalSlot(symbol, SLOTS.DESCRIPTION, descString);
+    return NormalCompletion(symbol);
+};
+var SymbolFunction_Construct = function Construct(argList) {
+    return OrdinaryConstruct(this, argList);
+};
+var SymbolPrototype_toString = function toString(thisArg, argList) {
+    var s = thisArg;
+    if (hasInternalSlot(s, SLOTS.SYMBOLDATA)) return newTypeError(format("HAS_NO_SLOT_S", "[[SymbolData]]"));
+    var sym = getInternalSlot(s, SLOTS.SYMBOLDATA);
+    var desc = getInternalSlot(sym, SLOTS.DESCRIPTION);
+    if (desc === undefined) desc = "";
+    Assert(Type(desc) === STRING, format("SLOT_S_NOT_A_STRING", "[[Description]]"));
+    var result = "Symbol(" + desc + ")";
+    return NormalCompletion(result);
+};
+
+var SymbolPrototype_valueOf = function valueOf(thisArg, argList) {
+    var s = thisArg;
+    if (hasInternalSlot(s, SLOTS.SYMBOLDATA)) return newTypeError(format("HAS_NO_SLOT_S", "[[SymbolData]]"));
+    var sym = getInternalSlot(s, SLOTS.SYMBOLDATA);
+    return NormalCompletion(sym);
+};
+var SymbolPrototype_$$toPrimitive = function (thisArg, argList) {
+    return newTypeError(format("SYMBOL_TOPRIMITVE_ERROR"));
+};
+var SymbolFunction_keyFor = function (thisArg, argList) {
+    var sym = argList[0];
+    if (Type(sym) !== SYMBOL) return newTypeError(format("S_NOT_A_SYMBOL","keyFor: sym"));
+    var key = getInternalSlot(sym, SLOTS.DESCRIPTION);
+    var e = getRealm().GlobalSymbolRegistry[key];
+    if (SameValue(e.Symbol, sym)) return NormalCompletion(e.Key);
+    Assert(getRealm().GlobalSymbolRegistry[key] === undefined, trans("GLOBAL_SYMBOL_REGISTRY_ERROR"));
+    return NormalCompletion(undefined);
+};
+var SymbolFunction_for = function (thisArg, argList) {
+    var key = argList[0];
+    var stringKey = ToString(key);
+    if (isAbrupt(stringKey = ifAbrupt(stringKey))) return stringKey;
+    var e = getRealm().GlobalSymbolRegistry[key];
+    if (e !== undefined && SameValue(e.Key, stringKey)) return NormalCompletion(e.Symbol);
+    Assert(e === undefined, trans("GLOBAL_SYMBOL_REGISTRY_ERROR"));
+    var newSymbol = SymbolPrimitiveType();
+    setInternalSlot(newSymbol, SLOTS.DESCRIPTION, stringKey);
+    getRealm().GlobalSymbolRegistry[stringKey] = { Key: stringKey, Symbol: newSymbol };
+    return NormalCompletion(newSymbol); // There is a Typo newSumbol in the Spec.
+};
+var SymbolFunction_$$create = function (thisArg, argList) {
+    return newTypeError( format("SYMBOL_CREATE_ERROR"));
+};
 
 
 // ===========================================================================================================
@@ -14169,6 +15187,1403 @@ function DefineBuiltinProperties(O) {
     return O;
 }
 
+/**
+ * a simplification to search through a list (in our case a js array)
+ * and look at the current item.
+ *
+ * @param list
+ * @param field
+ * @param value
+ * @returns {boolean}
+ */
+function hasRecordInList(list, field, value) {
+    if (!list) return false;
+    for (var i = 0, j = list.length; i < j; i++) {
+        var r = list[i];
+        if (r[field] === value) return true;
+    }
+    return false;
+}
+
+function getRecordFromList(list, field, value) {
+    if (!list) return false;
+    for (var i = 0, j = list.length; i < j; i++) {
+        var r = list[i];
+        if (r[field] === value) return r;
+    }
+    return undefined;
+}
+
+
+function thisLoader(value) {
+    if (value instanceof CompletionRecord) return thisLoader(value.value);
+    var m;
+    if (Type(value) === OBJECT && (m=getInternalSlot(value, SLOTS.LOADERRECORD))) {
+        if (m !== undefined) return value;
+    }
+    return newTypeError( "thisLoader(value): value is not a valid loader object");
+}
+
+
+//
+// Runtime Semantics
+// Loader State
+//
+
+// 27.1. add
+function LoaderRecord () {
+    var lr = Object.create(LoaderRecord.prototype);
+    lr.Realm = undefined;
+    lr.Modules = undefined; // record { Name, Module }
+    lr.Loads = undefined;   // outstanding async requests
+    lr.Loader = undefined;  // the loader obj
+    return lr;
+}
+LoaderRecord.prototype.toString = function () { return "[object LoaderRecord]"; };
+
+// 27.1.
+function CreateLoaderRecord(realm, object) {
+    var loader = LoaderRecord();
+    loader.Realm = realm;
+    loader.Modules = [];
+    loader.Loads = [];
+    loader.LoaderObj = object;
+    return loader;
+}
+
+function LoadRecord() {
+    var lr = Object.create(LoadRecord.prototype);
+    lr.Status = undefined;
+    lr.Name = undefined;
+    lr.LinkSets = undefined;
+    lr.Metadata = undefined;
+    lr.Address = undefined;
+    lr.Source = undefined;
+    lr.Kind = undefined;
+    lr.Body = undefined;
+    lr.Execute = undefined;
+    lr.Exception = undefined;
+    lr.Module = undefined;
+    lr.constructor = LoadRecord;
+    return lr;
+}
+LoadRecord.prototype.toString = function () { return "[object LoadRecord]"; };
+
+// 27.1. check
+function CreateLoad(name) {
+    var load = LoadRecord();
+    var metadata = ObjectCreate();
+    load.Status = "loading";
+    load.Name = name;
+    load.LinkSets = [];
+    load.Metadata = metadata;
+    // all other fields are exisiting but undefined.
+    return load;
+}
+
+// 27.1.
+function CreateLoadRequestObject(name, metadata, address, source) {
+    var obj = ObjectCreate();
+    var status, errmsg = "CreateLoadRequest: CreateDataProperty must not fail";
+    status = CreateDataProperty(obj, "name", name);
+    Assert(!isAbrupt(status), errmsg+ " - 1");
+    status = CreateDataProperty(obj, "metadata", metadata);
+    Assert(!isAbrupt(status), errmsg+ " - 2");
+    if (address !== undefined) {
+        status = CreateDataProperty(obj, "address", address);
+        Assert(!isAbrupt(status), errmsg+ " - 3");
+    }
+    if (source !== undefined) {
+        status = CreateDataProperty(obj, "source", source);
+        Assert(!isAbrupt(status), errmsg + " - 4");
+    }
+    return obj;
+}
+
+// 27.1. updated
+function LoadModule(loader, name, options) {
+    ////debug2("loadmodule");
+    if (!options) options = ObjectCreate();
+    name = ToString(name);
+    if (isAbrupt(name = ifAbrupt(name))) return name;
+    var address = GetOption(options, "address");
+    if (isAbrupt(address = ifAbrupt(address))) return address;
+    var step;
+    if (address === undefined) step = "locate";
+    else step = "fetch";
+    var metadata = ObjectCreate();
+    var source;
+    return PromiseOfStartLoadPartWayThrough(step, loader, name, metadata, source, address);
+}
+
+// 27.1. update
+function RequestLoad(loader, request, refererName, refererAddress) {
+    var F = CallNormalize();
+    setInternalSlot(F, SLOTS.LOADER, loader);
+    setInternalSlot(F, SLOTS.REQUEST, request);
+    setInternalSlot(F, SLOTS.REFERERNAME, refererName);
+    setInternalSlot(F, SLOTS.REFERERADDRESS, refererAddress);
+    var p = PromiseNew(F);
+    var G = GetOrCreateLoad();
+    setInternalSlot(G, SLOTS.LOADER, loader);
+    p = PromiseThen(p, G);
+    return p;
+}
+
+
+// neu 27.1.
+function CallNormalize() {
+    var F = OrdinaryFunction();
+    var CallNormalizeFunction_Call = function (thisArg, argList) {
+        var resolve = argList[0];
+        var reject = argList[1];
+        var loader = getInternalSlot(F, SLOTS.LOADER);
+        var request = getInternalSlot(F, SLOTS.REQUEST);
+        var refererName = getInternalSlot(F, SLOTS.REFERERNAME);
+        var refererAddress = getInternalSlot(F, SLOTS.REFERERADDRESS);
+        var loaderObj = loader.LoaderObj;
+        var normalizeHook = Get(loaderObj, "normalize");
+        var name = callInternalSlot(SLOTS.CALL, normalizeHook, loaderObj, [request, refererName, refererAddress]);
+        if (isAbrupt(name = ifAbrupt(name))) return name;
+        return callInternalSlot(SLOTS.CALL, resolve, undefined, [name]);
+    };
+    setInternalSlot(F, SLOTS.CALL, CallNormalizeFunction_Call);
+    return F;
+}
+
+// neu 27.1.
+function GetOrCreateLoad() {
+    var F = OrdinaryFunction();
+    var GetOrCreateLoad_Call = function (thisArg, argList) {
+        var name = argList[0];
+        var loader = getInternalSlot(F, SLOTS.LOADER);
+        name = ToString(name);
+        if (isAbrupt(name = ifAbrupt(name))) return name;
+        var modules = loaderRecord.Modules;
+        for (var i = 0, j = modules.length; i < j; i++) {
+            var p = modules[i];
+            if (SameValue(p.key, name)) {
+                var existingModule = p.value;
+                load = CreateLoad(name);
+                load.Status = "linked";
+                load.Module = existingModule;
+                return NormalCompletion(load);
+            }
+        }
+        for (i = 0, j = loader.Loads.length; i < j; i++) {
+            if (SameValue(load.Name, name)) {
+                Assert(load.Status === "loading" || load.Status === "loaded", "load.Status has to be loading or loaded");
+                return NormalCompletion(load);
+            }
+        }
+        var load = CreateLoad(name);
+        loader.Loads.push(load);
+        ProceedToLocate(loader, load);
+        return NormalCompletion(load);
+    };
+    setInternalSlot(F, SLOTS.CALL, GetOrCreateLoad_Call);
+    return F;
+}
+
+// 27.1. update
+function ProceedToLocate(loader, load, p) {
+    p = PromiseOf(undefined);
+    var F = CallLocate();
+    setInternalSlot(F, SLOTS.LOADER, loader);
+    setInternalSlot(F, "Load", load);
+    p = PromiseThen(p, F);
+    return ProceedToFetch(loader, load, p);
+}
+
+// 27.1. update
+function CallLocate() {
+    var F = OrdinaryFunction();
+    var CallLocate_Call = function (thisArg, argList) {
+        var F = this;
+        var loader = getInternalSlot(F, SLOTS.LOADER);
+        var load = getInternalSlot(F, "Load");
+        var loaderObj = loader.LoaderObj;
+        var hook = Get(loaderObj, "locate");
+        if (isAbrupt(hook = ifAbrupt(hook))) return hook;
+        if (!IsCallable(hook)) return newTypeError( "call locate hook is not callable");
+        var obj = CreateLoadRequestObject(load.Name, load.Metadata);
+        return callInternalSlot(SLOTS.CALL, hook, loader, [obj])
+    };
+    setInternalSlot(F, SLOTS.CALL, CallLocate_Call);
+    return F;
+}
+
+// 27.1.
+function ProceedToFetch(loader, load, p) {
+    var F = CallFetch();
+    setInternalSlot(F, SLOTS.LOADER, loader);
+    setInternalSlot(F, "Load", load);
+    setInternalSlot(F, "AddressPromise", p);
+    p = PromiseThen(p, F);
+    return ProceedToTranslate(loader, load, p);
+}
+
+// 27.1.
+function CallFetch() {
+    var F = OrdinaryFunction();
+    var CallFetch_Call = function (thisArg, argList) {
+        var F = this;
+        var address = argList[0];
+        var loader = getInternalSlot(F, SLOTS.LOADER);
+        var load = getInternalSlot(F, "Load");
+        if (load.LinkSets.length === 0) return NormalCompletion(undefined);
+        load.Address = address;
+        var loaderObj = loader.LoaderObj;
+        var hook = Get(loaderObj, "fetch");
+        if (isAbrupt(hook = ifAbrupt(hook))) return hook;
+        if (!IsCallable(hook)) return newTypeError( "fetch hook is not a function");
+        var obj = CreateLoadRequestObject(load.Name, load.Metadata, address);
+        return callInternalSlot(SLOTS.CALL, hook, loader, [obj]);
+    };
+    setInternalSlot(F, SLOTS.CALL, CallFetch_Call);
+    return F;
+}
+
+// 27.1.
+function ProceedToTranslate(loader, load, p) {
+    var F = CallTranslate();
+    setInternalSlot(F, SLOTS.LOADER, loader);
+    setInternalSlot(F, "Load", load);
+    p = PromiseThen(p, F);
+    F = CallInstantiate();
+    setInternalSlot(F, SLOTS.LOADER, loader);
+    setInternalSlot(F, "Load", load);
+    p = PromiseThen(p, F);
+    F = InstantiateSucceeded();
+    setInternalSlot(F, SLOTS.LOADER, loader);
+    setInternalSlot(F, "Load", load);
+    p = PromiseThen(p, F);
+    F = LoadFailed();
+    setInternalSlot(F, "Load", load);
+    return PromiseCatch(p, F);
+}
+
+// 27.1.
+function CallTranslate() {
+    var F = OrdinaryFunction();
+    var CallTranslate_Call = function (thisArg, argList) {
+        var F = this;
+        var source = argList[0];
+        var loader = getInternalSlot(F, SLOTS.LOADER);
+        var load = getInternalSlot(F, "Load");
+        if (load.LinkSets.length === 0) return NormalCompletion(undefined);
+        var hook = Get(loader, "translate");
+        if (isAbrupt(hook = ifAbrupt(hook))) return hook;
+        if (!IsCallable(hook)) return newTypeError( "call translate hook is not callable");
+        var obj = CreateLoadRequestObject(load.Name, load.Metadata, load.Address, source);
+        return callInternalSlot(SLOTS.CALL, hook, loader, [obj]);
+    };
+    setInternalSlot(F, SLOTS.CALL, CallTranslate_Call);
+    return F;
+}
+
+
+// 27.1.
+function CallInstantiate() {
+    var F = OrdinaryFunction();
+    var CallInstantiate_Call = function (thisArg, argList) {
+        var F = this;
+        var source = argList[0];
+        var loader = getInternalSlot(F, SLOTS.LOADER);
+        var load = getInternalSlot(F, "Load");
+        if (loader.LinkSets.length === 0) return NormalCompletion(undefined);
+        var hook = Get(loader, "instantiate");
+        if (isAbrupt(hook = ifAbrupt(hook))) return hook;
+        if (!IsCallable(hook)) return newTypeError( "call instantiate hook is not callable");
+        var obj = CreateLoadRequestObject(load.Name, load.Metadata, load.Address, source);
+        return callInternalSlot(SLOTS.CALL, hook, loader, [obj]);
+    };
+    setInternalSlot(F, SLOTS.CALL, CallInstantiate_Call);
+    return F;
+}
+
+// 27.1.
+function InstantiateSucceeded() {
+    var F = OrdinaryFunction();
+    var InstantiateSucceeded_Call = function (thisArg, argList) {
+        var instantiateResult = argList[0];
+        var loader = getInternalSlot(F, SLOTS.LOADER);
+        var load = getInternalSlot(F, "Load");
+        if (load.LinkSets.length === 0) return NormalCompletion(undefined);
+        if (instantiateResult === undefined) {
+            try {
+                var body = parseGoal("Module", load.Source);
+            } catch (ex) {
+                return newSyntaxError( ex.message);
+            }
+            load.Body = body;
+            load.Kind = "declarative";
+            var depsList = ModuleRequests(body);
+        } else if (Type(instantiateResult) === OBJECT) {
+            var deps = Get(instantiateResult, "deps");
+            if (isAbrupt(deps = ifAbrupt(deps))) return deps;
+            if (deps === undefined) depsList = [];
+            else {
+                depsList = IterableToList(deps); // IterableToArray?
+                if (isAbrupt(depsList = ifAbrupt(depsList))) return depsList;
+            }
+            var execute = Get(instantiateResult, "execute");
+            if (isAbrupt(execute = ifAbrupt(execute))) return execute;
+            load.Execute = execute;
+            load.Kind = "dynamic";
+        } else {
+            return newTypeError( "instantiateResult error");
+        }
+        return ProcessLoadDependencies(load, loader, depsList);
+    };
+    setInternalSlot(F, SLOTS.CALL, InstantiateSucceeded_Call);
+    return F;
+}
+
+// 27.1.
+function LoadFailed() {
+    var LoadFailedFunction_Call = function (thisArg, argList) {
+        var exc = argList[0];
+        var F = this;
+        var load = getInternalSlot(this, SLOTS.LOAD);
+        Assert(load.Status === "loading", "load.[[Status]] has to be loading at this point");
+        load.Status = "failed";
+        load.Exception = exc;
+        var linkSets = load.LinkSets;
+        for (var i = 0, j = linkSets.length; i < j; i++) {
+            LinkSetFailed(linkSets[i], exc);
+        }
+        Assert(load.LinkSets.length === 0, "load.[[LinkSets]] has to be empty at this point");
+    };
+    var F = OrdinaryFunction();
+    setInternalSlot(F, SLOTS.CALL, LoadFailedFunction_Call);
+    return F;
+}
+
+// 27.1.
+function ProcessLoadDependencies(load, loader, depsList) {
+    var refererName = load.Name;
+    load.Dependencies = [];
+    var loadPromises = [];
+    for (var i = 0, j = depsList.length; i < j; i++) {
+        var request = depsList[i];
+        var p = RequestLoad(loader, request, refererName, load.Address);
+        var F = AddDependencyLoad();
+        setInternalSlot(F, SLOTS.LOAD, load);
+        setInternalSlot(F, SLOTS.REQUEST, request);
+        p = PromiseThen(p, F);
+        loadPromises.push(p);
+    }
+    p = PromiseAll(loadPromises);
+    F = LoadSucceeded();
+    setInternalSlot(F, SLOTS.LOAD, load);
+    return PromiseThen(p, F);
+}
+
+// 27.1.
+function AddDependencyLoad() {
+    var AddDependencyLoad_Call = function (thisArg, argList) {
+        var depLoad = argList[0];
+        var parentLoad = getInternalSlot(F, "ParentLoad");
+        var request = getInternalSlot(F, SLOTS.REQUEST);
+        Assert(!hasRecordInList(parentLoad.Dependencies, "Key", request), "there must be no record in parentLoad.Dependencies with key equal to request ");
+        parentLoad.Dependences.push({Key: request, Value: depLoad.Name });
+        if (depLoad.Status !== "linked") {
+            var linkSets = parentLoad.LinkSets;
+            for (var i = 0, j = linkSets.length; i < j; i++) {
+                AddLoadToLinkSet(linkSets[i], depLoad);
+            }
+        }
+        return NormalCompletion(undefined);
+    };
+    var F = OrdinaryFunction();
+    setInternalSlot(F, SLOTS.CALL, AddDependencyLoad_Call);
+    return F;
+}
+
+// 27.1.
+function LoadSucceeded() {
+    var LoadSucceeded_Call = function (thisArg, argList) {
+        var load = getInternalSlot(F, SLOTS.LOAD);
+        Assert(load.Status === "loading", "load.Status should have been loading but isnt");
+        load.Status = "loaded";
+        var linkSets = load.LinkSets;
+        for (var i = 0, j = linkSets.length; i < j; i++) {
+            UpdateLinkSetOnLoad(linkSets[i], load);
+        }
+        return NormalCompletion(undefined);
+    };
+    var F = OrdinaryFunction();
+    setInternalSlot(F, SLOTS.CALL, LoadSucceeded_Call);
+    return F;
+}
+
+// 27.1.
+function PromiseOfStartLoadPartWayThrough(step, loader, name, metadata, source, address) {
+    //debug2("PromiseOfStartLoadPartWayThrough: start");
+    var F = AsyncStartLoadPartwayThrough();
+    var state = Object.create(null);
+    state.Step = "translate";
+    state.Loader = loader;
+    state.ModuleName = name;
+    state.ModuleMetadata = metadata;
+    state.ModuleSource = source;
+    state.ModuleAddress = address;
+    setInternalSlot(F, "StepState", state);
+    return PromiseNew(F);
+}
+
+
+// 26.1
+function AsyncStartLoadPartwayThrough() {
+    var F = OrdinaryFunction();
+    //debug2("AsyncStartLoadPartwayThrough: start");
+    var AsyncStartLoadPartwayThrough_Call = function (thisArg, argList) {
+        //debug2("AsyncStartLoadPartwayThrough_Call");
+        var resolve = argList[0];
+        var reject = argList[1];
+        var state = getInternalSlot(F, "StepState");
+        var loader = state.Loader;
+        var name = state.ModuleName;
+        var step = state.Step;
+        var source = state.ModuleSource;
+        if (hasRecordInList(loader.Modules, "Name", name)) return newTypeError( "Got name in loader.Modules");
+        if (hasRecordInList(loader.Loads, "Name", name)) return newTypeError( "loader.Loads contains another entry with name '"+name+"'");
+        var load = CreateLoad(name);
+        load.Metadata = state.ModuleMetadata;
+        var linkSet = CreateLinkSet(loader, load);
+        if (!Array.isArray(loader.Loads)) loader.Loads = [];
+        loader.Loads.push(load);
+        var result = callInternalSlot(SLOTS.CALL, resolve, null, [linkSet.done]);
+        if (step === "locate") {
+            ProceedToLocate(loader, load);
+        } else if (step === "fetch") {
+            var addressPromise = PromiseOf(address);
+            ProceedToFetch(loader, load, addressPromise);
+        } else {
+            Assert(step === "translate", "step has to be translate");
+            load.Address = state.ModuleAddress;
+            var sourcePromise = PromiseOf(source);
+            ProceedToTranslate(loader, load, sourcePromise);
+        }
+    };
+    setInternalSlot(F, SLOTS.CALL, AsyncStartLoadPartwayThrough_Call);
+    return F;
+}
+//
+// Module Linkage
+//
+
+// 27.1.
+function CreateModuleLinkageRecord (loader, body) {
+    var M = ObjectCreate(null);
+    setInternalSlot(M, "Body", body);
+    setInternalSlot(M, "BoundNames", DeclaredNames(body));
+    setInternalSlot(M, "KnownExportEntries", KnownExportEntries(body));
+    setInternalSlot(M, "UnknownExportEntries", UnknownExportEntries(body));
+    setInternalSlot(M, "ExportDefinitions", undefined);
+    setInternalSlot(M, "Exports", undefined);
+    setInternalSlot(M, "Dependencies", undefined);
+    setInternalSlot(M, "UnlinkedDependencies", undefined);
+    setInternalSlot(M, "ImportEntries", ImportEntries(body));
+    setInternalSlot(M, "ImportDefinitions", undefined);
+    setInternalSlot(M, "LinkErrors", []);
+    var realm = loader.Realm;
+    var globalEnv = realm.globalEnv;
+    var env = NewModuleEnvironment(globalEnv);
+    setInternalSlot(M, SLOTS.ENVIRONMENT, env);
+    return M;
+}
+// 27.1.
+function LookupExport(M, exportName) {
+    var mExp = getInternalSlot(M, "Exports");
+    var exp;
+    if (!(exp=getRecordFromList(mExp, "ExportName", exportName))) {
+        return NormalCompletion(undefined);
+    }
+    return exp.Binding;
+}
+// 27.1.
+function LookupModuleDependency(M, requestName) {
+    if (requestName === null) return M;
+    var deps = getInternalSlot(M, "Dependencies");
+    var pair = getRecordFromList(deps, "Key", requestName);
+    return pair.Module;
+}
+
+// 27.1.
+function LinkSet(loader, loads, done, resolve, reject) {
+    var ls = Object.create(LinkSet.prototype);
+    ls.Loader = loader;
+    ls.Loads = loads;
+    ls.Done = done;
+    ls.Resolve = resolve;
+    ls.Reject = reject;
+    return ls;
+}
+LinkSet.prototype.toString = function () { return "[object LinkSet]"; };
+
+// 27.1.
+function CreateLinkSet(loader, startingLoad) {
+    //debug2("createlinkset");
+    if (Type(loader) !== OBJECT) return newTypeError( "CreateLinkSet: loader has to be an object");
+    if (!hasInternalSlot(loader, SLOTS.LOAD)) return newTypeError( "CreateLinkSet: loader is missing internal properties");
+    var promiseCapability = PromiseBuiltinCapability();
+    if (isAbrupt(promiseCapability = ifAbrupt(promiseCapability))) return promiseCapability;
+    var linkSet = LinkSet(loader, loads, promiseCapability.Promise, promiseCapability.Resolve, promiseCapability.Reject);
+    AddLoadToLinkSet(linkSet, startingLoad);
+    return NormalCompletion(linkSet);
+}
+
+// 27.1.
+function AddLoadToLinkSet(linkSet, load) {
+    //debug2("add load to linkset");
+    Assert(load.Status === "loading" || load.Status === "loaded", "load.Status is either loading or loaded.");
+    var loader = linkSet.Loader;
+    if (linkSet.indexOf(load) === -1) {     // INDEX-OF (Das ist dieser O(n) den fast jeder bedenkenlos und viel zu oft nimmt)
+        linkSet.Loads.push(load);
+        load.LinkSets.push(linkSet);
+        if (load.Status === "loaded") {
+            for (var i = 0, j = load.Dependencies.length; i < j; i++) {
+                var r = load.Dependencies[i];
+                if (!hasRecordInList(loader.Modules, "Key", name)) {       // Evil cubic stuff.
+                    var depLoad;
+                    if ((depLoad=getRecordFromList(loader.Loads, "Name", name))) {
+                        AddLoadToLinkSet(linkSet, depLoad);
+                    }
+                }
+            }
+        }
+    }
+}
+// 27.1.
+function UpdateLinkSetOnLoad(linkSet, load) {
+    //debug2("updatelinksetonload");
+    var loads = linkSet.Loads;
+    Assert(loads.indexOf(loads) > -1, "linkset.Loads has to contain load");
+    Assert(load.Status === "loaded" || load.Status === "linked", "load.Status must be one of loaded or linked");
+    for (var i = 0, j = loads.length; i < j; i++) {
+        var load = loads[i];
+        if (load.Status === "loading") return NormalCompletion(undefined);
+    }
+    var startingLoad = loads[0];
+    var status = Link(loads, linkSet.Loader);
+    if (isAbrupt(status)) {
+        return LinkSetFailed(linkSet, status.value);
+    }
+    Assert(linkSet.Loads.length === 0, "linkset.Loads has to be empty here");
+    var result = callInternalSlot(SLOTS.CALL, linkset.Resolve, undefined, [startingLoad]);
+    Assert(!isAbrupt(result), "linkSet.resolve had to terminate normally");
+    return result;
+}
+
+// 27.1.
+function LinkSetFailed(linkSet, exc) {
+    //debug2("linksetfailed");
+    var loader = linkSet.Loader;
+    var loads = linkSet.Loads;
+    for (var i = 0, j = loads.length; i < j; i++) {
+        var load = loads[i];
+        var idx;
+        Assert((idx = load.LinkSets.indexOf(v)) > -1, "load.LinkSets has to contain linkset");
+        load.LinkSets.splice(idx,1);    // SPLICE KOSTET EXTRA
+        if ((load.LinkSets.length === 0) && ((idx=loader.Loads.indexOf(load)) > -1)) {
+            loader.Loads.splice(idx,1); // SPLICE KOSTET EXTRA
+        }
+    }
+    var result = callInternalSlot(SLOTS.CALL, linkset.Reject, undefined, [exc]);
+    Assert(!isAbrupt(result), "linkSet.reject had to terminate normally");
+    return NormalCompletion(result);
+}
+
+// 27.1.    USING EXPENSIVE SPLICES to EMPTY the array (and .indexOf Arrays )
+function FinishLoad(loader, load) {
+    //debug2("finishload");
+    var name = load.Name;
+    if (name !== undefined) {
+        Assert(!hasRecordInList(loader.Modules, "Key", load.Name), "there may be no duplicate records in loader.Modules");
+        loader.Modules.push({ key: load.Name, value: load.Module });
+    }
+    var idx;
+    if ((idx=loader.Loads.indexOf(load)) > -1) {
+        load.Loads.splice(idx, 1);
+    }
+    for (var i = 0, j = load.LinkSets.length; i < j; i++) {
+        var loads = load.LinkSets[i].Loads;
+        idx = loads.indexOf(loads);
+        if (idx>-1) {
+            loads.splice(idx, 1);
+        }
+    }
+    load.LinkSets.splice(0, load.linkSets.length);
+}
+// 29.1.
+
+
+
+/*
+
+ this one is still incomplete.
+
+ */
+
+function LinkageGroups(start) {
+    // 1.
+    Assert(Array.isArray(start), "start has to be a list of LinkSet Records");
+    // 2.
+    var G = start.Loads;
+    var kind;
+    // 3.
+    for (var i = 0, j = G.length; i < j; i++) {
+        var load = G[i];
+        if (load.Kind != kind) {
+            if (kind === undefined) kind = G[i].Kind;
+            else return newSyntaxError( "all loads must be of the same kind");
+        }
+    }
+    var n = 0;
+
+    // 4.
+    for (i = 0, j = G.length; i < j; i++) {
+        load = G[i];
+        n = max(n, load.UnlinkedDependencies.length);
+        load.GroupIndex = n;
+    }
+
+    var declarativeGroupCount = n;
+    var declarativeGroups = [];
+    // 8.
+    for (i = 0; i < j; i++) declarativeGroups.push([]);
+
+
+    var dynamicGroupCount = 0;
+    var dynamicGroups = [];
+    var visited = [];
+    for (var i = 0, j = G.length; i < j; i++) {
+        var load = G[i];
+        BuildLinkageGroups(load, declarativeGroups, dynamicGroups, visited);
+    }
+
+    var first = declarativeGroups[0];
+    if (hasRecordInList(first, "Kind", "dynamic")) {
+        var groups = interleaveLists(dynamicGroups, declarativeGroups);
+    } else {
+        var groups = interleaveLists(declarativeGroups, dynamicGroups);
+    }
+    return groups;
+
+}
+
+function interleaveLists(list1, list2) {
+    // temp. doing nothing
+    return list1.concat(list2);
+}
+
+
+// 28.1.
+function BuildLinkageGroups(load, declarativeGroups, dynamicGroups, visited) {
+    if (hasRecordInList(visited, "Name", load.Name)) return NormalCompletion(undefined);
+    visited.push(load);
+    for (var i = 0, j = load.UnlinkedDependencies.length; i < j; i++) {
+        BuildLinkageGroups(dep, declarativeGroups, dynamicGroups, visitied);
+    }
+    i = load.GroupIndex;
+    if (load.Kind === "declarative") {
+        var groups = declarativeGroups;
+    } else {
+        groups = dynamicGroups;
+    }
+    var group = groups[i];
+    group.push(load);
+    return NormalCompletion(undefined);
+}
+// 28.1.
+function Link(start, loader) {
+    var groups = LinkageGroups(start);
+    for (var i = 0; i < groups.length; i++) {
+        var group = groups[i];
+        if (group[0].Kind === "declarative") {
+            LinkDeclarativeModules(group, loader)
+        } else {
+            LinkDynamicModules(group, loader);
+        }
+    }
+}
+// 28.1
+function LinkImports(M) {
+    var envRec = getInternalSlot(M, SLOTS.ENVIRONMENT);
+    var defs = getInternalSlot(M, "ImportDefinitions");
+    for (var i = 0; i < defs.length; i++) {
+        var def = defs[i];
+        if (def.ImportName === "module") {
+            envRec.CreateImmutableBinding(def.LocalName);
+            envRec.InitializeBinding(def.LocalName, def.Module);
+        } else {
+            var binding = ResolveExport(def.Module, def.ImportName);
+            if (binding === undefined) {
+                var error = newReferenceError( "Can not resolve export to a binding record");
+                var linkErrors = getInternalSlot(M, "LinkErrors");
+                linkErrors.push(error);
+                return error;
+            }  else {
+                env.CreateImportBinding(envRec, def.LocalName);
+                // THIS FUNCTION DOES NOT EXIST YET.
+            }
+        }
+    }
+}
+// 31.1.
+function ResolveExportEntries(M, visited) {
+    var exportDefs = getInternalSlot(M, "ExportDefinitions");
+    if (exportDefs != undefined) return exportDefs;
+    var defs = [];
+    var boundNames = getInternalSlot(M, "BoundNames");
+    var knownExportEntries = getInternalSlot(M, "KnownExportEntries");
+    var linkErrors = getInternalSlot(M, "LinkErrors");
+    for (var i = 0, j = knownExportEntries.length; i < j; i++) {
+        var entry = knownExportEntries[i];
+        var modReq = entry.ModuleRequest;
+        var otherMod = LookupModuleDependency(M, modReq);
+        if (entry.Module !== null && entry.LocalName !== null && !boundNames[entry.LocalName]) { // caps
+            var error = newReferenceError( "linkError created in ResolveExportEntries");
+            linkErrors.push(error);
+        }
+        defs.push({ Module: otherMod, ImportName: entry.ImportName, LocalName: entry.LocalName,
+            ExportName: entry.ExportName, Explicit: true });
+
+    }
+    var MUEE = M.UnknownExportEntries;
+    for (var i = 0; i < MUUE.length; i++) {
+        modReq = LookupModuleDependency(M, modReq);
+        if (visited.indexOf(otherMod) > -1) {
+            error = newSyntaxError( "otherMod is alreay in visited");
+            linkErrors.push(error);
+        } else {
+            visited.push(otherMod);
+            var otherDefs = ResolveExportEntries(otherMod, visited);
+            for (var j = 0, k = otherDefs.length; j < k; j++) {
+                var def = otherDefs[j];
+                defs.push({ Module: otherMod, ImportName: def.ExportName, LocalName: null, ExportName: def.ExportName,
+                    Explicit: false });
+            }
+        }
+    }
+    setInteranlSlot(M, "ExportDefinitions", defs);
+    return defs;
+}
+// 28.1.
+function ResolveExports(M) {
+    //debug2("resolve exports");
+    var exportDefinitions = getInternalSlot(M, "ExportDefinitions");
+    for (var i = 0, j = exportDefinitions.length; i < j; i++) {
+        var def = exportDefinitions[i];
+        ResolveExport(M, def.exportName, []);
+    }
+}
+
+// 29.1
+function ResolveExport(M, exportName, visited) {
+    //debug2("resolve export");
+    var exports = getInternalSlot(M,"Exports");
+    var exported;
+    if (exported=getRecordFromList(exports, "ExportName", exportName)) {
+        return NormalCompletion(exported.Binding)
+    }
+    var ref = { Module: M, ExportName: exportName };
+    if (visited.indexOf(ref) !== -1) {
+        var error = newSyntaxError( "ResolveExport: can not find ref in visited");
+        var linkErrors = getInternalSlot(M, "LinkErrors");
+        linkErrors.push(error);
+    }
+    var defs = getInternalSlot(M, "ExportDefinitions");
+    var overlappingDefs = [];
+    for (var i = 0, j = defs.length; i < j; i++) {
+        var def = defs[i];
+        if (def.ExportName === exportName) overlappingDefs.push(def);
+    }
+    if (!overlappingDefs.length) {
+        error = newReferenceError( "ResolveExport: overlappingDefs is empty");
+        linkErrors = getInternalSlot(M, "LinkErrors");
+        linkErrors.push(error);
+    }
+    var explicits = [];
+    for (var i = 0, j = overlappingDefs.length; i < j; i++) {
+        var overlappingDef = overlappingDefs[i];
+        if (overlappingDef.Explicit === true) explicits.push(overlappingDef);
+    }
+    if ((explicits.length > 1) || ((overlappingDefs.length > 1) && !explicits.length)) {
+        error = newSyntaxError( "");
+        linkErrors = getInternalSlot(M, "LinkErrors");
+        linkErrors.push(error);
+        return error;
+    }
+
+    def = getRecordFromList(overlappingDefs, "Explicit", true);
+    if (!def) def = overlappingDefs[0];
+    Assert(def, "i should have a def here");
+    if (def.LocalName !== null) {
+        var binding = { Module: M, LocalName: def.LocalName };
+        var exported = { ExportName: exportName, Binding: binding };
+        exports.push(exported);
+        return binding;
+
+    }
+    visited.push(ref);
+    var binding = ResolveExport(def.Module, def.ImportName);
+    return binding;
+}
+
+// 28.1.
+function ResolveImportEntries(M) {
+    var entries = getInternalSlot(M, "ImportEntries");
+    var defs = [];
+    for (var i = 0; i < entries.length; i++) {
+        var entry = entries[i];
+        var modReq = entry.ModuleRequest;
+        var otherMod = LookupModuleDependency(M, modReq);
+        var record = { Module: otherMod, ImportName: entry.ImportName, localName: entry.LocalName };
+        defs.push(record);
+    }
+    return defs;
+}
+
+
+// 28.1.
+function LinkDynamicModules(loads, loader) {
+    for (var i = 0; i < loads.length; i++) {
+        var load = loads[i];
+        var factory = load.Execute;
+        var module = callInternalSlot(SLOTS.CALL, factory, undefined, []);
+        if (isAbrupt(module = ifAbrupt(module))) return module;
+
+        if (!hasInternalSlot(module, "Exports")) {
+            return newTypeError( "module object has not the required internal properties");
+        }
+        load.Module = module;
+        load.Status = "linked";
+        var r = FinishLoad(loader, load);
+        if (isAbrupt(r=ifAbrupt(r))) return r;
+    }
+}
+
+
+
+
+function LinkDeclarativeModules(loads, loader) {
+    var unlinked = [];
+    for (var i = 0, j = loads.length; i < j; i++) {
+        var module =CreateModuleLinkageRecord(loader, load.Body);
+        var pair ={ Module: module, Load: load };
+        unlinked.push(pair);
+    }
+    for (i = 0, j = loads.length; i < j; i++) {
+        var resolvedDeps = [];
+        var unlinkedDeps = [];
+        var pair = loads[i];
+        var deps = pair.load.Dependencies;
+        var pairModule = pair.Module;
+        for (var k = 0; k < deps.length; k++) {
+            var dep = deps[k];
+            var requestName = dep.Key;
+            var normalizedName = dep.Value;
+            var load;
+            if (load = getRecordFromList(loads, "Name", normalizedName)) {
+                if (load.Status === "linked") {
+                    var resolvedDep = genericRecord({ Key: requestName, Value: load.Module });
+                    resolvedDeps.push(resolvedDep);
+                } else {
+                    for (var m = 0; m < unlinked.lengh; m++) {
+                        var otherPair = unlinked[i];
+                        if (otherPair.Load.Name == normalizedName) {
+                            resolvedDeps.push(genericRecord({ Key: requestName, Value: otherPair.Module }));
+                            unlinkedDeps.push(otherPair.Load);
+                        }
+                    }
+                }
+            } else {
+                var module = LoaderRegistryLookup(loader, normalizedName);
+                if (module === null) {
+                    var error = newReferenceError("");
+                    pair.Module.LinkErrors.push(error);
+
+                } else {
+                    resolvedDeps.push({ Key: requestName, Value: module });
+                }
+            }
+        }
+        pairModule.Dependencies = resolvedDeps;
+        pairModule.UnlinkedDependencies = unlinkedDeps;
+    }
+    for (i = 0, j = unlinked.length; i < j; i++) {
+        pair = unlinked[i];
+        ResolveExportEntries(pair.Module, []);
+        ResolveExports(pair.Module);
+    }
+    for (i = 0, j = unlinked.length; i < j; i++) {
+        pair = unlinked[i];
+        ResolveExportEntries(pair.Module, []);
+        ResolveExports(pair.Module);
+    }
+}
+
+
+// 29.1
+function EvaluateLoadedModule() {
+    var EvaluateLoadedModule_Call = function (thisArg, argList) {
+        var F = thisArg;
+        var load = argList[0];
+        var loader = getInternalSlot(F, SLOTS.LOADER);
+        Assert(load.Status === "linked", "load.Status has to be linked here");
+        var module = load.Module;
+        var result = EnsureEvaluated(module, [], loader);
+        if (isAbrupt(result)) return result;
+        return NormalCompletion(module);
+    };
+    var F = OrdinaryFunction();
+    setInternalSlot(F, SLOTS.CALL, EvaluateLoadedModule_Call);
+    return F;
+}
+
+// 29.1.
+function EnsureEvaluated(mod, seen, loader) {
+    seen.push(mod);
+    var deps = mod.Dependencies;
+    for (var i = 0, j = deps.length; i < j; i++) {
+        var pair = deps[i];
+        var dep = pair.value;
+        if (seen.indexOf(dep) === -1) EnsureEvaluated(dep, seen, loader);
+        // index of is so expensive
+    }
+    if (getInternalSlot(mod, "Evaluated") === true) return NormalCompletion(undefined);
+    setInternalSlot(mod, "Evaluated", true);
+    var body;
+    if ((body=getInternalSlot(mod, "Body")) === undefined) return NormalCompletion(undefined);
+    var env = getInternalSlot(mod, SLOTS.ENVIRONMENT);
+    var status = InstantiateModuleDeclaration(body, env);
+    var initContext = ExecutionContext(null);
+    initContext.realm = getInternalSlot(loader, SLOTS.REALM);
+    initContext.VarEnv = env;
+    initContext.LexEnv = env;
+    var stack = getStack();
+    if (stack.length) getStack().pop();
+    stack.push(initContext);
+    var r = Evaluate(body);
+    Assert(stack.pop() === initContext, "EnsureEvaluated: The right context could not be popped off the stack.");
+    return r;
+}
+
+
+
+var ReturnUndefined_Call = function (thisArg, argList) {
+    return NormalCompletion(undefined);
+};
+
+var ConstantFunction_Call = function (thisArg, argList) {
+    return getInternalSlot(this, "ConstantValue");
+};
+
+function CreateConstantGetter(key, value) {
+    var getter = CreateBuiltinFunction(getRealm(), ConstantFunction_Call, 0, "get " + key);
+    setInternalSlot(getter, "ConstantValue", value);
+    return getter;
+}
+
+function ReturnUndefined() {
+    var F = OrdinaryFunction();
+    setInternalSlot(F, SLOTS.CALL, ReturnUndefined_Call);
+    return F;
+}
+
+function IterableToList(iterable) {
+    //debug2("iterable2list");
+    //var A = ArrayCreate();
+    var A = [];
+    var next, status;
+    while (next = IteratorStep(iterable)) {
+        A.push(next);
+        // status = Invoke(A, "push", [next]);
+        //if (isAbrupt(status)) return status;
+    }
+    return A;
+}
+
+// Seite 21 von 43
+
+function GetOption(options, name) {
+    //debug2("get options");
+    if (options == undefined) return undefined;
+    if (Type(options) !== OBJECT) return newTypeError( "options is not an object");
+    return Get(options, name);
+}
+
+function OrdinaryModule() {
+    //debug2("ordinarymodule");
+    var mod = ObjectCreate(null, {
+        "Environment" : undefined,
+        "Exports": undefined,
+        "Dependencies": undefined
+    });
+    return mod;
+}
+function Module(obj) {
+    if (Type(obj) !== OBJECT) return newTypeError( "module obj is not an object");
+    var mod = OrdinaryModule();
+    var keys = OwnPropertyKeysAsList(obj);
+    for (var k in keys) {
+        var key = keys[k];
+        var value = Get(obj, key);
+        if (isAbrupt(value = ifAbrupt(value))) return value;
+        var F = CreateConstantGetter(key, value);
+        var desc = {
+            get: F,
+            set: undefined,
+            enumerable: true,
+            configurable: false
+        };
+        var status = DefineOwnPropertyOrThrow(mod, key, desc);
+        if (isAbrupt(status = ifAbrupt(status))) return status;
+    }
+    callInternalSlot("PreventExtensions", mod, mod, []);
+    return mod;
+}
+
+
+/************************* unupdated end ****/
+
+
+var LoaderConstructor_Call = function (thisArg, argList) {
+    var options = argList[0];
+    var loader = thisArg;
+
+    if (options === undefined) options = ObjectCreate();
+    if (Type(loader) !== OBJECT) return newTypeError( "Loader is not an object");
+
+    if (getInternalSlot(loader, SLOTS.LOADERRECORD) !== undefined) return newTypeError( "loader.[[LoaderRecord]] isnt undefined");
+    if (Type(options) !== OBJECT) return newTypeError( "the Loader constructors´ options argument is not an object");
+
+    var realmObject = Get(options, "realm");
+    if (isAbrupt(realmObject = ifAbrupt(realmObject))) return realmObject;
+
+    var realm;
+    if (realmObject === undefined) realm = getRealm();
+    else {
+        if ((Type(realmObject) !== OBJECT) || !hasInternalSlot(realmObject, SLOTS.REALM)) {
+            return newTypeError( "realmObject has to be an object and to have a [[RealmRecord]] internal slot");
+        }
+        var realm = getInternalSlot(realmObject, SLOTS.REALM);
+        if (realm === undefined) return newTypeError( "[[RealmRecord]] of a realmObject must not be undefined here.")
+    }
+
+    var define_loader_pipeline_hook = function (name) {
+        var hook = Get(options, name);
+        if (isAbrupt(hook = ifAbrupt(hook))) return hook;
+        if (hook !== undefined) {
+            var result = callInternalSlot(SLOTS.DEFINEOWNPROPERTY, loader, name, {
+                value: hook,
+                writable: true,
+                enumerable: true,
+                configurable: true
+            });
+            if (isAbrupt(result)) return result;
+        }
+        return NormalCompletion();
+    };
+    var status = define_loader_pipeline_hook("normalize");
+    if (isAbrupt(status)) return status;
+    status = define_loader_pipeline_hook("locate");
+    if (isAbrupt(status)) return status;
+    status = define_loader_pipeline_hook("fetch");
+    if (isAbrupt(status)) return status;
+    status = define_loader_pipeline_hook("translate");
+    if (isAbrupt(status)) return status;
+    status = define_loader_pipeline_hook("instantiate");
+    if (isAbrupt(status)) return status;
+    if (getInternalSlot(loader, SLOTS.LOADERRECORD) !== undefined) return newTypeError( "loader.[[LoaderRecord]] seems to have been changed, expected the undefined value.");
+
+    var loaderRecord = CreateLoaderRecord(realm, loader);
+    setInternalSlot(loader, SLOTS.LOADERRECORD, loaderRecord);
+    return NormalCompletion(loader);
+};
+
+var LoaderConstructor_Construct = function (argList) {
+    return Construct(this, argList);
+};
+
+// 31.1.
+var LoaderConstructor_$$create = function (thisArg, argList) {
+    var F = thisArg;
+    var loader = OrdinaryCreateFromConstructor(F, INTRINSICS.LOADERPROTOTYPE, [ SLOTS.LOADERRECORD ]);
+    return loader;
+};
+
+// 31.1.
+var LoaderPrototype_get_realm = function (thisArg, argList) {
+    var loader = thisArg;
+    if (Type(loader) !== OBJECT || !hasInternalSlot(loader, SLOTS.REALM)) {
+        return newTypeError( "the this value is not a valid loader object");
+    }
+    var loaderRecord = getInternalSlot(loader, SLOTS.LOADERRECORD);
+    var realm = loaderRecord.Realm;
+    return NormalCompletion(realm);
+};
+
+// 31.1.
+var LoaderPrototype_get_global = function (thisArg, argList) {
+    var loader = thisArg;
+    if (Type(loader) !== OBJECT || !hasInternalSlot(loader, SLOTS.REALM)) {
+        return newTypeError( "the this value is not a valid loader object");
+    }
+    var loaderRecord = getInternalSlot(loader, SLOTS.LOADERRECORD);
+    var realm = loaderRecord.Realm;
+    var global = realm.globalThis;
+    return NormalCompletion(global);
+};
+
+// 31.1.
+var LoaderPrototype_entries = function (thisArg, argList) {
+    var loader = thisLoader(thisArg);
+    return CreateLoaderIterator(loader, "key+value");
+};
+
+var LoaderPrototype_values = function (thisArg, argList) {
+    var loader = thisLoader(thisArg);
+    return CreateLoaderIterator(loader, "value");
+};
+
+var LoaderPrototype_keys = function (thisArg, argList) {
+    var loader = thisLoader(thisArg);
+    return CreateLoaderIterator(loader, "key");
+};
+// 31.1.
+var LoaderPrototype_define = function (thisArg, argList) {
+    //debug2("loaderprotodefine");
+    var name = argList[0];
+    var source =argList[1];
+    var options = argList[2];
+    var loader = thisArg;
+    if (isAbrupt(loader = ifAbrupt(loader))) return loader;
+    var loaderRecord = getInternalSlot(loader, SLOTS.LOADERRECORD);
+    name = ToString(name);
+    if (isAbrupt(name = ifAbrupt(name))) return name;
+    var address = GetOption(options, "address");
+    if (isAbrupt(address = ifAbrupt(address))) return address;
+    var metadata = GetOption(options, "metadata");
+    if (isAbrupt(metadata = ifAbrupt(metadata))) return metadata;
+    if (metadata === undefined) metadata = ObjectCreate();
+    var p = PromiseOfStartLoadPartWayThrough("translate", loaderRecord, name, metadata, source, address);
+    if (isAbrupt(p = ifAbrupt(p))) return p;
+    var G = ReturnUndefined();
+    p = PromiseThen(p, G);
+    return p;
+};
+
+// 31.1.
+var LoaderPrototype_load = function (thisArg, argList) {
+    //debug2("loaderprotoload");
+    var name = argList[0];
+    var options = argList[1];
+    var loader = thisLoader(thisArg);
+    if (isAbrupt(loader = ifAbrupt(loader))) return loader;
+    var loaderRecord = getInternalSlot(loader,SLOTS.LOADERRECORD);
+    var p = LoadModule(loader, name, options);
+    if (isAbrupt(p = ifAbrupt(p))) return p;
+    var F = ReturnUndefined();
+    p = PromiseThen(p, F);
+    return p;
+};
+
+// 31.1.
+var LoaderPrototype_module = function (thisArg, argList) {
+    //debug2("loaderprotomodule");
+    var source = argList[0];
+    var options = argList[1];
+    var loader = thisLoader(thisArg);
+    if (isAbrupt(loader = ifAbrupt(loader))) return loader;
+    var loaderRecord = getInternalSlot(loader, SLOTS.LOADERRECORD);
+    var address = GetOption(options, "address");
+    if (isAbrupt(address = ifAbrupt(address))) return address;
+    var load = CreateLoad(undefined);
+    load.Address = address;
+    var linkSet = CreateLinkSet(loaderRecord, load);
+    var successCallback = EvaluateLoadedModule();
+    setInternalSlot(successCallback, SLOTS.LOADER, loaderRecord);
+    setInternalSlot(successCallback, SLOTS.LOAD, load);
+    var p = PromiseThen(linkSet.Done, successCallback);
+    var sourcePromise = PromiseOf(source);
+    ProceedToTranslate(loader, load, sourcePromise);
+    return NormalCompletion(p);
+};
+
+// 31.1.
+var LoaderPrototype_import = function (thisArg, argList) {
+    //debug2("loaderprototypeimport");
+    var name = argList[0];
+    var options = argList[1];
+    var loader = thisLoader(thisArg);
+    if (isAbrupt(loader = ifAbrupt(loader))) return loader;
+    var loaderRecord = getInternalSlot(loader, SLOTS.LOADERRECORD);
+    var p = LoadModule(loaderRecord, name, options);
+    if (isAbrupt(p = ifAbrupt(p))) return p;
+    var F = EvaluateLoadedModule();
+    setInternalSlot(F, SLOTS.LOADER, loaderRecord);
+    var p = PromiseThen(p, F);
+    return p;
+};
+
+// 31.1.
+var LoaderPrototype_eval = function (thisArg, argList) {
+    //debug2("loaderprototypeeval");
+    var source = argList[0];
+    var loader = thisLoader(thisArg);
+    if (isAbrupt(loader = ifAbrupt(loader))) return loader;
+    var loaderRecord = getInternalSlot(loader, SLOTS.LOADERRECORD);
+    return IndirectEval(loaderRecord.Realm, source);
+};
+
+// 31.1.
+var LoaderPrototype_get = function (thisArg, argList) {
+    //debug2("loaderprototypeget");
+    var loader = thisLoader(thisArg);
+    if (isAbrupt(loader = ifAbrupt(loader))) return loader;
+    var name = ToString(argList[0]);
+    if (isAbrupt(name = ifAbrupt(name))) return name;
+    var loaderRecord = getInternalSlot(loader, SLOTS.LOADERRECORD);
+
+    var modules = loaderRecord.Modules;
+    var record, module;
+    if ((record = getRecordFromList(modules, "Key", name))) {
+        var module = p.Value;
+        var result = EnsureEvaluated(module, [], loaderRecord);
+        if (isAbrupt(result = ifAbrupt(result))) return result;
+        return NormalCompletion(module);
+        // has typo/bug in spec, let module = p.value. ensureenv(module) but return p.value
+    }
+    return NormalCompletion(undefined);
+};
+// 31.1.
+var LoaderPrototype_has = function (thisArg, argList) {
+    //debug2("loaderprototypehas");
+    var loader = thisLoader(thisArg);
+    if (isAbrupt(loader = ifAbrupt(loader))) return loader;
+    var name = ToString(argList[0]);
+    if (isAbrupt(name = ifAbrupt(name))) return name;
+
+    var loaderRecord = getInternalSlot(loader, SLOTS.LOADERRECORD);
+    var modules = loaderRecord.Modules;
+    if (hasRecordInList(modules, "Key", name)) return NormalCompletion(true);
+
+    /*
+     refactoring hasRecord in list. must result in this:
+     if (modules[name]) {
+     return NormalCompletion(true);
+     }
+     */
+
+    return NormalCompletion(false);
+
+};
+// 31.1.
+var LoaderPrototype_set = function (thisArg, argList) {
+    //debug2("loaderprototypeset");
+    var name = argList[0];
+    var module = argList[1];
+    var loader = thisLoader(thisArg);
+    if (isAbrupt(loader = ifAbrupt(loader))) return loader;
+    var loaderRecord = getInternalSlot(loader, SLOTS.LOADERRECORD);
+    var name = ToString(name);
+    if (isAbrupt(name = ifAbrupt(name))) return name;
+    if (Type(module) !== OBJECT) return newTypeError( "module is not an object");
+    var modules = loaderRecord.Modules;
+    var p;
+    if (p=getRecordFromList(modules, "Key", name)) {
+        p.Value = module;
+        return NormalCompletion(loader);
+    }
+    p = { Key: name, Value: module };
+    loaderRecord.Modules.push(p);
+    return NormalCompletion(loader);
+};
+// 31.1.
+var LoaderPrototype_delete = function (thisArg, argList) {
+    var name = argList[0];
+    var loader = thisLoader(thisArg);
+    if (isAbrupt(loader = ifAbrupt(loader))) return loader;
+    var loaderRecord = getInternalSlot(loader, SLOTS.LOADERRECORD);
+    name = ToString(name);
+    if (isAbrupt(name = ifAbrupt(name))) return name;
+    var modules = loaderRecord.Modules;
+    for (var i = 0, j = modules.length; i < j; i++) {
+        var p = modules[i];
+        if (SameValue(p.Key, name)) {
+            // remove them from list otherwhere
+            p.Key = empty;
+            p.Value = empty;
+            return NormalCompletion(true);
+        }
+    }
+    return NormalCompletion(false);
+};
+var LoaderPrototype_normalize = function (thisArg, argList) {
+    var name = argList[0];
+    var refererName = argList[1];
+    var refererAddress = argList[2];
+    Assert(Type(name) === STRING, "Loader.prototype.normalize: name has to be a string.");
+    return NormalCompletion(name);
+};
+var LoaderPrototype_locate = function (thisArg, argList) {
+    var loadRequest = argList[0];
+    var r = Get(loadRequest, "name");
+    if (isAbrupt(r=ifAbrupt(r))) return r;
+    return NormalCompletion(r);
+};
+var LoaderPrototype_fetch = function (thisArg, argList) {
+    return newTypeError( "The Loader.prototype.fetch function is supposed to throw a type error.");
+};
+var LoaderPrototype_translate = function (thisArg, argList) {
+    var load = argList[0];
+    var r = Get(load, "source");
+    if (isAbrupt(r=ifAbrupt(r))) return r;
+    return NormalCompletion(r);
+};
+
+var LoaderPrototype_instantiate = function (thisArg, argList) {
+    var loadRequest = argList[0];
+    return NormalCompletion(undefined);
+};
+
+function CreateLinkedModuleInstance (loader) {
+    var mod = OrdinaryModule();
+//    var lr = getInternalSlot(loader, SLOTS.LOADERRECORD);
+//    lr.Modules.push({ Name: name, Module: mod });
+    return mod;
+}
+
+// 31.1.
+var LoaderPrototype_newModule = function(thisArg, argList) {
+    var obj = argList[0];
+    if (Type(obj) !== OBJECT) return newTypeError( "newModule: obj is not an object");
+
+    var mod = CreateLinkedModuleInstance(thisArg);
+    var keys = OwnPropertyKeysAsList(obj);
+    if (isAbrupt(keys = ifAbrupt(keys))) return keys;
+    for (var i = 0, j = keys.length; i < j; i++) {
+        var key = keys[i];
+        var value = Get(obj, key);
+        if (isAbrupt(value = ifAbrupt(value))) return value;
+        var F = CreateConstantGetter(key, value);
+        var desc = {
+            configurable: false,
+            enumerable: true,
+            get: F,
+            set: undefined
+        };
+        var status = DefineOwnPropertyOrThrow(mod, key, desc);
+    }
+    callInternalSlot("PreventExtensions", mod);
+    return NormalCompletion(mod);
+};
+
+var LoaderPrototype_$$iterator = LoaderPrototype_entries;
 
 /**
  * Created by root on 31.03.14.
@@ -15510,123 +17925,6 @@ setInternalSlot(LoadFunction, SLOTS.CALL, function load(thisArg, argList) {
     });
 
 
-var RealmPrototype_get_global = function (thisArg, argList) {
-    var RealmConstructor = thisArg;
-    if (Type(RealmConstructor) !== OBJECT || !hasInternalSlot(RealmConstructor, SLOTS.REALM)) return newTypeError(format("S_HAS_NO_S", "thisValue", "[[Realm]]"));
-    var realm = getInternalSlot(RealmConstructor, SLOTS.REALM);
-    var globalThis = realm.globalThis;
-    return globalThis;
-};
-
-var RealmPrototype_eval = function (thisArg, argList) {
-    var source = argList[0];
-    var RealmConstructor = thisArg;
-    if (Type(RealmConstructor) !== OBJECT || !hasInternalSlot(RealmConstructor, SLOTS.REALM)) return newTypeError(format("S_HAS_NO_S", "thisValue", "[[Realm]]"));
-    return IndirectEval(getInternalSlot(RealmConstructor, SLOTS.REALM), source);
-};
-
-var RealmConstructor_Call = function (thisArg, argList) {
-    var RealmConstructor = thisArg;
-    var options = argList[0];
-    var initializer = argList[1];
-    if (Type(RealmConstructor) !== OBJECT) return newTypeError(format("S_NOT_OBJECT", "thisValue"));
-    if (!hasInternalSlot(RealmConstructor, SLOTS.REALM)) return newTypeError(format("S_NOT_COMPLETE", "thisValue"));
-    if (getInternalSlot(RealmConstructor, SLOTS.REALM) !== undefined) return newTypeError(format("S_NOT_UNDEFINED", "[[Realm]]"));
-    if (options === undefined) options = ObjectCreate(null);
-    else if (Type(options) !== OBJECT) return newTypeError(format("S_NOT_OBJECT", "options"));
-    var realm = CreateRealm();
-    var evalHooks = Get(options, "eval");
-    if (isAbrupt(evalHooks = ifAbrupt(evalHooks))) return evalHooks;
-    if (evalHooks === undefined) evalHooks = ObjectCreate();
-    var directEval = Get(evalHooks, "directEval");
-    if (isAbrupt(directEval = ifAbrupt(directEval))) return directEval;
-    if (directEval === undefined) directEval = ObjectCreate();
-    else if (Type(directEval) !== OBJECT) return newTypeError(format("S_NOT_OBJECT", "directEval"));
-    var translate = Get(directEval, "translate");
-    if (isAbrupt(translate = ifAbrupt(translate))) return translate;
-    if ((translate !== undefined) && !IsCallable(translate)) return newTypeError(format("S_NOT_CALLABLE", "translate"));
-    setInternalSlot(realm, "translateDirectEvalHook", translate);
-    var fallback = Get(directEval, "fallback");
-    if (isAbrupt(fallback = ifAbrupt(fallback))) return fallback;
-    setInternalSlot(realm, "fallbackDirectEvalHook", fallback);
-    var indirectEval = Get(options, "indirect");
-    if (isAbrupt(indirectEval = ifAbrupt(indirectEval))) return indirectEval;
-    if ((indirectEval !== undefined) && !IsCallable(indirectEval)) return newTypeError(format("S_NOT_CALLABLE", "indirectEval"));
-    setInternalSlot(realm, "indirectEvalHook", indirectEval);
-    var Function = Get(options, "Function");
-    if (isAbrupt(Function = ifAbrupt(Function))) return Function;
-    if ((Function !== undefined) && !IsCallable(Function)) return newTypeError(format("S_NOT_CALLABLE", "Function"));
-    setInternalSlot(realm, "FunctionHook", Function);
-    setInternalSlot(RealmConstructor, SLOTS.REALM, realm);
-
-    realm.directEvalTranslate = translate;
-    realm.directEvalFallback = fallback;
-    realm.indirectEval = indirectEval;
-    realm.Function = Function;
-
-    if (initializer !== undefined) {
-        if (!IsCallable(initializer)) return newTypeError(format("S_NOT_CALLABLE", "initializer"));
-        var builtins = ObjectCreate();
-        DefineBuiltinProperties(realm, builtins);
-        var status = callInternalSlot(SLOTS.CALL, initializer, RealmConstructor, [builtins]);
-        if (isAbrupt(status)) return status;
-    }
-    return RealmConstructor;
-};
-
-var RealmConstructor_Construct = function (argList) {
-    var F = this;
-    var args = argList;
-    return Construct(F, argList);
-};
-
-var RealmConstructor_$$create = function (thisArg, argList) {
-    return OrdinaryCreateFromConstructor(thisArg, INTRINSICS.REALMPROTOTYPE, [
-        SLOTS.REALM
-    ]);
-};
-
-
-var RealmPrototype_stdlib_get = function (thisArg, argList) {
-    var RealmConstructor = thisArg;
-    var source = argList[0];
-    if (Type(RealmConstructor) !== OBJECT || !hasInternalSlot(RealmConstructor, SLOTS.REALM)) return newTypeError("S_HAS_NO_S", "thisValue", "[[Realm]]");    var realm = getInternalSlot(RealmConstructor, SLOTS.REALM);
-    if (realm === undefined) return newTypeError(format("S_IS_UNDEFINED", "[[Realm]]"));
-    var props = ObjectCreate(getIntrinsic(INTRINSICS.OBJECTPROTOTYPE));
-    var bindings = getInternalSlot(getGlobalThis(), SLOTS.BINDINGS);
-    var symbols = getInternalSlot(getGlobalThis(), SLOTS.SYMBOLS);
-    function forEachProperty(props, bindings) {
-        for (var P in bindings) {
-            var desc = bindings[P];
-            var newDesc = {
-                value: desc.value,
-                enumerable: desc.enumerable,
-                configurable: desc.configurable,
-                writable: desc.writable
-            };
-            var status = DefineOwnPropertyOrThrow(props, P, newDesc);
-            if (isAbrupt(status)) return status;
-        }
-    }
-    forEachProperty(props, bindings);
-    forEachProperty(props, symbols);
-
-};
-var RealmPrototype_intrinsics = function (thisArg, argList) {
-};
-var RealmPrototype_initGlobal = function (thisArg, argList) {
-};
-var RealmPrototype_directEval = function (thisArg, argList) {
-};
-var RealmPrototype_indirectEval = function (thisArg, argList) {
-    var RealmConstructor = thisArg;
-    var source = argList[0];
-    if (Type(RealmConstructor) !== OBJECT || !hasInternalSlot(RealmConstructor, SLOTS.REALM)) return newTypeError(format("S_HAS_NO_S", "thisValue", "[[Realm]]"));
-    var realm = getInternalSlot(RealmConstructor, SLOTS.REALM);
-    if (realm === undefined) return newTypeError(format("S_IS_UNDEFINED", "[[Realm]]"));
-    return IndirectEval(realm, source);
-};
-
 
 // %Realm%
 setInternalSlot(RealmConstructor, SLOTS.CALL, RealmConstructor_Call);
@@ -15646,1380 +17944,6 @@ LazyDefineProperty(RealmPrototype, "eval", CreateBuiltinFunction(realm,RealmProt
 LazyDefineProperty(RealmPrototype, $$toStringTag, "Reflect.Realm");
 
 
-/**
- * a simplification to search through a list (in our case a js array)
- * and look at the current item.
- *
- * @param list
- * @param field
- * @param value
- * @returns {boolean}
- */
-function hasRecordInList(list, field, value) {
-    if (!list) return false;
-    for (var i = 0, j = list.length; i < j; i++) {
-        var r = list[i];
-        if (r[field] === value) return true;
-    }
-    return false;
-}
-
-function getRecordFromList(list, field, value) {
-    if (!list) return false;
-    for (var i = 0, j = list.length; i < j; i++) {
-        var r = list[i];
-        if (r[field] === value) return r;
-    }
-    return undefined;
-}
-
-
-function thisLoader(value) {
-    if (value instanceof CompletionRecord) return thisLoader(value.value);
-    var m;
-    if (Type(value) === OBJECT && (m=getInternalSlot(value, SLOTS.LOADERRECORD))) {
-        if (m !== undefined) return value;
-    }
-    return newTypeError( "thisLoader(value): value is not a valid loader object");
-}
-
-
-//
-// Runtime Semantics
-// Loader State
-//
-
-// 27.1. add
-function LoaderRecord () {
-    var lr = Object.create(LoaderRecord.prototype);
-    lr.Realm = undefined;
-    lr.Modules = undefined; // record { Name, Module }
-    lr.Loads = undefined;   // outstanding async requests
-    lr.Loader = undefined;  // the loader obj
-    return lr;
-}
-LoaderRecord.prototype.toString = function () { return "[object LoaderRecord]"; };
-
-// 27.1.
-function CreateLoaderRecord(realm, object) {
-    var loader = LoaderRecord();
-    loader.Realm = realm;
-    loader.Modules = [];
-    loader.Loads = [];
-    loader.LoaderObj = object;
-    return loader;
-}
-
-function LoadRecord() {
-    var lr = Object.create(LoadRecord.prototype);
-    lr.Status = undefined;
-    lr.Name = undefined;
-    lr.LinkSets = undefined;
-    lr.Metadata = undefined;
-    lr.Address = undefined;
-    lr.Source = undefined;
-    lr.Kind = undefined;
-    lr.Body = undefined;
-    lr.Execute = undefined;
-    lr.Exception = undefined;
-    lr.Module = undefined;
-    lr.constructor = LoadRecord;
-    return lr;
-}
-LoadRecord.prototype.toString = function () { return "[object LoadRecord]"; };
-
-// 27.1. check
-function CreateLoad(name) {
-    var load = LoadRecord();
-    var metadata = ObjectCreate();
-    load.Status = "loading";
-    load.Name = name;
-    load.LinkSets = [];
-    load.Metadata = metadata;
-    // all other fields are exisiting but undefined.
-    return load;
-}
-
-// 27.1.
-function CreateLoadRequestObject(name, metadata, address, source) {
-    var obj = ObjectCreate();
-    var status, errmsg = "CreateLoadRequest: CreateDataProperty must not fail";
-    status = CreateDataProperty(obj, "name", name);
-    Assert(!isAbrupt(status), errmsg+ " - 1");
-    status = CreateDataProperty(obj, "metadata", metadata);
-    Assert(!isAbrupt(status), errmsg+ " - 2");
-    if (address !== undefined) {
-        status = CreateDataProperty(obj, "address", address);
-        Assert(!isAbrupt(status), errmsg+ " - 3");
-    }
-    if (source !== undefined) {
-        status = CreateDataProperty(obj, "source", source);
-        Assert(!isAbrupt(status), errmsg + " - 4");
-    }
-    return obj;
-}
-
-// 27.1. updated
-function LoadModule(loader, name, options) {
-    ////debug2("loadmodule");
-    if (!options) options = ObjectCreate();
-    name = ToString(name);
-    if (isAbrupt(name = ifAbrupt(name))) return name;
-    var address = GetOption(options, "address");
-    if (isAbrupt(address = ifAbrupt(address))) return address;
-    var step;
-    if (address === undefined) step = "locate";
-    else step = "fetch";
-    var metadata = ObjectCreate();
-    var source;
-    return PromiseOfStartLoadPartWayThrough(step, loader, name, metadata, source, address);
-}
-
-// 27.1. update
-function RequestLoad(loader, request, refererName, refererAddress) {
-    var F = CallNormalize();
-    setInternalSlot(F, SLOTS.LOADER, loader);
-    setInternalSlot(F, SLOTS.REQUEST, request);
-    setInternalSlot(F, SLOTS.REFERERNAME, refererName);
-    setInternalSlot(F, SLOTS.REFERERADDRESS, refererAddress);
-    var p = PromiseNew(F);
-    var G = GetOrCreateLoad();
-    setInternalSlot(G, SLOTS.LOADER, loader);
-    p = PromiseThen(p, G);
-    return p;
-}
-
-
-// neu 27.1.
-function CallNormalize() {
-    var F = OrdinaryFunction();
-    var CallNormalizeFunction_Call = function (thisArg, argList) {
-        var resolve = argList[0];
-        var reject = argList[1];
-        var loader = getInternalSlot(F, SLOTS.LOADER);
-        var request = getInternalSlot(F, SLOTS.REQUEST);
-        var refererName = getInternalSlot(F, SLOTS.REFERERNAME);
-        var refererAddress = getInternalSlot(F, SLOTS.REFERERADDRESS);
-        var loaderObj = loader.LoaderObj;
-        var normalizeHook = Get(loaderObj, "normalize");
-        var name = callInternalSlot(SLOTS.CALL, normalizeHook, loaderObj, [request, refererName, refererAddress]);
-        if (isAbrupt(name = ifAbrupt(name))) return name;
-        return callInternalSlot(SLOTS.CALL, resolve, undefined, [name]);
-    };
-    setInternalSlot(F, SLOTS.CALL, CallNormalizeFunction_Call);
-    return F;
-}
-
-// neu 27.1.
-function GetOrCreateLoad() {
-    var F = OrdinaryFunction();
-    var GetOrCreateLoad_Call = function (thisArg, argList) {
-        var name = argList[0];
-        var loader = getInternalSlot(F, SLOTS.LOADER);
-        name = ToString(name);
-        if (isAbrupt(name = ifAbrupt(name))) return name;
-        var modules = loaderRecord.Modules;
-        for (var i = 0, j = modules.length; i < j; i++) {
-            var p = modules[i];
-            if (SameValue(p.key, name)) {
-                var existingModule = p.value;
-                load = CreateLoad(name);
-                load.Status = "linked";
-                load.Module = existingModule;
-                return NormalCompletion(load);
-            }
-        }
-        for (i = 0, j = loader.Loads.length; i < j; i++) {
-            if (SameValue(load.Name, name)) {
-                Assert(load.Status === "loading" || load.Status === "loaded", "load.Status has to be loading or loaded");
-                return NormalCompletion(load);
-            }
-        }
-        var load = CreateLoad(name);
-        loader.Loads.push(load);
-        ProceedToLocate(loader, load);
-        return NormalCompletion(load);
-    };
-    setInternalSlot(F, SLOTS.CALL, GetOrCreateLoad_Call);
-    return F;
-}
-
-// 27.1. update
-function ProceedToLocate(loader, load, p) {
-    p = PromiseOf(undefined);
-    var F = CallLocate();
-    setInternalSlot(F, SLOTS.LOADER, loader);
-    setInternalSlot(F, "Load", load);
-    p = PromiseThen(p, F);
-    return ProceedToFetch(loader, load, p);
-}
-
-// 27.1. update
-function CallLocate() {
-    var F = OrdinaryFunction();
-    var CallLocate_Call = function (thisArg, argList) {
-        var F = this;
-        var loader = getInternalSlot(F, SLOTS.LOADER);
-        var load = getInternalSlot(F, "Load");
-        var loaderObj = loader.LoaderObj;
-        var hook = Get(loaderObj, "locate");
-        if (isAbrupt(hook = ifAbrupt(hook))) return hook;
-        if (!IsCallable(hook)) return newTypeError( "call locate hook is not callable");
-        var obj = CreateLoadRequestObject(load.Name, load.Metadata);
-        return callInternalSlot(SLOTS.CALL, hook, loader, [obj])
-    };
-    setInternalSlot(F, SLOTS.CALL, CallLocate_Call);
-    return F;
-}
-
-// 27.1.
-function ProceedToFetch(loader, load, p) {
-    var F = CallFetch();
-    setInternalSlot(F, SLOTS.LOADER, loader);
-    setInternalSlot(F, "Load", load);
-    setInternalSlot(F, "AddressPromise", p);
-    p = PromiseThen(p, F);
-    return ProceedToTranslate(loader, load, p);
-}
-
-// 27.1.
-function CallFetch() {
-    var F = OrdinaryFunction();
-    var CallFetch_Call = function (thisArg, argList) {
-        var F = this;
-        var address = argList[0];
-        var loader = getInternalSlot(F, SLOTS.LOADER);
-        var load = getInternalSlot(F, "Load");
-        if (load.LinkSets.length === 0) return NormalCompletion(undefined);
-        load.Address = address;
-        var loaderObj = loader.LoaderObj;
-        var hook = Get(loaderObj, "fetch");
-        if (isAbrupt(hook = ifAbrupt(hook))) return hook;
-        if (!IsCallable(hook)) return newTypeError( "fetch hook is not a function");
-        var obj = CreateLoadRequestObject(load.Name, load.Metadata, address);
-        return callInternalSlot(SLOTS.CALL, hook, loader, [obj]);
-    };
-    setInternalSlot(F, SLOTS.CALL, CallFetch_Call);
-    return F;
-}
-
-// 27.1.
-function ProceedToTranslate(loader, load, p) {
-    var F = CallTranslate();
-    setInternalSlot(F, SLOTS.LOADER, loader);
-    setInternalSlot(F, "Load", load);
-    p = PromiseThen(p, F);
-    F = CallInstantiate();
-    setInternalSlot(F, SLOTS.LOADER, loader);
-    setInternalSlot(F, "Load", load);
-    p = PromiseThen(p, F);
-    F = InstantiateSucceeded();
-    setInternalSlot(F, SLOTS.LOADER, loader);
-    setInternalSlot(F, "Load", load);
-    p = PromiseThen(p, F);
-    F = LoadFailed();
-    setInternalSlot(F, "Load", load);
-    return PromiseCatch(p, F);
-}
-
-// 27.1.
-function CallTranslate() {
-    var F = OrdinaryFunction();
-    var CallTranslate_Call = function (thisArg, argList) {
-        var F = this;
-        var source = argList[0];
-        var loader = getInternalSlot(F, SLOTS.LOADER);
-        var load = getInternalSlot(F, "Load");
-        if (load.LinkSets.length === 0) return NormalCompletion(undefined);
-        var hook = Get(loader, "translate");
-        if (isAbrupt(hook = ifAbrupt(hook))) return hook;
-        if (!IsCallable(hook)) return newTypeError( "call translate hook is not callable");
-        var obj = CreateLoadRequestObject(load.Name, load.Metadata, load.Address, source);
-        return callInternalSlot(SLOTS.CALL, hook, loader, [obj]);
-    };
-    setInternalSlot(F, SLOTS.CALL, CallTranslate_Call);
-    return F;
-}
-
-
-// 27.1.
-function CallInstantiate() {
-    var F = OrdinaryFunction();
-    var CallInstantiate_Call = function (thisArg, argList) {
-        var F = this;
-        var source = argList[0];
-        var loader = getInternalSlot(F, SLOTS.LOADER);
-        var load = getInternalSlot(F, "Load");
-        if (loader.LinkSets.length === 0) return NormalCompletion(undefined);
-        var hook = Get(loader, "instantiate");
-        if (isAbrupt(hook = ifAbrupt(hook))) return hook;
-        if (!IsCallable(hook)) return newTypeError( "call instantiate hook is not callable");
-        var obj = CreateLoadRequestObject(load.Name, load.Metadata, load.Address, source);
-        return callInternalSlot(SLOTS.CALL, hook, loader, [obj]);
-    };
-    setInternalSlot(F, SLOTS.CALL, CallInstantiate_Call);
-    return F;
-}
-
-// 27.1.
-function InstantiateSucceeded() {
-    var F = OrdinaryFunction();
-    var InstantiateSucceeded_Call = function (thisArg, argList) {
-        var instantiateResult = argList[0];
-        var loader = getInternalSlot(F, SLOTS.LOADER);
-        var load = getInternalSlot(F, "Load");
-        if (load.LinkSets.length === 0) return NormalCompletion(undefined);
-        if (instantiateResult === undefined) {
-            try {
-                var body = parseGoal("Module", load.Source);
-            } catch (ex) {
-                return newSyntaxError( ex.message);
-            }
-            load.Body = body;
-            load.Kind = "declarative";
-            var depsList = ModuleRequests(body);
-        } else if (Type(instantiateResult) === OBJECT) {
-            var deps = Get(instantiateResult, "deps");
-            if (isAbrupt(deps = ifAbrupt(deps))) return deps;
-            if (deps === undefined) depsList = [];
-            else {
-                depsList = IterableToList(deps); // IterableToArray?
-                if (isAbrupt(depsList = ifAbrupt(depsList))) return depsList;
-            }
-            var execute = Get(instantiateResult, "execute");
-            if (isAbrupt(execute = ifAbrupt(execute))) return execute;
-            load.Execute = execute;
-            load.Kind = "dynamic";
-        } else {
-            return newTypeError( "instantiateResult error");
-        }
-        return ProcessLoadDependencies(load, loader, depsList);
-    };
-    setInternalSlot(F, SLOTS.CALL, InstantiateSucceeded_Call);
-    return F;
-}
-
-// 27.1.
-function LoadFailed() {
-    var LoadFailedFunction_Call = function (thisArg, argList) {
-        var exc = argList[0];
-        var F = this;
-        var load = getInternalSlot(this, SLOTS.LOAD);
-        Assert(load.Status === "loading", "load.[[Status]] has to be loading at this point");
-        load.Status = "failed";
-        load.Exception = exc;
-        var linkSets = load.LinkSets;
-        for (var i = 0, j = linkSets.length; i < j; i++) {
-            LinkSetFailed(linkSets[i], exc);
-        }
-        Assert(load.LinkSets.length === 0, "load.[[LinkSets]] has to be empty at this point");
-    };
-    var F = OrdinaryFunction();
-    setInternalSlot(F, SLOTS.CALL, LoadFailedFunction_Call);
-    return F;
-}
-
-// 27.1.
-function ProcessLoadDependencies(load, loader, depsList) {
-    var refererName = load.Name;
-    load.Dependencies = [];
-    var loadPromises = [];
-    for (var i = 0, j = depsList.length; i < j; i++) {
-        var request = depsList[i];
-        var p = RequestLoad(loader, request, refererName, load.Address);
-        var F = AddDependencyLoad();
-        setInternalSlot(F, SLOTS.LOAD, load);
-        setInternalSlot(F, SLOTS.REQUEST, request);
-        p = PromiseThen(p, F);
-        loadPromises.push(p);
-    }
-    p = PromiseAll(loadPromises);
-    F = LoadSucceeded();
-    setInternalSlot(F, SLOTS.LOAD, load);
-    return PromiseThen(p, F);
-}
-
-// 27.1.
-function AddDependencyLoad() {
-    var AddDependencyLoad_Call = function (thisArg, argList) {
-        var depLoad = argList[0];
-        var parentLoad = getInternalSlot(F, "ParentLoad");
-        var request = getInternalSlot(F, SLOTS.REQUEST);
-        Assert(!hasRecordInList(parentLoad.Dependencies, "Key", request), "there must be no record in parentLoad.Dependencies with key equal to request ");
-        parentLoad.Dependences.push({Key: request, Value: depLoad.Name });
-        if (depLoad.Status !== "linked") {
-            var linkSets = parentLoad.LinkSets;
-            for (var i = 0, j = linkSets.length; i < j; i++) {
-                AddLoadToLinkSet(linkSets[i], depLoad);
-            }
-        }
-        return NormalCompletion(undefined);
-    };
-    var F = OrdinaryFunction();
-    setInternalSlot(F, SLOTS.CALL, AddDependencyLoad_Call);
-    return F;
-}
-
-// 27.1.
-function LoadSucceeded() {
-    var LoadSucceeded_Call = function (thisArg, argList) {
-        var load = getInternalSlot(F, SLOTS.LOAD);
-        Assert(load.Status === "loading", "load.Status should have been loading but isnt");
-        load.Status = "loaded";
-        var linkSets = load.LinkSets;
-        for (var i = 0, j = linkSets.length; i < j; i++) {
-            UpdateLinkSetOnLoad(linkSets[i], load);
-        }
-        return NormalCompletion(undefined);
-    };
-    var F = OrdinaryFunction();
-    setInternalSlot(F, SLOTS.CALL, LoadSucceeded_Call);
-    return F;
-}
-
-// 27.1.
-function PromiseOfStartLoadPartWayThrough(step, loader, name, metadata, source, address) {
-    //debug2("PromiseOfStartLoadPartWayThrough: start");
-    var F = AsyncStartLoadPartwayThrough();
-    var state = Object.create(null);
-    state.Step = "translate";
-    state.Loader = loader;
-    state.ModuleName = name;
-    state.ModuleMetadata = metadata;
-    state.ModuleSource = source;
-    state.ModuleAddress = address;
-    setInternalSlot(F, "StepState", state);
-    return PromiseNew(F);
-}
-
-
-// 26.1
-function AsyncStartLoadPartwayThrough() {
-    var F = OrdinaryFunction();
-    //debug2("AsyncStartLoadPartwayThrough: start");
-    var AsyncStartLoadPartwayThrough_Call = function (thisArg, argList) {
-        //debug2("AsyncStartLoadPartwayThrough_Call");
-        var resolve = argList[0];
-        var reject = argList[1];
-        var state = getInternalSlot(F, "StepState");
-        var loader = state.Loader;
-        var name = state.ModuleName;
-        var step = state.Step;
-        var source = state.ModuleSource;
-        if (hasRecordInList(loader.Modules, "Name", name)) return newTypeError( "Got name in loader.Modules");
-        if (hasRecordInList(loader.Loads, "Name", name)) return newTypeError( "loader.Loads contains another entry with name '"+name+"'");
-        var load = CreateLoad(name);
-        load.Metadata = state.ModuleMetadata;
-        var linkSet = CreateLinkSet(loader, load);
-        if (!Array.isArray(loader.Loads)) loader.Loads = [];
-        loader.Loads.push(load);
-        var result = callInternalSlot(SLOTS.CALL, resolve, null, [linkSet.done]);
-        if (step === "locate") {
-            ProceedToLocate(loader, load);
-        } else if (step === "fetch") {
-            var addressPromise = PromiseOf(address);
-            ProceedToFetch(loader, load, addressPromise);
-        } else {
-            Assert(step === "translate", "step has to be translate");
-            load.Address = state.ModuleAddress;
-            var sourcePromise = PromiseOf(source);
-            ProceedToTranslate(loader, load, sourcePromise);
-        }
-    };
-    setInternalSlot(F, SLOTS.CALL, AsyncStartLoadPartwayThrough_Call);
-    return F;
-}
-//
-// Module Linkage
-//
-
-// 27.1.
-function CreateModuleLinkageRecord (loader, body) {
-    var M = ObjectCreate(null);
-    setInternalSlot(M, "Body", body);
-    setInternalSlot(M, "BoundNames", DeclaredNames(body));
-    setInternalSlot(M, "KnownExportEntries", KnownExportEntries(body));
-    setInternalSlot(M, "UnknownExportEntries", UnknownExportEntries(body));
-    setInternalSlot(M, "ExportDefinitions", undefined);
-    setInternalSlot(M, "Exports", undefined);
-    setInternalSlot(M, "Dependencies", undefined);
-    setInternalSlot(M, "UnlinkedDependencies", undefined);
-    setInternalSlot(M, "ImportEntries", ImportEntries(body));
-    setInternalSlot(M, "ImportDefinitions", undefined);
-    setInternalSlot(M, "LinkErrors", []);
-    var realm = loader.Realm;
-    var globalEnv = realm.globalEnv;
-    var env = NewModuleEnvironment(globalEnv);
-    setInternalSlot(M, SLOTS.ENVIRONMENT, env);
-    return M;
-}
-// 27.1.
-function LookupExport(M, exportName) {
-    var mExp = getInternalSlot(M, "Exports");
-    var exp;
-    if (!(exp=getRecordFromList(mExp, "ExportName", exportName))) {
-        return NormalCompletion(undefined);
-    }
-    return exp.Binding;
-}
-// 27.1.
-function LookupModuleDependency(M, requestName) {
-    if (requestName === null) return M;
-    var deps = getInternalSlot(M, "Dependencies");
-    var pair = getRecordFromList(deps, "Key", requestName);
-    return pair.Module;
-}
-
-// 27.1.
-function LinkSet(loader, loads, done, resolve, reject) {
-    var ls = Object.create(LinkSet.prototype);
-    ls.Loader = loader;
-    ls.Loads = loads;
-    ls.Done = done;
-    ls.Resolve = resolve;
-    ls.Reject = reject;
-    return ls;
-}
-LinkSet.prototype.toString = function () { return "[object LinkSet]"; };
-
-// 27.1.
-function CreateLinkSet(loader, startingLoad) {
-    //debug2("createlinkset");
-    if (Type(loader) !== OBJECT) return newTypeError( "CreateLinkSet: loader has to be an object");
-    if (!hasInternalSlot(loader, SLOTS.LOAD)) return newTypeError( "CreateLinkSet: loader is missing internal properties");
-    var promiseCapability = PromiseBuiltinCapability();
-    if (isAbrupt(promiseCapability = ifAbrupt(promiseCapability))) return promiseCapability;
-    var linkSet = LinkSet(loader, loads, promiseCapability.Promise, promiseCapability.Resolve, promiseCapability.Reject);
-    AddLoadToLinkSet(linkSet, startingLoad);
-    return NormalCompletion(linkSet);
-}
-
-// 27.1.
-function AddLoadToLinkSet(linkSet, load) {
-    //debug2("add load to linkset");
-    Assert(load.Status === "loading" || load.Status === "loaded", "load.Status is either loading or loaded.");
-    var loader = linkSet.Loader;
-    if (linkSet.indexOf(load) === -1) {     // INDEX-OF (Das ist dieser O(n) den fast jeder bedenkenlos und viel zu oft nimmt)
-        linkSet.Loads.push(load);
-        load.LinkSets.push(linkSet);
-        if (load.Status === "loaded") {
-            for (var i = 0, j = load.Dependencies.length; i < j; i++) {
-                var r = load.Dependencies[i];
-                if (!hasRecordInList(loader.Modules, "Key", name)) {       // Evil cubic stuff.
-                    var depLoad;
-                    if ((depLoad=getRecordFromList(loader.Loads, "Name", name))) {
-                        AddLoadToLinkSet(linkSet, depLoad);
-                    }
-                }
-            }
-        }
-    }
-}
-// 27.1.
-function UpdateLinkSetOnLoad(linkSet, load) {
-    //debug2("updatelinksetonload");
-    var loads = linkSet.Loads;
-    Assert(loads.indexOf(loads) > -1, "linkset.Loads has to contain load");
-    Assert(load.Status === "loaded" || load.Status === "linked", "load.Status must be one of loaded or linked");
-    for (var i = 0, j = loads.length; i < j; i++) {
-        var load = loads[i];
-        if (load.Status === "loading") return NormalCompletion(undefined);
-    }
-    var startingLoad = loads[0];
-    var status = Link(loads, linkSet.Loader);
-    if (isAbrupt(status)) {
-        return LinkSetFailed(linkSet, status.value);
-    }
-    Assert(linkSet.Loads.length === 0, "linkset.Loads has to be empty here");
-    var result = callInternalSlot(SLOTS.CALL, linkset.Resolve, undefined, [startingLoad]);
-    Assert(!isAbrupt(result), "linkSet.resolve had to terminate normally");
-    return result;
-}
-
-// 27.1.
-function LinkSetFailed(linkSet, exc) {
-    //debug2("linksetfailed");
-    var loader = linkSet.Loader;
-    var loads = linkSet.Loads;
-    for (var i = 0, j = loads.length; i < j; i++) {
-        var load = loads[i];
-        var idx;
-        Assert((idx = load.LinkSets.indexOf(v)) > -1, "load.LinkSets has to contain linkset");
-        load.LinkSets.splice(idx,1);    // SPLICE KOSTET EXTRA
-        if ((load.LinkSets.length === 0) && ((idx=loader.Loads.indexOf(load)) > -1)) {
-            loader.Loads.splice(idx,1); // SPLICE KOSTET EXTRA
-        }
-    }
-    var result = callInternalSlot(SLOTS.CALL, linkset.Reject, undefined, [exc]);
-    Assert(!isAbrupt(result), "linkSet.reject had to terminate normally");
-    return NormalCompletion(result);
-}
-
-// 27.1.    USING EXPENSIVE SPLICES to EMPTY the array (and .indexOf Arrays )
-function FinishLoad(loader, load) {
-    //debug2("finishload");
-    var name = load.Name;
-    if (name !== undefined) {
-        Assert(!hasRecordInList(loader.Modules, "Key", load.Name), "there may be no duplicate records in loader.Modules");
-        loader.Modules.push({ key: load.Name, value: load.Module });
-    }
-    var idx;
-    if ((idx=loader.Loads.indexOf(load)) > -1) {
-        load.Loads.splice(idx, 1);
-    }
-    for (var i = 0, j = load.LinkSets.length; i < j; i++) {
-        var loads = load.LinkSets[i].Loads;
-        idx = loads.indexOf(loads);
-        if (idx>-1) {
-            loads.splice(idx, 1);
-        }
-    }
-    load.LinkSets.splice(0, load.linkSets.length);
-}
-// 29.1.
-
-
-
-/*
-
-    this one is still incomplete.
-
-*/
-
-function LinkageGroups(start) {
-    // 1.
-    Assert(Array.isArray(start), "start has to be a list of LinkSet Records");
-    // 2.
-    var G = start.Loads;
-    var kind;
-    // 3.
-    for (var i = 0, j = G.length; i < j; i++) {
-        var load = G[i];
-        if (load.Kind != kind) {
-            if (kind === undefined) kind = G[i].Kind;
-            else return newSyntaxError( "all loads must be of the same kind");
-        }
-    }
-    var n = 0;
-    
-    // 4.
-    for (i = 0, j = G.length; i < j; i++) {
-        load = G[i];
-        n = max(n, load.UnlinkedDependencies.length);
-        load.GroupIndex = n;
-    }
-    
-    var declarativeGroupCount = n;
-    var declarativeGroups = [];
-    // 8.
-    for (i = 0; i < j; i++) declarativeGroups.push([]);
-    
-
-    var dynamicGroupCount = 0;
-    var dynamicGroups = [];
-    var visited = [];
-    for (var i = 0, j = G.length; i < j; i++) {
-        var load = G[i];
-        BuildLinkageGroups(load, declarativeGroups, dynamicGroups, visited);
-    }
-    
-    var first = declarativeGroups[0];
-    if (hasRecordInList(first, "Kind", "dynamic")) {
-        var groups = interleaveLists(dynamicGroups, declarativeGroups);
-    } else {
-        var groups = interleaveLists(declarativeGroups, dynamicGroups);
-    }
-    return groups;
-
-}
-
-function interleaveLists(list1, list2) {
-    // temp. doing nothing
-    return list1.concat(list2);
-}
-
-
-// 28.1.
-function BuildLinkageGroups(load, declarativeGroups, dynamicGroups, visited) {
-    if (hasRecordInList(visited, "Name", load.Name)) return NormalCompletion(undefined);
-    visited.push(load);
-    for (var i = 0, j = load.UnlinkedDependencies.length; i < j; i++) {
-        BuildLinkageGroups(dep, declarativeGroups, dynamicGroups, visitied);
-    }
-    i = load.GroupIndex;
-    if (load.Kind === "declarative") {
-        var groups = declarativeGroups;
-    } else {
-        groups = dynamicGroups;
-    }
-    var group = groups[i];
-    group.push(load);
-    return NormalCompletion(undefined);
-}
-
-
-// 28.1.
-function Link(start, loader) {
-    var groups = LinkageGroups(start);
-    for (var i = 0; i < groups.length; i++) {
-        var group = groups[i];
-        if (group[0].Kind === "declarative") {
-            LinkDeclarativeModules(group, loader)
-        } else {
-            LinkDynamicModules(group, loader);
-        }
-    }
-}
-
-
-// 28.1
-function LinkImports(M) {
-    var envRec = getInternalSlot(M, SLOTS.ENVIRONMENT);
-    var defs = getInternalSlot(M, "ImportDefinitions");
-    for (var i = 0; i < defs.length; i++) {
-        var def = defs[i];
-        if (def.ImportName === "module") {
-            envRec.CreateImmutableBinding(def.LocalName);
-            envRec.InitializeBinding(def.LocalName, def.Module);
-        } else {
-            var binding = ResolveExport(def.Module, def.ImportName);
-            if (binding === undefined) {
-                var error = newReferenceError( "Can not resolve export to a binding record");
-                var linkErrors = getInternalSlot(M, "LinkErrors");
-                linkErrors.push(error);
-                return error;
-            }  else {
-                env.CreateImportBinding(envRec, def.LocalName);
-                // THIS FUNCTION DOES NOT EXIST YET.
-            }
-        }
-    }
-}
-
-
-// 31.1.
-function ResolveExportEntries(M, visited) {
-    var exportDefs = getInternalSlot(M, "ExportDefinitions");
-    if (exportDefs != undefined) return exportDefs;
-    var defs = [];
-    var boundNames = getInternalSlot(M, "BoundNames");
-    var knownExportEntries = getInternalSlot(M, "KnownExportEntries");
-    var linkErrors = getInternalSlot(M, "LinkErrors");
-    for (var i = 0, j = knownExportEntries.length; i < j; i++) {
-
-        var entry = knownExportEntries[i];
-        var modReq = entry.ModuleRequest;
-        var otherMod = LookupModuleDependency(M, modReq);
-
-        if (entry.Module !== null && entry.LocalName !== null && !boundNames[entry.LocalName]) { // caps
-            var error = newReferenceError( "linkError created in ResolveExportEntries");
-            linkErrors.push(error);
-        }
-        defs.push({ Module: otherMod, ImportName: entry.ImportName, LocalName: entry.LocalName,
-            ExportName: entry.ExportName, Explicit: true });
-
-    }
-    var MUEE = M.UnknownExportEntries;
-    for (var i = 0; i < MUUE.length; i++) {
-        modReq = LookupModuleDependency(M, modReq);
-        if (visited.indexOf(otherMod) > -1) {
-            error = newSyntaxError( "otherMod is alreay in visited");
-            linkErrors.push(error);
-        } else {
-            visited.push(otherMod);
-            var otherDefs = ResolveExportEntries(otherMod, visited);
-            for (var j = 0, k = otherDefs.length; j < k; j++) {
-                var def = otherDefs[j];
-                defs.push({ Module: otherMod, ImportName: def.ExportName, LocalName: null, ExportName: def.ExportName,
-                    Explicit: false });
-            }
-        }
-    }
-    setInteranlSlot(M, "ExportDefinitions", defs);
-    return defs;
-}
-
-// 28.1.
-function ResolveExports(M) {
-    //debug2("resolve exports");
-    var exportDefinitions = getInternalSlot(M, "ExportDefinitions");
-    for (var i = 0, j = exportDefinitions.length; i < j; i++) {
-        var def = exportDefinitions[i];
-        ResolveExport(M, def.exportName, []);
-    }
-}
-
-// 29.1
-function ResolveExport(M, exportName, visited) {
-    //debug2("resolve export");
-    var exports = getInternalSlot(M,"Exports");
-    var exported;
-    if (exported=getRecordFromList(exports, "ExportName", exportName)) {
-        return NormalCompletion(exported.Binding)
-    }
-    var ref = { Module: M, ExportName: exportName };
-    if (visited.indexOf(ref) !== -1) {
-        var error = newSyntaxError( "ResolveExport: can not find ref in visited");
-        var linkErrors = getInternalSlot(M, "LinkErrors");
-        linkErrors.push(error);
-    }
-    var defs = getInternalSlot(M, "ExportDefinitions");
-    var overlappingDefs = [];
-    for (var i = 0, j = defs.length; i < j; i++) {
-        var def = defs[i];
-        if (def.ExportName === exportName) overlappingDefs.push(def);
-    }
-    if (!overlappingDefs.length) {
-        error = newReferenceError( "ResolveExport: overlappingDefs is empty");
-        linkErrors = getInternalSlot(M, "LinkErrors");
-        linkErrors.push(error);
-    }
-    var explicits = [];
-    for (var i = 0, j = overlappingDefs.length; i < j; i++) {
-        var overlappingDef = overlappingDefs[i];
-        if (overlappingDef.Explicit === true) explicits.push(overlappingDef);
-    }
-    if ((explicits.length > 1) || ((overlappingDefs.length > 1) && !explicits.length)) {
-        error = newSyntaxError( "");
-        linkErrors = getInternalSlot(M, "LinkErrors");
-        linkErrors.push(error);
-        return error;
-    }
-
-    def = getRecordFromList(overlappingDefs, "Explicit", true);
-    if (!def) def = overlappingDefs[0];
-    Assert(def, "i should have a def here");
-    if (def.LocalName !== null) {
-        var binding = { Module: M, LocalName: def.LocalName };
-        var exported = { ExportName: exportName, Binding: binding };
-        exports.push(exported);
-        return binding;
-
-    }
-    visited.push(ref);
-    var binding = ResolveExport(def.Module, def.ImportName);
-    return binding;
-}
-
-// 28.1.
-function ResolveImportEntries(M) {
-    var entries = getInternalSlot(M, "ImportEntries");
-    var defs = [];
-    for (var i = 0; i < entries.length; i++) {
-        var entry = entries[i];
-        var modReq = entry.ModuleRequest;
-        var otherMod = LookupModuleDependency(M, modReq);
-        var record = { Module: otherMod, ImportName: entry.ImportName, localName: entry.LocalName };
-        defs.push(record);
-    }
-    return defs;
-}
-
-
-// 28.1.
-function LinkDynamicModules(loads, loader) {
-    for (var i = 0; i < loads.length; i++) {
-        var load = loads[i];
-        var factory = load.Execute;
-        var module = callInternalSlot(SLOTS.CALL, factory, undefined, []);
-        if (isAbrupt(module = ifAbrupt(module))) return module;
-
-        if (!hasInternalSlot(module, "Exports")) {
-            return newTypeError( "module object has not the required internal properties");
-        }
-        load.Module = module;
-        load.Status = "linked";
-        var r = FinishLoad(loader, load);
-        if (isAbrupt(r=ifAbrupt(r))) return r;
-    }
-}
-
-
-
-
-function LinkDeclarativeModules(loads, loader) {
-    var unlinked = [];
-    for (var i = 0, j = loads.length; i < j; i++) {
-        var module =CreateModuleLinkageRecord(loader, load.Body);
-        var pair ={ Module: module, Load: load };
-        unlinked.push(pair);
-    }
-    for (i = 0, j = loads.length; i < j; i++) {
-        var resolvedDeps = [];
-        var unlinkedDeps = [];
-        var pair = loads[i];
-        var deps = pair.load.Dependencies;
-        var pairModule = pair.Module;
-        for (var k = 0; k < deps.length; k++) {
-            var dep = deps[k];
-            var requestName = dep.Key;
-            var normalizedName = dep.Value;
-            var load;
-            if (load = getRecordFromList(loads, "Name", normalizedName)) {
-                if (load.Status === "linked") {
-                    var resolvedDep = genericRecord({ Key: requestName, Value: load.Module });
-                    resolvedDeps.push(resolvedDep);
-                } else {
-                    for (var m = 0; m < unlinked.lengh; m++) {
-                        var otherPair = unlinked[i];
-                        if (otherPair.Load.Name == normalizedName) {
-                            resolvedDeps.push(genericRecord({ Key: requestName, Value: otherPair.Module }));
-                            unlinkedDeps.push(otherPair.Load);
-                        }
-                    }
-                }
-            } else {
-                var module = LoaderRegistryLookup(loader, normalizedName);
-                if (module === null) {
-                    var error = newReferenceError("");
-                    pair.Module.LinkErrors.push(error);
-
-                } else {
-                    resolvedDeps.push({ Key: requestName, Value: module });
-                }
-            }
-        }
-        pairModule.Dependencies = resolvedDeps;
-        pairModule.UnlinkedDependencies = unlinkedDeps;
-    }
-    for (i = 0, j = unlinked.length; i < j; i++) {
-        pair = unlinked[i];
-        ResolveExportEntries(pair.Module, []);
-        ResolveExports(pair.Module);
-    }
-    for (i = 0, j = unlinked.length; i < j; i++) {
-        pair = unlinked[i];
-        ResolveExportEntries(pair.Module, []);
-        ResolveExports(pair.Module);
-    }
-}
-
-
-// 29.1
-function EvaluateLoadedModule() {
-    var EvaluateLoadedModule_Call = function (thisArg, argList) {
-        var F = thisArg;
-        var load = argList[0];
-        var loader = getInternalSlot(F, SLOTS.LOADER);
-        Assert(load.Status === "linked", "load.Status has to be linked here");
-        var module = load.Module;
-        var result = EnsureEvaluated(module, [], loader);
-        if (isAbrupt(result)) return result;
-        return NormalCompletion(module);
-    };
-    var F = OrdinaryFunction();
-    setInternalSlot(F, SLOTS.CALL, EvaluateLoadedModule_Call);
-    return F;
-}
-
-// 29.1.
-function EnsureEvaluated(mod, seen, loader) {
-    seen.push(mod);
-    var deps = mod.Dependencies;
-    for (var i = 0, j = deps.length; i < j; i++) {
-        var pair = deps[i];
-        var dep = pair.value;
-        if (seen.indexOf(dep) === -1) EnsureEvaluated(dep, seen, loader);
-        // index of is so expensive
-    }
-    if (getInternalSlot(mod, "Evaluated") === true) return NormalCompletion(undefined);
-    setInternalSlot(mod, "Evaluated", true);
-    var body;
-    if ((body=getInternalSlot(mod, "Body")) === undefined) return NormalCompletion(undefined);
-    var env = getInternalSlot(mod, SLOTS.ENVIRONMENT);
-    var status = InstantiateModuleDeclaration(body, env);
-    var initContext = ExecutionContext(null);
-    initContext.realm = getInternalSlot(loader, SLOTS.REALM);
-    initContext.VarEnv = env;
-    initContext.LexEnv = env;
-    var stack = getStack();
-    if (stack.length) getStack().pop();
-    stack.push(initContext);
-    var r = Evaluate(body);
-    Assert(stack.pop() === initContext, "EnsureEvaluated: The right context could not be popped off the stack.");
-    return r;
-}
-
-
-
-var ReturnUndefined_Call = function (thisArg, argList) {
-    return NormalCompletion(undefined);
-};
-
-var ConstantFunction_Call = function (thisArg, argList) {
-    return getInternalSlot(this, "ConstantValue");
-};
-
-function CreateConstantGetter(key, value) {
-    var getter = CreateBuiltinFunction(getRealm(), ConstantFunction_Call, 0, "get " + key);
-    setInternalSlot(getter, "ConstantValue", value);
-    return getter;
-}
-
-function ReturnUndefined() {
-    var F = OrdinaryFunction();
-    setInternalSlot(F, SLOTS.CALL, ReturnUndefined_Call);
-    return F;
-}
-
-function IterableToList(iterable) {
-    //debug2("iterable2list");
-    //var A = ArrayCreate();
-    var A = [];
-    var next, status;
-    while (next = IteratorStep(iterable)) {
-        A.push(next);
-        // status = Invoke(A, "push", [next]);
-        //if (isAbrupt(status)) return status;
-    }
-    return A;
-}
-
-// Seite 21 von 43
-
-function GetOption(options, name) {
-    //debug2("get options");
-    if (options == undefined) return undefined;
-    if (Type(options) !== OBJECT) return newTypeError( "options is not an object");
-    return Get(options, name);
-}
-
-function OrdinaryModule() {
-    //debug2("ordinarymodule");
-    var mod = ObjectCreate(null, {
-        "Environment" : undefined,
-        "Exports": undefined,
-        "Dependencies": undefined
-    });
-    return mod;
-}
-function Module(obj) {
-    if (Type(obj) !== OBJECT) return newTypeError( "module obj is not an object");
-    var mod = OrdinaryModule();
-    var keys = OwnPropertyKeysAsList(obj);
-    for (var k in keys) {
-        var key = keys[k];
-        var value = Get(obj, key);
-        if (isAbrupt(value = ifAbrupt(value))) return value;
-        var F = CreateConstantGetter(key, value);
-        var desc = {
-            get: F,
-            set: undefined,
-            enumerable: true,
-            configurable: false
-        };
-        var status = DefineOwnPropertyOrThrow(mod, key, desc);
-        if (isAbrupt(status = ifAbrupt(status))) return status;
-    }
-    callInternalSlot("PreventExtensions", mod, mod, []);
-    return mod;
-}
-
-
-/************************* unupdated end ****/
-
-
-var LoaderConstructor_Call = function (thisArg, argList) {
-    var options = argList[0];
-    var loader = thisArg;
-
-    if (options === undefined) options = ObjectCreate();
-    if (Type(loader) !== OBJECT) return newTypeError( "Loader is not an object");
-
-    if (getInternalSlot(loader, SLOTS.LOADERRECORD) !== undefined) return newTypeError( "loader.[[LoaderRecord]] isnt undefined");
-    if (Type(options) !== OBJECT) return newTypeError( "the Loader constructors´ options argument is not an object");
-
-    var realmObject = Get(options, "realm");
-    if (isAbrupt(realmObject = ifAbrupt(realmObject))) return realmObject;
-
-    var realm;
-    if (realmObject === undefined) realm = getRealm();
-    else {
-        if ((Type(realmObject) !== OBJECT) || !hasInternalSlot(realmObject, SLOTS.REALM)) {
-            return newTypeError( "realmObject has to be an object and to have a [[RealmRecord]] internal slot");
-        }
-        var realm = getInternalSlot(realmObject, SLOTS.REALM);
-        if (realm === undefined) return newTypeError( "[[RealmRecord]] of a realmObject must not be undefined here.")
-    }
-
-    var define_loader_pipeline_hook = function (name) {
-        var hook = Get(options, name);
-        if (isAbrupt(hook = ifAbrupt(hook))) return hook;
-        if (hook !== undefined) {
-            var result = callInternalSlot(SLOTS.DEFINEOWNPROPERTY, loader, name, {
-                value: hook,
-                writable: true,
-                enumerable: true,
-                configurable: true
-            });
-            if (isAbrupt(result)) return result;
-        }
-        return NormalCompletion();
-    };
-    var status = define_loader_pipeline_hook("normalize");
-    if (isAbrupt(status)) return status;
-    status = define_loader_pipeline_hook("locate");
-    if (isAbrupt(status)) return status;
-    status = define_loader_pipeline_hook("fetch");
-    if (isAbrupt(status)) return status;
-    status = define_loader_pipeline_hook("translate");
-    if (isAbrupt(status)) return status;
-    status = define_loader_pipeline_hook("instantiate");
-    if (isAbrupt(status)) return status;
-    if (getInternalSlot(loader, SLOTS.LOADERRECORD) !== undefined) return newTypeError( "loader.[[LoaderRecord]] seems to have been changed, expected the undefined value.");
-
-    var loaderRecord = CreateLoaderRecord(realm, loader);
-    setInternalSlot(loader, SLOTS.LOADERRECORD, loaderRecord);
-    return NormalCompletion(loader);
-};
-
-var LoaderConstructor_Construct = function (argList) {
-    return Construct(this, argList);
-};
-
-// 31.1.
-var LoaderConstructor_$$create = function (thisArg, argList) {
-    var F = thisArg;
-    var loader = OrdinaryCreateFromConstructor(F, INTRINSICS.LOADERPROTOTYPE, [ SLOTS.LOADERRECORD ]);
-    return loader;
-};
-
-// 31.1.
-var LoaderPrototype_get_realm = function (thisArg, argList) {
-    var loader = thisArg;
-    if (Type(loader) !== OBJECT || !hasInternalSlot(loader, SLOTS.REALM)) {
-        return newTypeError( "the this value is not a valid loader object");
-    }
-    var loaderRecord = getInternalSlot(loader, SLOTS.LOADERRECORD);
-    var realm = loaderRecord.Realm;
-    return NormalCompletion(realm);
-};
-
-// 31.1.
-var LoaderPrototype_get_global = function (thisArg, argList) {
-    var loader = thisArg;
-    if (Type(loader) !== OBJECT || !hasInternalSlot(loader, SLOTS.REALM)) {
-        return newTypeError( "the this value is not a valid loader object");
-    }
-    var loaderRecord = getInternalSlot(loader, SLOTS.LOADERRECORD);
-    var realm = loaderRecord.Realm;
-    var global = realm.globalThis;
-    return NormalCompletion(global);
-};
-
-// 31.1.
-var LoaderPrototype_entries = function (thisArg, argList) {
-    var loader = thisLoader(thisArg);
-    return CreateLoaderIterator(loader, "key+value");
-};
-
-var LoaderPrototype_values = function (thisArg, argList) {
-    var loader = thisLoader(thisArg);
-    return CreateLoaderIterator(loader, "value");
-};
-
-var LoaderPrototype_keys = function (thisArg, argList) {
-    var loader = thisLoader(thisArg);
-    return CreateLoaderIterator(loader, "key");
-};
-// 31.1.
-var LoaderPrototype_define = function (thisArg, argList) {
-    //debug2("loaderprotodefine");
-    var name = argList[0];
-    var source =argList[1];
-    var options = argList[2];
-    var loader = thisArg;
-    if (isAbrupt(loader = ifAbrupt(loader))) return loader;
-    var loaderRecord = getInternalSlot(loader, SLOTS.LOADERRECORD);
-    name = ToString(name);
-    if (isAbrupt(name = ifAbrupt(name))) return name;
-    var address = GetOption(options, "address");
-    if (isAbrupt(address = ifAbrupt(address))) return address;
-    var metadata = GetOption(options, "metadata");
-    if (isAbrupt(metadata = ifAbrupt(metadata))) return metadata;
-    if (metadata === undefined) metadata = ObjectCreate();
-    var p = PromiseOfStartLoadPartWayThrough("translate", loaderRecord, name, metadata, source, address);
-    if (isAbrupt(p = ifAbrupt(p))) return p;
-    var G = ReturnUndefined();
-    p = PromiseThen(p, G);
-    return p;
-};
-
-// 31.1.
-var LoaderPrototype_load = function (thisArg, argList) {
-    //debug2("loaderprotoload");
-    var name = argList[0];
-    var options = argList[1];
-    var loader = thisLoader(thisArg);
-    if (isAbrupt(loader = ifAbrupt(loader))) return loader;
-    var loaderRecord = getInternalSlot(loader,SLOTS.LOADERRECORD);
-    var p = LoadModule(loader, name, options);
-    if (isAbrupt(p = ifAbrupt(p))) return p;
-    var F = ReturnUndefined();
-    p = PromiseThen(p, F);
-    return p;
-};
-
-// 31.1.
-var LoaderPrototype_module = function (thisArg, argList) {
-    //debug2("loaderprotomodule");
-    var source = argList[0];
-    var options = argList[1];
-    var loader = thisLoader(thisArg);
-    if (isAbrupt(loader = ifAbrupt(loader))) return loader;
-    var loaderRecord = getInternalSlot(loader, SLOTS.LOADERRECORD);
-    var address = GetOption(options, "address");
-    if (isAbrupt(address = ifAbrupt(address))) return address;
-    var load = CreateLoad(undefined);
-    load.Address = address;
-    var linkSet = CreateLinkSet(loaderRecord, load);
-    var successCallback = EvaluateLoadedModule();
-    setInternalSlot(successCallback, SLOTS.LOADER, loaderRecord);
-    setInternalSlot(successCallback, SLOTS.LOAD, load);
-    var p = PromiseThen(linkSet.Done, successCallback);
-    var sourcePromise = PromiseOf(source);
-    ProceedToTranslate(loader, load, sourcePromise);
-    return NormalCompletion(p);
-};
-
-// 31.1.
-var LoaderPrototype_import = function (thisArg, argList) {
-    //debug2("loaderprototypeimport");
-    var name = argList[0];
-    var options = argList[1];
-    var loader = thisLoader(thisArg);
-    if (isAbrupt(loader = ifAbrupt(loader))) return loader;
-    var loaderRecord = getInternalSlot(loader, SLOTS.LOADERRECORD);
-    var p = LoadModule(loaderRecord, name, options);
-    if (isAbrupt(p = ifAbrupt(p))) return p;
-    var F = EvaluateLoadedModule();
-    setInternalSlot(F, SLOTS.LOADER, loaderRecord);
-    var p = PromiseThen(p, F);
-    return p;
-};
-
-// 31.1.
-var LoaderPrototype_eval = function (thisArg, argList) {
-    //debug2("loaderprototypeeval");
-    var source = argList[0];
-    var loader = thisLoader(thisArg);
-    if (isAbrupt(loader = ifAbrupt(loader))) return loader;
-    var loaderRecord = getInternalSlot(loader, SLOTS.LOADERRECORD);
-    return IndirectEval(loaderRecord.Realm, source);
-};
-
-// 31.1.
-var LoaderPrototype_get = function (thisArg, argList) {
-    //debug2("loaderprototypeget");
-    var loader = thisLoader(thisArg);
-    if (isAbrupt(loader = ifAbrupt(loader))) return loader;
-    var name = ToString(argList[0]);
-    if (isAbrupt(name = ifAbrupt(name))) return name;
-    var loaderRecord = getInternalSlot(loader, SLOTS.LOADERRECORD);
-
-    var modules = loaderRecord.Modules;
-    var record, module;
-    if ((record = getRecordFromList(modules, "Key", name))) {
-        var module = p.Value;
-        var result = EnsureEvaluated(module, [], loaderRecord);
-        if (isAbrupt(result = ifAbrupt(result))) return result;
-        return NormalCompletion(module);
-        // has typo/bug in spec, let module = p.value. ensureenv(module) but return p.value
-    }
-    return NormalCompletion(undefined);
-};
-// 31.1.
-var LoaderPrototype_has = function (thisArg, argList) {
-    //debug2("loaderprototypehas");
-    var loader = thisLoader(thisArg);
-    if (isAbrupt(loader = ifAbrupt(loader))) return loader;
-    var name = ToString(argList[0]);
-    if (isAbrupt(name = ifAbrupt(name))) return name;
-
-    var loaderRecord = getInternalSlot(loader, SLOTS.LOADERRECORD);
-    var modules = loaderRecord.Modules;
-    if (hasRecordInList(modules, "Key", name)) return NormalCompletion(true);
-
-    /*  
-     refactoring hasRecord in list. must result in this:
-     if (modules[name]) {
-        return NormalCompletion(true);
-     }
-    */
-     
-    return NormalCompletion(false);
-
-};
-// 31.1.
-var LoaderPrototype_set = function (thisArg, argList) {
-    //debug2("loaderprototypeset");
-    var name = argList[0];
-    var module = argList[1];
-    var loader = thisLoader(thisArg);
-    if (isAbrupt(loader = ifAbrupt(loader))) return loader;
-    var loaderRecord = getInternalSlot(loader, SLOTS.LOADERRECORD);
-    var name = ToString(name);
-    if (isAbrupt(name = ifAbrupt(name))) return name;
-    if (Type(module) !== OBJECT) return newTypeError( "module is not an object");
-    var modules = loaderRecord.Modules;
-    var p;
-    if (p=getRecordFromList(modules, "Key", name)) {
-        p.Value = module;
-        return NormalCompletion(loader);
-    }
-    p = { Key: name, Value: module };
-    loaderRecord.Modules.push(p);
-    return NormalCompletion(loader);
-};
-// 31.1.
-var LoaderPrototype_delete = function (thisArg, argList) {
-    var name = argList[0];
-    var loader = thisLoader(thisArg);
-    if (isAbrupt(loader = ifAbrupt(loader))) return loader;
-    var loaderRecord = getInternalSlot(loader, SLOTS.LOADERRECORD);
-    name = ToString(name);
-    if (isAbrupt(name = ifAbrupt(name))) return name;
-    var modules = loaderRecord.Modules;
-    for (var i = 0, j = modules.length; i < j; i++) {
-        var p = modules[i];
-        if (SameValue(p.Key, name)) {
-            // remove them from list otherwhere
-            p.Key = empty;
-            p.Value = empty;
-            return NormalCompletion(true);
-        }
-    }
-    return NormalCompletion(false);
-};
-var LoaderPrototype_normalize = function (thisArg, argList) {
-    var name = argList[0];
-    var refererName = argList[1];
-    var refererAddress = argList[2];
-    Assert(Type(name) === STRING, "Loader.prototype.normalize: name has to be a string.");
-    return NormalCompletion(name);
-};
-var LoaderPrototype_locate = function (thisArg, argList) {
-    var loadRequest = argList[0];
-    var r = Get(loadRequest, "name");
-    if (isAbrupt(r=ifAbrupt(r))) return r;
-    return NormalCompletion(r);
-};
-var LoaderPrototype_fetch = function (thisArg, argList) {
-    return newTypeError( "The Loader.prototype.fetch function is supposed to throw a type error.");
-};
-var LoaderPrototype_translate = function (thisArg, argList) {
-    var load = argList[0];
-    var r = Get(load, "source");
-    if (isAbrupt(r=ifAbrupt(r))) return r;
-    return NormalCompletion(r);
-};
-
-var LoaderPrototype_instantiate = function (thisArg, argList) {
-    var loadRequest = argList[0];
-    return NormalCompletion(undefined);
-};
-
-var LoaderPrototype_$$iterator = LoaderPrototype_entries;
 
 // Loader
 setInternalSlot(LoaderConstructor, SLOTS.PROTOTYPE, FunctionPrototype);
@@ -17050,40 +17974,8 @@ LazyDefineProperty(LoaderPrototype, "translate", CreateBuiltinFunction(realm,Loa
 LazyDefineProperty(LoaderPrototype, "instantiate", CreateBuiltinFunction(realm,LoaderPrototype_instantiate, 0, "instantiate"));
 LazyDefineProperty(LoaderPrototype, $$iterator, CreateBuiltinFunction(realm,LoaderPrototype_$$iterator, 0, "[Symbol.iterator]"));
 LazyDefineProperty(LoaderPrototype, $$toStringTag, SLOTS.LOADER);
-
-function CreateLinkedModuleInstance (loader) {
-    var mod = OrdinaryModule();
-//    var lr = getInternalSlot(loader, SLOTS.LOADERRECORD);
-//    lr.Modules.push({ Name: name, Module: mod });
-    return mod;
-}
-
-// 31.1.
-var LoaderPrototype_newModule = function(thisArg, argList) {
-    var obj = argList[0];
-    if (Type(obj) !== OBJECT) return newTypeError( "newModule: obj is not an object");
-
-    var mod = CreateLinkedModuleInstance(thisArg);
-    var keys = OwnPropertyKeysAsList(obj);
-    if (isAbrupt(keys = ifAbrupt(keys))) return keys;
-    for (var i = 0, j = keys.length; i < j; i++) {
-        var key = keys[i];
-        var value = Get(obj, key);
-        if (isAbrupt(value = ifAbrupt(value))) return value;
-        var F = CreateConstantGetter(key, value);
-        var desc = {
-            configurable: false,
-            enumerable: true,
-            get: F,
-            set: undefined
-        };
-        var status = DefineOwnPropertyOrThrow(mod, key, desc);
-    }
-    callInternalSlot("PreventExtensions", mod);
-    return NormalCompletion(mod);
-};
-
 LazyDefineBuiltinFunction(LoaderPrototype, "newModule", 1, LoaderPrototype_newModule);
+
 // ##################################################################
 // Der Loader Iterator
 // ##################################################################
@@ -19378,62 +20270,7 @@ DefineOwnProperty(BooleanPrototype, "valueOf", {
     writable: true,
     configurable: true
 });
-var SymbolFunction_Call = function Call(thisArg, argList) {
-    var descString;
-    var description = argList[0];
-    if (description !== undefined) descString = ToString(description);
-    if (isAbrupt(descString = ifAbrupt(descString))) return descString;
-    var symbol = SymbolPrimitiveType();
-    setInternalSlot(symbol, SLOTS.DESCRIPTION, descString);
-    return NormalCompletion(symbol);
-};
-var SymbolFunction_Construct = function Construct(argList) {
-    return OrdinaryConstruct(this, argList);
-};
-var SymbolPrototype_toString = function toString(thisArg, argList) {
-    var s = thisArg;
-    if (hasInternalSlot(s, SLOTS.SYMBOLDATA)) return newTypeError(format("HAS_NO_SLOT_S", "[[SymbolData]]"));
-    var sym = getInternalSlot(s, SLOTS.SYMBOLDATA);
-    var desc = getInternalSlot(sym, SLOTS.DESCRIPTION);
-    if (desc === undefined) desc = "";
-    Assert(Type(desc) === STRING, format("SLOT_S_NOT_A_STRING", "[[Description]]"));
-    var result = "Symbol(" + desc + ")";
-    return NormalCompletion(result);
-};
 
-var SymbolPrototype_valueOf = function valueOf(thisArg, argList) {
-    var s = thisArg;
-    if (hasInternalSlot(s, SLOTS.SYMBOLDATA)) return newTypeError(format("HAS_NO_SLOT_S", "[[SymbolData]]"));
-    var sym = getInternalSlot(s, SLOTS.SYMBOLDATA);
-    return NormalCompletion(sym);
-};
-var SymbolPrototype_$$toPrimitive = function (thisArg, argList) {
-    return newTypeError(format("SYMBOL_TOPRIMITVE_ERROR"));
-};
-var SymbolFunction_keyFor = function (thisArg, argList) {
-    var sym = argList[0];
-    if (Type(sym) !== SYMBOL) return newTypeError(format("S_NOT_A_SYMBOL","keyFor: sym"));
-    var key = getInternalSlot(sym, SLOTS.DESCRIPTION);
-    var e = getRealm().GlobalSymbolRegistry[key];
-    if (SameValue(e.Symbol, sym)) return NormalCompletion(e.Key);
-    Assert(getRealm().GlobalSymbolRegistry[key] === undefined, trans("GLOBAL_SYMBOL_REGISTRY_ERROR"));
-    return NormalCompletion(undefined);
-};
-var SymbolFunction_for = function (thisArg, argList) {
-    var key = argList[0];
-    var stringKey = ToString(key);
-    if (isAbrupt(stringKey = ifAbrupt(stringKey))) return stringKey;
-    var e = getRealm().GlobalSymbolRegistry[key];
-    if (e !== undefined && SameValue(e.Key, stringKey)) return NormalCompletion(e.Symbol);
-    Assert(e === undefined, trans("GLOBAL_SYMBOL_REGISTRY_ERROR"));
-    var newSymbol = SymbolPrimitiveType();
-    setInternalSlot(newSymbol, SLOTS.DESCRIPTION, stringKey);
-    getRealm().GlobalSymbolRegistry[stringKey] = { Key: stringKey, Symbol: newSymbol };
-    return NormalCompletion(newSymbol); // There is a Typo newSumbol in the Spec.
-};
-var SymbolFunction_$$create = function (thisArg, argList) {
-    return newTypeError( format("SYMBOL_CREATE_ERROR"));
-};
 MakeConstructor(SymbolFunction, true, SymbolPrototype);
 setInternalSlot(SymbolFunction, SLOTS.CALL, SymbolFunction_Call);
 setInternalSlot(SymbolFunction, SLOTS.CONSTRUCT, SymbolFunction_Construct);
@@ -20788,324 +21625,6 @@ IsFiniteFunction = CreateBuiltinFunction(realm, function isFinite(thisArg, argLi
     return  !(number == Infinity || number == -Infinity || number != number);
 }, 1, "isFinite");
 
-// ===========================================================================================================
-// Object
-// ===========================================================================================================
-var ObjectConstructor_assign = function (thisArg, argList) {
-    var target = argList[0];
-    var source = argList[1];
-    var to = ToObject(target);
-    if (isAbrupt(to = ifAbrupt(to))) return to;
-    var from = ToObject(source);
-    if (isAbrupt(source = ifAbrupt(source))) return source;
-    var keys = OwnPropertyKeys(source);
-    if (isAbrupt(keys = ifAbrupt(keys))) return keys;
-    var gotAllNames = false;
-    var pendingException = undefined;
-    var next, nextKey, desc, propValue, status;
-    while (!gotAllNames) {
-        next = IteratorStep(keys);
-        if (isAbrupt(next = ifAbrupt(next))) return next;
-        if (!next) gotAllNames = true;
-        else {
-            nextKey = IteratorValue(next);
-            if (isAbrupt(nextKey = ifAbrupt(nextKey))) return nextKey;
-            desc = GetOwnProperty(from, nextKey);
-            if (isAbrupt(desc)) pendingException = desc;
-            else if (desc !== undefined && desc.enumerable === true) {
-                propValue = Get(from, nextKey);
-                if (isAbrupt(propValue)) pendingException = propValue;
-                else {
-                    status = Put(to, nextKey, propValue, true);
-                    if (isAbrupt(status)) pendingException = status;
-                }
-            }
-        }
-    }
-    if (pendingException !== undefined) return pendingException;
-    return to;
-};
-var ObjectConstructor_create = function (thisArg, argList) {
-    var O = argList[0];
-    var Properties = argList[1];
-    if (Type(O) !== OBJECT && Type(O) !== NULL) return newTypeError( "create: argument is not an object or null");
-    var obj = ObjectCreate(O);
-    if (Properties !== undefined) {
-        return ObjectDefineProperties(obj, Properties);
-    }
-    return obj;
-};
-var ObjectConstructor_defineProperty = function (thisArg, argList) {
-    var O = argList[0];
-    var P = argList[1];
-    var Attributes = argList[2];
-    if (Type(O) !== OBJECT) return newTypeError( "defineProperty: argument 1 is not an object");
-    var key = ToPropertyKey(P);
-    var desc = ToPropertyDescriptor(Attributes);
-    if (isAbrupt(desc = ifAbrupt(desc))) return desc;
-    var success = DefineOwnPropertyOrThrow(O, key, desc);
-    if (isAbrupt(success = ifAbrupt(success))) return success;
-    return O;
-};
-var ObjectConstructor_defineProperties = function (thisArg, argList) {
-    var O = argList[0];
-    var Properties = argList[1];
-    return ObjectDefineProperties(O, Properties);
-};
-
-
-
-
-var ObjectConstructor_call = function Call(thisArg, argList) {
-    var value = argList[0];
-    if (value === null || value === undefined) return ObjectCreate();
-    return ToObject(value);
-};
-
-var ObjectConstructor_construct = function (argList) {
-    var value = argList[0];
-    var type = Type(value);
-    switch (type) {
-        case OBJECT:
-            return value;
-        case STRING:
-        case NUMBER:
-        case SYMBOL:
-        case BOOLEAN:
-            return ToObject(value);
-    }
-    return ObjectCreate();
-};
-
-setInternalSlot(ObjectConstructor, SLOTS.CALL, ObjectConstructor_call);
-setInternalSlot(ObjectConstructor, SLOTS.CONSTRUCT, ObjectConstructor_construct);
-
-var ObjectConstructor_seal = function (thisArg, argList) {
-        var O;
-        O = argList[0];
-        if (Type(O) !== OBJECT) return newTypeError( "First argument is object");
-        var status = SetIntegrityLevel(O, "sealed");
-        if (isAbrupt(status = ifAbrupt(status))) return status;
-        if (status === false) return newTypeError( "seal: can not seal object");
-        return O;
-};
-
-
-var ObjectConstructor_freeze =function (thisArg, argList) {
-    var O;
-    O = argList[0];
-    if (Type(O) !== OBJECT) return newTypeError( "First argument is object");
-    var status = SetIntegrityLevel(O, "frozen");
-    if (isAbrupt(status = ifAbrupt(status))) return status;
-    if (status === false) return newTypeError( "freeze: can not freeze object");
-    return O;
-};
-
-var ObjectConstructor_getOwnPropertyDescriptor = function (thisArg, argList) {
-    var O = argList[0];
-    var P = argList[1];
-    var obj = ToObject(O);
-    if (isAbrupt(obj = ifAbrupt(obj))) return obj;
-    var key = ToPropertyKey(P);
-    var desc = GetOwnProperty(obj, key);
-    if (isAbrupt(desc = ifAbrupt(desc))) return desc;
-    return FromPropertyDescriptor(desc);
-};
-var ObjectConstructor_getOwnPropertyNames = function (thisArg, argList) {
-    var O = argList[0];
-    return GetOwnPropertyKeys(O, "string");
-};
-
-var ObjectConstructor_getOwnPropertySymbols =     function (thisArg, argList) {
-        var O = argList[0];
-        return GetOwnPropertyKeys(O, "symbol");
-};
-var ObjectConstructor_getPrototypeOf = function (thisArg, argList) {
-        var O = argList[0];
-        var obj = ToObject(O);
-        if (isAbrupt(obj = ifAbrupt(obj))) return obj;
-        return GetPrototypeOf(obj);
-};
-var ObjectConstructor_is = function (thisArg, argList) {
-        var value1 = argList[0];
-        var value2 = argList[1];
-        return SameValue(value1, value2);
-};
-var ObjectConstructor_isExtensible = function (thisArg, argList) {
-        var O = argList[0];
-        if (Type(O) !== OBJECT) return false;
-        return IsExtensible(O);
-};
-
-var ObjectConstructor_isSealed = function (thisArg, argList) {
-        var O = argList[0];
-        if (Type(O) !== OBJECT) return true;
-        return TestIntegrityLevel(O, "sealed");
-};
-
-var ObjectConstructor_isFrozen = function (thisArg, argList) {
-        var O = argList[0];
-        if (Type(O) !== OBJECT) return true;
-        return TestIntegrityLevel(O, "frozen");
-};
-
-
-var ObjectConstructor_preventExtensions = function (thisArg, argList) {
-    var O = argList[0];
-    if (Type(O) !== OBJECT) return newTypeError( "argument is not an object");
-    var status = PreventExtensions(O);
-    if (isAbrupt(status = ifAbrupt(status))) return status;
-    if (status === false) return newTypeError( "can not prevent extensions");
-    return O;
-};
-
-
-var ObjectConstructor_keys = function (thisArg, argList) {
-    var O = argList[0];
-    var obj = ToObject(O);
-    if (isAbrupt(obj = ifAbrupt(obj))) return obj;
-    var keys = OwnPropertyKeys(O);
-    if (isAbrupt(keys = ifAbrupt(keys))) return keys;
-
-    var nameList = [];
-    var gotAllNames = false;
-    var next, nextKey, desc;
-    while (!gotAllNames) {
-        next = IteratorNext(keys);
-        if (isAbrupt(next = ifAbrupt(next))) return next;
-        nextKey = IteratorValue(next);
-        if (isAbrupt(nextKey = ifAbrupt(nextKey))) return nextKey;
-        if (Type(nextKey) === STRING) {
-            desc = GetOwnProperty(O, nextKey);
-            if (isAbrupt(desc = ifAbrupt(desc))) return desc;
-            if (desc !== undefined && desc.enumerable === true) {
-                nameList.push(nextKey);
-            }
-        }
-
-        if (IteratorComplete(next)) gotAllNames = true;
-    }
-    return CreateArrayFromList(nameList);
-};
-
-var ObjectConstructor_mixin = function (thisArg, argList) {
-    var target = argList[0];
-    var source = argList[1];
-    var to = ToObject(target);
-    if (isAbrupt(to = ifAbrupt(to))) return to;
-    var from = ToObject(source);
-    if (isAbrupt(from = ifAbrupt(from))) return from;
-    return MixinProperties(to, from);
-};
-
-//SetFunctionName(ObjectConstructor, "Object");
-//SetFunctionLength(ObjectConstructor, 1);
-LazyDefineBuiltinFunction(ObjectConstructor, "assign", 2, ObjectConstructor_assign);
-LazyDefineBuiltinFunction(ObjectConstructor, "create", 0, ObjectConstructor_create);
-LazyDefineBuiltinFunction(ObjectConstructor, "defineProperty", 0, ObjectConstructor_defineProperty);
-LazyDefineBuiltinFunction(ObjectConstructor, "defineProperties", 0, ObjectConstructor_defineProperties);
-LazyDefineBuiltinFunction(ObjectConstructor, "freeze", 1, ObjectConstructor_freeze);
-LazyDefineBuiltinFunction(ObjectConstructor, "getOwnPropertyDescriptor", 2, ObjectConstructor_getOwnPropertyDescriptor);
-LazyDefineBuiltinFunction(ObjectConstructor, "getOwnPropertyNames", 1, ObjectConstructor_getOwnPropertyNames);
-LazyDefineBuiltinFunction(ObjectConstructor, "getOwnPropertySymbols", 1, ObjectConstructor_getOwnPropertySymbols);
-LazyDefineBuiltinFunction(ObjectConstructor, "getPrototypeOf", 1, ObjectConstructor_getPrototypeOf);
-LazyDefineBuiltinFunction(ObjectConstructor, "keys", 1, ObjectConstructor_keys);
-LazyDefineBuiltinFunction(ObjectConstructor, "mixin", 2, ObjectConstructor_mixin);
-LazyDefineBuiltinFunction(ObjectConstructor, "is", 1, ObjectConstructor_is);
-LazyDefineBuiltinFunction(ObjectConstructor, "isExtensible", 1, ObjectConstructor_isExtensible);
-LazyDefineBuiltinFunction(ObjectConstructor, "isSealed", 1, ObjectConstructor_isSealed);
-LazyDefineBuiltinFunction(ObjectConstructor, "isFrozen", 1, ObjectConstructor_isFrozen);
-LazyDefineBuiltinFunction(ObjectConstructor, "preventExtensions", 1, ObjectConstructor_preventExtensions);
-LazyDefineBuiltinFunction(ObjectConstructor, "seal", 2, ObjectConstructor_seal);
-
-function MixinProperties(target, source) {
-    Assert(Type(target) === OBJECT);
-    Assert(Type(source) === OBJECT);
-    var keys = OwnPropertyKeys(source);
-    if (isAbrupt(keys = ifAbrupt(keys))) return keys;
-    var gotAllNames = false;
-    var pendingException = undefined;
-    var next, nextKey, desc, propValue, newFunc;
-    var pendingException, getter, setter;
-    while (!gotAllNames) {
-        next = IteratorStep(next);
-        if (isAbrupt(next = ifAbrupt(next))) return next;
-        //    if ((=ifAbrupt()) && isAbrupt()) return ;
-        if (!next) gotAllNames = true;
-        else {
-            nextKey = IteratorValue(next);
-            if (isAbrupt(nextKey = ifAbrupt(nextKey))) return nextKey;
-            var desc = GetOwnProperty(source, nextKey);
-            if (isAbrupt(desc)) pendingException = desc;
-            else if (desc !== undefined && desc.enumerable === true) {
-                // possibly neccessary (if desc isnt fresh)
-                // desc = assign({}, desc);
-                if (IsDataDescriptor(desc)) {
-                    propValue = desc.Value;
-                    if (SameValue(GetSuperBinding(propValue), source)) {
-                        newFunc = MixinProperties(RebindSuper(propValue, target), propValue);
-                        if (isAbrupt(newFunc)) pendingException = newFunc;
-                        else desc.Value = newFunc;
-                    }
-                } else {
-                    getter = desc.get;
-                    if (SameValue(GetSuperBinding(getter), source)) {
-                        newFunc = MixinProperties(RebindSuper(propValue, target), getter);
-                        if (isAbrupt(newFunc)) pendingException = newFunc;
-                        else desc.get = newFunc;
-                    }
-                    setter = desc.set;
-                    if (SameValue(GetSuperBinding(setter), source)) {
-                        newFunc = MixinProperties(RebindSuper(propValue, target), setter);
-                        if (isAbrupt(newFunc)) pendingException = newFunc;
-                        else desc.set = newFunc;
-                    }
-                }
-                var status = DefineOwnPropertyOrThrow(target, nextKey, desc);
-                if (isAbrupt(status)) pendingException = status;
-            }
-        }
-    }
-    if (pendingException) return pendingException;
-    return target;
-}
-
-
-/*
-    What a mess for refactoring. 2 styles and both deprecated behind the next 
-*/
-
-var ObjectConstructor_getOwnPropertyDescriptors = function (thisArg, argList) {
-    /*
-	http://gist.github.com/WebReflection/9353781
-	Object.getOwnPropertyDescriptors
-    */
-    var O = argList[0];
-    var obj = ToObject(O);
-    if (isAbrupt(obj = ifAbrupt(obj))) return obj;
-    var keys = OwnPropertyKeys(obj);
-    if (isAbrupt(keys = ifAbrupt(keys))) return keys;
-    var descriptors = ObjectCreate(getIntrinsic(INTRINSICS.OBJECTPROTOTYPE));
-    var gotAllNames = false;
-    while (gotAllNames === false) {
-	var next = IteratorStep(keys);
-	if (isAbrupt(next=ifAbrupt(next))) return next;
-	if (next === false) gotAllNames = true;
-	else {
-	    var nextKey = IteratorValue(next);
-	    nextKey = ToPropertyKey(nextKey);
-	    if (isAbrupt(nextKey=ifAbrupt(nextKey))) return nextKey;
-	    var desc = callInternalSlot(SLOTS.GETOWNPROPERTY, obj, nextKey);
-	    if (isAbrupt(desc=ifAbrupt(desc))) return desc;
-	    var descriptor = FromPropertyDescriptor(desc);
-	    if (isAbrupt(descriptor=ifAbrupt(descriptor))) return descriptor;
-	    var status = CreateDataProperty(descriptors, nextKey, descriptor);
-	    // Assert(!isAbrupt(status));
-	    if (isAbrupt(status)) return status; 
-	}
-    }
-    return descriptors;
-};	
 
 LazyDefineBuiltinFunction(ObjectConstructor, "getOwnPropertyDescriptors", 1, ObjectConstructor_getOwnPropertyDescriptors);
 
@@ -21246,8 +21765,31 @@ var ObjectPrototype_proto_ = {
     get: CreateBuiltinFunction(realm, ObjectPrototype_get_proto, "get __proto__", 0),
     set: CreateBuiltinFunction(realm, ObjectPrototype_set_proto, "set __proto___", 0)
 };
+
 DefineOwnProperty(ObjectPrototype, "__proto__", ObjectPrototype_proto_);
 
+setInternalSlot(ObjectConstructor, SLOTS.CALL, ObjectConstructor_call);
+setInternalSlot(ObjectConstructor, SLOTS.CONSTRUCT, ObjectConstructor_construct);
+
+//SetFunctionName(ObjectConstructor, "Object");
+//SetFunctionLength(ObjectConstructor, 1);
+LazyDefineBuiltinFunction(ObjectConstructor, "assign", 2, ObjectConstructor_assign);
+LazyDefineBuiltinFunction(ObjectConstructor, "create", 0, ObjectConstructor_create);
+LazyDefineBuiltinFunction(ObjectConstructor, "defineProperty", 0, ObjectConstructor_defineProperty);
+LazyDefineBuiltinFunction(ObjectConstructor, "defineProperties", 0, ObjectConstructor_defineProperties);
+LazyDefineBuiltinFunction(ObjectConstructor, "freeze", 1, ObjectConstructor_freeze);
+LazyDefineBuiltinFunction(ObjectConstructor, "getOwnPropertyDescriptor", 2, ObjectConstructor_getOwnPropertyDescriptor);
+LazyDefineBuiltinFunction(ObjectConstructor, "getOwnPropertyNames", 1, ObjectConstructor_getOwnPropertyNames);
+LazyDefineBuiltinFunction(ObjectConstructor, "getOwnPropertySymbols", 1, ObjectConstructor_getOwnPropertySymbols);
+LazyDefineBuiltinFunction(ObjectConstructor, "getPrototypeOf", 1, ObjectConstructor_getPrototypeOf);
+LazyDefineBuiltinFunction(ObjectConstructor, "keys", 1, ObjectConstructor_keys);
+LazyDefineBuiltinFunction(ObjectConstructor, "mixin", 2, ObjectConstructor_mixin);
+LazyDefineBuiltinFunction(ObjectConstructor, "is", 1, ObjectConstructor_is);
+LazyDefineBuiltinFunction(ObjectConstructor, "isExtensible", 1, ObjectConstructor_isExtensible);
+LazyDefineBuiltinFunction(ObjectConstructor, "isSealed", 1, ObjectConstructor_isSealed);
+LazyDefineBuiltinFunction(ObjectConstructor, "isFrozen", 1, ObjectConstructor_isFrozen);
+LazyDefineBuiltinFunction(ObjectConstructor, "preventExtensions", 1, ObjectConstructor_preventExtensions);
+LazyDefineBuiltinFunction(ObjectConstructor, "seal", 2, ObjectConstructor_seal);
 
 LazyDefineBuiltinFunction(ObjectPrototype, $$create, 0, ObjectPrototype_$$create);
 LazyDefineBuiltinFunction(ObjectPrototype, "hasOwnProperty", 0, ObjectPrototype_hasOwnProperty);
@@ -21257,152 +21799,7 @@ LazyDefineBuiltinFunction(ObjectPrototype, "toString", 0, ObjectPrototype_toStri
 LazyDefineBuiltinFunction(ObjectPrototype, "valueOf", 0, ObjectPrototype_valueOf);
 LazyDefineProperty(ObjectPrototype, $$toStringTag, "Object");
 
-var NotifierPrototype_notify = function notify(thisArg, argList) {
-    var changeRecord = argList[0];
-    var notifier = thisArg;
-    if (Type(notifier) !== OBJECT) return newTypeError( "Notifier is not an object.");
-    var target = getInternalSlot(notifier, SLOTS.TARGET);
-    var newRecord = ObjectCreate();
-    var status = callInternalSlot(SLOTS.DEFINEOWNPROPERTY, newRecord, "object", {
-        value: target,
-        writable: false,
-        enumerable: true,
-        configurable: false
-    });
-    //if (isAbrupt(status)) return status;
-    var bindings = getInternalSlot(changeRecord, SLOTS.BINDINGS);
-    var value;
-    for (var N in bindings) {
-        if (Object.hasOwnProperty.call(bindings, N)) {
-            if (N !== "object") {
-                value = callInternalSlot(SLOTS.GET, changeRecord, N, changeRecord);
-                if (isAbrupt(value = ifAbrupt(value))) return value;
-                status = callInternalSlot(SLOTS.DEFINEOWNPROPERTY, newRecord, N, {
-                    value: value,
-                    writable: false,
-                    enumerable: true,
-                    configurable: false
-                });
-                //if (isAbrupt(status)) return status;
-            }
-        }
-    }
-    setInternalSlot(newRecord, SLOTS.EXTENSIBLE, false);
-    status = EnqueueChangeRecord(target, newRecord);
-    //if (isAbrupt(status)) return status;
-    return NormalCompletion();
-};
-var NotifierPrototype_performChange =  function performChange(thisArg, argList) {
-    var changeType = argList[0];
-    var changeFn = argList[1];
-    var notifier = thisArg;
-    var status;
-    if (Type(notifier) !== OBJECT) return newTypeError( "notifier is not an object");
-    var target = getInternalSlot(notifier, SLOTS.TARGET);
-    if (target === undefined) return NormalCompletion(undefined);
-    if (Type(changeType) !== STRING) return newTypeError( "changeType has to be a string");
-    if (!IsCallable(changeFn)) return newTypeError( "changeFn is not a callable");
-    status = BeginChange(target, changeType);
-    var changeRecord = callInternalSlot(SLOTS.CALL, changeFn, undefined, []);
-    status = EndChange(target, changeType);
-    var changeObservers = getInternalSlot(notifier, SLOTS.CHANGEOBSERVERS);
-    if (!changeObservers.length) return NormalCompletion();
-    var newRecord = ObjectCreate();
-    status = callInternalSlot(SLOTS.DEFINEOWNPROPERTY, newRecord, "object", {
-        value: target,
-        writable: false,
-        enumerable: true,
-        configurable: false
-    });
-    status = callInternalSlot(SLOTS.DEFINEOWNPROPERTY, newRecord, "type", {
-        value: changeType,
-        writable: false,
-        enumerable: true,
-        configurable: false
-    });
-    var bindings = getInternalSlot(changeRecord, SLOTS.BINDINGS);
-    var value;
-    for (var N in bindings) {
-        if (Object.hasOwnProperty.call(bindings, N)) {
-            if (N !== "object" && N !== "type") {
-                value = callInternalSlot(SLOTS.GET, changeRecord, N, changeRecord);
-                if (isAbrupt(value = ifAbrupt(value))) return value;
-                status = callInternalSlot(SLOTS.DEFINEOWNPROPERTY, newRecord, N, {
-                    value: value,
-                    writable: false,
-                    enumerable: true,
-                    configurable: false
-                });
-            }
-        }
-    }
-    setInternalSlot(newRecord, SLOTS.EXTENSIBLE, false);
-    status = EnqueueChangeRecord(target, newRecord);
-    return NormalCompletion(undefined);
-};
-var ObjectConstructor_observe = function (thisArg, argList) {
-    var O = argList[0];
-    var callback = argList[1];
-    var accept = argList[2];
-    if (Type(O) !== OBJECT) return newTypeError(format("S_NOT_OBJECT", "arg0"));
-    if (!IsCallable(callback)) return newTypeError("S_NOT_CALLABLE", "arg1");
-    if (TestIntegrityLevel(callback, "frozen")) return newTypeError("S_IS_FROZEN", "arg1");
-    if (accept === undefined) {
-        accept = ["add", "updata", "delete", "reconfigure", "setPrototype", "preventExtensions"];
-    } else {
-        accept = CreateListFromArray(accept);
-    }
-    var notifier = GetNotifier(O);
-    var changeObservers = getInternalSlot(notifier, SLOTS.CHANGEOBSERVERS);
-    var observer;
-    for (var i = 0, j = changeObservers.length; i < j; i++) {
-        if (observer = changeObservers[i]) {
-            if (Get(observer, "callback") === callback) {
-                CreateDataProperty(record, "accept", acceptList);
-                return NormalCompletion(O);
-            }
-        }
-    }
-    var observerRecord = ObjectCreate();
-    CreateDataProperty(observerRecord, "callback", callback);
-    CreateDataProperty(observerRecord, "accept", acceptList);
-    changeObservers.push(observerRecord);
-    var observerCallbacks = getRealm().ObserverCallbacks;
-    if (observerCallbacks.indexOf(callback)) return NormalCompletion(O);
-    observerCallbacks.push(calllback);
-    return NormalCompletion(O);
-};
-var ObjectConstructor_unobserve = function (thisArg, argList) {
-    var O = argList[0];
-    var callback = argList[1];
-    if (Type(O) !== OBJECT) return newTypeError( "first argument is not an object");
-    if (!IsCallable(callback)) return newTypeError( "second argument is not callable");
-    var notifier = GetNotifier(O);
-    var changeObservers = getInternalSlot(notifier, SLOTS.CHANGEOBSERVERS);
-    changeObservers = changeObservers.filter(function (record) {
-        return (Get(record, "callback") !== callback);
-    });
-    setInternalSlot(notifier, SLOTS.CHANGEOBSERVERS, changeObservers);
-    return NormalCompletion(O);
-};
-var ObjectConstructor_deliverChangeRecords = function (thisArg, argList) {
-    var callback = argList[0];
-    if (!IsCallable(callback)) return newTypeError( "first argument is not callable.");
-    var status;
-    for (;;) {
-        status = DeliverChangeRecords(callback);
-        status = ifAbrupt(status);
-        if (status === false || isAbrupt(status)) break;
-    }
-    if (isAbrupt(status)) return status;
-    return NormalCompletion(undefined);
-};
-var ObjectConstructor_getNotifier = function (thisArg, argList) {
-    var O = argList[0];
-    if (Type(O) !== OBJECT) return newTypeError( "first argument is not an object");
-    if (TestIntegrityLevel(O, "frozen")) return NormalCompletion(null);
-    return GetNotifier(O);
-};
+
 // this shall be in lib/intrinsics
 LazyDefineBuiltinFunction(NotifierPrototype, "notify", 1, NotifierPrototype_notify);
 LazyDefineBuiltinFunction(NotifierPrototype, "performChange", 2, NotifierPrototype_performChange);
@@ -23185,388 +23582,6 @@ LazyDefineBuiltinFunction(DataViewPrototype, "setUint16", 2, DataViewPrototype_s
 LazyDefineBuiltinFunction(DataViewPrototype, "setUint32", 2, DataViewPrototype_setUint32);
 LazyDefineBuiltinConstant(DataViewConstructor, $$toStringTag, SLOTS.DATAVIEW);
 
-var TypedArrayConstructor_Call = function (thisArg, argList) {
-    var array, typedArray, length;
-    array = argList[0];
-    var O;
-    var elementType;
-    var numberLength;
-    var elementLength;
-    var elementSize;
-    var byteLength;
-    var status;
-    var data;
-    var constructorName;
-    if (Type(array) === OBJECT) {
-        if (IsArray(array)) {
-            Assert((Type(array) === OBJECT) && !hasInternalSlot(array, SLOTS.TYPEDARRAYNAME) && !hasInternalSlot(array, SLOTS.ARRAYBUFFERDATA),
-                "array has to be an object without [[TypedArrayName]] or [[ArrayBufferData]] slots");
-            O = thisArg;
-            var srcArray = array;
-            if (Type(O) != OBJECT || !hasInternalSlot(O, SLOTS.TYPEDARRAYNAME)) return withError(
-                "Type", "this value is no object or has no [[TypedArrayName]] slot"
-            );
-            Assert(hasInternalSlot(O, SLOTS.VIEWEDARRAYBUFFER), "this value has no [[ViewedArrayBuffer]] slot");
-            var constructorName = getInternalSlot(O, SLOTS.TYPEDARRAYNAME);
-            var elementType = TypedArrayElementType[constructorName];
-            var arrayLength = Get(srcArray, "length");
-            if (isAbrupt(arrayLength=ifAbrupt(arrayLength))) return arrayLength;
-            var elementLength = ToLength(arrayLength);
-            if (isAbrupt(elementLength=ifAbrupt(elementLength))) return elementLength;
-            var data = AllocateArrayBuffer(getIntrinsic(INTRINSICS.ARRAYBUFFER));
-            if (isAbrupt(data=ifAbrupt(data))) return data;
-            var elementSize = typedArrayElementSize[elementType];
-            var byteLength = elementSize * elementLength;
-            var status = SetArrayBufferData(data, byteLength);
-            if (isAbrupt(status)) return status;
-            var k = 0;
-            while (k < elementLength) {
-                var Pk = ToString(k);
-                var kValue = Get(srcArray, Pk);
-                var kNumber = ToNumber(k);
-                if (isAbrupt(kNumber=ifAbrupt(kNumber))) return kNumber;
-                SetValueInBuffer(data, k * elementSize, elementType, kNumber);
-                k = k + 1;
-            }
-            if (getInternalSlot(O, SLOTS.VIEWEDARRAYBUFFER) !== undefined) return newTypeError( "the this values [[ViewedArrayBuffer]] may not be initialized here");
-            setInternalSlot(O, SLOTS.VIEWEDARRAYBUFFER, data);
-            setInternalSlot(O, SLOTS.BYTELENGTH, byteLength);
-            setInternalSlot(O, SLOTS.BYTEOFFSET, 0);
-            setInternalSlot(O, SLOTS.ARRAYLENGTH, elementLength);
-            return NormalCompletion(O);
-        } else if ((typedArray = array) instanceof IntegerIndexedExoticObject) {
-            Assert((Type(typedArray) === OBJECT) && hasInternalSlot(typedArray, SLOTS.TYPEDARRAYNAME), "typedArray has to be an object and to have a TypedArrayName slot");
-            var srcArray = typedArray;
-            O = thisArg;
-            if ((Type(O) !== OBJECT) || getInternalSlot(O, SLOTS.TYPEDARRAYNAME)===undefined) return newTypeError( "this value has to be object and to have a defined TypedArrayName slot");
-            Assert(hasInternalSlot(O, SLOTS.VIEWEDARRAYBUFFER), "this value has to have a ViewedArrayBuffer slot");
-            if (getInternalSlot(O, SLOTS.VIEWEDARRAYBUFFER) === undefined) return newTypeError( "ViewedArrayBuffer may not be undefined");
-            var constructorName = getInternalSlot(O, SLOTS.TYPEDARRAYNAME);
-            var elementType = TypedArrayElementType[constructorName];
-            var elementLength = getInternalSlot(srcArray, SLOTS.ARRAYLENGTH);
-            var srcName = getInternalSlot(srcArray, SLOTS.TYPEDARRAYNAME);
-            var srcType = TypedArrayElementType[srcName];
-            var srcElementSize = typedArrayElementSize[srcType];
-            var srcData = getInternalSlot(srcArray, SLOTS.VIEWEDARRAYBUFFER);
-            var srcByteOffset = getInternalSlot(srcArray, SLOTS.BYTEOFFSET);
-            var elementSize = typedArrayElementSize[constructorName];
-            var byteLength = elementSize * elementLength;
-            if (SameValue(elementType, srcType)) {
-                var data = CloneArrayBuffer(srcData, srcByteOffset);
-                if (isAbrupt(data=ifAbrupt(data))) return data;
-            } else {
-                var bufferConstructor = Get(srcBuffer, "constructor");
-                if (isAbrupt(bufferConstructor=ifAbrupt(bufferConstructor))) return bufferConstructor;
-                if (bufferConstructor === undefined) bufferConstructor = getIntrinsic(INTRINSICS.ARRAYBUFFER);
-                var data = AllocateArrayBuffer(bufferConstructor);
-                var status = SetArrayBufferData(data, byteLength);
-                if (isAbrupt(status=ifAbrupt(status))) return status;
-                var srcByteIndex = srcByteOffset;
-                var targetByteIndex = 0;
-                var count = elementLength;
-                while (count > 0) {
-                    var value = GetValueFromBuffer(srcData, srcByteIndex, srcType);
-                    status = SetValueInBuffer(data, targetByteIndex, elementType, value);
-                    srcByteIndex = srcByteIndex + srcElementSize;
-                    targetByteIndex = targetByteIndex + elementSize;
-                    count = count - 1;
-                }
-            }
-            if (getInternalSlot(O, SLOTS.VIEWEDARRAYBUFFER) !== undefined) return newTypeError( "ViewedArrayBuffer may not be defined at this point");
-            setInternalSlot(O, SLOTS.VIEWEDARRAYBUFFER, data);
-            setInternalSlot(O, SLOTS.BYTELENGTH, byteLength);
-            setInternalSlot(O, SLOTS.BYTEOFFSET, 0);
-            setInternalSlot(O, SLOTS.ARRAYLENGTH, elementLength);
-            return NormalCompletion(O);
-        }
-    } else if (typeof (length = array) == "number") {
-        O = thisArg;
-        if (Type(O) !== OBJECT) return newTypeError( "this value is not an object");
-        if (!hasInternalSlot(O, SLOTS.TYPEDARRAYNAME)) return newTypeError( "object has no TypedArrayName property");
-        Assert(hasInternalSlot(O, SLOTS.VIEWEDARRAYBUFFER), "object has to have a ViewedArrayBuffer property");
-        if (getInternalSlot(O, SLOTS.VIEWEDARRAYBUFFER) === undefined) return newTypeError( "object has to have a well defined ViewedArrayBuffer property");
-        constructorName = getInternalSlot(O, SLOTS.TYPEDARRAYNAME);
-        elementType = TypedArrayElementType[constructorName];
-        numberLength = ToNumber(length);
-        elementLength = ToLength(numberLength);
-        if (isAbrupt(elementLength = ifAbrupt(elementLength))) return elementLength;
-        if (SameValueZero(numberLength, elementLength) === false) return newRangeError( "TypedArray: numberLength and elementLength are not equal");
-        data = AllocateArrayBuffer(getIntrinsic(INTRINSICS.ARRAYBUFFER));
-        if (isAbrupt(data = ifAbrupt(data))) return data;
-        elementSize = typedArrayElementSize[elementType];
-        byteLength = elementSize * elementLength;
-        status = SetArrayBufferData(data, byteLength);
-        if (isAbrupt(status = ifAbrupt(status))) return status;
-        setInternalSlot(O, SLOTS.VIEWEDARRAYBUFFER, data);
-        setInternalSlot(O, SLOTS.BYTELENGTH, byteLength);
-        setInternalSlot(O, SLOTS.BYTEOFFSET, 0);
-        setInternalSlot(O, SLOTS.ARRAYLENGTH, elementLength);
-        return NormalCompletion(O);
-    } else {
-        Assert(hasInternalSlot(O, SLOTS.VIEWEDARRAYBUFFER), "O has to have [[ViewedArrayBuffer]]");
-        var buffer = argList[0];
-        var byteOffset = argList[1];
-        if (byteOffset === undefined) byteOffset = 0;
-        length = argList[2];
-        Assert((Type(buffer) === OBJECT) && hasInternalSlot(buffer, SLOTS.ARRAYBUFFERDATA), "buffer has to be an object and to have [[ArrayBufferData]]");
-        O = thisArg;
-        var arrayBufferData = getInternalSlot(buffer, SLOTS.ARRAYBUFFERDATA);
-        if (arrayBufferData === undefined) return newTypeError( "[[ArrayBufferData]] is undefined");
-        if (Type(O) !== OBJECT || !hasInternalSlot(O, SLOTS.TYPEDARRAYNAME)) return newTypeError( "O has to be object and to have [[TypedArrayName]]");
-        var viewedArrayBuffer = getInternalSlot(O, SLOTS.VIEWEDARRAYBUFFER);
-        var typedArrayName = getInternalSlot(O, SLOTS.TYPEDARRAYNAME);
-        if (typedArrayName === undefined) return newTypeError( "O has to have a well defined [[TypedArrayName]]");
-        constructorName = getInternalSlot(O, SLOTS.TYPEDARRAYNAME);
-        elementType = TypedArrayElementType[constructorName];
-        elementSize = typedArrayElementSize[elementType];
-        var offset = ToInteger(byteOffset);
-        if (isAbrupt(offset = ifAbrupt(offset))) return offset;
-        if (offset < 0) return newRangeError( "offset is smaller 0");
-        if ((offset % elementSize) !== 0) return newRangeError( "offset mod elementSize is not 0");
-        var byteBufferLength = getInternalSlot(buffer, SLOTS.ARRAYBUFFERBYTELENGTH);
-        if (offset + elementSize >= byteBufferLength) return newRangeError( "offset + elementSize is >= byteBufferLength");
-        var newByteLength;
-        if (length === undefined) {
-            if (byteBufferLength % elementSize !== 0) return newRangeError( "byteBufferLength mod elementSize is not 0");
-            newByteLength = byteBufferLength + offset;
-            if (newByteLength < 0) return newRangeError( "newByteLength < 0 underflow when adding offset to byteBufferLength");
-        } else {
-            var newLength = ToLength(length);
-            if (isAbrupt(newLength = ifAbrupt(newLength))) return newLength;
-            newByteLength = newLength * elementSize;
-            if (offset + newByteLength > byteBufferLength) return newRangeError( "offset + newByteLength is larger than byteBufferLength");
-        }
-        if (viewedArrayBuffer !== undefined) return newTypeError( "the [[ViewedArrayBuffer]] of O is not empty");
-        setInternalSlot(O, SLOTS.VIEWEDARRAYBUFFER, buffer);
-        setInternalSlot(O, SLOTS.BYTELENGTH, newByteLength);
-        setInternalSlot(O, SLOTS.BYTEOFFSET, offset);
-        setInternalSlot(O, SLOTS.ARRAYLENGTH, Math.floor(newByteLength / elementSize));
-    }
-    return NormalCompletion(O);
-};
-
-var typedArrayPrototypeNames = {
-    "Float64Array": INTRINSICS.FLOAT64ARRAYPROTOTYPE,
-    "Float32Array": INTRINSICS.FLOAT32ARRAYPROTOTYPE,
-    "Int32Array": INTRINSICS.INT32ARRAYPROTOTYPE,
-    "Uint32Array": INTRINSICS.UINT32ARRAYPROTOTYPE,
-    "Int16Array": INTRINSICS.INT16ARRAYPROTOTYPE,
-    "Uint16Array": INTRINSICS.UINT16ARRAYPROTOTYPE,
-    "Int8Array": INTRINSICS.INT8ARRAYPROTOTYPE,
-    "Uint8Array": INTRINSICS.UINT8ARRAYPROTOTYPE,
-    "Uint8Clamped": "%Uint8ClampedArrayProtoype%"
-};
-
-var TypedArrayConstructor_$$create = function $$create(thisArg, argList) {
-    var F = thisArg;
-    if (Type(F) !== OBJECT) return newTypeError( "the this value is not an object");
-    if (!hasInternalSlot(F, SLOTS.TYPEDARRAYCONSTRUCTOR)) return newTypeError( "The this value has no [[TypedArrayConstructor]] property");
-    var proto = GetPrototypeFromConstructor(F, typedArrayPrototypeNames[getInternalSlot(F, SLOTS.TYPEDARRAYCONSTRUCTOR)]);
-    if (isAbrupt(proto = ifAbrupt(proto))) return proto;
-    var obj = IntegerIndexedObjectCreate(proto);
-    setInternalSlot(obj, SLOTS.VIEWEDARRAYBUFFER, undefined);
-    setInternalSlot(obj, SLOTS.TYPEDARRAYNAME, getInternalSlot(F, SLOTS.TYPEDARRAYCONSTRUCTOR));
-    setInternalSlot(obj, SLOTS.BYTELENGTH, 0);
-    setInternalSlot(obj, SLOTS.BYTEOFFSET, 0);
-    setInternalSlot(obj, SLOTS.ARRAYLENGTH, 0);
-    return obj;
-};
-
-var TypedArrayConstructor_from = function from(thisArg, argList) {
-    "use strict";
-    var source = argList[0];
-    var mapfn = argList[1];
-    var tArg = argList[2];
-    var T;
-    var C = thisArg;
-    var newObj;
-    var putStatus;
-    if (!IsConstructor(C)) return newTypeError(format("S_NO_CONSTRUCTOR", "the this value"));
-    var items = ToObject(source);
-    if (isAbrupt(items = ifAbrupt(items))) return items;
-    var mapping;
-    var k;
-    var nextValue, kValue, Pk;
-    if (mapfn === undefined) {
-        mapping = false;
-    } else {
-        if (!IsCallable(mapfn)) return newTypeError(format("S_NOT_CALLABLE", "mapfn"));
-        T = tArg;
-        mapping = true;
-    }
-    var usingIterator = HasProperty(items, $$iterator);
-    if (isAbrupt(usingIterator = ifAbrupt(usingIterator))) return usingIterator;
-    if (usingIterator) {
-        var iterator = Get(items, $$iterator);
-        iterator = unwrap(iterator);
-        var values = [];
-        var next = true;
-        while (next != false) {
-            next = IteratorStept(iterator);
-            if (next !== false) {
-                nextValue = IteratorValue(next);
-                if (isAbrupt(nextValue = ifAbrupt(nextValue))) return nextValue;
-                values.push(nextValue);
-            }
-        }
-        var len = values.length;
-        newObj = callInternalSlot(SLOTS.CONSTRUCT, C, C, [len]);
-        if (isAbrupt(newObj = ifAbrupt(newObj))) return newObj;
-        k = 0;
-        while (k < len) {
-            Pk = ToString(k);
-            kValue = values[k];
-            if (mapping) {
-                mappedValue = callInternalSlot(SLOTS.CALL, mapfn, T, [kValue]);
-                if (isAbrupt(mappedValue = ifAbrupt(mappedValue))) return mappedValue;
-            } else mappedValue = kValue;
-            putStatus = Put(newObj, Pk, mappedValue, true);
-            if (isAbrupt(putStatus)) return putStatus;
-            k = k + 1;
-        }
-        return NormalCompletion(newObj);
-    }
-    Assert(HasProperty(items, "length"), format("EXPECTING_ARRAYLIKE"));
-    var lenValue = Get(items, "length");
-    len = ToLength(lenValue);
-    if (isAbrupt(len = ifAbrupt(len))) return len;
-    newObj = callInternalSlot(SLOTS.CONSTRUCT, C, C, [len]);
-    if (isAbrupt(newObj = ifAbrupt(newObj))) return newObj;
-
-    var mappedValue;
-    k = 0;
-    while (k < len) {
-        Pk = ToString(k);
-        kValue = Get(items, Pk);
-        if (isAbrupt(kValue = ifAbrupt(kValue))) return kValue;
-        if (mapping) {
-            mappedValue = callInternalSlot(SLOTS.CALL, mapfn, T, [kValue, k, items]);
-            if (isAbrupt(mappedValue = ifAbrupt(mappedValue))) return mappedValue;
-        } else {
-            mappedValue = kValue;
-        }
-        putStatus = Put(newObj, Pk, mappedValue, true);
-        if (isAbrupt(putStatus)) return putStatus;
-        k = k + 1;
-    }
-    return NormalCompletion(newObj);
-};
-
-
-var TypedArrayConstructor_of = function of(thisArg, argList) {
-    var items = CreateArrayFromList(argList);
-    var lenValue = Get(items, "length");
-    var len = ToLength(lenValue);
-    if (isAbrupt(len=ifAbrupt(length))) return length;
-    var C = thisArg;
-    if (IsConstructor(C)) {
-        var newObj = callInternalSlot(SLOTS.CONSTRUCT, C, C, [len]);
-        if (isAbrupt(newObj = ifAbrupt(newObj))) return newObj;
-    } else {
-        return newTypeError( "The thisValue has to be a constructor");
-    }
-    var k = 0;
-    var status;
-    var Pk, kValue;
-    while (k < len) {
-        Pk = ToString(k);
-        kValue = Get(items, Pk);
-        //if (isAbrupt(kValue = ifAbrupt(kValue))) return kValue;
-        status = Put(newObj, Pk, kValue, true);
-        if (isAbrupt(status = ifAbrupt(status))) return status;
-        k = k + 1;
-    }
-    return NormalCompletion(newObj);
-};
-
-setInternalSlot(TypedArrayConstructor, SLOTS.CALL, TypedArrayConstructor_Call);
-LazyDefineProperty(TypedArrayConstructor, $$create, CreateBuiltinFunction(realm, TypedArrayConstructor_$$create, 0, "[Symbol.create]"));
-LazyDefineProperty(TypedArrayConstructor, "from", CreateBuiltinFunction(realm, TypedArrayConstructor_from, 1, "from"));
-LazyDefineProperty(TypedArrayConstructor, "of", CreateBuiltinFunction(realm, TypedArrayConstructor_of, 2, "of"));
-
-// ------------------------------------------------------------------------------------------
-// 22.2.6. Typed Array Prototype
-// ------------------------------------------------------------------------------------------
-
-var TypedArrayPrototype_get_byteLength = function (thisArg, argList) {
-    var O = thisArg;
-    if (Type(O) !== OBJECT) return newTypeError( "this value is not an object");
-    if (!hasInternalSlot(O, SLOTS.VIEWEDARRAYBUFFER)) return newTypeError( "has no ViewedArrayBuffer slot");
-    var buffer = getInternalSlot(O, SLOTS.VIEWEDARRAYBUFFER);
-    if (buffer === undefined) return newTypeError( "slot value for viewed array buffer is undefined");
-    var length = getInternalSlot(O, SLOTS.BYTELENGTH);
-    return NormalCompletion(length);
-};
-var TypedArrayPrototype_get_byteOffset = function (thisArg, argList) {
-    var O = thisArg;
-    if (Type(O) !== OBJECT) return newTypeError( "this value is not an object");
-    if (!hasInternalSlot(O, SLOTS.VIEWEDARRAYBUFFER)) return newTypeError( "has no ViewedArrayBuffer slot");
-    var buffer = getInternalSlot(O, SLOTS.VIEWEDARRAYBUFFER);
-    if (buffer === undefined) return newTypeError( "slot value for viewed array buffer is undefined");
-    var offset = getInternalSlot(O, SLOTS.BYTEOFFSET);
-    return NormalCompletion(offset);
-};
-var TypedArrayPrototype_get_buffer = function (thisArg, argList) {
-    var O = thisArg;
-    if (Type(O) !== OBJECT) return newTypeError( "this value is not an object");
-    if (!hasInternalSlot(O, SLOTS.VIEWEDARRAYBUFFER)) return newTypeError( "has no ViewedArrayBuffer slot");
-    var buffer = getInternalSlot(O, SLOTS.VIEWEDARRAYBUFFER);
-    if (buffer === undefined) return newTypeError( "slot value for viewed array buffer is undefined");
-    return NormalCompletion(buffer);
-};
-
-var TypedArrayPrototype_filter = function subarray(thisArg, argList) {
-};
-var TypedArrayPrototype_find = function subarray(thisArg, argList) {
-};
-var TypedArrayPrototype_findIndex = function subarray(thisArg, argList) {
-};
-var TypedArrayPrototype_forEach = function subarray(thisArg, argList) {
-};
-var TypedArrayPrototype_indexOf = function subarray(thisArg, argList) {
-};
-var TypedArrayPrototype_join = function subarray(thisArg, argList) {
-};
-var TypedArrayPrototype_keys = function subarray(thisArg, argList) {
-};
-var TypedArrayPrototype_lastIndexOf = function subarray(thisArg, argList) {
-};
-var TypedArrayPrototype_length = function subarray(thisArg, argList) {
-};
-var TypedArrayPrototype_map = function subarray(thisArg, argList) {
-};
-var TypedArrayPrototype_reduce = function subarray(thisArg, argList) {
-};
-var TypedArrayPrototype_reduceRight = function subarray(thisArg, argList) {
-};
-var TypedArrayPrototype_reverse = function subarray(thisArg, argList) {
-};
-var TypedArrayPrototype_set = function subarray(thisArg, argList) {
-};
-var TypedArrayPrototype_slice = function subarray(thisArg, argList) {
-};
-var TypedArrayPrototype_some = function subarray(thisArg, argList) {
-};
-var TypedArrayPrototype_sort = function subarray(thisArg, argList) {
-};
-
-var TypedArrayPrototype_subarray = function subarray(thisArg, argList) {
-};
-
-
-var TypedArrayPrototype_$$iterator = function iterator(thisArg, argList) {
-    return CreateArrayIterator(thisArg, "value");
-};
-
-// $$toStringTag
-var TypedArrayPrototype_get_$$toStringTag = function get_toStringTag(thisArg, argList) {
-    var O = thisArg;
-    if (Type(O) !== OBJECT) return newTypeError( "the this value is not an object");
-    if (!hasInternalSlot(O, SLOTS.TYPEDARRAYNAME)) return newTypeError( "the this value has no [[TypedArrayName]] slot");
-    var name = getInternalSlot(O, SLOTS.TYPEDARRAYNAME);
-    Assert(Type(name) == STRING, "name has to be a string value");
-    return NormalCompletion(name);
-};
 
 function createTypedArrayPrototype(proto) {
     LazyDefineAccessor(proto, "buffer", CreateBuiltinFunction(realm, TypedArrayPrototype_get_buffer, 0, "get buffer"));
@@ -23607,6 +23622,13 @@ function createTypedArrayVariant(_type, _bpe, _ctor, _proto, ctorName) {
     return _ctor;
 }
 
+
+setInternalSlot(TypedArrayConstructor, SLOTS.CALL, TypedArrayConstructor_Call);
+LazyDefineProperty(TypedArrayConstructor, $$create, CreateBuiltinFunction(realm, TypedArrayConstructor_$$create, 0, "[Symbol.create]"));
+LazyDefineProperty(TypedArrayConstructor, "from", CreateBuiltinFunction(realm, TypedArrayConstructor_from, 1, "from"));
+LazyDefineProperty(TypedArrayConstructor, "of", CreateBuiltinFunction(realm, TypedArrayConstructor_of, 2, "of"));
+
+
 createTypedArrayVariant("Int8", 1, Int8ArrayConstructor, Int8ArrayPrototype, "Int8Array");
 createTypedArrayVariant("Uint8", 1, Uint8ArrayConstructor, Int8ArrayPrototype, "Uint8Array");
 createTypedArrayVariant("Uint8C", 1, Uint8ClampedArrayConstructor, Uint8ClampedArrayPrototype, "Uint8Clamped");
@@ -23616,6 +23638,7 @@ createTypedArrayVariant("Int32", 4, Int32ArrayConstructor, Int32ArrayPrototype, 
 createTypedArrayVariant("Uint32", 4, Uint32ArrayConstructor, Uint32ArrayPrototype, "Uint32Array");
 createTypedArrayVariant("Float32", 8, Float32ArrayConstructor, Float32ArrayPrototype, "Float32Array");
 createTypedArrayVariant("Float64", 8, Float64ArrayConstructor, Float64ArrayPrototype, "Float64Array");
+
 
 
 // ===========================================================================================================
@@ -24965,7 +24988,6 @@ LazyDefineBuiltinFunction(VMObject, "heap", 1, VMObject_heap);
     exports.newEvalError = newEvalError;
     exports.newURIError = newURIError;
     exports.newReferenceError = newReferenceError;
-    exports.TypedArrayFrom = TypedArrayFrom;
     // my own definitions between the ecma stuff
     exports.SetFunctionLength = SetFunctionLength;
     exports.LazyDefineProperty = LazyDefineProperty;
