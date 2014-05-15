@@ -9751,28 +9751,16 @@ var MathObject_clz = function (thisArg, argList) {
     return NormalCompletion(p);
 };
 
-/**
- * Created by root on 31.03.14.
- */
-
-// ===========================================================================================================
-// Assert
-// ===========================================================================================================
-
 function Assert(act, message) {
-    var cx, node;
+    //var cx;
     if (!act) {
-        if (cx = getContext()) {
-            node = cx.state.node;
-        }
-        if (node) {
-            var loc = node.loc;
-            if (loc) {
-                var line = loc.start.line;
-                var col = loc.start.column;
-            }
-        }
-        throw new Error("Assertion failed: " + message + " (at: line " + line + ", column " + col + ")");
+        /* if (cx = getContext()) {
+
+                var line = cx.line;
+                var col = cx.column;
+                throw new Error("Assertion failed: " + message + " (at: line " + line + ", column " + col + ")");
+        }*/
+        throw new Error("Assertion failed: " + message);
     }
 }
 
@@ -11379,6 +11367,7 @@ function Type(O) {
 }
 
 var EnvironmentType = {
+    __proto__:null,
   "[object ObjectEnvironment]":true,
   "[object DeclarativeEnvironment]": true,
   "[object FunctionEnvironment]": true,
@@ -11474,9 +11463,6 @@ var toInt8View = new Int8Array(1);
 var toUint8View = new Uint8Array(1);
 var toUint8ClampView = new Uint8ClampedArray(1);
 
-/*
-    soon i know how to cast better ;-)
-*/
 
 function ToInt8(V) {
     var view = new Int8Array(1);
@@ -11488,26 +11474,32 @@ function ToUint8(V) {
 function ToUint8Clamp(V) {
     return toUint8ClampView[0] = V;
 }
+
 function ToUint16(V) {
     var number = ToNumber(V);
-    if (isAbrupt(number = ifAbrupt(number))) return number;
+    //if (isAbrupt(number = ifAbrupt(number))) return number;
+    if (isAbrupt(number)) return number;
     if (ReturnZero[number]) return +0;
     var int = sign(number) * floor(abs(number));
     var int16bit = int % (Math.pow(2, 16));
-    return int16Bit;
+ //   return NormalCompletion(int16Bit);
+    return int16bit;
 }
 function ToInt32(V) {
     var number = ToNumber(V);
-    if (isAbrupt(number = ifAbrupt(number))) return number;
+    //if (isAbrupt(number = ifAbrupt(number))) return number;
+    if (isAbrupt(number)) return number;
     if (ReturnZero[number]) return +0;
     var int = sign(number) * floor(abs(number));
     var int32bit = int % (Math.pow(2, 32));
-    if (int >= (Math.pow(2, 31))) return int32bit - (Math.pow(2, 32));
+    if (int >= (Math.pow(2, 31))) return NormalCompletion(int32bit - (Math.pow(2, 32)));
+    //return NormalCompletion(int32bit);
     return int32bit;
 }
 function ToUint32(V) {
     var number = ToNumber(V);
-    if (isAbrupt(number = ifAbrupt(number))) return number;
+    //if (isAbrupt(number = ifAbrupt(number))) return number;
+    if (isAbrupt(number)) return number;
     if (ReturnZero[number]) return +0;
     return number >>> 0;
     //var int = sign(number) * floor(abs(number));
@@ -11516,15 +11508,18 @@ function ToUint32(V) {
 }
 function ToInteger(V) {
     var number = ToNumber(V);
-    if (isAbrupt(number = ifAbrupt(number))) return number;
+    //if (isAbrupt(number = ifAbrupt(number))) return number;
+    if (isAbrupt(number)) return number;
     if (ReturnNaN[number]) return +0;
     if (ReturnNum[number]) return number;
     // return sign(number) * floor(abs(number));
+    //return NormalCompletion(number|0);
     return number|0;
 }
 function ToLength(V) {
     var len = ToInteger(V);
-    if (isAbrupt(len = ifAbrupt(len))) return len;
+    //if (isAbrupt(len = ifAbrupt(len))) return len;
+    if (isAbrupt(len)) return len;
     if (len <= 0) return Completion("normal", 0, "");
     return Completion("normal", min(len, (Math.pow(2, 53)) - 1), "");
 }
@@ -11541,7 +11536,6 @@ function ToBoolean(V) {
     if (typeof V === "number") {
         return !(V === +0 || V === -0 || V !== V);
     }
-
     if (type === STRING) V = thisStringValue(V);
     if (typeof V === "string") {
         return !(V === "" || V.length === 0);
@@ -11565,6 +11559,7 @@ function ToNumber(V) {
         return ToNumber(primVal);
     }
     return +V;
+    //return NormalCompletion(+V);
 }
 function ToString(V) {
     var t;
@@ -11615,10 +11610,8 @@ function ToObject(V) {
     // return V;
 }
 function CheckObjectCoercible(argument) {
-
     if (argument instanceof CompletionRecord) return CheckObjectCoercible(argument.value);
     else if (argument === undefined) return newTypeError(format("UNDEFINED_NOT_COERCIBLE"));
-
     else if (argument === null) return newTypeError(format("NULL_NOT_COERCIBLE"));
 
     var type = Type(argument);
@@ -11644,6 +11637,7 @@ function CanonicalNumericString (argument) {
     if (SameValue(ToString(n), argument) === false) return undefined;
     return n;
 }
+
 /**
  * Created by root on 31.03.14.
  */
@@ -32351,29 +32345,33 @@ define("syntaxjs-shell", function (require, exports) {
     var VERSION = "0.0.1";
     var syntaxjs_public_api_readonly = {
     // essential functions
+	note: pdmacro("Use realm = syntaxjs.createRealm() and realm.eval*(*) instead of the syntaxjs.eval*(*) functions."),
         version: pdmacro(VERSION),
         define: pdmacro(define),
         require: pdmacro(require),
         Promise: pdmacro(makePromise),
-        tokenizeIntoArrayWithWhiteSpaces: pdmacro(require("tokenizer").tokenizeIntoArrayWithWhiteSpaces),
-        tokenizeIntoArray: pdmacro(require("tokenizer").tokenizeIntoArray),
-	    tokenize: pdmacro(require("tokenizer")),// <-- needs exports fixed
+        tokenize: pdmacro(require("tokenizer")),// <-- needs exports fixed
         parse: pdmacro(require("parser")),// <-- needs exports fixed
         parseGoal: pdmacro(require("parser").parseGoal),
-        eval: pdmacro(require("runtime")),// <-- needs exports fixed
         createRealm: pdmacro(require("api").createPublicCodeRealm),
         toJsLang: pdmacro(require("js-codegen")),// <-- needs exports fixed
-
-    // or is it a bridge? pattern mania continues
-
+        
+        tokenizeIntoArrayWithWhiteSpaces: pdmacro(require("tokenizer").tokenizeIntoArrayWithWhiteSpaces),
+        tokenizeIntoArray: pdmacro(require("tokenizer").tokenizeIntoArray),
+        eval: pdmacro(require("runtime")),// <-- needs exports fixed
         makeAdapter: pdmacro(require("filesystem").makeAdapter),
-
-    // experimental functions
-
         readFile: pdmacro(require("filesystem").readFile),	
         readFileSync: pdmacro(require("filesystem").readFileSync),
-
   // put into filesystem.js please
+    /*
+	i willl remove them for
+	
+	realm = syntaxjs.createRealm();
+	realm.eval(code);
+	realm.evalAsync(code, callback, errback);
+
+	realm.evalByteCode(code); // just begun - experimental
+    */
         evalFile: pdmacro(function (name, callback, errback) {
             var syntaxjs = this;
             return this.readFile(name, function (code) {
@@ -32385,37 +32383,26 @@ define("syntaxjs-shell", function (require, exports) {
         evalFileSync: pdmacro(function (name) {
             return this.eval(this.readFileSync(name));
         }),
-
         evalStaticXform: pdmacro(require("runtime").ExecuteAsyncStaticXform),
         evalAsync: pdmacro(require("runtime").ExecuteAsync),
         evalAsyncXform: pdmacro(require("runtime").ExecuteAsyncTransform)
-        // arraycompile: pdmacro(require("arraycompiler").compile)
     };
     
     var syntaxjs_highlighter_api = {
         highlight: pdmacro(require("highlight"))
     };
     
-    // 1. The following block sets a property on syntaxjs
-    // telling, which "system" has been detected (currently, only poorly "browser, node, worker" are supported, doesn´t work in spidermonkey or nashorn)
-    // 2. the public properties are defined with defineProperties.
-    // in the browser block the highlighter app is added 
-    
     if (typeof window == "undefined" && typeof self !== "undefined" && typeof importScripts !== "undefined") {
-    // worker export
         syntaxjs.system = "worker";
         syntaxjs_public_api_readonly.subscribeWorker = pdmacro(require("syntaxjs-worker").subscribeWorker);
 
     } else if (typeof window !== "undefined") {
-    // browser export
         syntaxjs.system = "browser";
         syntaxjs_public_api_readonly.subscribeWorker = pdmacro(require("syntaxjs-worker").subscribeWorker);
         syntaxjs_highlighter_api.highlightElements = pdmacro(require("highlight-gui").highlightElements);
         syntaxjs_highlighter_api.startHighlighterOnLoad = pdmacro(require("highlight-gui").startHighlighterOnLoad);
 
     } else if (typeof process !== "undefined") {
-    // node js export
-
         if (typeof exports !== "undefined") exports.syntaxjs = syntaxjs;
         syntaxjs.system = "node";
         syntaxjs_public_api_readonly.nodeShell = pdmacro(require("syntaxjs-shell"));// <-- needs exports fixed
@@ -32428,7 +32415,6 @@ define("syntaxjs-shell", function (require, exports) {
         if (typeof exports !== "undefined") exports.syntaxjs = syntaxjs;
     }
 
-    // ASSIGN properties to a SYNTAXJS object (all platforms)
     Object.defineProperties(syntaxjs, syntaxjs_public_api_readonly);
     Object.defineProperties(syntaxjs, syntaxjs_highlighter_api);
 
