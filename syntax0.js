@@ -9327,6 +9327,7 @@ exports.CreateSelfHostingFunction = CreateSelfHostingFunction;
 exports.LazyDefineSelfHostingFunction = LazyDefineSelfHostingFunction;
 
 var SLOTS = Object.create(null);
+
 // Object Properties
 SLOTS.BINDINGS = "Bindings";
 SLOTS.SYMBOLS = "Symbols";
@@ -9466,7 +9467,7 @@ SLOTS.ARRAYDESCRIPTOR = "ArrayDescriptor";
 SLOTS.OPAQUEDESCRIPTOR = "OpaqueDescriptor";
 // Structured Clones
 SLOTS.TRANSFER = "Transfer";
-SLOTS.ONSUCCESSFULTRANSFER = "OnSuccessfulTransfer";
+SLOTS.ONSUCCESSTRANSFER = "OnSuccessTransfer";
 
 
 
@@ -18186,7 +18187,7 @@ function StructuredClone (input, transferList, targetRealm) {
         var mapping = memory[i];
         transferResult = mapping.output;
         transferable = mapping.input;
-        var OnSuccessTransfer = getInternalSlot(transferable, "OnSuccessTransfer");
+        var OnSuccessTransfer = getInternalSlot(transferable, SLOTS.ONSUCCESSTRANSFER);
         callInternalSlot(SLOTS.CALL, OnSuccessTransfer, transferable, [transferResult, targetRealm]);
     }
     return NormalCompletion(clone);
@@ -18698,7 +18699,7 @@ function reflect_parse_transformASTtoOrdinaries(node, options) {
     var value;
     for (var k in node) {
         if (!loc && k === "loc") continue;
-        if (Object.hasOwnProperty.call(node, k)) {
+        if (objectHasOwnProperty(node, k)) {
             current = node[k];
             if (current && typeof current === "object") {
                 value = reflect_parse_transformASTtoOrdinaries(current);
@@ -19567,6 +19568,28 @@ var MapConstructor_$$create = function $$create(thisArg, argList) {
  * Created by root on 15.05.14.
  */
 
+function CreateMapIterator(map, kind) {
+    var M = ToObject(map);
+    if (isAbrupt(M = ifAbrupt(M))) return M;
+    if (!hasInternalSlot(M, SLOTS.MAPDATA)) return newTypeError( "object has no internal MapData slot");
+    var entries = getInternalSlot(M, SLOTS.MAPDATA);
+    var MapIteratorPrototype = Get(getIntrinsics(), INTRINSICS.MAPITERATORPROTOTYPE);
+    var iterator = ObjectCreate(MapIteratorPrototype, [
+        SLOTS.MAP,
+        SLOTS.MAPNEXTINDEX,
+        SLOTS.MAPITERATIONKIND
+    ]);
+    setInternalSlot(iterator, SLOTS.MAP, entries);
+    setInternalSlot(iterator, SLOTS.MAPNEXTINDEX, 0);
+    setInternalSlot(iterator, SLOTS.MAPITERATIONKIND, kind);
+    return iterator;
+}
+
+
+/**
+ * Created by root on 15.05.14.
+ */
+
 var SetConstructor_call = function Call(thisArg, argList) {
     var iterable = argList[0];
     var comparator = argList[1];
@@ -19687,6 +19710,44 @@ var SetPrototype_forEach = function (thisArg, argList) {
 
 };
 
+
+
+/**
+ * Created by root on 15.05.14.
+ */
+/**
+ *
+ * @param set
+ * @param kind
+ * @returns {*}
+ * @constructor
+ */
+function CreateSetIterator(set, kind) {
+    var S = ToObject(set);
+    if (isAbrupt(S = ifAbrupt(S))) return S;
+    if (!hasInternalSlot(S, SLOTS.SETDATA)) return newTypeError( "object has no internal SetData slot");
+    var origEntries = getInternalSlot(S, SLOTS.SETDATA);
+    var SetIteratorPrototype = getIntrinsic(INTRINSICS.SETITERATORPROTOTYPE);
+    var iterator = ObjectCreate(SetIteratorPrototype,
+        [
+            SLOTS.ITERATEDSET,
+            SLOTS.SETNEXTINDEX,
+            SLOTS.SETITERATIONKIND
+        ]
+    );
+    /* price of creating my es5 iterator is a pre-run of O(n) to
+     translate the set into some array (currently)
+     */
+    var entries = [];
+    for (var keys in origEntries) entries.push(origEntries[keys]);
+    /*
+
+     */
+    setInternalSlot(iterator, SLOTS.ITERATEDSET, entries);
+    setInternalSlot(iterator, SLOTS.SETNEXTINDEX, 0);
+    setInternalSlot(iterator, SLOTS.SETITERATIONKIND, kind);
+    return iterator;
+}
 
 
 
