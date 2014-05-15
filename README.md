@@ -15,6 +15,30 @@ the destructuring to a LeftHandSideExpression Target is not completed, plus
 a few little things inside which make the program fail in running itself with
 node syntax0.js syntax0.js. But of course, later, they will be available, too.
 
+Latest ES7 piece of a feature
+=============================
+
+I added the const class and freeze the constructor, the prototype, and the instance
+with SetIntegrityLevel(O, "frozen"). That´s all so far about defensible classes from me.
+But there is more about in the strawman. E.g. public and private. 
+
+```js
+es6> const class C { method() { return 10; }
+// shows class
+es6> let c = new C
+undefined
+es6> c.a = 10;
+10
+es6> c.a
+undefined
+es6> c.method()
+10
+es6> c.method = null;
+null
+es6> c.method()
+10
+```
+
 Running a file
 ==============
 

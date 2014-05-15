@@ -27822,6 +27822,9 @@ define("runtime", function () {
         }
         MakeConstructor(F, false, Proto);
 
+	if (isConst) {
+	    SetIntegrityLevel(Proto, "frozen");
+	}
         setInternalSlot(F, SLOTS.CONSTRUCT, function (argList) {
             var O = OrdinaryConstruct(this, argList);
             if (isConst) {
