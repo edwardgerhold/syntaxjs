@@ -21270,6 +21270,19 @@ var JSONObject_stringify = function (thisArg, argList) {
     return NormalCompletion(result);
 };
 
+/**
+ * Created by root on 16.05.14.
+ */
+
+var EscapeFunction_call = function (thisArg, argList) {
+    return escape(argList[0]);
+};
+
+var UnescapeFunction_call = function (thisArg, argList) {
+    return unescape(argList[0]);
+};
+
+
 
     var createGlobalThis, createIntrinsics;
 
@@ -22910,7 +22923,7 @@ LazyDefineBuiltinFunction(SymbolFunction, "for", 1, SymbolFunction_for);
 LazyDefineBuiltinConstant(SymbolFunction, "isConcatSpreadable", $$isConcatSpreadable);
 LazyDefineBuiltinConstant(SymbolFunction, "isRegExp", $$isRegExp);
 LazyDefineBuiltinConstant(SymbolFunction, "iterator", $$iterator);
-LazyDefineBuiltinFunction(SymbolFunction, "keyFor", 1, SymbolFunction_keyFor /* ,realm */);
+LazyDefineBuiltinFunction(SymbolFunction, "keyFor", 1, SymbolFunction_keyFor);
 LazyDefineBuiltinConstant(SymbolFunction, "prototype", SymbolPrototype);
 LazyDefineBuiltinConstant(SymbolFunction, "hasInstance", $$hasInstance);
 LazyDefineBuiltinConstant(SymbolFunction, "toPrimitive", $$toPrimitive);
@@ -23491,17 +23504,8 @@ setInternalSlot(DecodeURIFunction, SLOTS.CALL, DecodeURIFunction_call);
 setInternalSlot(DecodeURIComponentFunction, SLOTS.CALL, DecodeURIComponentFunction_call);
 
 
-// ===========================================================================================================
-// escape, unescape
-// ===========================================================================================================
-
-setInternalSlot(EscapeFunction, SLOTS.CALL, function (thisArg, argList) {
-    return escape(argList[0]);
-});
-
-setInternalSlot(UnescapeFunction, SLOTS.CALL, function (thisArg, argList) {
-    return unescape(argList[0]);
-});
+setInternalSlot(EscapeFunction, SLOTS.CALL, EscapeFunction_call);
+setInternalSlot(UnescapeFunction, SLOTS.CALL, UnescapeFunction_call);
 
 
 setInternalSlot(ParseIntFunction, SLOTS.CALL, ParseIntFunction_call);
@@ -24268,7 +24272,7 @@ var VMObject_eval = function (thisArg, argList) {
     var realm = argList[1];
     var realmObject;
     if (realm === undefined) realmObject = getRealm();
-    else if (!(realmObject = getInternalSlot(realm, "RealmObject"))) return newTypeError( "Sorry, only realm objects are accepted as realm object");
+    else if (!(realmObject = getInternalSlot(realm, SLOTS.REALMOBJECT))) return newTypeError( "Sorry, only realm objects are accepted as realm object");
     return require("vm").CompileAndRun(realmObject, code);
 };
 
