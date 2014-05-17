@@ -13069,12 +13069,10 @@ var FunctionPrototype_valueOf = function valueOf(thisArg, argList) {
 };
 
 var FunctionConstructor_call = function (thisArg, argList) {
-
     var argCount = argList.length;
     var P = "";
     var bodyText;
     var firstArg, nextArg;
-
     if (argCount === 0) bodyText = "";
     else if (argCount === 1) bodyText = argList[0];
     else if (argCount > 1) {
@@ -13091,13 +13089,10 @@ var FunctionConstructor_call = function (thisArg, argList) {
         }
         bodyText = argList[argCount - 1];
     }
-
     bodyText = ToString(bodyText);
     if (isAbrupt(bodyText = ifAbrupt(bodyText))) return bodyText;
     var parameters = parseGoal("FormalParameterList", P); // () sind fehlerhaft bei
     var funcBody = parseGoal("FunctionBody", bodyText);
-
-
     /* old and from july draf */
     var boundNames = BoundNames(parameters);
     if (!IsSimpleParameterList(parameters)) {
@@ -13105,7 +13100,6 @@ var FunctionConstructor_call = function (thisArg, argList) {
     }
     if (dupesInTheTwoLists(boundNames, LexicallyDeclaredNames(funcBody))) return newSyntaxError( "Duplicate Identifier in Parameters and LexicallyDeclaredNames of funcBody");
     /* one of the few edge cases to recall static semantics */
-
     var scope = getRealm().globalEnv;
     var F = thisArg;
     if (F === undefined || !hasInternalSlot(F, SLOTS.CODE)) {
@@ -13114,7 +13108,6 @@ var FunctionConstructor_call = function (thisArg, argList) {
         if (isAbrupt(proto = ifAbrupt(proto))) return proto;
         F = FunctionAllocate(C);
     }
-
     if (getInternalSlot(F, SLOTS.FUNCTIONKIND) !== "normal") return newTypeError( "function object not a 'normal' function");
     FunctionInitialize(F, "normal", parameters, funcBody, scope, true);
     proto = ObjectCreate();
@@ -13122,7 +13115,6 @@ var FunctionConstructor_call = function (thisArg, argList) {
     if (isAbrupt(status)) return status;
     SetFunctionName(F, "anonymous");
     return NormalCompletion(F);
-
 };
 
 var FunctionConstructor_construct = function (argList) {
@@ -23524,11 +23516,14 @@ LazyDefineBuiltinFunction(ObjectConstructor, "unobserve", 1, ObjectConstructor_u
 LazyDefineBuiltinFunction(ObjectConstructor, "deliverChangeRecords", 1, ObjectConstructor_deliverChangeRecords);
 LazyDefineBuiltinFunction(ObjectConstructor, "getNotifier", 1, ObjectConstructor_getNotifier);
 MakeConstructor(FunctionConstructor, true, FunctionPrototype);
+
 setInternalSlot(FunctionPrototype, SLOTS.PROTOTYPE, ObjectPrototype);
 LazyDefineProperty(FunctionPrototype, $$toStringTag, "Function");
 LazyDefineBuiltinFunction(FunctionPrototype, "valueOf", 0, FunctionPrototype_valueOf);
-setInternalSlot(FunctionConstructor, SLOTS.CALL, FunctionPrototype_call);
+
+setInternalSlot(FunctionConstructor, SLOTS.CALL, FunctionConstructor_call);
 setInternalSlot(FunctionConstructor, SLOTS.CONSTRUCT, FunctionConstructor_construct);
+
 LazyDefineProperty(FunctionConstructor, $$create, CreateBuiltinFunction(realm, FunctionConstructor_$$create, 1, "[Symbol.create]"));
 LazyDefineProperty(FunctionPrototype, $$create, CreateBuiltinFunction(realm, FunctionPrototype_$$create, 1, "[Symbol.create]"));
 LazyDefineProperty(FunctionPrototype, "constructor", FunctionConstructor);
