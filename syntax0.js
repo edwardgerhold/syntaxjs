@@ -4460,7 +4460,7 @@ define("tokenizer", function () {
         line = 1;
         column = 1;
         pos = -1;
-        length = sourceCode.length;
+        length = (sourceCode&&sourceCode.length)|0;
         ch = undefined;
         lookahead = sourceCode[0];
         next();
@@ -7528,7 +7528,7 @@ define("parser", function () {
         pos = -1;
         lookPos = 0;
         token = t = v = undefined;
-        tokenArrayLength = tokens.length;
+        tokenArrayLength = (tokens&&tokens.length)|0;
         ast = null;
         loc = lastloc = undefined;
         currentNode = undefined;
@@ -9451,7 +9451,8 @@ SLOTS.TRANSFER = "Transfer";
 SLOTS.ONSUCCESSTRANSFER = "OnSuccessTransfer";
 
 
-
+SLOTS.WRAPPEDOBJECT = "Wrapped";
+SLOTS.NATIVETHIS    = "NativeThis"
 Object.freeze(SLOTS); // DOES A FREEZE HELP OPTIMIZING? The pointers can´t change anymore, or?
 
 /**
@@ -12791,7 +12792,7 @@ function SetFunctionName(F, name, prefix) {
         configurable: false
     });
     if (isAbrupt(success = ifAbrupt(success))) return success;
-    if (success === false) return newTypeError( "Sorry, can not set name property of a non function");
+    if (success === false) return newTypeError( "Sorry, can not set the f.name property");
     return NormalCompletion(undefined);
 }
 
@@ -13038,9 +13039,9 @@ var FunctionPrototype_bind = function (thisArg, argList) {
 
 var FunctionPrototype_call = function (thisArg, argList) {
     var func = thisArg;
-    if (!IsCallable(func)) return newTypeError( "fproto.call: func is not callable");
+    if (!IsCallable(func)) return newTypeError("fproto.call: func is not callable");
     var T = ToObject(argList[0]);
-    var args = arraySlice(argList,1);
+    var args = arraySlice(argList, 1);
     return callInternalSlot(SLOTS.CALL, func, T, args);
 };
 
@@ -13067,7 +13068,7 @@ var FunctionPrototype_valueOf = function valueOf(thisArg, argList) {
     return thisArg;
 };
 
-var FunctionPrototype_call = function (thisArg, argList) {
+var FunctionConstructor_call = function (thisArg, argList) {
 
     var argCount = argList.length;
     var P = "";
@@ -16376,7 +16377,7 @@ var TypedArrayPrototype_get_$$toStringTag = function get_toStringTag(thisArg, ar
 function NativeJSObjectWrapper(object) {
     if (object instanceof NativeJSObjectWrapper || object instanceof NativeJSFunctionWrapper) return object;
     var O = Object.create(NativeJSObjectWrapper.prototype);
-    setInternalSlot(O, "Wrapped", object);
+    setInternalSlot(O, SLOTS.WRAPPEDOBJECT, object);
     setInternalSlot(O, SLOTS.BINDINGS, Object.create(null));
     setInternalSlot(O, SLOTS.SYMBOLS, Object.create(null));
     setInternalSlot(O, SLOTS.PROTOTYPE, getIntrinsic(INTRINSICS.OBJECTPROTOTYPE));
@@ -16387,10 +16388,10 @@ NativeJSObjectWrapper.prototype = {
     constructor: NativeJSObjectWrapper,
     type: "object",
     toString: function () {
-        return "[object EddiesDOMObjectWrapper]";
+        return "[object NativeJSObjectWrapper]";
     },
     Get: function (P) {
-        var o = this.Wrapped;
+        var o = getInternalSlot(this, SLOTS.WRAPPEDOBJECT);
         var p = o[P];
         if (typeof p === "object" && p) {
             return NativeJSObjectWrapper(p);
@@ -16400,12 +16401,12 @@ NativeJSObjectWrapper.prototype = {
         return p;
     },
     Set: function (P, V, R) {
-        var o = this.Wrapped;
+        var o = getInternalSlot(this, SLOTS.WRAPPEDOBJECT);
         return o[P] = V;
     },
     Invoke: function (P, argList, Rcv) {
         var f;
-        var o = this.Wrapped;
+        var o = getInternalSlot(this, SLOTS.WRAPPEDOBJECT);
         Rcv = Rcv || this;
 
         if ((f = this.Get(P)) && (typeof f === "function")) {
@@ -16422,40 +16423,40 @@ NativeJSObjectWrapper.prototype = {
         }
     },
     Delete: function (P) {
-        var o = this.Wrapped;
+        var o = getInternalSlot(this, SLOTS.WRAPPEDOBJECT);
         return (delete o[P]);
     },
     DefineOwnProperty: function (P, D) {
-        return Object.defineProperty(this.Wrapped, P, D);
+        return Object.defineProperty(getInternalSlot(this, SLOTS.WRAPPEDOBJECT), P, D);
     },
     GetOwnProperty: function (P) {
-        return Object.getOwnPropertyDescriptor(this.Wrapped, P);
+        return Object.getOwnPropertyDescriptor(getInternalSlot(this, SLOTS.WRAPPEDOBJECT), P);
     },
     HasProperty: function (P) {
-        return !!(P in this.Wrapped);
+        return !!(P in getInternalSlot(this, SLOTS.WRAPPEDOBJECT));
     },
     HasOwnProperty: function (P) {
-        var o = this.Wrapped;
+        var o = getInternalSlot(this, SLOTS.WRAPPEDOBJECT);
         return Object.hasOwnProperty.call(o, P);
     },
     GetPrototypeOf: function () {
-        var o = this.Wrapped;
+        var o = getInternalSlot(this, SLOTS.WRAPPEDOBJECT);
         return Object.getPrototypeOf(o);
     },
     SetPrototypeOf: function (P) {
-        var o = this.Wrapped;
+        var o = getInternalSlot(this, SLOTS.WRAPPEDOBJECT);
         return (o.__proto__ = P);
     },
     IsExtensible: function () {
-        var o = this.Wrapped;
+        var o = getInternalSlot(this, SLOTS.WRAPPEDOBJECT);
         return Object.isExtensible(o);
     }
 };
 
 function NativeJSFunctionWrapper(func, that) {
     var F = Object.create(NativeJSFunctionWrapper.prototype);
-    setInternalSlot(F, "Wrapped", func);
-    setInternalSlot(F, "NativeThis", that);
+    setInternalSlot(F, SLOTS.WRAPPEDOBJECT, func);
+    setInternalSlot(F, SLOTS.NATIVETHIS, that);
     setInternalSlot(F, SLOTS.BINDINGS, Object.create(null));
     setInternalSlot(F, SLOTS.SYMBOLS, Object.create(null));
     setInternalSlot(F, SLOTS.PROTOTYPE, getIntrinsic(INTRINSICS.FUNCTIONPROTOTYPE));
@@ -16464,19 +16465,24 @@ function NativeJSFunctionWrapper(func, that) {
 }
 NativeJSFunctionWrapper.prototype = {
     constructor: NativeJSFunctionWrapper,
-
     toString: function () {
-        return "[object EddiesDOMFunctionWrapper]";
+        return "[object NativeJSFunctionWrapper]";
     },
     Call: function (thisArg, argList) {
-
-        var f = this.Wrapped;
+        var f = getInternalSlot(this, SLOTS.WRAPPEDOBJECT);
         var that = this.NativeThis;
-        console.log("arglist");
-        console.dir(argList);
         var result = f.apply(that, argList);
-        
-        
+        if (typeof result === "object" && result) {
+            result = NativeJSObjectWrapper(result);
+        } else if (typeof result === "function") {
+            result = NativeJSFunctionWrapper(result, that);
+        }
+        return NormalCompletion(result);
+    },
+    Construct: function (argList) {
+        var f = getInternalSlot(this, SLOTS.WRAPPEDOBJECT);
+        var that = this.NativeThis;
+        var result = f.apply(that, argList);
         if (typeof result === "object" && result) {
             result = NativeJSObjectWrapper(result);
         } else if (typeof result === "function") {
@@ -27492,7 +27498,7 @@ define("runtime", function () {
         }
         // //debug("Evaluate(" + node.type + ")");
         if (E = evaluation[node.type]) {
-            tellContext(node);
+     //       tellContext(node);
             // tellExecutionContext(node, 0);
             R = E(node, a, b, c);
             // untellExecutionContext();
