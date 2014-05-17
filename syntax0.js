@@ -9294,6 +9294,17 @@ function LazyDefineSelfHostingFunction(O, name, arity, fproto, e, w, c) {
 exports.CreateSelfHostingFunction = CreateSelfHostingFunction;
 exports.LazyDefineSelfHostingFunction = LazyDefineSelfHostingFunction;
 
+
+
+var VMObject_eval = function (thisArg, argList) {
+    var code = argList[0];
+    var realm = argList[1];
+    var realmObject;
+    if (realm === undefined) realmObject = getRealm();
+    else if (!(realmObject = getInternalSlot(realm, SLOTS.REALMOBJECT))) return newTypeError( "Sorry, only realm objects are accepted as realm object");
+    return require("vm").CompileAndRun(realmObject, code);
+};
+
 var SLOTS = Object.create(null);
 
 // Object Properties
@@ -13721,6 +13732,840 @@ var ArrayPrototype_values = function (thisArg, argList) {
     return CreateArrayIterator(O, "value");
 };
 
+var ArrayConstructor_$$create = function $$create(thisArg, argList) {
+    var F = thisArg;
+    var proto = GetPrototypeFromConstructor(F, INTRINSICS.ARRAYPROTOTYPE);
+    if (isAbrupt(proto = ifAbrupt(proto))) return proto;
+    var obj = ArrayCreate(undefined, proto);
+    return obj;
+};
+var ArrayConstructor_isArray = function (thisArg, argList) {
+    var arg = GetValue(argList[0]);
+    return IsArray(arg);
+};
+
+var ArrayConstructor_of = function (thisArg, argList) {
+    var items = CreateArrayFromList(argList);
+    var lenValue = Get(items, "length");
+    var C = thisArg;
+    var newObj;
+    var A;
+    var len = ToInteger(lenValue);
+    if (IsConstructor(C)) {
+        newObj = OrdinaryConstruct(C, [len]);
+        A = ToObject(newObj);
+    } else {
+        A = ArrayCreate(len);
+    }
+    if (isAbrupt(A = ifAbrupt(A))) return A;
+    var k = 0;
+    var Pk, kValue, defineStatus, putStatus;
+    while (k < len) {
+        Pk = ToString(k);
+        kValue = Get(items, Pk);
+        defineStatus = DefineOwnPropertyOrThrow(A, Pk, {
+            value: kValue,
+            writable: true,
+            configurable: true,
+            enumerable: true
+        });
+        if (isAbrupt(defineStatus)) return defineStatus;
+        k = k + 1;
+    }
+    putStatus = Put(A, "length", len, true);
+    if (isAbrupt(putStatus)) return putStatus;
+    return NormalCompletion(A);
+
+};
+
+var ArrayConstructor_from  = function from(thisArg, argList) {
+    var C = thisArg;
+    var arrayLike = argList[0];
+    var mapfn = argList[1];
+    var thisArg2 = argList[2];
+    var T;
+    var items = ToObject(arrayLike);
+    var mapping = false;
+    var len, lenValue;
+    var k;
+    var iterator;
+    var done, Pk, kValue, defineStatus, putStatus, kPresent, mappedValue;
+    var newObj, A;
+    if (isAbrupt(items = ifAbrupt(items))) return items;
+    if (mapfn == undefined) {
+        mapping = true;
+    } else {
+        if (!IsCallable(mapfn)) return newTypeError(format("S_NOT_CALLABLE"), "Array.from: mapfn");
+        if (thisArg2) T = thisArg2;
+        else T = undefined;
+        mapping = true;
+
+    }
+    var usingIterator = HasProperty(items, $$iterator);
+
+    var next, nextValue;
+    if (usingIterator) {
+        iterator = GetIterator(items);
+        if (IsConstructor(C)) {
+            newObj = OrdinaryConstruct(C, []);
+            A = ToObject(newObj);
+        } else {
+            A = ArrayCreate(0);
+        }
+        while (!done) {
+
+            Pk = ToString(k);
+            next = IteratorNext(iterator);
+            if (isAbrupt(next)) return next;
+            next = ifAbrupt(next);
+            done = IteratorComplete(next);
+            if (isAbrupt(done)) return done;
+            done = ifAbrupt(done);
+            if (done) {
+
+            }
+            nextValue = IteratorValue(next);
+            if (isAbrupt(nextValue)) return nextValue;
+            nextValue = ifAbrupt(nextValue);
+            if (mapping) {
+                mappedValue = mapfn.Call(T, [nextValue]);
+                if (isAbrupt(mappedValue)) return mappedValue;
+                mappedValue = ifAbrupt(mappedValue);
+
+            } else mappedValue = nextValue;
+
+            defineStatus = DefineOwnPropertyOrThrow(A, Pk, {
+                value: mappedValue,
+                writable: true,
+                enumberable: true,
+                configurable: true
+            });
+
+            if (isAbrupt(defineStatus)) return defineStatus;
+
+            k = k + 1;
+        }
+
+    } else {
+
+        // Assert(items is array like and no iterator)
+        lenValue = Get(items, "length");
+        len = ToInteger(lenValue);
+        if (isAbrupt(len)) return len;
+        if (IsConstructor(C)) {
+            newObj = OrdinaryConstruct(C, [len]);
+            A = ToObject(newObj);
+        } else {
+            A = ArrayCreate(len);
+        }
+        k = 0;
+        while (k < len) {
+            Pk = ToString(k);
+            kPresent = HasProperty(items, Pk);
+            if (isAbrupt(kPresent)) return kPresent;
+            if (kPresent) {
+                kValue = Get(items, Pk);
+                if (isAbrupt(kValue = ifAbrupt(kValue))) return kValue;
+                if (mapping) {
+                    mappedValue = mapfn.Call(T, [kValue, k, items]);
+                    if (isAbrupt(mappedValue = ifAbrupt(mappedValue))) return mappedValue;
+                    defineStatus = DefineOwnPropertyOrThrow(A, Pk, {
+                        value: mappedValue,
+                        writable: true,
+                        configurable: true,
+                        enumerable: true
+                    });
+
+                } else mappedValue = kValue;
+
+            }
+            k = k + 1;
+        }
+
+    }
+    putStatus = Put(A, "length", len, true);
+    if (isAbrupt(putStatus)) return putStatus;
+    return NormalCompletion(A);
+};
+
+var ArrayPrototype_toString = function toString(thisArg, argList) {
+    var array = ToObject(thisArg);
+    if (isAbrupt(array = ifAbrupt(array))) return array;
+    array = GetValue(array);
+    var func = Get(array, "join");
+    if (isAbrupt(func = ifAbrupt(func))) return func;
+    if (!IsCallable(func)) func = Get(ObjectPrototype, "toString");
+    return callInternalSlot(SLOTS.CALL, func, array, []);
+};
+
+
+function IsConcatSpreadable(O) {
+    if (Type(O) !== OBJECT) return false;
+    if (isAbrupt(O)) return O;
+    var spreadable = Get(O, $$isConcatSpreadable);
+    if (isAbrupt(spreadable = ifAbrupt(spreadable))) return spreadable;
+    if (spreadable !== undefined) return ToBoolean(spreadable);
+    return O instanceof ArrayExoticObject;
+}
+
+var ArrayPrototype_concat = function (thisArg, argList) {
+    var O = ToObject(thisArg);
+    if (isAbrupt(O=ifAbrupt(O))) return O;
+    var A = undefined;
+    if (IsArray(O)) {
+        var C = Get(O, "constructor");
+        if (isAbrupt(C=isAbrupt(C))) return C;
+        if (IsConstructor(C)) {
+            var thisRealm = getRealm();
+            if (thisRealm === getInternalSlot(C, SLOTS.REALM)) {
+                A =  callInternalSlot(SLOTS.CONSTRUCT, C, [0]);
+                if (isAbrupt(A=ifAbrupt(A))) return A;
+            }
+        }
+    }
+    if (A === undefined) {
+        A = ArrayCreate(0);
+        if (isAbrupt(A=ifAbrupt(A))) return A;
+    }
+    var n = 0;
+    var items = [O].concat(argList);
+    var i = 0;
+    var status;
+    while (i < items.length) {
+        var E = items[i];
+        var spreadable = IsConcatSpreadable(E);
+        if (spreadable) {
+            var k = 0;
+            var lenVal = Get(E, "length");
+            var len = ToLength(lenVal);
+            if (isAbrupt(len=ifAbrupt(len))) return len;
+            while (k < len) {
+                var P = ToString(k);
+                var exists = HasProperty(E, P);
+                if (isAbrupt(exists=ifAbrupt(exists))) return exists;
+                if (exists) {
+                    var subElement = Get(E, P);
+                    if (isAbrupt(subElement=ifAbrupt(subElement))) return subElement;
+                    status = CreateDataPropertyOrThrow(A, ToString(n), subElement);
+                    if (isAbrupt(status)) return status;
+                }
+                n = n + 1;
+                k = k + 1;
+            }
+        } else  {
+            status = CreateDataPropertyOrThrow(A, ToString(n), E);
+            if (isAbrupt(status=ifAbrupt(status))) return status;
+            n = n + 1;
+        }
+        i = i + 1;
+    }
+    var putStatus = Put(A, "length", n, true);
+    if (isAbrupt(putStatus)) return putStatus;
+    return NormalCompletion(A);
+};
+
+var ArrayPrototype_join = function join(thisArg, argList) {
+    var O = ToObject(thisArg);
+    if (isAbrupt(O = ifAbrupt(O))) return O;
+    var separator = argList[0];
+    var lenVal = Get(O, "length");
+    var len = ToUint32(lenVal);
+    if (isAbrupt(len = ifAbrupt(len))) return len;
+    if (separator === undefined) separator = ",";
+    var sep = ToString(separator);
+    if (len === 0) return NormalCompletion("");
+    var element0 = Get(O, "0");
+    var R;
+    if (element0 === undefined) R = "";
+    else R = ToString(element0);
+    var k = 1;
+    while (k < len) {
+        var S = R + sep;
+        var element = Get(O, ToString(k));
+        var next;
+        if (element === undefined || element === null) next = "";
+        else next = ToString(element);
+        if (isAbrupt(next = ifAbrupt(next))) return next;
+        R = S + next;
+        k = k + 1;
+    }
+    return NormalCompletion(R);
+};
+
+
+var ArrayPrototype_pop = function pop(thisArg, argList) {
+    var O = ToObject(thisArg);
+    if (isAbrupt(O = ifAbrupt(O))) return O;
+    var lenVal = Get(O, "length");
+    var len = ToUint32(lenVal);
+    if (isAbrupt(len = ifAbrupt(len))) return len;
+    var putStatus, deleteStatus;
+    if (len === 0) {
+        putStatus = Put(O, "length", 0, true);
+        if (isAbrupt(putStatus = ifAbrupt(putStatus))) return putStatus;
+        return undefined;
+    } else {
+        var newLen = len - 1;
+        var index = ToString(newLen);
+        var element = Get(O, index);
+        if (isAbrupt(element = ifAbrupt(element))) return element;
+        deleteStatus = DeletePropertyOrThrow(O, index);
+        if (isAbrupt(deleteStatus = ifAbrupt(deleteStatus))) return deleteStatus;
+        putStatus = Put(O, "length", newLen, true);
+        if (isAbrupt(putStatus = ifAbrupt(putStatus))) return putStatus;
+        return NormalCompletion(element);
+    }
+};
+var ArrayPrototype_push = function push(thisArg, argList) {
+    var O = ToObject(thisArg);
+    if (isAbrupt(O = ifAbrupt(O))) return O;
+    var lenVal = Get(O, "length");
+    var n = ToUint32(lenVal);
+    if (isAbrupt(n = ifAbrupt(n))) return n;
+    var items = argList;
+    var E, putStatus;
+    for (var i = 0, j = items.length; i < j; i++) {
+        E = items[i];
+        putStatus = Put(O, ToString(n), E, true);
+        if (isAbrupt(putStatus = ifAbrupt(putStatus))) return putStatus;
+        n = n + 1;
+    }
+    putStatus = Put(O, "length", n, true);
+    if (isAbrupt(putStatus = ifAbrupt(putStatus))) return putStatus;
+    return NormalCompletion(n);
+};
+
+var ArrayPrototype_reverse = function reverse(thisArg, argList) {
+    var O = ToObject(thisArg);
+    if (isAbrupt(O = ifAbrupt(O))) return O;
+    var lenVal = Get(O, "length");
+    var len = ToUint32(lenVal);
+    if (isAbrupt(len = ifAbrupt(len))) return len;
+    var middle = Math.floor(len / 2);
+    var lower = 0;
+    var putStatus;
+    var deleteStatus;
+    while (lower < middle) {
+        var upper = len - lower - 1;
+        var upperP = ToString(upper);
+        var lowerP = ToString(lower);
+        var lowerValue = Get(O, lowerP);
+        if (isAbrupt(lowerValue = ifAbrupt(lowerValue))) return lowerValue;
+        var upperValue = Get(O, upperP);
+        if (isAbrupt(upperValue = ifAbrupt(upperValue))) return upperValue;
+        var lowerExists = HasProperty(O, lowerP);
+        if (isAbrupt(lowerExists = ifAbrupt(lowerExists))) return lowerExists;
+        var upperExists = HasProperty(O, upperP);
+        if (isAbrupt(upperExists = ifAbrupt(upperExists))) return upperExists;
+        if (lowerExists === true && upperExists === true) {
+            putStatus = Put(O, lowerP, upperValue, true);
+            if (isAbrupt(putStatus = ifAbrupt(putStatus))) return putStatus;
+            putStatus = Put(O, upperP, lowerValue, true);
+            if (isAbrupt(putStatus = ifAbrupt(putStatus))) return putStatus;
+
+        } else if (lowerExists === false && upperExists === true) {
+
+            putStatus = Put(O, lowerP, upperValue, true);
+            if (isAbrupt(putStatus = ifAbrupt(putStatus))) return putStatus;
+            deleteStatus = DeletePropertyOrThrow(O, upperP);
+            if (isAbrupt(deleteStatus = ifAbrupt(deleteStatus))) return deleteStatus;
+
+        } else if (lowerExists === true && upperExists === false) {
+
+            deleteStatus = DeletePropertyOrThrow(O, lowerP);
+            if (isAbrupt(deleteStatus = ifAbrupt(deleteStatus))) return deleteStatus;
+            putStatus = Put(O, upperP, lowerValue, true);
+            if (isAbrupt(putStatus = ifAbrupt(putStatus))) return putStatus;
+
+        }
+
+        lower = lower + 1;
+    }
+    return NormalCompletion(O);
+};
+
+
+var ArrayPrototype_entries = function entries(thisArg, argList) {
+    var O = ToObject(thisArg);
+    if (isAbrupt(O)) return O;
+    return CreateArrayIterator(O, "key+value");
+};
+
+var ArrayPrototype_keys = function keys(thisArg, argList) {
+    var O = ToObject(thisArg);
+    if (isAbrupt(O)) return O;
+    return CreateArrayIterator(O, "key");
+};
+
+var ArrayPrototype_$$iterator = function $$iterator(thisArg, argList) {
+    var O = ToObject(thisArg);
+    if (isAbrupt(O = ifAbrupt(O))) return O;
+    return CreateArrayIterator(O, "value");
+};
+
+var ArrayPrototype_shift = function shift(thisArg, argList) {
+    var O = ToObject(thisArg);
+    if (isAbrupt(O = ifAbrupt(O))) return O;
+    var lenVal = Get(O, "length");
+    var len = ToUint32(lenVal);
+    if (isAbrupt(len = ifAbrupt(len))) return len;
+    /*
+
+     hey, where is the rest?
+
+     i implemented this function, i am 100% sure
+
+     */
+};
+
+var ArrayPrototype_slice = function slice(thisArg, argList) {
+    var start = argList[0];
+    var end = argList[1];
+    var O = ToObject(thisArg);
+    var A = ArrayCreate(0);
+    if (isAbrupt(O = ifAbrupt(O))) return O;
+    var lenVal = Get(O, "length");
+    var len = ToUint32(lenVal);
+    if (isAbrupt(len = ifAbrupt(len))) return len;
+
+    var relativeStart = ToInteger(start);
+    if (isAbrupt(relativeStart = ifAbrupt(relativeStart))) return relativeStart;
+
+    var k;
+    if (relativeStart < 0) k = max((len + relativeStart), 0);
+    else k = min(relativeStart, len);
+    var relativeEnd;
+    if (end === undefined) relativeEnd = len;
+    else relativeEnd = ToInteger(end);
+    if (isAbrupt(relativeEnd = ifAbrupt(relativeEnd))) return relativeEnd;
+    var final;
+    if (relativeEnd < 0) final = max((len + relativeEnd), 0);
+    else final = min(relativeEnd, len);
+    var n = 0;
+    var putStatus, status;
+    while (k < final) {
+        var Pk = ToString(k);
+        var kPresent = HasProperty(O, Pk);
+        if (isAbrupt(kPresent = ifAbrupt(kPresent))) return kPresent;
+        if (kPresent) {
+            var kValue = Get(O, Pk);
+            if (isAbrupt(kValue = ifAbrupt(kValue))) return kValue;
+            status = CreateDataProperty(A, ToString(n), kValue);
+            if (isAbrupt(status)) return status;
+            if (status === false) return newTypeError(format("CREATEDATAPROPERTY_FAILED"));
+        }
+        k = k + 1;
+        n = n + 1;
+    }
+    putStatus = Put(A, "length", n, true);
+    if (isAbrupt(putStatus)) return putStatus;
+    return NormalCompletion(A);
+};
+
+var ArrayPrototype_sort = function sort(thisArg, argList) {
+    var O = ToObject(thisArg);
+    if (isAbrupt(O = ifAbrupt(O))) return O;
+    var lenVal = Get(O, "length");
+    var len = ToUint32(lenVal);
+    if (isAbrupt(len = ifAbrupt(len))) return len;
+
+};
+
+
+
+var ArrayPrototype_splice = function splice(thisArg, argList) {
+    var start = argList[0];
+    var deleteCount = argList[1];
+    var items = arraySlice(argList, 2);
+    var O = ToObject(thisArg);
+    if (isAbrupt(O = ifAbrupt(O))) return O;
+    var lenVal = Get(O, "length");
+    var len = ToLength(lenVal);
+    if (isAbrupt(len = ifAbrupt(len))) return len;
+    var relativeStart = ToInteger(start);
+    if (isAbrupt(relativeStart = ifAbrupt(relativeStart))) return relativeStart;
+    var actualStart;
+    if (relativeStart < 0) actualStart = max((len+relativeStart),0);
+    else actualStart=min(relativeStart,len);
+    if (start === undefined) {
+        var actualDeleteCount = 0;
+    } else if (deleteCount === undefined) {
+        actualDeleteCount = len - actualStart;
+    } else {
+        var dc = ToInteger(deleteCount);
+        if (isAbrupt(dc = ifAbrupt(dc))) return dc;
+        actualDeleteCount = min(max(dc, 0), len - actualStart);
+    }
+    var A = undefined;
+    if (IsArray(O)) {
+        var C = Get(O, "constructor");
+        if (isAbrupt(C = ifAbrupt(C))) return C;
+        if (IsConstructor(C) === true) {
+            var thisRealm = getRealm();
+            if (SameValue(thisRealm, getInternalSlot(C, SLOTS.REALM))) {
+                A = callInternalSlot(SLOTS.CONSTRUCT, [actualDeleteCount]);
+            }
+        }
+    }
+    if (A === undefined) {
+        A = ArrayCreate(actualDeleteCount);
+    }
+    if (isAbrupt(A = ifAbrupt(A))) return A;
+    var k = 0;
+    while (k < actualDeleteCount) {
+        var from = ToString(actualStart + k);
+        var fromPresent = HasProperty(O, from);
+        if (isAbrupt(fromPresent = ifAbrupt(fromPresent))) return fromPresent;
+        if (fromPresent === true) {
+            var fromValue = Get(O, from);
+            if (isAbrupt(fromValue = ifAbrupt(fromValue))) return fromValue;
+            var status = CreateDataPropertyOrThrow(A, ToString(k), fromValue);
+            if (isAbrupt(status)) return status;
+        }
+        k = k + 1;
+    }
+    var putStatus = Put(A, "length", actualDeleteCount, true);
+    if (isAbrupt(putStatus)) return putStatus;
+    var itemCount = items.length;
+    if (itemCount < actualDeleteCount) {
+        k = actualStart;
+        while (k < (len - actualDeleteCount)) {
+            from = ToString(k+actualDeleteCount);
+            var to = ToString(k+itemCount);
+            fromPresent = HasProperty(O, from);
+            if (isAbrupt(fromPresent = ifAbrupt(fromPresent))) return fromPresent;
+            if (fromPresent  === true) {
+                fromValue = Get(O, from);
+                if (isAbrupt(fromValue = ifAbrupt(fromValue))) return fromValue;
+                putStatus = Put(O, to, fromValue, true);
+                if (isAbrupt(putStatus)) return putStatus;
+
+            } else {
+                var deleteStatus = DeletePropertyOrThrow(O, to);
+                if (isAbrupt(deleteStatus)) return deleteStatus;
+            }
+            k = k + 1;
+        }
+    } else if (itemCount > actualDeleteCount) {
+        k = len - actualDeleteCount;
+        while (k < actualStart) {
+            from = ToString(k + actualDeleteCount - 1);
+            to = ToString(k + itemCount - 1);
+            fromPresent = HasProperty(O, from);
+            if (fromPresent === true) {
+                fromValue = Get(O, from);
+                if (isAbrupt(fromValue = ifAbrupt(fromValue))) return fromValue;
+                putStatus = Put(O, to, fromValue, true);
+                if (isAbrupt(putStatus)) return putStatus;
+            } else {
+                deleteStatus = DeletePropertyOrThrow(O, to);
+                if (isAbrupt(deleteStatus)) return deleteStatus;
+            }
+            k = k - 1;
+        }
+    }
+    k = actualStart;
+    var l = 0;
+    while (k < actualStart) {
+        var E = items[l];
+        putStatus = Put(O, ToString(k), E, true);
+        l = l + 1;
+        k = k + 1;
+        if (isAbrupt(putStatus)) return putStatus;
+    }
+    putStatus = Put(O, "length", len - actualDeleteCount + itemCount, true);
+    if (isAbrupt(putStatus)) return putStatus;
+    return NormalCompletion(A);
+};
+
+var ArrayPrototype_indexOf = function indexOf(thisArg, argList) {
+    var O = ToObject(thisArg);
+    if (isAbrupt(O = ifAbrupt(O))) return O;
+    var searchElement = argList[0];
+    var fromIndex = argList[1];
+    var lenValue = Get(O, "length");
+    var len = ToUint32(lenValue);
+    if (isAbrupt(len = ifAbrupt(len))) return len;
+    var n;
+    var k;
+    if (fromIndex !== undefined) n = ToInteger(fromIndex);
+    else n = 0;
+    if (isAbrupt(n = ifAbrupt(n))) return n;
+    if (len === 0) return -1;
+    if (n >= 0) k = n;
+    else {
+        k = len - abs(n);
+        if (k < 0) k = 0;
+    }
+    while (k < len) {
+        var Pk = ToString(k);
+        var kPresent = HasProperty(O, Pk);
+        if (isAbrupt(kPresent = ifAbrupt(kPresent))) return kPresent;
+        if (kPresent) {
+            var elementK = Get(O, Pk);
+            if (isAbrupt(elementK = ifAbrupt(elementK))) return elementK;
+            /* Replace mit Strict EQ Abstract Op */
+            var same = (searchElement === elementK);
+            if (same) return NormalCompletion(k);
+        }
+        k = k + 1;
+    }
+    return NormalCompletion(-1);
+};
+var ArrayPrototype_lastIndexOf = function lastIndexOf(thisArg, argList) {
+    var O = ToObject(thisArg);
+    if (isAbrupt(O = ifAbrupt(O))) return O;
+    var searchElement = argList[0];
+    var fromIndex = argList[1];
+    var lenValue = Get(O, "length");
+    var len = ToUint32(lenValue);
+    if (isAbrupt(len = ifAbrupt(len))) return len;
+    var n;
+    var k;
+    if (len === 0) return -1;
+    if (fromIndex !== undefined) n = ToInteger(fromIndex);
+    else n = len - 1;
+    if (isAbrupt(n = ifAbrupt(n))) return n;
+    if (n >= 0) k = min(n, len - 1);
+    else {
+        k = len - abs(n);
+    }
+    while (k > 0) {
+        var Pk = ToString(k);
+        var kPresent = HasProperty(O, Pk);
+        if (isAbrupt(kPresent = ifAbrupt(kPresent))) return kPresent;
+        if (kPresent) {
+            var elementK = Get(O, Pk);
+            if (isAbrupt(elementK = ifAbrupt(elementK))) return elementK;
+            /* Replace mit Strict EQ Abstract Op */
+            var same = (searchElement === elementK);
+            if (same) return NormalCompletion(k);
+        }
+        k = k - 1;
+    }
+    return NormalCompletion(-1);
+
+};
+var ArrayPrototype_forEach = function forEach(thisArg, argList) {
+    var callback = argList[0];
+    var T = argList[1];
+    var O = ToObject(thisArg);
+    if (isAbrupt(O = ifAbrupt(O))) return O;
+    var lenVal = Get(O, "length");
+    var len = ToUint32(lenVal);
+    if (isAbrupt(len = ifAbrupt(len))) return len;
+    if (!IsCallable(callback)) return newTypeError(format("S_NOT_CALLABLE", "forEach: callback"));
+    if (argList.length < 2) T = undefined;
+    var k = 0;
+    while (k < len) {
+        var Pk = ToString(k);
+        var kPresent = HasProperty(O, Pk);
+        if (isAbrupt(kPresent = ifAbrupt(kPresent))) return kPresent;
+        if (kPresent) {
+            var kValue = Get(O, Pk);
+            if (isAbrupt(kValue = ifAbrupt(kValue))) return kValue;
+            var funcResult = callInternalSlot(SLOTS.CALL, callback, T, [kValue, k, O]);
+            if (isAbrupt(funcResult)) return funcResult;
+        }
+        k = k + 1;
+    }
+    return NormalCompletion(undefined);
+};
+var ArrayPrototype_map = function map(thisArg, argList) {
+
+    var callback = argList[0];
+    var T = argList[1];
+    var O = ToObject(thisArg);
+    if (isAbrupt(O = ifAbrupt(O))) return O;
+    var lenVal = Get(O, "length");
+    var len = ToUint32(lenVal);
+    if (!IsCallable(callback)) return newTypeError(format("S_NOT_CALLABLE", "map: callback"));
+    if (argList.length < 2) T = undefined;
+    var k = 0;
+    var A = ArrayCreate(len);
+    while (k < len) {
+        var Pk = ToString(k);
+        var kPresent = HasProperty(O, Pk);
+        if (isAbrupt(kPresent = ifAbrupt(kPresent))) return kPresent;
+        if (kPresent) {
+            var kValue = Get(O, Pk);
+            if (isAbrupt(kValue = ifAbrupt(kValue))) return kValue;
+            var mappedValue = callInternalSlot(SLOTS.CALL, callback, T, [kValue, k, O]);
+            if (isAbrupt(mappedValue = ifAbrupt(mappedValue))) return mappedValue;
+            callInternalSlot(SLOTS.DEFINEOWNPROPERTY, A, Pk, {
+                value: mappedValue,
+                writable: true,
+                enumerable: true,
+                configurable: true
+            });
+        }
+        k = k + 1;
+    }
+    return NormalCompletion(A);
+};
+var ArrayPrototype_filter = function filter(thisArg, argList) {
+
+    var callback = argList[0];
+    var T = argList[1];
+    var O = ToObject(thisArg);
+    if (isAbrupt(O = ifAbrupt(O))) return O;
+    var lenVal = Get(O, "length");
+    var len = ToUint32(lenVal);
+    if (!IsCallable(callback)) return newTypeError(format("S_NOT_CALLABLE", "filter: callback"));
+    if (argList.length < 2) T = undefined;
+    var k = 0;
+    var to = 0;
+    var A = ArrayCreate(len);
+    while (k < len) {
+        var Pk = ToString(k);
+        var kPresent = HasProperty(O, Pk);
+        if (isAbrupt(kPresent = ifAbrupt(kPresent))) return kPresent;
+        if (kPresent) {
+            var kValue = Get(O, Pk);
+            if (isAbrupt(kValue = ifAbrupt(kValue))) return kValue;
+
+            var selected = callInternalSlot(SLOTS.CALL, callback, T, [kValue, k, O]);
+            if (isAbrupt(selected = ifAbrupt(selected))) return selected;
+            if (ToBoolean(selected) === true) {
+
+                A.DefineOwnProperty(ToString(to), {
+                    value: kValue,
+                    writable: true,
+                    enumerable: true,
+                    configurable: true
+                });
+                to = to + 1;
+            }
+        }
+        k = k + 1;
+    }
+    return NormalCompletion(A);
+};
+var ArrayPrototype_every = function every(thisArg, argList) {
+    var callback = argList[0];
+    var T = argList[1];
+    var O = ToObject(thisArg);
+    if (isAbrupt(O = ifAbrupt(O))) return O;
+    var lenVal = Get(O, "length");
+    var len = ToUint32(lenVal);
+    if (!IsCallable(callback)) return newTypeError(format("S_NOT_CALLABLE", "every: callback"));
+    if (argList.length < 2) T = undefined;
+    var k = 0;
+    while (k < len) {
+        var Pk = ToString(k);
+        var kPresent = HasProperty(O, Pk);
+        if (isAbrupt(kPresent = ifAbrupt(kPresent))) return kPresent;
+        if (kPresent) {
+            var kValue = Get(O, Pk);
+            if (isAbrupt(kValue = ifAbrupt(kValue))) return kValue;
+            var testResult = callInternalSlot(SLOTS.CALL, callback, T, [kValue, k, O]);
+            if (isAbrupt(testResult = ifAbrupt(testResult))) return testResult;
+            if (ToBoolean(testResult) === false) return NormalCompletion(false);
+        }
+        k = k + 1;
+    }
+    return NormalCompletion(true);
+};
+var ArrayPrototype_some = function some(thisArg, argList) {
+    var callback = argList[0];
+    var T = argList[1];
+    var O = ToObject(thisArg);
+    if (isAbrupt(O = ifAbrupt(O))) return O;
+    var lenVal = Get(O, "length");
+    var len = ToUint32(lenVal);
+    if (!IsCallable(callback)) return newTypeError(format("S_NOT_CALLABLE", "some: callback"));
+    if (argList.length < 2) T = undefined;
+    var k = 0;
+    while (k < len) {
+        var Pk = ToString(k);
+        var kPresent = HasProperty(O, Pk);
+        if (isAbrupt(kPresent = ifAbrupt(kPresent))) return kPresent;
+        if (kPresent) {
+            var kValue = Get(O, Pk);
+            if (isAbrupt(kValue = ifAbrupt(kValue))) return kValue;
+            var testResult = callInternalSlot(SLOTS.CALL, callback, T, [kValue, k, O]);
+            if (isAbrupt(testResult = ifAbrupt(testResult))) return testResult;
+            if (ToBoolean(testResult) === true) return NormalCompletion(true);
+        }
+        k = k + 1;
+    }
+    return NormalCompletion(false);
+};
+
+/**
+ * Created by root on 17.05.14.
+ */
+
+var ArrayIteratorPrototype_$$iterator = function (thisArg, argList) {
+    return thisArg;
+};
+
+var ArrayIteratorPrototype_next = function (thisArg, argList) {
+    var O = thisArg;
+    if (Type(O) !== OBJECT) return newTypeError( "ArrayIterator.prototype.next: O is not an object. ");
+
+    if (!hasInternalSlot(O, SLOTS.ITERATEDOBJECT) || !hasInternalSlot(O, SLOTS.ARRAYITERATIONNEXTINDEX) || !hasInternalSlot(O, SLOTS.ARRAYITERATIONKIND)) {
+        return newTypeError( "Object has not all ArrayIterator properties.");
+    }
+
+    var a = getInternalSlot(O, SLOTS.ITERATEDOBJECT);
+    var index = getInternalSlot(O, SLOTS.ARRAYITERATIONNEXTINDEX);
+    var itemKind = getInternalSlot(O, SLOTS.ARRAYITERATIONKIND);
+    var lenValue = Get(a, "length");
+    var len = ToUint32(lenValue);
+    var elementKey, found, result, elementValue;
+    if (isAbrupt(len = ifAbrupt(len))) return len;
+    if ((/sparse/).test(itemKind)) {
+        var found = false;
+        while (!found && (index < len)) {
+            elementKey = ToString(index);
+            found = HasProperty(a, elementKey);
+            if (isAbrupt(found)) return found;
+            if (!(found = ifAbrupt(found))) index = index + 1;
+        }
+    }
+    if (index >= len) {
+        setInternalSlot(O, SLOTS.ARRAYITERATIONNEXTINDEX, +Infinity);
+        return CreateItrResultObject(undefined, true);
+    }
+    elementKey = ToString(index);
+    setInternalSlot(O, SLOTS.ARRAYITERATIONNEXTINDEX, index + 1);
+
+    if (itemKind === "key+value") {
+        elementValue = Get(a, elementKey);
+        if (isAbrupt(elementValue = ifAbrupt(elementValue))) return elementValue;
+
+        result = ArrayCreate(2);
+        callInternalSlot(SLOTS.DEFINEOWNPROPERTY, result, "0", {
+            value: elementKey,
+            writable: true,
+            enumerable: true,
+            configurable: true
+        });
+        callInternalSlot(SLOTS.DEFINEOWNPROPERTY, result, "1", {
+            value: elementValue,
+            writable: true,
+            enumerable: true,
+            configurable: true
+        });
+        callInternalSlot(SLOTS.DEFINEOWNPROPERTY, result, "length", {
+            value: 2,
+            writable: true,
+            eumerable: false,
+            configurable: false
+        });
+        return CreateItrResultObject(result, false);
+
+    } else if (itemKind === "value") {
+        elementValue = Get(a, elementKey);
+        if (isAbrupt(elementValue = ifAbrupt(elementValue))) return elementValue;
+        return CreateItrResultObject(elementValue, false);
+    } else if (itemKind === "key") {
+        return CreateItrResultObject(elementKey, false);
+    }
+
+};
+
 function ArrayExoticObject(proto) {
     var A = Object.create(ArrayExoticObject.prototype);
     setInternalSlot(A, SLOTS.BINDINGS,Object.create(null));
@@ -14089,6 +14934,203 @@ function WeekDay (t) {
     return ((Day(t) + 4) % 7);
 }
 
+
+var DateConstructor_call = function (thisArg, argList) {
+    var O = thisArg;
+    var numberOfArgs = argList.length;
+    var y, m, dt, h, min, milli, finalDate;
+    if (numberOfArgs >= 2) {
+        var year = argList[0];
+        var month = argList[1];
+        var date = argList[2];
+        var hours = argList[3];
+        var minutes = argList[4];
+        var seconds = argList[5];
+        var ms = argList[6];
+        if (Type(O) === OBJECT
+            && hasInternalSlot(O, SLOTS.DATEVALUE)
+            && (getInternalSlot(O, SLOTS.DATEVALUE) === undefined)) {
+
+            y = ToNumber(year);
+            if (isAbrupt(y)) return y;
+            m = ToNumber(month);
+            if (isAbrupt(m)) return m;
+            if (date) dt = ToNumber(date);
+            else dt = 1;
+            if (isAbrupt(dt)) return dt;
+            if (hours) h = ToNumber(hours);
+            else h = 0;
+            if (minutes) min = ToNumber(minutes);
+            else min = 0;
+            if (isAbrupt(min)) return min;
+            if (ms) milli = ToNumber(ms);
+            else milli = 0;
+            if (isAbrupt(milli)) return milli;
+            finalDate = MakeDate(MakeDay(y, m, dt), MakeTime(h, min, s, milli));
+            setInternalSlot(O, SLOTS.DATEVALUE, TimeClip(UTC(finalDate)));
+        }
+        return O;
+    } else if (numberOfArgs === 1) {
+        var value = argList[0];
+        var tv, v;
+        if (Type(O) === OBJECT && hasInternalSlot(O, SLOTS.DATEVALUE) && getInternalSlot(O, SLOTS.DATEVALUE) === undefined) {
+            if (Type(value) === OBJECT && hasInternalSlot(value, SLOTS.DATEVALUE)) tv = thisTimeValue(value);
+            else {
+                v = ToPrimitive(value);
+                if (Type(v) === STRING) {
+                    tv = Invoke(DateConstructor, "parse", [v])
+                } else {
+                    tv = ToNumber(v);
+                }
+            }
+            if (isAbrupt(tv = ifAbrupt(tv))) return tv;
+            setInternalSlot(O, SLOTS.DATEVALUE, TimeClip(tv));
+            return O;
+        }
+    } else if (numberOfArgs === 0) {
+        if (Type(O) === OBJECT && hasInternalSlot(O, SLOTS.DATEVALUE) && getInternalSlot(O, SLOTS.DATEVALUE) === undefined) {
+            setInternalSlot(O, SLOTS.DATEVALUE, Date.now()/*TimeClip(UTC(Date.now()))*/);
+            return O;
+        }
+    } else {
+        O = OrdinaryConstruct(DateConstructor, []);
+        return Invoke(O, "toString", []);
+    }
+};
+
+var DateConstructor_construct = function (thisArg, argList) {
+    return OrdinaryConstruct(this, argList);
+};
+
+var DateConstructor_parse = function (thisArg, argList) {
+    var string = ToString(argList[0]);
+};
+/*
+
+ i got a job for me
+
+ write the date parser.
+
+ maybe a regex is sufficient here and can capture all groups easily
+
+ */
+var DateConstructor_now = function (thisArg, argList) {
+    return NormalCompletion(Date.now());
+};
+
+var DateConstructor_$$create = function (thisArg, argList) {
+    var obj = OrdinaryCreateFromConstructor(DateConstructor, INTRINSICS.DATEPROTOTYPE, [
+        SLOTS.DATEVALUE
+    ]);
+    return obj;
+};
+
+var DatePrototype_getDate = function (thisArg, argList) {
+    var t = thisTimeValue(thisArg);
+    if (isAbrupt(t)) return t;
+    if (t !== t) return NaN;
+    return DateFromTime(LocalTime(t));
+};
+
+var DatePrototype_getDay = function (thisArg, argList) {
+    var t = thisTimeValue(thisArg);
+    if (isAbrupt(t)) return t;
+    if (t !== t) return NaN;
+    return WeekDay(LocalTime(t));
+};
+
+var DatePrototype_getFullYear = function (thisArg, argList) {
+    var t = thisTimeValue(thisArg);
+    if (isAbrupt(t)) return t;
+    if (t !== t) return NaN;
+    return YearFromTime(LocalTime(t));
+};
+var DatePrototype_setDate = function (thisArg, argList) {
+    var date = argList[0];
+    var t = LocalTime(thisTimeValue(thisArg));
+    var newDate = MakeDate(MakeDay(YearFromTime(t), MonthFromTime(t), dt), TimeWithinDay(t));
+    var u = TimeClip(UTC(newDate));
+    setInternalSlot(thisArg, SLOTS.DATEVALUE, u);
+    return u;
+};
+var DatePrototype_getHours = function (thisArg, argList) {
+    var t = thisTimeValue(thisArg);
+    if (isAbrupt(t)) return t;
+    if (t !== t) return NaN;
+    return HourFromTime(LocalTime(t));
+};
+var DatePrototype_getMinutes = function (thisArg, argList) {
+    var t = thisTimeValue(thisArg);
+    if (isAbrupt(t)) return t;
+    if (t !== t) return NaN;
+    return MinFromTime(LocalTime(t));
+};
+
+var DatePrototype_getMonth = function (thisArg, argList) {
+    var t = thisTimeValue(thisArg);
+    if (isAbrupt(t)) return t;
+    if (t !== t) return NaN;
+    return MonthFromTime(LocalTime(t));
+}
+
+var DatePrototype_getMilliSeconds = function (thisArg, argList) {
+    var t = thisTimeValue(thisArg);
+    if (isAbrupt(t)) return t;
+    if (t !== t) return NaN;
+    return msFromTime(LocalTime(t));
+};
+
+var DatePrototype_getTimeZoneOffset = function (thisArg, argList) {
+    var t = thisTimeValue(thisArg);
+    if (isAbrupt(t)) return t;
+    if (t !== t) return NaN;
+    return (t - LocalTime(t));
+};
+
+var DatePrototype_getUTCDay = function (thisArg, argList) {
+    var t = thisTimeValue(thisArg);
+    if (isAbrupt(t)) return t;
+    if (t !== t) return NaN;
+    return WeekDay(t);
+
+};
+
+var DatePrototype_getUTCFullYear = function (thisArg, argList) {
+    var t = thisTimeValue(thisArg);
+    if (isAbrupt(t)) return t;
+    if (t !== t) return NaN;
+    return YearFromTime(t);
+
+};
+var DatePrototype_getUTCHours = function (thisArg, argList) {
+    var t = thisTimeValue(thisArg);
+    if (isAbrupt(t)) return t;
+    if (t !== t) return NaN;
+    return HourFromTime(t);
+
+};
+
+var DatePrototype_getUTCMilliSeconds = function (thisArg, argList) {
+    var t = thisTimeValue(thisArg);
+    if (isAbrupt(t)) return t;
+    if (t !== t) return NaN;
+    return msFromTime(t);
+};
+
+var DatePrototype_getUTCMinutes = function (thisArg, argList) {
+    var t = thisTimeValue(thisArg);
+    if (isAbrupt(t)) return t;
+    if (t !== t) return NaN;
+    return MinFromTime(t);
+}
+
+var DatePrototype_getUTCSeconds = function (thisArg, argList) {
+    var t = thisTimeValue(thisArg);
+    if (isAbrupt(t)) return t;
+    if (t !== t) return NaN;
+    return SecFromTime(t);
+};
+
 /**
  * Created by root on 15.05.14.
  */
@@ -14315,7 +15357,6 @@ function BetterComplicatedResumableEvaluationAlgorithmForASTVisitorsWithoutStack
 
 
 function printCodeEvaluationState() {
-
     var stack = getContext().state;
     var state = state[state.length-1];
     var node = state[0];
@@ -14352,47 +15393,146 @@ function GeneratorStart(generator, body) {
 }
 
 function GeneratorResume(generator, value) {
-    if (hasConsole) console.log("##GeneratorResume()##");
-
     if (Type(generator) !== OBJECT) return newTypeError( "resume: Generator is not an object");
     if (!hasInternalSlot(generator, SLOTS.GENERATORSTATE)) return newTypeError( "resume: Generator has no GeneratorState property");
     var state = getInternalSlot(generator, SLOTS.GENERATORSTATE);
     if (state !== "suspendedStart" && state !== "suspendedYield") return newTypeError( "Generator is neither in suspendedStart nor suspendedYield state");
     var genContext = getInternalSlot(generator, SLOTS.GENERATORCONTEXT);
-
     var methodContext = getContext();
     getStack().push(genContext);
     setInternalSlot(generator, SLOTS.GENERATORSTATE, "executing");
     var resumeGenerator = genContext.resumeGenerator;
-   
     var result = resumeGenerator(NormalCompletion(value));
     setInternalSlot(generator, SLOTS.GENERATORSTATE, "suspendedYield");
     var x = getContext();
     if (x !== methodContext) {
-        if (hasConsole) console.log("GENERATOR ACHTUNG 2: CONTEXT MISMATCH TEST NICHT BESTANDEN - resume");
+        return newTypeError("GeneratorContext mismatch at GeneratorResume")
     }
     return result;
 }
 
 function GeneratorYield(itrNextObj) {
-    if (hasConsole) console.log("##GeneratorYield()##");
     Assert(HasOwnProperty(itrNextObj, "value") && HasOwnProperty(itrNextObj, "done"), "expecting itrNextObj to have value and done properties");
-
     var genContext = getContext();
     var generator = genContext.generator;
     setInternalSlot(generator, SLOTS.GENERATORSTATE, "suspendedYield");
-
     var x = getStack().pop();
     if (x !== genContext) {
-        if (hasConsole) console.log("GENERATOR ACHTUNG 1: CONTEXT MISMATCH TEST NICHT BESTANDEN - yield");
+        return newTypeError("GeneratorContext mismatch at GeneratorYield")
     }
     // compl = yield smth;
     genContext.resumeGenerator = function (compl) {        
         return compl;
     };
-
     return NormalCompletion(itrNextObj);
 }
+
+var GeneratorPrototype_$$iterator = function (thisArg, argList) {
+    return thisArg;
+};
+
+var GeneratorPrototype_next = function (thisArg, argList) {
+    var value = argList[0];
+    var G = thisArg;
+    return GeneratorResume(G, value);
+};
+
+var GeneratorPrototype_throw = function (thisArg, argList) {
+    var g = thisArg;
+    var exception = argList[0];
+    if (Type(g) !== OBJECT) return newTypeError( "throw: Generator is not an object");
+    if (!hasInternalSlot(g, SLOTS.GENERATORSTATE)) return newTypeError( "throw: generator has no GeneratorState property");
+    var state = getInternalSlot(g, SLOTS.GENERATORSTATE);
+    Assert(hasInternalSlot(g, SLOTS.GENERATORCONTEXT), "generator has to have a GeneratorContext property");
+    if (state !== "suspendedStart" && state != "suspendedYield") return newTypeError( "GeneratorState is neither suspendedStart nor -Yield");
+    var E = CompletionRecord("throw", exception);
+    if (state === "suspendedStart") {
+        setInternalSlot(g, SLOTS.GENERATORSTATE, "completed");
+        setInternalSlot(g, SLOTS.GENERATORCONTEXT, undefined);
+        return E;
+    }
+    var genContext = getInternalSlot(g, SLOTS.GENERATORCONTEXT);
+    var methodContext = getCurrentExectionContext();
+    setInternalSlot(g, SLOTS.GENERATORSTATE, "executing");
+    getStack().push(genContext);
+    var result = genContext.generatorCallback(E);
+    Assert(genContext !== getContext());
+    Assert(methodContext === getContext());
+    return result;
+};
+
+var GeneratorFunction_call = function (thisArg, argList) {
+    // GeneratorFunction(p1...pn, body)
+    var GeneratorFunction = this;
+    var argCount = argList.length;
+    var P = "";
+    var bodyText;
+    var firstArg, nextArg;
+    if (argCount === 0) bodyText = "";
+    else if (argCount === 1) bodyText = argList[0];
+    else if (argCount > 1) {
+        firstArg = argList[0];
+        P = ToString(firstArg);
+        if (isAbrupt(firstArg = ifAbrupt(firstArg))) return firstArg;
+        var k = 1;
+        while (k < argCount - 1) {
+            nextArg = argList[k];
+            nextArg = ToString(nextArg);
+            if (isAbrupt(nextArg = ifAbrupt(nextArg))) return nextArg;
+            P = P + "," + nextArg;
+            k += 1;
+        }
+        bodyText = argList[argCount - 1];
+    }
+    bodyText = ToString(bodyText);
+    if (isAbrupt(bodyText = ifAbrupt(bodyText))) return bodyText;
+    var parameters = parseGoal("FormalParameterList", P);
+    var funcBody = parseGoal("GeneratorBody", bodyText);
+    /*
+     * this is very slow, asking for static semantics here with having to analyse the tree
+     * this should be captured by the ecmascript compliant parser
+     * */
+    if (!Contains(funcBody, "YieldExpression")) return newSyntaxError("GeneratorFunctions require some yield expression");
+
+    var boundNames = BoundNames(parameters);
+    if (!IsSimpleParameterList(parameters)) {
+        if (dupesInTheTwoLists(boundNames, VarDeclaredNames(funcBody))) return newSyntaxError("Duplicate Identifier in Parameters and VarDeclaredNames of funcBody");
+    }
+    if (dupesInTheTwoLists(boundNames, LexicallyDeclaredNames(funcBody))) return newSyntaxError("Duplicate Identifier in Parameters and LexicallyDeclaredNames of funcBody");
+
+    var scope = getRealm().globalEnv;
+    var F = thisArg;
+    if (F == undefined || !hasInternalSlot(F, SLOTS.CODE)) {
+        F = FunctionAllocate(GeneratorFunction, "generator");
+    }
+    if (getInternalSlot(F, SLOTS.FUNCTIONKIND) !== "generator") return newTypeError( "function object not a generator");
+    FunctionInitialize(F, "generator", parameters, funcBody, scope, true);
+    var proto = ObjectCreate(GeneratorPrototype);
+    MakeConstructor(F, true, proto);
+    SetFunctionLength(F, ExpectedArgumentCount(F.FormalParameters));
+    return NormalCompletion(F);
+};
+
+var GeneratorFunction_construct = function (argList) {
+    return OrdinaryConstruct(this, argList);
+};
+
+var GeneratorFunction_$$create = function (thisArg, argList) {
+    var F = thisArg;
+    var proto = GetPrototypeFromConstructor(F, INTRINSICS.GENERATOR);
+    if (isAbrupt(proto = ifAbrupt(proto))) return proto;
+    var obj = FunctionAllocate(proto, "generator");
+    return obj;
+};
+
+var GeneratorPrototype_$$create = function (thisArg, argList) {
+    var F = thisArg;
+    var obj = OrdinaryCreateFromConstructor(F, INTRINSICS.GENERATOR, [
+        SLOTS.GENERATORSTATE, SLOTS.GENERATORCONTEXT
+    ]);
+    return obj;
+};
+
 function GetIterable (obj) {
     if (Type(obj) !== OBJECT) return undefined;
     var iteratorGetter = Get(obj, $$iterator);
@@ -21283,6 +22423,478 @@ var UnescapeFunction_call = function (thisArg, argList) {
 };
 
 
+/**
+ * Created by root on 17.05.14.
+ */
+
+var ErrorConstructor_call = function (thisArg, argList) {
+    var func = this;
+    var message = argList[0];
+    var name = "Error";
+    var O = thisArg;
+    var isObject = Type(O) === OBJECT;
+    // This is different from the others in the spec
+    if (!isObject || (isObject &&
+        (!hasInternalSlot(O, SLOTS.ERRORDATA) || (getInternalSlot(O, SLOTS.ERRORDATA) === undefined)))) {
+        O = OrdinaryCreateFromConstructor(func, INTRINSICS.ERRORPROTOTYPE, [
+            SLOTS.ERRORDATA
+        ]);
+        if (isAbrupt(O = ifAbrupt(O))) return O;
+    }
+    // or i read it wrong
+    Assert(Type(O) === OBJECT);
+    setInternalSlot(O, SLOTS.ERRORDATA, "Error");
+    if (message !== undefined) {
+        var msg = ToString(message);
+        if (isAbrupt(msg = ifAbrupt(msg))) return msg;
+        var msgDesc = {
+            value: msg,
+            writable: true,
+            enumerable: false,
+            configurable: true
+        };
+        var status = DefineOwnPropertyOrThrow(O, "message", msgDesc);
+        if (isAbrupt(status)) return status;
+    }
+
+    CreateDataProperty(O, "stack", stringifyErrorStack());
+    setInternalSlot(O, "toString", function () { return "[object Error]"; });
+    return O;
+}
+
+var ErrorConstructor_construct = function (argList) {
+    return OrdinaryConstruct(this, argList);
+};
+
+var ErrorConstructor_$$create = function (thisArg, argList) {
+    var F = thisArg;
+    var obj = OrdinaryCreateFromConstructor(F, INTRINSICS.ERRORPROTOTYPE, [
+        SLOTS.ERRORDATA
+    ]);
+    return obj;
+};
+
+var ErrorPrototype_toString = function (thisArg, argList) {
+    var O = thisArg;
+    if (Type(O) !== OBJECT) return newTypeError(format("S_NOT_OBJECT", "Error.prototype.toString: O"));
+    var name = Get(O, "name");
+    if (isAbrupt(name)) return name;
+    name = ifAbrupt(name);
+    var msg = Get(O, "message");
+    if (isAbrupt(msg)) return msg;
+    msg = ifAbrupt(msg);
+    if (msg === undefined) msg = "";
+    else msg = ToString(msg);
+    if (name === "") return msg;
+    if (msg === "") return name;
+    return name + ": " + msg;
+};
+
+
+function createNativeError(nativeType, ctor, proto) {
+    //var name = nativeType + "Error";
+    // var intrProtoName = "%" + nativeType + "ErrorPrototype%";
+    var name;
+    var intrProtoName;
+    switch(nativeType) {
+        case "URI": name = "URIError"; intrProtoName = INTRINSICS.URIERROR; break;
+        case "Range": name = "RangeError"; intrProtoName = INTRINSICS.RANGEERROR; break;
+        case "Type": name = "TypeError"; intrProtoName = INTRINSICS.TYPEERROR; break;
+        case "Reference": name = "ReferenceError"; intrProtoName = INTRINSICS.REFERENCEERROR; break;
+        case "Syntax": name = "SyntaxError"; intrProtoName = INTRINSICS.SYNTAXERROR; break;
+        case "Eval": name = "EvalError"; intrProtoName = INTRINSICS.EVALERROR; break;
+    }
+
+    //SetFunctionName(ctor, name);
+    setInternalSlot(ctor, SLOTS.CALL, function (thisArg, argList) {
+        var func = this;
+        var O = thisArg;
+        var message = argList[0];
+        if (Type(O) !== OBJECT ||
+            (Type(O) === OBJECT && getInternalSlot(O, SLOTS.ERRORDATA) == undefined)) {
+            O = OrdinaryCreateFromConstructor(func, intrProtoName);
+            if (isAbrupt(O=ifAbrupt(O))) return O;
+        }
+        if (Type(O) !== OBJECT) return newTypeError(format("S_NOT_OBJECT", "O"));
+        setInternalSlot(O, SLOTS.ERRORDATA, name);
+        if (message !== undefined) {
+            var msg = ToString(message);
+            var msgDesc = {
+                value: msg,
+                writable: true,
+                enumerable: false,
+                configurable: true
+            };
+            var status = DefineOwnPropertyOrThrow(O, "message", msgDesc);
+            if (isAbrupt(status)) return status;
+        }
+        var cx = getContext();
+        if (cx && cx.line != undefined) {
+            var lineNumber = cx.line;
+            var columnNumber = cx.column;
+            CreateDataProperty(O, "lineNumber", lineNumber);
+            CreateDataProperty(O, "columnNumber", columnNumber);
+        }
+        CreateDataProperty(O, "stack", stringifyErrorStack());
+        // interne representation
+        setInternalSlot(O, "toString", function () {
+            return "[object "+name+"]";
+        });
+        return O;
+
+    });
+
+    setInternalSlot(ctor, SLOTS.CONSTRUCT, function (thisArg, argList) {
+        var F = this;
+        var argumentsList = argList;
+        return OrdinaryCreateFromConstructor(F, argumentsList);
+    });
+
+    DefineOwnProperty(ctor, $$create, {
+        value: CreateBuiltinFunction(realm, function (thisArg, argList) {
+            var F = thisArg;
+            var obj = OrdinaryCreateFromConstructor(F, intrProtoName);
+            return obj;
+        }),
+        enumerable: false,
+        configurable: false,
+        writable: false
+    });
+
+    LazyDefineBuiltinConstant(ctor, "length", 1);
+    LazyDefineBuiltinConstant(ctor, "prototype", proto);
+    LazyDefineBuiltinConstant(proto, "constructor", ctor);
+    LazyDefineBuiltinConstant(proto, "name", name);
+    LazyDefineBuiltinConstant(proto, "message", "");
+    MakeConstructor(ctor, false, proto);
+}
+/**
+ * Created by root on 17.05.14.
+ */
+var EmitterConstructor_call = function (thisArg, argList) {
+    var O = thisArg;
+    var type = Type(O);
+    var has, listeners;
+    if (type === OBJECT) {
+        has = hasInternalSlot(O, SLOTS.EVENTLISTENERS);
+        if (!has) {
+            return newTypeError( "this argument has to have a [[Listeners]] Property");
+        } else {
+            listeners = getInternalSlot(O, SLOTS.EVENTLISTENERS);
+            if (!listeners) {
+                listeners = Object.create(null);
+                setInternalSlot(O, SLOTS.EVENTLISTENERS, listeners);
+            }
+        }
+    } else {
+        return newTypeError( "this argument is not an object");
+    }
+    return O;
+};
+
+var EmitterConstructor_construct = function (argList) {
+    var F = this;
+    var args = argList;
+    return OrdinaryConstruct(F, args);
+};
+
+var EmitterConstructor_$$create = function (thisArg, argList) {
+    var F = EmitterConstructor;
+    var proto = GetPrototypeFromConstructor(F, INTRINSICS.EMITTERPROTOTYPE);
+    return ObjectCreate(proto, [SLOTS.EVENTLISTENERS]);
+};
+
+var EmitterPrototype_on = function (thisArg, argList) {
+    var E = thisArg,
+        listeners, callback, event;
+
+    if (Type(E) !== OBJECT) return newTypeError( "this argument is not an object");
+
+    if (!hasInternalSlot(E, SLOTS.EVENTLISTENERS)) return newTypeError( "[[Listeners]] missing on this argument");
+    else listeners = getInternalSlot(E, SLOTS.EVENTLISTENERS);
+    var event = argList[0];
+    var callback = argList[1];
+    if (Type(event) !== STRING) return newTypeError( "Your argument 1 is not an event name string.");
+    if (!IsCallable(callback)) return newTypeError( "Your argument 2 is not a callback function");
+
+    var list = listeners[event];
+    if (list == undefined) list = listeners[event] = [];
+    list.push(callback);
+
+    return NormalCompletion(undefined);
+};
+var EmitterPrototype_once = function (thisArg, argList) {
+    var E = thisArg,
+        listeners, callback, event;
+    if (Type(E) !== OBJECT) return newTypeError( "this argument is not an object");
+    if (!hasInternalSlot(E, SLOTS.EVENTLISTENERS)) return newTypeError( "[[Listeners]] missing on this argument");
+    else listeners = getInternalSlot(E, SLOTS.EVENTLISTENERS);
+    event = argList[0];
+    callback = argList[1];
+    if (Type(event) !== STRING) return newTypeError( "Your argument 1 is not an event name string.");
+    if (!IsCallable(callback)) return newTypeError( "Your argument 2 is not a callback function");
+    var list = listeners[event];
+    if (list == undefined) list = listeners[event] = [];
+    list.push(
+        function (callback) {
+            return CreateBuiltinFunction(realm, function once_callback(thisArg, argList) {
+                if (callback) {
+                    callInternalSlot(SLOTS.CALL, callback, thisArg, argList);
+                    callback = null;
+                }
+            });
+
+        }(callback)
+    );
+    return NormalCompletion(undefined);
+};
+var EmitterPrototype_remove = function (thisArg, argList) {
+    var E = thisArg,
+        listeners, callback, event, values;
+    if (Type(E) !== OBJECT) return newTypeError( "this argument is not an object");
+    if (!hasInternalSlot(E, SLOTS.EVENTLISTENERS)) return newTypeError( "[[Listeners]] missing on this argument");
+    else listeners = getInternalSlot(E, SLOTS.EVENTLISTENERS);
+    event = argList[0];
+    callback = argList[1];
+    if (Type(event) !== STRING) return newTypeError( "Your argument 1 is not an event name string.");
+    if (!IsCallable(callback)) return newTypeError( "Your argument 2 is not a function.");
+    var list = listeners[event];
+    if (list == undefined) return NormalCompletion(undefined);
+    var newList = [];
+    var fn;
+    for (var i = 0, j = list.length; i < j; i++) {
+        if (fn = list[i]) {
+            if (fn !== callback) newList.push(fn);
+        }
+    }
+    listeners[event] = newList;
+    return NormalCompletion(undefined);
+};
+var EmitterPrototype_removeAll = function (thisArg, argList) {
+    var E = thisArg,
+        listeners, event;
+    if (Type(E) !== OBJECT) return newTypeError( "this argument is not an object");
+    if (!hasInternalSlot(E, SLOTS.EVENTLISTENERS)) return newTypeError( "[[Listeners]] missing on this argument");
+    else listeners = getInternalSlot(E, SLOTS.EVENTLISTENERS);
+    event = argList[0];
+    if (Type(event) !== STRING) return newTypeError( "Your argument 1 is not a event name string.");
+    var list = listeners[event];
+    if (list == undefined) return NormalCompletion(undefined);
+    else listeners[event] = [];
+    return NormalCompletion(undefined);
+};
+var EmitterPrototype_emit = function (thisArg, argList) {
+    var E = thisArg,
+        listeners, callback, event, values;
+    if (Type(E) !== OBJECT) return newTypeError( "this argument is not an object");
+    if (!hasInternalSlot(E, SLOTS.EVENTLISTENERS)) return newTypeError( "[[Listeners]] missing on this argument");
+    else listeners = getInternalSlot(E, SLOTS.EVENTLISTENERS);
+    event = argList[0];
+    values = arraySlice(argList, 1);
+    if (Type(event) !== STRING) return newTypeError( "Your argument 1 is not a event name string.");
+    var list = listeners[event];
+    if (list == undefined) return NormalCompletion(undefined);
+    //setTimeout(function () {
+    var F = OrdinaryFunction();
+    var status = callInternalSlot(SLOTS.CALL, SetTimeoutFunction, null, [F, 0]);
+    setInternalSlot(F, SLOTS.CALL, function (thisArg, argList) {
+        var result;
+        for (var i = 0, j = list.length; i < j; i++) {
+            if (callback = list[i]) {
+                result = callInternalSlot(SLOTS.CALL, callback, thisArg, values);
+                //    if (isAbrupt(result)) return result;
+            }
+        }
+    });
+    //});
+    return NormalCompletion(undefined);
+};
+var EventConstructor_Call = function (thisArg, argList) {
+};
+var EventTargetConstructor_Call = function (thisArg, argList) {
+};
+var EventTargetPrototype_addEventListener = function (thisArg, argList) {
+};
+var EventTargetPrototype_dispatchEvent = function (thisArg, argList) {
+};
+var EventTargetPrototype_removeEventListener = function (thisArg, argList) {
+};
+var MessagePortPrototype_close = function (thisArg, argList) {
+};
+var MessagePortPrototype_open = function (thisArg, argList) {
+};
+var MessagePortPrototype_postMessage = function (thisArg, argList) {
+};
+
+/**
+ * Created by root on 17.05.14.
+ */
+var PrintFunction_call = function (thisArg, argList) {
+    var str = "";
+    var j = argList.length-1;
+    if (j === 0) str = argList[0];
+    else {
+        for (var i = 0; i < j; i++) {
+            str += argList[i] + " ";
+        }
+        str += argList[j];
+    }
+    if (hasConsole) console.log(str);
+    else if (hasPrint) print(str);
+    return NormalCompletion(undefined);
+};
+
+var DebugFunction_call = function (thisArg, argList)  {
+
+    var TAB = "\t";
+    var O = argList[0];
+    var type = Type(O);
+
+    console.log("Type() results in " + type);
+
+    function printProps(name) {
+        var desc = this[name];
+        console.log(TAB+TAB+name+": ("+Type(desc.value)+") "+(desc.enumerable?"e":"-")+""+(desc.configurable?"c":"-")+""+(desc.writable?"w":"-"));
+    }
+
+    if (type == OBJECT) {
+
+        var isCallable = IsCallable(O);
+
+        if (!isCallable)  {
+            var toString = Invoke(O, "toString", []);
+            if (isAbrupt(toString=ifAbrupt(toString))) return toString;
+        } else {
+            var funcName = Get(O, "name");
+            console.log("[object Function]: "+funcName);
+        }
+        console.log(toString);
+        console.log("{");
+
+        var bindings = getInternalSlot(O, SLOTS.BINDINGS);
+        var symbols = getInternalSlot(O, SLOTS.SYMBOLS);
+        var isExtensible = getInternalSlot(O, SLOTS.EXTENSIBLE);
+        var proto = GetPrototypeOf(O);
+        var prototypeInfo;
+
+        if (proto == null) prototypeInfo = "null";
+        else prototypeInfo = Invoke(proto, "toString", []);
+        if (isAbrupt(prototypeInfo=ifAbrupt(prototypeInfo))) return prototypeInfo;
+
+        console.log(TAB+"[[Prototype]]: " + prototypeInfo);
+        console.log(TAB+"[[Extensible]]: " +isExtensible);
+
+        console.log(TAB+"[[Bindings]]:");
+        var printer = printProps.bind(bindings);
+        Object.keys(bindings).forEach(printer);
+
+        console.log(TAB+"[[Symbols]]:");
+        printer = printProps.bind(symbols);
+        Object.keys(symbols).forEach(printer);
+
+        if (IsCallable(O)) {
+            var strict = getInternalSlot(O, SLOTS.STRICT);
+            console.log(TAB+"[[Strict]]:" + strict);
+
+            var thisMode = getInternalSlot(O, SLOTS.THISMODE);
+            console.log(TAB+"[[ThisMode]]: "+thisMode);
+
+            var formals = getInternalSlot(O, SLOTS.FORMALPARAMETERS);
+            console.log(TAB+"[[FormalParameters]]:");
+            console.log(formals.join(","));
+
+            console.log(TAB+"[[Code]]:");
+
+            var code = getInternalSlot(O, SLOTS.CODE);
+            console.log(JSON.stringify(code, null, 4));
+        }
+
+        console.log("}");
+
+        return NormalCompletion();
+    }
+
+    if (type == NUMBER) {
+        console.log("Number");
+        console.log("binary (base 2): "+O.toString(2));
+        console.log("decimal (base 10): "+O.toString(10));
+        console.log("hex (base 16): "+O.toString(16));
+
+    } else if (type == STRING) {
+        var len = O.length;
+        console.log("String");
+        console.log("value: "+O);
+        console.log("length: "+len);
+
+    } else if (type == SYMBOL) {
+        console.log("Symbol");
+        var descr = getInternalSlot(O, SLOTS.DESCRIPTION);
+        console.log("[[Description]]: " +descr);
+    } else if (type == BOOLEAN) {
+        console.log("Boolean");
+        console.log("value: "+!!O);
+    } else if (type === NULL) {
+        console.log("it´s null");
+    } else if (type === UNDEFINED) {
+        console.log("it´s undefined");
+    }
+    return NormalCompletion();
+}
+var LoadFunction_call = function (thisArg, argList) {
+    var file = argList[0];
+    try {
+        var data = loaderAdapter(file);
+    } catch (ex) {
+        return newTypeError( "loaderAdaper fails with a " + ex.name + ": " + ex.message + "\n" + ex.stack)
+    }
+    return data;
+};
+var RequestFunction_call = function (thisArg, argList) {
+    if (detector.isNode) {
+
+    } else if (detector.isWorker || detector.isBrowser) {
+
+    }
+};
+
+
+/**
+ * Created by root on 17.05.14.
+ */
+var ConsoleObject_log = function log(thisArg, argList) {
+    if (hasConsole) console.log.apply(console, argList);
+};
+var ConsoleObject_dir = function dir(thisArg, argList) {
+    if (hasConsole) console.dir.apply(console, argList);
+};
+var ConsoleObject_error = function error(thisArg, argList) {
+    if (hasConsole) console.error.apply(console, argList);
+};
+var ConsoleObject_html = function html(thisArg, argList) {
+    var selector = argList[0];
+    var html = "";
+    if (Type(selector) !== STRING) return newTypeError( "First argument of console.html should be a valid css selector string.");
+    if (typeof document !== "undefined") {
+        var element = document.querySelector(selector);
+    } else {
+        if (typeof process !== "undefined") {
+            if (hasConsole) console.log.apply(console, argList.slice(1));
+        } else {
+            return newReferenceError("Can not select element. document.querySelector is not supported in the current environment.");
+        }
+    }
+    if (element) {
+        html += argList[1];
+        for (var i = 2, j = argList.length; i < j; i++) {
+            html += ", " + argList[i];
+        }
+        html += "<br>\n";
+    } else {
+        return newReferenceError( "document.querySelector could not find the element " + selector);
+    }
+    element.innerHTML += html;
+    return NormalCompletion(undefined);
+};
 
     var createGlobalThis, createIntrinsics;
 
@@ -21326,7 +22938,13 @@ var UnescapeFunction_call = function (thisArg, argList) {
      
      Here goes the big wrapping closure for createIntrinsics();    (tmp)
      
+     -- refactoring : this will become one big list of assignments
+     of intrinsic object properties and all Call Functions and Helper
+     Functions (except for less than a handful of in-closure generations)
+     move into /api (and will be separated there)
+     
      */
+     
     createIntrinsics = function createIntrinsics(realm) {
 
         var intrinsics = OrdinaryObject(null);
@@ -21498,248 +23116,21 @@ var UnescapeFunction_call = function (thisArg, argList) {
 
 
     /*
-	These include files include the builtin library
+	overworked
 	
-	refactoring decision: the xxxConstructor_fname and xxxPrototype_fname
-	[[Call]] Operations of the Builtins have to move into the upper block
-	together with a few helper functions, e.g. when writing the loader in
-	january i had put the operations all together.
-	
-	update: currently i am doing this and move them
-	
-	The [[Call]] and the helpers belong into the include file list above.
-	Here they waste time instantiating the realms, because the (never modified)
-	[[Call]] Operations are newly compiled instantiated each time a realm is 
-	made. I guess it, but i guess also i am right, that moving them up will
-	save some instantiation costs, coz all realms then share the [[Call]] operations,
-	which solve the invariant, that no realm ever touches them, the properties are
-	set on the xxxPrototype and xxxConstructor functions, which of course are
-	created new. So far for my library refactoring plans. The other piece is to
-	replace the DefineOwnProperty(...  { value: CreateBuiltinFunction(...)  }) with
-	LazyDefineBuiltinFunction to remove the repeating property descriptors. For
-	that i wanted to write a tool, refactorDOP.js in /tools, some day. Apropos
-	/tools the important files are testmaker.js, tester.js, inlinefiles.js
-	
-	maybe i´ll do it by hand while moving.
+	the following files just contain the definition of the intrinsic objects properties,
+	better known as the "builtin functions". The declarations of the call functions have
+	been moved into lib/api. The tool idea "refactorDOP.js" is no longer needed and removed.
+
 	
     */
 
-setInternalSlot(PrintFunction, SLOTS.CALL, function (thisArg, argList) {
-   var str = "";
-   var j = argList.length-1;
-   if (j === 0) str = argList[0];
-   else {
-       for (var i = 0; i < j; i++) {
-           str += argList[i] + " ";
-       }
-       str += argList[j];
-   }
-   if (hasConsole) console.log(str);
-   else if (hasPrint) print(str);
-   return NormalCompletion(undefined);
-});
-
-/**
- *
- * debug(val) is some util.inspect() with now just less styling
- *
- *
- */
 
 
-setInternalSlot(DebugFunction, SLOTS.CALL, function debugfunc (thisArg, argList)  {
-
-    var TAB = "\t";
-    var O = argList[0];
-    var type = Type(O);
-
-    console.log("Type() results in " + type);
-
-    function printProps(name) {
-        var desc = this[name];
-        console.log(TAB+TAB+name+": ("+Type(desc.value)+") "+(desc.enumerable?"e":"-")+""+(desc.configurable?"c":"-")+""+(desc.writable?"w":"-"));
-    }
-
-    if (type == OBJECT) {
-
-        var isCallable = IsCallable(O);
-
-        if (!isCallable)  {
-            var toString = Invoke(O, "toString", []);
-            if (isAbrupt(toString=ifAbrupt(toString))) return toString;
-        } else {
-            var funcName = Get(O, "name");
-            console.log("[object Function]: "+funcName);
-        }
-        console.log(toString);
-        console.log("{");
-
-        var bindings = getInternalSlot(O, SLOTS.BINDINGS);
-        var symbols = getInternalSlot(O, SLOTS.SYMBOLS);
-        var isExtensible = getInternalSlot(O, SLOTS.EXTENSIBLE);
-        var proto = GetPrototypeOf(O);
-        var prototypeInfo;
-
-        if (proto == null) prototypeInfo = "null";
-        else prototypeInfo = Invoke(proto, "toString", []);
-        if (isAbrupt(prototypeInfo=ifAbrupt(prototypeInfo))) return prototypeInfo;
-
-        console.log(TAB+"[[Prototype]]: " + prototypeInfo);
-        console.log(TAB+"[[Extensible]]: " +isExtensible);
-
-        console.log(TAB+"[[Bindings]]:");
-        var printer = printProps.bind(bindings);
-        Object.keys(bindings).forEach(printer);
-        
-        console.log(TAB+"[[Symbols]]:");
-        printer = printProps.bind(symbols);
-        Object.keys(symbols).forEach(printer);
-
-        if (IsCallable(O)) {
-            var strict = getInternalSlot(O, SLOTS.STRICT);
-            console.log(TAB+"[[Strict]]:" + strict);
-
-            var thisMode = getInternalSlot(O, SLOTS.THISMODE);
-            console.log(TAB+"[[ThisMode]]: "+thisMode);
-
-            var formals = getInternalSlot(O, SLOTS.FORMALPARAMETERS);
-            console.log(TAB+"[[FormalParameters]]:");
-            console.log(formals.join(","));
-
-            console.log(TAB+"[[Code]]:");
-
-            var code = getInternalSlot(O, SLOTS.CODE);
-            console.log(JSON.stringify(code, null, 4));
-        }
-
-        console.log("}");
-
-        return NormalCompletion();
-    }
-
-    if (type == NUMBER) {
-        console.log("Number");
-        console.log("binary (base 2): "+O.toString(2));
-        console.log("decimal (base 10): "+O.toString(10));
-        console.log("hex (base 16): "+O.toString(16));
-
-    } else if (type == STRING) {
-        var len = O.length;
-        console.log("String");
-        console.log("value: "+O);
-        console.log("length: "+len);
-
-    } else if (type == SYMBOL) {
-        console.log("Symbol");
-        var descr = getInternalSlot(O, SLOTS.DESCRIPTION);
-        console.log("[[Description]]: " +descr);
-    } else if (type == BOOLEAN) {
-        console.log("Boolean");
-        console.log("value: "+!!O);
-    } else if (type === NULL) {
-        console.log("it´s null");
-    } else if (type === UNDEFINED) {
-        console.log("it´s undefined");
-    }
-    return NormalCompletion();
-});
-/**
- *
- *  load(file);
- *
- *
- */
-var loaderAdapter = require("filesystem").makeAdapter({
-    test: {
-        "node": typeof process === "object" && typeof window === "undefined",
-        "browser": typeof window === "object" && typeof XMLHttpRequest === "function",
-        "worker": typeof window == "undefined" && typeof importScripts === "function" && typeof XMLHttpRequest === "function",
-        "sm": typeof load === "function" && typeof print === "function"
-    },
-    work: (function () {
-        function xmlHTTPrequest(file) {
-            var xhr;
-            try {
-                xhr = new XMLHttpRequest();
-                xhr.open("GET", file, false);
-                xhr.send(null);
-                return xhr.responseText;
-            } catch (ex) {
-                return newTypeError( "can not xml http request " + file);
-            }
-        }
-
-        return {
-            "node": function (file) {
-                var data;
-                var fs = module.require("fs");
-                try {
-                    data = fs.readFileSync(file, "utf8");
-                } catch (ex) {
-                    return newTypeError( "fs.readFileSync threw a "+ex.name+" exception "+ ex.message+"\n"+ (ex.stack&&ex.stack.toString()));
-                }
-                return data;
-            },
-            "browser": xmlHTTPrequest,
-            "worker": xmlHTTPrequest,
-            "sm": function (file) {
-                return load(file)
-            }
-        };
-    }())
-});
-
-setInternalSlot(LoadFunction, SLOTS.CALL, function load(thisArg, argList) {
-    var file = argList[0];
-    try {
-        var data = loaderAdapter(file);
-    } catch (ex) {
-        return newTypeError( "loaderAdaper fails with a " + ex.name + ": " + ex.message + "\n" + ex.stack)
-    }
-    return data;
-});
-
-/**
- *
- * request
- *
- *
- *
- *
- */
-
-    setInternalSlot(RequestFunction, SLOTS.CALL, function request(thisArg, argList) {
-        var url = argList[0];
-        var d, p;
-
-
-        if (isWindow) {
-
-            var handler = CreateBuiltinFunction(realm, function handler(thisArg, argList) {
-                var resolve = argList[0];
-                var reject = argList[1];
-            });
-
-            d = OrdinaryConstruct(PromiseConstructor, [handler]);
-
-            var xhr = new XMLHttpRequest();
-            xhr.open("GET", url, true);
-            xhr.onload = function (e) {
-                if (xhr.status !== 200 || xhr.status === 301) {}
-            };
-
-            xhr.send();
-
-            return xhr.responseText;
-
-        } else if (isNode) {
-
-        } else if (isWorker) {
-
-        } else {
-            return newTypeError( "Unknown architecture. Request function not available.");
-        }
-    });
+setInternalSlot(PrintFunction, SLOTS.CALL, PrintFunction_call);
+setInternalSlot(DebugFunction, SLOTS.CALL, DebugFunction_call);
+setInternalSlot(LoadFunction, SLOTS.CALL, LoadFunction_call);
+setInternalSlot(RequestFunction, SLOTS.CALL, RequestFunction_call);
 
 
 
@@ -21792,948 +23183,42 @@ LazyDefineProperty(LoaderIteratorPrototype, "next", CreateBuiltinFunction(realm,
 LazyDefineProperty(LoaderIteratorPrototype, $$toStringTag, "Loader Iterator");
 
 
-// ===========================================================================================================
-// Console (add-on, with if (hasConsole) console.log);
-// ===========================================================================================================
 
 LazyDefineBuiltinConstant(ConsoleObject, $$toStringTag, "Console");
-
-DefineOwnProperty(ConsoleObject, "log", {
-    value: CreateBuiltinFunction(realm, function log(thisArg, argList) {
-        if (hasConsole) console.log.apply(console, argList);
-    }),
-    writable: true,
-    enumerable: false,
-    configurable: true
-
-});
-DefineOwnProperty(ConsoleObject, "dir", {
-    value: CreateBuiltinFunction(realm, function dir(thisArg, argList) {
-        if (hasConsole) console.dir.apply(console, argList);
-    }),
-    writable: true,
-    enumerable: false,
-    configurable: true
-
-});
-
-DefineOwnProperty(ConsoleObject, "error", {
-    value: CreateBuiltinFunction(realm, function error(thisArg, argList) {
-        if (hasConsole) console.error.apply(console, argList);
-    }),
-    writable: true,
-    enumerable: false,
-    configurable: true
-
-});
-DefineOwnProperty(ConsoleObject, "html", {
-    value: CreateBuiltinFunction(realm, function html(thisArg, argList) {
-        var selector = argList[0];
-        var html = "";
-        if (Type(selector) !== STRING) return newTypeError( "First argument of console.html should be a valid css selector string.");
-        if (typeof document !== "undefined") {
-            var element = document.querySelector(selector);
-        } else {
-            if (typeof process !== "undefined") {
-                if (hasConsole) console.log.apply(console, argList.slice(1));
-            } else
-                return newReferenceError( "Can not select element. document.querySelector is not supported in the current environment.");
-        }
-        if (element) {
-            html += argList[1];
-            for (var i = 2, j = argList.length; i < j; i++) {
-                html += ", " + argList[i];
-            }
-            html += "<br>\n";
-        } else {
-            return newReferenceError( "document.querySelector could not find the element " + selector);
-        }
-        element.innerHTML += html;
-        return NormalCompletion(undefined);
-    }),
-    writable: true,
-    enumerable: false,
-    configurable: true
-});
-
-
-
-DefineOwnProperty(ArrayConstructor, $$create, {
-    value: CreateBuiltinFunction(realm, function $$create(thisArg, argList) {
-        var F = thisArg;
-        var proto = GetPrototypeFromConstructor(F, INTRINSICS.ARRAYPROTOTYPE);
-        if (isAbrupt(proto = ifAbrupt(proto))) return proto;
-        var obj = ArrayCreate(undefined, proto);
-        return obj;
-    }),
-    enumerable: false,
-    writable: true,
-    configurable: true
-});
-
-
-
-DefineOwnProperty(ArrayConstructor, "isArray", {
-    value: CreateBuiltinFunction(realm, function (thisArg, argList) {
-        var arg = GetValue(argList[0]);
-        return IsArray(arg);
-    }),
-    enumerable: false,
-    writable: true,
-    configurable: true
-});
-
-DefineOwnProperty(ArrayConstructor, "of", {
-    value: CreateBuiltinFunction(realm, function (thisArg, argList) {
-        var items = CreateArrayFromList(argList);
-        var lenValue = Get(items, "length");
-        var C = thisArg;
-        var newObj;
-        var A;
-        var len = ToInteger(lenValue);
-        if (IsConstructor(C)) {
-            newObj = OrdinaryConstruct(C, [len]);
-            A = ToObject(newObj);
-        } else {
-            A = ArrayCreate(len);
-        }
-        if (isAbrupt(A = ifAbrupt(A))) return A;
-        var k = 0;
-        var Pk, kValue, defineStatus, putStatus;
-        while (k < len) {
-            Pk = ToString(k);
-            kValue = Get(items, Pk);
-            defineStatus = DefineOwnPropertyOrThrow(A, Pk, {
-                value: kValue,
-                writable: true,
-                configurable: true,
-                enumerable: true
-            });
-            if (isAbrupt(defineStatus)) return defineStatus;
-            k = k + 1;
-        }
-        putStatus = Put(A, "length", len, true);
-        if (isAbrupt(putStatus)) return putStatus;
-        return A;
-
-    }),
-    enumerable: false,
-    writable: true,
-    configurable: true
-});
-
-DefineOwnProperty(ArrayConstructor, "from", {
-    value: CreateBuiltinFunction(realm, function from(thisArg, argList) {
-        var C = thisArg;
-        var arrayLike = argList[0];
-        var mapfn = argList[1];
-        var thisArg2 = argList[2];
-        var T;
-        var items = ToObject(arrayLike);
-        var mapping = false;
-        var len, lenValue;
-        var k;
-        var iterator;
-        var done, Pk, kValue, defineStatus, putStatus, kPresent, mappedValue;
-        var newObj, A;
-        if (isAbrupt(items = ifAbrupt(items))) return items;
-        if (mapfn == undefined) {
-            mapping = true;
-        } else {
-            if (!IsCallable(mapfn)) return newTypeError(format("S_NOT_CALLABLE"), "Array.from: mapfn");
-            if (thisArg2) T = thisArg2;
-            else T = undefined;
-            mapping = true;
-
-        }
-        var usingIterator = HasProperty(items, $$iterator);
-
-        var next, nextValue;
-        if (usingIterator) {
-            iterator = GetIterator(items);
-            if (IsConstructor(C)) {
-                newObj = OrdinaryConstruct(C, []);
-                A = ToObject(newObj);
-            } else {
-                A = ArrayCreate(0);
-            }
-            while (!done) {
-
-                Pk = ToString(k);
-                next = IteratorNext(iterator);
-                if (isAbrupt(next)) return next;
-                next = ifAbrupt(next);
-                done = IteratorComplete(next);
-                if (isAbrupt(done)) return done;
-                done = ifAbrupt(done);
-                if (done) {
-
-                }
-                nextValue = IteratorValue(next);
-                if (isAbrupt(nextValue)) return nextValue;
-                nextValue = ifAbrupt(nextValue);
-                if (mapping) {
-                    mappedValue = mapfn.Call(T, [nextValue]);
-                    if (isAbrupt(mappedValue)) return mappedValue;
-                    mappedValue = ifAbrupt(mappedValue);
-
-                } else mappedValue = nextValue;
-
-                defineStatus = DefineOwnPropertyOrThrow(A, Pk, {
-                    value: mappedValue,
-                    writable: true,
-                    enumberable: true,
-                    configurable: true
-                });
-
-                if (isAbrupt(defineStatus)) return defineStatus;
-
-                k = k + 1;
-            }
-
-        } else {
-
-            // Assert(items is array like and no iterator)
-            lenValue = Get(items, "length");
-            len = ToInteger(lenValue);
-            if (isAbrupt(len)) return len;
-            if (IsConstructor(C)) {
-                newObj = OrdinaryConstruct(C, [len]);
-                A = ToObject(newObj);
-            } else {
-                A = ArrayCreate(len);
-            }
-            k = 0;
-            while (k < len) {
-                Pk = ToString(k);
-                kPresent = HasProperty(items, Pk);
-                if (isAbrupt(kPresent)) return kPresent;
-                if (kPresent) {
-                    kValue = Get(items, Pk);
-                    if (isAbrupt(kValue = ifAbrupt(kValue))) return kValue;
-                    if (mapping) {
-                        mappedValue = mapfn.Call(T, [kValue, k, items]);
-                        if (isAbrupt(mappedValue = ifAbrupt(mappedValue))) return mappedValue;
-                        defineStatus = DefineOwnPropertyOrThrow(A, Pk, {
-                            value: mappedValue,
-                            writable: true,
-                            configurable: true,
-                            enumerable: true
-                        });
-
-                    } else mappedValue = kValue;
-
-                }
-                k = k + 1;
-            }
-
-        }
-        putStatus = Put(A, "length", len, true);
-        if (isAbrupt(putStatus)) return putStatus;
-        return A;
-    }),
-    enumerable: false,
-    writable: true,
-    configurable: true
-});
-
-DefineOwnProperty(ArrayPrototype, "constructor", {
-    value: ArrayConstructor,
-    enumerable: false,
-    writable: false,
-    configurable: true
-});
-
-DefineOwnProperty(ArrayPrototype, "toString", {
-    value: CreateBuiltinFunction(realm, function toString(thisArg, argList) {
-        var array = ToObject(thisArg);
-        if (isAbrupt(array = ifAbrupt(array))) return array;
-        array = GetValue(array);
-        var func = Get(array, "join");
-        if (isAbrupt(func = ifAbrupt(func))) return func;
-        if (!IsCallable(func)) func = Get(ObjectPrototype, "toString");
-        return callInternalSlot(SLOTS.CALL, func, array, []);
-    }),
-    enumerable: false,
-    writable: true,
-    configurable: true
-});
-
-
-function IsConcatSpreadable(O) {
-    if (Type(O) !== OBJECT) return false;
-    if (isAbrupt(O)) return O;
-    var spreadable = Get(O, $$isConcatSpreadable);
-    if (isAbrupt(spreadable = ifAbrupt(spreadable))) return spreadable;
-    if (spreadable !== undefined) return ToBoolean(spreadable);
-    return O instanceof ArrayExoticObject;
-}
-
-var ArrayPrototype_concat = function (thisArg, argList) {
-    var O = ToObject(thisArg);
-    if (isAbrupt(O=ifAbrupt(O))) return O;
-    var A = undefined;
-    if (IsArray(O)) {
-        var C = Get(O, "constructor");
-        if (isAbrupt(C=isAbrupt(C))) return C;
-        if (IsConstructor(C)) {
-            var thisRealm = getRealm();
-            if (thisRealm === getInternalSlot(C, SLOTS.REALM)) {
-                A =  callInternalSlot(SLOTS.CONSTRUCT, C, [0]);
-                if (isAbrupt(A=ifAbrupt(A))) return A;
-            }
-        }
-    }
-    if (A === undefined) {
-        A = ArrayCreate(0);
-        if (isAbrupt(A=ifAbrupt(A))) return A;
-    }
-    var n = 0;
-    var items = [O].concat(argList);
-    var i = 0;
-    var status;
-    while (i < items.length) {
-        var E = items[i];
-        var spreadable = IsConcatSpreadable(E);
-        if (spreadable) {
-            var k = 0;
-            var lenVal = Get(E, "length");
-            var len = ToLength(lenVal);
-            if (isAbrupt(len=ifAbrupt(len))) return len;
-            while (k < len) {
-                var P = ToString(k);
-                var exists = HasProperty(E, P);
-                if (isAbrupt(exists=ifAbrupt(exists))) return exists;
-                if (exists) {
-                    var subElement = Get(E, P);
-                    if (isAbrupt(subElement=ifAbrupt(subElement))) return subElement;
-                    status = CreateDataPropertyOrThrow(A, ToString(n), subElement);
-                    if (isAbrupt(status)) return status;
-                }
-                n = n + 1;
-                k = k + 1;
-            }
-        } else  {
-            status = CreateDataPropertyOrThrow(A, ToString(n), E);
-            if (isAbrupt(status=ifAbrupt(status))) return status;
-            n = n + 1;
-        }
-        i = i + 1;
-    }
-    var putStatus = Put(A, "length", n, true);
-    if (isAbrupt(putStatus)) return putStatus;
-    return NormalCompletion(A);
-};
-
-
-DefineOwnProperty(ArrayPrototype, "join", {
-    value: CreateBuiltinFunction(realm, function join(thisArg, argList) {
-        var O = ToObject(thisArg);
-        if (isAbrupt(O = ifAbrupt(O))) return O;
-        var separator = argList[0];
-        var lenVal = Get(O, "length");
-        var len = ToUint32(lenVal);
-        if (isAbrupt(len = ifAbrupt(len))) return len;
-        if (separator === undefined) separator = ",";
-        var sep = ToString(separator);
-        if (len === 0) return NormalCompletion("");
-        var element0 = Get(O, "0");
-        var R;
-        if (element0 === undefined) R = "";
-        else R = ToString(element0);
-        var k = 1;
-        while (k < len) {
-            var S = R + sep;
-            var element = Get(O, ToString(k));
-            var next;
-            if (element === undefined || element === null) next = "";
-            else next = ToString(element);
-            if (isAbrupt(next = ifAbrupt(next))) return next;
-            R = S + next;
-            k = k + 1;
-        }
-        return NormalCompletion(R);
-    }, 1),
-    enumerable: false,
-    writable: true,
-    configurable: true
-});
-
-DefineOwnProperty(ArrayPrototype, "pop", {
-    value: CreateBuiltinFunction(realm, function pop(thisArg, argList) {
-        var O = ToObject(thisArg);
-        if (isAbrupt(O = ifAbrupt(O))) return O;
-        var lenVal = Get(O, "length");
-        var len = ToUint32(lenVal);
-        if (isAbrupt(len = ifAbrupt(len))) return len;
-        var putStatus, deleteStatus;
-        if (len === 0) {
-            putStatus = Put(O, "length", 0, true);
-            if (isAbrupt(putStatus = ifAbrupt(putStatus))) return putStatus;
-            return undefined;
-        } else {
-            var newLen = len - 1;
-            var index = ToString(newLen);
-            var element = Get(O, index);
-            if (isAbrupt(element = ifAbrupt(element))) return element;
-            deleteStatus = DeletePropertyOrThrow(O, index);
-            if (isAbrupt(deleteStatus = ifAbrupt(deleteStatus))) return deleteStatus;
-            putStatus = Put(O, "length", newLen, true);
-            if (isAbrupt(putStatus = ifAbrupt(putStatus))) return putStatus;
-            return NormalCompletion(element);
-        }
-    }),
-    enumerable: false,
-    writable: true,
-    configurable: true
-});
-
-DefineOwnProperty(ArrayPrototype, "push", {
-    value: CreateBuiltinFunction(realm, function push(thisArg, argList) {
-        var O = ToObject(thisArg);
-        if (isAbrupt(O = ifAbrupt(O))) return O;
-        var lenVal = Get(O, "length");
-        var n = ToUint32(lenVal);
-        if (isAbrupt(n = ifAbrupt(n))) return n;
-        var items = argList;
-        var E, putStatus;
-        for (var i = 0, j = items.length; i < j; i++) {
-            E = items[i];
-            putStatus = Put(O, ToString(n), E, true);
-            if (isAbrupt(putStatus = ifAbrupt(putStatus))) return putStatus;
-            n = n + 1;
-        }
-        putStatus = Put(O, "length", n, true);
-        if (isAbrupt(putStatus = ifAbrupt(putStatus))) return putStatus;
-        return NormalCompletion(n);
-    }, 1),
-    enumerable: false,
-    writable: true,
-    configurable: true
-});
-
-DefineOwnProperty(ArrayPrototype, "reverse", {
-    value: CreateBuiltinFunction(realm, function reverse(thisArg, argList) {
-        var O = ToObject(thisArg);
-        if (isAbrupt(O = ifAbrupt(O))) return O;
-        var lenVal = Get(O, "length");
-        var len = ToUint32(lenVal);
-        if (isAbrupt(len = ifAbrupt(len))) return len;
-        var middle = Math.floor(len / 2);
-        var lower = 0;
-        var putStatus;
-        var deleteStatus;
-        while (lower < middle) {
-            var upper = len - lower - 1;
-            var upperP = ToString(upper);
-            var lowerP = ToString(lower);
-            var lowerValue = Get(O, lowerP);
-            if (isAbrupt(lowerValue = ifAbrupt(lowerValue))) return lowerValue;
-            var upperValue = Get(O, upperP);
-            if (isAbrupt(upperValue = ifAbrupt(upperValue))) return upperValue;
-            var lowerExists = HasProperty(O, lowerP);
-            if (isAbrupt(lowerExists = ifAbrupt(lowerExists))) return lowerExists;
-            var upperExists = HasProperty(O, upperP);
-            if (isAbrupt(upperExists = ifAbrupt(upperExists))) return upperExists;
-            if (lowerExists === true && upperExists === true) {
-                putStatus = Put(O, lowerP, upperValue, true);
-                if (isAbrupt(putStatus = ifAbrupt(putStatus))) return putStatus;
-                putStatus = Put(O, upperP, lowerValue, true);
-                if (isAbrupt(putStatus = ifAbrupt(putStatus))) return putStatus;
-
-            } else if (lowerExists === false && upperExists === true) {
-
-                putStatus = Put(O, lowerP, upperValue, true);
-                if (isAbrupt(putStatus = ifAbrupt(putStatus))) return putStatus;
-                deleteStatus = DeletePropertyOrThrow(O, upperP);
-                if (isAbrupt(deleteStatus = ifAbrupt(deleteStatus))) return deleteStatus;
-
-            } else if (lowerExists === true && upperExists === false) {
-
-                deleteStatus = DeletePropertyOrThrow(O, lowerP);
-                if (isAbrupt(deleteStatus = ifAbrupt(deleteStatus))) return deleteStatus;
-                putStatus = Put(O, upperP, lowerValue, true);
-                if (isAbrupt(putStatus = ifAbrupt(putStatus))) return putStatus;
-
-            }
-
-            lower = lower + 1;
-        }
-        return NormalCompletion(O);
-    }),
-    enumerable: false,
-    writable: true,
-    configurable: true
-});
-
-DefineOwnProperty(ArrayPrototype, "shift", {
-    value: CreateBuiltinFunction(realm, function shift(thisArg, argList) {
-        var O = ToObject(thisArg);
-        if (isAbrupt(O = ifAbrupt(O))) return O;
-        var lenVal = Get(O, "length");
-        var len = ToUint32(lenVal);
-        if (isAbrupt(len = ifAbrupt(len))) return len;
-
-    }),
-    enumerable: false,
-    writable: true,
-    configurable: true
-});
-
-DefineOwnProperty(ArrayPrototype, "slice", {
-    value: CreateBuiltinFunction(realm, function slice(thisArg, argList) {
-        var start = argList[0];
-        var end = argList[1];
-        var O = ToObject(thisArg);
-        var A = ArrayCreate(0);
-        if (isAbrupt(O = ifAbrupt(O))) return O;
-        var lenVal = Get(O, "length");
-        var len = ToUint32(lenVal);
-        if (isAbrupt(len = ifAbrupt(len))) return len;
-
-        var relativeStart = ToInteger(start);
-        if (isAbrupt(relativeStart = ifAbrupt(relativeStart))) return relativeStart;
-
-        var k;
-        if (relativeStart < 0) k = max((len + relativeStart), 0);
-        else k = min(relativeStart, len);
-        var relativeEnd;
-        if (end === undefined) relativeEnd = len;
-        else relativeEnd = ToInteger(end);
-        if (isAbrupt(relativeEnd = ifAbrupt(relativeEnd))) return relativeEnd;
-        var final;
-        if (relativeEnd < 0) final = max((len + relativeEnd), 0);
-        else final = min(relativeEnd, len);
-        var n = 0;
-        var putStatus, status;
-        while (k < final) {
-            var Pk = ToString(k);
-            var kPresent = HasProperty(O, Pk);
-            if (isAbrupt(kPresent = ifAbrupt(kPresent))) return kPresent;
-            if (kPresent) {
-                var kValue = Get(O, Pk);
-                if (isAbrupt(kValue = ifAbrupt(kValue))) return kValue;
-                status = CreateDataProperty(A, ToString(n), kValue);
-                if (isAbrupt(status)) return status;
-                if (status === false) return newTypeError(format("CREATEDATAPROPERTY_FAILED"));
-            }
-            k = k + 1;
-            n = n + 1;
-        }
-        putStatus = Put(A, "length", n, true);
-        if (isAbrupt(putStatus)) return putStatus;
-        return NormalCompletion(A);
-    }, 2),
-    enumerable: false,
-    writable: true,
-    configurable: true
-});
-
-DefineOwnProperty(ArrayPrototype, "sort", {
-    value: CreateBuiltinFunction(realm, function sort(thisArg, argList) {
-        var O = ToObject(thisArg);
-        if (isAbrupt(O = ifAbrupt(O))) return O;
-        var lenVal = Get(O, "length");
-        var len = ToUint32(lenVal);
-        if (isAbrupt(len = ifAbrupt(len))) return len;
-
-    }),
-    enumerable: false,
-    writable: true,
-    configurable: true
-});
-
-var ArrayPrototype_splice = function splice(thisArg, argList) {
-    var start = argList[0];
-    var deleteCount = argList[1];
-    var items = arraySlice(argList, 2);
-    var O = ToObject(thisArg);
-    if (isAbrupt(O = ifAbrupt(O))) return O;
-    var lenVal = Get(O, "length");
-    var len = ToLength(lenVal);
-    if (isAbrupt(len = ifAbrupt(len))) return len;
-    var relativeStart = ToInteger(start);
-    if (isAbrupt(relativeStart = ifAbrupt(relativeStart))) return relativeStart;
-    var actualStart;
-    if (relativeStart < 0) actualStart = max((len+relativeStart),0);
-    else actualStart=min(relativeStart,len);
-    if (start === undefined) {
-        var actualDeleteCount = 0;
-    } else if (deleteCount === undefined) {
-        actualDeleteCount = len - actualStart;
-    } else {
-        var dc = ToInteger(deleteCount);
-        if (isAbrupt(dc = ifAbrupt(dc))) return dc;
-        actualDeleteCount = min(max(dc, 0), len - actualStart);
-    }
-    var A = undefined;
-    if (IsArray(O)) {
-        var C = Get(O, "constructor");
-        if (isAbrupt(C = ifAbrupt(C))) return C;
-        if (IsConstructor(C) === true) {
-            var thisRealm = getRealm();
-            if (SameValue(thisRealm, getInternalSlot(C, SLOTS.REALM))) {
-                A = callInternalSlot(SLOTS.CONSTRUCT, [actualDeleteCount]);
-            }
-        }
-    }
-    if (A === undefined) {
-        A = ArrayCreate(actualDeleteCount);
-    }
-    if (isAbrupt(A = ifAbrupt(A))) return A;
-    var k = 0;
-    while (k < actualDeleteCount) {
-        var from = ToString(actualStart + k);
-        var fromPresent = HasProperty(O, from);
-        if (isAbrupt(fromPresent = ifAbrupt(fromPresent))) return fromPresent;
-        if (fromPresent === true) {
-            var fromValue = Get(O, from);
-            if (isAbrupt(fromValue = ifAbrupt(fromValue))) return fromValue;
-            var status = CreateDataPropertyOrThrow(A, ToString(k), fromValue);
-            if (isAbrupt(status)) return status;
-        }
-        k = k + 1;
-    }
-    var putStatus = Put(A, "length", actualDeleteCount, true);
-    if (isAbrupt(putStatus)) return putStatus;
-    var itemCount = items.length;
-    if (itemCount < actualDeleteCount) {
-        k = actualStart;
-        while (k < (len - actualDeleteCount)) {
-            from = ToString(k+actualDeleteCount);
-            var to = ToString(k+itemCount);
-            fromPresent = HasProperty(O, from);
-            if (isAbrupt(fromPresent = ifAbrupt(fromPresent))) return fromPresent;
-            if (fromPresent  === true) {
-                fromValue = Get(O, from);
-                if (isAbrupt(fromValue = ifAbrupt(fromValue))) return fromValue;
-                putStatus = Put(O, to, fromValue, true);
-                if (isAbrupt(putStatus)) return putStatus;
-
-            } else {
-                var deleteStatus = DeletePropertyOrThrow(O, to);
-                if (isAbrupt(deleteStatus)) return deleteStatus;
-            }
-            k = k + 1;
-        }
-    } else if (itemCount > actualDeleteCount) {
-        k = len - actualDeleteCount;
-        while (k < actualStart) {
-            from = ToString(k + actualDeleteCount - 1);
-            to = ToString(k + itemCount - 1);
-            fromPresent = HasProperty(O, from);
-            if (fromPresent === true) {
-                fromValue = Get(O, from);
-                if (isAbrupt(fromValue = ifAbrupt(fromValue))) return fromValue;
-                putStatus = Put(O, to, fromValue, true);
-                if (isAbrupt(putStatus)) return putStatus;
-            } else {
-                deleteStatus = DeletePropertyOrThrow(O, to);
-                if (isAbrupt(deleteStatus)) return deleteStatus;
-            }
-            k = k - 1;
-        }
-    }
-    k = actualStart;
-    var l = 0;
-    while (k < actualStart) {
-        var E = items[l];
-        putStatus = Put(O, ToString(k), E, true);
-        l = l + 1;
-        k = k + 1;
-        if (isAbrupt(putStatus)) return putStatus;
-    }
-    putStatus = Put(O, "length", len - actualDeleteCount + itemCount, true);
-    if (isAbrupt(putStatus)) return putStatus;
-    return NormalCompletion(A);
-};
-
-DefineOwnProperty(ArrayPrototype, "indexOf", {
-    value: CreateBuiltinFunction(realm, function indexOf(thisArg, argList) {
-        var O = ToObject(thisArg);
-        if (isAbrupt(O = ifAbrupt(O))) return O;
-        var searchElement = argList[0];
-        var fromIndex = argList[1];
-        var lenValue = Get(O, "length");
-        var len = ToUint32(lenValue);
-        if (isAbrupt(len = ifAbrupt(len))) return len;
-        var n;
-        var k;
-        if (fromIndex !== undefined) n = ToInteger(fromIndex);
-        else n = 0;
-        if (isAbrupt(n = ifAbrupt(n))) return n;
-        if (len === 0) return -1;
-        if (n >= 0) k = n;
-        else {
-            k = len - abs(n);
-            if (k < 0) k = 0;
-        }
-        while (k < len) {
-            var Pk = ToString(k);
-            var kPresent = HasProperty(O, Pk);
-            if (isAbrupt(kPresent = ifAbrupt(kPresent))) return kPresent;
-            if (kPresent) {
-                var elementK = Get(O, Pk);
-                if (isAbrupt(elementK = ifAbrupt(elementK))) return elementK;
-                /* Replace mit Strict EQ Abstract Op */
-                var same = (searchElement === elementK);
-                if (same) return NormalCompletion(k);
-            }
-            k = k + 1;
-        }
-        return NormalCompletion(-1);
-    }, 1),
-    enumerable: false,
-    writable: true,
-    configurable: true
-});
-DefineOwnProperty(ArrayPrototype, "lastIndexOf", {
-    value: CreateBuiltinFunction(realm, function lastIndexOf(thisArg, argList) {
-        var O = ToObject(thisArg);
-        if (isAbrupt(O = ifAbrupt(O))) return O;
-        var searchElement = argList[0];
-        var fromIndex = argList[1];
-        var lenValue = Get(O, "length");
-        var len = ToUint32(lenValue);
-        if (isAbrupt(len = ifAbrupt(len))) return len;
-        var n;
-        var k;
-        if (len === 0) return -1;
-        if (fromIndex !== undefined) n = ToInteger(fromIndex);
-        else n = len - 1;
-        if (isAbrupt(n = ifAbrupt(n))) return n;
-        if (n >= 0) k = min(n, len - 1);
-        else {
-            k = len - abs(n);
-        }
-        while (k > 0) {
-            var Pk = ToString(k);
-            var kPresent = HasProperty(O, Pk);
-            if (isAbrupt(kPresent = ifAbrupt(kPresent))) return kPresent;
-            if (kPresent) {
-                var elementK = Get(O, Pk);
-                if (isAbrupt(elementK = ifAbrupt(elementK))) return elementK;
-                /* Replace mit Strict EQ Abstract Op */
-                var same = (searchElement === elementK);
-                if (same) return NormalCompletion(k);
-            }
-            k = k - 1;
-        }
-        return NormalCompletion(-1);
-
-    }, 1),
-    enumerable: false,
-    writable: true,
-    configurable: true
-});
-DefineOwnProperty(ArrayPrototype, "forEach", {
-    value: CreateBuiltinFunction(realm, function forEach(thisArg, argList) {
-        var callback = argList[0];
-        var T = argList[1];
-        var O = ToObject(thisArg);
-        if (isAbrupt(O = ifAbrupt(O))) return O;
-        var lenVal = Get(O, "length");
-        var len = ToUint32(lenVal);
-        if (isAbrupt(len = ifAbrupt(len))) return len;
-        if (!IsCallable(callback)) return newTypeError(format("S_NOT_CALLABLE", "forEach: callback"));
-        if (argList.length < 2) T = undefined;
-        var k = 0;
-        while (k < len) {
-            var Pk = ToString(k);
-            var kPresent = HasProperty(O, Pk);
-            if (isAbrupt(kPresent = ifAbrupt(kPresent))) return kPresent;
-            if (kPresent) {
-                var kValue = Get(O, Pk);
-                if (isAbrupt(kValue = ifAbrupt(kValue))) return kValue;
-                var funcResult = callInternalSlot(SLOTS.CALL, callback, T, [kValue, k, O]);
-                if (isAbrupt(funcResult)) return funcResult;
-            }
-            k = k + 1;
-        }
-        return NormalCompletion(undefined);
-    }),
-    enumerable: false,
-    writable: true,
-    configurable: true
-});
-DefineOwnProperty(ArrayPrototype, "map", {
-    value: CreateBuiltinFunction(realm, function map(thisArg, argList) {
-
-        var callback = argList[0];
-        var T = argList[1];
-        var O = ToObject(thisArg);
-        if (isAbrupt(O = ifAbrupt(O))) return O;
-        var lenVal = Get(O, "length");
-        var len = ToUint32(lenVal);
-        if (!IsCallable(callback)) return newTypeError(format("S_NOT_CALLABLE", "map: callback"));
-        if (argList.length < 2) T = undefined;
-        var k = 0;
-        var A = ArrayCreate(len);
-        while (k < len) {
-            var Pk = ToString(k);
-            var kPresent = HasProperty(O, Pk);
-            if (isAbrupt(kPresent = ifAbrupt(kPresent))) return kPresent;
-            if (kPresent) {
-                var kValue = Get(O, Pk);
-                if (isAbrupt(kValue = ifAbrupt(kValue))) return kValue;
-                var mappedValue = callInternalSlot(SLOTS.CALL, callback, T, [kValue, k, O]);
-                if (isAbrupt(mappedValue = ifAbrupt(mappedValue))) return mappedValue;
-                callInternalSlot(SLOTS.DEFINEOWNPROPERTY, A, Pk, {
-                    value: mappedValue,
-                    writable: true,
-                    enumerable: true,
-                    configurable: true
-                });
-            }
-            k = k + 1;
-        }
-        return NormalCompletion(A);
-    }),
-    enumerable: false,
-    writable: true,
-    configurable: true
-});
-DefineOwnProperty(ArrayPrototype, "filter", {
-    value: CreateBuiltinFunction(realm, function filter(thisArg, argList) {
-
-        var callback = argList[0];
-        var T = argList[1];
-        var O = ToObject(thisArg);
-        if (isAbrupt(O = ifAbrupt(O))) return O;
-        var lenVal = Get(O, "length");
-        var len = ToUint32(lenVal);
-        if (!IsCallable(callback)) return newTypeError(format("S_NOT_CALLABLE", "filter: callback"));
-        if (argList.length < 2) T = undefined;
-        var k = 0;
-        var to = 0;
-        var A = ArrayCreate(len);
-        while (k < len) {
-            var Pk = ToString(k);
-            var kPresent = HasProperty(O, Pk);
-            if (isAbrupt(kPresent = ifAbrupt(kPresent))) return kPresent;
-            if (kPresent) {
-                var kValue = Get(O, Pk);
-                if (isAbrupt(kValue = ifAbrupt(kValue))) return kValue;
-
-                var selected = callInternalSlot(SLOTS.CALL, callback, T, [kValue, k, O]);
-                if (isAbrupt(selected = ifAbrupt(selected))) return selected;
-                if (ToBoolean(selected) === true) {
-
-                    A.DefineOwnProperty(ToString(to), {
-                        value: kValue,
-                        writable: true,
-                        enumerable: true,
-                        configurable: true
-                    });
-                    to = to + 1;
-                }
-            }
-            k = k + 1;
-        }
-        return NormalCompletion(A);
-    }, 1),
-    enumerable: false,
-    writable: true,
-    configurable: true
-});
-
-DefineOwnProperty(ArrayPrototype, "every", {
-    value: CreateBuiltinFunction(realm, function every(thisArg, argList) {
-        var callback = argList[0];
-        var T = argList[1];
-        var O = ToObject(thisArg);
-        if (isAbrupt(O = ifAbrupt(O))) return O;
-        var lenVal = Get(O, "length");
-        var len = ToUint32(lenVal);
-        if (!IsCallable(callback)) return newTypeError(format("S_NOT_CALLABLE", "every: callback"));
-        if (argList.length < 2) T = undefined;
-        var k = 0;
-        while (k < len) {
-            var Pk = ToString(k);
-            var kPresent = HasProperty(O, Pk);
-            if (isAbrupt(kPresent = ifAbrupt(kPresent))) return kPresent;
-            if (kPresent) {
-                var kValue = Get(O, Pk);
-                if (isAbrupt(kValue = ifAbrupt(kValue))) return kValue;
-                var testResult = callInternalSlot(SLOTS.CALL, callback, T, [kValue, k, O]);
-                if (isAbrupt(testResult = ifAbrupt(testResult))) return testResult;
-                if (ToBoolean(testResult) === false) return NormalCompletion(false);
-            }
-            k = k + 1;
-        }
-        return NormalCompletion(true);
-    }, 1),
-    enumerable: false,
-    writable: true,
-    configurable: true
-});
-
-DefineOwnProperty(ArrayPrototype, "some", {
-    value: CreateBuiltinFunction(realm, function some(thisArg, argList) {
-        var callback = argList[0];
-        var T = argList[1];
-        var O = ToObject(thisArg);
-        if (isAbrupt(O = ifAbrupt(O))) return O;
-        var lenVal = Get(O, "length");
-        var len = ToUint32(lenVal);
-        if (!IsCallable(callback)) return newTypeError(format("S_NOT_CALLABLE", "some: callback"));
-        if (argList.length < 2) T = undefined;
-        var k = 0;
-        while (k < len) {
-            var Pk = ToString(k);
-            var kPresent = HasProperty(O, Pk);
-            if (isAbrupt(kPresent = ifAbrupt(kPresent))) return kPresent;
-            if (kPresent) {
-                var kValue = Get(O, Pk);
-                if (isAbrupt(kValue = ifAbrupt(kValue))) return kValue;
-                var testResult = callInternalSlot(SLOTS.CALL, callback, T, [kValue, k, O]);
-                if (isAbrupt(testResult = ifAbrupt(testResult))) return testResult;
-                if (ToBoolean(testResult) === true) return NormalCompletion(true);
-            }
-            k = k + 1;
-        }
-        return NormalCompletion(false);
-    }, 1),
-    enumerable: false,
-    writable: true,
-    configurable: true
-});
-
-DefineOwnProperty(ArrayPrototype, "entries", {
-    value: CreateBuiltinFunction(realm, function entries(thisArg, argList) {
-        var O = ToObject(thisArg);
-        if (isAbrupt(O)) return O;
-        return CreateArrayIterator(O, "key+value");
-    }),
-    enumerable: false,
-    writable: true,
-    configurable: true
-});
-DefineOwnProperty(ArrayPrototype, "keys", {
-    value: CreateBuiltinFunction(realm, function keys(thisArg, argList) {
-        var O = ToObject(thisArg);
-        if (isAbrupt(O)) return O;
-        return CreateArrayIterator(O, "key");
-    }),
-    enumerable: false,
-    writable: true,
-    configurable: true
-});
-
-
-
-DefineOwnProperty(ArrayPrototype, $$iterator, {
-    value: CreateBuiltinFunction(realm, function $$iterator(thisArg, argList) {
-        var O = ToObject(thisArg);
-        if (isAbrupt(O = ifAbrupt(O))) return O;
-        return CreateArrayIterator(O, "value");
-    }),
-    enumerable: false,
-    writable: true,
-    configurable: true
-});
-
-
+LazyDefineBuiltinFunction(ConsoleObject, "log", 1, ConsoleObject_log);
+LazyDefineBuiltinFunction(ConsoleObject, "dir", 1, ConsoleObject_dir);
+LazyDefineBuiltinFunction(ConsoleObject, "error", 1, ConsoleObject_error);
+LazyDefineBuiltinFunction(ConsoleObject, "html", 1, ConsoleObject_html);
+
+LazyDefineBuiltinFunction(ArrayPrototype, "indexOf", 0, ArrayPrototype_indexOf);
+LazyDefineBuiltinFunction(ArrayPrototype, "lastIndexOf", 0, ArrayPrototype_lastIndexOf);
+LazyDefineBuiltinFunction(ArrayPrototype, "forEach", 0, ArrayPrototype_forEach);
+LazyDefineBuiltinFunction(ArrayPrototype, "map", 0, ArrayPrototype_map);
+LazyDefineBuiltinFunction(ArrayPrototype, "filter", 0, ArrayPrototype_filter);
+LazyDefineBuiltinFunction(ArrayPrototype, "every", 0, ArrayPrototype_every);
+LazyDefineBuiltinFunction(ArrayPrototype, "some", 0, ArrayPrototype_some);
+
+LazyDefineBuiltinFunction(ArrayConstructor, $$create, 1, ArrayConstructor_$$create);
+LazyDefineBuiltinFunction(ArrayConstructor, "from", 1, ArrayConstructor_from);
+LazyDefineBuiltinFunction(ArrayConstructor, "isArray", 1, ArrayConstructor_isArray);
+LazyDefineBuiltinFunction(ArrayConstructor, "of", 1, ArrayConstructor_of);
+
+LazyDefineBuiltinConstant(ArrayPrototype, "constructor", ArrayConstructor);
+LazyDefineBuiltinConstant(ArrayConstructor, "prototype", ArrayPrototype);
+
+
+LazyDefineBuiltinFunction(ArrayPrototype, "pop", 0, ArrayPrototype_pop);
+LazyDefineBuiltinFunction(ArrayPrototype, "push", 1, ArrayPrototype_push);
+LazyDefineBuiltinFunction(ArrayPrototype, "join", 0, ArrayPrototype_join);
+LazyDefineBuiltinFunction(ArrayPrototype, "reverse", 0, ArrayPrototype_reverse);
+LazyDefineBuiltinFunction(ArrayPrototype, "shift", 0, ArrayPrototype_shift);
+
+LazyDefineBuiltinFunction(ArrayPrototype, "slice", 0, ArrayPrototype_slice);
+LazyDefineBuiltinFunction(ArrayPrototype, "sort", 1, ArrayPrototype_sort);
+
+LazyDefineBuiltinFunction(ArrayPrototype, "entries", 0, ArrayPrototype_entries);
+LazyDefineBuiltinFunction(ArrayPrototype, "keys", 0, ArrayPrototype_keys);
+LazyDefineBuiltinFunction(ArrayPrototype, $$iterator, 0, ArrayPrototype_$$iterator);
 LazyDefineProperty(ArrayPrototype, $$unscopables, (function () {
         var blackList = ObjectCreate();
         CreateDataProperty(blackList, "find", true);
@@ -22745,7 +23230,6 @@ LazyDefineProperty(ArrayPrototype, $$unscopables, (function () {
         CreateDataProperty(blackList, "values", true);
         return blackList;
 }()));
-
 setInternalSlot(ArrayProto_values, SLOTS.CALL, ArrayPrototype_values);
 setInternalSlot(ArrayProto_values, SLOTS.CONSTRUCT, undefined);
 LazyDefineProperty(ArrayPrototype, "values", ArrayProto_values);
@@ -22769,98 +23253,11 @@ LazyDefineBuiltinFunction(ArrayPrototype, "splice", 2, ArrayPrototype_splice);
 LazyDefineBuiltinFunction(ArrayPrototype, "toLocaleString", 2, ArrayPrototype_toLocaleString);
 LazyDefineBuiltinFunction(ArrayPrototype, "unshift", 1, ArrayPrototype_unshift);
 LazyDefineBuiltinConstant(ArrayPrototype, $$toStringTag, "Array");
-// ===========================================================================================================
-// Array Iterator
-// ===========================================================================================================
 
 setInternalSlot(ArrayIteratorPrototype, SLOTS.PROTOTYPE, ObjectPrototype);
-DefineOwnProperty(ArrayIteratorPrototype, $$iterator, {
-    value: CreateBuiltinFunction(realm, function (thisArg, argList) {
-        return thisArg;
-    }, 0, "[Symbol.iterator]"),
-    enumerable: false,
-    configurable: false,
-    writable: false
-});
-
-DefineOwnProperty(ArrayIteratorPrototype, $$toStringTag, {
-    value: "Array Iterator",
-    enumerable: false,
-    configurable: false,
-    writable: false
-});
-
-DefineOwnProperty(ArrayIteratorPrototype, "next", {
-    value: CreateBuiltinFunction(realm, function next(thisArg, argList) {
-        var O = thisArg;
-        if (Type(O) !== OBJECT) return newTypeError( "ArrayIterator.prototype.next: O is not an object. ");
-
-        if (!hasInternalSlot(O, SLOTS.ITERATEDOBJECT) || !hasInternalSlot(O, SLOTS.ARRAYITERATIONNEXTINDEX) || !hasInternalSlot(O, SLOTS.ARRAYITERATIONKIND)) {
-            return newTypeError( "Object has not all ArrayIterator properties.");
-        }
-
-        var a = getInternalSlot(O, SLOTS.ITERATEDOBJECT);
-        var index = getInternalSlot(O, SLOTS.ARRAYITERATIONNEXTINDEX);
-        var itemKind = getInternalSlot(O, SLOTS.ARRAYITERATIONKIND);
-        var lenValue = Get(a, "length");
-        var len = ToUint32(lenValue);
-        var elementKey, found, result, elementValue;
-        if (isAbrupt(len = ifAbrupt(len))) return len;
-        if ((/sparse/).test(itemKind)) {
-            var found = false;
-            while (!found && (index < len)) {
-                elementKey = ToString(index);
-                found = HasProperty(a, elementKey);
-                if (isAbrupt(found)) return found;
-                if (!(found = ifAbrupt(found))) index = index + 1;
-            }
-        }
-        if (index >= len) {
-            setInternalSlot(O, SLOTS.ARRAYITERATIONNEXTINDEX, +Infinity);
-            return CreateItrResultObject(undefined, true);
-        }
-        elementKey = ToString(index);
-        setInternalSlot(O, SLOTS.ARRAYITERATIONNEXTINDEX, index + 1);
-
-        if (itemKind === "key+value") {
-            elementValue = Get(a, elementKey);
-            if (isAbrupt(elementValue = ifAbrupt(elementValue))) return elementValue;
-
-            result = ArrayCreate(2);
-            callInternalSlot(SLOTS.DEFINEOWNPROPERTY, result, "0", {
-                value: elementKey,
-                writable: true,
-                enumerable: true,
-                configurable: true
-            });
-            callInternalSlot(SLOTS.DEFINEOWNPROPERTY, result, "1", {
-                value: elementValue,
-                writable: true,
-                enumerable: true,
-                configurable: true
-            });
-            callInternalSlot(SLOTS.DEFINEOWNPROPERTY, result, "length", {
-                value: 2,
-                writable: true,
-                eumerable: false,
-                configurable: false
-            });
-            return CreateItrResultObject(result, false);
-
-        } else if (itemKind === "value") {
-            elementValue = Get(a, elementKey);
-            if (isAbrupt(elementValue = ifAbrupt(elementValue))) return elementValue;
-            return CreateItrResultObject(elementValue, false);
-        } else if (itemKind === "key") {
-            return CreateItrResultObject(elementKey, false);
-        }
-
-    }),
-    writable: false,
-    enumerable: false,
-    configurable: false
-});
-
+LazyDefineBuiltinFunction(ArrayIteratorPrototype, $$iterator, 0, ArrayIteratorPrototype_$$iterator);
+LazyDefineBuiltinConstant(ArrayIteratorPrototype, $$toStringTag, "Array Iterator");
+LazyDefineBuiltinFunction(ArrayIteratorPrototype, "next", 0, ArrayIteratorPrototype_next);
 MakeConstructor(StringConstructor, true, StringPrototype);
 
 setInternalSlot(StringConstructor, SLOTS.CALL, StringConstructor_call);
@@ -22935,179 +23332,15 @@ LazyDefineBuiltinFunction(SymbolPrototype, "toString", 0, SymbolPrototype_toStri
 LazyDefineBuiltinConstant(SymbolPrototype, $$toStringTag, "Symbol");
 LazyDefineBuiltinFunction(SymbolPrototype, "valueOf", 0, SymbolPrototype_valueOf);
 
-
-// ===========================================================================================================
-// Error
-// ===========================================================================================================
-
 setInternalSlot(ErrorPrototype, SLOTS.PROTOTYPE, ObjectPrototype);
 MakeConstructor(ErrorConstructor, true, ErrorPrototype);
 LazyDefineBuiltinConstant(ErrorConstructor, "prototype", ErrorPrototype);
 LazyDefineBuiltinConstant(ErrorPrototype, "constructor", ErrorConstructor);
 LazyDefineBuiltinConstant(ErrorPrototype, "name", "Error");
-
-setInternalSlot(ErrorConstructor, SLOTS.CALL, function (thisArg, argList) {
-    var func = ErrorConstructor;
-    var message = argList[0];
-    var name = "Error";
-    var O = thisArg;
-    var isObject = Type(O) === OBJECT;
-    // This is different from the others in the spec
-    if (!isObject || (isObject &&
-        (!hasInternalSlot(O, SLOTS.ERRORDATA) || (getInternalSlot(O, SLOTS.ERRORDATA) === undefined)))) {
-        O = OrdinaryCreateFromConstructor(func, INTRINSICS.ERRORPROTOTYPE, [
-            SLOTS.ERRORDATA
-        ]);
-        if (isAbrupt(O = ifAbrupt(O))) return O;
-    }
-    // or i read it wrong
-    Assert(Type(O) === OBJECT);
-    setInternalSlot(O, SLOTS.ERRORDATA, "Error");
-    if (message !== undefined) {
-        var msg = ToString(message);
-        if (isAbrupt(msg = ifAbrupt(msg))) return msg;
-        var msgDesc = {
-            value: msg,
-            writable: true,
-            enumerable: false,
-            configurable: true
-        };
-        var status = DefineOwnPropertyOrThrow(O, "message", msgDesc);
-        if (isAbrupt(status)) return status;
-    }
-
-    CreateDataProperty(O, "stack", stringifyErrorStack());
-    setInternalSlot(O, "toString", function () { return "[object Error]"; });
-    return O;
-});
-
-setInternalSlot(ErrorConstructor, SLOTS.CONSTRUCT, function (argList) {
-    var F = this;
-    var argumentsList = argList;
-    return OrdinaryConstruct(F, argumentsList);
-});
-
-DefineOwnProperty(ErrorConstructor, $$create, {
-    value: CreateBuiltinFunction(realm, function (thisArg, argList) {
-        var F = thisArg;
-        var obj = OrdinaryCreateFromConstructor(F, INTRINSICS.ERRORPROTOTYPE, [
-            SLOTS.ERRORDATA
-    ]);
-        return obj;
-    }),
-    writable: false,
-    configurable: false,
-    enumerable: false
-});
-
-DefineOwnProperty(ErrorPrototype, "toString", {
-    value: CreateBuiltinFunction(realm, function (thisArg, argList) {
-        var O = thisArg;
-        if (Type(O) !== OBJECT) return newTypeError( "Error.prototype.toString: O is not an object.");
-        var name = Get(O, "name");
-        if (isAbrupt(name)) return name;
-        name = ifAbrupt(name);
-        var msg = Get(O, "message");
-        if (isAbrupt(msg)) return msg;
-        msg = ifAbrupt(msg);
-        if (msg === undefined) msg = "";
-        else msg = ToString(msg);
-        if (name === "") return msg;
-        if (msg === "") return name;
-        return name + ": " + msg;
-    }),
-    writable: false,
-    configurable: false,
-    enumerable: false
-
-});
-
-function createNativeError(nativeType, ctor, proto) {
-    //var name = nativeType + "Error";
-    // var intrProtoName = "%" + nativeType + "ErrorPrototype%";
-    var name;
-    var intrProtoName;
-    switch(nativeType) {
-        case "URI": name = "URIError"; intrProtoName = INTRINSICS.URIERROR; break;
-        case "Range": name = "RangeError"; intrProtoName = INTRINSICS.RANGEERROR; break;
-        case "Type": name = "TypeError"; intrProtoName = INTRINSICS.TYPEERROR; break;
-        case "Reference": name = "ReferenceError"; intrProtoName = INTRINSICS.REFERENCEERROR; break;
-        case "Syntax": name = "SyntaxError"; intrProtoName = INTRINSICS.SYNTAXERROR; break;
-        case "Eval": name = "EvalError"; intrProtoName = INTRINSICS.EVALERROR; break;
-    }
-
-    //SetFunctionName(ctor, name);
-    setInternalSlot(ctor, SLOTS.CALL, function (thisArg, argList) {
-        var func = this;
-        var O = thisArg;
-        var message = argList[0];
-        if (Type(O) !== OBJECT ||
-            (Type(O) === OBJECT && getInternalSlot(O, SLOTS.ERRORDATA) == undefined)) {
-            O = OrdinaryCreateFromConstructor(func, intrProtoName);
-            if (isAbrupt(O=ifAbrupt(O))) return O;
-        }
-        if (Type(O) !== OBJECT) return newTypeError(format("S_NOT_OBJECT", "O"));
-        setInternalSlot(O, SLOTS.ERRORDATA, name);
-        if (message !== undefined) {
-            var msg = ToString(message);
-            var msgDesc = {
-                value: msg,
-                writable: true,
-                enumerable: false,
-                configurable: true
-            };
-            var status = DefineOwnPropertyOrThrow(O, "message", msgDesc);
-            if (isAbrupt(status)) return status;
-        }
-        var cx = getContext();
-        if (cx && cx.line != undefined) {
-            var lineNumber = cx.line;
-            var columnNumber = cx.column;
-            CreateDataProperty(O, "lineNumber", lineNumber);
-            CreateDataProperty(O, "columnNumber", columnNumber);
-        }
-        CreateDataProperty(O, "stack", stringifyErrorStack());
-        // interne representation
-        setInternalSlot(O, "toString", function () {
-            return "[object "+name+"]";
-        });
-        return O;
-
-    });
-
-    setInternalSlot(ctor, SLOTS.CONSTRUCT, function (thisArg, argList) {
-        var F = ctor;
-        var argumentsList = argList;
-        return OrdinaryCreateFromConstructor(F, argumentsList);
-    });
-
-    DefineOwnProperty(ctor, "length", {
-        value: 1,
-        enumerable: false,
-        configurable: false,
-        writable: false
-    });
-    DefineOwnProperty(ctor, $$create, {
-        value: CreateBuiltinFunction(realm, function (thisArg, argList) {
-            var F = thisArg;
-            var obj = OrdinaryCreateFromConstructor(F, intrProtoName);
-            return obj;
-        }),
-        enumerable: false,
-        configurable: false,
-        writable: false
-    });
-
-    LazyDefineBuiltinConstant(ctor, "prototype", proto);
-    LazyDefineBuiltinConstant(proto, "constructor", ctor);
-    LazyDefineBuiltinConstant(proto, "name", name);
-    LazyDefineBuiltinConstant(proto, "message", "");
-    MakeConstructor(ctor, false, proto);
-}
-
-// ===========================================================================================================
-// SyntaxError, TypeError, ReferenceError, URIError, RangeError, EvalError
-// ===========================================================================================================
+setInternalSlot(ErrorConstructor, SLOTS.CALL, ErrorConstructor_call);
+setInternalSlot(ErrorConstructor, SLOTS.CONSTRUCT, ErrorConstructor_construct);
+LazyDefineBuiltinFunction(ErrorConstructor, $$create, 1, ErrorConstructor_$$create);
+LazyDefineBuiltinFunction(ErrorPrototype, "toString", 0, ErrorPrototype_toString);
 
 createNativeError("Syntax", SyntaxErrorConstructor, SyntaxErrorPrototype);
 createNativeError("Type", TypeErrorConstructor, TypeErrorPrototype);
@@ -23116,385 +23349,31 @@ createNativeError("Range", RangeErrorConstructor, RangeErrorPrototype);
 createNativeError("URI", URIErrorConstructor, URIErrorPrototype);
 createNativeError("Eval", EvalErrorConstructor, EvalErrorPrototype);
 
-var EvalFunction_call = function (thisArg, argList) {
-    var input, strict, direct, strictCaller, evalRealm, directCallToEval,
-        ctx, value, result, script, evalCxt, LexEnv, VarEnv, strictVarEnv,
-        strictScript;
-    var Evaluate = require("runtime").Evaluate;
-
-    input = GetValue(argList[0]);
-    if (isAbrupt(input=ifAbrupt(input))) return input;
-
-    if (Type(input) !== STRING) return input;
-    try {
-        script = parse(input);
-    } catch (ex) {
-        return newSyntaxError( ex.message);
-    }
-
-    if (script.type !== "Program") return undefined;
-
-    if (script.strict) {
-        strict = true;
-    }
-
-    if (directCallToEval) direct = true;
-    strictCaller = !!direct;
-    ctx = getContext();
-    if (strict) ctx.strict = true;
-    evalRealm = ctx.realm;
-
-    if (direct) {
-
-        // 1. if the code that made the call is function code
-        // and ValidInFunction is false throw SyntaxError
-        // 2. If the code is module code and
-        // ValidInModule ist false throw SyntaxError
-    }
-    if (direct) {
-        LexEnv = ctx.LexEnv;
-        VarEnv = ctx.VarEnv;
-    } else {
-        LexEnv = evalRealm.globalEnv;
-        VarEnv = evalRealm.globalEnv;
-    }
-    if (strictScript || (direct && strictCaller)) {
-        strictVarEnv = NewDeclarativeEnvironment(LexEnv);
-        LexEnv = strictVarEnv;
-        VarEnv = strictVarEnv;
-    }
-
-    evalCxt = ExecutionContext(getContext());
-    evalCxt.realm = evalRealm;
-    evalCxt.VarEnv = VarEnv;
-    evalCxt.LexEnv = LexEnv;
-    getStack().push(evalCxt);
-    result = Evaluate(script);
-    getStack().pop();
-    return result;
-};
 
 setInternalSlot(EvalFunction, SLOTS.CALL, EvalFunction_call);
 setInternalSlot(EvalFunction, SLOTS.CONSTRUCT, null);
 
 
-// ===========================================================================================================
-// Date Constructor and Prototype (algorithms above)
-// ===========================================================================================================
-
-setInternalSlot(DateConstructor, SLOTS.CALL, function (thisArg, argList) {
-
-    var O = thisArg;
-    var numberOfArgs = argList.length;
-    var y, m, dt, h, min, milli, finalDate;
-
-    if (numberOfArgs >= 2) {
-
-        var year = argList[0];
-        var month = argList[1];
-        var date = argList[2];
-        var hours = argList[3];
-        var minutes = argList[4];
-        var seconds = argList[5];
-        var ms = argList[6];
-
-        if (Type(O) === OBJECT
-            && hasInternalSlot(O, SLOTS.DATEVALUE)
-            && (getInternalSlot(O, SLOTS.DATEVALUE) === undefined)) {
-
-            y = ToNumber(year);
-            if (isAbrupt(y)) return y;
-            m = ToNumber(month);
-            if (isAbrupt(m)) return m;
-            if (date) dt = ToNumber(date);
-            else dt = 1;
-            if (isAbrupt(dt)) return dt;
-            if (hours) h = ToNumber(hours);
-            else h = 0;
-            if (minutes) min = ToNumber(minutes);
-            else min = 0;
-            if (isAbrupt(min)) return min;
-            if (ms) milli = ToNumber(ms);
-            else milli = 0;
-            if (isAbrupt(milli)) return milli;
-            finalDate = MakeDate(MakeDay(y, m, dt), MakeTime(h, min, s, milli));
-            setInternalSlot(O, SLOTS.DATEVALUE, TimeClip(UTC(finalDate)));
-        }
-        return O;
-    } else if (numberOfArgs === 1) {
-        var value = argList[0];
-        var tv, v;
-        if (Type(O) === OBJECT && hasInternalSlot(O, SLOTS.DATEVALUE) && getInternalSlot(O, SLOTS.DATEVALUE) === undefined) {
-            if (Type(value) === OBJECT && hasInternalSlot(value, SLOTS.DATEVALUE)) tv = thisTimeValue(value);
-            else {
-                v = ToPrimitive(value);
-                if (Type(v) === STRING) {
-                    tv = Invoke(DateConstructor, "parse", [v])
-                } else {
-                    tv = ToNumber(v);
-                }
-            }
-                if (isAbrupt(tv = ifAbrupt(tv))) return tv;
-                setInternalSlot(O, SLOTS.DATEVALUE, TimeClip(tv));
-                return O;
-
-        }
-    } else if (numberOfArgs === 0) {
-        if (Type(O) === OBJECT && hasInternalSlot(O, SLOTS.DATEVALUE) && getInternalSlot(O, SLOTS.DATEVALUE) === undefined) {
-            setInternalSlot(O, SLOTS.DATEVALUE, Date.now()/*TimeClip(UTC(Date.now()))*/);
-            return O;
-        }
-    } else {
-        O = OrdinaryConstruct(DateConstructor, []);
-        return Invoke(O, "toString", []);
-    }
-});
-
-setInternalSlot(DateConstructor, SLOTS.CONSTRUCT, function (thisArg, argList) {
-    return OrdinaryConstruct(this, argList);
-});
-
-
-DefineOwnProperty(DateConstructor, "prototype", {
-    value: DatePrototype,
-    writable: false,
-    enumerable: false,
-    configurable: false
-});
-
-DefineOwnProperty(DatePrototype, "constructor", {
-    value: DateConstructor,
-    writable: false,
-    enumerable: false,
-    configurable: false
-});
-
-//DatePrototype
-DefineOwnProperty(DateConstructor, "parse", {
-    value: CreateBuiltinFunction(realm, function (thisArg, argList) {
-        var string = ToString(argList[0]);
-    }),
-    writable: false,
-    enumerable: false,
-    configurable: false
-});
-
-//DatePrototype
-DefineOwnProperty(DateConstructor, "now", {
-    value: CreateBuiltinFunction(realm, function (thisArg, argList) {
-        return NormalCompletion(Date.now());
-    }),
-    writable: false,
-    enumerable: false,
-    configurable: false
-});
-
-DefineOwnProperty(DateConstructor, $$create, {
-    value: CreateBuiltinFunction(realm, function (thisArg, argList) {
-        var obj = OrdinaryCreateFromConstructor(DateConstructor, INTRINSICS.DATEPROTOTYPE, [
-           SLOTS.DATEVALUE
-    ]);
-        return obj;
-    }),
-    writable: false,
-    enumerable: false,
-    configurable: false
-});
-
-DefineOwnProperty(DatePrototype, "getDate", {
-    value: CreateBuiltinFunction(realm, function (thisArg, argList) {
-        var t = thisTimeValue(thisArg);
-        if (isAbrupt(t)) return t;
-        if (t !== t) return NaN;
-        return DateFromTime(LocalTime(t));
-    }),
-    writable: false,
-    enumerable: false,
-    configurable: false
-});
-
-DefineOwnProperty(DatePrototype, "getDay", {
-    value: CreateBuiltinFunction(realm, function (thisArg, argList) {
-        var t = thisTimeValue(thisArg);
-        if (isAbrupt(t)) return t;
-        if (t !== t) return NaN;
-        return WeekDay(LocalTime(t));
-    }),
-
-    writable: false,
-    enumerable: false,
-    configurable: false
-});
-
-DefineOwnProperty(DatePrototype, "getFullYear", {
-    value: CreateBuiltinFunction(realm, function (thisArg, argList) {
-        var t = thisTimeValue(thisArg);
-        if (isAbrupt(t)) return t;
-        if (t !== t) return NaN;
-        return YearFromTime(LocalTime(t));
-    }),
-    writable: false,
-    enumerable: false,
-    configurable: false
-});
-
-DefineOwnProperty(DatePrototype, "getHours", {
-    value: CreateBuiltinFunction(realm, function (thisArg, argList) {
-        var t = thisTimeValue(thisArg);
-        if (isAbrupt(t)) return t;
-        if (t !== t) return NaN;
-        return HourFromTime(LocalTime(t));
-    }),
-    writable: false,
-    enumerable: false,
-    configurable: false
-});
-
-DefineOwnProperty(DatePrototype, "getMilliSeconds", {
-    value: CreateBuiltinFunction(realm, function (thisArg, argList) {
-        var t = thisTimeValue(thisArg);
-        if (isAbrupt(t)) return t;
-        if (t !== t) return NaN;
-        return msFromTime(LocalTime(t));
-    }),
-    writable: false,
-    enumerable: false,
-    configurable: false
-});
-
-DefineOwnProperty(DatePrototype, "getMinutes", {
-    value: CreateBuiltinFunction(realm, function (thisArg, argList) {
-        var t = thisTimeValue(thisArg);
-        if (isAbrupt(t)) return t;
-        if (t !== t) return NaN;
-        return MinFromTime(LocalTime(t));
-    }),
-    writable: false,
-    enumerable: false,
-    configurable: false
-});
-
-DefineOwnProperty(DatePrototype, "getMonth", {
-    value: CreateBuiltinFunction(realm, function (thisArg, argList) {
-        var t = thisTimeValue(thisArg);
-        if (isAbrupt(t)) return t;
-        if (t !== t) return NaN;
-        return MonthFromTime(LocalTime(t));
-    }),
-    writable: false,
-    enumerable: false,
-    configurable: false
-});
-
-DefineOwnProperty(DatePrototype, "getTimeZoneOffset", {
-    value: CreateBuiltinFunction(realm, function (thisArg, argList) {
-        var t = thisTimeValue(thisArg);
-        if (isAbrupt(t)) return t;
-        if (t !== t) return NaN;
-        return (t - LocalTime(t));
-
-    }),
-    writable: false,
-    enumerable: false,
-    configurable: false
-});
-
-DefineOwnProperty(DatePrototype, "getUTCDay", {
-    value: CreateBuiltinFunction(realm, function (thisArg, argList) {
-        var t = thisTimeValue(thisArg);
-        if (isAbrupt(t)) return t;
-        if (t !== t) return NaN;
-        return WeekDay(t);
-
-    }),
-    writable: false,
-    enumerable: false,
-    configurable: false
-});
-
-DefineOwnProperty(DatePrototype, "getUTCFullYear", {
-    value: CreateBuiltinFunction(realm, function (thisArg, argList) {
-        var t = thisTimeValue(thisArg);
-        if (isAbrupt(t)) return t;
-        if (t !== t) return NaN;
-        return YearFromTime(t);
-
-    }),
-    writable: false,
-    enumerable: false,
-    configurable: false
-});
-
-DefineOwnProperty(DatePrototype, "getUTCHours", {
-    value: CreateBuiltinFunction(realm, function (thisArg, argList) {
-        var t = thisTimeValue(thisArg);
-        if (isAbrupt(t)) return t;
-        if (t !== t) return NaN;
-        return HourFromTime(t);
-
-    }),
-    writable: false,
-    enumerable: false,
-    configurable: false
-});
-
-DefineOwnProperty(DatePrototype, "getUTCMilliseconds", {
-    value: CreateBuiltinFunction(realm, function (thisArg, argList) {
-        var t = thisTimeValue(thisArg);
-        if (isAbrupt(t)) return t;
-        if (t !== t) return NaN;
-        return msFromTime(t);
-    }),
-    writable: false,
-    enumerable: false,
-    configurable: false
-});
-
-DefineOwnProperty(DatePrototype, "getUTCMinutes", {
-    value: CreateBuiltinFunction(realm, function (thisArg, argList) {
-        var t = thisTimeValue(thisArg);
-        if (isAbrupt(t)) return t;
-        if (t !== t) return NaN;
-        return MinFromTime(t);
-    }),
-    writable: false,
-    enumerable: false,
-    configurable: false
-});
-
-DefineOwnProperty(DatePrototype, "getUTCSeconds", {
-    value: CreateBuiltinFunction(realm, function (thisArg, argList) {
-        var t = thisTimeValue(thisArg);
-        if (isAbrupt(t)) return t;
-        if (t !== t) return NaN;
-        return SecFromTime(t);
-    }),
-    writable: false,
-    enumerable: false,
-    configurable: false
-});
-
-DefineOwnProperty(DatePrototype, "setDate", {
-    value: CreateBuiltinFunction(realm, function (thisArg, argList) {
-        var date = argList[0];
-        var t = LocalTime(thisTimeValue(thisArg));
-        var newDate = MakeDate(MakeDay(YearFromTime(t), MonthFromTime(t), dt), TimeWithinDay(t));
-        var u = TimeClip(UTC(newDate));
-        setInternalSlot(thisArg, SLOTS.DATEVALUE, u);
-        return u;
-    }),
-    writable: false,
-    enumerable: false,
-    configurable: false
-});
-
-DefineOwnProperty(DatePrototype, "", {
-    value: null,
-    writable: false,
-    enumerable: false,
-    configurable: false
-});
-
+setInternalSlot(DateConstructor, SLOTS.CALL, DateConstructor_call);
+setInternalSlot(DateConstructor, SLOTS.CONSTRUCT, DateConstructor_construct);
+LazyDefineBuiltinConstant(DateConstructor, "prototype", DatePrototype);
+LazyDefineBuiltinConstant(DatePrototype, "constructor", DateConstructor);
+LazyDefineBuiltinFunction(DateConstructor, "parse", DateConstructor_parse)
+LazyDefineBuiltinFunction(DateConstructor, "now", DateConstructor_now)
+LazyDefineBuiltinFunction(DatePrototype, "getDate", 0, DatePrototype_getDate);
+LazyDefineBuiltinFunction(DatePrototype, "getDay", 0, DatePrototype_getDay);
+LazyDefineBuiltinFunction(DatePrototype, "getFullYear", 0, DatePrototype_getFullYear);
+LazyDefineBuiltinFunction(DatePrototype, "getMonth", 0, DatePrototype_getMonth);
+LazyDefineBuiltinFunction(DatePrototype, "getHours", 0, DatePrototype_getHours);
+LazyDefineBuiltinFunction(DatePrototype, "getMinutes", 0, DatePrototype_getMinutes);
+LazyDefineBuiltinFunction(DatePrototype, "getMilliSeconds", 0, DatePrototype_getMilliSeconds);
+LazyDefineBuiltinFunction(DatePrototype, "getTimeZoneOffset", 0, DatePrototype_getTimeZoneOffset);
+LazyDefineBuiltinFunction(DatePrototype, "getUTCDay", 0, DatePrototype_getUTCDay);
+LazyDefineBuiltinFunction(DatePrototype, "getUTCFullYear", 0, DatePrototype_getUTCFullYear);
+LazyDefineBuiltinFunction(DatePrototype, "getUTCHours", 0, DatePrototype_getUTCHours);
+LazyDefineBuiltinFunction(DatePrototype, "getUTCMinutes", 0, DatePrototype_getUTCMinutes);
+LazyDefineBuiltinFunction(DatePrototype, "getUTCSeconds", 0, DatePrototype_getUTCSeconds);
+LazyDefineBuiltinFunction(DatePrototype, "getUTCMilliSeconds", 0, DatePrototype_getUTCMilliSeconds);
 LazyDefineBuiltinConstant(DatePrototype, $$toStringTag, "Date");
 
 
@@ -23540,9 +23419,7 @@ LazyDefineBuiltinFunction(MathObject, "sin", 1, MathObject_sin);
 LazyDefineBuiltinFunction(MathObject, "sign", 1, MathObject_sign);
 LazyDefineBuiltinFunction(MathObject, "tan", 1, MathObject_tan);
 LazyDefineBuiltinFunction(MathObject, "random", 0, MathObject_random);
-
 MakeConstructor(NumberConstructor, true, NumberPrototype);
-
 setInternalSlot(NumberConstructor, SLOTS.CALL, NumberConstructor_call);
 setInternalSlot(NumberConstructor, SLOTS.CONSTRUCT, NumberConstructor_construct);
 LazyDefineBuiltinFunction(NumberConstructor, "isFinite", 0, NumberConstructor_isFinite);
@@ -23640,7 +23517,6 @@ LazyDefineBuiltinFunction(ObjectConstructor, "observe", 3, ObjectConstructor_obs
 LazyDefineBuiltinFunction(ObjectConstructor, "unobserve", 1, ObjectConstructor_unobserve);
 LazyDefineBuiltinFunction(ObjectConstructor, "deliverChangeRecords", 1, ObjectConstructor_deliverChangeRecords);
 LazyDefineBuiltinFunction(ObjectConstructor, "getNotifier", 1, ObjectConstructor_getNotifier);
-
 MakeConstructor(FunctionConstructor, true, FunctionPrototype);
 setInternalSlot(FunctionPrototype, SLOTS.PROTOTYPE, ObjectPrototype);
 LazyDefineProperty(FunctionPrototype, $$toStringTag, "Function");
@@ -23658,139 +23534,24 @@ LazyDefineProperty(FunctionPrototype, $$hasInstance, CreateBuiltinFunction(realm
 LazyDefineBuiltinFunction(FunctionPrototype, "toMethod", 1, FunctionPrototype_toMethod /*, realm  !!!*/);
 
 
-
-LazyDefineProperty(GeneratorPrototype, $$iterator, CreateBuiltinFunction(realm, function (thisArg, argList) {
-    return thisArg;
-}));
-
+LazyDefineBuiltinFunction(GeneratorPrototype, $$iterator, 0, GeneratorPrototype_$$iterator);
 LazyDefineProperty(GeneratorPrototype, $$toStringTag, "Generator");
-
 // GeneratorFunction.[[Prototype]] = FunctionPrototype
 setInternalSlot(GeneratorFunction, SLOTS.PROTOTYPE, FunctionConstructor);
 MakeConstructor(GeneratorFunction, true, GeneratorObject);
 // GeneratorFunction.prototype = %Generator%
-
-DefineOwnProperty(GeneratorFunction, "prototype", {
-    value: GeneratorPrototype,
-    enumerable: false
-});
 // GeneratorFunction.prototype.constructor = GeneratorFunction
 LazyDefineProperty(GeneratorPrototype, "constructor", GeneratorFunction);
 LazyDefineProperty(GeneratorObject, "constructor", GeneratorFunction);
 LazyDefineProperty(GeneratorObject, "prototype", GeneratorPrototype);
-
 // GeneratorFunction.prototype.prototype = GeneratorPrototype
 setInternalSlot(GeneratorObject, SLOTS.PROTOTYPE, GeneratorPrototype);
-
-//    LazyDefineProperty(GeneratorPrototype, "constructor", GeneratorObject);
-
-LazyDefineProperty(GeneratorPrototype, "next", CreateBuiltinFunction(realm, function (thisArg, argList) {
-    var value = argList[0];
-    var G = thisArg;
-    return GeneratorResume(G, value);
-}));
-
-LazyDefineProperty(GeneratorPrototype, "throw", CreateBuiltinFunction(realm, function (thisArg, argList) {
-    var g = thisArg;
-    var exception = argList[0];
-    if (Type(g) !== OBJECT) return newTypeError( "throw: Generator is not an object");
-    if (!hasInternalSlot(g, SLOTS.GENERATORSTATE)) return newTypeError( "throw: generator has no GeneratorState property");
-    var state = getInternalSlot(g, SLOTS.GENERATORSTATE);
-    Assert(hasInternalSlot(g, SLOTS.GENERATORCONTEXT), "generator has to have a GeneratorContext property");
-    if (state !== "suspendedStart" && state != "suspendedYield") return newTypeError( "GeneratorState is neither suspendedStart nor -Yield");
-    var E = CompletionRecord("throw", exception);
-    if (state === "suspendedStart") {
-        setInternalSlot(g, SLOTS.GENERATORSTATE, "completed");
-        setInternalSlot(g, SLOTS.GENERATORCONTEXT, undefined);
-        return E;
-    }
-    var genContext = getInternalSlot(g, SLOTS.GENERATORCONTEXT);
-    var methodContext = getCurrentExectionContext();
-    setInternalSlot(g, SLOTS.GENERATORSTATE, "executing");
-    getStack().push(genContext);
-    var result = genContext.generatorCallback(E);
-    Assert(genContext !== getContext());
-    Assert(methodContext === getContext());
-    return result;
-}));
-
-setInternalSlot(GeneratorFunction, SLOTS.CALL, function Call(thisArg, argList) {
-    // GeneratorFunction(p1...pn, body)
-    var argCount = argList.length;
-    var P = "";
-    var bodyText;
-    var firstArg, nextArg;
-    if (argCount === 0) bodyText = "";
-    else if (argCount === 1) bodyText = argList[0];
-    else if (argCount > 1) {
-        firstArg = argList[0];
-        P = ToString(firstArg);
-        if (isAbrupt(firstArg = ifAbrupt(firstArg))) return firstArg;
-        var k = 1;
-        while (k < argCount - 1) {
-            nextArg = argList[k];
-            nextArg = ToString(nextArg);
-            if (isAbrupt(nextArg = ifAbrupt(nextArg))) return nextArg;
-            P = P + "," + nextArg;
-            k += 1;
-        }
-        bodyText = argList[argCount - 1];
-    }
-
-    bodyText = ToString(bodyText);
-    if (isAbrupt(bodyText = ifAbrupt(bodyText))) return bodyText;
-    var parameters = parseGoal("FormalParameterList", P);
-
-    var funcBody = parseGoal("GeneratorBody", bodyText);
-
-    /*  this is very slow, asking for static semantics here with having to analyse the tree
-    * this should be captured by the ecmascript compliant parser */
-
-     if (!Contains(funcBody, "YieldExpression")) return newSyntaxError( "GeneratorFunctions require some yield expression");
-    var boundNames = BoundNames(parameters);
-    if (!IsSimpleParameterList(parameters)) {
-        if (dupesInTheTwoLists(boundNames, VarDeclaredNames(funcBody))) return newSyntaxError( "Duplicate Identifier in Parameters and VarDeclaredNames of funcBody");
-    }
-    if (dupesInTheTwoLists(boundNames, LexicallyDeclaredNames(funcBody))) return newSyntaxError( "Duplicate Identifier in Parameters and LexicallyDeclaredNames of funcBody");
-
-
-
-    var scope = getRealm().globalEnv;
-    var F = thisArg;
-    if (F == undefined || !hasInternalSlot(F, SLOTS.CODE)) {
-        F = FunctionAllocate(GeneratorFunction, "generator");
-    }
-    if (getInternalSlot(F, SLOTS.FUNCTIONKIND) !== "generator") return newTypeError( "function object not a generator");
-    FunctionInitialize(F, "generator", parameters, funcBody, scope, true);
-    var proto = ObjectCreate(GeneratorPrototype);
-    MakeConstructor(F, true, proto);
-    SetFunctionLength(F, ExpectedArgumentCount(F.FormalParameters));
-    return NormalCompletion(F);
-});
-
-setInternalSlot(GeneratorFunction, SLOTS.CONSTRUCT, function (argList) {
-    var F = GeneratorFunction;
-    return OrdinaryConstruct(F, argList);
-});
-
-LazyDefineProperty(GeneratorFunction, $$create, CreateBuiltinFunction(realm, function (thisArg, argList) {
-    var F = thisArg;
-    var proto = GetPrototypeFromConstructor(F, INTRINSICS.GENERATOR);
-    if (isAbrupt(proto = ifAbrupt(proto))) return proto;
-    var obj = FunctionAllocate(proto, "generator");
-    return obj;
-}));
-
-LazyDefineProperty(GeneratorPrototype, $$create, CreateBuiltinFunction(realm, function (thisArg, argList) {
-    var F = thisArg;
-    var obj = OrdinaryCreateFromConstructor(F, INTRINSICS.GENERATOR, {
-        GeneratorState: null,
-        GeneratorContext: null
-    });
-    return obj;
-}));
-
-
+// LazyDefineProperty(GeneratorPrototype, "constructor", GeneratorObject);
+LazyDefineBuiltinFunction(GeneratorPrototype, "next", 0, GeneratorPrototype_next);
+LazyDefineBuiltinFunction(GeneratorPrototype, "throw", 0, GeneratorPrototype_throw);
+setInternalSlot(GeneratorFunction, SLOTS.CALL, GeneratorFunction_call);
+setInternalSlot(GeneratorFunction, SLOTS.CONSTRUCT, GeneratorFunction_construct);
+LazyDefineBuiltinFunction(GeneratorFunction, $$create, 0, GeneratorFunction_$$create);
 setInternalSlot(JSONObject, SLOTS.PROTOTYPE, ObjectPrototype);
 setInternalSlot(JSONObject, SLOTS.JSONTAG, true);
 LazyDefineBuiltinFunction(JSONObject, "parse", 2, JSONObject_parse);
@@ -23812,28 +23573,20 @@ LazyDefineProperty(PromisePrototype, $$toStringTag, SLOTS.PROMISE);
 
 
 MakeConstructor(RegExpConstructor, true, RegExpPrototype);
-
-
-
 setInternalSlot(RegExpConstructor, SLOTS.CALL, RegExp_Call);
 setInternalSlot(RegExpConstructor, SLOTS.CONSTRUCT, RegExp_Construct);
-
 LazyDefineBuiltinConstant(RegExpConstructor, "prototype", RegExpPrototype);
 LazyDefineBuiltinConstant(RegExpPrototype, "constructor", RegExpConstructor);
-
 LazyDefineBuiltinConstant(RegExpPrototype, $$isRegExp, true);
 LazyDefineBuiltinConstant(RegExpPrototype, $$toStringTag, "RegExp");
 LazyDefineBuiltinFunction(RegExpConstructor, $$create, 1, RegExp_$$create);
-
 LazyDefineAccessorFunction(RegExpPrototype, "ignoreCase",  0, RegExpPrototype_get_ignoreCase);
 LazyDefineAccessorFunction(RegExpPrototype, "global",  0, RegExpPrototype_get_global);
 LazyDefineAccessorFunction(RegExpPrototype, "multiline",  0, RegExpPrototype_get_multiline);
 LazyDefineAccessorFunction(RegExpPrototype, "source",  0, RegExpPrototype_get_source);
 LazyDefineAccessorFunction(RegExpPrototype, "sticky",  0, RegExpPrototype_get_sticky);
 LazyDefineAccessorFunction(RegExpPrototype, "unicode", 0, RegExpPrototype_get_unicode);
-
 LazyDefineProperty(RegExpPrototype, "lastIndex", 0);
-
 LazyDefineBuiltinFunction(RegExpPrototype, "compile", 1, RegExpPrototype_compile);
 LazyDefineBuiltinFunction(RegExpPrototype, "exec", 1, RegExpPrototype_exec);
 LazyDefineBuiltinFunction(RegExpPrototype, "match", 1, RegExpPrototype_match);
@@ -23990,269 +23743,30 @@ LazyDefineBuiltinConstant(SetIteratorPrototype, $$toStringTag, "Set Iterator");
 LazyDefineBuiltinFunction(SetIteratorPrototype, $$iterator, 0, SetIteratorPrototype_$$iterator);
 LazyDefineBuiltinFunction(SetIteratorPrototype, "next", 0, SetIteratorPrototype_next);
 
-
-// ===========================================================================================================
-// Event Emitter (nodejs emitter like with equal interfaces)
-// ===========================================================================================================
-
+MakeConstructor(EmitterConstructor, true, EmitterPrototype);
 setInternalSlot(EmitterPrototype, SLOTS.PROTOTYPE, ObjectPrototype);
-setInternalSlot(EmitterConstructor, SLOTS.CALL, function Call(thisArg, argList) {
-    var O = thisArg;
-    var type = Type(O);
-    var has, listeners;
-    if (type === OBJECT) {
-        has = hasInternalSlot(O, SLOTS.EVENTLISTENERS);
-        if (!has) {
-            return newTypeError( "this argument has to have a [[Listeners]] Property");
-        } else {
-            listeners = getInternalSlot(O, SLOTS.EVENTLISTENERS);
-            if (!listeners) {
-                listeners = Object.create(null);
-                setInternalSlot(O, SLOTS.EVENTLISTENERS, listeners);
-
-            }
-        }
-    } else {
-        return newTypeError( "this argument is not an object");
-    }
-    return O;
-});
-
-setInternalSlot(EmitterConstructor, SLOTS.CONSTRUCT, function Call(argList) {
-    var F = this;
-    var args = argList;
-    return OrdinaryConstruct(F, args);
-});
-
-DefineOwnProperty(EmitterConstructor, $$create, {
-    value: CreateBuiltinFunction(realm, function (thisArg, argList) {
-        var F = EmitterConstructor;
-        var proto = GetPrototypeFromConstructor(F, "%EmitterPrototype%");
-        return ObjectCreate(proto, [SLOTS.EVENTLISTENERS]);
-    }),
-    writable: false,
-    enumerable: false,
-    configurable: false
-});
-
-DefineOwnProperty(EmitterConstructor, "prototype", {
-    value: EmitterPrototype,
-    writable: false,
-    enumerable: false,
-    configurable: false
-});
-DefineOwnProperty(EmitterPrototype, "constructor", {
-    value: EmitterConstructor,
-    writable: false,
-    enumerable: false,
-    configurable: false
-});
-
-DefineOwnProperty(EmitterPrototype, "on", {
-    value: CreateBuiltinFunction(realm, function on(thisArg, argList) {
-        var E = thisArg,
-            listeners, callback, event;
-
-        if (Type(E) !== OBJECT) return newTypeError( "this argument is not an object");
-
-        if (!hasInternalSlot(E, SLOTS.EVENTLISTENERS)) return newTypeError( "[[Listeners]] missing on this argument");
-        else listeners = getInternalSlot(E, SLOTS.EVENTLISTENERS);
-
-        var event = argList[0];
-        var callback = argList[1];
-        if (Type(event) !== STRING) return newTypeError( "Your argument 1 is not a event name string.");
-        if (!IsCallable(callback)) return newTypeError( "Your argument 2 is not a callback function");
-
-        var list = listeners[event];
-        if (list == undefined) list = listeners[event] = [];
-        list.push(callback);
-
-        return NormalCompletion(undefined);
-    }),
-    writable: false,
-    enumerable: false,
-    configurable: false
-});
-
-DefineOwnProperty(EmitterPrototype, "once", {
-    value: CreateBuiltinFunction(realm, function once(thisArg, argList) {
-        var E = thisArg,
-            listeners, callback, event;
-
-        if (Type(E) !== OBJECT) return newTypeError( "this argument is not an object");
-
-        if (!hasInternalSlot(E, SLOTS.EVENTLISTENERS)) return newTypeError( "[[Listeners]] missing on this argument");
-        else listeners = getInternalSlot(E, SLOTS.EVENTLISTENERS);
-
-        event = argList[0];
-        callback = argList[1];
-        if (Type(event) !== STRING) return newTypeError( "Your argument 1 is not a event name string.");
-        if (!IsCallable(callback)) return newTypeError( "Your argument 2 is not a callback function");
-
-        var list = listeners[event];
-        if (list == undefined) list = listeners[event] = [];
-
-        list.push(
-            function (callback) {
-
-                return CreateBuiltinFunction(realm, function once_callback(thisArg, argList) {
-                    if (callback) {
-                        callInternalSlot(SLOTS.CALL, callback, thisArg, argList);
-                        callback = null;
-                    }
-                });
-
-            }(callback)
-        );
-
-        return NormalCompletion(undefined);
-    }),
-    writable: false,
-    enumerable: false,
-    configurable: false
-});
-
-DefineOwnProperty(EmitterPrototype, "remove", {
-    value: CreateBuiltinFunction(realm, function remove(thisArg, argList) {
-
-        var E = thisArg,
-            listeners, callback, event, values;
-
-        if (Type(E) !== OBJECT) return newTypeError( "this argument is not an object");
-
-        if (!hasInternalSlot(E, SLOTS.EVENTLISTENERS)) return newTypeError( "[[Listeners]] missing on this argument");
-        else listeners = getInternalSlot(E, SLOTS.EVENTLISTENERS);
-
-        event = argList[0];
-        callback = argList[1];
-
-        if (Type(event) !== STRING) return newTypeError( "Your argument 1 is not a event name string.");
-        if (!IsCallable(callback)) return newTypeError( "Your argument 2 is not a function.");
-
-        var list = listeners[event];
-        if (list == undefined) return NormalCompletion(undefined);
-
-        var newList = [];
-        var fn;
-        for (var i = 0, j = list.length; i < j; i++) {
-            if (fn = list[i]) {
-                if (fn !== callback) newList.push(fn);
-            }
-        }
-
-        listeners[event] = newList;
-
-        return NormalCompletion(undefined);
-
-    }),
-    writable: false,
-    enumerable: false,
-    configurable: false
-});
-
-DefineOwnProperty(EmitterPrototype, "removeAll", {
-    value: CreateBuiltinFunction(realm, function removeAll(thisArg, argList) {
-        var E = thisArg,
-            listeners, event;
-
-        if (Type(E) !== OBJECT) return newTypeError( "this argument is not an object");
-
-        if (!hasInternalSlot(E, SLOTS.EVENTLISTENERS)) return newTypeError( "[[Listeners]] missing on this argument");
-        else listeners = getInternalSlot(E, SLOTS.EVENTLISTENERS);
-
-        event = argList[0];
-
-        if (Type(event) !== STRING) return newTypeError( "Your argument 1 is not a event name string.");
-
-        var list = listeners[event];
-        if (list == undefined) return NormalCompletion(undefined);
-        else listeners[event] = [];
-
-        return NormalCompletion(undefined);
-
-    }),
-    writable: false,
-    enumerable: false,
-    configurable: false
-});
-
-DefineOwnProperty(EmitterPrototype, "emit", {
-    value: CreateBuiltinFunction(realm, function emit(thisArg, argList) {
-        var E = thisArg,
-            listeners, callback, event, values;
-
-        if (Type(E) !== OBJECT) return newTypeError( "this argument is not an object");
-
-        if (!hasInternalSlot(E, SLOTS.EVENTLISTENERS)) return newTypeError( "[[Listeners]] missing on this argument");
-        else listeners = getInternalSlot(E, SLOTS.EVENTLISTENERS);
-        event = argList[0];
-        values = arraySlice(argList, 1);
-        if (Type(event) !== STRING) return newTypeError( "Your argument 1 is not a event name string.");
-        var list = listeners[event];
-        if (list == undefined) return NormalCompletion(undefined);
-
-        //setTimeout(function () {
-        var F = OrdinaryFunction();
-        var status = callInternalSlot(SLOTS.CALL, SetTimeoutFunction, null, [F, 0]);
-        setInternalSlot(F, SLOTS.CALL, function (thisArg, argList) {
-        var result;
-        for (var i = 0, j = list.length; i < j; i++) {
-            if (callback = list[i]) {
-                result = callInternalSlot(SLOTS.CALL, callback, thisArg, values);
-            //    if (isAbrupt(result)) return result;
-            }
-        }
-        });
-        //});
-
-        return NormalCompletion(undefined);
-    }),
-    writable: false,
-    enumerable: false,
-    configurable: false
-});
-
+setInternalSlot(EmitterConstructor, SLOTS.CALL, EmitterConstructor_call);
+setInternalSlot(EmitterConstructor, SLOTS.CONSTRUCT, EmitterConstructor_construct);
+LazyDefineBuiltinFunction(EmitterConstructor, $$create, 1, EmitterConstructor_$$create);
+LazyDefineBuiltinConstant(EmitterConstructor, "prototype", EmitterPrototype);
+LazyDefineBuiltinConstant(EmitterPrototype, "constructor", EmitterConstructor);
+LazyDefineBuiltinFunction(EmitterPrototype, "on", 2, EmitterPrototype_on);
+LazyDefineBuiltinFunction(EmitterPrototype, "once", 2, EmitterPrototype_once);
+LazyDefineBuiltinFunction(EmitterPrototype, "remove", 2, EmitterPrototype_remove);
+LazyDefineBuiltinFunction(EmitterPrototype, "removeAll", 2, EmitterPrototype_removeAll);
+LazyDefineBuiltinFunction(EmitterPrototype, "emit", 2, EmitterPrototype_emit);
 LazyDefineBuiltinConstant(EmitterPrototype, $$toStringTag, "Emitter");
-
-
-/*
-  Emitter,
-  Event
-  EventTarget
-  MessagePort
- */
 
 
 MakeConstructor(EventConstructor, true, EventPrototype);
 MakeConstructor(EventTargetConstructor, true, EventTargetPrototype);
 MakeConstructor(MessagePortConstructor, true, MessagePortPrototype);
-
-var EventConstructor_Call = function (thisArg, argList) {
-};
-
-
-var EventTargetConstructor_Call = function (thisArg, argList) {
-};
-var EventTargetPrototype_addEventListener = function (thisArg, argList) {
-};
-var EventTargetPrototype_dispatchEvent = function (thisArg, argList) {
-};
-var EventTargetPrototype_removeEventListener = function (thisArg, argList) {
-};
 LazyDefineBuiltinFunction(EventTargetPrototype, "addEventListener", 3, EventTargetPrototype_addEventListener);
 LazyDefineBuiltinFunction(EventTargetPrototype, "dispatchEvent", 1, EventTargetPrototype_dispatchEvent);
 LazyDefineBuiltinFunction(EventTargetPrototype, "removeEventListener", 2, EventTargetPrototype_removeEventListener);
-
-var MessagePortPrototype_close = function (thisArg, argList) {
-};
-var MessagePortPrototype_open = function (thisArg, argList) {
-};
-var MessagePortPrototype_postMessage = function (thisArg, argList) {
-};
 LazyDefineBuiltinFunction(MessagePortPrototype, "close", 0, MessagePortPrototype_close);
 LazyDefineBuiltinFunction(MessagePortPrototype, "open", 0, MessagePortPrototype_open);
 LazyDefineBuiltinFunction(MessagePortPrototype, "postMessage", 0, MessagePortPrototype_postMessage);
-
 
 
 // StructType
@@ -24266,15 +23780,6 @@ LazyDefineBuiltinFunction(TypePrototype, "arrayType", 1, TypePrototype_arrayType
 LazyDefineBuiltinFunction(TypePrototype, "opaqueType", 1, TypePrototype_opaqueType);
 
 
-
-var VMObject_eval = function (thisArg, argList) {
-    var code = argList[0];
-    var realm = argList[1];
-    var realmObject;
-    if (realm === undefined) realmObject = getRealm();
-    else if (!(realmObject = getInternalSlot(realm, SLOTS.REALMOBJECT))) return newTypeError( "Sorry, only realm objects are accepted as realm object");
-    return require("vm").CompileAndRun(realmObject, code);
-};
 
 LazyDefineBuiltinFunction(VMObject, "eval", 1, VMObject_eval);
 
