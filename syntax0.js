@@ -9692,12 +9692,12 @@ var MathObject_atan2 = function (thisArg, argList) {
     return NormalCompletion(Math.atan2(x,y));
 };
 var MathObject_max = function (thisArg, argList) {
-    var args = CreateListFromArray(argList);
+    var args = CreateListFromArrayLike(argList);
     if (isAbrupt(args)) return args;
     return NormalCompletion(Math.max.apply(Math, args));
 };
 var MathObject_min = function (thisArg, argList) {
-    var args = CreateListFromArray(argList);
+    var args = CreateListFromArrayLike(argList);
     if (isAbrupt(args)) return args;
     return NormalCompletion(Math.min.apply(Math, args));
 };
@@ -11840,7 +11840,7 @@ function DeletePropertyOrThrow(O, P) {
     var success = Delete(O, P);
     if (isAbrupt(success = ifAbrupt(success))) return success;
     if (success === false) return newTypeError(format("DELETEPROPERTYORTHROW_FAILS_AT_S", P));
-    return NormalCompleion(success);
+    return NormalCompletion(success);
 }
 
 function OrdinaryDefineOwnProperty(O, P, D) {
@@ -12519,7 +12519,7 @@ var ObjectConstructor_observe = function (thisArg, argList) {
     if (accept === undefined) {
         accept = ["add", "updata", "delete", "reconfigure", "setPrototype", "preventExtensions"];
     } else {
-        accept = CreateListFromArray(accept);
+        accept = CreateListFromArrayLike(accept);
     }
     var notifier = GetNotifier(O);
     var changeObservers = getInternalSlot(notifier, SLOTS.CHANGEOBSERVERS);
@@ -13212,8 +13212,8 @@ function CreateArrayFromList(list) {
 }
 function CreateListFromArrayLike(arrayLike) {
     var list = [];
-    for (var i = 0, j = arrayLike.length; i < j; i++) {
-        list.push(arrayLike.Get(ToString(i), arrayLike))
+    for (var i = 0, j = Get(arrayLike, "length"); i < j; i++) {
+        list.push(unwrap(Get(arrayLike, ToString(i))));
     }
     return list;
 }
@@ -13945,16 +13945,12 @@ var ArrayPrototype_reverse = function reverse(thisArg, argList) {
             if (isAbrupt(putStatus = ifAbrupt(putStatus))) return putStatus;
             deleteStatus = DeletePropertyOrThrow(O, upperP);
             if (isAbrupt(deleteStatus = ifAbrupt(deleteStatus))) return deleteStatus;
-
         } else if (lowerExists === true && upperExists === false) {
-
             deleteStatus = DeletePropertyOrThrow(O, lowerP);
             if (isAbrupt(deleteStatus = ifAbrupt(deleteStatus))) return deleteStatus;
             putStatus = Put(O, upperP, lowerValue, true);
             if (isAbrupt(putStatus = ifAbrupt(putStatus))) return putStatus;
-
         }
-
         lower = lower + 1;
     }
     return NormalCompletion(O);
@@ -13985,13 +13981,35 @@ var ArrayPrototype_shift = function shift(thisArg, argList) {
     var lenVal = Get(O, "length");
     var len = ToUint32(lenVal);
     if (isAbrupt(len = ifAbrupt(len))) return len;
-    /*
-
-     hey, where is the rest?
-
-     i implemented this function, i am 100% sure
-
-     */
+    if (len === 0) {
+	var putStatus = Put(O, "length", 0, true);
+	if (isAbrupt(putStatus)) return putStatus;
+	return NormalCompletion(undefined);
+    }
+    var first = Get(O, "0");
+    if (isAbrupt(first=ifAbrupt(first))) return first;
+    var k = 1;
+    while (k < len) {
+	var from = ToString(k);
+	var to = ToString(k-1);
+	var fromPresent = HasProperty(O, from);
+	if (isAbrupt(fromPresent=ifAbrupt(fromPresent))) return fromPresent;
+	if (fromPresent === true) {
+	    var fromVal = Get(O, from);
+	    if (isAbrupt(fromVal = ifAbrupt(fromVal))) return fromVal;
+	    putStatus = Put(O, to, fromVal, true);
+	    if (isAbrupt(putStatus)) return putStatus;
+	} else {
+	    var deleteStatus = DeletePropertyOrThrow(O, to);
+	    if (isAbrupt(deleteStatus)) return deleteStatus;
+	}
+	k = k + 1;
+    }
+    deleteStatus = DeletePropertyOrThrow(O, ToString(len-1));
+    if (isAbrupt(deleteStatus)) return deleteStatus;
+    putStatus = Put(O, "length", len-1, true);
+    if (isAbrupt(putStatus)) return putStatus;
+    return NormalCompletion(first);
 };
 
 var ArrayPrototype_slice = function slice(thisArg, argList) {
@@ -14038,13 +14056,67 @@ var ArrayPrototype_slice = function slice(thisArg, argList) {
     return NormalCompletion(A);
 };
 
-var ArrayPrototype_sort = function sort(thisArg, argList) {
+function SortCompare(thisArg, argList) {
+    var obj = thisArg;
+    var j = argList[0];
+    var k = argList[1];
+    var jString = ToString(j);
+    var kString = ToString(k);
+    var hasj = HasProperty(obj, jString);
+    var hask = HasProperty(obj, kString);
+    if (isAbrupt(hasj=ifAbrupt(hasj))) return hasj;
+    if (isAbrupt(hask=ifAbrupt(hask))) return hask;
+    if (!hasj && !hask) return NormalCompletion(+0);
+    if (!hasj) return NormalCompletion(1);
+    if (!hask) return NormalCompletion(-1);
+    var x = Get(obj, jString);
+    if (isAbrupt(x = ifAbrupt(x))) return x;
+    var y = Get(obj, kString);
+    if (isAbrupt(y = ifAbrupt(y))) return y;
+    if (x === undefined && y === undefined) return NormalCompletion(+0);
+    if (x === undefined) return NormalCompletion(1);
+    if (y === undefined) return NormalCompletion(-1);    
+    /*
+	unfinished, to be continued
+	
+	(i did quicksort already, that´s not the matter)
+    
+    */
+};
+
+var defaultCompareFn;
+var defaultCompareFn_call = function(thisArg, argList) {
+    var a = argList[0];
+    var b = argList[1];
+    return a > b;
+};
+
+var ArrayPrototype_sort = function (thisArg, argList) {
     var O = ToObject(thisArg);
+    var comparefn = argList[0];
     if (isAbrupt(O = ifAbrupt(O))) return O;
     var lenVal = Get(O, "length");
     var len = ToUint32(lenVal);
     if (isAbrupt(len = ifAbrupt(len))) return len;
 
+    // let´s call native sort
+    // for today
+    
+
+    var arrayToSort = CreateListFromArrayLike(O);
+    if (isAbrupt(arrayToSort=ifAbrupt(arrayToSort))) return arrayToSort;
+
+    if (!comparefn) {
+	comparefn = defaultCompareFn;
+    } 
+    if (!IsCallable(comparefn)) { 
+	return newTypeError("comparefn is not callable");    
+    }
+    var sortedArray = arrayToSort.sort(function (a, b) {
+	var result =  unwrap(callInternalSlot(SLOTS.CALL, comparefn, undefined, [a,b]));
+	return result;
+    });
+    return NormalCompletion(CreateArrayFromList(sortedArray));
 };
 
 
@@ -15679,6 +15751,38 @@ var ArrayBufferPrototype_slice = function (thisArg, argList) {
  * Created by root on 30.03.14.
  */
 
+var typedArrayElementSize = {
+    "Float64Array": 8,
+    "Float32Array": 4,
+    "Int32Array": 4,
+    "Uint32Array": 4,
+    "Int16Array": 2,
+    "Uint16Array": 2,
+    "Int8Array": 1,
+    "Uint8Array": 1,
+    "Uint8ClampedArray": 1
+};
+
+var typedArrayElementType = {
+    "Float64Array": "Float64",
+    "Float32Array": "Float32",
+    "Int32Array": "Int32",
+    "Uint32Array": "Uint32",
+    "Int16Array": "Int16",
+    "Uint16Array": "Uint16",
+    "Int8Array": "Int8",
+    "Uint8Array": "Uint8",
+    "Uint8ClampedArray": "Uint8C"
+};
+
+function IntegerIndexedObjectCreate(prototype) {
+    var O = IntegerIndexedExoticObject();
+    setInternalSlot(O, SLOTS.EXTENSIBLE, true);
+    setInternalSlot(O, SLOTS.PROTOTYPE, prototype);
+    return O;
+}
+
+
 function IntegerIndexedExoticObject() {
     var O = Object.create(IntegerIndexedExoticObject.prototype);
     setInternalSlot(O, SLOTS.ARRAYBUFFERDATA, undefined);
@@ -15702,7 +15806,7 @@ IntegerIndexedExoticObject.prototype = assign(IntegerIndexedExoticObject.prototy
             if (SameValue(ToString(intIndex), P)) {
                 if (intIndex < 0) return false;
                 var len = getInternalSlot(O,SLOTS.ARRAYLENGTH);
-                if (len === undefined) return newTypeError( "integerindexed: length is undefined");
+                if (len === undefined) return newTypeError(format("S_IS_UNDEFINED", "length"));
                 if (intIndex >= len) return false;
                 if (IsAccessorDescriptor(Desc)) return false;
                 if (Desc.configurable) return false;
@@ -15758,15 +15862,13 @@ IntegerIndexedExoticObject.prototype = assign(IntegerIndexedExoticObject.prototy
         Assert(IsPropertyKey(P), trans("P_HAS_TO_BE_A_VALID_PROPERTY_KEY"));
         //Assert(getInternalSlot(O,SLOTS.ARRAYBUFFERDATA) !== undefined, "[[ArrayBufferData]] must not be undefined");
         if (Type(P) === STRING) {
-            var intIndex = P|0; //ToInteger(P);
-
+            var intIndex = ToInteger(P);
             if (isAbrupt(intIndex = ifAbrupt(intIndex))) return intIndex;
             if (SameValue(ToString(intIndex), P)) {
                 var value = IntegerIndexedElementGet(O, intIndex);
                 if (isAbrupt(value = ifAbrupt(value))) return value;
                 if (value === undefined) return undefined;
                 var writable = true;
-                // setze falsch, falls sie es nciht sind, die props vom integerindexed
                 return {
                     value: value,
                     enumerable: true,
@@ -15786,8 +15888,8 @@ IntegerIndexedExoticObject.prototype = assign(IntegerIndexedExoticObject.prototy
             if (isAbrupt(intIndex = ifAbrupt(intIndex))) return intIndex;
             if (SameValue(ToString(intIndex), P)) {
                 if (intIndex < 0) return false;
-                var len = O.ArrayLength;
-                if (len === undefined) return newTypeError( "integerindexed: length is undefined");
+                var len = getInternalSlot(O, SLOTS.ARRAYLENGTH);
+                if (len === undefined) return newTypeError(format("S_IS_UNDEFINED", "length"));
                 if (intIndex >= len) return false;
             }
         }
@@ -15822,12 +15924,12 @@ function IntegerIndexedElementGet(O, index) {
 }
 
 function IntegerIndexedElementSet(O, index, value) {
-    Assert(Type(index) === NUMBER, "index type has to be number");
-    Assert(index === ToInteger(index), "index has to be tointeger of index");
+    Assert(Type(index) === NUMBER, "index != number");
+    Assert(index === ToInteger(index), "index != ToInteger(index)");
     var O = ToObject(ThisResolution());
     if (isAbrupt(O = ifAbrupt(O))) return O;
     var buffer = getInternalSlot(O, SLOTS.VIEWEDARRAYBUFFER);
-    if (!buffer) return newTypeError( "object is not a viewed array buffer");
+    if (!buffer) return newTypeError(format("S_IS_UNDEFINED", "buffer"));
     var length = getInternalSlot(O, SLOTS.ARRAYLENGTH);
     var numValue = ToNumber(value);
     if (isAbrupt(numValue = ifAbrupt(numValue))) return numValue;
@@ -15840,37 +15942,6 @@ function IntegerIndexedElementSet(O, index, value) {
     var status = SetValueInBuffer(buffer, indexedPosition, elementType, numValue);
     if (isAbrupt(status = ifAbrupt(status))) return status;
     return numValue;
-}
-
-var typedArrayElementSize = {
-    "Float64Array": 8,
-    "Float32Array": 4,
-    "Int32Array": 4,
-    "Uint32Array": 4,
-    "Int16Array": 2,
-    "Uint16Array": 2,
-    "Int8Array": 1,
-    "Uint8Array": 1,
-    "Uint8ClampedArray": 1
-};
-
-var typedArrayElementType = {
-    "Float64Array": "Float64",
-    "Float32Array": "Float32",
-    "Int32Array": "Int32",
-    "Uint32Array": "Uint32",
-    "Int16Array": "Int16",
-    "Uint16Array": "Uint16",
-    "Int8Array": "Int8",
-    "Uint8Array": "Uint8",
-    "Uint8ClampedArray": "Uint8C"
-};
-
-function IntegerIndexedObjectCreate(prototype) {
-    var O = IntegerIndexedExoticObject();
-    setInternalSlot(O, SLOTS.EXTENSIBLE, true);
-    setInternalSlot(O, SLOTS.PROTOTYPE, prototype);
-    return O;
 }
 
 
@@ -23207,7 +23278,12 @@ LazyDefineBuiltinFunction(ArrayPrototype, "reverse", 0, ArrayPrototype_reverse);
 LazyDefineBuiltinFunction(ArrayPrototype, "shift", 0, ArrayPrototype_shift);
 
 LazyDefineBuiltinFunction(ArrayPrototype, "slice", 0, ArrayPrototype_slice);
+
+// -
 LazyDefineBuiltinFunction(ArrayPrototype, "sort", 1, ArrayPrototype_sort);
+defaultCompareFn = OrdinaryFunction();
+setInternalSlot(defaultCompareFn, SLOTS.CALL, defaultCompareFn_call);
+// -
 
 LazyDefineBuiltinFunction(ArrayPrototype, "entries", 0, ArrayPrototype_entries);
 LazyDefineBuiltinFunction(ArrayPrototype, "keys", 0, ArrayPrototype_keys);
