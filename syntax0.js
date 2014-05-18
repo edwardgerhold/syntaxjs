@@ -9581,6 +9581,7 @@ INTRINSICS.ARRAYPROTO_VALUES = "%ArrayProto_values%";
 INTRINSICS.SETLANGUAGE = "%SetLanguage%";
 INTRINSICS.VM = "%VM%";
 INTRINSICS.DOMWRAPPER = "%DOMWrapper%";
+INTRINSICS.DEFAULTCOMPARE = "%DefaultCompare%";
 Object.freeze(INTRINSICS);
 
 /**
@@ -14084,11 +14085,13 @@ function SortCompare(thisArg, argList) {
     */
 };
 
-var defaultCompareFn;
+
 var defaultCompareFn_call = function(thisArg, argList) {
     var a = argList[0];
     var b = argList[1];
-    return a > b;
+    if (a > b) return 1;
+    if (a < b) return -1;
+    return 0;
 };
 
 var ArrayPrototype_sort = function (thisArg, argList) {
@@ -14107,7 +14110,7 @@ var ArrayPrototype_sort = function (thisArg, argList) {
     if (isAbrupt(arrayToSort=ifAbrupt(arrayToSort))) return arrayToSort;
 
     if (!comparefn) {
-	comparefn = defaultCompareFn;
+	comparefn = getIntrinsic(INTRINSICS.DEFAULTCOMPARE);
     } 
     if (!IsCallable(comparefn)) { 
 	return newTypeError("comparefn is not callable");    
@@ -23150,6 +23153,8 @@ var RealmPrototype_indirectEval = function (thisArg, argList) {
 
         var VMObject = createIntrinsicObject(intrinsics,INTRINSICS.VM); // that i can play with from inside the shell, too.
 
+        var defaultCompareFn = createIntrinsicFunction(intrinsics, "compare", 2, INTRINSICS.DEFAULTCOMPARE)
+
         var ThrowTypeError_Call = function (thisArg, argList) {
             return newTypeError(format("THROW_TYPE_ERROR"));
         };
@@ -23281,8 +23286,7 @@ LazyDefineBuiltinFunction(ArrayPrototype, "slice", 0, ArrayPrototype_slice);
 
 // -
 LazyDefineBuiltinFunction(ArrayPrototype, "sort", 1, ArrayPrototype_sort);
-defaultCompareFn = OrdinaryFunction();
-setInternalSlot(defaultCompareFn, SLOTS.CALL, defaultCompareFn_call);
+setInternalSlot(getIntrinsic(INTRINSICS.DEFAULTCOMPARE), SLOTS.CALL, defaultCompareFn_call);
 // -
 
 LazyDefineBuiltinFunction(ArrayPrototype, "entries", 0, ArrayPrototype_entries);

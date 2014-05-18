@@ -1,0 +1,14 @@
+{
+	"Array methods":
+	{
+	    "init": 		
+		"let a = [1,5,2,6,4,3];",
+	    "tests": 
+	    [
+
+		["a.sort().join()", "1,2,3,4,5,6"],
+		["a.shift()", 1],
+		["a.unshift(1); a[0];", 1]
+	    ]
+	}
+}

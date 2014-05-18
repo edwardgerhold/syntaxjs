@@ -1,0 +1,23 @@
+{
+	"have to repair strict mode and non strict mode":
+	{
+	    "init": 		
+		"function s() { 'use strict'; return !!this; }\nfunction n() { return !!this; }\n",
+	    "tests": 
+	    [
+
+		["s()", false],
+		["n()", true]
+	    ]
+	},
+	"have to repair strict mode 2":
+	{
+	    "init": 		
+		"'use strict'; function f() { return !!this; }",
+	    "tests": 
+	    [
+		["f()", true],
+		["let eval = 10;", null, "throws"]
+	    ]
+	}
+}
