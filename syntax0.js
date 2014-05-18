@@ -631,6 +631,7 @@ define("languages.de_DE", function (require, exports) {
     exports.COLUMN_S = "Spalte %s";
     exports.AT_LINE_S_COLUMN_S = "in Zeile %s, Spalte %s";
 
+    exports.ARGUMENTS_CALLER_STRICT_ERROR = "Kann nicht auf Caller im Strict Mode zugreifen";
 
     return exports;
 
@@ -771,6 +772,8 @@ define("languages.en_US", function (require, exports) {
     exports.COLUMN_S = "column %s";
     exports.AT_LINE_S_COLUMN_S = "at line %s, column %s";
 
+
+    exports.ARGUMENTS_CALLER_STRICT_ERROR = "Can not access 'caller' in strict mode";
 
     return exports;
 });
@@ -10840,7 +10843,7 @@ function createIdentifierBinding(envRec, N, V, D, W) {
         value: V,
         writable: W === undefined? true : W,
         configurable: !!D
-    }
+    };
 }
 
 function GetIdentifierReference(lex, name, strict) {
@@ -13153,7 +13156,7 @@ ArgumentsExoticObject.prototype = {
             var v = OrdinaryGetOwnProperty(ao, P);
             if (v !== undefined) v = v.value;
             if (P === "caller" && (Type(v) === OBJECT && (IsCallable(v) || IsConstructor(v))) && getInternalSlot(v, SLOTS.STRICT)) {
-                return newTypeError( "Arguments.Get: Can not access 'caller' in strict mode");
+                return newTypeError(format("ARGUMENTS_CALLER_STRICT_ERROR"));
             }
             return v;
         } else {
@@ -14438,11 +14441,32 @@ var ArrayPrototype_some = function some(thisArg, argList) {
             if (isAbrupt(testResult = ifAbrupt(testResult))) return testResult;
             if (ToBoolean(testResult) === true) return NormalCompletion(true);
         }
-        k = k + 1;
+            k = k + 1;
     }
     return NormalCompletion(false);
 };
 
+/*
+    non-standard from es-discuss.
+    Angus asked, and David told, about a year ago.
+*/
+var ArrayPrototype_first = function (thisArg, argList) {
+    var O = ToObject(thisArg);
+    if (isAbrupt(O = ifAbrupt(O))) return O;
+    var result = Get(O, ToString(0));
+    if (isAbrupt(result=ifAbrupt(result))) return result;
+    return NormalCompletion(result);
+};
+var ArrayPrototype_last = function (thisArg, argList) {
+    var O = ToObject(thisArg);
+    if (isAbrupt(O = ifAbrupt(O))) return O;
+    var lenVal = Get(O, "length");
+    var len = ToUint32(lenVal);
+    if (isAbrupt(len = ifAbrupt(len))) return len;
+    var result = Get(O, ToString(len-1));
+    if (isAbrupt(result=ifAbrupt(result))) return result;
+    return NormalCompletion(result);
+};
 /**
  * Created by root on 17.05.14.
  */
@@ -23270,34 +23294,37 @@ LazyDefineBuiltinFunction(ArrayConstructor, "of", 1, ArrayConstructor_of);
 LazyDefineBuiltinConstant(ArrayConstructor, "prototype", ArrayPrototype);
 LazyDefineBuiltinConstant(ArrayConstructor, "prototype", ArrayPrototype);
 LazyDefineBuiltinFunction(ArrayPrototype, "concat", 1, ArrayPrototype_concat);
+LazyDefineBuiltinConstant(ArrayPrototype, "constructor", ArrayConstructor);
 LazyDefineBuiltinFunction(ArrayPrototype, "copyWithin", 2, ArrayPrototype_copyWithin);
+LazyDefineBuiltinFunction(ArrayPrototype, "entries", 0, ArrayPrototype_entries);
+LazyDefineBuiltinFunction(ArrayPrototype, "every", 0, ArrayPrototype_every);
 LazyDefineBuiltinFunction(ArrayPrototype, "fill", 1, ArrayPrototype_fill);
+LazyDefineBuiltinFunction(ArrayPrototype, "filter", 0, ArrayPrototype_filter);
 LazyDefineBuiltinFunction(ArrayPrototype, "find", 1, ArrayPrototype_find);
 LazyDefineBuiltinFunction(ArrayPrototype, "findIndex", 1, ArrayPrototype_findIndex);
-LazyDefineBuiltinFunction(ArrayPrototype, "reduce", 1, ArrayPrototype_reduce);
-LazyDefineBuiltinFunction(ArrayPrototype, "reduceRight", 1, ArrayPrototype_reduceRight);
-LazyDefineBuiltinFunction(ArrayPrototype, "splice", 2, ArrayPrototype_splice);
-LazyDefineBuiltinFunction(ArrayPrototype, "toLocaleString", 2, ArrayPrototype_toLocaleString);
-LazyDefineBuiltinFunction(ArrayPrototype, "unshift", 1, ArrayPrototype_unshift);
-LazyDefineBuiltinFunction(ArrayPrototype, "indexOf", 0, ArrayPrototype_indexOf);
-LazyDefineBuiltinFunction(ArrayPrototype, "lastIndexOf", 0, ArrayPrototype_lastIndexOf);
+LazyDefineBuiltinFunction(ArrayPrototype, "first", 1, ArrayPrototype_first);
 LazyDefineBuiltinFunction(ArrayPrototype, "forEach", 0, ArrayPrototype_forEach);
+LazyDefineBuiltinFunction(ArrayPrototype, "indexOf", 0, ArrayPrototype_indexOf);
+LazyDefineBuiltinFunction(ArrayPrototype, "join", 0, ArrayPrototype_join);
+LazyDefineBuiltinFunction(ArrayPrototype, "keys", 0, ArrayPrototype_keys);
+LazyDefineBuiltinFunction(ArrayPrototype, "last", 1, ArrayPrototype_last);
+LazyDefineBuiltinFunction(ArrayPrototype, "lastIndexOf", 0, ArrayPrototype_lastIndexOf);
 LazyDefineBuiltinFunction(ArrayPrototype, "map", 0, ArrayPrototype_map);
-LazyDefineBuiltinFunction(ArrayPrototype, "filter", 0, ArrayPrototype_filter);
-LazyDefineBuiltinFunction(ArrayPrototype, "every", 0, ArrayPrototype_every);
-LazyDefineBuiltinFunction(ArrayPrototype, "some", 0, ArrayPrototype_some);
-LazyDefineBuiltinConstant(ArrayPrototype, $$toStringTag, "Array");
-LazyDefineBuiltinConstant(ArrayPrototype, "constructor", ArrayConstructor);
 LazyDefineBuiltinFunction(ArrayPrototype, "pop", 0, ArrayPrototype_pop);
 LazyDefineBuiltinFunction(ArrayPrototype, "push", 1, ArrayPrototype_push);
-LazyDefineBuiltinFunction(ArrayPrototype, "join", 0, ArrayPrototype_join);
+LazyDefineBuiltinFunction(ArrayPrototype, "reduce", 1, ArrayPrototype_reduce);
+LazyDefineBuiltinFunction(ArrayPrototype, "reduceRight", 1, ArrayPrototype_reduceRight);
 LazyDefineBuiltinFunction(ArrayPrototype, "reverse", 0, ArrayPrototype_reverse);
 LazyDefineBuiltinFunction(ArrayPrototype, "shift", 0, ArrayPrototype_shift);
 LazyDefineBuiltinFunction(ArrayPrototype, "slice", 0, ArrayPrototype_slice);
 LazyDefineBuiltinFunction(ArrayPrototype, "sort", 1, ArrayPrototype_sort);
 setInternalSlot(getIntrinsic(INTRINSICS.DEFAULTCOMPARE), SLOTS.CALL, defaultCompareFn_call);
-LazyDefineBuiltinFunction(ArrayPrototype, "entries", 0, ArrayPrototype_entries);
-LazyDefineBuiltinFunction(ArrayPrototype, "keys", 0, ArrayPrototype_keys);
+LazyDefineBuiltinFunction(ArrayPrototype, "splice", 2, ArrayPrototype_splice);
+LazyDefineBuiltinFunction(ArrayPrototype, "some", 0, ArrayPrototype_some);
+LazyDefineBuiltinFunction(ArrayPrototype, "toLocaleString", 2, ArrayPrototype_toLocaleString);
+LazyDefineBuiltinFunction(ArrayPrototype, "unshift", 1, ArrayPrototype_unshift);
+LazyDefineProperty(ArrayPrototype, "values", ArrayProto_values);
+LazyDefineBuiltinConstant(ArrayPrototype, $$toStringTag, "Array");
 LazyDefineBuiltinFunction(ArrayPrototype, $$iterator, 0, ArrayPrototype_$$iterator);
 LazyDefineProperty(ArrayPrototype, $$unscopables, (function () {
         var blackList = ObjectCreate();
@@ -23312,7 +23339,7 @@ LazyDefineProperty(ArrayPrototype, $$unscopables, (function () {
 }()));
 setInternalSlot(ArrayProto_values, SLOTS.CALL, ArrayPrototype_values);
 setInternalSlot(ArrayProto_values, SLOTS.CONSTRUCT, undefined);
-LazyDefineProperty(ArrayPrototype, "values", ArrayProto_values);
+
 
 
 setInternalSlot(ArrayIteratorPrototype, SLOTS.PROTOTYPE, ObjectPrototype);
