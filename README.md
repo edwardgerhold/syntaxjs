@@ -4,11 +4,15 @@ syntax.js
 EcmaScript 6 Interpreter and beyond written with JavaScript or EcmaScript 5.
 
 Maybe at the current time the slowest of the world.
+Performance killers: Too many completions (removed reuse),
+return if abrupt is 2 calls, scanning BoundNames in for (;;) loops...
 
 For node.js (shell) and browser (syntaxhighlighter for PRE with controls 
 possible and CODE without controls, featuring autostart, just include and it
 highlights. For controls at data-syntaxjs-controls=true either to html or to
 the pre-Element depending on if the controls should be global or specific)
+
+I just started profiling
 
 Not working: Generators, and the module loader is still disconnected. And maybe 
 the destructuring to a LeftHandSideExpression Target is not completed, plus
@@ -17,6 +21,7 @@ node syntax0.js syntax0.js. But of course, later, they will be available, too.
 
 Latest ES7 piece of a feature
 =============================
+Fixed String.prototype.lpad and rpads resulting length..
 
 I added the const class and freeze the constructor, the prototype, and the instance
 with SetIntegrityLevel(O, "frozen"). That´s all so far about defensible classes from me.
