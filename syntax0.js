@@ -10832,18 +10832,15 @@ function NewDeclarativeEnvironment(E) {
 }
 
 
-function IdentifierBinding(N, V, D, W) {
-    return {
+
+function createIdentifierBinding(envRec, N, V, D, W) {
+    return envRec[N] = {
         __proto__: null,
         name: N,
         value: V,
         writable: W === undefined? true : W,
         configurable: !!D
-    };
-}
-
-function createIdentifierBinding(envRec, N, V, D, W) {
-    return envRec[N] = IdentifierBinding(N, V, D, W);
+    }
 }
 
 function GetIdentifierReference(lex, name, strict) {
@@ -14056,7 +14053,7 @@ var ArrayPrototype_slice = function slice(thisArg, argList) {
     if (isAbrupt(putStatus)) return putStatus;
     return NormalCompletion(A);
 };
-
+/*
 function SortCompare(thisArg, argList) {
     var obj = thisArg;
     var j = argList[0];
@@ -14076,15 +14073,19 @@ function SortCompare(thisArg, argList) {
     if (isAbrupt(y = ifAbrupt(y))) return y;
     if (x === undefined && y === undefined) return NormalCompletion(+0);
     if (x === undefined) return NormalCompletion(1);
-    if (y === undefined) return NormalCompletion(-1);    
-    /*
-	unfinished, to be continued
-	
-	(i did quicksort already, that´s not the matter)
-    
-    */
-};
+    if (y === undefined) return NormalCompletion(-1);
+    if (comparefn != undefined) {
+        if (!IsCallable(comparefn)) return newTypeError("comparefn not callable");
+        return callInternalSlot(SLOTS.CALL, comparefn, undefined, [x,y]);
+    }
+    var xString = ToString(x);
+    if (isAbrupt(xString=ifAbrupt(xString))) return xString;
+    var yString = ToString(y);
+    if (isAbrupt(yString=ifAbrupt(yString))) return yString;
+    if (xString < yString) return -1
 
+};
+*/
 
 var defaultCompareFn_call = function(thisArg, argList) {
     var a = argList[0];
@@ -14104,7 +14105,6 @@ var ArrayPrototype_sort = function (thisArg, argList) {
 
     // let´s call native sort
     // for today
-    
 
     var arrayToSort = CreateListFromArrayLike(O);
     if (isAbrupt(arrayToSort=ifAbrupt(arrayToSort))) return arrayToSort;
@@ -23258,7 +23258,27 @@ LazyDefineBuiltinFunction(ConsoleObject, "log", 1, ConsoleObject_log);
 LazyDefineBuiltinFunction(ConsoleObject, "dir", 1, ConsoleObject_dir);
 LazyDefineBuiltinFunction(ConsoleObject, "error", 1, ConsoleObject_error);
 LazyDefineBuiltinFunction(ConsoleObject, "html", 1, ConsoleObject_html);
-
+MakeConstructor(ArrayConstructor, true, ArrayPrototype);
+setInternalSlot(ArrayConstructor, SLOTS.CALL, ArrayConstructor_call);
+setInternalSlot(ArrayConstructor, SLOTS.CONSTRUCT, ArrayConstructor_construct);
+LazyDefineBuiltinConstant(ArrayConstructor, "length", 1);
+setInternalSlot(ArrayPrototype, SLOTS.PROTOTYPE, ObjectPrototype);
+LazyDefineBuiltinFunction(ArrayConstructor, $$create, 1, ArrayConstructor_$$create);
+LazyDefineBuiltinFunction(ArrayConstructor, "from", 1, ArrayConstructor_from);
+LazyDefineBuiltinFunction(ArrayConstructor, "isArray", 1, ArrayConstructor_isArray);
+LazyDefineBuiltinFunction(ArrayConstructor, "of", 1, ArrayConstructor_of);
+LazyDefineBuiltinConstant(ArrayConstructor, "prototype", ArrayPrototype);
+LazyDefineBuiltinConstant(ArrayConstructor, "prototype", ArrayPrototype);
+LazyDefineBuiltinFunction(ArrayPrototype, "concat", 1, ArrayPrototype_concat);
+LazyDefineBuiltinFunction(ArrayPrototype, "copyWithin", 2, ArrayPrototype_copyWithin);
+LazyDefineBuiltinFunction(ArrayPrototype, "fill", 1, ArrayPrototype_fill);
+LazyDefineBuiltinFunction(ArrayPrototype, "find", 1, ArrayPrototype_find);
+LazyDefineBuiltinFunction(ArrayPrototype, "findIndex", 1, ArrayPrototype_findIndex);
+LazyDefineBuiltinFunction(ArrayPrototype, "reduce", 1, ArrayPrototype_reduce);
+LazyDefineBuiltinFunction(ArrayPrototype, "reduceRight", 1, ArrayPrototype_reduceRight);
+LazyDefineBuiltinFunction(ArrayPrototype, "splice", 2, ArrayPrototype_splice);
+LazyDefineBuiltinFunction(ArrayPrototype, "toLocaleString", 2, ArrayPrototype_toLocaleString);
+LazyDefineBuiltinFunction(ArrayPrototype, "unshift", 1, ArrayPrototype_unshift);
 LazyDefineBuiltinFunction(ArrayPrototype, "indexOf", 0, ArrayPrototype_indexOf);
 LazyDefineBuiltinFunction(ArrayPrototype, "lastIndexOf", 0, ArrayPrototype_lastIndexOf);
 LazyDefineBuiltinFunction(ArrayPrototype, "forEach", 0, ArrayPrototype_forEach);
@@ -23266,29 +23286,16 @@ LazyDefineBuiltinFunction(ArrayPrototype, "map", 0, ArrayPrototype_map);
 LazyDefineBuiltinFunction(ArrayPrototype, "filter", 0, ArrayPrototype_filter);
 LazyDefineBuiltinFunction(ArrayPrototype, "every", 0, ArrayPrototype_every);
 LazyDefineBuiltinFunction(ArrayPrototype, "some", 0, ArrayPrototype_some);
-
-LazyDefineBuiltinFunction(ArrayConstructor, $$create, 1, ArrayConstructor_$$create);
-LazyDefineBuiltinFunction(ArrayConstructor, "from", 1, ArrayConstructor_from);
-LazyDefineBuiltinFunction(ArrayConstructor, "isArray", 1, ArrayConstructor_isArray);
-LazyDefineBuiltinFunction(ArrayConstructor, "of", 1, ArrayConstructor_of);
-
+LazyDefineBuiltinConstant(ArrayPrototype, $$toStringTag, "Array");
 LazyDefineBuiltinConstant(ArrayPrototype, "constructor", ArrayConstructor);
-LazyDefineBuiltinConstant(ArrayConstructor, "prototype", ArrayPrototype);
-
-
 LazyDefineBuiltinFunction(ArrayPrototype, "pop", 0, ArrayPrototype_pop);
 LazyDefineBuiltinFunction(ArrayPrototype, "push", 1, ArrayPrototype_push);
 LazyDefineBuiltinFunction(ArrayPrototype, "join", 0, ArrayPrototype_join);
 LazyDefineBuiltinFunction(ArrayPrototype, "reverse", 0, ArrayPrototype_reverse);
 LazyDefineBuiltinFunction(ArrayPrototype, "shift", 0, ArrayPrototype_shift);
-
 LazyDefineBuiltinFunction(ArrayPrototype, "slice", 0, ArrayPrototype_slice);
-
-// -
 LazyDefineBuiltinFunction(ArrayPrototype, "sort", 1, ArrayPrototype_sort);
 setInternalSlot(getIntrinsic(INTRINSICS.DEFAULTCOMPARE), SLOTS.CALL, defaultCompareFn_call);
-// -
-
 LazyDefineBuiltinFunction(ArrayPrototype, "entries", 0, ArrayPrototype_entries);
 LazyDefineBuiltinFunction(ArrayPrototype, "keys", 0, ArrayPrototype_keys);
 LazyDefineBuiltinFunction(ArrayPrototype, $$iterator, 0, ArrayPrototype_$$iterator);
@@ -23307,25 +23314,6 @@ setInternalSlot(ArrayProto_values, SLOTS.CALL, ArrayPrototype_values);
 setInternalSlot(ArrayProto_values, SLOTS.CONSTRUCT, undefined);
 LazyDefineProperty(ArrayPrototype, "values", ArrayProto_values);
 
-MakeConstructor(ArrayConstructor, true, ArrayPrototype);
-setInternalSlot(ArrayConstructor, SLOTS.CALL, ArrayConstructor_call);
-setInternalSlot(ArrayConstructor, SLOTS.CONSTRUCT, ArrayConstructor_construct);
-LazyDefineBuiltinConstant(ArrayConstructor, "length", 1);
-
-setInternalSlot(ArrayPrototype, SLOTS.PROTOTYPE, ObjectPrototype);
-LazyDefineBuiltinConstant(ArrayConstructor, "prototype", ArrayPrototype);
-LazyDefineBuiltinFunction(ArrayPrototype, "concat", 1, ArrayPrototype_concat);
-LazyDefineBuiltinFunction(ArrayPrototype, "copyWithin", 2, ArrayPrototype_copyWithin);
-LazyDefineBuiltinFunction(ArrayPrototype, "fill", 1, ArrayPrototype_fill);
-LazyDefineBuiltinFunction(ArrayPrototype, "find", 1, ArrayPrototype_find);
-LazyDefineBuiltinFunction(ArrayPrototype, "findIndex", 1, ArrayPrototype_findIndex);
-
-LazyDefineBuiltinFunction(ArrayPrototype, "reduce", 1, ArrayPrototype_reduce);
-LazyDefineBuiltinFunction(ArrayPrototype, "reduceRight", 1, ArrayPrototype_reduceRight);
-LazyDefineBuiltinFunction(ArrayPrototype, "splice", 2, ArrayPrototype_splice);
-LazyDefineBuiltinFunction(ArrayPrototype, "toLocaleString", 2, ArrayPrototype_toLocaleString);
-LazyDefineBuiltinFunction(ArrayPrototype, "unshift", 1, ArrayPrototype_unshift);
-LazyDefineBuiltinConstant(ArrayPrototype, $$toStringTag, "Array");
 
 setInternalSlot(ArrayIteratorPrototype, SLOTS.PROTOTYPE, ObjectPrototype);
 LazyDefineBuiltinFunction(ArrayIteratorPrototype, $$iterator, 0, ArrayIteratorPrototype_$$iterator);
@@ -24061,7 +24049,6 @@ LazyDefineBuiltinFunction(VMObject, "eval", 1, VMObject_eval);
     exports.ExecutionContext = ExecutionContext;
     exports.CompletionRecord = CompletionRecord;
     exports.NormalCompletion = NormalCompletion;
-    exports.IdentifierBinding = IdentifierBinding;
     exports.floor = floor;
     exports.ceil = ceil;
     exports.sign = sign;
