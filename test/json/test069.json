@@ -1,0 +1,11 @@
+{
+	"checking scope with new initFile feature in testmaker.js":
+	{
+	    "initFile": "../listings/init069.js",
+	    "tests": 
+	    [
+		["f(10)", 10],
+		["x", "root"]
+	    ]
+	}
+}
