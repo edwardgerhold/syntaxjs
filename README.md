@@ -5,19 +5,23 @@ EcmaScript 6 Interpreter and beyond written with JavaScript or EcmaScript 5.
 
 Maybe at the current time the slowest of the world.
 Performance killers: Too many completions (removed reuse),
-return if abrupt is 2 calls, scanning BoundNames in for (;;) loops...
+ReturnIfAbrupt is 2 calls, scanning BoundNames in for (;;) loops...
 
 For node.js (shell) and browser (syntaxhighlighter for PRE with controls 
 possible and CODE without controls, featuring autostart, just include and it
-highlights. For controls at data-syntaxjs-controls=true either to html or to
+highlights. For controls add data-syntaxjs-controls=true either to html or to
 the pre-Element depending on if the controls should be global or specific)
 
-I just started profiling
+I just started profiling.
 
 Not working: Generators, and the module loader is still disconnected. And maybe 
 the destructuring to a LeftHandSideExpression Target is not completed, plus
 a few little things inside which make the program fail in running itself with
 node syntax0.js syntax0.js. But of course, later, they will be available, too.
+
+One little thing is Unicode. But i have downloaded @mathias "i \u2661 unicode"
+two days ago and feel already much better, that i can manage it without bigger
+problems than finding again all places in the code.
 
 Latest ES7 piece of a feature
 =============================
@@ -47,7 +51,7 @@ es6> c.method()
 Running a file
 ==============
 
-Probably it will not run your script. It runs files and codes, eventtest262.
+Probably it will not run your script. It runs files and codes, even test262.
 But there are bugs left. For the latter i added to "throw at function declarations
 in strict mode in loop bodies", because it hung in the loop the last time i tried it.
 It´s promising, that test262 is executable.

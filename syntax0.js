@@ -11237,8 +11237,8 @@ function ToString(V) {
 function ToObject(V) {
     if (isAbrupt(V)) return V;
     if (V instanceof CompletionRecord) return ToObject(V.value);
-    if (V === undefined) return newTypeError( "ToObject: can not convert undefined to object");
-    if (V === null) return newTypeError( "ToObject: can not convert null to object");
+    if (V === undefined) return newTypeError("ToObject: can not convert undefined to object");
+    if (V === null) return newTypeError("ToObject: can not convert null to object");
     if (Type(V) === OBJECT) return V;
     if (V instanceof SymbolPrimitiveType) {
         var s = SymbolPrimitiveType();
@@ -11246,22 +11246,16 @@ function ToObject(V) {
         setInternalSlot(s, SLOTS.SYMBOLDATA, V);
         return s;
     }
-    if (typeof V === "number") {
-        return OrdinaryConstruct(getIntrinsic(INTRINSICS.NUMBER), [V]);
+    switch (typeof V) {
+        case "number":return OrdinaryConstruct(getIntrinsic(INTRINSICS.NUMBER), [V]);
+        case "string":return OrdinaryConstruct(getIntrinsic(INTRINSICS.STRING), [V]);
+        case "boolean":return OrdinaryConstruct(getIntrinsic(INTRINSICS.BOOLEAN), [V]);
     }
-    if (typeof V === "string") {
-        return OrdinaryConstruct(getIntrinsic(INTRINSICS.STRING), [V]);
-    }
-    if (typeof V === "boolean") {
-        return OrdinaryConstruct(getIntrinsic(INTRINSICS.BOOLEAN), [V]);
-    }
-    // return V;
 }
 function CheckObjectCoercible(argument) {
     if (argument instanceof CompletionRecord) return CheckObjectCoercible(argument.value);
     else if (argument === undefined) return newTypeError(format("UNDEFINED_NOT_COERCIBLE"));
     else if (argument === null) return newTypeError(format("NULL_NOT_COERCIBLE"));
-
     var type = Type(argument);
     switch (type) {
         case BOOLEAN:
@@ -14110,10 +14104,6 @@ var ArrayPrototype_some = function some(thisArg, argList) {
     }
     return NormalCompletion(false);
 };
-/*
-    non-standard from es-discuss.
-    Angus asked, and David told, about a year ago.
-*/
 var ArrayPrototype_first = function (thisArg, argList) {
     var O = ToObject(thisArg);
     if (isAbrupt(O = ifAbrupt(O))) return O;
@@ -22247,6 +22237,7 @@ setInternalSlot(getIntrinsic(INTRINSICS.DEFAULTCOMPARE), SLOTS.CALL, defaultComp
 NowDefineBuiltinFunction(ArrayPrototype, "splice", 2, ArrayPrototype_splice);
 NowDefineBuiltinFunction(ArrayPrototype, "some", 0, ArrayPrototype_some);
 NowDefineBuiltinFunction(ArrayPrototype, "toLocaleString", 2, ArrayPrototype_toLocaleString);
+NowDefineBuiltinFunction(ArrayPrototype, "toString", 2, ArrayPrototype_toString);
 NowDefineBuiltinFunction(ArrayPrototype, "unshift", 1, ArrayPrototype_unshift);
 NowDefineProperty(ArrayPrototype, "values", ArrayProto_values);
 NowDefineBuiltinConstant(ArrayPrototype, $$toStringTag, "Array");
