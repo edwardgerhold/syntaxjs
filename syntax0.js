@@ -11241,7 +11241,7 @@ function ToObject(V) {
     if (V === null) return newTypeError("ToObject: can not convert null to object");
     if (Type(V) === OBJECT) return V;
     if (V instanceof SymbolPrimitiveType) {
-        var s = SymbolPrimitiveType();
+        var s = ObjectCreate();
         setInternalSlot(s, SLOTS.PROTOTYPE, getIntrinsic(INTRINSICS.SYMBOLPROTOTYPE));
         setInternalSlot(s, SLOTS.SYMBOLDATA, V);
         return s;

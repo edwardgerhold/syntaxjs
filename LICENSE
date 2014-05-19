@@ -1,72 +1,53 @@
+Edwards Open Source License for syntax.js
 
-Placeholder for the License Terms for syntaxjs
+Better definition what open source is: opensource.org
 
-syntax0.js (c) or (w) Edward Gerhold 2013, 2014
+Anyone obtaining this archive has the rights to use, modify, copy and spread
+the program and modified programs, as long as they can be distinguished, and
+as long as he/she respects the copyrights of the underlying specifications
+and the work of their owners.
+In other words, you may do anything with, which is anyways allowed. I grant
+you a possibility change away from my license and align it with your needs.
+You may hack it, delete it, remove it, replace it, re-release it, maybe you
+forget my name, maybe you would like to rename it. You can do what you want
+with, you are allowed to. That´s for my part of the program.
 
-I still have to figure out, which license is the right one.
+The list of copyrights and people i have to respect for this pile of bugs is
+long.
 
+Special thanks to Allen Wirfs-Brock, the editor of the EcmaScript 6 specification
+for very good code and plain text. It´s dense, it´s concise and very different from
+what i wrote before. I hopefully have learned something for life from this document,
+how to write better code, and how requirements and co have to be written. I hope that
+i taught myself with how to concretly handle errors correct through the whole program,
+through a whole real application.
 
-I think i will find the answer in the Open Source Definition.
-opensource.org/docs/osd
-but i won´t finish this update of the license today
-i will write down what´s standing there then
-making sure to hit the osd then
+My code lacks a bit (lot) in performance and has some beginner´s mistakes, but concretly
+i see more of them, than one may expect. Mostly i have to fight against my laziness.
+I am not in a hurry, so days pass me by before i do. Like half of the time.
 
-Here are my first notes of what the license will outline:
-
-* EcmaScript 6 Specification belongs to Ecma, TC-39, and it´s editor,
-which is most of the code. (And the more sophisticated, something to learn from.)
-* Mozilla Parser API belongs to Mozilla, which is the Syntaxtree Format.
-* There is a module with a functional parser by Douglas Crockford, from a
-tutorial on his website, written down by hand. It´s currently not in use, 
-but inclusive (it will be split into an own file, yes, but i think, it will
-also get it´s time being in use for something in the future).
-* Esprimas Demo on it´s Website esprima.org inspired me to add a button, 
-to show the ast of a highlighted text, and to use JSON.stringify(code, null, 4);
-As i remember again. I have seen the array of tokens there. Already in 2012.
-When i first wrote a syntaxhighlighter, which later in 2013 became this tool.
-* I wrote code with promisesaplus.com and github.com/domenic/promises-unwrapping
-and people.mozilla.org/~jorendorff/js-loaders but these parts are superseeded by 
-the latest specification
-* The /unicode directory contains a code by mathias bynens modified to test in 
-constant time for code point values in a set but adds a size of 1meg for the 6.3
-table (reduced the original in this file)
-* Object.observe is included, but not finished, only the half is written,
-the internal methods are not updated with yet.
-* An Emitter is inspired by Node.js but a complete own Implementation.
-* I already started to add Structured Cloning for Cross Realm
-* Which will incorporate EventTarget, Event, and MessagePort from the DOM.
-The names are already registered in the global environment. (Whether i come
-to implement the Node Interface when doing the propagation is open.)
-* I have started to include dslmomovs Type Objects specification from github
-* Then i have a special project viewed on the internet, over es-discuss and
-got interested in. The Concrete Syntax Tree by getify et al. This tool contains
-little portions of some upcoming Source Code preserving Tree, which will be
-suitable for code editors.
-* Everything else is written and even invented by me. You can see it at the
-mistakes. That´s mine..
-
-I think i can grant you the rights to use, modify and distribute the software
-and make your own with
-and the same conditions, the others licenses grant me. I won´t change my mind,
-that´s for sure. But to be correct, i still have to figure out, what we got.u
-
-I should take the "Do what the fuck you wanna do with license", i have seen
-together with the releases of the promises-aplus-tests, by Domenic Denicola. I think
-it´s his public domain license. The license expresses what i mean.
-
-Oh. 
-All persons namely called are not affiliated with me in any way. I just took
-from the internet, what was there. I meant not to disturb or stress anyone with,
-please. I simply want the tool to be open, free, and be there for anyone.
-
-Have fun!
-(Or be annoyed at the moment because of the open bugs, hehe. 
-I´ll mark it big and fat if it´s no longer the case.)
-
-Edward
-
-
-
-
-
+This program contains code from the EcmaScript Edition 6 document. And it already
+contains code from the actual ES7 proposals from http://github.com/tc39/ecma262
+from WebDirections, Dslomov, @mathias, erights.
+There is a edit of a module by @mathias with a large unicode table for String.isIdentifierStart()
+and String.isIdentifierPart().
+I wanted to implement the Concrete Syntax Tree by @getify et al. but didn´t manage it yet
+to do so. Currently there is no code but will be.
+There is a parser by Douglas Crockford in lib/parsenodes/crockfords-parser.js written down from
+his homepage from his tutorial.
+Formerly i cited @domenics DWTFYWTDW License to express what i mean. And i´ve forgotten to remove
+the Aplus Test Adapter, for the obligatory "good that it´s not happening in production" gag.
+There is one file from V8 in test/listings/symbols-only.js
+I have already made use of emscripten/docs/paper.pdf and asmjs.org/spec/ and have the aims to
+finish these documents some day. Together with the compiler implementation, which will probably
+no "asm.js" but make use of the HEAP technology. On the other side i have decided to develop a
+typechecker for the toolbox, there will be use for.
+The Parser_API AST belongs to Mozilla. And for historical reasons, i have seen esprimas parser and
+website already in 2012, which influenced the kind of parser, while it´s development was 101% independent.
+One forgotten? Will write up.
+Yes. Thanks to Jetbrains for my current IDE, a WebStorm 8 Evaluation Version, making it possible to overwork
+the whole thing again and again with all comforts and extras.
+Thanks to anyone else who contributed to the used documents and codes, to es-discuss for entertainment
+and education, to github for my free repository.
+For our pet Gizmo. Rest in Peace. I continued this syntax highlighter when you wasn´t there anymore.
+My girlfriend hates my computer.
