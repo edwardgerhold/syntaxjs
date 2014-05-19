@@ -28,18 +28,15 @@
 
 
  */
-
 var VERSION = "0.0.1";
 var jsonfile, rawjson, json, writetests, testnames, verbose, separator, doubleseparator, realm, testfile;
 var writeFn, data;
 var Test = require("../tools/tester0.js").Test;
 var syntaxjs = require("../syntax0.js").syntaxjs;
 var fs = require("fs");
-
 function about() {
     console.log("testmaker.js "+VERSION+" for tester.js for syntax.js by Edward");
 }
-
 function usage() {
     console.log("usage:");
     console.log("testmaker.js tests.json (calls tester.js and syntax.js with the testdata at once)");
@@ -47,8 +44,6 @@ function usage() {
     console.log("-w = writes tester.js code. other target libraries are the reason for the idea");
     console.log("-r = check out a new realm for the test");
 }
-
-
 function basic_setup (args) {
     for (var i = 0, j = args.length; i < j; i++) {
         if (args[i] == "-w") {
@@ -70,7 +65,6 @@ function basic_setup (args) {
     if (writetests) testfile = jsonfile.substr(0, jsonfile.lastIndexOf(".")) + ".test.js";
     data = "";
 }
-
 function writeTests(testfile, json, testnames, err, fd) {
     if (err) throw err;
     while (testnames.length) {
@@ -85,7 +79,6 @@ function writeTests(testfile, json, testnames, err, fd) {
         console.log("finished "+testfile);
     }
 }
-
 function writeTest(testfile, current, testname) {
     "use strict";
     data += "(function () {\n";
@@ -144,12 +137,10 @@ function writeTest(testfile, current, testname) {
         writeFn();
     });
 }
-
 function writeTestStarter(testfile, json, testnames) {
     writeFn = writeTests.bind(null, testfile, json, testnames);
     writeFn();
 }
-
 function runTest(current, testname) {
     // calling tester.js
     var tester = new Test();
@@ -209,7 +200,6 @@ function runTest(current, testname) {
     tester.run();
     tester.print();
 }
-
 function runTestStarter(json, testnames) {
     testnames.forEach(function (testname, index) {
         var current = json[testname];
@@ -231,7 +221,6 @@ function runTestStarter(json, testnames) {
         }
     });
 }
-
 (function main(args) {
     if (!args.length) {
         about();
@@ -249,4 +238,3 @@ function runTestStarter(json, testnames) {
         runTestStarter(json, testnames);
     }
 }(process.argv.slice(2)));
-

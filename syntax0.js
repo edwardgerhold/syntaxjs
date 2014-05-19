@@ -22,7 +22,7 @@
 
 */
 
-Error.stackTraceLimit = 3;
+Error.stackTraceLimit = 10;
 
 var syntaxjs;
 
@@ -8914,25 +8914,21 @@ define("js-codegen", function (require, exports, module) {
 
 define("api", function (require, exports) {
     "use strict";
-
     var realm;
     var intrinsics;
     var globalEnv;
     var globalThis;
     var stack;
     var eventQueue;
-
     var _call = Function.prototype.call;   // I´ve seen little of jquery conf
     var _bind = Function.prototype.bind;
     var objectHasOwnProperty = _call.bind(Object.prototype.hasOwnProperty);
     var arraySlice = _call.bind(Array.prototype.slice);
     // gotta find and replace the rest, this gets a compiler, etc, it´s worth to do.
-
     var intl = require("i18n");
     var format = intl.format;
     var formatStr = intl.formatStr;
     var trans = intl.trans;
-
     var all = {
         toString: function () {
             return "[all imports/exports value]";
@@ -8945,7 +8941,6 @@ define("api", function (require, exports) {
     };
     exports.all = all;
     exports.empty = empty;
-
     var statics = require("slower-static-semantics");
     var Contains = statics.Contains;
     var BoundNames = statics.BoundNames;
@@ -8955,18 +8950,15 @@ define("api", function (require, exports) {
     var ExpectedArgumentCount = statics.ExpectedArgumentCount;
     var ModuleRequests = statics.ModuleRequests;
     var dupesInTheTwoLists = statics.dupesInTheTwoLists; // self defined
-
     var parse = require("parser");
     var parseGoal = parse.parseGoal;
     var debugmode = false;
-
     var detector = require("detector");
     var hasConsole = detector.hasConsole;
     var hasPrint = detector.hasPrint;
     var isNode = detector.isNode;
     var isWindow = detector.isWindow;
     var isWorker = detector.isWorker;
-
     function debug() {
         if (debugmode && hasConsole) console.log.apply(console, arguments);
     }
@@ -8976,14 +8968,11 @@ define("api", function (require, exports) {
     function debugdir() {
         if (debugmode && hasConsole) console.dir.apply(console, arguments);
     }
-
     /*
      These include files include the main ecma 262 abstract operations.
      */
-
 var DefineOwnProperty = OrdinaryDefineOwnProperty;
 var GetOwnProperty = OrdinaryGetOwnProperty;
-
 function Push(array, data) {
     return array.push(data);
 }
@@ -9005,33 +8994,25 @@ function setRec(obj, key, value) {
 function genericArray(arr) {
     return arr;
 }
-
 function genericRecord(obj) {
     return obj;
 }
-
-
 function compareInternalSlot(O, N, V) {
     var value = getInternalSlot(O, N);
     return value === V;
 }
-
 function getInternalSlot(O, N) {
     return O[N];
 }
-
 function setInternalSlot(O, N, V) {
     return O[N] = V;
 }
-
 function hasInternalSlot(O, N) {
     return N in O;
 }
-
 function callInternalSlot(name, object, a, b, c, d) {
     return object[name](a,b,c,d);
 }
-
 function assignConstructorAndPrototype(Function, Prototype) {
     setInternalSlot(Function, SLOTS.PROTOTYPE, Prototype);
     DefineOwnProperty(Function, "prototype", {
@@ -9047,8 +9028,6 @@ function assignConstructorAndPrototype(Function, Prototype) {
         configurable: true
     });
 }
-
-
 function addMissingProperties(target, mixin) {
     for (var k in mixin) {
         if (Object.hasOwnProperty.call(mixin, k)) {
@@ -9057,15 +9036,13 @@ function addMissingProperties(target, mixin) {
     }
     return target;
 }
-
 function assign(obj, obj2) {
     for (var k in obj2) {
         obj[k] = obj2[k];
     }
     return obj;
 }
-
-function LazyDefineFalseTrueFalse(O, name, value) {
+function NowDefineFalseTrueFalse(O, name, value) {
     return callInternalSlot(SLOTS.DEFINEOWNPROPERTY, O, name, {
         configurable: false,
         enumerable: true,
@@ -9073,8 +9050,7 @@ function LazyDefineFalseTrueFalse(O, name, value) {
         writable: false
     });
 }
-
-function LazyDefineBuiltinConstant(O, name, value) {
+function NowDefineBuiltinConstant(O, name, value) {
     return callInternalSlot(SLOTS.DEFINEOWNPROPERTY, O, name, {
         configurable: false,
         enumerable: false,
@@ -9082,9 +9058,7 @@ function LazyDefineBuiltinConstant(O, name, value) {
         writable: false
     });
 }
-
-// noch was vereinfacht
-function LazyDefineBuiltinFunction(O, name, arity, fproto, e, w, c) {
+function NowDefineBuiltinFunction(O, name, arity, fproto, e, w, c) {
     if (e === undefined) e = false;
     if (w === undefined) w = true;
     if (c === undefined) c = true;
@@ -9095,9 +9069,8 @@ function LazyDefineBuiltinFunction(O, name, arity, fproto, e, w, c) {
         writable: w
     });
 }
-
-exports.LazyDefineAccessorFunction = LazyDefineAccessorFunction;
-function LazyDefineAccessorFunction(O, name, arity, g, s, e, c) {
+exports.NowDefineAccessorFunction = NowDefineAccessorFunction;
+function NowDefineAccessorFunction(O, name, arity, g, s, e, c) {
     if (e === undefined) e = false;
     if (c === undefined) c = true;
     var fname = name;
@@ -9109,8 +9082,7 @@ function LazyDefineAccessorFunction(O, name, arity, g, s, e, c) {
         set: s ? CreateBuiltinFunction(getRealm(), s, arity, "set "+fname) : undefined
     });
 }
-
-function LazyDefineAccessor(obj, name, g, s, e, c) {
+function NowDefineAccessor(obj, name, g, s, e, c) {
     if (e === undefined) e = false;
     if (c === undefined) c = true;
     return callInternalSlot(SLOTS.DEFINEOWNPROPERTY, obj, name, {
@@ -9120,8 +9092,7 @@ function LazyDefineAccessor(obj, name, g, s, e, c) {
         set: s
     });
 }
-
-function LazyDefineProperty(O, P, V, w, e, c) {
+function NowDefineProperty(O, P, V, w, e, c) {
     var desc;
     if (w === undefined) w = true;
     if (e === undefined) e = false;
@@ -9139,7 +9110,6 @@ function LazyDefineProperty(O, P, V, w, e, c) {
     //return callInternalSlot(SLOTS.DEFINEOWNPROPERTY, O, P, desc);
     return OrdinaryDefineOwnProperty(O, P, desc);
 }
-
 function getContext() {
     var stack = realm.stack;
     return stack[stack.length-1];
@@ -9147,51 +9117,39 @@ function getContext() {
 function getEventQueue() {
     return realm.eventQueue;
 }
-
 function getGlobalThis() {
     return realm.globalThis;
 }
-
 function getGlobalEnv() {
     return realm.globalEnv;
 }
-
 function getIntrinsics() {
     return realm.intrinsics;
 }
-
 function getIntrinsic(name) {
     var desc = realm.intrinsics.Bindings[name];
     return desc && desc.value;
 }
-
 function getIntrinsicFromRealm(name, otherRealm) {
     var desc = otherRealm.intrinsics.Bindings[name];
     return desc && desc.value;
 }
-
 function getRealm() {
     return realm;
 }
-
 function getLexEnv() {
     var cx = getContext();
     return cx && cx.LexEnv;
     //    return getGlobalEnv().LexEnv;
 }
-
 function getVarEnv() {
     var cx = getContext();
     return cx && cx.VarEnv;
     //    return getGlobalEnv().objEnv;
 }
-
-
 function getStack() {
     return realm.stack;
 }
-
-
 function printException (error) {
     var name = Get(error, "name");
     var message = Get(error, "message");
@@ -9199,7 +9157,6 @@ function printException (error) {
     var text = createExceptionTextOutput(name, message, callstack);
     console.log(text);
 }
-
 function createExceptionTextOutput(name, message, callstack) {
     var text = "\n";
     text += format("S_EXCEPTION_THROWN", name) + "\n";
@@ -9207,7 +9164,6 @@ function createExceptionTextOutput(name, message, callstack) {
     text += format("EXCEPTION_STACK_S", callstack) + "\n";
     return text;
 }
-
 function stringifyErrorStack(type, message) {
     var callStack = getStack();
     var len = callStack.length || 0;
@@ -9246,8 +9202,6 @@ function stringifyErrorStack(type, message) {
     }
     return stack;
 }
-
-
 function makeNativeException (error) {
     if (Type(error) != OBJECT) return error;
     var name = unwrap(Get(error, "name"));
@@ -9261,10 +9215,7 @@ function makeNativeException (error) {
     nativeError.stack = text;
     return nativeError;
 }
-
 exports.makeNativeException = makeNativeException;
-
-
 function CreateSelfHostingFunction(realm, name, arity, source) {
     var parseGoal = require("parser").parseGoal;
     var fn = parseGoal("FunctionDeclaration", source);
@@ -9276,9 +9227,7 @@ function CreateSelfHostingFunction(realm, name, arity, source) {
     SetFunctionLength(F, arity);
     return F;
 }
-
-
-function LazyDefineSelfHostingFunction(O, name, arity, fproto, e, w, c) {
+function NowDefineSelfHostingFunction(O, name, arity, fproto, e, w, c) {
     if (e === undefined) e = false;
     if (w === undefined) w = true;
     if (c === undefined) c = true;
@@ -9289,12 +9238,8 @@ function LazyDefineSelfHostingFunction(O, name, arity, fproto, e, w, c) {
         writable: w
     });
 }
-
 exports.CreateSelfHostingFunction = CreateSelfHostingFunction;
-exports.LazyDefineSelfHostingFunction = LazyDefineSelfHostingFunction;
-
-
-
+exports.NowDefineSelfHostingFunction = NowDefineSelfHostingFunction;
 var VMObject_eval = function (thisArg, argList) {
     var code = argList[0];
     var realm = argList[1];
@@ -9303,9 +9248,7 @@ var VMObject_eval = function (thisArg, argList) {
     else if (!(realmObject = getInternalSlot(realm, SLOTS.REALMOBJECT))) return newTypeError( "Sorry, only realm objects are accepted as realm object");
     return require("vm").CompileAndRun(realmObject, code);
 };
-
 var SLOTS = Object.create(null);
-
 // Object Properties
 SLOTS.BINDINGS = "Bindings";
 SLOTS.SYMBOLS = "Symbols";
@@ -9454,12 +9397,7 @@ SLOTS.WRAPPEDOBJECT = "Wrapped";
 SLOTS.NATIVETHIS    = "NativeThis"
 Object.freeze(SLOTS); // DOES A FREEZE HELP OPTIMIZING? The pointers can´t change anymore, or?
 
-/**
- * Created by root on 10.05.14.
- */
-
 var INTRINSICS = Object.create(null);
-
 INTRINSICS.OBJECT = "%Object%";
 INTRINSICS.OBJECTPROTOTYPE = "%ObjectPrototype%";
 INTRINSICS.FUNCTION = "%Function%";
@@ -9582,37 +9520,23 @@ INTRINSICS.VM = "%VM%";
 INTRINSICS.DOMWRAPPER = "%DOMWrapper%";
 INTRINSICS.DEFAULTCOMPARE = "%DefaultCompare%";
 Object.freeze(INTRINSICS);
-
-/**
- * Created by root on 31.03.14.
- */
-
-// ===========================================================================================================
-// floor, ceil, abs, min, max
-// ===========================================================================================================
-
 var floor = Math.floor;
 var ceil = Math.ceil;
 var abs = Math.abs;
 var min = Math.min;
 var max = Math.max;
-
 function _floor(x) {
     return x - (x % 1);
 }
-
 function _ceil(x) {
     return x - (x % 1) + 1;
 }
-
 function _abs(x) {
     return x < 0 ? -x : x;
 }
-
 function sign(x) {
     return x < 0 ? -1 : 1;
 }
-
 function _min() {
     var min = Infinity;
     var n;
@@ -9620,7 +9544,6 @@ function _min() {
         if ((n = arguments[i]) < min) min = n;
     return min;
 }
-
 function _max() {
     var max = -Infinity;
     var n;
@@ -9628,11 +9551,6 @@ function _max() {
         if ((n = arguments[i]) > max) max = n;
     return max;
 }
-
-
-
-
-
 var PI = Math.PI;
 var LOG2E = Math.LOG2E;
 var SQRT1_2 = Math.SQRT1_2;
@@ -9641,17 +9559,14 @@ var LN10 = Math.LN10;
 var LN2 = Math.LN2;
 var LOG10E = Math.LOG10E;
 var E = Math.E;
-
 var MathObject_sign = function (thisArg, argList) {
     var x = ToNumber(argList[0]);
     if (isAbrupt(x)) return x;
     return NormalCompletion(x > 0 ? 1 : -1);
 };
-
 var MathObject_random = function (thisArg, argList) {
     return NormalCompletion(Math.random());
 };
-
 var MathObject_log = function (thisArg, argList) {
     var x = +argList[0];
     return NormalCompletion(Math.log(x));
@@ -9668,7 +9583,6 @@ var MathObject_abs = function (thisArg, argList) {
     var a = +argList[0];
     return NormalCompletion(Math.abs(a));
 };
-
 var MathObject_pow = function (thisArg, argList) {
     var b = +argList[0];
     var e = +argList[1];
@@ -9715,11 +9629,8 @@ var MathObject_hypot = function (thisArg, argList) {
 var MathObject_imul = function (thisArg, argList) {
 
 };
-
 var MathObject_log1p = function (thisArg, argList) {
-
 };
-
 var MathObject_clz = function (thisArg, argList) {
     var x = argList[0];
     x = ToNumber(x);
@@ -9732,7 +9643,6 @@ var MathObject_clz = function (thisArg, argList) {
     var p = 32 - bitlen;
     return NormalCompletion(p);
 };
-
 function Assert(act, message) {
     if (!act) throw new Error(format("ASSERTION_S", message));
 }
@@ -9743,8 +9653,6 @@ function GetGlobalObject() {
     var globalThis = realm.globalThis;
     return globalThis;
 }
-
-
 function createPublicCodeRealm () {
     var realm = CreateRealm();
     return {
@@ -9762,7 +9670,6 @@ function createPublicCodeRealm () {
         }
     };
 }
-
 function CodeRealm(intrinsics, gthis, genv, ldr) {
     "use strict";
     return {
@@ -9782,7 +9689,6 @@ function CodeRealm(intrinsics, gthis, genv, ldr) {
 }
 CodeRealm.prototype.toString = CodeRealm_toString;
 CodeRealm.prototype.constructor = CodeRealm;
-
 CodeRealm.prototype.fileToValue =
     CodeRealm.prototype.evalFile = function (filename) {
         var rf = require("filesystem").readFileSync;
@@ -9793,8 +9699,6 @@ CodeRealm.prototype.fileToValue =
             throw new TypeError("can not read file "+filename+" with filesystem module");
         }
     };
-
-
 CodeRealm.prototype.eval =
     CodeRealm.prototype.toValue = function (code) {
         // overhead save realm
@@ -9816,7 +9720,6 @@ CodeRealm.prototype.eval =
         restoreCodeRealm();
         return result;
     };
-
 CodeRealm.prototype.evalAsync =
     function (code) {
         var realm = this;
@@ -9829,39 +9732,34 @@ CodeRealm.prototype.evalAsync =
             }
         });
     };
-
-    CodeRealm.prototype.evalFileAsync = function (file) {
-        var realm = this;
-        return require("filesystem").readFileP(name).then(function (code) {
-            return realm.eval(code);
-        }, function (err) {
-            throw err;
-        });
-    };
-
-    CodeRealm.prototype.evalByteCode = function (code) {
-        saveCodeRealm();
-        setCodeRealm(this);
-        var result = require("vm").CompileAndRun(this, code);
-        result = GetValue(result);
-        if (isAbrupt(result=ifAbrupt(result))) {
-            var error = result.value;
-            var ex = new Error(Get(error, "message"));
-            ex.name = Get(error, "name");
-            ex.stack = Get(error,"stack");
-            throw ex;
-        }
-        var PromiseTasks = getTasks(getRealm(), "PromiseTasks");
-        var taskResults = NextTask(undefined, PromiseTasks);
-        restoreCodeRealm();
-        return result;
-    };
-
+CodeRealm.prototype.evalFileAsync = function (file) {
+    var realm = this;
+    return require("filesystem").readFileP(name).then(function (code) {
+        return realm.eval(code);
+    }, function (err) {
+        throw err;
+    });
+};
+CodeRealm.prototype.evalByteCode = function (code) {
+    saveCodeRealm();
+    setCodeRealm(this);
+    var result = require("vm").CompileAndRun(this, code);
+    result = GetValue(result);
+    if (isAbrupt(result=ifAbrupt(result))) {
+        var error = result.value;
+        var ex = new Error(Get(error, "message"));
+        ex.name = Get(error, "name");
+        ex.stack = Get(error,"stack");
+        throw ex;
+    }
+    var PromiseTasks = getTasks(getRealm(), "PromiseTasks");
+    var taskResults = NextTask(undefined, PromiseTasks);
+    restoreCodeRealm();
+    return result;
+};
 function CodeRealm_toString() {
     return "[object CodeRealm]";
 }
-
-
 function IndirectEval(realm, source) {
     saveCodeRealm();
     setCodeRealm(realm);
@@ -9873,11 +9771,9 @@ function IndirectEval(realm, source) {
     return result;
     //return realm.toValue(source);
 }
-
 exports.IndirectEval = IndirectEval;
 exports.CreateRealm = CreateRealm;
 exports.createPublicCodeRealm = createPublicCodeRealm;
-
 function CreateRealm () {
 
     saveCodeRealm();
@@ -9918,8 +9814,6 @@ function CreateRealm () {
     restoreCodeRealm();
     return realmRec;
 }
-
-
 var ___realms___ = [];
 function saveCodeRealm() {
     ___realms___.push(realm);
@@ -9960,7 +9854,6 @@ ExecutionContext.prototype.constructor = ExecutionContext;
 function ExecutionContext_toString() {
     return "[object ExecutionContext]";
 }
-
 /*
     // completion re-use
 
@@ -9992,7 +9885,6 @@ function CompletionRecord(type, value, target) {
 }
 
 */
-
 function CompletionRecord(type, value, target) {
     "use strict";
     return {
@@ -10002,19 +9894,13 @@ function CompletionRecord(type, value, target) {
         target: target
     };
 }
-
-
 CompletionRecord.prototype.toString = CompletionRecord_toString;
 CompletionRecord.prototype.constructor = CompletionRecord;
-
 function CompletionRecord_toString() {
     return "[object CompletionRecord]";
 }
-
-
 // var completion = CompletionRecord();
 // breaks for loops subject for research to save lots of objects
-
 function NormalCompletion(argument, label) {
     var completion;
     if (argument instanceof CompletionRecord) {
@@ -10027,8 +9913,6 @@ function NormalCompletion(argument, label) {
     }
     return completion;
 }
-
-
 function Completion(type, argument, target) {
     var completion;
     if (argument instanceof CompletionRecord) {
@@ -10043,46 +9927,34 @@ function Completion(type, argument, target) {
     completion.target = target;
     return completion;
 }
-
 function unwrap(arg) {
     if (arg instanceof CompletionRecord) return arg.value;
     return arg;
 }
-
 function ifAbrupt(argument) {
     return (!(argument instanceof CompletionRecord) || argument.type !== "normal") ? argument : argument.value;
 }
-
 function isAbrupt(completion) {
     return (completion instanceof CompletionRecord && completion.type !== "normal");
 }
-
 function newReferenceError(message) {
     return Completion("throw", OrdinaryConstruct(getIntrinsic(INTRINSICS.REFERENCEERROR), [message]));
 }
-
 function newRangeError(message) {
     return Completion("throw", OrdinaryConstruct(getIntrinsic(INTRINSICS.RANGEERROR), [message]));
 }
-
 function newSyntaxError(message) {
     return Completion("throw", OrdinaryConstruct(getIntrinsic(INTRINSICS.SYNTAXERROR), [message]));
 }
-
 function newTypeError(message) {
     return Completion("throw", OrdinaryConstruct(getIntrinsic(INTRINSICS.TYPEERROR), [message]));
 }
-
 function newURIError(message) {
     return Completion("throw", OrdinaryConstruct(getIntrinsic(INTRINSICS.URIERROR), [message]));
 }
-
 function newEvalError(message) {
     return Completion("throw", OrdinaryConstruct(getIntrinsic(INTRINSICS.EVALERROR), [message]));
 }
-
-
-
 function Reference(N, V, S, T) {
     return {
         __proto__: Reference.prototype,
@@ -10092,7 +9964,6 @@ function Reference(N, V, S, T) {
         thisValue: T
     };
 }
-
 Reference.prototype = {
     constructor: Reference,
     toString: function () {
@@ -10133,8 +10004,6 @@ Reference.prototype = {
      }*/
 
 };
-
-
 function GetValue(V) {
 
     if (isAbrupt(V = ifAbrupt(V))) return V;
@@ -10159,7 +10028,6 @@ function GetValue(V) {
     }
 
 }
-
 function PutValue(V, W) {
     if (isAbrupt(V = ifAbrupt(V))) return V;
     if (isAbrupt(W = ifAbrupt(W))) return W;
@@ -10189,35 +10057,28 @@ function PutValue(V, W) {
     }
 
 }
-
 function IsPropertyReference(V) {
     var base = GetBase(V);
     return Type(base) === OBJECT || HasPrimitiveBase(V);
 
 }
-
 function IsSuperReference(V) {
     return V.thisValue;
 
 }
-
 function IsUnresolvableReference(V) {
     return V.base === undefined;
 
 }
-
 function IsStrictReference(V) {
     return V.strict === true;
 }
-
 function GetReferencedName(V) {
     return V.name;
 }
-
 function GetBase(V) {
     return V.base;
 }
-
 function HasPrimitiveBase(V) {
     var type = Type(GetBase(V));
     switch(type) {
@@ -10230,7 +10091,6 @@ function HasPrimitiveBase(V) {
             return false;
     }
 }
-
 function GetThisValue(V) {
     if (isAbrupt(V = ifAbrupt(V))) return V;
     if (Type(V) !== REFERENCE) return V;
@@ -10238,7 +10098,6 @@ function GetThisValue(V) {
     if (IsSuperReference(V)) return V.thisValue;
     return GetBase(V);
 }
-
 function OrdinaryObject(prototype) {
     var O = Object.create(OrdinaryObject.prototype);
     prototype = prototype === undefined ? getIntrinsic(INTRINSICS.OBJECTPROTOTYPE) || null : prototype;
@@ -10818,13 +10677,9 @@ DeclarativeEnvironment.prototype = {
         return undefined;
     }
 };
-
 function NewDeclarativeEnvironment(E) {
     return DeclarativeEnvironment(E);
 }
-
-
-
 function createIdentifierBinding(envRec, N, V, D, W) {
     return envRec[N] = {
         __proto__: null,
@@ -10834,7 +10689,6 @@ function createIdentifierBinding(envRec, N, V, D, W) {
         configurable: !!D
     };
 }
-
 function GetIdentifierReference(lex, name, strict) {
     if (lex === null) return Reference(name, undefined, strict);
     var exists = lex.HasBinding(name);
@@ -10845,25 +10699,20 @@ function GetIdentifierReference(lex, name, strict) {
         return GetIdentifierReference(outer, name, strict);
     }
 }
-
 function GetThisEnvironment () {
     var env = getLexEnv();
     do {
         if (env.HasThisBinding()) return env;
     } while (env = env.outer);
 }
-
 function ThisResolution () {
     var env = GetThisEnvironment();
     return env.GetThisBinding();
 }
-
 function GetGlobalObject () {
     var realm = getRealm();
     return realm.globalThis;
 }
-
-
 function FunctionEnvironment(F, T) {
     var fe = Object.create(FunctionEnvironment.prototype);
     fe.BoundFunction = F;
@@ -10898,7 +10747,6 @@ FunctionEnvironment.prototype = assign(FunctionEnvironment.prototype, {
     constructor: FunctionEnvironment
 });
 addMissingProperties(FunctionEnvironment.prototype, DeclarativeEnvironment.prototype);
-
 function NewFunctionEnvironment(F, T) {
     Assert(getInternalSlot(F, SLOTS.THISMODE) !== "lexical", "thisMode === 'lexical'?");
     var env = FunctionEnvironment(F, T);
@@ -10914,8 +10762,6 @@ function NewFunctionEnvironment(F, T) {
     env.outer = getInternalSlot(F, SLOTS.ENVIRONMENT);
     return env;
 }
-
-
 function ObjectEnvironment(O, E) {
     var oe = Object.create(ObjectEnvironment.prototype);
     oe.Unscopables = Object.create(null);
@@ -11000,14 +10846,9 @@ ObjectEnvironment.prototype = {
         return O;
     }
 };
-
 function NewObjectEnvironment(O, E) {
     return ObjectEnvironment(O, E);
 }
-
-
-
-
 function GlobalEnvironment(globalThis, intrinsics) {
     var ge = Object.create(GlobalEnvironment.prototype);
     ge.outer = null;
@@ -11116,11 +10957,9 @@ GlobalEnvironment.prototype = {
         this.VarNames[N] = true;
     }
 };
-
 function NewGlobalEnvironment(global) {
     return GlobalEnvironment(global);
 }
-
 var OBJECT = 1, // "object"
     NUMBER = 2, // "number"
     STRING = 3, // "string",
@@ -11131,7 +10970,6 @@ var OBJECT = 1, // "object"
     COMPLETION = 8, //"completion",
     UNDEFINED = 9, // "undefined",
     NULL = 10; // "null";
-
 var object_tostring_to_type_table = {
     __proto__: null,
     "[object SymbolPrimitiveType]": SYMBOL,
@@ -11162,7 +11000,32 @@ var primitive_type_string_table = {
     "boolean": "boolean",
     "undefined": "undefined"
 };
-
+var EnvironmentType = {
+    __proto__:null,
+    "[object ObjectEnvironment]":true,
+    "[object DeclarativeEnvironment]": true,
+    "[object FunctionEnvironment]": true,
+    "[object GlobalLexicalEnvironment]": true,
+    "[object GlobalVariableEnvironment]":true,
+    "[object GlobalEnvironment]": true
+};
+var ReturnZero = {
+    "NaN": true,
+    "Infinity": true,
+    "-Infinity": true,
+    "0": true
+};
+var ReturnNaN = {
+    "NaN": true
+};
+var ReturnNum = {
+    "Infinity": true,
+    "-Infinity": true,
+    "0": true
+};
+var toInt8View = new Int8Array(1);
+var toUint8View = new Uint8Array(1);
+var toUint8ClampView = new Uint8ClampedArray(1);
 function Type(O) {
     var type = typeof O;
     if (type === "object") {
@@ -11183,16 +11046,6 @@ function Type(O) {
             return UNDEFINED;
     }
 }
-
-var EnvironmentType = {
-    __proto__:null,
-  "[object ObjectEnvironment]":true,
-  "[object DeclarativeEnvironment]": true,
-  "[object FunctionEnvironment]": true,
-  "[object GlobalLexicalEnvironment]": true,
-  "[object GlobalVariableEnvironment]":true,
-  "[object GlobalEnvironment]": true
-};
 function ToPrimitive(V, prefType) {
     var type = typeof V;
     if (V === null) return V;
@@ -11242,7 +11095,6 @@ function ToPrimitive(V, prefType) {
     if (hint === "default") hint = "number";
     return OrdinaryToPrimitive(V, hint);
 }
-
 function OrdinaryToPrimitive(O, hint) {
     Assert(Type(O) === OBJECT, "o must be an object");
     Assert(Type(hint) === STRING && (hint === "string" || hint === "number"), "hint must be a string equal to the letters string or number");
@@ -11262,26 +11114,6 @@ function OrdinaryToPrimitive(O, hint) {
     }
     return newTypeError( "Can not convert object to primitive with OrdinaryToPrimitive (end)");
 }
-var ReturnZero = {
-    "NaN": true,
-    "Infinity": true,
-    "-Infinity": true,
-    "0": true
-};
-var ReturnNaN = {
-    "NaN": true
-};
-var ReturnNum = {
-    "Infinity": true,
-    "-Infinity": true,
-    "0": true
-};
-
-var toInt8View = new Int8Array(1);
-var toUint8View = new Uint8Array(1);
-var toUint8ClampView = new Uint8ClampedArray(1);
-
-
 function ToInt8(V) {
     var view = new Int8Array(1);
     return toInt8View[0] = V;
@@ -11292,7 +11124,6 @@ function ToUint8(V) {
 function ToUint8Clamp(V) {
     return toUint8ClampView[0] = V;
 }
-
 function ToUint16(V) {
     var number = ToNumber(V);
     //if (isAbrupt(number = ifAbrupt(number))) return number;
@@ -11403,7 +11234,6 @@ function ToString(V) {
     }
     return "" + V;
 }
-
 function ToObject(V) {
     if (isAbrupt(V)) return V;
     if (V instanceof CompletionRecord) return ToObject(V.value);
@@ -11446,8 +11276,6 @@ function CheckObjectCoercible(argument) {
     }
     return argument;
 }
-
-// 7.4.2014
 function CanonicalNumericString (argument) {
     Assert(Type(argument) === STRING, "CanonicalNumericString: argument has to be a string");
     var n = ToNumber(argument);
@@ -11455,12 +11283,6 @@ function CanonicalNumericString (argument) {
     if (SameValue(ToString(n), argument) === false) return undefined;
     return n;
 }
-
-/**
- * Created by root on 31.03.14.
- */
-
-
 function SameValue(x, y) {
     if (isAbrupt(x = ifAbrupt(x))) return x;
     if (isAbrupt(y = ifAbrupt(y))) return y;
@@ -11490,7 +11312,6 @@ function SameValue(x, y) {
     return x === y;
 
 }
-
 function SameValueZero(x, y) {
     if (isAbrupt(x = ifAbrupt(x))) return x;
     if (isAbrupt(y = ifAbrupt(y))) return y;
@@ -11530,16 +11351,6 @@ function SameValueZero(x, y) {
     return x === y;
 
 }
-
-
-/*
-
-    the following three functions are not used,
-    because of a native strict equal and abstract equal
-    but will be completed somewhen
-
- */
-
 function StrictEqualityComparison(x, y) {
     var tx = Type(x);
     var ty = Type(y);
@@ -11550,7 +11361,6 @@ function StrictEqualityComparison(x, y) {
     if (ty === UNDEFINED && tx === NULL) return false;
 
 }
-
 function AbstractEqualityComparison(x, y) {
     var tx = Type(x);
     var ty = Type(y);
@@ -11561,13 +11371,11 @@ function AbstractEqualityComparison(x, y) {
     if (ty === UNDEFINED && tx === NULL) return true;
 
 }
-
 function AbstractRelationalComparison(x,y,leftFirst) {
     var tx = Type(x);
     var ty = Type(y);
 
 }
-
 exports.StrictEqualityComparison = StrictEqualityComparison;
 exports.AbstractEqualityComparison = AbstractEqualityComparison;
 exports.AbstractRelationalComparison = AbstractRelationalComparison;
@@ -11804,7 +11612,6 @@ function ValidateAndApplyPropertyDescriptor(O, P, extensible, Desc, current) {
         return true;
     }
 }
-
 function Put(O, P, V, Throw) {
     Assert(Type(O) === OBJECT, "O != OBJECT");
     Assert(IsPropertyKey(P));
@@ -11814,7 +11621,6 @@ function Put(O, P, V, Throw) {
     if (success === false && Throw === true) return newTypeError(format("PUT_FAILS_AT_S", P));
     return NormalCompletion(success);
 }
-
 function DefineOwnPropertyOrThrow(O, P, D) {
     Assert(Type(O) === OBJECT, "O != OBJECT");
     Assert(IsPropertyKey(P));
@@ -11823,7 +11629,6 @@ function DefineOwnPropertyOrThrow(O, P, D) {
     if (success === false) return newTypeError(format("DEFINEPROPERTYORTHROW_FAILS_AT_S", P));
     return NormalCompletion(success);
 }
-
 function DeletePropertyOrThrow(O, P) {
     Assert(Type(O) === OBJECT, "O != OBJECT");
     Assert(IsPropertyKey(P));
@@ -11832,18 +11637,11 @@ function DeletePropertyOrThrow(O, P) {
     if (success === false) return newTypeError(format("DELETEPROPERTYORTHROW_FAILS_AT_S", P));
     return NormalCompletion(success);
 }
-
 function OrdinaryDefineOwnProperty(O, P, D) {
     var current = OrdinaryGetOwnProperty(O, P);
     var extensible = getInternalSlot(O, SLOTS.EXTENSIBLE);
     return ValidateAndApplyPropertyDescriptor(O, P, extensible, D, current);
 }
-/*
-function GetOwnProperty(O, P) {
-    return OrdinaryGetOwnProperty(O, P);
-}
-*/
-
 function OrdinaryGetOwnProperty(O, P) {
     Assert(IsPropertyKey(P));
     var D = Object.create(null); // value: undefined, writable: true, enumerable: true, configurable: true };
@@ -11861,12 +11659,10 @@ function OrdinaryGetOwnProperty(O, P) {
     D.enumerable = X.enumerable;
     return D;
 }
-
 function ToPropertyKey(P) {
     if ((P = ifAbrupt(P)) && (isAbrupt(P) || P instanceof SymbolPrimitiveType)) return P;
     return ToString(P);
 }
-
 function GetOwnPropertyKeys(O, type) {
     var obj = ToObject(O);
     if (isAbrupt(obj = ifAbrupt(obj))) return obj;
@@ -11897,7 +11693,6 @@ function GetOwnPropertyKeys(O, type) {
     }
     return CreateArrayFromList(nameList);
 }
-
 function OwnPropertyKeys(O, type) {
     var keys = [];
     var bindings = getInternalSlot(O,SLOTS.BINDINGS);
@@ -11907,7 +11702,6 @@ function OwnPropertyKeys(O, type) {
     }
     return MakeListIterator(keys);
 }
-
 function OwnPropertyKeysAsList(O) {
     var keys = [];
     var bindings = getInternalSlot(O, SLOTS.BINDINGS);
@@ -11917,13 +11711,6 @@ function OwnPropertyKeysAsList(O) {
     }
     return keys;
 }
-
-/*
-    trying to fix es5id and Object.getOwnPropertySymbols
-    a) backref (a-)
-    b) second global registry (of all symbols, no matter what the user says)
-*/
-
 function OwnPropertySymbols(O) {
     var keys = [];
     var symbols = getInternalSlot(O, SLOTS.SYMBOLS);
@@ -11936,8 +11723,6 @@ function OwnPropertySymbols(O) {
     }
     return MakeListIterator(keys);
 }
-
-
 function GetMethod(O, P) {
     Assert(Type(O) === OBJECT && IsPropertyKey(P) === true, "o has to be object and p be a valid key");
     var method = callInternalSlot(SLOTS.GET, O, P, O);
@@ -11945,7 +11730,6 @@ function GetMethod(O, P) {
     if (IsCallable(method)) return method;
     else return newTypeError( "GetMethod: " + P + " can not be retrieved");
 }
-
 function SetIntegrityLevel(O, level) {
     Assert(Type(O) === OBJECT, "object expected");
     Assert(level === "sealed" || level === "frozen", "level must be sealed or frozen");
@@ -12007,7 +11791,6 @@ function SetIntegrityLevel(O, level) {
         return PreventExtensions(O);
     }
 }
-
 function TestIntegrityLevel(O, level) {
     Assert(TyType(O) === OBJECT,"object expected");
     Assert(level === "sealed" || level === "frozen", "level must be sealed or frozen");
@@ -12040,12 +11823,10 @@ function TestIntegrityLevel(O, level) {
     if (level === "frozen" && writable) return false;
     if (configurable) return false;
 }
-
 function GetPrototypeOf(V) {
     if (Type(V) !== OBJECT) return newTypeError( "argument is not an object");
     return getInternalSlot(V, SLOTS.PROTOTYPE) || null;
 }
-
 function SetPrototypeOf(O, V) {
     if (Type(V) !== OBJECT && V !== null) return newTypeError( "Assertion: argument is either object or null, but it is not.");
     var extensible = getInternalSlot(O, SLOTS.EXTENSIBLE);
@@ -12064,7 +11845,6 @@ function SetPrototypeOf(O, V) {
     setInternalSlot(O, SLOTS.PROTOTYPE, V);
     return true;
 }
-
 function Delete(O, P) {
     var desc;
     if (IsSymbol(P)) desc = O.Symbols[P.es5id];
@@ -12083,13 +11863,11 @@ function Delete(O, P) {
     }
     return false;
 }
-
 function Get(O, P) {
     Assert(Type(O) === OBJECT, "[[Get]] expecting object");
     Assert(IsPropertyKey(P), "[[Get]] expecting valid property key, got "+ P);
     return callInternalSlot(SLOTS.GET, O, P, O);
 }
-
 function OrdinaryObjectGet(O, P, R) {
     Assert(IsPropertyKey(P), "Get (object) expects a valid Property Key (got " + P + ")");
     var desc = callInternalSlot(SLOTS.GETOWNPROPERTY, O, P);
@@ -12110,7 +11888,6 @@ function OrdinaryObjectGet(O, P, R) {
     }
     return undefined;
 }
-
 function Set(O, P, V, R) {
     var ownDesc, parent, setter;
     Assert(IsPropertyKey(P), "Set (object) expects a valid Property Key");
@@ -12155,7 +11932,6 @@ function Set(O, P, V, R) {
     }
     return false;
 }
-
 function Invoke(O, P, args) {
     var obj;
     Assert(IsPropertyKey(P), "Invoke: expecting property key");
@@ -12167,7 +11943,6 @@ function Invoke(O, P, args) {
     if (isAbrupt(func = ifAbrupt(func))) return func;
     return callInternalSlot(SLOTS.CALL, func, O, args);
 }
-
 function OrdinaryObjectInvoke(O, P, A, R) {
     Assert(IsPropertyKey(P), "expecting property key");
     Assert(Array.isArray(A), "expecting arguments list");
@@ -12177,14 +11952,6 @@ function OrdinaryObjectInvoke(O, P, A, R) {
     if (!IsCallable(method)) return newTypeError( "Invoke: method " + P + " is not callable");
     return method.Call(R, A);
 }
-
-
-/*
-function DefineOwnProperty(O, P, Desc) {
-    return OrdinaryDefineOwnProperty(O, P, Desc);
-}
-*/
-
 function HasOwnProperty(O, P) {
     Assert(Type(O) === OBJECT, "GetOwnProperty: first argument has to be an object");
     Assert(IsPropertyKey(P), "HasOwnProperty: second argument has to be a valid property key, got " + P);
@@ -12192,14 +11959,12 @@ function HasOwnProperty(O, P) {
     return desc !== undefined;
 
 }
-
 function HasProperty(O, P) {
     do {
         if (HasOwnProperty(O, P)) return true;
     } while (O = GetPrototypeOf(O));
     return false;
 }
-
 function Enumerate(O) {
     var name, proto, bindings, desc, index, denseList, isSparse;
     var duplicateMap = Object.create(null);
@@ -12241,20 +12006,13 @@ function Enumerate(O) {
     
     return MakeListIterator(propList);
 }
-
 function IsExtensible(O) {
     if (Type(O) === OBJECT) return getInternalSlot(O, SLOTS.EXTENSIBLE);
     return false;
 }
-
 function PreventExtensions(O) {
     if (Type(O) === OBJECT) setInternalSlot(O, SLOTS.EXTENSIBLE, false);
 }
-
-
-
-
-
 function GetNotifier(O) {
     var proto;
     var notifier = getInternalSlot(O, SLOTS.NOTIFIER);
@@ -12413,9 +12171,6 @@ function CreateSpliceChanceRecord(object, index, removed, addedCount) {
         configurable: false
     });
 }
-
-
-
 var NotifierPrototype_notify = function notify(thisArg, argListdgn) {
     var changeRecord = argList[0];
     var notifier = thisArg;
@@ -12562,9 +12317,6 @@ var ObjectConstructor_getNotifier = function (thisArg, argList) {
     if (TestIntegrityLevel(O, "frozen")) return NormalCompletion(null);
     return GetNotifier(O);
 };
-
-
-
 function OrdinaryFunction() {
     var F = Object.create(OrdinaryFunction.prototype);
     setInternalSlot(F, SLOTS.BINDINGS, Object.create(null));
@@ -12578,7 +12330,6 @@ function OrdinaryFunction() {
     setInternalSlot(F, SLOTS.CODE, undefined);
     return F;
 }
-
 OrdinaryFunction.prototype = {
     constructor: OrdinaryFunction,
     type: "object",
@@ -12604,7 +12355,6 @@ OrdinaryFunction.prototype = {
     }
 };
 addMissingProperties(OrdinaryFunction.prototype, OrdinaryObject.prototype);
-
 function BoundFunctionCreate(B, T, argList) {
     var F = OrdinaryFunction();
     setInternalSlot(F, SLOTS.BOUNDTARGETFUNCTION, B);
@@ -12620,19 +12370,14 @@ function BoundFunctionCreate(B, T, argList) {
     });
     return F;
 }
-
-
-
 function IsCallable(O) {
     if (O instanceof CompletionRecord) return IsCallable(O.value);
     return Type(O) === OBJECT && O.Call;
 }
-
 function IsConstructor(F) {
     if (F instanceof CompletionRecord) return IsConstructor(F.value);
     return F && F.Construct;
 }
-
 function SetFunctionLength(F, L) {
     L = ToLength(L);
     // if (isAbrupt(L)) return L;
@@ -12643,7 +12388,6 @@ function SetFunctionLength(F, L) {
         configurable: false
     });
 }
-
 function SetFunctionName(F, name, prefix) {
     var success;
     var t = Type(name);
@@ -12668,19 +12412,16 @@ function SetFunctionName(F, name, prefix) {
     if (success === false) return newTypeError( "Sorry, can not set the f.name property");
     return NormalCompletion(undefined);
 }
-
 function GeneratorFunctionCreate(kind, paramList, body, scope, strict, fProto, homeObject, methodName) {
     if (!fProto) fProto = Get(getIntrinsics(), INTRINSICS.GENERATOR);
     var F = FunctionAllocate(fProto, "generator");
     return FunctionInitialize(F, kind, paramList, body, scope, strict, homeObject, methodName);
 }
-
 function FunctionCreate(kind, paramList, body, scope, strict, fProto, homeObject, methodName) {
     if (!fProto) fProto = Get(getIntrinsics(), INTRINSICS.FUNCTIONPROTOTYPE);
     var F = FunctionAllocate(fProto);
     return FunctionInitialize(F, kind, paramList, body, scope, strict, homeObject, methodName);
 }
-
 function FunctionAllocate(fProto, kind) {
     var F;
     Assert(Type(fProto) === OBJECT, "fproto has to be an object");
@@ -12697,7 +12438,6 @@ function FunctionAllocate(fProto, kind) {
     setInternalSlot(F, SLOTS.REALM, getRealm());
     return F;
 }
-
 function FunctionInitialize(F, kind, paramList, body, scope, strict, homeObject, methodName) {
     setInternalSlot(F, SLOTS.FUNCTIONKIND, kind);
     setInternalSlot(F, SLOTS.FORMALPARAMETERS, paramList);
@@ -12713,7 +12453,6 @@ function FunctionInitialize(F, kind, paramList, body, scope, strict, homeObject,
     else setInternalSlot(F, SLOTS.THISMODE, "global");
     return F;
 }
-
 function GetPrototypeFromConstructor(C, intrinsicDefaultProto) {
     var realm, intrinsics;
     Assert((typeof intrinsicDefaultProto === "string"), "intrinsicDefaultProto has to be a string");
@@ -12728,7 +12467,6 @@ function GetPrototypeFromConstructor(C, intrinsicDefaultProto) {
     }
     return proto;
 }
-
 function OrdinaryCreateFromConstructor(constructor, intrinsicDefaultProto, internalDataList) {
     Assert(HasProperty(getIntrinsics(), intrinsicDefaultProto), "the chosen intrinsic default proto has to be defined in the intrinsic");
     var O, result;
@@ -12736,9 +12474,6 @@ function OrdinaryCreateFromConstructor(constructor, intrinsicDefaultProto, inter
     if (isAbrupt(proto = ifAbrupt(proto))) return proto;
     return ObjectCreate(proto, internalDataList);
 }
-
-// 20. Januar
-
 function CreateFromConstructor(F) {
     var creator = Get(F, $$create);
     if (isAbrupt(creator = ifAbrupt(creator))) return creator;
@@ -12749,7 +12484,6 @@ function CreateFromConstructor(F) {
     if (Type(obj) !== OBJECT) return newTypeError( "CreateFromConstructor: obj has to be an object");
     return obj;
 }
-
 function Construct(F, argList) {
     Assert(Type(F) === OBJECT, "essential Construct: F is not an object");
     var obj = CreateFromConstructor(F);
@@ -12764,8 +12498,6 @@ function Construct(F, argList) {
     if (Type(result) === OBJECT) return result;
     return obj;
 }
-
-// vorher
 function OrdinaryConstruct(F, argList) {
     var creator = Get(F, $$create);
     var obj;
@@ -12782,7 +12514,6 @@ function OrdinaryConstruct(F, argList) {
     if (Type(result) === OBJECT) return result;
     return obj;
 }
-
 function MakeConstructor(F, writablePrototype, prototype) {
     var installNeeded = false;
 
@@ -12808,7 +12539,6 @@ function MakeConstructor(F, writablePrototype, prototype) {
     });
     return F;
 }
-
 function OrdinaryHasInstance(C, O) {
     var BC, P;
     if (!IsCallable(C)) return false;
@@ -12826,7 +12556,6 @@ function OrdinaryHasInstance(C, O) {
     }
     return false;
 }
-
 function AddRestrictedFunctionProperties(F) {
     var thrower = getIntrinsic(INTRINSICS.THROWTYPEERROR);
     var status = DefineOwnPropertyOrThrow(F, "caller", {
@@ -12843,7 +12572,6 @@ function AddRestrictedFunctionProperties(F) {
         configurable: false
     });
 }
-
 function CreateBuiltinFunction(realm, steps, len, name, internalSlots) {
     var tmp;
     realm = realm || getRealm();
@@ -12901,7 +12629,6 @@ function CreateBuiltinFunction(realm, steps, len, name, internalSlots) {
     }    
     return F;
 }
-
 var FunctionPrototype_apply = function (thisArg, argList) {
     var func = thisArg;
     if (!IsCallable(func)) return newTypeError( "fproto.apply: func is not callable");
@@ -12912,14 +12639,12 @@ var FunctionPrototype_apply = function (thisArg, argList) {
     if (isAbrupt(argList2 = ifAbrupt(argList2))) return argList2;
     return callInternalSlot(SLOTS.CALL, func, T, argList2);
 };
-
 var FunctionPrototype_bind = function (thisArg, argList) {
     var boundTarget = thisArg;
     var thisArgument = argList[0];
     var listOfArguments = arraySlice(argList, 1, argList.length);
     return BoundFunctionCreate(boundTarget, thisArgument, listOfArguments);
 };
-
 var FunctionPrototype_call = function (thisArg, argList) {
     var func = thisArg;
     if (!IsCallable(func)) return newTypeError("fproto.call: func is not callable");
@@ -12928,13 +12653,11 @@ var FunctionPrototype_call = function (thisArg, argList) {
     var args = arraySlice(argList, 1);
     return callInternalSlot(SLOTS.CALL, func, T, args);
 };
-
 var FunctionPrototype_$$hasInstance = function (thisArg, argList) {
     var V = argList[0];
     var F = thisArg;
     return OrdinaryHasInstance(F, V);
 };
-
 var FunctionPrototype_toMethod = function (thisArg, argList) {
     var superBinding = argList[0];
     var methodName = argList[1];
@@ -12946,11 +12669,9 @@ var FunctionPrototype_toMethod = function (thisArg, argList) {
     }
     return CloneMethod(thisArg, superBinding, methodName);
 };
-
 var FunctionPrototype_valueOf = function (thisArg, argList) {
     return thisArg;
 };
-
 var FunctionConstructor_call = function (thisArg, argList) {
     var argCount = argList.length;
     var P = "";
@@ -13003,12 +12724,10 @@ var FunctionConstructor_call = function (thisArg, argList) {
     SetFunctionName(F, "anonymous");
     return NormalCompletion(F);
 };
-
 var FunctionConstructor_construct = function (argList) {
     var F = this;
     return OrdinaryConstruct(F, argList);
 };
-
 var FunctionConstructor_$$create = function (thisArg, argList) {
     var F = thisArg;
     var proto = GetPrototypeFromConstructor(F, INTRINSICS.FUNCTIONPROTOTYPE);
@@ -13016,11 +12735,9 @@ var FunctionConstructor_$$create = function (thisArg, argList) {
     var obj = FunctionAllocate(proto);
     return obj;
 };
-
 var FunctionPrototype_$$create = function (thisArg, argList) {
     return OrdinaryCreateFromConstructor(thisArg, INTRINSICS.OBJECTPROTOTYPE);
 };
-
 var FunctionPrototype_toString = function (thisArg, argList) {
     var codegen = require("js-codegen");
     var F = thisArg;
@@ -13054,12 +12771,6 @@ var FunctionPrototype_toString = function (thisArg, argList) {
         return NormalCompletion("function" + star + " " + name + " " + paramString + " " + bodyString);
     }
 };
-
-
-/**
- * Created by root on 30.03.14.
- */
-
 function MakeMethod (F, methodName, homeObject) {
     Assert(IsCallable(F), "MakeMethod: method is not a function");
     Assert(methodName === undefined || IsPropertyKey(methodName), "MakeMethod: methodName is neither undefined nor a valid property key");
@@ -13070,7 +12781,6 @@ function MakeMethod (F, methodName, homeObject) {
     setInternalSlot(F, SLOTS.METHODNAME, methodName);
     return NormalCompletion(undefined);
 }
-
 function MakeSuperReference(propertyKey, strict) {
     var env = GetThisEnvironment();
     if (!env.HasSuperBinding()) return newReferenceError(format("CAN_NOT_MAKE_SUPER_REF"));
@@ -13081,14 +12791,12 @@ function MakeSuperReference(propertyKey, strict) {
     if (propertyKey === undefined) propertyKey = env.GetMethodName();
     return Reference(propertyKey, bv, strict, actualThis);
 }
-
 function GetSuperBinding(obj) {
     if (Type(obj) !== OBJECT) return undefined;
     if (getInternalSlot(obj, SLOTS.NEEDSSUPER) !== true) return undefined;
     if (!hasInternalSlot(obj, SLOTS.HOMEOBJECT)) return undefined;
     return getInternalSlot(obj, SLOTS.HOMEOBJECT);
 }
-
 function cloneFunction (func) {
     var newFunc = OrdinaryFunction();
     setInternalSlot(newFunc, SLOTS.ENVIRONMENT, getInternalSlot(func, SLOTS.ENVIRONMENT));
@@ -13099,7 +12807,6 @@ function cloneFunction (func) {
     setInternalSlot(newFunc, SLOTS.STRICT, getInternalSlot(func, SLOTS.STRICT));
     return newFunc;
 }
-
 function CloneMethod(func, newHome, newName) {
     Assert(IsCallable(func), "CloneMethod: function has to be callable");
     Assert(Type(newHome) === OBJECT, "CloneMethod: newHome has to be an object");
@@ -13116,7 +12823,6 @@ function CloneMethod(func, newHome, newName) {
     }
     return newFunc;
 }
-
 function RebindSuper(func, newHome) {
     Assert(IsCallable(func) && func.HomeObject, "func got to be callable and have a homeobject");
     Assert(Type(newHome) === OBJECT, "newhome has to be an object");
@@ -13132,9 +12838,6 @@ function RebindSuper(func, newHome) {
     setInternalSlot(nu, SLOTS.HOMEOBJECT, newHome);
     return nu;
 }
-
-
-
 function ArgumentsExoticObject() {
     var O = Object.create(ArgumentsExoticObject.prototype);
     setInternalSlot(O, SLOTS.BINDINGS, Object.create(null));
@@ -13204,9 +12907,7 @@ ArgumentsExoticObject.prototype = {
     },
     constructor: ArgumentsExoticObject
 };
-
 addMissingProperties(ArgumentsExoticObject.prototype, OrdinaryObject.prototype);
-
 function CreateArrayFromList(list) {
     var array = ArrayCreate(list.length);
     for (var i = 0, j = list.length; i < j; i++) {
@@ -13231,7 +12932,6 @@ function CreateArrayIterator(array, kind) {
     setInternalSlot(iterator, SLOTS.ARRAYITERATIONKIND, kind);
     return iterator;
 }
-
 function IsSparseArray(A) {
     var len = Get(A, "length");
     var elem;
@@ -13242,12 +12942,9 @@ function IsSparseArray(A) {
     }
     return false;
 }
-
 function IsArray(A) {
     return A instanceof ArrayExoticObject;
 }
-
-
 var ArrayConstructor_call =  function (thisArg, argList) {
     var O = thisArg;
     var array;
@@ -13335,15 +13032,9 @@ var ArrayConstructor_construct = function (argList) {
     var argumentsList = argList;
     return OrdinaryConstruct(F, argumentsList);
 };
-
-
-
-
 var ArrayPrototype_toLocaleString = function toLocaleString(thisArg, argList) {
 
 };
-
-
 var ArrayPrototype_copyWithin = function (thisArg, argList) {
     var target = argList[0];
     var start = argList[1];
@@ -13397,7 +13088,6 @@ var ArrayPrototype_copyWithin = function (thisArg, argList) {
     }
     return NormalCompletion(O);
 };
-
 var ArrayPrototype_reduce = function reduce(thisArg, argList) {
     var callback = argList[0];
     var initialValue = argList[1];
@@ -13519,7 +13209,6 @@ var ArrayPrototype_unshift = function unshift(thisArg, argList) {
     // thats unshift (renumber the old, prepend the new) == O(n) total copy and define
     return NormalCompletion(len+argCount);
 };
-
 var ArrayPrototype_findIndex = function (thisArg, argList) {
     var predicate = argList[0];
     var optThisArg = argList[1];
@@ -13547,7 +13236,6 @@ var ArrayPrototype_findIndex = function (thisArg, argList) {
     }
     return NormalCompletion(-1);
 };
-
 var ArrayPrototype_find = function (thisArg, argList) {
     var predicate = argList[0];
     var optThisArg = argList[1];
@@ -13575,7 +13263,6 @@ var ArrayPrototype_find = function (thisArg, argList) {
     }
     return NormalCompletion(-1);
 };
-
 var ArrayPrototype_fill = function (thisArg, argList) {
     var value = argList[0];
     var start = argList[1];
@@ -13604,14 +13291,11 @@ var ArrayPrototype_fill = function (thisArg, argList) {
     }
     return NormalCompletion(O);
 };
-
-// %ArrayProto_values === Array.prototype.values
 var ArrayPrototype_values = function (thisArg, argList) {
     var O = ToObject(thisArg);
     if (isAbrupt(O)) return O;
     return CreateArrayIterator(O, "value");
 };
-
 var ArrayConstructor_$$create = function $$create(thisArg, argList) {
     var F = thisArg;
     var proto = GetPrototypeFromConstructor(F, INTRINSICS.ARRAYPROTOTYPE);
@@ -13623,7 +13307,6 @@ var ArrayConstructor_isArray = function (thisArg, argList) {
     var arg = GetValue(argList[0]);
     return IsArray(arg);
 };
-
 var ArrayConstructor_of = function (thisArg, argList) {
     var items = CreateArrayFromList(argList);
     var lenValue = Get(items, "length");
@@ -13657,7 +13340,6 @@ var ArrayConstructor_of = function (thisArg, argList) {
     return NormalCompletion(A);
 
 };
-
 var ArrayConstructor_from  = function from(thisArg, argList) {
     var C = thisArg;
     var arrayLike = argList[0];
@@ -13767,7 +13449,6 @@ var ArrayConstructor_from  = function from(thisArg, argList) {
     if (isAbrupt(putStatus)) return putStatus;
     return NormalCompletion(A);
 };
-
 var ArrayPrototype_toString = function toString(thisArg, argList) {
     var array = ToObject(thisArg);
     if (isAbrupt(array = ifAbrupt(array))) return array;
@@ -13777,8 +13458,6 @@ var ArrayPrototype_toString = function toString(thisArg, argList) {
     if (!IsCallable(func)) func = Get(ObjectPrototype, "toString");
     return callInternalSlot(SLOTS.CALL, func, array, []);
 };
-
-
 function IsConcatSpreadable(O) {
     if (Type(O) !== OBJECT) return false;
     if (isAbrupt(O)) return O;
@@ -13787,7 +13466,6 @@ function IsConcatSpreadable(O) {
     if (spreadable !== undefined) return ToBoolean(spreadable);
     return O instanceof ArrayExoticObject;
 }
-
 var ArrayPrototype_concat = function (thisArg, argList) {
     var O = ToObject(thisArg);
     if (isAbrupt(O=ifAbrupt(O))) return O;
@@ -13843,7 +13521,6 @@ var ArrayPrototype_concat = function (thisArg, argList) {
     if (isAbrupt(putStatus)) return putStatus;
     return NormalCompletion(A);
 };
-
 var ArrayPrototype_join = function join(thisArg, argList) {
     var O = ToObject(thisArg);
     if (isAbrupt(O = ifAbrupt(O))) return O;
@@ -13871,8 +13548,6 @@ var ArrayPrototype_join = function join(thisArg, argList) {
     }
     return NormalCompletion(R);
 };
-
-
 var ArrayPrototype_pop = function pop(thisArg, argList) {
     var O = ToObject(thisArg);
     if (isAbrupt(O = ifAbrupt(O))) return O;
@@ -13914,7 +13589,6 @@ var ArrayPrototype_push = function push(thisArg, argList) {
     if (isAbrupt(putStatus = ifAbrupt(putStatus))) return putStatus;
     return NormalCompletion(n);
 };
-
 var ArrayPrototype_reverse = function reverse(thisArg, argList) {
     var O = ToObject(thisArg);
     if (isAbrupt(O = ifAbrupt(O))) return O;
@@ -13959,26 +13633,21 @@ var ArrayPrototype_reverse = function reverse(thisArg, argList) {
     }
     return NormalCompletion(O);
 };
-
-
 var ArrayPrototype_entries = function entries(thisArg, argList) {
     var O = ToObject(thisArg);
     if (isAbrupt(O)) return O;
     return CreateArrayIterator(O, "key+value");
 };
-
 var ArrayPrototype_keys = function keys(thisArg, argList) {
     var O = ToObject(thisArg);
     if (isAbrupt(O)) return O;
     return CreateArrayIterator(O, "key");
 };
-
 var ArrayPrototype_$$iterator = function $$iterator(thisArg, argList) {
     var O = ToObject(thisArg);
     if (isAbrupt(O = ifAbrupt(O))) return O;
     return CreateArrayIterator(O, "value");
 };
-
 var ArrayPrototype_shift = function shift(thisArg, argList) {
     var O = ToObject(thisArg);
     if (isAbrupt(O = ifAbrupt(O))) return O;
@@ -14015,7 +13684,6 @@ var ArrayPrototype_shift = function shift(thisArg, argList) {
     if (isAbrupt(putStatus)) return putStatus;
     return NormalCompletion(first);
 };
-
 var ArrayPrototype_slice = function slice(thisArg, argList) {
     var start = argList[0];
     var end = argList[1];
@@ -14092,7 +13760,6 @@ function SortCompare(thisArg, argList) {
 
 };
 */
-
 var defaultCompareFn_call = function(thisArg, argList) {
     var a = argList[0];
     var b = argList[1];
@@ -14100,7 +13767,6 @@ var defaultCompareFn_call = function(thisArg, argList) {
     if (a < b) return -1;
     return 0;
 };
-
 var ArrayPrototype_sort = function (thisArg, argList) {
     var O = ToObject(thisArg);
     var comparefn = argList[0];
@@ -14127,9 +13793,6 @@ var ArrayPrototype_sort = function (thisArg, argList) {
     });
     return NormalCompletion(CreateArrayFromList(sortedArray));
 };
-
-
-
 var ArrayPrototype_splice = function splice(thisArg, argList) {
     var start = argList[0];
     var deleteCount = argList[1];
@@ -14234,7 +13897,6 @@ var ArrayPrototype_splice = function splice(thisArg, argList) {
     if (isAbrupt(putStatus)) return putStatus;
     return NormalCompletion(A);
 };
-
 var ArrayPrototype_indexOf = function indexOf(thisArg, argList) {
     var O = ToObject(thisArg);
     if (isAbrupt(O = ifAbrupt(O))) return O;
@@ -14448,7 +14110,6 @@ var ArrayPrototype_some = function some(thisArg, argList) {
     }
     return NormalCompletion(false);
 };
-
 /*
     non-standard from es-discuss.
     Angus asked, and David told, about a year ago.
@@ -14470,14 +14131,9 @@ var ArrayPrototype_last = function (thisArg, argList) {
     if (isAbrupt(result=ifAbrupt(result))) return result;
     return NormalCompletion(result);
 };
-/**
- * Created by root on 17.05.14.
- */
-
 var ArrayIteratorPrototype_$$iterator = function (thisArg, argList) {
     return thisArg;
 };
-
 var ArrayIteratorPrototype_next = function (thisArg, argList) {
     var O = thisArg;
     if (Type(O) !== OBJECT) return newTypeError( "ArrayIterator.prototype.next: O is not an object. ");
@@ -14543,7 +14199,6 @@ var ArrayIteratorPrototype_next = function (thisArg, argList) {
     }
 
 };
-
 function ArrayExoticObject(proto) {
     var A = Object.create(ArrayExoticObject.prototype);
     setInternalSlot(A, SLOTS.BINDINGS,Object.create(null));
@@ -14552,7 +14207,6 @@ function ArrayExoticObject(proto) {
     setInternalSlot(A, SLOTS.PROTOTYPE, proto? proto : ArrayPrototype);
     return A;
 }
-
 ArrayExoticObject.prototype = {
     constructor: ArrayExoticObject,
     type: "object",
@@ -14590,7 +14244,6 @@ ArrayExoticObject.prototype = {
     }
 };
 addMissingProperties(ArrayExoticObject.prototype, OrdinaryObject.prototype);
-
 function ArrayCreate(len, proto) {
     var p = proto || getIntrinsic(INTRINSICS.ARRAYPROTOTYPE);
     var array = ArrayExoticObject(p);
@@ -14609,7 +14262,6 @@ function ArrayCreate(len, proto) {
     });
     return array;
 }
-
 function ArraySetLength(A, Desc) {
     if (Desc.value === undefined) {
         return OrdinaryDefineOwnProperty(A, "length", Desc);
@@ -14653,18 +14305,9 @@ function ArraySetLength(A, Desc) {
     }
     return true;
 }
-
-
-
-// ===========================================================================================================
-// Encode, Decode Algorithms
-// ===========================================================================================================
-
 var HexDigits = require("tables").HexDigits; // CAUTION: require
-
 var uriReserved = ";/?:@&=+$,";
 var uriUnescaped = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789~_.!\"*'()";
-
 function Encode(string, unescapedSet) {
     var strLen = string.length;
     var R = "";
@@ -14705,11 +14348,9 @@ function Encode(string, unescapedSet) {
     }
     return NormalCompletion(R);
 }
-
 function UTF8Encode(V) {
     return [V];
 }
-
 function Decode(string, reservedSet) {
     var strLen = string.length;
     var R = "";
@@ -14733,9 +14374,6 @@ function Decode(string, reservedSet) {
         k = k + 1;
     }
 }
-
-
-
 var EncodeURIFunction_call = function (thisArg, argList) {
     var uri = argList[0];
     var uriString = ToString(uri);
@@ -14750,7 +14388,6 @@ var EncodeURIComponentFunction_call = function (thisArg, argList) {
     var unescapedUriComponentSet = "" + uriUnescaped;
     return Encode(uriComponentString, unescapedUriComponentSet);
 };
-
 var DecodeURIFunction_call = function (thisArg, argList) {
     var encodedUri = argList[0];
     var uriString = ToString(encodedUri);
@@ -14758,7 +14395,6 @@ var DecodeURIFunction_call = function (thisArg, argList) {
     var reservedUriSet = "" + uriReserved + "#";
     return Decode(uriString, reservedUriSet);
 };
-
 var DecodeURIComponentFunction_call = function (thisArg, argList) {
     var encodedUriComponent = argList[0];
     var uriComponentString = ToString(encodedUriComponent);
@@ -14766,8 +14402,6 @@ var DecodeURIComponentFunction_call = function (thisArg, argList) {
     var reservedUriComponentSet = "";
     return Decode(uriComponentString, reservedUriComponentSet);
 };
-
-
 var msPerDay = 1000 * 60 * 60 * 24;
 var msPerHour = 1000 * 60 * 60;
 var msPerMinute = 1000 * 60;
@@ -14776,11 +14410,9 @@ var minutesPerHour = 60;
 var hoursPerDay = 24;
 var secondsPerMinute = 60;
 var msPerYear = msPerDay * 365;
-
 function UTC() {
 
 }
-
 function thisTimeValue(value) {
     if (value instanceof CompletionRecord) return thisTimeValue(value);
     if (Type(value) === OBJECT && hasInternalSlot(value, SLOTS.DATEVALUE)) {
@@ -14789,15 +14421,12 @@ function thisTimeValue(value) {
     }
     return newTypeError( "thisTimeValue: value is not a Date");
 }
-
 function Day(t) {
     return Math.floor(t / msPerDay);
 }
-
 function TimeWithinDay(t) {
     return t % msPerDay;
 }
-
 function DaysInYear(y) {
     var a = y % 4;
     var b = y % 100;
@@ -14807,22 +14436,18 @@ function DaysInYear(y) {
     if (b === 0 && c !== 0) return 365;
     if (c === 0) return 366;
 }
-
 function DayFromYear(y) {
     return 365 * (y - 1970) + floor((y-1969/4)) - floor((y-1901)/100) + floor((y-1601)/400);
 }
-
 function YearFromTime(t) {
     var y = t / (60 * 60 * 24 * 365);
     return y;
 }
-
 function InLeapYear(t) {
     var diy = DaysInYear(YearFromTime(t));
     if (diy == 365) return 0;
     if (diy == 366) return 1;
 }
-
 var Months = {
     __proto__: null,
     0: "January",
@@ -14838,7 +14463,6 @@ var Months = {
     10: "November",
     11: "December"
 };
-
 function MonthFromTime(t) {
     var il = InLeapYear(t);
     var dwy = DayWithinYear(t);
@@ -14855,27 +14479,21 @@ function MonthFromTime(t) {
     else if (304 + il <= dwy && dwy < 334 + il) return 10;
     else if (334 + il <= dwy && dwy < 365 + il) return 11;
 }
-
 function DayWithinYear(t) {
     return Day(t) - DayFromYear(YearFromTime(t));
 }
-
 function HourFromTime(t) {
     return Math.floor(t / msPerHour) % hoursPerDay;
 }
-
 function MinFromTime(t) {
     return Math.floor(t / msPerMinute) % minutesPerHour;
 }
-
 function SecFromTime(t) {
     return Math.floor(t / msPerSecond) % secondsPerMinute;
 }
-
 function msFromTime(t) {
     return t % msPerSecond;
 }
-
 function MakeTime(hour, min, sec, ms) {
     if (isFinite(hour) === false) return NaN;
     var h = ToInteger(hour);
@@ -14885,7 +14503,6 @@ function MakeTime(hour, min, sec, ms) {
     var t = h * msPerHour + m * msPerMinute + s * msPerSecond + milli;
     return t;
 }
-
 function MakeDay(year, month, date) {
     if (!isFinite(time)) return NaN;
     var y = ToInteger(year);
@@ -14896,23 +14513,18 @@ function MakeDay(year, month, date) {
     var t;
     return Day(t) + dt - 1;
 }
-
 function MakeDate(day, time) {
     if (!isFinite(day)) return NaN;
     return day * msPerDay + time;
 }
-
 function TimeClip(time) {
     if (!isFinite(time)) return NaN;
     if (Math.abs(time) > (8.64 * Math.pow(10, 15))) return NaN;
     return ToInteger(time) + (+0);
 }
-
 function WeekDay (t) {
     return ((Day(t) + 4) % 7);
 }
-
-
 var DateConstructor_call = function (thisArg, argList) {
     var O = thisArg;
     var numberOfArgs = argList.length;
@@ -14975,50 +14587,35 @@ var DateConstructor_call = function (thisArg, argList) {
         return Invoke(O, "toString", []);
     }
 };
-
 var DateConstructor_construct = function (thisArg, argList) {
     return OrdinaryConstruct(this, argList);
 };
-
 var DateConstructor_parse = function (thisArg, argList) {
     var string = ToString(argList[0]);
     
     return NormalCompletion(undefined);
 };
-/*
-
- i got a job for me
-
- write the date parser.
-
- maybe a regex is sufficient here and can capture all groups easily
-
- */
 var DateConstructor_now = function (thisArg, argList) {
     return NormalCompletion(Date.now());
 };
-
 var DateConstructor_$$create = function (thisArg, argList) {
     var obj = OrdinaryCreateFromConstructor(DateConstructor, INTRINSICS.DATEPROTOTYPE, [
         SLOTS.DATEVALUE
     ]);
     return obj;
 };
-
 var DatePrototype_getDate = function (thisArg, argList) {
     var t = thisTimeValue(thisArg);
     if (isAbrupt(t)) return t;
     if (t !== t) return NaN;
     return DateFromTime(LocalTime(t));
 };
-
 var DatePrototype_getDay = function (thisArg, argList) {
     var t = thisTimeValue(thisArg);
     if (isAbrupt(t)) return t;
     if (t !== t) return NaN;
     return WeekDay(LocalTime(t));
 };
-
 var DatePrototype_getFullYear = function (thisArg, argList) {
     var t = thisTimeValue(thisArg);
     if (isAbrupt(t)) return t;
@@ -15045,28 +14642,24 @@ var DatePrototype_getMinutes = function (thisArg, argList) {
     if (t !== t) return NaN;
     return MinFromTime(LocalTime(t));
 };
-
 var DatePrototype_getMonth = function (thisArg, argList) {
     var t = thisTimeValue(thisArg);
     if (isAbrupt(t)) return t;
     if (t !== t) return NaN;
     return MonthFromTime(LocalTime(t));
 }
-
 var DatePrototype_getMilliSeconds = function (thisArg, argList) {
     var t = thisTimeValue(thisArg);
     if (isAbrupt(t)) return t;
     if (t !== t) return NaN;
     return msFromTime(LocalTime(t));
 };
-
 var DatePrototype_getTimeZoneOffset = function (thisArg, argList) {
     var t = thisTimeValue(thisArg);
     if (isAbrupt(t)) return t;
     if (t !== t) return NaN;
     return (t - LocalTime(t));
 };
-
 var DatePrototype_getUTCDay = function (thisArg, argList) {
     var t = thisTimeValue(thisArg);
     if (isAbrupt(t)) return t;
@@ -15074,7 +14667,6 @@ var DatePrototype_getUTCDay = function (thisArg, argList) {
     return WeekDay(t);
 
 };
-
 var DatePrototype_getUTCFullYear = function (thisArg, argList) {
     var t = thisTimeValue(thisArg);
     if (isAbrupt(t)) return t;
@@ -15089,21 +14681,18 @@ var DatePrototype_getUTCHours = function (thisArg, argList) {
     return HourFromTime(t);
 
 };
-
 var DatePrototype_getUTCMilliSeconds = function (thisArg, argList) {
     var t = thisTimeValue(thisArg);
     if (isAbrupt(t)) return t;
     if (t !== t) return NaN;
     return msFromTime(t);
 };
-
 var DatePrototype_getUTCMinutes = function (thisArg, argList) {
     var t = thisTimeValue(thisArg);
     if (isAbrupt(t)) return t;
     if (t !== t) return NaN;
     return MinFromTime(t);
 }
-
 var DatePrototype_getUTCSeconds = function (thisArg, argList) {
     var t = thisTimeValue(thisArg);
     if (isAbrupt(t)) return t;
@@ -15111,9 +14700,6 @@ var DatePrototype_getUTCSeconds = function (thisArg, argList) {
     return SecFromTime(t);
 };
 
-/**
- * Created by root on 15.05.14.
- */
 var DataViewConstructor_Call= function (thisArg, argList) {
     var O = thisArg;
     var buffer = argList[0];
@@ -15151,11 +14737,9 @@ var DataViewConstructor_Call= function (thisArg, argList) {
     setInternalSlot(O, SLOTS.BYTEOFFSET, offset);
     return NormalCompletion(O);
 };
-
 var DataViewConstructor_Construct = function (argList) {
     return OrdinaryConstruct(this, argList);
 };
-
 var DataViewConstructor_$$create = function (thisArg, argList) {
     var F = thisArg;
     var obj = OrdinaryCreateFromConstructor(F, INTRINSICS.DATAVIEWPROTOTYPE, [
@@ -15167,7 +14751,6 @@ var DataViewConstructor_$$create = function (thisArg, argList) {
     setInternalSlot(obj, SLOTS.DATAVIEW, true);
     return obj;
 };
-
 var DataViewPrototype_get_buffer = function (thisArg, argList) {
     var O = thisArg;
     if (Type(O) !== OBJECT) return newTypeError( "O is not an object");
@@ -15176,7 +14759,6 @@ var DataViewPrototype_get_buffer = function (thisArg, argList) {
     if (buffer === undefined) return newTypeError( "buffer is undefined but must not");
     return NormalCompletion(buffer);
 };
-
 var DataViewPrototype_get_byteLength = function (thisArg, argList) {
     var O = thisArg;
     if (Type(O) !== OBJECT) return newTypeError( "O is not an object");
@@ -15186,7 +14768,6 @@ var DataViewPrototype_get_byteLength = function (thisArg, argList) {
     var size = getInternalSlot(O, SLOTS.BYTELENGTH);
     return NormalCompletion(size);
 };
-
 var DataViewPrototype_get_byteOffset = function (thisArg, argList) {
     var O = thisArg;
     if (Type(O) !== OBJECT) return newTypeError( "O is not an object");
@@ -15196,8 +14777,6 @@ var DataViewPrototype_get_byteOffset = function (thisArg, argList) {
     var offset = getInternalSlot(O, SLOTS.BYTEOFFSET);
     return NormalCompletion(offset);
 };
-
-
 var DataViewPrototype_getFloat32 = function (thisArg, argList) {
     var v = thisArg;
     var byteOffset = argList[0];
@@ -15205,7 +14784,6 @@ var DataViewPrototype_getFloat32 = function (thisArg, argList) {
     if (littleEndian == undefined) littleEndian = false;
     return GetViewValue(v, byteOffset, littleEndian, "Float32");
 };
-
 var DataViewPrototype_getFloat64 = function (thisArg, argList) {
     var v = thisArg;
     var byteOffset = argList[0];
@@ -15213,13 +14791,11 @@ var DataViewPrototype_getFloat64 = function (thisArg, argList) {
     if (littleEndian == undefined) littleEndian = false;
     return GetViewValue(v, byteOffset, littleEndian, "Float64");
 };
-
 var DataViewPrototype_getInt8 = function (thisArg, argList) {
     var byteOffset = argList[0];
     var v = thisArg;
     return GetViewValue(v, byteOffset, undefined, "Int8");
 };
-
 var DataViewPrototype_getInt16 = function (thisArg, argList) {
     var v = thisArg;
     var byteOffset = argList[0];
@@ -15227,8 +14803,6 @@ var DataViewPrototype_getInt16 = function (thisArg, argList) {
     if (littleEndian == undefined) littleEndian = false;
     return GetViewValue(v, byteOffset, littleEndian, "Int16");
 };
-
-
 var DataViewPrototype_getInt32 = function (thisArg, argList) {
     var v = thisArg;
     var byteOffset = argList[0];
@@ -15236,14 +14810,11 @@ var DataViewPrototype_getInt32 = function (thisArg, argList) {
     if (littleEndian == undefined) littleEndian = false;
     return GetViewValue(v, byteOffset, littleEndian, "Int32");
 };
-
-
 var DataViewPrototype_getUint8 = function (thisArg, argList) {
     var byteOffset = argList[0];
     var v = thisArg;
     return GetViewValue(v, byteOffset, undefined, "Uint8");
 };
-
 var DataViewPrototype_getUint16 = function (thisArg, argList) {
     var v = thisArg;
     var byteOffset = argList[0];
@@ -15258,7 +14829,6 @@ var DataViewPrototype_getUint32 = function (thisArg, argList) {
     if (littleEndian == undefined) littleEndian = false;
     return GetViewValue(v, byteOffset, littleEndian, "Uint32");
 };
-
 var DataViewPrototype_setFloat32 = function (thisArg, argList) {
     var v = thisArg;
     var byteOffset = argList[0];
@@ -15267,7 +14837,6 @@ var DataViewPrototype_setFloat32 = function (thisArg, argList) {
     if (littleEndian == undefined) littleEndian = false;
     return SetViewValue(v, byteOffset, littleEndian, "Float32", value);
 };
-
 var DataViewPrototype_setFloat64 = function (thisArg, argList) {
     var v = thisArg;
     var byteOffset = argList[0];
@@ -15276,7 +14845,6 @@ var DataViewPrototype_setFloat64 = function (thisArg, argList) {
     if (littleEndian == undefined) littleEndian = false;
     return SetViewValue(v, byteOffset, littleEndian, "Float64", value);
 };
-
 var DataViewPrototype_setInt8 = function (thisArg, argList) {
     var v = thisArg;
     var byteOffset = argList[0];
@@ -15291,7 +14859,6 @@ var DataViewPrototype_setInt16 = function (thisArg, argList) {
     if (littleEndian == undefined) littleEndian = false;
     return SetViewValue(v, byteOffset, littleEndian, "Int16", value);
 };
-
 var DataViewPrototype_setInt32 = function (thisArg, argList) {
     var v = thisArg;
     var byteOffset = argList[0];
@@ -15300,7 +14867,6 @@ var DataViewPrototype_setInt32 = function (thisArg, argList) {
     if (littleEndian == undefined) littleEndian = false;
     return SetViewValue(v, byteOffset, littleEndian, "Int32", value);
 };
-
 var DataViewPrototype_setUint8 = function (thisArg, argList) {
     var v = thisArg;
     var byteOffset = argList[0];
@@ -15315,7 +14881,6 @@ var DataViewPrototype_setUint16 = function (thisArg, argList) {
     if (littleEndian == undefined) littleEndian = false;
     return SetViewValue(v, byteOffset, littleEndian, "Uint16", value);
 };
-
 var DataViewPrototype_setUint32 = function (thisArg, argList) {
     var v = thisArg;
     var byteOffset = argList[0];
@@ -15324,7 +14889,6 @@ var DataViewPrototype_setUint32 = function (thisArg, argList) {
     if (littleEndian == undefined) littleEndian = false;
     return SetViewValue(v, byteOffset, littleEndian, "Uint32", value);
 };
-
 function BetterComplicatedResumableEvaluationAlgorithmForASTVisitorsWithoutStack(generator, body) {
     /*
 	Here is Space to handle all relevant nodes
@@ -15334,8 +14898,6 @@ function BetterComplicatedResumableEvaluationAlgorithmForASTVisitorsWithoutStack
     
     return exports.Evaluate(body);
 }
-
-
 function printCodeEvaluationState() {
     var stack = getContext().state;
     var state = state[state.length-1];
@@ -15345,7 +14907,6 @@ function printCodeEvaluationState() {
     var str = "["+(node&&node.type)+" === "+instructionIndex+"] of ["+(parent&&parent.type)+"]";
     if (hasConsole) console.log(str);
 }
-
 function Steps_GeneratorStart(generator, body) {
     var result = BetterComplicatedResumableEvaluationAlgorithmForASTVisitorsWithoutStack(generator, body);
     
@@ -15358,7 +14919,6 @@ function Steps_GeneratorStart(generator, body) {
     }    
     return NormalCompletion(result);
 }
-
 function GeneratorStart(generator, body) {
     if (hasConsole) console.log("##GeneratorStart()##");
     Assert(getInternalSlot(generator, SLOTS.GENERATORSTATE) === undefined, "GeneratorStart: GeneratorState has to be undefined");
@@ -15371,7 +14931,6 @@ function GeneratorStart(generator, body) {
     setInternalSlot(generator, SLOTS.GENERATORSTATE, "suspendedStart");
     return generator;
 }
-
 function GeneratorResume(generator, value) {
     if (Type(generator) !== OBJECT) return newTypeError( "resume: Generator is not an object");
     if (!hasInternalSlot(generator, SLOTS.GENERATORSTATE)) return newTypeError( "resume: Generator has no GeneratorState property");
@@ -15390,7 +14949,6 @@ function GeneratorResume(generator, value) {
     }
     return result;
 }
-
 function GeneratorYield(itrNextObj) {
     Assert(HasOwnProperty(itrNextObj, "value") && HasOwnProperty(itrNextObj, "done"), "expecting itrNextObj to have value and done properties");
     var genContext = getContext();
@@ -15406,17 +14964,14 @@ function GeneratorYield(itrNextObj) {
     };
     return NormalCompletion(itrNextObj);
 }
-
 var GeneratorPrototype_$$iterator = function (thisArg, argList) {
     return thisArg;
 };
-
 var GeneratorPrototype_next = function (thisArg, argList) {
     var value = argList[0];
     var G = thisArg;
     return GeneratorResume(G, value);
 };
-
 var GeneratorPrototype_throw = function (thisArg, argList) {
     var g = thisArg;
     var exception = argList[0];
@@ -15440,7 +14995,6 @@ var GeneratorPrototype_throw = function (thisArg, argList) {
     Assert(methodContext === getContext());
     return result;
 };
-
 var GeneratorFunction_call = function (thisArg, argList) {
     // GeneratorFunction(p1...pn, body)
     var GeneratorFunction = this;
@@ -15492,11 +15046,9 @@ var GeneratorFunction_call = function (thisArg, argList) {
     SetFunctionLength(F, ExpectedArgumentCount(F.FormalParameters));
     return NormalCompletion(F);
 };
-
 var GeneratorFunction_construct = function (argList) {
     return OrdinaryConstruct(this, argList);
 };
-
 var GeneratorFunction_$$create = function (thisArg, argList) {
     var F = thisArg;
     var proto = GetPrototypeFromConstructor(F, INTRINSICS.GENERATOR);
@@ -15504,7 +15056,6 @@ var GeneratorFunction_$$create = function (thisArg, argList) {
     var obj = FunctionAllocate(proto, "generator");
     return obj;
 };
-
 var GeneratorPrototype_$$create = function (thisArg, argList) {
     var F = thisArg;
     var obj = OrdinaryCreateFromConstructor(F, INTRINSICS.GENERATOR, [
@@ -15512,18 +15063,15 @@ var GeneratorPrototype_$$create = function (thisArg, argList) {
     ]);
     return obj;
 };
-
 function GetIterable (obj) {
     if (Type(obj) !== OBJECT) return undefined;
     var iteratorGetter = Get(obj, $$iterator);
     if (isAbrupt(iteratorGetter=ifAbrupt(iteratorGetter))) return iteratorGetter;
     return iteratorGetter;
 }
-
 function IsIterable(obj) {
     return HasProperty(obj, $$iterator);
 }
-
 function CreateItrResultObject(value, done) {
     Assert(Type(done) === BOOLEAN, "the second argument to CreateItrResultObject has to be a boolean value");
     var R = ObjectCreate();
@@ -15531,14 +15079,12 @@ function CreateItrResultObject(value, done) {
     CreateDataProperty(R, "done", done);
     return R;
 }
-
 function GetIterator(obj) {
     var iterator = Invoke(obj, $$iterator, []);
     if (isAbrupt(iterator = ifAbrupt(iterator))) return iterator;
     if (Type(iterator) !== OBJECT) return newTypeError( "iterator is not an object");
     return iterator;
 }
-
 function IteratorNext(itr, val) {
     var result;
     if (arguments.length === 1) result = Invoke(itr, "next", []);
@@ -15547,18 +15093,15 @@ function IteratorNext(itr, val) {
     if (Type(result) !== OBJECT) return newTypeError( "IteratorNext: result is not an object");
     return result;
 }
-
 function IteratorComplete(itrResult) {
     Assert(Type(itrResult) === OBJECT);
     var done = Get(itrResult, "done");
     return ToBoolean(done);
 }
-
 function IteratorValue(itrResult) {
     Assert(Type(itrResult) === OBJECT);
     return Get(itrResult, "value");
 }
-
 function CreateEmptyIterator() {
     var emptyNextMethod = OrdinaryFunction();
     setInternalSlot(emptyNextMethod, SLOTS.CALL, function (thisArg, argList) {
@@ -15568,7 +15111,6 @@ function CreateEmptyIterator() {
     CreateDataProperty(obj, "next", emptyNextMethod);
     return obj;
 }
-
 function IteratorStep(iterator, value) {
     var result = IteratorNext(iterator, value);
     if (isAbrupt(result = ifAbrupt(result))) return result;
@@ -15577,8 +15119,6 @@ function IteratorStep(iterator, value) {
     if (done === true) return false;
     return result;
 }
-
-
 function MakeListIterator(list) {
     var nextPos = 0;
     var len = list.length;
@@ -15601,7 +15141,6 @@ function MakeListIterator(list) {
     CreateDataProperty(obj, "next", listIteratorNext);
     return obj;
 }
-
 var ListIterator_next = function(thisArg, argList) {
     var O = thisArg;
     if (!hasInternalSlot(O, "IteratedList") || !hasInternalSlot(O, "IteratedListIndex")) {
@@ -15618,15 +15157,13 @@ var ListIterator_next = function(thisArg, argList) {
     setInternalSlot(O, "IteratedListIndex", index + 1);
     return NormalCompletion(result);
 };
-
 function CreateListIterator(list) {
     var iterator = ObjectCreate(getIntrinsic(INTRINSICS.OBJECTPROTOTYPE), { IteratedList: undefined, ListIteratorNextIndex: undefined });
     setInternalSlot(iterator, "IteratedList", list);
     setInternalSlot(iterator, "IteratedListIndex", 0);
-    LazyDefineProperty(iterator, "next", ListIterator_next);
+    NowDefineProperty(iterator, "next", ListIterator_next);
     return iterator;
 }
-
 function CopyDataBlockBytes(toBlock, toIndex, fromBlock, fromIndex, count) {
     for (var i = fromIndex, j = fromIndex + count, k = toIndex; i < j; i++, k++) toBlock[k] = fromBlock[i];
 }
@@ -15778,11 +15315,6 @@ var ArrayBufferPrototype_slice = function (thisArg, argList) {
     var start = argList[0];
     var end = argList[1];
 };
-
-/**
- * Created by root on 30.03.14.
- */
-
 var typedArrayElementSize = {
     "Float64Array": 8,
     "Float32Array": 4,
@@ -15794,7 +15326,6 @@ var typedArrayElementSize = {
     "Uint8Array": 1,
     "Uint8ClampedArray": 1
 };
-
 var typedArrayElementType = {
     "Float64Array": "Float64",
     "Float32Array": "Float32",
@@ -15806,15 +15337,12 @@ var typedArrayElementType = {
     "Uint8Array": "Uint8",
     "Uint8ClampedArray": "Uint8C"
 };
-
 function IntegerIndexedObjectCreate(prototype) {
     var O = IntegerIndexedExoticObject();
     setInternalSlot(O, SLOTS.EXTENSIBLE, true);
     setInternalSlot(O, SLOTS.PROTOTYPE, prototype);
     return O;
 }
-
-
 function IntegerIndexedExoticObject() {
     var O = Object.create(IntegerIndexedExoticObject.prototype);
     setInternalSlot(O, SLOTS.ARRAYBUFFERDATA, undefined);
@@ -15826,7 +15354,6 @@ function IntegerIndexedExoticObject() {
     setInternalSlot(O, SLOTS.SYMBOLS, Object.create(null));
     return O;
 }
-
 IntegerIndexedExoticObject.prototype = assign(IntegerIndexedExoticObject.prototype, {
     DefineOwnProperty: function (P, Desc) {
         var O = this;
@@ -15940,7 +15467,6 @@ IntegerIndexedExoticObject.prototype = assign(IntegerIndexedExoticObject.prototy
     type: "object"
 });
 addMissingProperties(IntegerIndexedExoticObject.prototype, OrdinaryObject.prototype);
-
 function IntegerIndexedElementGet(O, index) {
     Assert(Type(index) === NUMBER, "index type has to be number");
     Assert(index === ToInteger(index), "index has to be tointeger of index");
@@ -15954,7 +15480,6 @@ function IntegerIndexedElementGet(O, index) {
     var elementType = typedArrayElementType[arrayTypeName];
     return GetValueFromBuffer(buffer, indexedPosition, elementType);
 }
-
 function IntegerIndexedElementSet(O, index, value) {
     Assert(Type(index) === NUMBER, "index != number");
     Assert(index === ToInteger(index), "index != ToInteger(index)");
@@ -15975,8 +15500,6 @@ function IntegerIndexedElementSet(O, index, value) {
     if (isAbrupt(status = ifAbrupt(status))) return status;
     return numValue;
 }
-
-
 var TypedArrayConstructor_Call = function (thisArg, argList) {
     var array, typedArray, length, O,
     elementType,    numberLength,    elementLength,    elementSize,    byteLength,
@@ -16139,7 +15662,6 @@ var TypedArrayConstructor_Call = function (thisArg, argList) {
     }
     return NormalCompletion(O);
 };
-
 var typedArrayPrototypeNames = {
     "Float64Array": INTRINSICS.FLOAT64ARRAYPROTOTYPE,
     "Float32Array": INTRINSICS.FLOAT32ARRAYPROTOTYPE,
@@ -16151,7 +15673,6 @@ var typedArrayPrototypeNames = {
     "Uint8Array": INTRINSICS.UINT8ARRAYPROTOTYPE,
     "Uint8Clamped": INTRINSICS.UINT8CLAMPEDARRAYPROTOTYPE
 };
-
 var TypedArrayConstructor_$$create = function $$create(thisArg, argList) {
     var F = thisArg;
     if (Type(F) !== OBJECT) return newTypeError( "the this value is not an object");
@@ -16166,7 +15687,6 @@ var TypedArrayConstructor_$$create = function $$create(thisArg, argList) {
     setInternalSlot(obj, SLOTS.ARRAYLENGTH, 0);
     return obj;
 };
-
 var TypedArrayConstructor_from = function from(thisArg, argList) {
     "use strict";
     var source = argList[0];
@@ -16271,7 +15791,6 @@ var TypedArrayConstructor_of = function of(thisArg, argList) {
     }
     return NormalCompletion(newObj);
 };
-
 var TypedArrayPrototype_get_byteLength = function (thisArg, argList) {
     var O = thisArg;
     if (Type(O) !== OBJECT) return newTypeError( "this value is not an object");
@@ -16298,7 +15817,6 @@ var TypedArrayPrototype_get_buffer = function (thisArg, argList) {
     if (buffer === undefined) return newTypeError( "slot value for viewed array buffer is undefined");
     return NormalCompletion(buffer);
 };
-
 var TypedArrayPrototype_filter = function subarray(thisArg, argList) {
 };
 var TypedArrayPrototype_find = function subarray(thisArg, argList) {
@@ -16335,13 +15853,9 @@ var TypedArrayPrototype_sort = function subarray(thisArg, argList) {
 };
 var TypedArrayPrototype_subarray = function subarray(thisArg, argList) {
 };
-
-
 var TypedArrayPrototype_$$iterator = function iterator(thisArg, argList) {
     return CreateArrayIterator(thisArg, "value");
 };
-
-// $$toStringTag
 var TypedArrayPrototype_get_$$toStringTag = function get_toStringTag(thisArg, argList) {
     var O = thisArg;
     if (Type(O) !== OBJECT) return newTypeError( "the this value is not an object");
@@ -16350,11 +15864,6 @@ var TypedArrayPrototype_get_$$toStringTag = function get_toStringTag(thisArg, ar
     Assert(Type(name) == STRING, "name has to be a string value");
     return NormalCompletion(name);
 };
-
-/**
- * Created by root on 30.03.14.
- */
-
 function NativeJSObjectWrapper(object) {
     if (object instanceof NativeJSObjectWrapper || object instanceof NativeJSFunctionWrapper) return object;
     var O = Object.create(NativeJSObjectWrapper.prototype);
@@ -16433,7 +15942,6 @@ NativeJSObjectWrapper.prototype = {
         return Object.isExtensible(o);
     }
 };
-
 function NativeJSFunctionWrapper(func, that) {
     var F = Object.create(NativeJSFunctionWrapper.prototype);
     setInternalSlot(F, SLOTS.WRAPPEDOBJECT, func);
@@ -16473,18 +15981,10 @@ NativeJSFunctionWrapper.prototype = {
     }
 };
 addMissingProperties(NativeJSFunctionWrapper.prototype, NativeJSObjectWrapper.prototype);
-
-/**
- * Created by root on 30.03.14.
- */
-
-
 function IsSymbol(P) {
     return P instanceof SymbolPrimitiveType;
 }
-
 var es5id = Math.floor(Math.random() * (1 << 16));
-
 function SymbolPrimitiveType(id, desc) {
     var O = Object.create(SymbolPrimitiveType.prototype);
     setInternalSlot(O, SLOTS.DESCRIPTION, desc);
@@ -16494,7 +15994,6 @@ function SymbolPrimitiveType(id, desc) {
     setInternalSlot(O, SLOTS.ES5ID, id || (++es5id + Math.random()));
     return O;
 }
-
 SymbolPrimitiveType.prototype = {
     constructor: SymbolPrimitiveType,
     type: "symbol",
@@ -16535,7 +16034,6 @@ SymbolPrimitiveType.prototype = {
         return "[object SymbolPrimitiveType]";
     }
 };
-
 var $$unscopables        = SymbolPrimitiveType("@@unscopables",         "Symbol.unscopables");
 var $$create             = SymbolPrimitiveType("@@create",              "Symbol.create");
 var $$toPrimitive        = SymbolPrimitiveType("@@toPrimitive",         "Symbol.toPrimitive");
@@ -16544,18 +16042,14 @@ var $$hasInstance        = SymbolPrimitiveType("@@hasInstance",         "Symbol.
 var $$iterator           = SymbolPrimitiveType("@@iterator",            "Symbol.iterator");
 var $$isRegExp           = SymbolPrimitiveType("@@isRegExp",            "Symbol.isRegExp");
 var $$isConcatSpreadable = SymbolPrimitiveType("@@isConcatSpreadable",  "Symbol.isConcatSpreadable");
-
 var $$geti = SymbolPrimitiveType("@@geti",  "Symbol.geti");
 var $$seti = SymbolPrimitiveType("@@seti",  "Symbol.seti");
-
 var $$add  = SymbolPrimitiveType("@@ADD",  "Symbol.add");
 var $$addr = SymbolPrimitiveType("@@ADDR",  "Symbol.addR");
-
 exports.$$geti = $$geti;
 exports.$$seti = $$seti;
 exports.$$add = $$add;
 exports.$$addr = $$addr;
-
 function thisSymbolValue(value) {
     if (value instanceof CompletionRecord) return thisSymbolValue(value.value);
     if (Type(value) === SYMBOL) return value;
@@ -16565,10 +16059,6 @@ function thisSymbolValue(value) {
     }
     return newTypeError( "thisSymbolValue: value is not a Symbol");
 }
-
-
-
-
 var SymbolFunction_Call = function Call(thisArg, argList) {
     var descString;
     var description = argList[0];
@@ -16591,7 +16081,6 @@ var SymbolPrototype_toString = function toString(thisArg, argList) {
     var result = "Symbol(" + desc + ")";
     return NormalCompletion(result);
 };
-
 var SymbolPrototype_valueOf = function valueOf(thisArg, argList) {
     var s = thisArg;
     if (hasInternalSlot(s, SLOTS.SYMBOLDATA)) return newTypeError(format("HAS_NO_SLOT_S", "[[SymbolData]]"));
@@ -16627,10 +16116,6 @@ var SymbolFunction_$$create = function (thisArg, argList) {
 };
 
 
-// ===========================================================================================================
-// String Exotic Object
-// ===========================================================================================================
-
 function StringExoticObject() {
     var S = Object.create(StringExoticObject.prototype);
     setInternalSlot(S, SLOTS.BINDINGS, Object.create(null));
@@ -16638,7 +16123,6 @@ function StringExoticObject() {
     setInternalSlot(S, SLOTS.EXTENSIBLE, true);
     return S;
 }
-
 StringExoticObject.prototype = assign(StringExoticObject.prototype, {
     HasOwnProperty: function (P) {
         Assert(IsPropertyKey(P), trans("P_HAS_TO_BE_A_VALID_PROPERTY_KEY"));
@@ -16728,8 +16212,6 @@ StringExoticObject.prototype = assign(StringExoticObject.prototype, {
     type: "object"
 });
 addMissingProperties(StringExoticObject.prototype, OrdinaryObject.prototype);
-
-
 /**
  * Created by root on 15.05.14.
  */
@@ -17295,12 +16777,9 @@ var StringConstructor_raw = function (thisArg, argList) {
         nextIndex = nextIndex + 1;
     }
 };
-
-
 var StringIteratorPrototype_$$iterator = function (thisArg, argList) {
     return thisArg;
 };
-
 var StringIteratorPrototype_next = function (thisArg, argList) {
     var O = thisArg;
     if (Type(O) !== OBJECT)
@@ -17328,7 +16807,6 @@ var StringIteratorPrototype_next = function (thisArg, argList) {
     }
     return CreateItrResultObject(undefined, true);
 };
-
 function CreateStringIterator(string, kind) {
     var iterator = ObjectCreate(getIntrinsic(INTRINSICS.STRINGITERATORPROTOTYPE), [
         SLOTS.ITERATEDSTRING,
@@ -17343,9 +16821,6 @@ function CreateStringIterator(string, kind) {
     setInternalSlot(iterator, SLOTS.ITERATIONKIND, kind);
     return iterator;
 }
-/**
- * Created by root on 31.03.14.
- */
 function thisNumberValue(value) {
     if (value instanceof CompletionRecord) return thisNumberValue(value.value);
     if (typeof value === "number") return value;
@@ -17356,8 +16831,6 @@ function thisNumberValue(value) {
     }
     return newTypeError("thisNumberValue: value is not a Number");
 }
-
-
 var MIN_INTEGER = Number.MIN_INTEGER;
 var MAX_INTEGER = Number.MAX_INTEGER;
 var EPSILON = Number.EPSILON;
@@ -17366,7 +16839,6 @@ var MAX_VALUE = Number.MAX_VALUE;
 var NAN = NaN;
 var POSITIVE_INFINITY = Infinity;
 var NEGATIVE_INFINITY = -Infinity;
-
 var NumberConstructor_call = function (thisArg, argList) {
     var value = argList[0];
     var O = thisArg;
@@ -17380,12 +16852,10 @@ var NumberConstructor_call = function (thisArg, argList) {
     }
     return n;
 };
-
 var NumberConstructor_construct = function (argList) {
     var F = NumberConstructor;
     return OrdinaryConstruct(F, argList);
 }
-
 var NumberConstructor_$$create = function (thisArg, argList) {
     var F = thisArg;
     var obj = OrdinaryCreateFromConstructor(F, INTRINSICS.NUMBERPROTOTYPE, [ SLOTS.NUMBERDATA ]);
@@ -17403,7 +16873,6 @@ var NumberConstructor_isNaN = function (thisArg, argList) {
     if (number != number) return NormalCompletion(true);
     return NormalCompletion(false);
 };
-
 var NumberConstructor_isInteger = function (thisArg, argList) {
     var number = argList[0];
     if (Type(number) !== NUMBER) return NormalCompletion(false);
@@ -17411,7 +16880,6 @@ var NumberConstructor_isInteger = function (thisArg, argList) {
         number === +Infinity || number === -Infinity) return NormalCompletion(false);
     return NormalCompletion(true);
 };
-
 var NumberPrototype_clz = function (thisArg, argList) {
     var x = thisNumberValue(thisArg);
     if (isAbrupt(x = ifAbrupt(x))) return x;
@@ -17479,7 +16947,6 @@ var NumberPrototype_toPrecision = function (thisArg, argList) {
     var result = +x.toPrecision(precision);
     return NormalCompletion(result);
 };
-
 function repeatString (str, times) {
     var concat = "";
     for (var i = 0; i < times; i++) {
@@ -17487,7 +16954,6 @@ function repeatString (str, times) {
     }
     return concat;
 }
-
 var NumberPrototype_toFixed = function (thisArg, argList) {
     var fractionDigits = argList[0];
     var x = thisNumberValue(thisArg);
@@ -17580,12 +17046,6 @@ var NumberPrototype_toExponential = function (thisArg, argList) {
 
     // return NormalCompletion(s + m)
 };
-
-
-/**
- * Created by root on 15.05.14.
- */
-
 var ParseIntFunction_call = function (thisArg, argList) {
     try {
         return parseInt("" + argList[0], +argList[1]);
@@ -17593,7 +17053,6 @@ var ParseIntFunction_call = function (thisArg, argList) {
         return newTypeError(ex.message);
     }
 };
-
 var ParseFloatFunction_call = function (thisArg, argList) {
     try {
         return parseFloat("" + argList[0]);
@@ -17601,9 +17060,6 @@ var ParseFloatFunction_call = function (thisArg, argList) {
         return newTypeError(ex.message);
     }
 };
-/**
- * Created by root on 31.03.14.
- */
 function thisBooleanValue(value) {
     if (value instanceof CompletionRecord) return thisBooleanValue(value.value);
     if (typeof value === "boolean") return value;
@@ -17614,8 +17070,6 @@ function thisBooleanValue(value) {
     }
     return newTypeError( "thisBooleanValue: value is not a Boolean");
 }
-
-
 var BooleanConstructor_call = function (thisArg, argList) {
     var O = thisArg;
     var value = argList[0];
@@ -17626,27 +17080,22 @@ var BooleanConstructor_call = function (thisArg, argList) {
     }
     return NormalCompletion(b);
 }
-
 var BooleanConstructor_construct = function (argList) {
     return OrdinaryConstruct(this, argList);
 };
-
 var BooleanConstructor_$$create = function (thisArg, argList) {
     return OrdinaryCreateFromConstructor(thisArg, INTRINSICS.BOOLEANPROTOTYPE,[SLOTS.BOOLEANDATA]);
 };
-
 var BooleanPrototype_toString = function toString(thisArg, argList) {
     var b = thisBooleanValue(thisArg);
     if (isAbrupt(b)) return b;
     if (b === true) return "true";
     if (b === false) return "false";
 };
-
 var BooleanPrototype_valueOf = function (thisArg, argList) {
     return thisBooleanValue(thisArg);
 };
 
-    
 function ProxyExoticObject(handler, target) {
     var P = Object.create(ProxyExoticObject.prototype);
     setInternalSlot(P, SLOTS.PROTOTYPE, getIntrinsic(INTRINSICS.PROXYPROTOTYPE));
@@ -17655,7 +17104,6 @@ function ProxyExoticObject(handler, target) {
     setInternalSlot(P, SLOTS.PROXYTARGET, target);
     return P;
 }
-
 ProxyExoticObject.prototype = {
     constructor: ProxyExoticObject,
     type: "object",
@@ -17958,12 +17406,9 @@ ProxyExoticObject.prototype = {
         return newObj;
     }
 };
-
-
 function isProxy(o) {
     return o instanceof ProxyExoticObject;
 }
-
 function ProxyCreate(target, handler) {
     var proxy = ProxyExoticObject();
     setInternalSlot(proxy, SLOTS.PROTOTYPE, ProxyPrototype);
@@ -17972,8 +17417,6 @@ function ProxyCreate(target, handler) {
     if (!IsConstructor(target)) setInternalSlot(proxy, SLOTS.CONSTRUCT, undefined);
     return proxy;
 }
-
-
 var ProxyConstructor_revocable = function revocable(thisArg, argList) {
     var target = argList[0];
     var handler = argList[1];
@@ -17995,30 +17438,18 @@ var ProxyConstructor_revocable = function revocable(thisArg, argList) {
     CreateDataProperty(result, "revoke", revoker);
     return NormalCompletion(result);
 };
-
 var ProxyConstructor_Call = function (thisArg, argList) {
     return newTypeError(format("PROXY_CALL_ERROR"));
 };
-
 var ProxyConstructor_Construct = function (argList) {
     var target = argList[0];
     var handler = argList[1];
     return ProxyCreate(target, handler);
 };
 
-/**
- * Created by root on 31.03.14.
- */
-
-
-    // ===========================================================================================================
-    // 8.4 Tasks and Task Queues
-    // ===========================================================================================================
-
 function PendingTaskRecord_toString () {
     return "[object PendingTaskRecord]";
 }
-
 function PendingTaskRecord (task, args, realm) {
     var pendingTaskRecord = Object.create(PendingTaskRecord.prototype);
     pendingTaskRecord.Task = task;
@@ -18029,29 +17460,24 @@ function PendingTaskRecord (task, args, realm) {
 PendingTaskRecord.prototype = Object.create(null);
 PendingTaskRecord.prototype.constructor = PendingTaskRecord;
 PendingTaskRecord.prototype.toString = PendingTaskRecord_toString;
-
 function TaskQueue() {
     return [];
 }
-
 function makeTaskQueues(realm) {
     realm.LoadingTasks = TaskQueue();
     realm.PromiseTasks = TaskQueue();
     realm.ScriptEvaluationTasks = TaskQueue();
     realm.TimerTasks = TaskQueue();
 }
-
 function getTasks(realm, name) {
     if (realm) return realm[name];
 }
-
 var queueNames = {
     __proto__:null,
     "LoadingTasks": true,
     "PromiseTasks": true,
     "TimerTasks": true      // added for setTimeout
 };
-
 function EnqueueTask(queueName, task, args) {
     Assert(Type(queueName) === STRING && queueNames[queueName], "EnqueueTask: queueName has to be valid");
     Assert(Array.isArray(args), "arguments have to be a list and to be equal in the number of arguments of task");
@@ -18069,7 +17495,6 @@ function EnqueueTask(queueName, task, args) {
     }
     return NormalCompletion(empty);
 }
-
 function NextTask (result, nextQueue) {
     if (!nextQueue || !nextQueue.length) return;
     if (isAbrupt(result = ifAbrupt(result))) {
@@ -18099,9 +17524,6 @@ function NextTask (result, nextQueue) {
     getStack().pop();
     return NextTask(result, nextQueue);
 }
-
-
-
 function ScriptEvaluationTask (source) {
     Assert(typeof source === "string", "ScriptEvaluationTask: Source has to be a string");
     var status = NormalCompletion(undefined);
@@ -18114,11 +17536,6 @@ function ScriptEvaluationTask (source) {
     status = ScriptEvaluation(script, realm, false); // evaluation.Program(ast)
     return NextTask(status)
 }
-
-/**
- * Created by root on 31.03.14.
- */
-
 var standard_properties = {
     __proto__: null,
     "Array": true,
@@ -18127,7 +17544,6 @@ var standard_properties = {
     "Object": true,
     "Symbol": true
 };
-
 function DefineBuiltinProperties(O) {
     var globalThis = getGlobalThis();
     for (var name in standard_properties) {
@@ -18139,16 +17555,6 @@ function DefineBuiltinProperties(O) {
     }
     return O;
 }
-
-/**
- * a simplification to search through a list (in our case a js array)
- * and look at the current item.
- *
- * @param list
- * @param field
- * @param value
- * @returns {boolean}
- */
 function hasRecordInList(list, field, value) {
     if (!list) return false;
     for (var i = 0, j = list.length; i < j; i++) {
@@ -18157,7 +17563,6 @@ function hasRecordInList(list, field, value) {
     }
     return false;
 }
-
 function getRecordFromList(list, field, value) {
     if (!list) return false;
     for (var i = 0, j = list.length; i < j; i++) {
@@ -18166,8 +17571,6 @@ function getRecordFromList(list, field, value) {
     }
     return undefined;
 }
-
-
 function thisLoader(value) {
     if (value instanceof CompletionRecord) return thisLoader(value.value);
     var m;
@@ -18176,14 +17579,6 @@ function thisLoader(value) {
     }
     return newTypeError( "thisLoader(value): value is not a valid loader object");
 }
-
-
-//
-// Runtime Semantics
-// Loader State
-//
-
-// 27.1. add
 function LoaderRecord () {
     var lr = Object.create(LoaderRecord.prototype);
     lr.Realm = undefined;
@@ -18193,8 +17588,6 @@ function LoaderRecord () {
     return lr;
 }
 LoaderRecord.prototype.toString = function () { return "[object LoaderRecord]"; };
-
-// 27.1.
 function CreateLoaderRecord(realm, object) {
     var loader = LoaderRecord();
     loader.Realm = realm;
@@ -18203,7 +17596,6 @@ function CreateLoaderRecord(realm, object) {
     loader.LoaderObj = object;
     return loader;
 }
-
 function LoadRecord() {
     var lr = Object.create(LoadRecord.prototype);
     lr.Status = undefined;
@@ -18221,8 +17613,6 @@ function LoadRecord() {
     return lr;
 }
 LoadRecord.prototype.toString = function () { return "[object LoadRecord]"; };
-
-// 27.1. check
 function CreateLoad(name) {
     var load = LoadRecord();
     var metadata = ObjectCreate();
@@ -18233,8 +17623,6 @@ function CreateLoad(name) {
     // all other fields are exisiting but undefined.
     return load;
 }
-
-// 27.1.
 function CreateLoadRequestObject(name, metadata, address, source) {
     var obj = ObjectCreate();
     var status, errmsg = "CreateLoadRequest: CreateDataProperty must not fail";
@@ -18252,8 +17640,6 @@ function CreateLoadRequestObject(name, metadata, address, source) {
     }
     return obj;
 }
-
-// 27.1. updated
 function LoadModule(loader, name, options) {
     ////debug2("loadmodule");
     if (!options) options = ObjectCreate();
@@ -18268,8 +17654,6 @@ function LoadModule(loader, name, options) {
     var source;
     return PromiseOfStartLoadPartWayThrough(step, loader, name, metadata, source, address);
 }
-
-// 27.1. update
 function RequestLoad(loader, request, refererName, refererAddress) {
     var F = CallNormalize();
     setInternalSlot(F, SLOTS.LOADER, loader);
@@ -18282,9 +17666,6 @@ function RequestLoad(loader, request, refererName, refererAddress) {
     p = PromiseThen(p, G);
     return p;
 }
-
-
-// neu 27.1.
 function CallNormalize() {
     var F = OrdinaryFunction();
     var CallNormalizeFunction_Call = function (thisArg, argList) {
@@ -18303,8 +17684,6 @@ function CallNormalize() {
     setInternalSlot(F, SLOTS.CALL, CallNormalizeFunction_Call);
     return F;
 }
-
-// neu 27.1.
 function GetOrCreateLoad() {
     var F = OrdinaryFunction();
     var GetOrCreateLoad_Call = function (thisArg, argList) {
@@ -18337,8 +17716,6 @@ function GetOrCreateLoad() {
     setInternalSlot(F, SLOTS.CALL, GetOrCreateLoad_Call);
     return F;
 }
-
-// 27.1. update
 function ProceedToLocate(loader, load, p) {
     p = PromiseOf(undefined);
     var F = CallLocate();
@@ -18347,8 +17724,6 @@ function ProceedToLocate(loader, load, p) {
     p = PromiseThen(p, F);
     return ProceedToFetch(loader, load, p);
 }
-
-// 27.1. update
 function CallLocate() {
     var F = OrdinaryFunction();
     var CallLocate_Call = function (thisArg, argList) {
@@ -18365,8 +17740,6 @@ function CallLocate() {
     setInternalSlot(F, SLOTS.CALL, CallLocate_Call);
     return F;
 }
-
-// 27.1.
 function ProceedToFetch(loader, load, p) {
     var F = CallFetch();
     setInternalSlot(F, SLOTS.LOADER, loader);
@@ -18375,8 +17748,6 @@ function ProceedToFetch(loader, load, p) {
     p = PromiseThen(p, F);
     return ProceedToTranslate(loader, load, p);
 }
-
-// 27.1.
 function CallFetch() {
     var F = OrdinaryFunction();
     var CallFetch_Call = function (thisArg, argList) {
@@ -18396,8 +17767,6 @@ function CallFetch() {
     setInternalSlot(F, SLOTS.CALL, CallFetch_Call);
     return F;
 }
-
-// 27.1.
 function ProceedToTranslate(loader, load, p) {
     var F = CallTranslate();
     setInternalSlot(F, SLOTS.LOADER, loader);
@@ -18415,8 +17784,6 @@ function ProceedToTranslate(loader, load, p) {
     setInternalSlot(F, "Load", load);
     return PromiseCatch(p, F);
 }
-
-// 27.1.
 function CallTranslate() {
     var F = OrdinaryFunction();
     var CallTranslate_Call = function (thisArg, argList) {
@@ -18434,9 +17801,6 @@ function CallTranslate() {
     setInternalSlot(F, SLOTS.CALL, CallTranslate_Call);
     return F;
 }
-
-
-// 27.1.
 function CallInstantiate() {
     var F = OrdinaryFunction();
     var CallInstantiate_Call = function (thisArg, argList) {
@@ -18454,8 +17818,6 @@ function CallInstantiate() {
     setInternalSlot(F, SLOTS.CALL, CallInstantiate_Call);
     return F;
 }
-
-// 27.1.
 function InstantiateSucceeded() {
     var F = OrdinaryFunction();
     var InstantiateSucceeded_Call = function (thisArg, argList) {
@@ -18492,8 +17854,6 @@ function InstantiateSucceeded() {
     setInternalSlot(F, SLOTS.CALL, InstantiateSucceeded_Call);
     return F;
 }
-
-// 27.1.
 function LoadFailed() {
     var LoadFailedFunction_Call = function (thisArg, argList) {
         var exc = argList[0];
@@ -18512,8 +17872,6 @@ function LoadFailed() {
     setInternalSlot(F, SLOTS.CALL, LoadFailedFunction_Call);
     return F;
 }
-
-// 27.1.
 function ProcessLoadDependencies(load, loader, depsList) {
     var refererName = load.Name;
     load.Dependencies = [];
@@ -18532,8 +17890,6 @@ function ProcessLoadDependencies(load, loader, depsList) {
     setInternalSlot(F, SLOTS.LOAD, load);
     return PromiseThen(p, F);
 }
-
-// 27.1.
 function AddDependencyLoad() {
     var AddDependencyLoad_Call = function (thisArg, argList) {
         var depLoad = argList[0];
@@ -18553,8 +17909,6 @@ function AddDependencyLoad() {
     setInternalSlot(F, SLOTS.CALL, AddDependencyLoad_Call);
     return F;
 }
-
-// 27.1.
 function LoadSucceeded() {
     var LoadSucceeded_Call = function (thisArg, argList) {
         var load = getInternalSlot(F, SLOTS.LOAD);
@@ -18570,8 +17924,6 @@ function LoadSucceeded() {
     setInternalSlot(F, SLOTS.CALL, LoadSucceeded_Call);
     return F;
 }
-
-// 27.1.
 function PromiseOfStartLoadPartWayThrough(step, loader, name, metadata, source, address) {
     //debug2("PromiseOfStartLoadPartWayThrough: start");
     var F = AsyncStartLoadPartwayThrough();
@@ -18585,9 +17937,6 @@ function PromiseOfStartLoadPartWayThrough(step, loader, name, metadata, source, 
     setInternalSlot(F, "StepState", state);
     return PromiseNew(F);
 }
-
-
-// 26.1
 function AsyncStartLoadPartwayThrough() {
     var F = OrdinaryFunction();
     //debug2("AsyncStartLoadPartwayThrough: start");
@@ -18623,11 +17972,6 @@ function AsyncStartLoadPartwayThrough() {
     setInternalSlot(F, SLOTS.CALL, AsyncStartLoadPartwayThrough_Call);
     return F;
 }
-//
-// Module Linkage
-//
-
-// 27.1.
 function CreateModuleLinkageRecord (loader, body) {
     var M = ObjectCreate(null);
     setInternalSlot(M, "Body", body);
@@ -18647,7 +17991,6 @@ function CreateModuleLinkageRecord (loader, body) {
     setInternalSlot(M, SLOTS.ENVIRONMENT, env);
     return M;
 }
-// 27.1.
 function LookupExport(M, exportName) {
     var mExp = getInternalSlot(M, "Exports");
     var exp;
@@ -18656,15 +17999,12 @@ function LookupExport(M, exportName) {
     }
     return exp.Binding;
 }
-// 27.1.
 function LookupModuleDependency(M, requestName) {
     if (requestName === null) return M;
     var deps = getInternalSlot(M, "Dependencies");
     var pair = getRecordFromList(deps, "Key", requestName);
     return pair.Module;
 }
-
-// 27.1.
 function LinkSet(loader, loads, done, resolve, reject) {
     var ls = Object.create(LinkSet.prototype);
     ls.Loader = loader;
@@ -18675,8 +18015,6 @@ function LinkSet(loader, loads, done, resolve, reject) {
     return ls;
 }
 LinkSet.prototype.toString = function () { return "[object LinkSet]"; };
-
-// 27.1.
 function CreateLinkSet(loader, startingLoad) {
     //debug2("createlinkset");
     if (Type(loader) !== OBJECT) return newTypeError( "CreateLinkSet: loader has to be an object");
@@ -18687,8 +18025,6 @@ function CreateLinkSet(loader, startingLoad) {
     AddLoadToLinkSet(linkSet, startingLoad);
     return NormalCompletion(linkSet);
 }
-
-// 27.1.
 function AddLoadToLinkSet(linkSet, load) {
     //debug2("add load to linkset");
     Assert(load.Status === "loading" || load.Status === "loaded", "load.Status is either loading or loaded.");
@@ -18709,7 +18045,6 @@ function AddLoadToLinkSet(linkSet, load) {
         }
     }
 }
-// 27.1.
 function UpdateLinkSetOnLoad(linkSet, load) {
     //debug2("updatelinksetonload");
     var loads = linkSet.Loads;
@@ -18729,8 +18064,6 @@ function UpdateLinkSetOnLoad(linkSet, load) {
     Assert(!isAbrupt(result), "linkSet.resolve had to terminate normally");
     return result;
 }
-
-// 27.1.
 function LinkSetFailed(linkSet, exc) {
     //debug2("linksetfailed");
     var loader = linkSet.Loader;
@@ -18748,8 +18081,6 @@ function LinkSetFailed(linkSet, exc) {
     Assert(!isAbrupt(result), "linkSet.reject had to terminate normally");
     return NormalCompletion(result);
 }
-
-// 27.1.    USING EXPENSIVE SPLICES to EMPTY the array (and .indexOf Arrays )
 function FinishLoad(loader, load) {
     //debug2("finishload");
     var name = load.Name;
@@ -18770,16 +18101,6 @@ function FinishLoad(loader, load) {
     }
     load.LinkSets.splice(0, load.linkSets.length);
 }
-// 29.1.
-
-
-
-/*
-
- this one is still incomplete.
-
- */
-
 function LinkageGroups(start) {
     // 1.
     Assert(Array.isArray(start), "start has to be a list of LinkSet Records");
@@ -18826,14 +18147,10 @@ function LinkageGroups(start) {
     return groups;
 
 }
-
 function interleaveLists(list1, list2) {
     // temp. doing nothing
     return list1.concat(list2);
 }
-
-
-// 28.1.
 function BuildLinkageGroups(load, declarativeGroups, dynamicGroups, visited) {
     if (hasRecordInList(visited, "Name", load.Name)) return NormalCompletion(undefined);
     visited.push(load);
@@ -18850,7 +18167,6 @@ function BuildLinkageGroups(load, declarativeGroups, dynamicGroups, visited) {
     group.push(load);
     return NormalCompletion(undefined);
 }
-// 28.1.
 function Link(start, loader) {
     var groups = LinkageGroups(start);
     for (var i = 0; i < groups.length; i++) {
@@ -18862,7 +18178,6 @@ function Link(start, loader) {
         }
     }
 }
-// 28.1
 function LinkImports(M) {
     var envRec = getInternalSlot(M, SLOTS.ENVIRONMENT);
     var defs = getInternalSlot(M, "ImportDefinitions");
@@ -18885,7 +18200,6 @@ function LinkImports(M) {
         }
     }
 }
-// 31.1.
 function ResolveExportEntries(M, visited) {
     var exportDefs = getInternalSlot(M, "ExportDefinitions");
     if (exportDefs != undefined) return exportDefs;
@@ -18924,7 +18238,6 @@ function ResolveExportEntries(M, visited) {
     setInteranlSlot(M, "ExportDefinitions", defs);
     return defs;
 }
-// 28.1.
 function ResolveExports(M) {
     //debug2("resolve exports");
     var exportDefinitions = getInternalSlot(M, "ExportDefinitions");
@@ -18933,8 +18246,6 @@ function ResolveExports(M) {
         ResolveExport(M, def.exportName, []);
     }
 }
-
-// 29.1
 function ResolveExport(M, exportName, visited) {
     //debug2("resolve export");
     var exports = getInternalSlot(M,"Exports");
@@ -18985,8 +18296,6 @@ function ResolveExport(M, exportName, visited) {
     var binding = ResolveExport(def.Module, def.ImportName);
     return binding;
 }
-
-// 28.1.
 function ResolveImportEntries(M) {
     var entries = getInternalSlot(M, "ImportEntries");
     var defs = [];
@@ -18999,9 +18308,6 @@ function ResolveImportEntries(M) {
     }
     return defs;
 }
-
-
-// 28.1.
 function LinkDynamicModules(loads, loader) {
     for (var i = 0; i < loads.length; i++) {
         var load = loads[i];
@@ -19018,10 +18324,6 @@ function LinkDynamicModules(loads, loader) {
         if (isAbrupt(r=ifAbrupt(r))) return r;
     }
 }
-
-
-
-
 function LinkDeclarativeModules(loads, loader) {
     var unlinked = [];
     for (var i = 0, j = loads.length; i < j; i++) {
@@ -19078,9 +18380,6 @@ function LinkDeclarativeModules(loads, loader) {
         ResolveExports(pair.Module);
     }
 }
-
-
-// 29.1
 function EvaluateLoadedModule() {
     var EvaluateLoadedModule_Call = function (thisArg, argList) {
         var F = thisArg;
@@ -19096,8 +18395,6 @@ function EvaluateLoadedModule() {
     setInternalSlot(F, SLOTS.CALL, EvaluateLoadedModule_Call);
     return F;
 }
-
-// 29.1.
 function EnsureEvaluated(mod, seen, loader) {
     seen.push(mod);
     var deps = mod.Dependencies;
@@ -19124,29 +18421,22 @@ function EnsureEvaluated(mod, seen, loader) {
     Assert(stack.pop() === initContext, "EnsureEvaluated: The right context could not be popped off the stack.");
     return r;
 }
-
-
-
 var ReturnUndefined_Call = function (thisArg, argList) {
     return NormalCompletion(undefined);
 };
-
 var ConstantFunction_Call = function (thisArg, argList) {
     return getInternalSlot(this, "ConstantValue");
 };
-
 function CreateConstantGetter(key, value) {
     var getter = CreateBuiltinFunction(getRealm(), ConstantFunction_Call, 0, "get " + key);
     setInternalSlot(getter, "ConstantValue", value);
     return getter;
 }
-
 function ReturnUndefined() {
     var F = OrdinaryFunction();
     setInternalSlot(F, SLOTS.CALL, ReturnUndefined_Call);
     return F;
 }
-
 function IterableToList(iterable) {
     //debug2("iterable2list");
     //var A = ArrayCreate();
@@ -19159,16 +18449,12 @@ function IterableToList(iterable) {
     }
     return A;
 }
-
-// Seite 21 von 43
-
 function GetOption(options, name) {
     //debug2("get options");
     if (options == undefined) return undefined;
     if (Type(options) !== OBJECT) return newTypeError( "options is not an object");
     return Get(options, name);
 }
-
 function OrdinaryModule() {
     //debug2("ordinarymodule");
     var mod = ObjectCreate(null, {
@@ -19199,11 +18485,6 @@ function Module(obj) {
     callInternalSlot("PreventExtensions", mod, mod, []);
     return mod;
 }
-
-
-/************************* unupdated end ****/
-
-
 var LoaderConstructor_Call = function (thisArg, argList) {
     var options = argList[0];
     var loader = thisArg;
@@ -19257,19 +18538,14 @@ var LoaderConstructor_Call = function (thisArg, argList) {
     setInternalSlot(loader, SLOTS.LOADERRECORD, loaderRecord);
     return NormalCompletion(loader);
 };
-
 var LoaderConstructor_Construct = function (argList) {
     return Construct(this, argList);
 };
-
-// 31.1.
 var LoaderConstructor_$$create = function (thisArg, argList) {
     var F = thisArg;
     var loader = OrdinaryCreateFromConstructor(F, INTRINSICS.LOADERPROTOTYPE, [ SLOTS.LOADERRECORD ]);
     return loader;
 };
-
-// 31.1.
 var LoaderPrototype_get_realm = function (thisArg, argList) {
     var loader = thisArg;
     if (Type(loader) !== OBJECT || !hasInternalSlot(loader, SLOTS.REALM)) {
@@ -19279,8 +18555,6 @@ var LoaderPrototype_get_realm = function (thisArg, argList) {
     var realm = loaderRecord.Realm;
     return NormalCompletion(realm);
 };
-
-// 31.1.
 var LoaderPrototype_get_global = function (thisArg, argList) {
     var loader = thisArg;
     if (Type(loader) !== OBJECT || !hasInternalSlot(loader, SLOTS.REALM)) {
@@ -19291,23 +18565,18 @@ var LoaderPrototype_get_global = function (thisArg, argList) {
     var global = realm.globalThis;
     return NormalCompletion(global);
 };
-
-// 31.1.
 var LoaderPrototype_entries = function (thisArg, argList) {
     var loader = thisLoader(thisArg);
     return CreateLoaderIterator(loader, "key+value");
 };
-
 var LoaderPrototype_values = function (thisArg, argList) {
     var loader = thisLoader(thisArg);
     return CreateLoaderIterator(loader, "value");
 };
-
 var LoaderPrototype_keys = function (thisArg, argList) {
     var loader = thisLoader(thisArg);
     return CreateLoaderIterator(loader, "key");
 };
-// 31.1.
 var LoaderPrototype_define = function (thisArg, argList) {
     //debug2("loaderprotodefine");
     var name = argList[0];
@@ -19329,8 +18598,6 @@ var LoaderPrototype_define = function (thisArg, argList) {
     p = PromiseThen(p, G);
     return p;
 };
-
-// 31.1.
 var LoaderPrototype_load = function (thisArg, argList) {
     //debug2("loaderprotoload");
     var name = argList[0];
@@ -19344,8 +18611,6 @@ var LoaderPrototype_load = function (thisArg, argList) {
     p = PromiseThen(p, F);
     return p;
 };
-
-// 31.1.
 var LoaderPrototype_module = function (thisArg, argList) {
     //debug2("loaderprotomodule");
     var source = argList[0];
@@ -19366,8 +18631,6 @@ var LoaderPrototype_module = function (thisArg, argList) {
     ProceedToTranslate(loader, load, sourcePromise);
     return NormalCompletion(p);
 };
-
-// 31.1.
 var LoaderPrototype_import = function (thisArg, argList) {
     //debug2("loaderprototypeimport");
     var name = argList[0];
@@ -19382,8 +18645,6 @@ var LoaderPrototype_import = function (thisArg, argList) {
     var p = PromiseThen(p, F);
     return p;
 };
-
-// 31.1.
 var LoaderPrototype_eval = function (thisArg, argList) {
     //debug2("loaderprototypeeval");
     var source = argList[0];
@@ -19392,8 +18653,6 @@ var LoaderPrototype_eval = function (thisArg, argList) {
     var loaderRecord = getInternalSlot(loader, SLOTS.LOADERRECORD);
     return IndirectEval(loaderRecord.Realm, source);
 };
-
-// 31.1.
 var LoaderPrototype_get = function (thisArg, argList) {
     //debug2("loaderprototypeget");
     var loader = thisLoader(thisArg);
@@ -19413,7 +18672,6 @@ var LoaderPrototype_get = function (thisArg, argList) {
     }
     return NormalCompletion(undefined);
 };
-// 31.1.
 var LoaderPrototype_has = function (thisArg, argList) {
     //debug2("loaderprototypehas");
     var loader = thisLoader(thisArg);
@@ -19435,7 +18693,6 @@ var LoaderPrototype_has = function (thisArg, argList) {
     return NormalCompletion(false);
 
 };
-// 31.1.
 var LoaderPrototype_set = function (thisArg, argList) {
     //debug2("loaderprototypeset");
     var name = argList[0];
@@ -19456,7 +18713,6 @@ var LoaderPrototype_set = function (thisArg, argList) {
     loaderRecord.Modules.push(p);
     return NormalCompletion(loader);
 };
-// 31.1.
 var LoaderPrototype_delete = function (thisArg, argList) {
     var name = argList[0];
     var loader = thisLoader(thisArg);
@@ -19498,20 +18754,16 @@ var LoaderPrototype_translate = function (thisArg, argList) {
     if (isAbrupt(r=ifAbrupt(r))) return r;
     return NormalCompletion(r);
 };
-
 var LoaderPrototype_instantiate = function (thisArg, argList) {
     var loadRequest = argList[0];
     return NormalCompletion(undefined);
 };
-
 function CreateLinkedModuleInstance (loader) {
     var mod = OrdinaryModule();
 //    var lr = getInternalSlot(loader, SLOTS.LOADERRECORD);
 //    lr.Modules.push({ Name: name, Module: mod });
     return mod;
 }
-
-// 31.1.
 var LoaderPrototype_newModule = function(thisArg, argList) {
     var obj = argList[0];
     if (Type(obj) !== OBJECT) return newTypeError( "newModule: obj is not an object");
@@ -19535,12 +18787,7 @@ var LoaderPrototype_newModule = function(thisArg, argList) {
     callInternalSlot("PreventExtensions", mod);
     return NormalCompletion(mod);
 };
-
 var LoaderPrototype_$$iterator = LoaderPrototype_entries;
-
-/**
- * Created by root on 15.05.14.
- */
 var EvalFunction_call = function (thisArg, argList) {
     var input, strict, direct, strictCaller, evalRealm, directCallToEval,
         ctx, value, result, script, evalCxt, LexEnv, VarEnv, strictVarEnv,
@@ -19586,25 +18833,15 @@ var EvalFunction_call = function (thisArg, argList) {
     getStack().pop();
     return result;
 };
-/**
- * Created by root on 31.03.14.
- */
-
 function NewModuleEnvironment(global) {
     return DeclarativeEnvironment(global);
 }
-
-/**
- * Created by root on 07.04.14.
- */
-
 function ModuleExoticObject (environment, exports) {
     var m = Object.create(ModuleExoticObject.prototype);
     setInternalSlot(m, "ModuleEnvironment", environment);
     setInternalSlot(m, "Exports", exports);
     return m;
 }
-
 ModuleExoticObject.prototype = {
     constructor: "ModuleExoticObject",
     toString: function () { return "[ModuleExoticObject]"; },
@@ -19659,7 +18896,6 @@ ModuleExoticObject.prototype = {
     }
 };
 addMissingProperties(ModuleExoticObject.prototype, OrdinaryObject.prototype);
-
 function ModuleObjectCreate(environment, exports) {
     Assert(environment.Bindings, "environment has to be a declarative record");
     Assert(Array.isArray(exports), "exports has to be a list of string values");
@@ -19669,12 +18905,9 @@ function ModuleObjectCreate(environment, exports) {
     var m = ModuleExoticObject(environment, exports);
     return m;
 }
-
 exports.ModuleObjectCreate = ModuleObjectCreate;
 exports.ModuleExoticObject = ModuleExoticObject;
 exports.NewModuleEnvironment = NewModuleEnvironment;
-
-
 function List() {
     var list = Object.create(List.prototype);
     var sentinel = { next: undefined, prev: undefined, value: undefined };
@@ -19772,18 +19005,14 @@ List.prototype.pop = List.prototype.removeLast;
 List.prototype.shift = List.prototype.removeFirst;
 List.prototype.unshift = List.prototype.insertFirst;
 
-
 var tables = require("tables");
 var LineTerminators = tables.LineTerminators;
-
 exports.RegExpCreate = RegExpCreate;
-
 function RegExpCreate(P, F) {
     var obj = RegExpAllocate(getIntrinsic(INTRINSICS.REGEXP));
     if (isAbrupt(obj=ifAbrupt(obj))) return obj;
     return RegExpInitialize(obj, P, F);
 }
-
 function EscapeRegExpPattern(P, F) {
     var S = "";
     for (var i = 0, j = P.length; i < j; i++) {
@@ -19794,7 +19023,6 @@ function EscapeRegExpPattern(P, F) {
     }
     return S;
 }
-
 function RegExpInitialize(obj, pattern, flags) {
 
     var P, F, BMP;
@@ -19816,7 +19044,6 @@ function RegExpInitialize(obj, pattern, flags) {
     if (isAbrupt(putStatus=ifAbrupt(putStatus))) return putStatus;
     return NormalCompletion(obj);
 }
-
 function RegExpAllocate(constructor) {
 
     var obj = OrdinaryCreateFromConstructor(constructor, INTRINSICS.REGEXPPROTOTYPE,[
@@ -19834,7 +19061,6 @@ function RegExpAllocate(constructor) {
     if (isAbrupt(status = ifAbrupt(status))) return status;
     return NormalCompletion(obj);
 }
-
 function RegExpExec (R, S, ignore) {
     Assert(getInternalSlot(R, SLOTS.REGEXPMATCHER) != undefined, "RegExpExec: R must be a initialized RegExp instance");
     Assert(Type(S) === STRING);
@@ -19914,15 +19140,7 @@ function RegExpExec (R, S, ignore) {
     }
     return NormalCompletion(A);
 }
-
-/*
-
-
-
-*/
-
 var FAILURE = {};
-
 function createRegExpMatcher(pattern) {
     var patternMatcher; // Evaluate(Pattern::Disjunction) returns the [[RegExpMatcher]](x,c) i guess
     var evaluator = function() {
@@ -19960,7 +19178,6 @@ function createRegExpMatcher(pattern) {
     evaluator.patternMatcher = patternMatcher;
     return evaluator;
 }
-
 function Pattern (node) {
     // start at Pattern :: Disjunction
     var disjunction = node.disjunction;
@@ -19980,7 +19197,6 @@ function Pattern (node) {
         // temp disabled
     };
 }
-
 function Disjunction (node) {
     var alternative = node.alternative;
     var disjunction = node.disjunction;
@@ -20004,7 +19220,6 @@ function Disjunction (node) {
     }
     return FAILURE;
 }
-
 function Alternative(node) {
     if (!node) return FAILURE;
     var alternative = node.atom;
@@ -20012,7 +19227,6 @@ function Alternative(node) {
     // abc ist alternative alternative term.. oder [x,y,]
     if (!atom) return FAILURE;
 }
-
 function Term (node) {
     if (!node) return FAILURE;
     if (node.assertion) {
@@ -20020,7 +19234,6 @@ function Term (node) {
     }
     return FAILURE;
 }
-
 function Assertion(node) {
     return function m (x, c) {
         if (node == "^") {
@@ -20037,7 +19250,6 @@ function Assertion(node) {
         return c.call(this, x);
     };
 }
-
 var RegExp_$$create = function (thisArg, argList) {
     return RegExpAllocate(thisArg);
 };
@@ -20094,7 +19306,6 @@ var RegExpPrototype_get_sticky = function (thisArg, argList) {
     var flags = getInternalSlot(R, SLOTS.ORIGINALFLAGS);
     return NormalCompletion(flags.indexOf("y") > -1);
 };
-
 var RegExpPrototype_get_unicode = function (thisArg, argList) {
     var R = thisArg;
     if (Type(R) !== OBJECT) return newTypeError( "this value is no object");
@@ -20102,7 +19313,6 @@ var RegExpPrototype_get_unicode = function (thisArg, argList) {
     var flags = getInternalSlot(R, SLOTS.ORIGINALFLAGS);
     return NormalCompletion(flags.indexOf("u") > -1);
 };
-
 var RegExpPrototype_get_source = function (thisArg, argList) {
     var R = thisArg;
     if (Type(R) !== OBJECT) return newTypeError( "this value is no object");
@@ -20113,8 +19323,6 @@ var RegExpPrototype_get_source = function (thisArg, argList) {
     if (source === undefined || flags === undefined) return newTypeError( "source and flags may not be undefined");
     return EscapeRegExpPattern(source, flags);
 };
-
-
 var RegExpPrototype_exec = function (thisArg, argList) {
     var R = thisArg;
     var string = argList[0];
@@ -20126,7 +19334,6 @@ var RegExpPrototype_exec = function (thisArg, argList) {
     if (isAbrupt(S=ifAbrupt(S))) return S;
     return RegExpExec(R,S);
 };
-
 var RegExpPrototype_search = function (thisArg, argList) {
     var rx = thisArg;
     var S = argList[0];
@@ -20184,7 +19391,6 @@ var RegExpPrototype_match = function (thisArg, argList) {
         return NormalCompletion(A);
     }
 };
-
 var RegExpPrototype_test = function (thisArg, argList) {
     var R = thisArg;
     var string = argList[0];
@@ -20193,8 +19399,6 @@ var RegExpPrototype_test = function (thisArg, argList) {
     if (isAbrupt(match=ifAbrupt(match))) return match;
     return NormalCompletion(match !== null);
 };
-
-
 var RegExpPrototype_compile = function (thisArg, argList) {
 
 
@@ -20203,7 +19407,6 @@ var RegExpPrototype_compile = function (thisArg, argList) {
 var RegExpPrototype_split = function (thisArg, argList) {
 
 };
-
 var RegExpPrototype_replace = function (thisArg, argList) {
     var string = argList[0];
     var replaceValue = argList[1];
@@ -20296,8 +19499,6 @@ var RegExpPrototype_replace = function (thisArg, argList) {
 
     return NormalCompletion( accumulatedResult + S.substr(nextSrcPosition, S.length - nextSrcPosition) );
 };
-
-
 var RegExpPrototype_toString = function (thisArg, argList) {
     var R = thisArg;
     if (Type(R) !== OBJECT) return newTypeError( "this value is not an object");
@@ -20327,11 +19528,6 @@ var RegExpPrototype_toString = function (thisArg, argList) {
     if (sticky) result += "y";
     return NormalCompletion(result);
 };
-
-
-    // Structured Clone Algorithms
-    // strawman for es7
-    // https://github.com/dslomov-chromium/ecmascript-structured-clone
 function StructuredClone (input, transferList, targetRealm) {
     var memory = []; //mapping
     for (var i = 0, j = transferList.length; i< j; i++) {
@@ -20355,7 +19551,6 @@ function StructuredClone (input, transferList, targetRealm) {
     }
     return NormalCompletion(clone);
 }
-
 function InternalStructuredClone (input, memory, targetRealm) {
     var output;
     for (var i = 0, j = memory.length; i < j; i++) {
@@ -20436,15 +19631,12 @@ function InternalStructuredClone (input, memory, targetRealm) {
     }
     return NormalCompletion(output);
 }
-
-// object.[[Transfer]](targetRealm)
 var Transfer_Call = function (thisArg, argList) {
     var targetRealm = argList[0];
     var object = thisArg;
     if (hasInternalSlot(object, SLOTS.ARRAYBUFFERDATA))
         return CopyArrayBufferToRealm(object, targetRealm);
 };
-
 function CopyArrayBufferToRealm(arrayBuffer, targetRealm) {
     var ArrayBufferConstructor = getIntrinsicFromRealm(INTRINSICS.ARRAYBUFFER, targetRealm);
     var length = getInternalSlot(arrayBuffer, SLOTS.ARRAYBUFFERBYTELENGTH);
@@ -20456,8 +19648,6 @@ function CopyArrayBufferToRealm(arrayBuffer, targetRealm) {
     if (isAbrupt(copyStatus)) return copyStatus;
     return NormalCompletion(result);
 }
-
-// object.[[OnSuccessfulTransfer]](transferResult, targetRealm);
 var OnSuccessfulTransfer_Call = function (thisArg, argList) {
     var transferResult = argList[0];
     var targetRealm = argList[1];
@@ -20468,27 +19658,7 @@ var OnSuccessfulTransfer_Call = function (thisArg, argList) {
         setInternalSlot(object, SLOTS.TRANSFER, "neutered");
     }
 };
-
-
-/* Missing: MessagePort and postMessage and open und close */
-
-/*
- DataCloneError error object
- Indicates failure of the structured clone algorithm.
- {Rationale: typically, ECMAScript operations throw RangeError for similar failures, but we need to preserve DOM compatibnility}
- */
-
-/**
- * Created by root on 04.04.14.
- */
-/*
- Specification:
- https://github.com/dslomov-chromium/typed-objects-es7
- still have to read it
- */
-
 var Nil = null;
-
     function TypeDescriptorExoticObject() {
         var obj = Object.create(TypeDescriptorExoticObject.prototype);
         setInternalSlot(obj, SLOTS.STRUCTURE, undefined); // structure value
@@ -20498,14 +19668,11 @@ var Nil = null;
         setInternalSlot(obj, SLOTS.OPAQUEDESCRIPTOR, undefined); // undef or typedesc
         return obj;
     }
-
     TypeDescriptorExoticObject.prototype = {
         constructor: TypeDescriptorExoticObject,
         toString: function () { return "[object TypeDescriptorExoticObject]" }
     };
     addMissingProperties(TypeDescriptorExoticObject.prototype, OrdinaryObject.prototype);
-
-
     function TypeExoticObject() {
         var obj = Object.create(TypeExoticObject.prototype);
         setInternalSlot(obj, SLOTS.TYPEDESCRIPTOR, undefined);
@@ -20513,7 +19680,6 @@ var Nil = null;
         // assert len(dim) == rank of typedesc
         return obj;
     }
-
     TypeExoticObject.prototype = {
         constructor: TypeDescriptorExoticObject,
         toString: function () { return "[object TypeExoticObject]"; },
@@ -20583,11 +19749,6 @@ var Nil = null;
 
     };
     addMissingProperties(TypeExoticObject.prototype, OrdinaryObject.prototype);
-
-/*
- Possibly subject of wrong impl.
- */
-
 var int8 = "int8",
     uint8 = "uint8",
     int16 = "int16",
@@ -20599,7 +19760,6 @@ var int8 = "int8",
     any = "any",
     string = "string",
     object = "object";
-
 var GroundStructures = {
         __proto__:null,
         "uint8": { "Structure": uint8, "Opacity": false },
@@ -20614,8 +19774,6 @@ var GroundStructures = {
         "string": { "Structure": string, "Opacity": true},
         "object": { "Structure": object, "Opacity": true}
     };
-
-
 var groundTypes = Object.create(null);
 groundTypes.int8 = int8;
 groundTypes.uint8 = uint8;
@@ -20625,7 +19783,6 @@ groundTypes.int32 = int32;
 groundTypes.uint32 = uint32;
 groundTypes.float32 = float32;
 groundTypes.float64 = float64;
-
 function AlignTo(value, alignment) {
     var r = (value % alignment);
     if (r != 0) return value + alignment - r;
@@ -20637,7 +19794,6 @@ function IsTypeObject(O) {
     return hasInternalSlot(O, SLOTS.VIEWEDARRAYBUFFER);
 
 }
-
 function isGroundStructure(S) {
     switch(S) {
         case int8:
@@ -20653,7 +19809,6 @@ function isGroundStructure(S) {
     }
 
 }
-
 function FieldRecord(fieldName, byteOffset, currentOffset, fieldType) {
     if (arguments.length === 2) {
         return { name: fieldName, type: byteOffset };
@@ -20661,7 +19816,6 @@ function FieldRecord(fieldName, byteOffset, currentOffset, fieldType) {
 
     }
 }
-
 function Alignment(typeDescriptor) {
    var S = getInternalSlot(typeDescriptor, SLOTS.STRUCTURE);
    if (isGroundStructure(S)) return Size(S);
@@ -20711,24 +19865,18 @@ function Initialize(typeDescriptor, dimensions, buffer, offset) {
 function ConvertAndCopyTo(typeDescriptor, dimensions, buffer, offset, value) {
 
 }
-
 function Reify(typeDescriptor, dimensions, buffer, offset, opacity) {
 
 }
-
 function Cons(car, cdr) {
    // wiki says from lisp: (cons 42 (cons 69 (cons 613 nil)))
 }
-
 function SameDimensions(d1, d2) {
     if (d1 === Nil && d2 === Nil) return true;
     // if (d1 = Cons(1, remainingDimensions1)
     // if (d2 = Cons(1, remainingDimensions2)
     // SameDimensions(remainingDimensions1, remainingDimensions2)
 }
-
-
-
 exports.Nil = Nil;
 exports.TypeDescriptorExoticObject = TypeDescriptorExoticObject;
 exports.TypeExoticObject = TypeExoticObject;
@@ -20761,13 +19909,6 @@ exports.int32 = int32;
 exports.uint32 = uint32;
 exports.float32 = float32;
 exports.float64 = float64;
-
-
-
-
-/**
- * Created by root on 04.04.14.
- */
 var TypePrototypePrototype_get = function (thisArg, argList) {
     var O = thisArg;
     if (!hasInternalSlot(O, SLOTS.TYPEDESCRIPTOR)) return newTypeError( "has no type descriptor");
@@ -20845,13 +19986,6 @@ var StructTypeConstructor_$$create = function (thisArg, argList) {
     if (isAbrupt(proto = ifAbrupt(proto))) return proto;
     return ObjectCreate(proto);
 };
-
-// The above must be moved out of intrinsics/ into api for more speed creating realms.
-// that all "objects" gonna be refactored for typed memory is some other topic.
-
-/**
- * Created by root on 15.05.14.
- */
 function reflect_parse_transformASTtoOrdinaries(node, options) {
     var success;
     var newNode;
@@ -21066,7 +20200,6 @@ var ReflectObject_createSelfHostingFunction = function(thisArg, argList) {
 /**
  * Created by root on 15.05.14.
  */
-
 var PromiseConstructor_call = function (thisArg, argList) {
     var executor = argList[0];
     var promise = thisArg;
@@ -21229,11 +20362,6 @@ var PromisePrototype_catch = function (thisArg, argList) {
     var onRejected = argList[0];
     return Invoke(thisArg, "then", [undefined, onRejected]);
 };
-
-/*
- move into lib/api/promise.js
- */
-
 function PromiseNew (executor) {
     var promise = AllocatePromise(getIntrinsic(INTRINSICS.PROMISE));
     return InitializePromise(promise, executor);
@@ -21525,12 +20653,6 @@ function PromiseCatch(promise, rejectedAction) {
 }
 function PromiseThen(promise, resolvedAction, rejectedAction) {
 }
-
-
-/**
- * Created by root on 15.05.14.
- */
-
 var UniqueMapAndSetES5Counter = 0;
 function __checkInternalUniqueKey(value, writeIfUndefined) {
     var internalKey;
@@ -21550,8 +20672,6 @@ function __checkInternalUniqueKey(value, writeIfUndefined) {
     if (value === null) internalKey = internalKey + "" + internalKey;
     return internalKey;
 }
-
-
 var MapConstructor_call = function Call(thisArg, argList) {
 
     var iterable = argList[0];
@@ -21600,13 +20720,11 @@ var MapConstructor_call = function Call(thisArg, argList) {
         if (isAbrupt(status)) return status;
     }
 };
-
 var MapConstructor_construct = function (argList) {
     var F = this;
     var args = argList;
     return OrdinaryConstruct(F, args);
 };
-
 var MapPrototype_has = function has(thisArg, argList) {
 
     var same;
@@ -21629,7 +20747,6 @@ var MapPrototype_has = function has(thisArg, argList) {
     }
     return NormalCompletion(false);
 };
-
 var MapPrototype_get = function (thisArg, argList) {
     var key = argList[0];
     var M = thisArg;
@@ -21649,7 +20766,6 @@ var MapPrototype_get = function (thisArg, argList) {
     }
     return NormalCompletion(undefined);
 };
-
 var MapPrototype_set = function (thisArg, argList) {
     var key = argList[0];
     var value = argList[1];
@@ -21674,7 +20790,6 @@ var MapPrototype_set = function (thisArg, argList) {
     }
     return NormalCompletion(M);
 };
-
 var MapPrototype_delete = function (thisArg, argList) {
     var key = argList[0];
     var M = thisArg;
@@ -21699,26 +20814,20 @@ var MapPrototype_delete = function (thisArg, argList) {
 
     return NormalCompletion(false);
 };
-
 var MapPrototype_keys = function (thisArg, argList) {
     var O = thisArg;
     return CreateMapIterator(O, "key");
 };
-
 var MapPrototype_values = function (thisArg, argList) {
     var O = thisArg;
     return CreateMapIterator(O, "value");
 };
-
 var MapPrototype_entries = function (thisArg, argList) {
     var O = thisArg;
     return CreateMapIterator(O, "key+value");
 };
-
-
 var MapPrototype_forEach = function (thisArg, argList) {};
 var MapPrototype_clear = function (thisArg, argList) {};
-
 var MapConstructor_$$create = function $$create(thisArg, argList) {
     var F = thisArg;
     return OrdinaryCreateFromConstructor(F, INTRINSICS.MAPPROTOTYPE, [
@@ -21726,11 +20835,6 @@ var MapConstructor_$$create = function $$create(thisArg, argList) {
         SLOTS.MAPCOMPARATOR
     ]);
 };
-
-/**
- * Created by root on 15.05.14.
- */
-
 function CreateMapIterator(map, kind) {
     var M = ToObject(map);
     if (isAbrupt(M = ifAbrupt(M))) return M;
@@ -21747,11 +20851,9 @@ function CreateMapIterator(map, kind) {
     setInternalSlot(iterator, SLOTS.MAPITERATIONKIND, kind);
     return iterator;
 }
-
 var MapIteratorPrototype_$$iterator = function $$iterator(thisArg, argList) {
     return thisArg;
 };
-
 var MapIteratorPrototype_next = function next(thisArg, argList) {
     var O = thisArg;
     if (Type(O) !== OBJECT) return newTypeError( "the this value is not an object");
@@ -21783,12 +20885,6 @@ var MapIteratorPrototype_next = function next(thisArg, argList) {
     }
     return CreateItrResultObject(undefined, true);
 };
-
-
-/**
- * Created by root on 15.05.14.
- */
-
 var SetConstructor_call = function Call(thisArg, argList) {
     var iterable = argList[0];
     var comparator = argList[1];
@@ -21836,7 +20932,6 @@ var SetConstructor_call = function Call(thisArg, argList) {
 var SetConstructor_construct = function (argList) {
     return OrdinaryConstruct(this, argList);
 };
-
 var SetConstructor_$$create = function $$create(thisArg, argList) {
     var F = thisArg;
     return OrdinaryCreateFromConstructor(F, INTRINSICS.SETPROTOTYPE, [
@@ -21845,7 +20940,6 @@ var SetConstructor_$$create = function $$create(thisArg, argList) {
     ]);
 };
 var SetPrototype_clear = function clear(thisArg, argList) {};
-
 var SetPrototype_set = function (thisArg, argList) {
     var value = argList[0];
     var S = thisArg;
@@ -21876,7 +20970,6 @@ var SetPrototype_has = function (thisArg, argList) {
     if (entries[internalKey] === value) return NormalCompletion(true);
     return NormalCompletion(false);
 };
-
 var SetPrototype_delete = function (thisArg, argList) {
     var value = argList[0];
     var S = thisArg;
@@ -21908,19 +21001,6 @@ var SetPrototype_values = function (thisArg, argList) {
 var SetPrototype_forEach = function (thisArg, argList) {
 
 };
-
-
-
-/**
- * Created by root on 15.05.14.
- */
-/**
- *
- * @param set
- * @param kind
- * @returns {*}
- * @constructor
- */
 function CreateSetIterator(set, kind) {
     var S = ToObject(set);
     if (isAbrupt(S = ifAbrupt(S))) return S;
@@ -21947,9 +21027,6 @@ function CreateSetIterator(set, kind) {
     setInternalSlot(iterator, SLOTS.SETITERATIONKIND, kind);
     return iterator;
 }
-
-
-
 var SetIteratorPrototype_next = function (thisArg, argList) {
     var O = thisArg;
     if (Type(O) !== OBJECT) return newTypeError( "the this value is not an object");
@@ -21976,14 +21053,9 @@ var SetIteratorPrototype_next = function (thisArg, argList) {
     }
     return CreateItrResultObject(undefined, true);
 };
-
 var SetIteratorPrototype_$$iterator = function $$iterator(thisArg, argList) {
     return thisArg;
 };
-
-/**
- * Created by root on 16.05.14.
- */
 var SetTimeoutFunction_call = function (thisArg, argList) {
     var func = argList[0];
     var timeout = argList[1] | 0;
@@ -21997,11 +21069,6 @@ var SetTimeoutFunction_call = function (thisArg, argList) {
     getEventQueue().push(task);
     return task;
 };
-/**
- * Created by root on 16.05.14.
- */
-
-// 31.1.
 function CreateLoaderIterator(loader, kind) {
     var loaderIterator = ObjectCreate(LoaderIteratorPrototype, [
         SLOTS.LOADER,
@@ -22014,8 +21081,6 @@ function CreateLoaderIterator(loader, kind) {
     return loaderIterator;
 }
 exports.CreateLoaderIterator = CreateLoaderIterator;
-
-// 31.1.
 var LoaderIteratorPrototype_next = function next(thisArg, argList) {
     var iterator = thisArg;
     var m = getInternalSlot(iterator, SLOTS.LOADER);
@@ -22044,30 +21109,17 @@ var LoaderIteratorPrototype_next = function next(thisArg, argList) {
     setInternalSlot(iterator, SLOTS.LOADER, undefined);
     return CreateItrResultObject(undefined, true);
 };
-
-// 31.1.
 var LoaderIteratorPrototype_$$iterator = function $$iterator(thisArg, argList) {
     return thisArg;
 };
-
-/**
- * Created by root on 16.05.14.
- */
-
 var IsNaNFunction_call = function (thisArg, argList) {
     var nan = ToNumber(argList[0]);
     return nan !== nan;
 };
-
 var IsFiniteFunction_call =function (thisArg, argList) {
     var number = ToNumber(argList[0]);
     return  !(number == Infinity || number == -Infinity || number != number);
 };
-
-/**
- * Created by root on 16.05.14.
- */
-
 function Str(key, holder, _state) {
     var replacer = _state.ReplaceFunction;
     var value = Get(holder, key);
@@ -22104,7 +21156,6 @@ function Str(key, holder, _state) {
     }
     return undefined;
 }
-
 function Quote(value) {
     var ch;
     var product = "\"";
@@ -22114,7 +21165,6 @@ function Quote(value) {
     }
     return product + "\"";
 }
-
 function JA(value, _state) {
     var stack = _state.stack;
     var indent = _state.indent;
@@ -22157,7 +21207,6 @@ function JA(value, _state) {
     _state.indent = stepback;
     return final;
 }
-
 function JO(value, _state) {
     var stack = _state.stack;
     var indent = _state.indent;
@@ -22212,7 +21261,6 @@ function JO(value, _state) {
     _state.indent = stepback;
     return final;
 }
-
 function Walk(holder, name, reviver) {
     var val = Get(holder, name);
     var done;
@@ -22266,8 +21314,6 @@ function Walk(holder, name, reviver) {
     }
     return callInternalSlot(SLOTS.CALL, reviver, holder, [name, val]);
 }
-
-
 var JSONObject_parse = function (thisArg, argList) {
     var text = argList[0];
     var reviver = argList[1];
@@ -22286,7 +21332,6 @@ var JSONObject_parse = function (thisArg, argList) {
     }
     return NormalCompletion(unfiltered);
 };
-
 var JSONObject_stringify = function (thisArg, argList) {
     var value = argList[0];
     var replacer = argList[1];
@@ -22353,24 +21398,12 @@ var JSONObject_stringify = function (thisArg, argList) {
     if (isAbrupt(result=ifAbrupt(result))) return result;
     return NormalCompletion(result);
 };
-
-/**
- * Created by root on 16.05.14.
- */
-
 var EscapeFunction_call = function (thisArg, argList) {
     return escape(argList[0]);
 };
-
 var UnescapeFunction_call = function (thisArg, argList) {
     return unescape(argList[0]);
 };
-
-
-/**
- * Created by root on 17.05.14.
- */
-
 var ErrorConstructor_call = function (thisArg, argList) {
     var func = this;
     var message = argList[0];
@@ -22405,11 +21438,9 @@ var ErrorConstructor_call = function (thisArg, argList) {
     setInternalSlot(O, "toString", function () { return "[object Error]"; });
     return O;
 }
-
 var ErrorConstructor_construct = function (argList) {
     return OrdinaryConstruct(this, argList);
 };
-
 var ErrorConstructor_$$create = function (thisArg, argList) {
     var F = thisArg;
     var obj = OrdinaryCreateFromConstructor(F, INTRINSICS.ERRORPROTOTYPE, [
@@ -22417,7 +21448,6 @@ var ErrorConstructor_$$create = function (thisArg, argList) {
     ]);
     return obj;
 };
-
 var ErrorPrototype_toString = function (thisArg, argList) {
     var O = thisArg;
     if (Type(O) !== OBJECT) return newTypeError(format("S_NOT_OBJECT", "Error.prototype.toString: O"));
@@ -22433,8 +21463,6 @@ var ErrorPrototype_toString = function (thisArg, argList) {
     if (msg === "") return name;
     return name + ": " + msg;
 };
-
-
 function createNativeError(nativeType, ctor, proto) {
     //var name = nativeType + "Error";
     // var intrProtoName = "%" + nativeType + "ErrorPrototype%";
@@ -22505,16 +21533,13 @@ function createNativeError(nativeType, ctor, proto) {
         writable: false
     });
 
-    LazyDefineBuiltinConstant(ctor, "length", 1);
-    LazyDefineBuiltinConstant(ctor, "prototype", proto);
-    LazyDefineBuiltinConstant(proto, "constructor", ctor);
-    LazyDefineBuiltinConstant(proto, "name", name);
-    LazyDefineBuiltinConstant(proto, "message", "");
+    NowDefineBuiltinConstant(ctor, "length", 1);
+    NowDefineBuiltinConstant(ctor, "prototype", proto);
+    NowDefineBuiltinConstant(proto, "constructor", ctor);
+    NowDefineBuiltinConstant(proto, "name", name);
+    NowDefineBuiltinConstant(proto, "message", "");
     MakeConstructor(ctor, false, proto);
 }
-/**
- * Created by root on 17.05.14.
- */
 var EmitterConstructor_call = function (thisArg, argList) {
     var O = thisArg;
     var type = Type(O);
@@ -22535,19 +21560,16 @@ var EmitterConstructor_call = function (thisArg, argList) {
     }
     return O;
 };
-
 var EmitterConstructor_construct = function (argList) {
     var F = this;
     var args = argList;
     return OrdinaryConstruct(F, args);
 };
-
 var EmitterConstructor_$$create = function (thisArg, argList) {
     var F = EmitterConstructor;
     var proto = GetPrototypeFromConstructor(F, INTRINSICS.EMITTERPROTOTYPE);
     return ObjectCreate(proto, [SLOTS.EVENTLISTENERS]);
 };
-
 var EmitterPrototype_on = function (thisArg, argList) {
     var E = thisArg,
         listeners, callback, event;
@@ -22669,7 +21691,6 @@ var MessagePortPrototype_open = function (thisArg, argList) {
 };
 var MessagePortPrototype_postMessage = function (thisArg, argList) {
 };
-
 /**
  * Created by root on 17.05.14.
  */
@@ -22687,7 +21708,6 @@ var PrintFunction_call = function (thisArg, argList) {
     else if (hasPrint) print(str);
     return NormalCompletion(undefined);
 };
-
 var DebugFunction_call = function (thisArg, argList)  {
 
     var TAB = "\t";
@@ -22802,9 +21822,6 @@ var RequestFunction_call = function (thisArg, argList) {
 };
 
 
-/**
- * Created by root on 17.05.14.
- */
 var ConsoleObject_log = function log(thisArg, argList) {
     if (hasConsole) console.log.apply(console, argList);
 };
@@ -22839,13 +21856,6 @@ var ConsoleObject_html = function html(thisArg, argList) {
     element.innerHTML += html;
     return NormalCompletion(undefined);
 };
-/**
- * Created by root on 17.05.14.
- */
-
-
-
-
 var RealmPrototype_get_global = function (thisArg, argList) {
     var RealmConstructor = thisArg;
     if (Type(RealmConstructor) !== OBJECT || !hasInternalSlot(RealmConstructor, SLOTS.REALM)) return newTypeError(format("S_HAS_NO_S", "thisValue", "[[Realm]]"));
@@ -22853,14 +21863,12 @@ var RealmPrototype_get_global = function (thisArg, argList) {
     var globalThis = realm.globalThis;
     return globalThis;
 };
-
 var RealmPrototype_eval = function (thisArg, argList) {
     var source = argList[0];
     var RealmConstructor = thisArg;
     if (Type(RealmConstructor) !== OBJECT || !hasInternalSlot(RealmConstructor, SLOTS.REALM)) return newTypeError(format("S_HAS_NO_S", "thisValue", "[[Realm]]"));
     return IndirectEval(getInternalSlot(RealmConstructor, SLOTS.REALM), source);
 };
-
 var RealmConstructor_Call = function (thisArg, argList) {
     var RealmConstructor = thisArg;
     var options = argList[0];
@@ -22909,20 +21917,16 @@ var RealmConstructor_Call = function (thisArg, argList) {
     }
     return RealmConstructor;
 };
-
 var RealmConstructor_Construct = function (argList) {
     var F = this;
     var args = argList;
     return Construct(F, argList);
 };
-
 var RealmConstructor_$$create = function (thisArg, argList) {
     return OrdinaryCreateFromConstructor(thisArg, INTRINSICS.REALMPROTOTYPE, [
         SLOTS.REALM
     ]);
 };
-
-
 var RealmPrototype_stdlib_get = function (thisArg, argList) {
     var RealmConstructor = thisArg;
     var source = argList[0];
@@ -22962,11 +21966,7 @@ var RealmPrototype_indirectEval = function (thisArg, argList) {
     if (realm === undefined) return newTypeError(format("S_IS_UNDEFINED", "[[Realm]]"));
     return IndirectEval(realm, source);
 };
-
-
-
     var createGlobalThis, createIntrinsics;
-
     function define_intrinsic(intrinsics, intrinsicName, value) {
         var descriptor = {
             configurable: true,
@@ -23164,94 +22164,94 @@ setInternalSlot(RequestFunction, SLOTS.CALL, RequestFunction_call);
 // %Realm%
 setInternalSlot(RealmConstructor, SLOTS.CALL, RealmConstructor_Call);
 setInternalSlot(RealmConstructor, SLOTS.CONSTRUCT, RealmConstructor_Construct);
-LazyDefineProperty(RealmConstructor, $$create, CreateBuiltinFunction(realm,RealmConstructor_$$create, 0, "[Symbol.create]"));
+NowDefineProperty(RealmConstructor, $$create, CreateBuiltinFunction(realm,RealmConstructor_$$create, 0, "[Symbol.create]"));
 MakeConstructor(RealmConstructor, false, RealmPrototype);
-LazyDefineBuiltinFunction(RealmPrototype, "intrinsics", 2, RealmPrototype_intrinsics);
-LazyDefineBuiltinFunction(RealmPrototype, "indirectEval", 2, RealmPrototype_indirectEval);
-LazyDefineBuiltinFunction(RealmPrototype, "initGlobal", 2, RealmPrototype_initGlobal);
-LazyDefineAccessorFunction(RealmPrototype, "stdlib", 3, RealmPrototype_stdlib_get);
+NowDefineBuiltinFunction(RealmPrototype, "intrinsics", 2, RealmPrototype_intrinsics);
+NowDefineBuiltinFunction(RealmPrototype, "indirectEval", 2, RealmPrototype_indirectEval);
+NowDefineBuiltinFunction(RealmPrototype, "initGlobal", 2, RealmPrototype_initGlobal);
+NowDefineAccessorFunction(RealmPrototype, "stdlib", 3, RealmPrototype_stdlib_get);
 // %RealmPrototype%
-LazyDefineAccessor(RealmPrototype, "global", CreateBuiltinFunction(realm,RealmPrototype_get_global, 0, "get global"));
-LazyDefineProperty(RealmPrototype, "eval", CreateBuiltinFunction(realm,RealmPrototype_eval, 1, "eval"));
-LazyDefineProperty(RealmPrototype, $$toStringTag, "Reflect.Realm");
+NowDefineAccessor(RealmPrototype, "global", CreateBuiltinFunction(realm,RealmPrototype_get_global, 0, "get global"));
+NowDefineProperty(RealmPrototype, "eval", CreateBuiltinFunction(realm,RealmPrototype_eval, 1, "eval"));
+NowDefineProperty(RealmPrototype, $$toStringTag, "Reflect.Realm");
 setInternalSlot(LoaderConstructor, SLOTS.PROTOTYPE, FunctionPrototype);
 setInternalSlot(LoaderConstructor, SLOTS.CALL, LoaderConstructor_Call);
 setInternalSlot(LoaderConstructor, SLOTS.CONSTRUCT, LoaderConstructor_Construct);
-LazyDefineProperty(LoaderConstructor, $$create, CreateBuiltinFunction(realm,LoaderConstructor_$$create, 0, "[Symbol.create]"));
+NowDefineProperty(LoaderConstructor, $$create, CreateBuiltinFunction(realm,LoaderConstructor_$$create, 0, "[Symbol.create]"));
 MakeConstructor(LoaderConstructor, false, LoaderPrototype);
-LazyDefineProperty(LoaderPrototype, "entries", CreateBuiltinFunction(realm,LoaderPrototype_entries, 0, "entries"));
-LazyDefineProperty(LoaderPrototype, "values", CreateBuiltinFunction(realm,LoaderPrototype_values, 0, "values"));
-LazyDefineProperty(LoaderPrototype, "keys", CreateBuiltinFunction(realm,LoaderPrototype_keys, 0, "keys"));
-LazyDefineProperty(LoaderPrototype, "has", CreateBuiltinFunction(realm,LoaderPrototype_has, 0, "has"));
-LazyDefineProperty(LoaderPrototype, "get", CreateBuiltinFunction(realm,LoaderPrototype_get, 0, "get"));
-LazyDefineProperty(LoaderPrototype, "set", CreateBuiltinFunction(realm,LoaderPrototype_set, 0, "set"));
-LazyDefineProperty(LoaderPrototype, "delete", CreateBuiltinFunction(realm,LoaderPrototype_delete, 0, "delete"));
-LazyDefineProperty(LoaderPrototype, "define", CreateBuiltinFunction(realm,LoaderPrototype_define, 2, "define"));
-LazyDefineProperty(LoaderPrototype, "load", CreateBuiltinFunction(realm,LoaderPrototype_load,    1, "load"));
-LazyDefineProperty(LoaderPrototype, "module", CreateBuiltinFunction(realm,LoaderPrototype_module, 1, "module"));
-LazyDefineProperty(LoaderPrototype, "import", CreateBuiltinFunction(realm,LoaderPrototype_import, 0, "import"));
-LazyDefineProperty(LoaderPrototype, "eval", CreateBuiltinFunction(realm,LoaderPrototype_eval, 0, "eval"));
-LazyDefineProperty(LoaderPrototype, "normalize", CreateBuiltinFunction(realm,LoaderPrototype_normalize, 0, "normalize"));
-LazyDefineProperty(LoaderPrototype, "fetch", CreateBuiltinFunction(realm,LoaderPrototype_fetch, 0, "fetch"));
-LazyDefineProperty(LoaderPrototype, "locate", CreateBuiltinFunction(realm,LoaderPrototype_locate, 0, "locate"));
-LazyDefineProperty(LoaderPrototype, "translate", CreateBuiltinFunction(realm,LoaderPrototype_instantiate, 1, "translate"));
-LazyDefineProperty(LoaderPrototype, "instantiate", CreateBuiltinFunction(realm,LoaderPrototype_instantiate, 0, "instantiate"));
-LazyDefineProperty(LoaderPrototype, $$iterator, CreateBuiltinFunction(realm,LoaderPrototype_$$iterator, 0, "[Symbol.iterator]"));
-LazyDefineProperty(LoaderPrototype, $$toStringTag, SLOTS.LOADER);
-LazyDefineBuiltinFunction(LoaderPrototype, "newModule", 1, LoaderPrototype_newModule);
-LazyDefineProperty(LoaderIteratorPrototype, $$iterator, CreateBuiltinFunction(realm, LoaderIteratorPrototype_$$iterator, 0, "[Symbol.iterator]"));
-LazyDefineProperty(LoaderIteratorPrototype, "next", CreateBuiltinFunction(realm, LoaderIteratorPrototype_next, 0, "next"));
-LazyDefineProperty(LoaderIteratorPrototype, $$toStringTag, "Loader Iterator");
-LazyDefineBuiltinConstant(ConsoleObject, $$toStringTag, "Console");
-LazyDefineBuiltinFunction(ConsoleObject, "log", 1, ConsoleObject_log);
-LazyDefineBuiltinFunction(ConsoleObject, "dir", 1, ConsoleObject_dir);
-LazyDefineBuiltinFunction(ConsoleObject, "error", 1, ConsoleObject_error);
-LazyDefineBuiltinFunction(ConsoleObject, "html", 1, ConsoleObject_html);
+NowDefineProperty(LoaderPrototype, "entries", CreateBuiltinFunction(realm,LoaderPrototype_entries, 0, "entries"));
+NowDefineProperty(LoaderPrototype, "values", CreateBuiltinFunction(realm,LoaderPrototype_values, 0, "values"));
+NowDefineProperty(LoaderPrototype, "keys", CreateBuiltinFunction(realm,LoaderPrototype_keys, 0, "keys"));
+NowDefineProperty(LoaderPrototype, "has", CreateBuiltinFunction(realm,LoaderPrototype_has, 0, "has"));
+NowDefineProperty(LoaderPrototype, "get", CreateBuiltinFunction(realm,LoaderPrototype_get, 0, "get"));
+NowDefineProperty(LoaderPrototype, "set", CreateBuiltinFunction(realm,LoaderPrototype_set, 0, "set"));
+NowDefineProperty(LoaderPrototype, "delete", CreateBuiltinFunction(realm,LoaderPrototype_delete, 0, "delete"));
+NowDefineProperty(LoaderPrototype, "define", CreateBuiltinFunction(realm,LoaderPrototype_define, 2, "define"));
+NowDefineProperty(LoaderPrototype, "load", CreateBuiltinFunction(realm,LoaderPrototype_load,    1, "load"));
+NowDefineProperty(LoaderPrototype, "module", CreateBuiltinFunction(realm,LoaderPrototype_module, 1, "module"));
+NowDefineProperty(LoaderPrototype, "import", CreateBuiltinFunction(realm,LoaderPrototype_import, 0, "import"));
+NowDefineProperty(LoaderPrototype, "eval", CreateBuiltinFunction(realm,LoaderPrototype_eval, 0, "eval"));
+NowDefineProperty(LoaderPrototype, "normalize", CreateBuiltinFunction(realm,LoaderPrototype_normalize, 0, "normalize"));
+NowDefineProperty(LoaderPrototype, "fetch", CreateBuiltinFunction(realm,LoaderPrototype_fetch, 0, "fetch"));
+NowDefineProperty(LoaderPrototype, "locate", CreateBuiltinFunction(realm,LoaderPrototype_locate, 0, "locate"));
+NowDefineProperty(LoaderPrototype, "translate", CreateBuiltinFunction(realm,LoaderPrototype_instantiate, 1, "translate"));
+NowDefineProperty(LoaderPrototype, "instantiate", CreateBuiltinFunction(realm,LoaderPrototype_instantiate, 0, "instantiate"));
+NowDefineProperty(LoaderPrototype, $$iterator, CreateBuiltinFunction(realm,LoaderPrototype_$$iterator, 0, "[Symbol.iterator]"));
+NowDefineProperty(LoaderPrototype, $$toStringTag, SLOTS.LOADER);
+NowDefineBuiltinFunction(LoaderPrototype, "newModule", 1, LoaderPrototype_newModule);
+NowDefineProperty(LoaderIteratorPrototype, $$iterator, CreateBuiltinFunction(realm, LoaderIteratorPrototype_$$iterator, 0, "[Symbol.iterator]"));
+NowDefineProperty(LoaderIteratorPrototype, "next", CreateBuiltinFunction(realm, LoaderIteratorPrototype_next, 0, "next"));
+NowDefineProperty(LoaderIteratorPrototype, $$toStringTag, "Loader Iterator");
+NowDefineBuiltinConstant(ConsoleObject, $$toStringTag, "Console");
+NowDefineBuiltinFunction(ConsoleObject, "log", 1, ConsoleObject_log);
+NowDefineBuiltinFunction(ConsoleObject, "dir", 1, ConsoleObject_dir);
+NowDefineBuiltinFunction(ConsoleObject, "error", 1, ConsoleObject_error);
+NowDefineBuiltinFunction(ConsoleObject, "html", 1, ConsoleObject_html);
 MakeConstructor(ArrayConstructor, true, ArrayPrototype);
 setInternalSlot(ArrayConstructor, SLOTS.CALL, ArrayConstructor_call);
 setInternalSlot(ArrayConstructor, SLOTS.CONSTRUCT, ArrayConstructor_construct);
-LazyDefineBuiltinConstant(ArrayConstructor, "length", 1);
+NowDefineBuiltinConstant(ArrayConstructor, "length", 1);
 setInternalSlot(ArrayPrototype, SLOTS.PROTOTYPE, ObjectPrototype);
-LazyDefineBuiltinFunction(ArrayConstructor, $$create, 1, ArrayConstructor_$$create);
-LazyDefineBuiltinFunction(ArrayConstructor, "from", 1, ArrayConstructor_from);
-LazyDefineBuiltinFunction(ArrayConstructor, "isArray", 1, ArrayConstructor_isArray);
-LazyDefineBuiltinFunction(ArrayConstructor, "of", 1, ArrayConstructor_of);
-LazyDefineBuiltinConstant(ArrayConstructor, "prototype", ArrayPrototype);
-LazyDefineBuiltinConstant(ArrayConstructor, "prototype", ArrayPrototype);
-LazyDefineBuiltinFunction(ArrayPrototype, "concat", 1, ArrayPrototype_concat);
-LazyDefineBuiltinConstant(ArrayPrototype, "constructor", ArrayConstructor);
-LazyDefineBuiltinFunction(ArrayPrototype, "copyWithin", 2, ArrayPrototype_copyWithin);
-LazyDefineBuiltinFunction(ArrayPrototype, "entries", 0, ArrayPrototype_entries);
-LazyDefineBuiltinFunction(ArrayPrototype, "every", 0, ArrayPrototype_every);
-LazyDefineBuiltinFunction(ArrayPrototype, "fill", 1, ArrayPrototype_fill);
-LazyDefineBuiltinFunction(ArrayPrototype, "filter", 0, ArrayPrototype_filter);
-LazyDefineBuiltinFunction(ArrayPrototype, "find", 1, ArrayPrototype_find);
-LazyDefineBuiltinFunction(ArrayPrototype, "findIndex", 1, ArrayPrototype_findIndex);
-LazyDefineBuiltinFunction(ArrayPrototype, "first", 1, ArrayPrototype_first);
-LazyDefineBuiltinFunction(ArrayPrototype, "forEach", 0, ArrayPrototype_forEach);
-LazyDefineBuiltinFunction(ArrayPrototype, "indexOf", 0, ArrayPrototype_indexOf);
-LazyDefineBuiltinFunction(ArrayPrototype, "join", 0, ArrayPrototype_join);
-LazyDefineBuiltinFunction(ArrayPrototype, "keys", 0, ArrayPrototype_keys);
-LazyDefineBuiltinFunction(ArrayPrototype, "last", 1, ArrayPrototype_last);
-LazyDefineBuiltinFunction(ArrayPrototype, "lastIndexOf", 0, ArrayPrototype_lastIndexOf);
-LazyDefineBuiltinFunction(ArrayPrototype, "map", 0, ArrayPrototype_map);
-LazyDefineBuiltinFunction(ArrayPrototype, "pop", 0, ArrayPrototype_pop);
-LazyDefineBuiltinFunction(ArrayPrototype, "push", 1, ArrayPrototype_push);
-LazyDefineBuiltinFunction(ArrayPrototype, "reduce", 1, ArrayPrototype_reduce);
-LazyDefineBuiltinFunction(ArrayPrototype, "reduceRight", 1, ArrayPrototype_reduceRight);
-LazyDefineBuiltinFunction(ArrayPrototype, "reverse", 0, ArrayPrototype_reverse);
-LazyDefineBuiltinFunction(ArrayPrototype, "shift", 0, ArrayPrototype_shift);
-LazyDefineBuiltinFunction(ArrayPrototype, "slice", 0, ArrayPrototype_slice);
-LazyDefineBuiltinFunction(ArrayPrototype, "sort", 1, ArrayPrototype_sort);
+NowDefineBuiltinFunction(ArrayConstructor, $$create, 1, ArrayConstructor_$$create);
+NowDefineBuiltinFunction(ArrayConstructor, "from", 1, ArrayConstructor_from);
+NowDefineBuiltinFunction(ArrayConstructor, "isArray", 1, ArrayConstructor_isArray);
+NowDefineBuiltinFunction(ArrayConstructor, "of", 1, ArrayConstructor_of);
+NowDefineBuiltinConstant(ArrayConstructor, "prototype", ArrayPrototype);
+NowDefineBuiltinConstant(ArrayConstructor, "prototype", ArrayPrototype);
+NowDefineBuiltinFunction(ArrayPrototype, "concat", 1, ArrayPrototype_concat);
+NowDefineBuiltinConstant(ArrayPrototype, "constructor", ArrayConstructor);
+NowDefineBuiltinFunction(ArrayPrototype, "copyWithin", 2, ArrayPrototype_copyWithin);
+NowDefineBuiltinFunction(ArrayPrototype, "entries", 0, ArrayPrototype_entries);
+NowDefineBuiltinFunction(ArrayPrototype, "every", 0, ArrayPrototype_every);
+NowDefineBuiltinFunction(ArrayPrototype, "fill", 1, ArrayPrototype_fill);
+NowDefineBuiltinFunction(ArrayPrototype, "filter", 0, ArrayPrototype_filter);
+NowDefineBuiltinFunction(ArrayPrototype, "find", 1, ArrayPrototype_find);
+NowDefineBuiltinFunction(ArrayPrototype, "findIndex", 1, ArrayPrototype_findIndex);
+NowDefineBuiltinFunction(ArrayPrototype, "first", 1, ArrayPrototype_first);
+NowDefineBuiltinFunction(ArrayPrototype, "forEach", 0, ArrayPrototype_forEach);
+NowDefineBuiltinFunction(ArrayPrototype, "indexOf", 0, ArrayPrototype_indexOf);
+NowDefineBuiltinFunction(ArrayPrototype, "join", 0, ArrayPrototype_join);
+NowDefineBuiltinFunction(ArrayPrototype, "keys", 0, ArrayPrototype_keys);
+NowDefineBuiltinFunction(ArrayPrototype, "last", 1, ArrayPrototype_last);
+NowDefineBuiltinFunction(ArrayPrototype, "lastIndexOf", 0, ArrayPrototype_lastIndexOf);
+NowDefineBuiltinFunction(ArrayPrototype, "map", 0, ArrayPrototype_map);
+NowDefineBuiltinFunction(ArrayPrototype, "pop", 0, ArrayPrototype_pop);
+NowDefineBuiltinFunction(ArrayPrototype, "push", 1, ArrayPrototype_push);
+NowDefineBuiltinFunction(ArrayPrototype, "reduce", 1, ArrayPrototype_reduce);
+NowDefineBuiltinFunction(ArrayPrototype, "reduceRight", 1, ArrayPrototype_reduceRight);
+NowDefineBuiltinFunction(ArrayPrototype, "reverse", 0, ArrayPrototype_reverse);
+NowDefineBuiltinFunction(ArrayPrototype, "shift", 0, ArrayPrototype_shift);
+NowDefineBuiltinFunction(ArrayPrototype, "slice", 0, ArrayPrototype_slice);
+NowDefineBuiltinFunction(ArrayPrototype, "sort", 1, ArrayPrototype_sort);
 setInternalSlot(getIntrinsic(INTRINSICS.DEFAULTCOMPARE), SLOTS.CALL, defaultCompareFn_call);
-LazyDefineBuiltinFunction(ArrayPrototype, "splice", 2, ArrayPrototype_splice);
-LazyDefineBuiltinFunction(ArrayPrototype, "some", 0, ArrayPrototype_some);
-LazyDefineBuiltinFunction(ArrayPrototype, "toLocaleString", 2, ArrayPrototype_toLocaleString);
-LazyDefineBuiltinFunction(ArrayPrototype, "unshift", 1, ArrayPrototype_unshift);
-LazyDefineProperty(ArrayPrototype, "values", ArrayProto_values);
-LazyDefineBuiltinConstant(ArrayPrototype, $$toStringTag, "Array");
-LazyDefineBuiltinFunction(ArrayPrototype, $$iterator, 0, ArrayPrototype_$$iterator);
-LazyDefineProperty(ArrayPrototype, $$unscopables, (function () {
+NowDefineBuiltinFunction(ArrayPrototype, "splice", 2, ArrayPrototype_splice);
+NowDefineBuiltinFunction(ArrayPrototype, "some", 0, ArrayPrototype_some);
+NowDefineBuiltinFunction(ArrayPrototype, "toLocaleString", 2, ArrayPrototype_toLocaleString);
+NowDefineBuiltinFunction(ArrayPrototype, "unshift", 1, ArrayPrototype_unshift);
+NowDefineProperty(ArrayPrototype, "values", ArrayProto_values);
+NowDefineBuiltinConstant(ArrayPrototype, $$toStringTag, "Array");
+NowDefineBuiltinFunction(ArrayPrototype, $$iterator, 0, ArrayPrototype_$$iterator);
+NowDefineProperty(ArrayPrototype, $$unscopables, (function () {
         var blackList = ObjectCreate();
         CreateDataProperty(blackList, "find", true);
         CreateDataProperty(blackList, "findIndex", true);
@@ -23265,83 +22265,83 @@ LazyDefineProperty(ArrayPrototype, $$unscopables, (function () {
 setInternalSlot(ArrayProto_values, SLOTS.CALL, ArrayPrototype_values);
 setInternalSlot(ArrayProto_values, SLOTS.CONSTRUCT, undefined);
 setInternalSlot(ArrayIteratorPrototype, SLOTS.PROTOTYPE, ObjectPrototype);
-LazyDefineBuiltinFunction(ArrayIteratorPrototype, $$iterator, 0, ArrayIteratorPrototype_$$iterator);
-LazyDefineBuiltinConstant(ArrayIteratorPrototype, $$toStringTag, "Array Iterator");
-LazyDefineBuiltinFunction(ArrayIteratorPrototype, "next", 0, ArrayIteratorPrototype_next);
+NowDefineBuiltinFunction(ArrayIteratorPrototype, $$iterator, 0, ArrayIteratorPrototype_$$iterator);
+NowDefineBuiltinConstant(ArrayIteratorPrototype, $$toStringTag, "Array Iterator");
+NowDefineBuiltinFunction(ArrayIteratorPrototype, "next", 0, ArrayIteratorPrototype_next);
 MakeConstructor(StringConstructor, true, StringPrototype);
 setInternalSlot(StringConstructor, SLOTS.CALL, StringConstructor_call);
 setInternalSlot(StringConstructor, SLOTS.CONSTRUCT, StringConstructor_construct);
-LazyDefineBuiltinFunction(StringConstructor, "raw", 1, StringConstructor_raw);
-LazyDefineBuiltinFunction(StringConstructor, $$create, 1, StringConstructor_$$create);
-LazyDefineBuiltinFunction(StringPrototype, "at", 1, StringPrototype_at);
-LazyDefineBuiltinFunction(StringPrototype, "charAt", 1, StringPrototype_charAt);
-LazyDefineBuiltinFunction(StringPrototype, "charCodeAt", 1, StringPrototype_charCodeAt);
-LazyDefineBuiltinFunction(StringPrototype, "codePointAt", 1, StringPrototype_codePointAt);
-LazyDefineBuiltinFunction(StringPrototype, "concat", 1, StringPrototype_concat);
-LazyDefineBuiltinFunction(StringPrototype, "contains", 1, StringPrototype_contains);
-LazyDefineBuiltinFunction(StringPrototype, "endsWith", 1, StringPrototype_endsWith);
-LazyDefineBuiltinFunction(StringPrototype, "indexOf", 1, StringPrototype_indexOf);
-LazyDefineBuiltinFunction(StringPrototype, "lastIndexOf", 1, StringPrototype_lastIndexOf);
-LazyDefineBuiltinFunction(StringPrototype, "lpad", 1, StringPrototype_lpad);
-LazyDefineBuiltinFunction(StringPrototype, "rpad", 1, StringPrototype_rpad);
-LazyDefineBuiltinFunction(StringPrototype, "match", 0, StringPrototype_match);
-LazyDefineBuiltinFunction(StringPrototype, "normalize", 0, StringPrototype_normalize);
-LazyDefineBuiltinFunction(StringPrototype, "repeat", 0, StringPrototype_repeat);
-LazyDefineBuiltinFunction(StringPrototype, "replace", 0, StringPrototype_replace);
-LazyDefineBuiltinFunction(StringPrototype, "search", 1, StringPrototype_search);
-LazyDefineBuiltinFunction(StringPrototype, "startsWith", 1, StringPrototype_startsWith);
-LazyDefineBuiltinFunction(StringPrototype, "toArray", 0, StringPrototype_toArray);
-LazyDefineBuiltinFunction(StringPrototype, "toLocaleCompare", 0, StringPrototype_localeCompare);
-LazyDefineBuiltinFunction(StringPrototype, "toLowerCase", 0, StringPrototype_toLowerCase);
-LazyDefineBuiltinFunction(StringPrototype, "toUpperCase", 0, StringPrototype_toUpperCase);
-LazyDefineBuiltinFunction(StringPrototype, "trim", 1, StringPrototype_trim);
-LazyDefineBuiltinFunction(StringPrototype, "valueOf", 0, StringPrototype_valueOf);
-LazyDefineBuiltinConstant(StringPrototype, $$toStringTag, "String");
-LazyDefineBuiltinFunction(StringPrototype, $$iterator, 0, StringPrototype_$$iterator);
-LazyDefineBuiltinFunction(StringPrototype, "entries", 0, StringPrototype_entries);
-LazyDefineBuiltinFunction(StringPrototype, "keys", 0, StringPrototype_keys);
-LazyDefineBuiltinFunction(StringPrototype, "values", 0, StringPrototype_values);
-LazyDefineBuiltinFunction(StringIteratorPrototype, "next", 0, StringIteratorPrototype_next);
-LazyDefineBuiltinFunction(StringIteratorPrototype, $$iterator, 0, StringIteratorPrototype_$$iterator);
-LazyDefineBuiltinConstant(StringIteratorPrototype, $$toStringTag, "String Iterator");
+NowDefineBuiltinFunction(StringConstructor, "raw", 1, StringConstructor_raw);
+NowDefineBuiltinFunction(StringConstructor, $$create, 1, StringConstructor_$$create);
+NowDefineBuiltinFunction(StringPrototype, "at", 1, StringPrototype_at);
+NowDefineBuiltinFunction(StringPrototype, "charAt", 1, StringPrototype_charAt);
+NowDefineBuiltinFunction(StringPrototype, "charCodeAt", 1, StringPrototype_charCodeAt);
+NowDefineBuiltinFunction(StringPrototype, "codePointAt", 1, StringPrototype_codePointAt);
+NowDefineBuiltinFunction(StringPrototype, "concat", 1, StringPrototype_concat);
+NowDefineBuiltinFunction(StringPrototype, "contains", 1, StringPrototype_contains);
+NowDefineBuiltinFunction(StringPrototype, "endsWith", 1, StringPrototype_endsWith);
+NowDefineBuiltinFunction(StringPrototype, "indexOf", 1, StringPrototype_indexOf);
+NowDefineBuiltinFunction(StringPrototype, "lastIndexOf", 1, StringPrototype_lastIndexOf);
+NowDefineBuiltinFunction(StringPrototype, "lpad", 1, StringPrototype_lpad);
+NowDefineBuiltinFunction(StringPrototype, "rpad", 1, StringPrototype_rpad);
+NowDefineBuiltinFunction(StringPrototype, "match", 0, StringPrototype_match);
+NowDefineBuiltinFunction(StringPrototype, "normalize", 0, StringPrototype_normalize);
+NowDefineBuiltinFunction(StringPrototype, "repeat", 0, StringPrototype_repeat);
+NowDefineBuiltinFunction(StringPrototype, "replace", 0, StringPrototype_replace);
+NowDefineBuiltinFunction(StringPrototype, "search", 1, StringPrototype_search);
+NowDefineBuiltinFunction(StringPrototype, "startsWith", 1, StringPrototype_startsWith);
+NowDefineBuiltinFunction(StringPrototype, "toArray", 0, StringPrototype_toArray);
+NowDefineBuiltinFunction(StringPrototype, "toLocaleCompare", 0, StringPrototype_localeCompare);
+NowDefineBuiltinFunction(StringPrototype, "toLowerCase", 0, StringPrototype_toLowerCase);
+NowDefineBuiltinFunction(StringPrototype, "toUpperCase", 0, StringPrototype_toUpperCase);
+NowDefineBuiltinFunction(StringPrototype, "trim", 1, StringPrototype_trim);
+NowDefineBuiltinFunction(StringPrototype, "valueOf", 0, StringPrototype_valueOf);
+NowDefineBuiltinConstant(StringPrototype, $$toStringTag, "String");
+NowDefineBuiltinFunction(StringPrototype, $$iterator, 0, StringPrototype_$$iterator);
+NowDefineBuiltinFunction(StringPrototype, "entries", 0, StringPrototype_entries);
+NowDefineBuiltinFunction(StringPrototype, "keys", 0, StringPrototype_keys);
+NowDefineBuiltinFunction(StringPrototype, "values", 0, StringPrototype_values);
+NowDefineBuiltinFunction(StringIteratorPrototype, "next", 0, StringIteratorPrototype_next);
+NowDefineBuiltinFunction(StringIteratorPrototype, $$iterator, 0, StringIteratorPrototype_$$iterator);
+NowDefineBuiltinConstant(StringIteratorPrototype, $$toStringTag, "String Iterator");
 setInternalSlot(BooleanConstructor, SLOTS.CALL, BooleanConstructor_call);
 setInternalSlot(BooleanConstructor, SLOTS.CONSTRUCT, BooleanConstructor_construct);
 MakeConstructor(BooleanConstructor, true, BooleanPrototype);
-LazyDefineBuiltinFunction(BooleanConstructor, $$create, 1, BooleanConstructor_$$create);
-LazyDefineBuiltinFunction(BooleanPrototype, "toString", 0, BooleanPrototype_toString)
-LazyDefineBuiltinFunction(BooleanPrototype, "valueOf", 0, BooleanPrototype_valueOf)
-LazyDefineBuiltinConstant(BooleanConstructor, "prototype", BooleanPrototype);
-LazyDefineBuiltinConstant(BooleanConstructor, "constructor", BooleanConstructor);
+NowDefineBuiltinFunction(BooleanConstructor, $$create, 1, BooleanConstructor_$$create);
+NowDefineBuiltinFunction(BooleanPrototype, "toString", 0, BooleanPrototype_toString)
+NowDefineBuiltinFunction(BooleanPrototype, "valueOf", 0, BooleanPrototype_valueOf)
+NowDefineBuiltinConstant(BooleanConstructor, "prototype", BooleanPrototype);
+NowDefineBuiltinConstant(BooleanConstructor, "constructor", BooleanConstructor);
 MakeConstructor(SymbolFunction, true, SymbolPrototype);
 setInternalSlot(SymbolFunction, SLOTS.CALL, SymbolFunction_Call);
 setInternalSlot(SymbolFunction, SLOTS.CONSTRUCT, SymbolFunction_Construct);
 setInternalSlot(SymbolPrototype, SLOTS.PROTOTYPE, ObjectPrototype);
-LazyDefineBuiltinConstant(SymbolFunction, $$create, CreateBuiltinFunction(realm, SymbolFunction_$$create, 0, "[Symbol.create]"));
-LazyDefineBuiltinConstant(SymbolFunction, "create", $$create);
-LazyDefineBuiltinFunction(SymbolFunction, "for", 1, SymbolFunction_for);
-LazyDefineBuiltinConstant(SymbolFunction, "isConcatSpreadable", $$isConcatSpreadable);
-LazyDefineBuiltinConstant(SymbolFunction, "isRegExp", $$isRegExp);
-LazyDefineBuiltinConstant(SymbolFunction, "iterator", $$iterator);
-LazyDefineBuiltinFunction(SymbolFunction, "keyFor", 1, SymbolFunction_keyFor);
-LazyDefineBuiltinConstant(SymbolFunction, "prototype", SymbolPrototype);
-LazyDefineBuiltinConstant(SymbolFunction, "hasInstance", $$hasInstance);
-LazyDefineBuiltinConstant(SymbolFunction, "toPrimitive", $$toPrimitive);
-LazyDefineBuiltinConstant(SymbolFunction, "toStringTag", $$toStringTag);
-LazyDefineBuiltinConstant(SymbolFunction, "unscopables", $$unscopables);
-LazyDefineBuiltinConstant(SymbolPrototype, "constructor", SymbolFunction);
-LazyDefineBuiltinConstant(SymbolPrototype, $$toPrimitive, CreateBuiltinFunction(realm, SymbolPrototype_$$toPrimitive, 1, "[Symbol.toPrimitive]"));
-LazyDefineBuiltinFunction(SymbolPrototype, "toString", 0, SymbolPrototype_toString);
-LazyDefineBuiltinConstant(SymbolPrototype, $$toStringTag, "Symbol");
-LazyDefineBuiltinFunction(SymbolPrototype, "valueOf", 0, SymbolPrototype_valueOf);
+NowDefineBuiltinConstant(SymbolFunction, $$create, CreateBuiltinFunction(realm, SymbolFunction_$$create, 0, "[Symbol.create]"));
+NowDefineBuiltinConstant(SymbolFunction, "create", $$create);
+NowDefineBuiltinFunction(SymbolFunction, "for", 1, SymbolFunction_for);
+NowDefineBuiltinConstant(SymbolFunction, "isConcatSpreadable", $$isConcatSpreadable);
+NowDefineBuiltinConstant(SymbolFunction, "isRegExp", $$isRegExp);
+NowDefineBuiltinConstant(SymbolFunction, "iterator", $$iterator);
+NowDefineBuiltinFunction(SymbolFunction, "keyFor", 1, SymbolFunction_keyFor);
+NowDefineBuiltinConstant(SymbolFunction, "prototype", SymbolPrototype);
+NowDefineBuiltinConstant(SymbolFunction, "hasInstance", $$hasInstance);
+NowDefineBuiltinConstant(SymbolFunction, "toPrimitive", $$toPrimitive);
+NowDefineBuiltinConstant(SymbolFunction, "toStringTag", $$toStringTag);
+NowDefineBuiltinConstant(SymbolFunction, "unscopables", $$unscopables);
+NowDefineBuiltinConstant(SymbolPrototype, "constructor", SymbolFunction);
+NowDefineBuiltinConstant(SymbolPrototype, $$toPrimitive, CreateBuiltinFunction(realm, SymbolPrototype_$$toPrimitive, 1, "[Symbol.toPrimitive]"));
+NowDefineBuiltinFunction(SymbolPrototype, "toString", 0, SymbolPrototype_toString);
+NowDefineBuiltinConstant(SymbolPrototype, $$toStringTag, "Symbol");
+NowDefineBuiltinFunction(SymbolPrototype, "valueOf", 0, SymbolPrototype_valueOf);
 setInternalSlot(ErrorPrototype, SLOTS.PROTOTYPE, ObjectPrototype);
 MakeConstructor(ErrorConstructor, true, ErrorPrototype);
-LazyDefineBuiltinConstant(ErrorConstructor, "prototype", ErrorPrototype);
-LazyDefineBuiltinConstant(ErrorPrototype, "constructor", ErrorConstructor);
-LazyDefineBuiltinConstant(ErrorPrototype, "name", "Error");
+NowDefineBuiltinConstant(ErrorConstructor, "prototype", ErrorPrototype);
+NowDefineBuiltinConstant(ErrorPrototype, "constructor", ErrorConstructor);
+NowDefineBuiltinConstant(ErrorPrototype, "name", "Error");
 setInternalSlot(ErrorConstructor, SLOTS.CALL, ErrorConstructor_call);
 setInternalSlot(ErrorConstructor, SLOTS.CONSTRUCT, ErrorConstructor_construct);
-LazyDefineBuiltinFunction(ErrorConstructor, $$create, 1, ErrorConstructor_$$create);
-LazyDefineBuiltinFunction(ErrorPrototype, "toString", 0, ErrorPrototype_toString);
+NowDefineBuiltinFunction(ErrorConstructor, $$create, 1, ErrorConstructor_$$create);
+NowDefineBuiltinFunction(ErrorPrototype, "toString", 0, ErrorPrototype_toString);
 createNativeError("Syntax", SyntaxErrorConstructor, SyntaxErrorPrototype);
 createNativeError("Type", TypeErrorConstructor, TypeErrorPrototype);
 createNativeError("Reference", ReferenceErrorConstructor, ReferenceErrorPrototype);
@@ -23352,25 +22352,27 @@ setInternalSlot(EvalFunction, SLOTS.CALL, EvalFunction_call);
 setInternalSlot(EvalFunction, SLOTS.CONSTRUCT, null);
 setInternalSlot(DateConstructor, SLOTS.CALL, DateConstructor_call);
 setInternalSlot(DateConstructor, SLOTS.CONSTRUCT, DateConstructor_construct);
-LazyDefineBuiltinConstant(DateConstructor, "prototype", DatePrototype);
-LazyDefineBuiltinConstant(DatePrototype, "constructor", DateConstructor);
-LazyDefineBuiltinFunction(DateConstructor, "parse", DateConstructor_parse)
-LazyDefineBuiltinFunction(DateConstructor, "now", DateConstructor_now)
-LazyDefineBuiltinFunction(DatePrototype, "getDate", 0, DatePrototype_getDate);
-LazyDefineBuiltinFunction(DatePrototype, "getDay", 0, DatePrototype_getDay);
-LazyDefineBuiltinFunction(DatePrototype, "getFullYear", 0, DatePrototype_getFullYear);
-LazyDefineBuiltinFunction(DatePrototype, "getMonth", 0, DatePrototype_getMonth);
-LazyDefineBuiltinFunction(DatePrototype, "getHours", 0, DatePrototype_getHours);
-LazyDefineBuiltinFunction(DatePrototype, "getMinutes", 0, DatePrototype_getMinutes);
-LazyDefineBuiltinFunction(DatePrototype, "getMilliSeconds", 0, DatePrototype_getMilliSeconds);
-LazyDefineBuiltinFunction(DatePrototype, "getTimeZoneOffset", 0, DatePrototype_getTimeZoneOffset);
-LazyDefineBuiltinFunction(DatePrototype, "getUTCDay", 0, DatePrototype_getUTCDay);
-LazyDefineBuiltinFunction(DatePrototype, "getUTCFullYear", 0, DatePrototype_getUTCFullYear);
-LazyDefineBuiltinFunction(DatePrototype, "getUTCHours", 0, DatePrototype_getUTCHours);
-LazyDefineBuiltinFunction(DatePrototype, "getUTCMinutes", 0, DatePrototype_getUTCMinutes);
-LazyDefineBuiltinFunction(DatePrototype, "getUTCSeconds", 0, DatePrototype_getUTCSeconds);
-LazyDefineBuiltinFunction(DatePrototype, "getUTCMilliSeconds", 0, DatePrototype_getUTCMilliSeconds);
-LazyDefineBuiltinConstant(DatePrototype, $$toStringTag, "Date");
+NowDefineBuiltinConstant(DateConstructor, "prototype", DatePrototype);
+NowDefineBuiltinFunction(DateConstructor, $$create, 0, DateConstructor_$$create);
+NowDefineBuiltinConstant(DatePrototype, "constructor", DateConstructor);
+NowDefineBuiltinFunction(DateConstructor, "parse", DateConstructor_parse)
+NowDefineBuiltinFunction(DateConstructor, "now", DateConstructor_now)
+NowDefineBuiltinFunction(DatePrototype, "getDate", 0, DatePrototype_getDate);
+NowDefineBuiltinFunction(DatePrototype, "setDate", 0, DatePrototype_setDate);
+NowDefineBuiltinFunction(DatePrototype, "getDay", 0, DatePrototype_getDay);
+NowDefineBuiltinFunction(DatePrototype, "getFullYear", 0, DatePrototype_getFullYear);
+NowDefineBuiltinFunction(DatePrototype, "getMonth", 0, DatePrototype_getMonth);
+NowDefineBuiltinFunction(DatePrototype, "getHours", 0, DatePrototype_getHours);
+NowDefineBuiltinFunction(DatePrototype, "getMinutes", 0, DatePrototype_getMinutes);
+NowDefineBuiltinFunction(DatePrototype, "getMilliSeconds", 0, DatePrototype_getMilliSeconds);
+NowDefineBuiltinFunction(DatePrototype, "getTimeZoneOffset", 0, DatePrototype_getTimeZoneOffset);
+NowDefineBuiltinFunction(DatePrototype, "getUTCDay", 0, DatePrototype_getUTCDay);
+NowDefineBuiltinFunction(DatePrototype, "getUTCFullYear", 0, DatePrototype_getUTCFullYear);
+NowDefineBuiltinFunction(DatePrototype, "getUTCHours", 0, DatePrototype_getUTCHours);
+NowDefineBuiltinFunction(DatePrototype, "getUTCMinutes", 0, DatePrototype_getUTCMinutes);
+NowDefineBuiltinFunction(DatePrototype, "getUTCSeconds", 0, DatePrototype_getUTCSeconds);
+NowDefineBuiltinFunction(DatePrototype, "getUTCMilliSeconds", 0, DatePrototype_getUTCMilliSeconds);
+NowDefineBuiltinConstant(DatePrototype, $$toStringTag, "Date");
 setInternalSlot(EncodeURIFunction, SLOTS.CALL, EncodeURIFunction_call);
 setInternalSlot(EncodeURIComponentFunction, SLOTS.CALL, EncodeURIComponentFunction_call);
 setInternalSlot(DecodeURIFunction, SLOTS.CALL, DecodeURIFunction_call);
@@ -23381,83 +22383,83 @@ setInternalSlot(ParseIntFunction, SLOTS.CALL, ParseIntFunction_call);
 setInternalSlot(ParseFloatFunction, SLOTS.CALL, ParseFloatFunction_call);
 setInternalSlot(MathObject, SLOTS.MATHTAG, true);
 setInternalSlot(MathObject, SLOTS.PROTOTYPE, ObjectPrototype);
-LazyDefineBuiltinConstant(MathObject, "PI", PI);
-LazyDefineBuiltinConstant(MathObject, "LOG2E", LOG2E);
-LazyDefineBuiltinConstant(MathObject, "SQRT1_2", SQRT1_2);
-LazyDefineBuiltinConstant(MathObject, "SQRT2", SQRT2);
-LazyDefineBuiltinConstant(MathObject, "LN10", LN10);
-LazyDefineBuiltinConstant(MathObject, "LN2", LN2);
-LazyDefineBuiltinConstant(MathObject, "E", E);
-LazyDefineBuiltinConstant(MathObject, "LOG10E", LOG10E);
-LazyDefineBuiltinConstant(MathObject, $$toStringTag, "Math");
-LazyDefineBuiltinFunction(MathObject, "atan", 2, MathObject_atan);
-LazyDefineBuiltinFunction(MathObject, "atan2", 1, MathObject_atan2);
-LazyDefineBuiltinFunction(MathObject, "ceil", 1, MathObject_ceil);
-LazyDefineBuiltinFunction(MathObject, "clz", 1, MathObject_clz);
-LazyDefineBuiltinFunction(MathObject, "cos", 1, MathObject_cos);
-LazyDefineBuiltinFunction(MathObject, "exp", 1, MathObject_exp);
-LazyDefineBuiltinFunction(MathObject, "floor", 1, MathObject_floor);
-LazyDefineBuiltinFunction(MathObject, "hypot", 2, MathObject_hypot);
-LazyDefineBuiltinFunction(MathObject, "imul", 2, MathObject_imul);
-LazyDefineBuiltinFunction(MathObject, "log", 1, MathObject_log);
-LazyDefineBuiltinFunction(MathObject, "log1p", 1, MathObject_log1p);
-LazyDefineBuiltinFunction(MathObject, "max", 0, MathObject_max);
-LazyDefineBuiltinFunction(MathObject, "min", 0, MathObject_min);
-LazyDefineBuiltinFunction(MathObject, "pow", 2, MathObject_pow);
-LazyDefineBuiltinFunction(MathObject, "sin", 1, MathObject_sin);
-LazyDefineBuiltinFunction(MathObject, "sign", 1, MathObject_sign);
-LazyDefineBuiltinFunction(MathObject, "tan", 1, MathObject_tan);
-LazyDefineBuiltinFunction(MathObject, "random", 0, MathObject_random);
+NowDefineBuiltinConstant(MathObject, "PI", PI);
+NowDefineBuiltinConstant(MathObject, "LOG2E", LOG2E);
+NowDefineBuiltinConstant(MathObject, "SQRT1_2", SQRT1_2);
+NowDefineBuiltinConstant(MathObject, "SQRT2", SQRT2);
+NowDefineBuiltinConstant(MathObject, "LN10", LN10);
+NowDefineBuiltinConstant(MathObject, "LN2", LN2);
+NowDefineBuiltinConstant(MathObject, "E", E);
+NowDefineBuiltinConstant(MathObject, "LOG10E", LOG10E);
+NowDefineBuiltinConstant(MathObject, $$toStringTag, "Math");
+NowDefineBuiltinFunction(MathObject, "atan", 2, MathObject_atan);
+NowDefineBuiltinFunction(MathObject, "atan2", 1, MathObject_atan2);
+NowDefineBuiltinFunction(MathObject, "ceil", 1, MathObject_ceil);
+NowDefineBuiltinFunction(MathObject, "clz", 1, MathObject_clz);
+NowDefineBuiltinFunction(MathObject, "cos", 1, MathObject_cos);
+NowDefineBuiltinFunction(MathObject, "exp", 1, MathObject_exp);
+NowDefineBuiltinFunction(MathObject, "floor", 1, MathObject_floor);
+NowDefineBuiltinFunction(MathObject, "hypot", 2, MathObject_hypot);
+NowDefineBuiltinFunction(MathObject, "imul", 2, MathObject_imul);
+NowDefineBuiltinFunction(MathObject, "log", 1, MathObject_log);
+NowDefineBuiltinFunction(MathObject, "log1p", 1, MathObject_log1p);
+NowDefineBuiltinFunction(MathObject, "max", 0, MathObject_max);
+NowDefineBuiltinFunction(MathObject, "min", 0, MathObject_min);
+NowDefineBuiltinFunction(MathObject, "pow", 2, MathObject_pow);
+NowDefineBuiltinFunction(MathObject, "sin", 1, MathObject_sin);
+NowDefineBuiltinFunction(MathObject, "sign", 1, MathObject_sign);
+NowDefineBuiltinFunction(MathObject, "tan", 1, MathObject_tan);
+NowDefineBuiltinFunction(MathObject, "random", 0, MathObject_random);
 MakeConstructor(NumberConstructor, true, NumberPrototype);
 setInternalSlot(NumberConstructor, SLOTS.CALL, NumberConstructor_call);
 setInternalSlot(NumberConstructor, SLOTS.CONSTRUCT, NumberConstructor_construct);
-LazyDefineBuiltinFunction(NumberConstructor, "isFinite", 0, NumberConstructor_isFinite);
-LazyDefineBuiltinFunction(NumberConstructor, "isNaN", 0, NumberConstructor_isNaN);
-LazyDefineBuiltinFunction(NumberConstructor, "isInteger", 0, NumberConstructor_isInteger);
-LazyDefineBuiltinFunction(NumberConstructor, $$create, 0, NumberConstructor_$$create);
-LazyDefineBuiltinConstant(NumberConstructor, "EPSILON", EPSILON);
-LazyDefineBuiltinConstant(NumberConstructor, "MIN_INTEGER", MIN_INTEGER);
-LazyDefineBuiltinConstant(NumberConstructor, "MIN_VALUE", MIN_VALUE);
-LazyDefineBuiltinConstant(NumberConstructor, "MAX_INTEGER", MAX_INTEGER);
-LazyDefineBuiltinConstant(NumberConstructor, "MAX_VALUE", MAX_VALUE);
-LazyDefineBuiltinConstant(NumberConstructor, "NaN", NAN);
-LazyDefineBuiltinConstant(NumberConstructor, "POSITIVE_INFINITY", POSITIVE_INFINITY);
-LazyDefineBuiltinConstant(NumberConstructor, "NEGATIVE_INFINITY", NEGATIVE_INFINITY);
-LazyDefineBuiltinFunction(NumberPrototype, "clz", 0, NumberPrototype_clz);
-LazyDefineBuiltinFunction(NumberPrototype, "toExponential", 0, NumberPrototype_toExponential);
-LazyDefineBuiltinFunction(NumberPrototype, "toFixed", 0, NumberPrototype_toFixed);
-LazyDefineBuiltinFunction(NumberPrototype, "toPrecision", 0, NumberPrototype_toPrecision);
-LazyDefineBuiltinFunction(NumberPrototype, "toString", 0, NumberPrototype_toString);
-LazyDefineBuiltinFunction(NumberPrototype, "valueOf", 0, NumberPrototype_valueOf);
-LazyDefineBuiltinConstant(NumberPrototype, $$toStringTag, "Number");
+NowDefineBuiltinFunction(NumberConstructor, "isFinite", 0, NumberConstructor_isFinite);
+NowDefineBuiltinFunction(NumberConstructor, "isNaN", 0, NumberConstructor_isNaN);
+NowDefineBuiltinFunction(NumberConstructor, "isInteger", 0, NumberConstructor_isInteger);
+NowDefineBuiltinFunction(NumberConstructor, $$create, 0, NumberConstructor_$$create);
+NowDefineBuiltinConstant(NumberConstructor, "EPSILON", EPSILON);
+NowDefineBuiltinConstant(NumberConstructor, "MIN_INTEGER", MIN_INTEGER);
+NowDefineBuiltinConstant(NumberConstructor, "MIN_VALUE", MIN_VALUE);
+NowDefineBuiltinConstant(NumberConstructor, "MAX_INTEGER", MAX_INTEGER);
+NowDefineBuiltinConstant(NumberConstructor, "MAX_VALUE", MAX_VALUE);
+NowDefineBuiltinConstant(NumberConstructor, "NaN", NAN);
+NowDefineBuiltinConstant(NumberConstructor, "POSITIVE_INFINITY", POSITIVE_INFINITY);
+NowDefineBuiltinConstant(NumberConstructor, "NEGATIVE_INFINITY", NEGATIVE_INFINITY);
+NowDefineBuiltinFunction(NumberPrototype, "clz", 0, NumberPrototype_clz);
+NowDefineBuiltinFunction(NumberPrototype, "toExponential", 0, NumberPrototype_toExponential);
+NowDefineBuiltinFunction(NumberPrototype, "toFixed", 0, NumberPrototype_toFixed);
+NowDefineBuiltinFunction(NumberPrototype, "toPrecision", 0, NumberPrototype_toPrecision);
+NowDefineBuiltinFunction(NumberPrototype, "toString", 0, NumberPrototype_toString);
+NowDefineBuiltinFunction(NumberPrototype, "valueOf", 0, NumberPrototype_valueOf);
+NowDefineBuiltinConstant(NumberPrototype, $$toStringTag, "Number");
 MakeConstructor(ProxyConstructor, true, ProxyPrototype);
-LazyDefineBuiltinFunction(ProxyConstructor, "revocable", 2, ProxyConstructor_revocable);
+NowDefineBuiltinFunction(ProxyConstructor, "revocable", 2, ProxyConstructor_revocable);
 setInternalSlot(ProxyConstructor, SLOTS.CALL, ProxyConstructor_Call);
 setInternalSlot(ProxyConstructor, SLOTS.CONSTRUCT, ProxyConstructor_Construct);
-LazyDefineBuiltinFunction(ReflectObject, "defineProperty", 2, ReflectObject_defineProperty);
-LazyDefineBuiltinFunction(ReflectObject, "deleteProperty", 3, ReflectObject_deleteProperty);
-LazyDefineBuiltinFunction(ReflectObject, "enumerate", 1, ReflectObject_enumerate);
-LazyDefineBuiltinFunction(ReflectObject, "invoke", 3, ReflectObject_invoke);
-LazyDefineBuiltinFunction(ReflectObject, "isExtensible", 1, ReflectObject_isExtensible);
-LazyDefineBuiltinFunction(ReflectObject, "get", 2, ReflectObject_get);
-LazyDefineBuiltinFunction(ReflectObject, "getOwnPropertyDescriptor", 2, ReflectObject_getOwnPropertyDescriptor);
-LazyDefineBuiltinFunction(ReflectObject, "getPrototypeOf", 1, ReflectObject_getPrototypeOf);
-LazyDefineBuiltinFunction(ReflectObject, "has", 2, ReflectObject_has);
-LazyDefineBuiltinFunction(ReflectObject, "hasOwn", 2, ReflectObject_hasOwn);
-LazyDefineProperty(ReflectObject, SLOTS.LOADER, LoaderConstructor);
-LazyDefineBuiltinFunction(ReflectObject, "ownKeys", 1, ReflectObject_ownKeys);
-LazyDefineBuiltinFunction(ReflectObject, "parse", 1, ReflectObject_parse);
-LazyDefineBuiltinFunction(ReflectObject, "parseGoal", 1, ReflectObject_parseGoal);
-LazyDefineBuiltinFunction(ReflectObject, "preventExtensions", 1, ReflectObject_preventExtensions);
-LazyDefineProperty(ReflectObject, SLOTS.REALM, RealmConstructor);
-LazyDefineBuiltinFunction(ReflectObject, "set", 3, ReflectObject_set);
-LazyDefineBuiltinFunction(ReflectObject, "setPrototypeOf", 2, ReflectObject_setPrototypeOf);
-LazyDefineBuiltinConstant(ReflectObject, $$toStringTag, "Reflect");
-LazyDefineBuiltinFunction(ReflectObject, "getIntrinsic", 1, ReflectObject_getIntrinsic);
-LazyDefineBuiltinFunction(ReflectObject, "createSelfHostingFunction", 2, ReflectObject_createSelfHostingFunction);
+NowDefineBuiltinFunction(ReflectObject, "defineProperty", 2, ReflectObject_defineProperty);
+NowDefineBuiltinFunction(ReflectObject, "deleteProperty", 3, ReflectObject_deleteProperty);
+NowDefineBuiltinFunction(ReflectObject, "enumerate", 1, ReflectObject_enumerate);
+NowDefineBuiltinFunction(ReflectObject, "invoke", 3, ReflectObject_invoke);
+NowDefineBuiltinFunction(ReflectObject, "isExtensible", 1, ReflectObject_isExtensible);
+NowDefineBuiltinFunction(ReflectObject, "get", 2, ReflectObject_get);
+NowDefineBuiltinFunction(ReflectObject, "getOwnPropertyDescriptor", 2, ReflectObject_getOwnPropertyDescriptor);
+NowDefineBuiltinFunction(ReflectObject, "getPrototypeOf", 1, ReflectObject_getPrototypeOf);
+NowDefineBuiltinFunction(ReflectObject, "has", 2, ReflectObject_has);
+NowDefineBuiltinFunction(ReflectObject, "hasOwn", 2, ReflectObject_hasOwn);
+NowDefineProperty(ReflectObject, SLOTS.LOADER, LoaderConstructor);
+NowDefineBuiltinFunction(ReflectObject, "ownKeys", 1, ReflectObject_ownKeys);
+NowDefineBuiltinFunction(ReflectObject, "parse", 1, ReflectObject_parse);
+NowDefineBuiltinFunction(ReflectObject, "parseGoal", 1, ReflectObject_parseGoal);
+NowDefineBuiltinFunction(ReflectObject, "preventExtensions", 1, ReflectObject_preventExtensions);
+NowDefineProperty(ReflectObject, SLOTS.REALM, RealmConstructor);
+NowDefineBuiltinFunction(ReflectObject, "set", 3, ReflectObject_set);
+NowDefineBuiltinFunction(ReflectObject, "setPrototypeOf", 2, ReflectObject_setPrototypeOf);
+NowDefineBuiltinConstant(ReflectObject, $$toStringTag, "Reflect");
+NowDefineBuiltinFunction(ReflectObject, "getIntrinsic", 1, ReflectObject_getIntrinsic);
+NowDefineBuiltinFunction(ReflectObject, "createSelfHostingFunction", 2, ReflectObject_createSelfHostingFunction);
 setInternalSlot(IsNaNFunction, SLOTS.CALL, IsNaNFunction_call);
 setInternalSlot(IsFiniteFunction, SLOTS.CALL, IsFiniteFunction_call);
-LazyDefineBuiltinFunction(ObjectConstructor, "getOwnPropertyDescriptors", 1, ObjectConstructor_getOwnPropertyDescriptors);
+NowDefineBuiltinFunction(ObjectConstructor, "getOwnPropertyDescriptors", 1, ObjectConstructor_getOwnPropertyDescriptors);
 MakeConstructor(ObjectConstructor, true, ObjectPrototype);
 setInternalSlot(ObjectPrototype, SLOTS.PROTOTYPE, null);
 var ObjectPrototype_proto_ = {
@@ -23470,153 +22472,153 @@ var ObjectPrototype_proto_ = {
 DefineOwnProperty(ObjectPrototype, "__proto__", ObjectPrototype_proto_);
 setInternalSlot(ObjectConstructor, SLOTS.CALL, ObjectConstructor_call);
 setInternalSlot(ObjectConstructor, SLOTS.CONSTRUCT, ObjectConstructor_construct);
-LazyDefineBuiltinFunction(ObjectConstructor, "assign", 2, ObjectConstructor_assign);
-LazyDefineBuiltinFunction(ObjectConstructor, "create", 0, ObjectConstructor_create);
-LazyDefineBuiltinFunction(ObjectConstructor, "defineProperty", 0, ObjectConstructor_defineProperty);
-LazyDefineBuiltinFunction(ObjectConstructor, "defineProperties", 0, ObjectConstructor_defineProperties);
-LazyDefineBuiltinFunction(ObjectConstructor, "freeze", 1, ObjectConstructor_freeze);
-LazyDefineBuiltinFunction(ObjectConstructor, "getOwnPropertyDescriptor", 2, ObjectConstructor_getOwnPropertyDescriptor);
-LazyDefineBuiltinFunction(ObjectConstructor, "getOwnPropertyNames", 1, ObjectConstructor_getOwnPropertyNames);
-LazyDefineBuiltinFunction(ObjectConstructor, "getOwnPropertySymbols", 1, ObjectConstructor_getOwnPropertySymbols);
-LazyDefineBuiltinFunction(ObjectConstructor, "getPrototypeOf", 1, ObjectConstructor_getPrototypeOf);
-LazyDefineBuiltinFunction(ObjectConstructor, "keys", 1, ObjectConstructor_keys);
-LazyDefineBuiltinFunction(ObjectConstructor, "mixin", 2, ObjectConstructor_mixin);
-LazyDefineBuiltinFunction(ObjectConstructor, "is", 1, ObjectConstructor_is);
-LazyDefineBuiltinFunction(ObjectConstructor, "isExtensible", 1, ObjectConstructor_isExtensible);
-LazyDefineBuiltinFunction(ObjectConstructor, "isSealed", 1, ObjectConstructor_isSealed);
-LazyDefineBuiltinFunction(ObjectConstructor, "isFrozen", 1, ObjectConstructor_isFrozen);
-LazyDefineBuiltinFunction(ObjectConstructor, "preventExtensions", 1, ObjectConstructor_preventExtensions);
-LazyDefineBuiltinFunction(ObjectConstructor, "seal", 2, ObjectConstructor_seal);
-LazyDefineBuiltinFunction(ObjectPrototype, $$create, 0, ObjectPrototype_$$create);
-LazyDefineBuiltinFunction(ObjectPrototype, "hasOwnProperty", 0, ObjectPrototype_hasOwnProperty);
-LazyDefineBuiltinFunction(ObjectPrototype, "isPrototypeOf", 0, ObjectPrototype_isPrototypeOf);
-LazyDefineBuiltinFunction(ObjectPrototype, "propertyIsEnumerable", 0, ObjectPrototype_propertyIsEnumerable);
-LazyDefineBuiltinFunction(ObjectPrototype, "toString", 0, ObjectPrototype_toString);
-LazyDefineBuiltinFunction(ObjectPrototype, "valueOf", 0, ObjectPrototype_valueOf);
-LazyDefineProperty(ObjectPrototype, $$toStringTag, "Object");
-LazyDefineBuiltinFunction(NotifierPrototype, "notify", 1, NotifierPrototype_notify);
-LazyDefineBuiltinFunction(NotifierPrototype, "performChange", 2, NotifierPrototype_performChange);
-LazyDefineBuiltinFunction(ObjectConstructor, "observe", 3, ObjectConstructor_observe);
-LazyDefineBuiltinFunction(ObjectConstructor, "unobserve", 1, ObjectConstructor_unobserve);
-LazyDefineBuiltinFunction(ObjectConstructor, "deliverChangeRecords", 1, ObjectConstructor_deliverChangeRecords);
-LazyDefineBuiltinFunction(ObjectConstructor, "getNotifier", 1, ObjectConstructor_getNotifier);
+NowDefineBuiltinFunction(ObjectConstructor, "assign", 2, ObjectConstructor_assign);
+NowDefineBuiltinFunction(ObjectConstructor, "create", 0, ObjectConstructor_create);
+NowDefineBuiltinFunction(ObjectConstructor, "defineProperty", 0, ObjectConstructor_defineProperty);
+NowDefineBuiltinFunction(ObjectConstructor, "defineProperties", 0, ObjectConstructor_defineProperties);
+NowDefineBuiltinFunction(ObjectConstructor, "freeze", 1, ObjectConstructor_freeze);
+NowDefineBuiltinFunction(ObjectConstructor, "getOwnPropertyDescriptor", 2, ObjectConstructor_getOwnPropertyDescriptor);
+NowDefineBuiltinFunction(ObjectConstructor, "getOwnPropertyNames", 1, ObjectConstructor_getOwnPropertyNames);
+NowDefineBuiltinFunction(ObjectConstructor, "getOwnPropertySymbols", 1, ObjectConstructor_getOwnPropertySymbols);
+NowDefineBuiltinFunction(ObjectConstructor, "getPrototypeOf", 1, ObjectConstructor_getPrototypeOf);
+NowDefineBuiltinFunction(ObjectConstructor, "keys", 1, ObjectConstructor_keys);
+NowDefineBuiltinFunction(ObjectConstructor, "mixin", 2, ObjectConstructor_mixin);
+NowDefineBuiltinFunction(ObjectConstructor, "is", 1, ObjectConstructor_is);
+NowDefineBuiltinFunction(ObjectConstructor, "isExtensible", 1, ObjectConstructor_isExtensible);
+NowDefineBuiltinFunction(ObjectConstructor, "isSealed", 1, ObjectConstructor_isSealed);
+NowDefineBuiltinFunction(ObjectConstructor, "isFrozen", 1, ObjectConstructor_isFrozen);
+NowDefineBuiltinFunction(ObjectConstructor, "preventExtensions", 1, ObjectConstructor_preventExtensions);
+NowDefineBuiltinFunction(ObjectConstructor, "seal", 2, ObjectConstructor_seal);
+NowDefineBuiltinFunction(ObjectPrototype, $$create, 0, ObjectPrototype_$$create);
+NowDefineBuiltinFunction(ObjectPrototype, "hasOwnProperty", 0, ObjectPrototype_hasOwnProperty);
+NowDefineBuiltinFunction(ObjectPrototype, "isPrototypeOf", 0, ObjectPrototype_isPrototypeOf);
+NowDefineBuiltinFunction(ObjectPrototype, "propertyIsEnumerable", 0, ObjectPrototype_propertyIsEnumerable);
+NowDefineBuiltinFunction(ObjectPrototype, "toString", 0, ObjectPrototype_toString);
+NowDefineBuiltinFunction(ObjectPrototype, "valueOf", 0, ObjectPrototype_valueOf);
+NowDefineProperty(ObjectPrototype, $$toStringTag, "Object");
+NowDefineBuiltinFunction(NotifierPrototype, "notify", 1, NotifierPrototype_notify);
+NowDefineBuiltinFunction(NotifierPrototype, "performChange", 2, NotifierPrototype_performChange);
+NowDefineBuiltinFunction(ObjectConstructor, "observe", 3, ObjectConstructor_observe);
+NowDefineBuiltinFunction(ObjectConstructor, "unobserve", 1, ObjectConstructor_unobserve);
+NowDefineBuiltinFunction(ObjectConstructor, "deliverChangeRecords", 1, ObjectConstructor_deliverChangeRecords);
+NowDefineBuiltinFunction(ObjectConstructor, "getNotifier", 1, ObjectConstructor_getNotifier);
 MakeConstructor(FunctionConstructor, true, FunctionPrototype);
 setInternalSlot(FunctionPrototype, SLOTS.PROTOTYPE, ObjectPrototype);
-LazyDefineProperty(FunctionPrototype, $$toStringTag, "Function");
-LazyDefineBuiltinFunction(FunctionPrototype, "valueOf", 0, FunctionPrototype_valueOf);
+NowDefineProperty(FunctionPrototype, $$toStringTag, "Function");
+NowDefineBuiltinFunction(FunctionPrototype, "valueOf", 0, FunctionPrototype_valueOf);
 setInternalSlot(FunctionConstructor, SLOTS.CALL, FunctionConstructor_call);
 setInternalSlot(FunctionConstructor, SLOTS.CONSTRUCT, FunctionConstructor_construct);
-LazyDefineProperty(FunctionConstructor, $$create, CreateBuiltinFunction(realm, FunctionConstructor_$$create, 1, "[Symbol.create]"));
-LazyDefineProperty(FunctionPrototype, $$create, CreateBuiltinFunction(realm, FunctionPrototype_$$create, 1, "[Symbol.create]"));
-LazyDefineProperty(FunctionPrototype, "constructor", FunctionConstructor);
-LazyDefineBuiltinFunction(FunctionPrototype, "toString", 0, FunctionPrototype_toString);
-LazyDefineBuiltinFunction(FunctionPrototype, "apply", 1, FunctionPrototype_apply);
-LazyDefineBuiltinFunction(FunctionPrototype, "bind", 1, FunctionPrototype_bind);
-LazyDefineBuiltinFunction(FunctionPrototype, "call", 1, FunctionPrototype_call);
-LazyDefineProperty(FunctionPrototype, $$hasInstance, CreateBuiltinFunction(realm, FunctionPrototype_$$hasInstance, 1, "[Symbol.hasInstance]"));
-LazyDefineBuiltinFunction(FunctionPrototype, "toMethod", 1, FunctionPrototype_toMethod);
-LazyDefineBuiltinFunction(GeneratorPrototype, $$iterator, 0, GeneratorPrototype_$$iterator);
-LazyDefineProperty(GeneratorPrototype, $$toStringTag, "Generator");
+NowDefineProperty(FunctionConstructor, $$create, CreateBuiltinFunction(realm, FunctionConstructor_$$create, 1, "[Symbol.create]"));
+NowDefineProperty(FunctionPrototype, $$create, CreateBuiltinFunction(realm, FunctionPrototype_$$create, 1, "[Symbol.create]"));
+NowDefineProperty(FunctionPrototype, "constructor", FunctionConstructor);
+NowDefineBuiltinFunction(FunctionPrototype, "toString", 0, FunctionPrototype_toString);
+NowDefineBuiltinFunction(FunctionPrototype, "apply", 1, FunctionPrototype_apply);
+NowDefineBuiltinFunction(FunctionPrototype, "bind", 1, FunctionPrototype_bind);
+NowDefineBuiltinFunction(FunctionPrototype, "call", 1, FunctionPrototype_call);
+NowDefineProperty(FunctionPrototype, $$hasInstance, CreateBuiltinFunction(realm, FunctionPrototype_$$hasInstance, 1, "[Symbol.hasInstance]"));
+NowDefineBuiltinFunction(FunctionPrototype, "toMethod", 1, FunctionPrototype_toMethod);
+NowDefineBuiltinFunction(GeneratorPrototype, $$iterator, 0, GeneratorPrototype_$$iterator);
+NowDefineProperty(GeneratorPrototype, $$toStringTag, "Generator");
 // GeneratorFunction.[[Prototype]] = FunctionPrototype
 setInternalSlot(GeneratorFunction, SLOTS.PROTOTYPE, FunctionConstructor);
 MakeConstructor(GeneratorFunction, true, GeneratorObject);
 // GeneratorFunction.prototype = %Generator%
 // GeneratorFunction.prototype.constructor = GeneratorFunction
-LazyDefineProperty(GeneratorPrototype, "constructor", GeneratorFunction);
-LazyDefineProperty(GeneratorObject, "constructor", GeneratorFunction);
-LazyDefineProperty(GeneratorObject, "prototype", GeneratorPrototype);
+NowDefineProperty(GeneratorPrototype, "constructor", GeneratorFunction);
+NowDefineProperty(GeneratorObject, "constructor", GeneratorFunction);
+NowDefineProperty(GeneratorObject, "prototype", GeneratorPrototype);
 // GeneratorFunction.prototype.prototype = GeneratorPrototype
 setInternalSlot(GeneratorObject, SLOTS.PROTOTYPE, GeneratorPrototype);
-// LazyDefineProperty(GeneratorPrototype, "constructor", GeneratorObject);
-LazyDefineBuiltinFunction(GeneratorPrototype, "next", 0, GeneratorPrototype_next);
-LazyDefineBuiltinFunction(GeneratorPrototype, "throw", 0, GeneratorPrototype_throw);
+// NowDefineProperty(GeneratorPrototype, "constructor", GeneratorObject);
+NowDefineBuiltinFunction(GeneratorPrototype, "next", 0, GeneratorPrototype_next);
+NowDefineBuiltinFunction(GeneratorPrototype, "throw", 0, GeneratorPrototype_throw);
 setInternalSlot(GeneratorFunction, SLOTS.CALL, GeneratorFunction_call);
 setInternalSlot(GeneratorFunction, SLOTS.CONSTRUCT, GeneratorFunction_construct);
-LazyDefineBuiltinFunction(GeneratorFunction, $$create, 0, GeneratorFunction_$$create);
+NowDefineBuiltinFunction(GeneratorFunction, $$create, 0, GeneratorFunction_$$create);
 setInternalSlot(JSONObject, SLOTS.PROTOTYPE, ObjectPrototype);
 setInternalSlot(JSONObject, SLOTS.JSONTAG, true);
-LazyDefineBuiltinFunction(JSONObject, "parse", 2, JSONObject_parse);
-LazyDefineBuiltinFunction(JSONObject, "stringify", 2, JSONObject_stringify);
-LazyDefineBuiltinConstant(JSONObject, $$toStringTag, "JSON");
+NowDefineBuiltinFunction(JSONObject, "parse", 2, JSONObject_parse);
+NowDefineBuiltinFunction(JSONObject, "stringify", 2, JSONObject_stringify);
+NowDefineBuiltinConstant(JSONObject, $$toStringTag, "JSON");
 MakeConstructor(PromiseConstructor, true, PromisePrototype);
 setInternalSlot(PromiseConstructor, SLOTS.CALL, PromiseConstructor_call);
 setInternalSlot(PromiseConstructor, SLOTS.CONSTRUCT, PromiseConstructor_Construct);
-LazyDefineProperty(PromiseConstructor, $$create, CreateBuiltinFunction(realm, PromiseConstructor_$$create, 0, "[Symbol.create]"));
-LazyDefineBuiltinFunction(PromiseConstructor, "resolve", 1, PromiseConstructor_resolve);
-LazyDefineBuiltinFunction(PromiseConstructor, "reject", 1, PromiseConstructor_reject);
-LazyDefineBuiltinFunction(PromiseConstructor, "cast", 1, PromiseConstructor_cast);
-LazyDefineBuiltinFunction(PromiseConstructor, "race", 1, PromiseConstructor_race);
-LazyDefineProperty(PromiseConstructor, "all", CreateBuiltinFunction(realm, PromiseConstructor_all, 0, "all"));
-LazyDefineProperty(PromisePrototype, "then", CreateBuiltinFunction(realm, PromisePrototype_then, 2, "then"));
-LazyDefineProperty(PromisePrototype, "catch", CreateBuiltinFunction(realm, PromisePrototype_catch, 1, "catch"));
-LazyDefineProperty(PromisePrototype, "constructor", PromiseConstructor);
-LazyDefineProperty(PromisePrototype, $$toStringTag, SLOTS.PROMISE);
+NowDefineProperty(PromiseConstructor, $$create, CreateBuiltinFunction(realm, PromiseConstructor_$$create, 0, "[Symbol.create]"));
+NowDefineBuiltinFunction(PromiseConstructor, "resolve", 1, PromiseConstructor_resolve);
+NowDefineBuiltinFunction(PromiseConstructor, "reject", 1, PromiseConstructor_reject);
+NowDefineBuiltinFunction(PromiseConstructor, "cast", 1, PromiseConstructor_cast);
+NowDefineBuiltinFunction(PromiseConstructor, "race", 1, PromiseConstructor_race);
+NowDefineProperty(PromiseConstructor, "all", CreateBuiltinFunction(realm, PromiseConstructor_all, 0, "all"));
+NowDefineProperty(PromisePrototype, "then", CreateBuiltinFunction(realm, PromisePrototype_then, 2, "then"));
+NowDefineProperty(PromisePrototype, "catch", CreateBuiltinFunction(realm, PromisePrototype_catch, 1, "catch"));
+NowDefineProperty(PromisePrototype, "constructor", PromiseConstructor);
+NowDefineProperty(PromisePrototype, $$toStringTag, SLOTS.PROMISE);
 MakeConstructor(RegExpConstructor, true, RegExpPrototype);
 setInternalSlot(RegExpConstructor, SLOTS.CALL, RegExp_Call);
 setInternalSlot(RegExpConstructor, SLOTS.CONSTRUCT, RegExp_Construct);
-LazyDefineBuiltinConstant(RegExpConstructor, "prototype", RegExpPrototype);
-LazyDefineBuiltinConstant(RegExpPrototype, "constructor", RegExpConstructor);
-LazyDefineBuiltinConstant(RegExpPrototype, $$isRegExp, true);
-LazyDefineBuiltinConstant(RegExpPrototype, $$toStringTag, "RegExp");
-LazyDefineBuiltinFunction(RegExpConstructor, $$create, 1, RegExp_$$create);
-LazyDefineAccessorFunction(RegExpPrototype, "ignoreCase",  0, RegExpPrototype_get_ignoreCase);
-LazyDefineAccessorFunction(RegExpPrototype, "global",  0, RegExpPrototype_get_global);
-LazyDefineAccessorFunction(RegExpPrototype, "multiline",  0, RegExpPrototype_get_multiline);
-LazyDefineAccessorFunction(RegExpPrototype, "source",  0, RegExpPrototype_get_source);
-LazyDefineAccessorFunction(RegExpPrototype, "sticky",  0, RegExpPrototype_get_sticky);
-LazyDefineAccessorFunction(RegExpPrototype, "unicode", 0, RegExpPrototype_get_unicode);
-LazyDefineProperty(RegExpPrototype, "lastIndex", 0);
-LazyDefineBuiltinFunction(RegExpPrototype, "compile", 1, RegExpPrototype_compile);
-LazyDefineBuiltinFunction(RegExpPrototype, "exec", 1, RegExpPrototype_exec);
-LazyDefineBuiltinFunction(RegExpPrototype, "match", 1, RegExpPrototype_match);
-LazyDefineBuiltinFunction(RegExpPrototype, "replace", 1, RegExpPrototype_replace);
-LazyDefineBuiltinFunction(RegExpPrototype, "search", 1, RegExpPrototype_search);
-LazyDefineBuiltinFunction(RegExpPrototype, "split", 1, RegExpPrototype_split);
-LazyDefineBuiltinFunction(RegExpPrototype, "test", 1, RegExpPrototype_test);
-LazyDefineBuiltinFunction(RegExpPrototype, "toString", 1, RegExpPrototype_toString);
+NowDefineBuiltinConstant(RegExpConstructor, "prototype", RegExpPrototype);
+NowDefineBuiltinConstant(RegExpPrototype, "constructor", RegExpConstructor);
+NowDefineBuiltinConstant(RegExpPrototype, $$isRegExp, true);
+NowDefineBuiltinConstant(RegExpPrototype, $$toStringTag, "RegExp");
+NowDefineBuiltinFunction(RegExpConstructor, $$create, 1, RegExp_$$create);
+NowDefineAccessorFunction(RegExpPrototype, "ignoreCase",  0, RegExpPrototype_get_ignoreCase);
+NowDefineAccessorFunction(RegExpPrototype, "global",  0, RegExpPrototype_get_global);
+NowDefineAccessorFunction(RegExpPrototype, "multiline",  0, RegExpPrototype_get_multiline);
+NowDefineAccessorFunction(RegExpPrototype, "source",  0, RegExpPrototype_get_source);
+NowDefineAccessorFunction(RegExpPrototype, "sticky",  0, RegExpPrototype_get_sticky);
+NowDefineAccessorFunction(RegExpPrototype, "unicode", 0, RegExpPrototype_get_unicode);
+NowDefineProperty(RegExpPrototype, "lastIndex", 0);
+NowDefineBuiltinFunction(RegExpPrototype, "compile", 1, RegExpPrototype_compile);
+NowDefineBuiltinFunction(RegExpPrototype, "exec", 1, RegExpPrototype_exec);
+NowDefineBuiltinFunction(RegExpPrototype, "match", 1, RegExpPrototype_match);
+NowDefineBuiltinFunction(RegExpPrototype, "replace", 1, RegExpPrototype_replace);
+NowDefineBuiltinFunction(RegExpPrototype, "search", 1, RegExpPrototype_search);
+NowDefineBuiltinFunction(RegExpPrototype, "split", 1, RegExpPrototype_split);
+NowDefineBuiltinFunction(RegExpPrototype, "test", 1, RegExpPrototype_test);
+NowDefineBuiltinFunction(RegExpPrototype, "toString", 1, RegExpPrototype_toString);
 setInternalSlot(ArrayBufferConstructor, SLOTS.CALL, ArrayBufferConstructor_call);
 setInternalSlot(ArrayBufferConstructor, SLOTS.CONSTRUCT, ArrayBufferConstructor_construct);
 setInternalSlot(ArrayBufferConstructor, SLOTS.PROTOTYPE, FunctionPrototype);
-LazyDefineBuiltinConstant(ArrayBufferConstructor, "prototype", ArrayBufferPrototype);
-LazyDefineBuiltinFunction(ArrayBufferConstructor, "isView", 1, ArrayBufferConstructor_isView);
-LazyDefineBuiltinConstant(ArrayBufferPrototype, "constructor", ArrayBufferConstructor);
-LazyDefineBuiltinConstant(ArrayBufferPrototype, $$toStringTag, "ArrayBuffer");
-LazyDefineBuiltinFunction(ArrayBufferConstructor, $$create, 1, ArrayBufferConstructor_$$create)
+NowDefineBuiltinConstant(ArrayBufferConstructor, "prototype", ArrayBufferPrototype);
+NowDefineBuiltinFunction(ArrayBufferConstructor, "isView", 1, ArrayBufferConstructor_isView);
+NowDefineBuiltinConstant(ArrayBufferPrototype, "constructor", ArrayBufferConstructor);
+NowDefineBuiltinConstant(ArrayBufferPrototype, $$toStringTag, "ArrayBuffer");
+NowDefineBuiltinFunction(ArrayBufferConstructor, $$create, 1, ArrayBufferConstructor_$$create)
 setInternalSlot(ArrayBufferPrototype, SLOTS.PROTOTYPE, ObjectPrototype);
-LazyDefineAccessorFunction(ArrayBufferPrototype, "byteLength", 0, ArrayBufferPrototype_get_byteLength);
-LazyDefineBuiltinFunction(ArrayBufferPrototype, "slice", 1, ArrayBufferPrototype_slice);
+NowDefineAccessorFunction(ArrayBufferPrototype, "byteLength", 0, ArrayBufferPrototype_get_byteLength);
+NowDefineBuiltinFunction(ArrayBufferPrototype, "slice", 1, ArrayBufferPrototype_slice);
 MakeConstructor(DataViewConstructor, true, DataViewPrototype);
 setInternalSlot(DataViewConstructor, SLOTS.CALL, DataViewConstructor_Call);
 setInternalSlot(DataViewConstructor, SLOTS.CONSTRUCT, DataViewConstructor_Construct);
-LazyDefineBuiltinFunction(DataViewConstructor, $$create, 1, DataViewConstructor_$$create);
-LazyDefineAccessorFunction(DataViewPrototype, "buffer", 0, DataViewPrototype_get_buffer);
-LazyDefineAccessorFunction(DataViewPrototype, "byteLength", 0, DataViewPrototype_get_byteLength);
-LazyDefineAccessorFunction(DataViewPrototype, "byteOffset", 0, DataViewPrototype_get_byteOffset);
-LazyDefineBuiltinFunction(DataViewPrototype, "getFloat32", 1, DataViewPrototype_getFloat32);
-LazyDefineBuiltinFunction(DataViewPrototype, "getFloat64", 1, DataViewPrototype_getFloat64);
-LazyDefineBuiltinFunction(DataViewPrototype, "getInt8", 1, DataViewPrototype_getInt8);
-LazyDefineBuiltinFunction(DataViewPrototype, "getInt16", 1, DataViewPrototype_getInt16);
-LazyDefineBuiltinFunction(DataViewPrototype, "getInt32", 1, DataViewPrototype_getInt32);
-LazyDefineBuiltinFunction(DataViewPrototype, "getUint8", 1, DataViewPrototype_getUint8);
-LazyDefineBuiltinFunction(DataViewPrototype, "getUint16", 1, DataViewPrototype_getUint16);
-LazyDefineBuiltinFunction(DataViewPrototype, "getUint32", 1, DataViewPrototype_getUint32);
-LazyDefineBuiltinFunction(DataViewPrototype, "setFloat32", 2, DataViewPrototype_setFloat32);
-LazyDefineBuiltinFunction(DataViewPrototype, "setFloat64", 2, DataViewPrototype_setFloat64);
-LazyDefineBuiltinFunction(DataViewPrototype, "setInt8", 2, DataViewPrototype_setInt8);
-LazyDefineBuiltinFunction(DataViewPrototype, "setInt16", 2, DataViewPrototype_setInt16);
-LazyDefineBuiltinFunction(DataViewPrototype, "setInt32", 2, DataViewPrototype_setInt32);
-LazyDefineBuiltinFunction(DataViewPrototype, "setUint8", 2, DataViewPrototype_setUint8);
-LazyDefineBuiltinFunction(DataViewPrototype, "setUint16", 2, DataViewPrototype_setUint16);
-LazyDefineBuiltinFunction(DataViewPrototype, "setUint32", 2, DataViewPrototype_setUint32);
-LazyDefineBuiltinConstant(DataViewConstructor, $$toStringTag, SLOTS.DATAVIEW);
+NowDefineBuiltinFunction(DataViewConstructor, $$create, 1, DataViewConstructor_$$create);
+NowDefineAccessorFunction(DataViewPrototype, "buffer", 0, DataViewPrototype_get_buffer);
+NowDefineAccessorFunction(DataViewPrototype, "byteLength", 0, DataViewPrototype_get_byteLength);
+NowDefineAccessorFunction(DataViewPrototype, "byteOffset", 0, DataViewPrototype_get_byteOffset);
+NowDefineBuiltinFunction(DataViewPrototype, "getFloat32", 1, DataViewPrototype_getFloat32);
+NowDefineBuiltinFunction(DataViewPrototype, "getFloat64", 1, DataViewPrototype_getFloat64);
+NowDefineBuiltinFunction(DataViewPrototype, "getInt8", 1, DataViewPrototype_getInt8);
+NowDefineBuiltinFunction(DataViewPrototype, "getInt16", 1, DataViewPrototype_getInt16);
+NowDefineBuiltinFunction(DataViewPrototype, "getInt32", 1, DataViewPrototype_getInt32);
+NowDefineBuiltinFunction(DataViewPrototype, "getUint8", 1, DataViewPrototype_getUint8);
+NowDefineBuiltinFunction(DataViewPrototype, "getUint16", 1, DataViewPrototype_getUint16);
+NowDefineBuiltinFunction(DataViewPrototype, "getUint32", 1, DataViewPrototype_getUint32);
+NowDefineBuiltinFunction(DataViewPrototype, "setFloat32", 2, DataViewPrototype_setFloat32);
+NowDefineBuiltinFunction(DataViewPrototype, "setFloat64", 2, DataViewPrototype_setFloat64);
+NowDefineBuiltinFunction(DataViewPrototype, "setInt8", 2, DataViewPrototype_setInt8);
+NowDefineBuiltinFunction(DataViewPrototype, "setInt16", 2, DataViewPrototype_setInt16);
+NowDefineBuiltinFunction(DataViewPrototype, "setInt32", 2, DataViewPrototype_setInt32);
+NowDefineBuiltinFunction(DataViewPrototype, "setUint8", 2, DataViewPrototype_setUint8);
+NowDefineBuiltinFunction(DataViewPrototype, "setUint16", 2, DataViewPrototype_setUint16);
+NowDefineBuiltinFunction(DataViewPrototype, "setUint32", 2, DataViewPrototype_setUint32);
+NowDefineBuiltinConstant(DataViewConstructor, $$toStringTag, SLOTS.DATAVIEW);
 function createTypedArrayPrototype(proto) {
-    LazyDefineAccessor(proto, "buffer", CreateBuiltinFunction(realm, TypedArrayPrototype_get_buffer, 0, "get buffer"));
-    LazyDefineAccessor(proto, "byteLength", CreateBuiltinFunction(realm, TypedArrayPrototype_get_byteLength, 0, "get byteLength"));
-    LazyDefineAccessor(proto, "byteOffset", CreateBuiltinFunction(realm, TypedArrayPrototype_get_byteOffset, 0, "get byteOffset"));
-    LazyDefineAccessor(proto, $$toStringTag, CreateBuiltinFunction(realm, TypedArrayPrototype_get_$$toStringTag, 0, "get [Symbol.toStringTag]"));
-    LazyDefineBuiltinFunction(proto, "forEach", 1, TypedArrayPrototype_map);
-    LazyDefineBuiltinFunction(proto, "map", 1, TypedArrayPrototype_map);
-    LazyDefineBuiltinFunction(proto, "reduce", 1, TypedArrayPrototype_reduce);
+    NowDefineAccessor(proto, "buffer", CreateBuiltinFunction(realm, TypedArrayPrototype_get_buffer, 0, "get buffer"));
+    NowDefineAccessor(proto, "byteLength", CreateBuiltinFunction(realm, TypedArrayPrototype_get_byteLength, 0, "get byteLength"));
+    NowDefineAccessor(proto, "byteOffset", CreateBuiltinFunction(realm, TypedArrayPrototype_get_byteOffset, 0, "get byteOffset"));
+    NowDefineAccessor(proto, $$toStringTag, CreateBuiltinFunction(realm, TypedArrayPrototype_get_$$toStringTag, 0, "get [Symbol.toStringTag]"));
+    NowDefineBuiltinFunction(proto, "forEach", 1, TypedArrayPrototype_map);
+    NowDefineBuiltinFunction(proto, "map", 1, TypedArrayPrototype_map);
+    NowDefineBuiltinFunction(proto, "reduce", 1, TypedArrayPrototype_reduce);
     return proto;
 }
 function createTypedArrayVariant(_type, _bpe, _ctor, _proto, ctorName) {
@@ -23639,16 +22641,16 @@ function createTypedArrayVariant(_type, _bpe, _ctor, _proto, ctorName) {
     setInternalSlot(_ctor, SLOTS.CONSTRUCT, function (argList) {
         return OrdinaryConstruct(this, argList);
     });
-    LazyDefineBuiltinConstant(_ctor, "BYTES_PER_ELEMENT", _bpe);
-    LazyDefineBuiltinConstant(_ctor, "prototype", _proto);
-    LazyDefineBuiltinConstant(_proto, "constructor", _ctor);
+    NowDefineBuiltinConstant(_ctor, "BYTES_PER_ELEMENT", _bpe);
+    NowDefineBuiltinConstant(_ctor, "prototype", _proto);
+    NowDefineBuiltinConstant(_proto, "constructor", _ctor);
     createTypedArrayPrototype(_proto);
     return _ctor;
 }
 setInternalSlot(TypedArrayConstructor, SLOTS.CALL, TypedArrayConstructor_Call);
-LazyDefineProperty(TypedArrayConstructor, $$create, CreateBuiltinFunction(realm, TypedArrayConstructor_$$create, 0, "[Symbol.create]"));
-LazyDefineProperty(TypedArrayConstructor, "from", CreateBuiltinFunction(realm, TypedArrayConstructor_from, 1, "from"));
-LazyDefineProperty(TypedArrayConstructor, "of", CreateBuiltinFunction(realm, TypedArrayConstructor_of, 2, "of"));
+NowDefineProperty(TypedArrayConstructor, $$create, CreateBuiltinFunction(realm, TypedArrayConstructor_$$create, 0, "[Symbol.create]"));
+NowDefineProperty(TypedArrayConstructor, "from", CreateBuiltinFunction(realm, TypedArrayConstructor_from, 1, "from"));
+NowDefineProperty(TypedArrayConstructor, "of", CreateBuiltinFunction(realm, TypedArrayConstructor_of, 2, "of"));
 createTypedArrayVariant("Int8", 1, Int8ArrayConstructor, Int8ArrayPrototype, "Int8Array");
 createTypedArrayVariant("Uint8", 1, Uint8ArrayConstructor, Int8ArrayPrototype, "Uint8Array");
 createTypedArrayVariant("Uint8C", 1, Uint8ClampedArrayConstructor, Uint8ClampedArrayPrototype, "Uint8Clamped");
@@ -23663,72 +22665,72 @@ setInternalSlot(MapConstructor, SLOTS.PROTOTYPE, FunctionPrototype);
 setInternalSlot(MapPrototype, SLOTS.PROTOTYPE, ObjectPrototype);
 setInternalSlot(MapConstructor, SLOTS.CALL, MapConstructor_call);
 setInternalSlot(MapConstructor, SLOTS.CONSTRUCT, MapConstructor_construct);
-LazyDefineProperty(MapConstructor, $$create, CreateBuiltinFunction(realm, MapConstructor_$$create, 1, "[Symbol.create]"));
-LazyDefineBuiltinConstant(MapConstructor, "prototype", MapPrototype);
-LazyDefineBuiltinFunction(MapPrototype, "get", 1, MapPrototype_get);
-LazyDefineBuiltinFunction(MapPrototype, "has", 1, MapPrototype_has);
-LazyDefineBuiltinFunction(MapPrototype, "set", 2, MapPrototype_set);
-LazyDefineBuiltinFunction(MapPrototype, "delete", 1, MapPrototype_delete);
-LazyDefineBuiltinConstant(MapPrototype, "constructor", MapConstructor);
-LazyDefineBuiltinFunction(MapPrototype, "entries", 0, MapPrototype_entries);
-LazyDefineBuiltinFunction(MapPrototype, "keys", 0, MapPrototype_keys);
-LazyDefineBuiltinFunction(MapPrototype, "values", 0, MapPrototype_values);
-LazyDefineBuiltinFunction(MapPrototype, $$iterator, 0, MapPrototype_entries);
-LazyDefineBuiltinConstant(MapPrototype, $$toStringTag, "Map");
-LazyDefineBuiltinConstant(MapIteratorPrototype, $$toStringTag, "Map Iterator");
-LazyDefineBuiltinFunction(MapIteratorPrototype, $$iterator, 0, MapIteratorPrototype_$$iterator);
-LazyDefineBuiltinFunction(MapIteratorPrototype, "next", 0, MapIteratorPrototype_next);
+NowDefineProperty(MapConstructor, $$create, CreateBuiltinFunction(realm, MapConstructor_$$create, 1, "[Symbol.create]"));
+NowDefineBuiltinConstant(MapConstructor, "prototype", MapPrototype);
+NowDefineBuiltinFunction(MapPrototype, "get", 1, MapPrototype_get);
+NowDefineBuiltinFunction(MapPrototype, "has", 1, MapPrototype_has);
+NowDefineBuiltinFunction(MapPrototype, "set", 2, MapPrototype_set);
+NowDefineBuiltinFunction(MapPrototype, "delete", 1, MapPrototype_delete);
+NowDefineBuiltinConstant(MapPrototype, "constructor", MapConstructor);
+NowDefineBuiltinFunction(MapPrototype, "entries", 0, MapPrototype_entries);
+NowDefineBuiltinFunction(MapPrototype, "keys", 0, MapPrototype_keys);
+NowDefineBuiltinFunction(MapPrototype, "values", 0, MapPrototype_values);
+NowDefineBuiltinFunction(MapPrototype, $$iterator, 0, MapPrototype_entries);
+NowDefineBuiltinConstant(MapPrototype, $$toStringTag, "Map");
+NowDefineBuiltinConstant(MapIteratorPrototype, $$toStringTag, "Map Iterator");
+NowDefineBuiltinFunction(MapIteratorPrototype, $$iterator, 0, MapIteratorPrototype_$$iterator);
+NowDefineBuiltinFunction(MapIteratorPrototype, "next", 0, MapIteratorPrototype_next);
 setInternalSlot(SetConstructor, SLOTS.PROTOTYPE, FunctionPrototype);
 setInternalSlot(SetPrototype, SLOTS.PROTOTYPE, ObjectPrototype);
 setInternalSlot(SetConstructor, SLOTS.CALL, SetConstructor_call);
 setInternalSlot(SetConstructor, SLOTS.CONSTRUCT, SetConstructor_construct);
-LazyDefineProperty (SetConstructor, $$create, CreateBuiltinFunction(realm, SetConstructor_$$create, 1, "[Symbol.create]"));
-LazyDefineBuiltinConstant(SetPrototype, $$toStringTag, "Set");
-LazyDefineBuiltinFunction(SetPrototype, "clear", 0, SetPrototype_clear);
-LazyDefineBuiltinFunction(SetPrototype, "set", 1, SetPrototype_set);
-LazyDefineBuiltinFunction(SetPrototype, "has", 1, SetPrototype_has);
-LazyDefineBuiltinFunction(SetPrototype, "delete", 1, SetPrototype_delete);
-LazyDefineBuiltinFunction(SetPrototype, "keys", 0, SetPrototype_keys);
-LazyDefineBuiltinFunction(SetPrototype, "values", 0, SetPrototype_values);
-LazyDefineBuiltinFunction(SetPrototype, "entries", 0, SetPrototype_entries);
-LazyDefineBuiltinFunction(SetPrototype, "forEach", 0, SetPrototype_forEach);
-LazyDefineBuiltinFunction(SetPrototype, $$iterator, 0, SetPrototype_values);
-LazyDefineBuiltinConstant(SetIteratorPrototype, "constructor", undefined);
-LazyDefineBuiltinConstant(SetIteratorPrototype, $$toStringTag, "Set Iterator");
-LazyDefineBuiltinFunction(SetIteratorPrototype, $$iterator, 0, SetIteratorPrototype_$$iterator);
-LazyDefineBuiltinFunction(SetIteratorPrototype, "next", 0, SetIteratorPrototype_next);
+NowDefineProperty (SetConstructor, $$create, CreateBuiltinFunction(realm, SetConstructor_$$create, 1, "[Symbol.create]"));
+NowDefineBuiltinConstant(SetPrototype, $$toStringTag, "Set");
+NowDefineBuiltinFunction(SetPrototype, "clear", 0, SetPrototype_clear);
+NowDefineBuiltinFunction(SetPrototype, "set", 1, SetPrototype_set);
+NowDefineBuiltinFunction(SetPrototype, "has", 1, SetPrototype_has);
+NowDefineBuiltinFunction(SetPrototype, "delete", 1, SetPrototype_delete);
+NowDefineBuiltinFunction(SetPrototype, "keys", 0, SetPrototype_keys);
+NowDefineBuiltinFunction(SetPrototype, "values", 0, SetPrototype_values);
+NowDefineBuiltinFunction(SetPrototype, "entries", 0, SetPrototype_entries);
+NowDefineBuiltinFunction(SetPrototype, "forEach", 0, SetPrototype_forEach);
+NowDefineBuiltinFunction(SetPrototype, $$iterator, 0, SetPrototype_values);
+NowDefineBuiltinConstant(SetIteratorPrototype, "constructor", undefined);
+NowDefineBuiltinConstant(SetIteratorPrototype, $$toStringTag, "Set Iterator");
+NowDefineBuiltinFunction(SetIteratorPrototype, $$iterator, 0, SetIteratorPrototype_$$iterator);
+NowDefineBuiltinFunction(SetIteratorPrototype, "next", 0, SetIteratorPrototype_next);
 MakeConstructor(EmitterConstructor, true, EmitterPrototype);
 setInternalSlot(EmitterPrototype, SLOTS.PROTOTYPE, ObjectPrototype);
 setInternalSlot(EmitterConstructor, SLOTS.CALL, EmitterConstructor_call);
 setInternalSlot(EmitterConstructor, SLOTS.CONSTRUCT, EmitterConstructor_construct);
-LazyDefineBuiltinFunction(EmitterConstructor, $$create, 1, EmitterConstructor_$$create);
-LazyDefineBuiltinConstant(EmitterConstructor, "prototype", EmitterPrototype);
-LazyDefineBuiltinConstant(EmitterPrototype, "constructor", EmitterConstructor);
-LazyDefineBuiltinFunction(EmitterPrototype, "on", 2, EmitterPrototype_on);
-LazyDefineBuiltinFunction(EmitterPrototype, "once", 2, EmitterPrototype_once);
-LazyDefineBuiltinFunction(EmitterPrototype, "remove", 2, EmitterPrototype_remove);
-LazyDefineBuiltinFunction(EmitterPrototype, "removeAll", 2, EmitterPrototype_removeAll);
-LazyDefineBuiltinFunction(EmitterPrototype, "emit", 2, EmitterPrototype_emit);
-LazyDefineBuiltinConstant(EmitterPrototype, $$toStringTag, "Emitter");
+NowDefineBuiltinFunction(EmitterConstructor, $$create, 1, EmitterConstructor_$$create);
+NowDefineBuiltinConstant(EmitterConstructor, "prototype", EmitterPrototype);
+NowDefineBuiltinConstant(EmitterPrototype, "constructor", EmitterConstructor);
+NowDefineBuiltinFunction(EmitterPrototype, "on", 2, EmitterPrototype_on);
+NowDefineBuiltinFunction(EmitterPrototype, "once", 2, EmitterPrototype_once);
+NowDefineBuiltinFunction(EmitterPrototype, "remove", 2, EmitterPrototype_remove);
+NowDefineBuiltinFunction(EmitterPrototype, "removeAll", 2, EmitterPrototype_removeAll);
+NowDefineBuiltinFunction(EmitterPrototype, "emit", 2, EmitterPrototype_emit);
+NowDefineBuiltinConstant(EmitterPrototype, $$toStringTag, "Emitter");
 MakeConstructor(EventConstructor, true, EventPrototype);
 MakeConstructor(EventTargetConstructor, true, EventTargetPrototype);
 MakeConstructor(MessagePortConstructor, true, MessagePortPrototype);
-LazyDefineBuiltinFunction(EventTargetPrototype, "addEventListener", 3, EventTargetPrototype_addEventListener);
-LazyDefineBuiltinFunction(EventTargetPrototype, "dispatchEvent", 1, EventTargetPrototype_dispatchEvent);
-LazyDefineBuiltinFunction(EventTargetPrototype, "removeEventListener", 2, EventTargetPrototype_removeEventListener);
-LazyDefineBuiltinFunction(MessagePortPrototype, "close", 0, MessagePortPrototype_close);
-LazyDefineBuiltinFunction(MessagePortPrototype, "open", 0, MessagePortPrototype_open);
-LazyDefineBuiltinFunction(MessagePortPrototype, "postMessage", 0, MessagePortPrototype_postMessage);
+NowDefineBuiltinFunction(EventTargetPrototype, "addEventListener", 3, EventTargetPrototype_addEventListener);
+NowDefineBuiltinFunction(EventTargetPrototype, "dispatchEvent", 1, EventTargetPrototype_dispatchEvent);
+NowDefineBuiltinFunction(EventTargetPrototype, "removeEventListener", 2, EventTargetPrototype_removeEventListener);
+NowDefineBuiltinFunction(MessagePortPrototype, "close", 0, MessagePortPrototype_close);
+NowDefineBuiltinFunction(MessagePortPrototype, "open", 0, MessagePortPrototype_open);
+NowDefineBuiltinFunction(MessagePortPrototype, "postMessage", 0, MessagePortPrototype_postMessage);
 // StructType
 setInternalSlot(StructTypeConstructor, SLOTS.CALL, StructTypeConstructor_Call);
 setInternalSlot(StructTypeConstructor, SLOTS.CONSTRUCT, StructTypeConstructor_Construct);
-LazyDefineBuiltinFunction(StructTypePrototype, $$create, 1, StructTypeConstructor_$$create)
+NowDefineBuiltinFunction(StructTypePrototype, $$create, 1, StructTypeConstructor_$$create)
 // StructType.prototype
 // Type.prototype
-LazyDefineAccessor(TypePrototype, "prototype", TypePrototypePrototype_get);
-LazyDefineBuiltinFunction(TypePrototype, "arrayType", 1, TypePrototype_arrayType);
-LazyDefineBuiltinFunction(TypePrototype, "opaqueType", 1, TypePrototype_opaqueType);
-LazyDefineBuiltinFunction(VMObject, "eval", 1, VMObject_eval);
+NowDefineAccessor(TypePrototype, "prototype", TypePrototypePrototype_get);
+NowDefineBuiltinFunction(TypePrototype, "arrayType", 1, TypePrototype_arrayType);
+NowDefineBuiltinFunction(TypePrototype, "opaqueType", 1, TypePrototype_opaqueType);
+NowDefineBuiltinFunction(VMObject, "eval", 1, VMObject_eval);
         createGlobalThis = function createGlobalThis(realm, globalThis, intrinsics) {
             SetPrototypeOf(globalThis, ObjectPrototype);
             setInternalSlot(globalThis, SLOTS.EXTENSIBLE, true);
@@ -23746,7 +22748,7 @@ LazyDefineBuiltinFunction(VMObject, "eval", 1, VMObject_eval);
             DefineOwnProperty(globalThis, "Float32Array", GetOwnProperty(intrinsics, INTRINSICS.FLOAT32ARRAY));
             DefineOwnProperty(globalThis, "Float64Array", GetOwnProperty(intrinsics, INTRINSICS.FLOAT64ARRAY));
             DefineOwnProperty(globalThis, "GeneratorFunction", GetOwnProperty(intrinsics, INTRINSICS.GENERATORFUNCTION));
-            LazyDefineBuiltinConstant(globalThis, "Infinity", Infinity);
+            NowDefineBuiltinConstant(globalThis, "Infinity", Infinity);
             DefineOwnProperty(globalThis, "Int8Array", GetOwnProperty(intrinsics, INTRINSICS.INT8ARRAY));
             DefineOwnProperty(globalThis, "Int16Array", GetOwnProperty(intrinsics, INTRINSICS.INT16ARRAY));
             DefineOwnProperty(globalThis, "Int32Array", GetOwnProperty(intrinsics, INTRINSICS.INT32ARRAY));
@@ -23756,7 +22758,7 @@ LazyDefineBuiltinFunction(VMObject, "eval", 1, VMObject_eval);
             DefineOwnProperty(globalThis, "Map", GetOwnProperty(intrinsics, INTRINSICS.MAP));
             DefineOwnProperty(globalThis, "MessagePort", GetOwnProperty(intrinsics, INTRINSICS.MESSAGEPORT));
             DefineOwnProperty(globalThis, "Module", GetOwnProperty(intrinsics, INTRINSICS.MODULE));
-            LazyDefineBuiltinConstant(globalThis, "NaN", NaN);
+            NowDefineBuiltinConstant(globalThis, "NaN", NaN);
             DefineOwnProperty(globalThis, "Number", GetOwnProperty(intrinsics, INTRINSICS.NUMBER));
             DefineOwnProperty(globalThis, "Proxy", GetOwnProperty(intrinsics, INTRINSICS.PROXY));
             DefineOwnProperty(globalThis, "RangeError", GetOwnProperty(intrinsics, INTRINSICS.RANGEERROR));
@@ -23765,7 +22767,7 @@ LazyDefineBuiltinFunction(VMObject, "eval", 1, VMObject_eval);
             DefineOwnProperty(globalThis, "RegExp", GetOwnProperty(intrinsics, INTRINSICS.REGEXP));
             DefineOwnProperty(globalThis, "StructType", GetOwnProperty(intrinsics, INTRINSICS.STRUCTTYPE));
             DefineOwnProperty(globalThis, "SyntaxError", GetOwnProperty(intrinsics, INTRINSICS.SYNTAXERROR));
-            LazyDefineProperty(globalThis, "System", realm.loader);
+            NowDefineProperty(globalThis, "System", realm.loader);
             DefineOwnProperty(globalThis, "TypeError", GetOwnProperty(intrinsics, INTRINSICS.TYPEERROR));
             DefineOwnProperty(globalThis, "URIError", GetOwnProperty(intrinsics, INTRINSICS.URIERROR));
             DefineOwnProperty(globalThis, "Object", GetOwnProperty(intrinsics, INTRINSICS.OBJECT));
@@ -23788,7 +22790,7 @@ LazyDefineBuiltinFunction(VMObject, "eval", 1, VMObject_eval);
             DefineOwnProperty(globalThis, "encodeURIComponent", GetOwnProperty(intrinsics, INTRINSICS.ENCODEURICOMPONENT));
             DefineOwnProperty(globalThis, "escape", GetOwnProperty(intrinsics, INTRINSICS.ESCAPE));
             DefineOwnProperty(globalThis, "eval", GetOwnProperty(intrinsics, INTRINSICS.EVAL));
-            LazyDefineBuiltinConstant(globalThis, "global", globalThis);
+            NowDefineBuiltinConstant(globalThis, "global", globalThis);
             DefineOwnProperty(globalThis, "isFinite", GetOwnProperty(intrinsics, INTRINSICS.ISFINITE));
             DefineOwnProperty(globalThis, "isNaN", GetOwnProperty(intrinsics, INTRINSICS.ISNAN));
             DefineOwnProperty(globalThis, "load", GetOwnProperty(intrinsics, INTRINSICS.LOAD));
@@ -23798,12 +22800,12 @@ LazyDefineBuiltinFunction(VMObject, "eval", 1, VMObject_eval);
             DefineOwnProperty(globalThis, "request", GetOwnProperty(intrinsics, INTRINSICS.REQUEST));
             DefineOwnProperty(globalThis, "setTimeout", GetOwnProperty(intrinsics, INTRINSICS.SETTIMEOUT));
             DefineOwnProperty(globalThis, "setLanguage", GetOwnProperty(intrinsics, INTRINSICS.SETLANGUAGE));
-            LazyDefineBuiltinConstant(globalThis, "undefined", undefined);
+            NowDefineBuiltinConstant(globalThis, "undefined", undefined);
             DefineOwnProperty(globalThis, "unescape", GetOwnProperty(intrinsics, INTRINSICS.UNESCAPE));
-            LazyDefineBuiltinConstant(globalThis, $$toStringTag, "syntaxjs");
+            NowDefineBuiltinConstant(globalThis, $$toStringTag, "syntaxjs");
             DefineOwnProperty(globalThis, "VM", GetOwnProperty(intrinsics, INTRINSICS.VM));
             if (typeof Java !== "function" && typeof load !== "function" && typeof print !== "function") {
-                LazyDefineProperty(intrinsics, INTRINSICS.DOMWRAPPER,
+                NowDefineProperty(intrinsics, INTRINSICS.DOMWRAPPER,
                     NativeJSObjectWrapper(
                             typeof importScripts === "function" ? self :
                                 typeof window === "object" ? window :
@@ -23814,13 +22816,7 @@ LazyDefineBuiltinFunction(VMObject, "eval", 1, VMObject_eval);
                     DefineOwnProperty(globalThis, "self", GetOwnProperty(intrinsics, INTRINSICS.DOMWRAPPER));
                 } else if (typeof window === "object") {
                     DefineOwnProperty(globalThis, "window", GetOwnProperty(intrinsics, INTRINSICS.DOMWRAPPER));
-                    DefineOwnProperty(globalThis, "document", {
-                        configurable: true,
-                        enumerable: true,
-                        value: Get(Get(globalThis, "window"), "document"),
-                        writable: true
-
-                    });
+                    NowDefineProperty(globalThis, "document", Get(Get(globalThis, "window"), "document"));
                 } else if (typeof process === "object") {
                     DefineOwnProperty(globalThis, "process", GetOwnProperty(intrinsics, INTRINSICS.DOMWRAPPER));
                 }
@@ -24017,8 +23013,8 @@ LazyDefineBuiltinFunction(VMObject, "eval", 1, VMObject_eval);
     exports.newURIError = newURIError;
     exports.newReferenceError = newReferenceError;
     exports.SetFunctionLength = SetFunctionLength;
-    exports.LazyDefineProperty = LazyDefineProperty;
-    exports.LazyDefineSelfHostingFunction = LazyDefineSelfHostingFunction;
+    exports.NowDefineProperty = NowDefineProperty;
+    exports.NowDefineSelfHostingFunction = NowDefineSelfHostingFunction;
     exports.createIntrinsics = createIntrinsics;
     exports.setCodeRealm = setCodeRealm;
     exports.saveCodeRealm = saveCodeRealm;
@@ -27950,14 +26946,12 @@ define("runtime", function () {
  */
 define("asm-typechecker", function (require, exports){
     "use strict";
-
     /**
      * The environments are needed again
      */
     var globalEnvironment = Object.create(null);
     var localEnvironment = Object.create(null);
     var blockEnvironment = Object.create(null);
-
     /**
      * these types are disallowed from escaping
      * @type {number}
@@ -27995,7 +26989,6 @@ define("asm-typechecker", function (require, exports){
      *
      *
      */
-
     var currentFunction;
     var currentFunctionStack = [];
     var statics = require("slower-static-semantics");
@@ -28004,7 +26997,6 @@ define("asm-typechecker", function (require, exports){
     var VarScopedDeclarations = statics.VarScopedDeclarations;
     var LexicallyScopedDeclarations = statics.LexicallyScopedDeclarations;
     var BoundNames = statics.BoundNames;
-
     /**
      * getTypeOfParameter can look at
      * AssignmentExpressions
@@ -28015,7 +27007,6 @@ define("asm-typechecker", function (require, exports){
      * @param node
      * @returns {boolean}
      */
-
     function getTypeOfParameter(node) {
         if (isAssignmentExpressionAssign(node) &&
             isLeftAndRightSameIdentifier(node)) {
@@ -28023,7 +27014,6 @@ define("asm-typechecker", function (require, exports){
                 if (isInt(node.right)) return INT;
             }
     }
-
     function isLeftAndRightSameIdentifier(node) {
         var left = node.left;
         if (!isIdentifier(left)) return false;
@@ -28059,7 +27049,6 @@ define("asm-typechecker", function (require, exports){
     function isIdentifier(node) {
         return node.type === "Identifier";
     }
-
     function isInt(node) {
         // x = x | 0 is int
         if (node.type === "AssignmentExpression") return isInt(node.right);
@@ -28071,7 +27060,6 @@ define("asm-typechecker", function (require, exports){
         if (node.type === "AssignmentExpression") return isDouble(node.right);
         return (node.type === "UnaryExpression") && (node.operator === "+") && (node.argument.type === "Identifier");
     }
-
     function isSignedId(node) {
         // -x
         return node.type === "UnaryExpression" && node.operator === "-" && node.argument.type === "Identifier";
@@ -28080,24 +27068,18 @@ define("asm-typechecker", function (require, exports){
         // -x
         return node.type === "UnaryExpression" && node.operator === "-" && node.argument.type === "NumericLiteral";
     }
-
     function isVariableDeclarator(node) {
         return node.type === "VariableDeclarator";
     }
-
     function isNumber (node) {
         return node.type === "NumericLiteral";
     }
-
     function isReturnStatement(node) {
         return node.type === "ReturnStatement";
     }
-
     function isVariableDeclaration (node) {
         return node.type === "VariableDeclaration";
     }
-
-
     /**
      * ReturnStatement Analysis
      * Return the type of the return statement
@@ -28126,8 +27108,6 @@ define("asm-typechecker", function (require, exports){
             }
         }
     }
-
-
     /**
      * Validate the VariableDeclarations
      * @param node
@@ -28143,24 +27123,20 @@ define("asm-typechecker", function (require, exports){
 
         }
     }
-
     function getTypeOfVariableDeclaration(node) {
         if (isVariableDeclarator(node)) {
             if (node.init) return getTypeOfInitializer(node);
         }
     }
-
     function getTypeOfInitializer(node) {
         var initializer = decl.init;
         if (isInt(initializer)) return INT;
         if (isDouble(initializer)) return DOUBLE;
         if (isNumber(initalizer)) return DOUBLE;
     }
-
     function isValidInitializer(node) {
 
     }
-
     /**
      * Validate the FunctionDeclarations
      * @param node
@@ -28183,7 +27159,6 @@ define("asm-typechecker", function (require, exports){
 
         currentFunction = currentFunctionStack.pop();
     }
-
     /**
      * Iterate through the parameter list
      * and memoize the BoundNames
@@ -28207,12 +27182,9 @@ define("asm-typechecker", function (require, exports){
         // walks as long as there are assignments under each.
         // but
     }
-
-
     function isFunctionDeclaration(node) {
         return node.type === "FunctionDeclaration";
     }
-
     function Module (node) {
         if (isFunctionDeclaration(node)) {
             var params = node.params;
@@ -28223,13 +27195,10 @@ define("asm-typechecker", function (require, exports){
             }
         }
     }
-
-
     function validate(node) {
         var f = validator[node.type];
         if (f) return f.call(validator, node);
     }
-
     var valueTypes = Object.create(null);
     // may not escape
     valueTypes.VOID = VOID;
@@ -28242,13 +27211,10 @@ define("asm-typechecker", function (require, exports){
     valueTypes.FIXNUM = FIXNUM;
     valueTypes.SIGNED = SIGNED;
     valueTypes.EXTERN = EXTERN;
-
-
     var validator = Object.create(null);
     // contains the functions like parser, tokenizer, evaluation
     validator.FunctionDeclaration = FunctionDeclaration;
     validator.VariableDeclaration = VariableDeclaration;
-
     function validateAST(ast, validate) {
         var result;
         switch (ast.type) {
@@ -28275,15 +27241,11 @@ define("asm-typechecker", function (require, exports){
     exports.getTypeOfParameter = getTypeOfParameter;
     exports.getTypeOfReturnStatement  = getTypeOfReturnStatement;
     exports.getTypeOfVariableDeclaration = getTypeOfVariableDeclaration;
-
     exports.isLeftAndRightSameIdentifier = isLeftAndRightSameIdentifier;
     exports.validateAST = validateAST;
     exports.validate = validate;
     exports.validator = validator;
     exports.valueTypes = valueTypes;
-
-
-
 });
 /**
  * this compiler deconstructs the ast into INT Code.
