@@ -1,0 +1,17 @@
+{
+	"testing call, bind, apply":
+	{
+	    "init": 		
+		"function f() { 'use strict'; return [this, ...arguments] }\nfunction g() { return [this, ...arguments] }\n",
+	    "tests": 
+	    [
+		["f.call(null, 1,2).join()", "null,1,2" ],
+		["f.apply(null, [1,2]).join()", "null,1,2" ],
+		["(f.bind(null,1,2))().join()", "null,1,2" ],
+		["f.call(undefined, {},[]).join()", ",[object Object],[object Array]" ],
+		["f.apply(undefined, [{},[]]).join()", ",[object Object],[object Array]" ],
+		["(f.bind(undefined,{},[]))().join()", ",[object Object],[object Array]" ]
+
+	    ]
+	}
+}

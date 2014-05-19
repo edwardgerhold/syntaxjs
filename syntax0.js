@@ -398,8 +398,6 @@ define("detector", function () {
     // then i have some fs operations
 
 
-    
-
 // *******************************************************************************************************************************
 // file imports
 // *******************************************************************************************************************************
@@ -443,9 +441,7 @@ define("filesystem", function (require, exports) {
         return function adapterFunction () {
             for (var i = 0, j = keys.length; i < j; i++) {
                 var k = keys[i];
-
                 var test = methods.test[k];
-
                 if ((typeof test == "function" && test()) || test === true) {
                     var work = methods.work[k];
                     if (typeof work != "function") {
@@ -9738,16 +9734,9 @@ var MathObject_clz = function (thisArg, argList) {
 };
 
 function Assert(act, message) {
-    //var cx;
-    if (!act) {
-        /* if (cx = getContext()) {
-                var line = cx.line;
-                var col = cx.column;
-                throw new Error("Assertion failed: " + message + " (at: line " + line + ", column " + col + ")");
-        }*/
-        throw new Error(format("ASSERTION_S", message));
-    }
+    if (!act) throw new Error(format("ASSERTION_S", message));
 }
+
 
 function GetGlobalObject() {
     var realm = getRealm();
@@ -12916,7 +12905,7 @@ var FunctionPrototype_apply = function (thisArg, argList) {
 var FunctionPrototype_bind = function (thisArg, argList) {
     var boundTarget = thisArg;
     var thisArgument = argList[0];
-    var listOfArguments = arraySlice(argList, 1, argList.length - 1);
+    var listOfArguments = arraySlice(argList, 1, argList.length);
     return BoundFunctionCreate(boundTarget, thisArgument, listOfArguments);
 };
 
@@ -13045,10 +13034,10 @@ var FunctionPrototype_toString = function (thisArg, argList) {
         if (Array.isArray(C)) {
             bodyString = codegen.builder.functionBody(C);
         } else bodyString = codegen.callBuilder(C);
-        return paramString + " => " + bodyString;
+        return NormalCompletion(paramString + " => " + bodyString);
     } else {
         bodyString = codegen.builder.functionBody(C);
-        return "function" + star + " " + name + " " + paramString + " " + bodyString;
+        return NormalCompletion("function" + star + " " + name + " " + paramString + " " + bodyString);
     }
 };
 
@@ -23347,13 +23336,10 @@ LazyDefineBuiltinFunction(ArrayIteratorPrototype, $$iterator, 0, ArrayIteratorPr
 LazyDefineBuiltinConstant(ArrayIteratorPrototype, $$toStringTag, "Array Iterator");
 LazyDefineBuiltinFunction(ArrayIteratorPrototype, "next", 0, ArrayIteratorPrototype_next);
 MakeConstructor(StringConstructor, true, StringPrototype);
-
 setInternalSlot(StringConstructor, SLOTS.CALL, StringConstructor_call);
 setInternalSlot(StringConstructor, SLOTS.CONSTRUCT, StringConstructor_construct);
 LazyDefineBuiltinFunction(StringConstructor, "raw", 1, StringConstructor_raw);
-
 LazyDefineBuiltinFunction(StringConstructor, $$create, 1, StringConstructor_$$create);
-
 LazyDefineBuiltinFunction(StringPrototype, "at", 1, StringPrototype_at);
 LazyDefineBuiltinFunction(StringPrototype, "charAt", 1, StringPrototype_charAt);
 LazyDefineBuiltinFunction(StringPrototype, "charCodeAt", 1, StringPrototype_charCodeAt);
@@ -23378,8 +23364,6 @@ LazyDefineBuiltinFunction(StringPrototype, "toUpperCase", 0, StringPrototype_toU
 LazyDefineBuiltinFunction(StringPrototype, "trim", 1, StringPrototype_trim);
 LazyDefineBuiltinFunction(StringPrototype, "valueOf", 0, StringPrototype_valueOf);
 LazyDefineBuiltinConstant(StringPrototype, $$toStringTag, "String");
-
-
 LazyDefineBuiltinFunction(StringPrototype, $$iterator, 0, StringPrototype_$$iterator);
 LazyDefineBuiltinFunction(StringPrototype, "entries", 0, StringPrototype_entries);
 LazyDefineBuiltinFunction(StringPrototype, "keys", 0, StringPrototype_keys);
@@ -30264,7 +30248,7 @@ define("vm", function (require, exports) {
 });	// is not asm. but renamable.
 
     // syntax highlighter (the original application of syntax.js)
-    // will be rewritten soon, 
+    // will be rewritten soon,
     // maybe with jquery for max effect with same simplicity
 
 

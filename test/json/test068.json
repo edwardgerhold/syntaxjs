@@ -1,0 +1,14 @@
+{
+	"testing call, bind, apply":
+	{
+	    "init": 		
+		"var toString = Object.prototype.toString;",
+	    "tests": 
+	    [
+		["toString.call(undefined)", "[object Undefined]" ],
+		["toString.call(null)", "[object Null]" ],
+		["toString.call({})", "[object Object]" ],
+		["toString.call([])", "[object Array]" ]
+	    ]
+	}
+}
