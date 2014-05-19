@@ -16734,9 +16734,8 @@ addMissingProperties(StringExoticObject.prototype, OrdinaryObject.prototype);
  * Created by root on 15.05.14.
  */
 function StringCreate(StringData) {
-    return OrdinaryConstruct(StringConstructor, [StringData]);
+    return OrdinaryConstruct(getIntrinsic(INTRINSICS.STRING), [StringData]);
 }
-
 function thisStringValue(value) {
     if (value instanceof CompletionRecord) return thisStringValue(value.value);
     if (typeof value === "string") return value;
@@ -16747,8 +16746,6 @@ function thisStringValue(value) {
     }
     return newTypeError( "thisStringValue: value is not a String", value);
 }
-
-
 var StringConstructor_$$create = function (thisArg, argList) {
     var F = thisArg;
     var obj = StringExoticObject();
@@ -16758,8 +16755,6 @@ var StringConstructor_$$create = function (thisArg, argList) {
     setInternalSlot(obj, SLOTS.STRINGDATA, undefined);
     return obj;
 };
-
-
 var StringConstructor_call = function Call(thisArg, argList) {
     var O = thisArg;
     var s;
@@ -16783,14 +16778,12 @@ var StringConstructor_call = function Call(thisArg, argList) {
 var StringConstructor_construct = function Construct(argList) {
     return OrdinaryConstruct(this, argList);
 };
-
 var normalizeOneOfs = {
     "NFC":true,
     "NFD":true,
     "NFKC":true,
     "NFKD":true
 };
-
 var StringPrototype_normalize = function (thisArg, argList) {
     var from = argList[0];
     var S = CheckObjectCoercible(thisArg);
@@ -16810,7 +16803,6 @@ var StringPrototype_normalize = function (thisArg, argList) {
     }
     return NormalCompletion(ns);
 };
-
 var StringPrototype_replace = function (thisArg, argList) {
     var searchValue = argList[0];
     var replaceValue = argList[1];
@@ -16890,7 +16882,6 @@ var StringPrototype_repeat = function (thisArg, argList) {
     for (var i = 0; i < n; i++) T+=S;
     return NormalCompletion(T);
 };
-
 var StringPrototype_contains = function (thisArg, argList) {
     var searchString = argList[0];
     var position = argList[1];
@@ -16920,7 +16911,6 @@ var StringPrototype_contains = function (thisArg, argList) {
     }
     return false;
 };
-
 var StringPrototype_startsWith = function (thisArg, argList) {
     var searchString = argList[0];
     var position = argList[1];
@@ -16984,10 +16974,8 @@ var StringPrototype_toArray = function (thisArg, argList) {
     return NormalCompletion(array);
 
 };
-
 var trim_leading_space_expr = /^([\s]*)/;
 var trim_trailing_space_expr = /([\s]*)$/;
-// 31.1.
 var StringPrototype_trim = function (thisArg, argList) {
     var O = CheckObjectCoercible(thisArg);
     if (isAbrupt(O = ifAbrupt(O))) return O;
@@ -16998,8 +16986,6 @@ var StringPrototype_trim = function (thisArg, argList) {
     T = T.replace(trim_trailing_space_expr, "");
     return NormalCompletion(T);
 };
-
-// 31.1.
 var StringPrototype_search = function (thisArg, argList) {
     var regexp = argList[0];
     var O = CheckObjectCoercible(thisArg);
@@ -17015,7 +17001,6 @@ var StringPrototype_search = function (thisArg, argList) {
     if (isAbrupt(rx = ifAbrupt(rx))) return rx;
     return Invoke(rx, "search", [S]);
 };
-// 31.1.
 var StringPrototype_toUpperCase = function (thisArg, argList) {
     var O = CheckObjectCoercible(thisArg);
     if (isAbrupt(O = ifAbrupt(O))) return O;
@@ -17024,8 +17009,6 @@ var StringPrototype_toUpperCase = function (thisArg, argList) {
     var U = S.toUpperCase();
     return NormalCompletion(U);
 };
-
-// 31.1.
 var StringPrototype_toLowerCase = function (thisArg, argList) {
     var O = CheckObjectCoercible(thisArg);
     if (isAbrupt(O = ifAbrupt(O))) return O;
@@ -17034,7 +17017,6 @@ var StringPrototype_toLowerCase = function (thisArg, argList) {
     var L = S.toLowerCase();
     return NormalCompletion(L);
 };
-
 var StringPrototype_charAt = function (thisArg, argList) {
     var index = argList[0];
     index = index|0;
@@ -17057,7 +17039,6 @@ var StringPrototype_charCodeAt = function (thisArg, argList) {
     var C = S.charCodeAt(index);
     return NormalCompletion(C);
 };
-
 var StringPrototype_split = function (thisArg, argList) {
     var separator = argList[0];
     var limit = argList[1];
@@ -17078,14 +17059,6 @@ var StringPrototype_split = function (thisArg, argList) {
     var R = ToString(separator);
 
 };
-
-// http://wiki.ecmascript.org/doku.php?id=strawman:strawman
-// 29.1. i have read a post about es7 timeline and one
-// said for es7 we should look into the strawman namespace except
-// for observe which is in harmony. Here is string_extensions
-// http://wiki.ecmascript.org/doku.php?id=strawman:string_extensions
-// the document defines lpad and rpad
-
 var StringPrototype_lpad = function (thisArg, argList) {
     var minLength = argList[0];
     var fillStr = argList[1];
@@ -17096,7 +17069,7 @@ var StringPrototype_lpad = function (thisArg, argList) {
     if (isAbrupt(intMinLength = ifAbrupt(intMinLength))) return intMinLength;
     if (intMinLength === undefined) return NormalCompletion(S);
     var fillLen = intMinLength - S.length;
-    if (fillLen < 0) return newRangeError( "lpad: fillLen is smaller than the string"); // maybe auto cut just the string. too?
+    if (fillLen < 0) return newRangeError( "lpad: fillLen is smaller than the string");
     if (fillLen == Infinity) return newRangeError( "lpad: fillLen is Infinity");
     var sFillStr;
     if (fillStr === undefined) sFillStr = " ";
@@ -17126,8 +17099,6 @@ var StringPrototype_rpad = function (thisArg, argList) {
     if (sFillVal.length > fillLen) sFillVal = sFillVal.substr(0, fillLen);
     return NormalCompletion(S + sFillVal);
 };
-
-
 var StringPrototype_codePointAt = function (thisArg, argList) {
     var O = CheckObjectCoercible(thisArg);
     if (isAbrupt(O = ifAbrupt(O))) return O;
@@ -17143,7 +17114,6 @@ var StringPrototype_codePointAt = function (thisArg, argList) {
     var result = (((first - 0xD800)*1024) + (second - 0xDC00)) + 0x10000;
     return NormalCompletion(result);
 };
-
 var StringPrototype_concat = function (thisArg, argList) {
     var O = CheckObjectCoercible(thisArg);
     if (isAbrupt(O = ifAbrupt(O))) return O;
@@ -17159,7 +17129,6 @@ var StringPrototype_concat = function (thisArg, argList) {
     }
     return NormalCompletion(R);
 };
-
 var StringPrototype_indexOf = function (thisArg, argList) {
     var searchString = argList[0];
     var position = argList[1];
@@ -17186,7 +17155,6 @@ var StringPrototype_indexOf = function (thisArg, argList) {
         }
     return NormalCompletion(-1);
 };
-
 var StringPrototype_lastIndexOf = function (thisArg, argList)   {
     var searchString = argList[0];
     var position = argList[1];
@@ -17205,7 +17173,6 @@ var StringPrototype_lastIndexOf = function (thisArg, argList)   {
     var start = min(pos, len);
     var searchLen = searchStr.length;
     //return S.lastIndexOf(searchStr, position);
-
     outer:
         for (var j = 0, i = start; j >= i; i--) {
             var ch = S[i];
@@ -17220,7 +17187,6 @@ var StringPrototype_lastIndexOf = function (thisArg, argList)   {
         }
     return NormalCompletion(-1);
 };
-
 var StringPrototype_localeCompare = function (thisArg, argList) {
     var that = argList[0];
     var O = CheckObjectCoercible(thisArg);
@@ -17231,7 +17197,6 @@ var StringPrototype_localeCompare = function (thisArg, argList) {
     if (isAbrupt(that = ifAbrupt(that))) return that;
     return NormalCompletion(undefined);
 };
-
 var StringPrototype_at = function (thisArg, argList) {
     var position = argList[0];
     var O = CheckObjectCoercible(thisArg);
@@ -17250,7 +17215,6 @@ var StringPrototype_at = function (thisArg, argList) {
     var cp = (first - 0xD800) * 0x400+(second-0xDC00)+0x1000;
     return NormalCompletion(String.fromCharCode(cuFirst, cuSecond));
 };
-
 function GetReplaceSubstitution (matched, string, postion, captures) {
     Assert(Type(matched) === STRING, "matched has to be a string");
     var matchLength = matched.length;
@@ -17268,9 +17232,6 @@ function GetReplaceSubstitution (matched, string, postion, captures) {
      */
     return result;
 }
-
-
-
 var StringConstructor_fromCharCode = function (thisArg, argList) {
     try {
         var str = String.fromCharCode.apply(null, argList);
@@ -17279,7 +17240,6 @@ var StringConstructor_fromCharCode = function (thisArg, argList) {
     }
     return NormalCompletion(str);
 };
-
 var StringConstructor_fromCodePoint = function (thisArg, argList) {
     // Here we need mathias´ code :-)
     try {
@@ -17289,11 +17249,9 @@ var StringConstructor_fromCodePoint = function (thisArg, argList) {
     }
     return NormalCompletion(str);
 };
-
 var StringPrototype_$$iterator = function (thisArg, argList) {
     return CreateStringIterator(thisArg, "value");
 };
-
 var StringPrototype_entries = function (thisArg, argList) {
     return CreateStringIterator(thisArg, "key+value");
 };
@@ -17303,7 +17261,6 @@ var StringPrototype_values = function values(thisArg, argList) {
 var StringPrototype_keys = function keys(thisArg, argList) {
     return CreateStringIterator(thisArg, "key");
 };
-
 var StringConstructor_raw = function (thisArg, argList) {
     // String.raw(callSite, ...substitutions)
 
@@ -23652,7 +23609,6 @@ LazyDefineBuiltinFunction(DataViewPrototype, "setUint8", 2, DataViewPrototype_se
 LazyDefineBuiltinFunction(DataViewPrototype, "setUint16", 2, DataViewPrototype_setUint16);
 LazyDefineBuiltinFunction(DataViewPrototype, "setUint32", 2, DataViewPrototype_setUint32);
 LazyDefineBuiltinConstant(DataViewConstructor, $$toStringTag, SLOTS.DATAVIEW);
-
 function createTypedArrayPrototype(proto) {
     LazyDefineAccessor(proto, "buffer", CreateBuiltinFunction(realm, TypedArrayPrototype_get_buffer, 0, "get buffer"));
     LazyDefineAccessor(proto, "byteLength", CreateBuiltinFunction(realm, TypedArrayPrototype_get_byteLength, 0, "get byteLength"));
@@ -23671,7 +23627,6 @@ function createTypedArrayVariant(_type, _bpe, _ctor, _proto, ctorName) {
         var O = thisArg;
         if (Type(O) !== OBJECT) return newTypeError( "O is not an object");
         if (!hasInternalSlot(O, SLOTS.TYPEDARRAYNAME)) return newTypeError( "[[TypedArrayName]] is missing");
-        //if (getInternalSlot(O, SLOTS.TYPEDARRAYNAME) != undefined) return newTypeError( "[[TypedArrayName]] isnt undefined");
         var suffix = "Array";
         if (_type === "Uint8C") suffix = "lamped" + suffix;
         setInternalSlot(O, SLOTS.TYPEDARRAYNAME, _type + suffix);

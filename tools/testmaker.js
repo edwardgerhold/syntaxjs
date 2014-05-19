@@ -10,7 +10,7 @@
  ["x",10],
  ["x+x", 20]
  ],
-
+ },
  "test2": {
  "init": "const x = 20;",
  "tests":
@@ -31,7 +31,7 @@
 
 var VERSION = "0.0.1";
 var jsonfile, rawjson, json, writetests, testnames, verbose, separator, doubleseparator, realm, testfile;
-var writeFn, data; // lifetime
+var writeFn, data;
 var Test = require("../tools/tester0.js").Test;
 var syntaxjs = require("../syntax0.js").syntaxjs;
 var fs = require("fs");
