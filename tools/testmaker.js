@@ -153,7 +153,13 @@ function writeTestStarter(testfile, json, testnames) {
 function runTest(current, testname) {
     // calling tester.js
     var tester = new Test();
-    var code = current.init;
+
+    if (current.init) {
+        var code = current.init;
+    } else if (current.initFile) {
+        code = fs.readFileSync(current.initFile, "utf8");
+    }
+
     var throws = current.throws;
     var rlm, result;
     console.log("TEST: " + testname);

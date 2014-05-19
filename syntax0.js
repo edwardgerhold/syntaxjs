@@ -12851,6 +12851,7 @@ function CreateBuiltinFunction(realm, steps, len, name, internalSlots) {
 
     // this is probably/oc unneccessary, coz all builtins have make no use of the environments anyways
     // because they are plain javascript functions
+    /*
     function Call() {
         var result;
         var oldContext = getContext();
@@ -12861,10 +12862,13 @@ function CreateBuiltinFunction(realm, steps, len, name, internalSlots) {
         Assert(callContext === stack.pop(), "CreateBuiltinFunction: Wrong Context popped from the Stack.");
         return result;
     }
+*/
+    steps = steps || function () {return NormalCompletion(undefined);};
+    // var Call = steps;
     // the .steps reference is needed by function.prototype.toString to put out the right function
-    Call.steps = steps;
+    //Call.steps = steps;
 
-    setInternalSlot(F, SLOTS.CALL, Call);
+    setInternalSlot(F, SLOTS.CALL, steps);
     setInternalSlot(F, SLOTS.CODE, undefined);
     setInternalSlot(F, SLOTS.CONSTRUCT, undefined);
     setInternalSlot(F, SLOTS.FORMALPARAMETERS, undefined);
@@ -12879,14 +12883,21 @@ function CreateBuiltinFunction(realm, steps, len, name, internalSlots) {
         name = len;
         len = tmp;
     }
-    if (typeof name !== "string") name = steps.name;
+    // if (typeof name !== "string") name = steps.name;
     if (name) SetFunctionName(F, name);
     if (typeof len !== "number") len = 0;
     SetFunctionLength(F, len);
-    if (typeof internalSlots === "object" && internalSlots) {
-	Object.keys(internalSlots).forEach(function (slot) {
-	    setInternalSlot(F, slot, undefined);
-	});
+    if (internalSlots) {
+        if (Array.isArray(internalSlots)) {
+            for (var i = 0, j = internalSlots.length; i < j; i++) {
+                setInternalSlot(F, internalSlots[i], undefined);
+            }
+        }
+        else if (typeof internalSlots === "object") {
+            Object.keys(internalSlots).forEach(function (slot) {
+                setInternalSlot(F, slot, undefined);
+            });
+        }
     }    
     return F;
 }
@@ -12936,8 +12947,7 @@ var FunctionPrototype_toMethod = function (thisArg, argList) {
     return CloneMethod(thisArg, superBinding, methodName);
 };
 
-
-var FunctionPrototype_valueOf = function valueOf(thisArg, argList) {
+var FunctionPrototype_valueOf = function (thisArg, argList) {
     return thisArg;
 };
 
@@ -12964,8 +12974,10 @@ var FunctionConstructor_call = function (thisArg, argList) {
     }
     bodyText = ToString(bodyText);
     if (isAbrupt(bodyText = ifAbrupt(bodyText))) return bodyText;
-    var parameters = parseGoal("FormalParameterList", P); // () sind fehlerhaft bei
+    var parameters = parseGoal("FormalParameterList", P);
     var funcBody = parseGoal("FunctionBody", bodyText);
+
+
     /* old and from july draf */
     var boundNames = BoundNames(parameters);
     if (!IsSimpleParameterList(parameters)) {
@@ -12973,6 +12985,8 @@ var FunctionConstructor_call = function (thisArg, argList) {
     }
     if (dupesInTheTwoLists(boundNames, LexicallyDeclaredNames(funcBody))) return newSyntaxError( "Duplicate Identifier in Parameters and LexicallyDeclaredNames of funcBody");
     /* one of the few edge cases to recall static semantics */
+
+
     var scope = getRealm().globalEnv;
     var F = thisArg;
     if (F === undefined || !hasInternalSlot(F, SLOTS.CODE)) {
@@ -14968,6 +14982,8 @@ var DateConstructor_construct = function (thisArg, argList) {
 
 var DateConstructor_parse = function (thisArg, argList) {
     var string = ToString(argList[0]);
+    
+    return NormalCompletion(undefined);
 };
 /*
 
@@ -23023,15 +23039,12 @@ var RealmPrototype_indirectEval = function (thisArg, argList) {
         define_intrinsic(intrinsics, intrinsicName, prototype);
         return prototype;
     }
-
     function createIntrinsicObject (intrinsics, intrinsicName) {
         var object = OrdinaryObject();
         define_intrinsic(intrinsics, intrinsicName, object);
         return object;
     }
-
     createIntrinsics = function createIntrinsics(realm) {
-
         var intrinsics = OrdinaryObject(null);
         realm.intrinsics = intrinsics;
         var ObjectPrototype = createIntrinsicPrototype(intrinsics, INTRINSICS.OBJECTPROTOTYPE);
@@ -23042,7 +23055,6 @@ var RealmPrototype_indirectEval = function (thisArg, argList) {
         setInternalSlot(FunctionConstructor, SLOTS.PROTOTYPE, FunctionPrototype);
         var ObjectConstructor = createIntrinsicConstructor(intrinsics, "Object", 0, INTRINSICS.OBJECT);
         Assert(getInternalSlot(ObjectConstructor, SLOTS.PROTOTYPE) === FunctionPrototype, "ObjectConstructor and FunctionPrototype have to have a link");
-
         var EncodeURIFunction = createIntrinsicFunction(intrinsics, "encodeURI", 1, INTRINSICS.ENCODEURI);
         var DecodeURIFunction = createIntrinsicFunction(intrinsics, "ecodeURI", 1, INTRINSICS.DECODEURI);
         var EncodeURIComponentFunction = createIntrinsicFunction(intrinsics, "encodeURIComponent", 1, INTRINSICS.ENCODEURICOMPONENT);
@@ -23079,7 +23091,6 @@ var RealmPrototype_indirectEval = function (thisArg, argList) {
         var ArrayConstructor = createIntrinsicConstructor(intrinsics, "Array", 0, INTRINSICS.ARRAY);
         var ArrayPrototype = createIntrinsicPrototype(intrinsics, INTRINSICS.ARRAYPROTOTYPE);
         var ArrayIteratorPrototype = createIntrinsicPrototype(intrinsics, INTRINSICS.ARRAYITERATORPROTOTYPE);
-
         var GeneratorPrototype = createIntrinsicPrototype(intrinsics, INTRINSICS.GENERATORPROTOTYPE);
         var GeneratorObject = createIntrinsicObject(intrinsics, INTRINSICS.GENERATOR);
         var ReflectObject = createIntrinsicObject(intrinsics, INTRINSICS.REFLECT);
@@ -23135,26 +23146,21 @@ var RealmPrototype_indirectEval = function (thisArg, argList) {
         var JSONObject = createIntrinsicObject(intrinsics, INTRINSICS.JSON);
         var MathObject = createIntrinsicObject(intrinsics, INTRINSICS.MATH);
         var ConsoleObject = createIntrinsicObject(intrinsics, INTRINSICS.CONSOLE);
-        // ---
         var EmitterConstructor = createIntrinsicConstructor(intrinsics, "Emitter", 0, INTRINSICS.EMITTER);
         var EmitterPrototype = createIntrinsicPrototype(intrinsics, INTRINSICS.EMITTERPROTOTYPE);
-        // Object.observe
         var NotifierPrototype = createIntrinsicPrototype(intrinsics, INTRINSICS.NOTIFIERPROTOTYPE);
-        // Loader
         var LoaderConstructor = createIntrinsicConstructor(intrinsics, "Loader", 0, INTRINSICS.LOADER);
         var LoaderPrototype = createIntrinsicPrototype(intrinsics, INTRINSICS.LOADERPROTOTYPE);
         var LoaderIteratorPrototype = createIntrinsicPrototype(intrinsics, INTRINSICS.LOADERITERATORPROTOTYPE);
         var RealmConstructor = createIntrinsicConstructor(intrinsics, "Realm", 0, INTRINSICS.REALM);
         var RealmPrototype = createIntrinsicPrototype(intrinsics, INTRINSICS.REALMPROTOTYPE);
         var ModulePrototype = null;
-        // that is something from the dom, which is useful for communication and its messaging needs structured cloning so i can check out both
-        var EventConstructor = createIntrinsicConstructor(intrinsics, "Event", 0, INTRINSICS.EVENT);
+        var EventConstructor = createIntrinsicConstructor(intrinsics, "Event", 0, INTRINSICS.EVENT);         // EventTarget and MessagePort are just stubs yet.
         var EventPrototype = createIntrinsicPrototype(intrinsics, INTRINSICS.EVENTPROTOTYPE);
         var EventTargetConstructor = createIntrinsicConstructor(intrinsics, "EventTarget", 0, INTRINSICS.EVENTTARGET);
         var EventTargetPrototype = createIntrinsicPrototype(intrinsics, INTRINSICS.EVENTTARGETPROTOTYPE);
         var MessagePortConstructor = createIntrinsicConstructor(intrinsics, "MessagePort", 0, INTRINSICS.MESSAGEPORT);
         var MessagePortPrototype = createIntrinsicPrototype(intrinsics, INTRINSICS.MESSAGEPORTPROTOTYPE);
-        // EventTarget and MessagePort are just stubs yet.
         var DebugFunction = createIntrinsicFunction(intrinsics, "debug", 1, INTRINSICS.DEBUGFUNCTION);
         var PrintFunction = createIntrinsicFunction(intrinsics, "print", 1, INTRINSICS.PRINTFUNCTION);
         var StructTypeConstructor = createIntrinsicConstructor(intrinsics, "StructType", 0, INTRINSICS.STRUCTTYPE);
@@ -23163,11 +23169,8 @@ var RealmPrototype_indirectEval = function (thisArg, argList) {
         var TypePrototype = createIntrinsicPrototype(intrinsics, INTRINSICS.TYPEPROTOTYPE);
         var ThrowTypeError = createIntrinsicFunction(intrinsics, "ThrowTypeError", 0, INTRINSICS.THROWTYPEERROR);
         var ArrayProto_values = createIntrinsicFunction(intrinsics, "values", 0, INTRINSICS.ARRAYPROTO_VALUES);
-
         var VMObject = createIntrinsicObject(intrinsics,INTRINSICS.VM); // that i can play with from inside the shell, too.
-
         var defaultCompareFn = createIntrinsicFunction(intrinsics, "compare", 2, INTRINSICS.DEFAULTCOMPARE)
-
         var ThrowTypeError_Call = function (thisArg, argList) {
             return newTypeError(format("THROW_TYPE_ERROR"));
         };
@@ -23196,44 +23199,24 @@ var RealmPrototype_indirectEval = function (thisArg, argList) {
         var SetLanguage = createIntrinsicFunction(intrinsics, "setLanguage", 1, INTRINSICS.SETLANGUAGE)
         setInternalSlot(SetLanguage, SLOTS.CALL, SetLanguage_Call);
         setInternalSlot(SetLanguage, SLOTS.CONSTRUCT, undefined);
-
         // maybe it´s best on: Reflect.
-        // but i get strange feelings to wish to implement the intl api together with es6 and asm.js
-
-        /*
-         overworked
-         the following files just contain the definition of the intrinsic objects properties,
-         better known as the "builtin functions". The declarations of the call functions have
-         been moved into lib/api. The tool idea "refactorDOP.js" is no longer needed and removed.
-         */
-
-
-
 setInternalSlot(PrintFunction, SLOTS.CALL, PrintFunction_call);
 setInternalSlot(DebugFunction, SLOTS.CALL, DebugFunction_call);
 setInternalSlot(LoadFunction, SLOTS.CALL, LoadFunction_call);
 setInternalSlot(RequestFunction, SLOTS.CALL, RequestFunction_call);
-
-
-
 // %Realm%
 setInternalSlot(RealmConstructor, SLOTS.CALL, RealmConstructor_Call);
 setInternalSlot(RealmConstructor, SLOTS.CONSTRUCT, RealmConstructor_Construct);
 LazyDefineProperty(RealmConstructor, $$create, CreateBuiltinFunction(realm,RealmConstructor_$$create, 0, "[Symbol.create]"));
 MakeConstructor(RealmConstructor, false, RealmPrototype);
-
-
 LazyDefineBuiltinFunction(RealmPrototype, "intrinsics", 2, RealmPrototype_intrinsics);
 LazyDefineBuiltinFunction(RealmPrototype, "indirectEval", 2, RealmPrototype_indirectEval);
 LazyDefineBuiltinFunction(RealmPrototype, "initGlobal", 2, RealmPrototype_initGlobal);
 LazyDefineAccessorFunction(RealmPrototype, "stdlib", 3, RealmPrototype_stdlib_get);
-
 // %RealmPrototype%
 LazyDefineAccessor(RealmPrototype, "global", CreateBuiltinFunction(realm,RealmPrototype_get_global, 0, "get global"));
 LazyDefineProperty(RealmPrototype, "eval", CreateBuiltinFunction(realm,RealmPrototype_eval, 1, "eval"));
 LazyDefineProperty(RealmPrototype, $$toStringTag, "Reflect.Realm");
-
-
 setInternalSlot(LoaderConstructor, SLOTS.PROTOTYPE, FunctionPrototype);
 setInternalSlot(LoaderConstructor, SLOTS.CALL, LoaderConstructor_Call);
 setInternalSlot(LoaderConstructor, SLOTS.CONSTRUCT, LoaderConstructor_Construct);
@@ -23259,13 +23242,9 @@ LazyDefineProperty(LoaderPrototype, "instantiate", CreateBuiltinFunction(realm,L
 LazyDefineProperty(LoaderPrototype, $$iterator, CreateBuiltinFunction(realm,LoaderPrototype_$$iterator, 0, "[Symbol.iterator]"));
 LazyDefineProperty(LoaderPrototype, $$toStringTag, SLOTS.LOADER);
 LazyDefineBuiltinFunction(LoaderPrototype, "newModule", 1, LoaderPrototype_newModule);
-
 LazyDefineProperty(LoaderIteratorPrototype, $$iterator, CreateBuiltinFunction(realm, LoaderIteratorPrototype_$$iterator, 0, "[Symbol.iterator]"));
 LazyDefineProperty(LoaderIteratorPrototype, "next", CreateBuiltinFunction(realm, LoaderIteratorPrototype_next, 0, "next"));
 LazyDefineProperty(LoaderIteratorPrototype, $$toStringTag, "Loader Iterator");
-
-
-
 LazyDefineBuiltinConstant(ConsoleObject, $$toStringTag, "Console");
 LazyDefineBuiltinFunction(ConsoleObject, "log", 1, ConsoleObject_log);
 LazyDefineBuiltinFunction(ConsoleObject, "dir", 1, ConsoleObject_dir);
@@ -23328,9 +23307,6 @@ LazyDefineProperty(ArrayPrototype, $$unscopables, (function () {
 }()));
 setInternalSlot(ArrayProto_values, SLOTS.CALL, ArrayPrototype_values);
 setInternalSlot(ArrayProto_values, SLOTS.CONSTRUCT, undefined);
-
-
-
 setInternalSlot(ArrayIteratorPrototype, SLOTS.PROTOTYPE, ObjectPrototype);
 LazyDefineBuiltinFunction(ArrayIteratorPrototype, $$iterator, 0, ArrayIteratorPrototype_$$iterator);
 LazyDefineBuiltinConstant(ArrayIteratorPrototype, $$toStringTag, "Array Iterator");
@@ -23368,11 +23344,9 @@ LazyDefineBuiltinFunction(StringPrototype, $$iterator, 0, StringPrototype_$$iter
 LazyDefineBuiltinFunction(StringPrototype, "entries", 0, StringPrototype_entries);
 LazyDefineBuiltinFunction(StringPrototype, "keys", 0, StringPrototype_keys);
 LazyDefineBuiltinFunction(StringPrototype, "values", 0, StringPrototype_values);
-
 LazyDefineBuiltinFunction(StringIteratorPrototype, "next", 0, StringIteratorPrototype_next);
 LazyDefineBuiltinFunction(StringIteratorPrototype, $$iterator, 0, StringIteratorPrototype_$$iterator);
 LazyDefineBuiltinConstant(StringIteratorPrototype, $$toStringTag, "String Iterator");
-
 setInternalSlot(BooleanConstructor, SLOTS.CALL, BooleanConstructor_call);
 setInternalSlot(BooleanConstructor, SLOTS.CONSTRUCT, BooleanConstructor_construct);
 MakeConstructor(BooleanConstructor, true, BooleanPrototype);
@@ -23381,7 +23355,6 @@ LazyDefineBuiltinFunction(BooleanPrototype, "toString", 0, BooleanPrototype_toSt
 LazyDefineBuiltinFunction(BooleanPrototype, "valueOf", 0, BooleanPrototype_valueOf)
 LazyDefineBuiltinConstant(BooleanConstructor, "prototype", BooleanPrototype);
 LazyDefineBuiltinConstant(BooleanConstructor, "constructor", BooleanConstructor);
-
 MakeConstructor(SymbolFunction, true, SymbolPrototype);
 setInternalSlot(SymbolFunction, SLOTS.CALL, SymbolFunction_Call);
 setInternalSlot(SymbolFunction, SLOTS.CONSTRUCT, SymbolFunction_Construct);
@@ -23403,7 +23376,6 @@ LazyDefineBuiltinConstant(SymbolPrototype, $$toPrimitive, CreateBuiltinFunction(
 LazyDefineBuiltinFunction(SymbolPrototype, "toString", 0, SymbolPrototype_toString);
 LazyDefineBuiltinConstant(SymbolPrototype, $$toStringTag, "Symbol");
 LazyDefineBuiltinFunction(SymbolPrototype, "valueOf", 0, SymbolPrototype_valueOf);
-
 setInternalSlot(ErrorPrototype, SLOTS.PROTOTYPE, ObjectPrototype);
 MakeConstructor(ErrorConstructor, true, ErrorPrototype);
 LazyDefineBuiltinConstant(ErrorConstructor, "prototype", ErrorPrototype);
@@ -23413,19 +23385,14 @@ setInternalSlot(ErrorConstructor, SLOTS.CALL, ErrorConstructor_call);
 setInternalSlot(ErrorConstructor, SLOTS.CONSTRUCT, ErrorConstructor_construct);
 LazyDefineBuiltinFunction(ErrorConstructor, $$create, 1, ErrorConstructor_$$create);
 LazyDefineBuiltinFunction(ErrorPrototype, "toString", 0, ErrorPrototype_toString);
-
 createNativeError("Syntax", SyntaxErrorConstructor, SyntaxErrorPrototype);
 createNativeError("Type", TypeErrorConstructor, TypeErrorPrototype);
 createNativeError("Reference", ReferenceErrorConstructor, ReferenceErrorPrototype);
 createNativeError("Range", RangeErrorConstructor, RangeErrorPrototype);
 createNativeError("URI", URIErrorConstructor, URIErrorPrototype);
 createNativeError("Eval", EvalErrorConstructor, EvalErrorPrototype);
-
-
 setInternalSlot(EvalFunction, SLOTS.CALL, EvalFunction_call);
 setInternalSlot(EvalFunction, SLOTS.CONSTRUCT, null);
-
-
 setInternalSlot(DateConstructor, SLOTS.CALL, DateConstructor_call);
 setInternalSlot(DateConstructor, SLOTS.CONSTRUCT, DateConstructor_construct);
 LazyDefineBuiltinConstant(DateConstructor, "prototype", DatePrototype);
@@ -23447,21 +23414,14 @@ LazyDefineBuiltinFunction(DatePrototype, "getUTCMinutes", 0, DatePrototype_getUT
 LazyDefineBuiltinFunction(DatePrototype, "getUTCSeconds", 0, DatePrototype_getUTCSeconds);
 LazyDefineBuiltinFunction(DatePrototype, "getUTCMilliSeconds", 0, DatePrototype_getUTCMilliSeconds);
 LazyDefineBuiltinConstant(DatePrototype, $$toStringTag, "Date");
-
-
 setInternalSlot(EncodeURIFunction, SLOTS.CALL, EncodeURIFunction_call);
 setInternalSlot(EncodeURIComponentFunction, SLOTS.CALL, EncodeURIComponentFunction_call);
 setInternalSlot(DecodeURIFunction, SLOTS.CALL, DecodeURIFunction_call);
 setInternalSlot(DecodeURIComponentFunction, SLOTS.CALL, DecodeURIComponentFunction_call);
-
-
 setInternalSlot(EscapeFunction, SLOTS.CALL, EscapeFunction_call);
 setInternalSlot(UnescapeFunction, SLOTS.CALL, UnescapeFunction_call);
-
-
 setInternalSlot(ParseIntFunction, SLOTS.CALL, ParseIntFunction_call);
 setInternalSlot(ParseFloatFunction, SLOTS.CALL, ParseFloatFunction_call);
-
 setInternalSlot(MathObject, SLOTS.MATHTAG, true);
 setInternalSlot(MathObject, SLOTS.PROTOTYPE, ObjectPrototype);
 LazyDefineBuiltinConstant(MathObject, "PI", PI);
@@ -23513,13 +23473,10 @@ LazyDefineBuiltinFunction(NumberPrototype, "toPrecision", 0, NumberPrototype_toP
 LazyDefineBuiltinFunction(NumberPrototype, "toString", 0, NumberPrototype_toString);
 LazyDefineBuiltinFunction(NumberPrototype, "valueOf", 0, NumberPrototype_valueOf);
 LazyDefineBuiltinConstant(NumberPrototype, $$toStringTag, "Number");
-
-
 MakeConstructor(ProxyConstructor, true, ProxyPrototype);
 LazyDefineBuiltinFunction(ProxyConstructor, "revocable", 2, ProxyConstructor_revocable);
 setInternalSlot(ProxyConstructor, SLOTS.CALL, ProxyConstructor_Call);
 setInternalSlot(ProxyConstructor, SLOTS.CONSTRUCT, ProxyConstructor_Construct);
-
 LazyDefineBuiltinFunction(ReflectObject, "defineProperty", 2, ReflectObject_defineProperty);
 LazyDefineBuiltinFunction(ReflectObject, "deleteProperty", 3, ReflectObject_deleteProperty);
 LazyDefineBuiltinFunction(ReflectObject, "enumerate", 1, ReflectObject_enumerate);
@@ -23543,7 +23500,6 @@ LazyDefineBuiltinFunction(ReflectObject, "getIntrinsic", 1, ReflectObject_getInt
 LazyDefineBuiltinFunction(ReflectObject, "createSelfHostingFunction", 2, ReflectObject_createSelfHostingFunction);
 setInternalSlot(IsNaNFunction, SLOTS.CALL, IsNaNFunction_call);
 setInternalSlot(IsFiniteFunction, SLOTS.CALL, IsFiniteFunction_call);
-
 LazyDefineBuiltinFunction(ObjectConstructor, "getOwnPropertyDescriptors", 1, ObjectConstructor_getOwnPropertyDescriptors);
 MakeConstructor(ObjectConstructor, true, ObjectPrototype);
 setInternalSlot(ObjectPrototype, SLOTS.PROTOTYPE, null);
@@ -23581,8 +23537,6 @@ LazyDefineBuiltinFunction(ObjectPrototype, "propertyIsEnumerable", 0, ObjectProt
 LazyDefineBuiltinFunction(ObjectPrototype, "toString", 0, ObjectPrototype_toString);
 LazyDefineBuiltinFunction(ObjectPrototype, "valueOf", 0, ObjectPrototype_valueOf);
 LazyDefineProperty(ObjectPrototype, $$toStringTag, "Object");
-
-// this shall be in lib/intrinsics
 LazyDefineBuiltinFunction(NotifierPrototype, "notify", 1, NotifierPrototype_notify);
 LazyDefineBuiltinFunction(NotifierPrototype, "performChange", 2, NotifierPrototype_performChange);
 LazyDefineBuiltinFunction(ObjectConstructor, "observe", 3, ObjectConstructor_observe);
@@ -23640,8 +23594,6 @@ LazyDefineProperty(PromisePrototype, "then", CreateBuiltinFunction(realm, Promis
 LazyDefineProperty(PromisePrototype, "catch", CreateBuiltinFunction(realm, PromisePrototype_catch, 1, "catch"));
 LazyDefineProperty(PromisePrototype, "constructor", PromiseConstructor);
 LazyDefineProperty(PromisePrototype, $$toStringTag, SLOTS.PROMISE);
-
-
 MakeConstructor(RegExpConstructor, true, RegExpPrototype);
 setInternalSlot(RegExpConstructor, SLOTS.CALL, RegExp_Call);
 setInternalSlot(RegExpConstructor, SLOTS.CONSTRUCT, RegExp_Construct);
@@ -23665,9 +23617,6 @@ LazyDefineBuiltinFunction(RegExpPrototype, "search", 1, RegExpPrototype_search);
 LazyDefineBuiltinFunction(RegExpPrototype, "split", 1, RegExpPrototype_split);
 LazyDefineBuiltinFunction(RegExpPrototype, "test", 1, RegExpPrototype_test);
 LazyDefineBuiltinFunction(RegExpPrototype, "toString", 1, RegExpPrototype_toString);
-
-
-
 setInternalSlot(ArrayBufferConstructor, SLOTS.CALL, ArrayBufferConstructor_call);
 setInternalSlot(ArrayBufferConstructor, SLOTS.CONSTRUCT, ArrayBufferConstructor_construct);
 setInternalSlot(ArrayBufferConstructor, SLOTS.PROTOTYPE, FunctionPrototype);
@@ -23679,9 +23628,6 @@ LazyDefineBuiltinFunction(ArrayBufferConstructor, $$create, 1, ArrayBufferConstr
 setInternalSlot(ArrayBufferPrototype, SLOTS.PROTOTYPE, ObjectPrototype);
 LazyDefineAccessorFunction(ArrayBufferPrototype, "byteLength", 0, ArrayBufferPrototype_get_byteLength);
 LazyDefineBuiltinFunction(ArrayBufferPrototype, "slice", 1, ArrayBufferPrototype_slice);
-
-
-
 MakeConstructor(DataViewConstructor, true, DataViewPrototype);
 setInternalSlot(DataViewConstructor, SLOTS.CALL, DataViewConstructor_Call);
 setInternalSlot(DataViewConstructor, SLOTS.CONSTRUCT, DataViewConstructor_Construct);
@@ -23707,7 +23653,6 @@ LazyDefineBuiltinFunction(DataViewPrototype, "setUint16", 2, DataViewPrototype_s
 LazyDefineBuiltinFunction(DataViewPrototype, "setUint32", 2, DataViewPrototype_setUint32);
 LazyDefineBuiltinConstant(DataViewConstructor, $$toStringTag, SLOTS.DATAVIEW);
 
-
 function createTypedArrayPrototype(proto) {
     LazyDefineAccessor(proto, "buffer", CreateBuiltinFunction(realm, TypedArrayPrototype_get_buffer, 0, "get buffer"));
     LazyDefineAccessor(proto, "byteLength", CreateBuiltinFunction(realm, TypedArrayPrototype_get_byteLength, 0, "get byteLength"));
@@ -23718,7 +23663,6 @@ function createTypedArrayPrototype(proto) {
     LazyDefineBuiltinFunction(proto, "reduce", 1, TypedArrayPrototype_reduce);
     return proto;
 }
-
 function createTypedArrayVariant(_type, _bpe, _ctor, _proto, ctorName) {
     setInternalSlot(_ctor, SLOTS.REALM, getRealm());
     setInternalSlot(_ctor, SLOTS.TYPEDARRAYCONSTRUCTOR, ctorName);
@@ -23746,14 +23690,10 @@ function createTypedArrayVariant(_type, _bpe, _ctor, _proto, ctorName) {
     createTypedArrayPrototype(_proto);
     return _ctor;
 }
-
-
 setInternalSlot(TypedArrayConstructor, SLOTS.CALL, TypedArrayConstructor_Call);
 LazyDefineProperty(TypedArrayConstructor, $$create, CreateBuiltinFunction(realm, TypedArrayConstructor_$$create, 0, "[Symbol.create]"));
 LazyDefineProperty(TypedArrayConstructor, "from", CreateBuiltinFunction(realm, TypedArrayConstructor_from, 1, "from"));
 LazyDefineProperty(TypedArrayConstructor, "of", CreateBuiltinFunction(realm, TypedArrayConstructor_of, 2, "of"));
-
-
 createTypedArrayVariant("Int8", 1, Int8ArrayConstructor, Int8ArrayPrototype, "Int8Array");
 createTypedArrayVariant("Uint8", 1, Uint8ArrayConstructor, Int8ArrayPrototype, "Uint8Array");
 createTypedArrayVariant("Uint8C", 1, Uint8ClampedArrayConstructor, Uint8ClampedArrayPrototype, "Uint8Clamped");
@@ -23763,13 +23703,7 @@ createTypedArrayVariant("Int32", 4, Int32ArrayConstructor, Int32ArrayPrototype, 
 createTypedArrayVariant("Uint32", 4, Uint32ArrayConstructor, Uint32ArrayPrototype, "Uint32Array");
 createTypedArrayVariant("Float32", 8, Float32ArrayConstructor, Float32ArrayPrototype, "Float32Array");
 createTypedArrayVariant("Float64", 8, Float64ArrayConstructor, Float64ArrayPrototype, "Float64Array");
-
-
-
 setInternalSlot(SetTimeoutFunction, SLOTS.CALL, SetTimeoutFunction_call);
-
-
-
 setInternalSlot(MapConstructor, SLOTS.PROTOTYPE, FunctionPrototype);
 setInternalSlot(MapPrototype, SLOTS.PROTOTYPE, ObjectPrototype);
 setInternalSlot(MapConstructor, SLOTS.CALL, MapConstructor_call);
@@ -23786,12 +23720,9 @@ LazyDefineBuiltinFunction(MapPrototype, "keys", 0, MapPrototype_keys);
 LazyDefineBuiltinFunction(MapPrototype, "values", 0, MapPrototype_values);
 LazyDefineBuiltinFunction(MapPrototype, $$iterator, 0, MapPrototype_entries);
 LazyDefineBuiltinConstant(MapPrototype, $$toStringTag, "Map");
-
-
 LazyDefineBuiltinConstant(MapIteratorPrototype, $$toStringTag, "Map Iterator");
 LazyDefineBuiltinFunction(MapIteratorPrototype, $$iterator, 0, MapIteratorPrototype_$$iterator);
 LazyDefineBuiltinFunction(MapIteratorPrototype, "next", 0, MapIteratorPrototype_next);
-
 setInternalSlot(SetConstructor, SLOTS.PROTOTYPE, FunctionPrototype);
 setInternalSlot(SetPrototype, SLOTS.PROTOTYPE, ObjectPrototype);
 setInternalSlot(SetConstructor, SLOTS.CALL, SetConstructor_call);
@@ -23811,7 +23742,6 @@ LazyDefineBuiltinConstant(SetIteratorPrototype, "constructor", undefined);
 LazyDefineBuiltinConstant(SetIteratorPrototype, $$toStringTag, "Set Iterator");
 LazyDefineBuiltinFunction(SetIteratorPrototype, $$iterator, 0, SetIteratorPrototype_$$iterator);
 LazyDefineBuiltinFunction(SetIteratorPrototype, "next", 0, SetIteratorPrototype_next);
-
 MakeConstructor(EmitterConstructor, true, EmitterPrototype);
 setInternalSlot(EmitterPrototype, SLOTS.PROTOTYPE, ObjectPrototype);
 setInternalSlot(EmitterConstructor, SLOTS.CALL, EmitterConstructor_call);
@@ -23825,8 +23755,6 @@ LazyDefineBuiltinFunction(EmitterPrototype, "remove", 2, EmitterPrototype_remove
 LazyDefineBuiltinFunction(EmitterPrototype, "removeAll", 2, EmitterPrototype_removeAll);
 LazyDefineBuiltinFunction(EmitterPrototype, "emit", 2, EmitterPrototype_emit);
 LazyDefineBuiltinConstant(EmitterPrototype, $$toStringTag, "Emitter");
-
-
 MakeConstructor(EventConstructor, true, EventPrototype);
 MakeConstructor(EventTargetConstructor, true, EventTargetPrototype);
 MakeConstructor(MessagePortConstructor, true, MessagePortPrototype);
@@ -23836,7 +23764,6 @@ LazyDefineBuiltinFunction(EventTargetPrototype, "removeEventListener", 2, EventT
 LazyDefineBuiltinFunction(MessagePortPrototype, "close", 0, MessagePortPrototype_close);
 LazyDefineBuiltinFunction(MessagePortPrototype, "open", 0, MessagePortPrototype_open);
 LazyDefineBuiltinFunction(MessagePortPrototype, "postMessage", 0, MessagePortPrototype_postMessage);
-
 // StructType
 setInternalSlot(StructTypeConstructor, SLOTS.CALL, StructTypeConstructor_Call);
 setInternalSlot(StructTypeConstructor, SLOTS.CONSTRUCT, StructTypeConstructor_Construct);
@@ -23846,13 +23773,7 @@ LazyDefineBuiltinFunction(StructTypePrototype, $$create, 1, StructTypeConstructo
 LazyDefineAccessor(TypePrototype, "prototype", TypePrototypePrototype_get);
 LazyDefineBuiltinFunction(TypePrototype, "arrayType", 1, TypePrototype_arrayType);
 LazyDefineBuiltinFunction(TypePrototype, "opaqueType", 1, TypePrototype_opaqueType);
-
-
 LazyDefineBuiltinFunction(VMObject, "eval", 1, VMObject_eval);
-
-
-
-
         createGlobalThis = function createGlobalThis(realm, globalThis, intrinsics) {
             SetPrototypeOf(globalThis, ObjectPrototype);
             setInternalSlot(globalThis, SLOTS.EXTENSIBLE, true);
@@ -23916,7 +23837,6 @@ LazyDefineBuiltinFunction(VMObject, "eval", 1, VMObject_eval);
             DefineOwnProperty(globalThis, "isFinite", GetOwnProperty(intrinsics, INTRINSICS.ISFINITE));
             DefineOwnProperty(globalThis, "isNaN", GetOwnProperty(intrinsics, INTRINSICS.ISNAN));
             DefineOwnProperty(globalThis, "load", GetOwnProperty(intrinsics, INTRINSICS.LOAD));
-//            LazyDefineBuiltinConstant(globalThis, "null", null);
             DefineOwnProperty(globalThis, "parseInt", GetOwnProperty(intrinsics, INTRINSICS.PARSEINT));
             DefineOwnProperty(globalThis, "parseFloat", GetOwnProperty(intrinsics, INTRINSICS.PARSEFLOAT));
             DefineOwnProperty(globalThis, "print", GetOwnProperty(intrinsics, INTRINSICS.PRINTFUNCTION));
@@ -23927,7 +23847,6 @@ LazyDefineBuiltinFunction(VMObject, "eval", 1, VMObject_eval);
             DefineOwnProperty(globalThis, "unescape", GetOwnProperty(intrinsics, INTRINSICS.UNESCAPE));
             LazyDefineBuiltinConstant(globalThis, $$toStringTag, "syntaxjs");
             DefineOwnProperty(globalThis, "VM", GetOwnProperty(intrinsics, INTRINSICS.VM));
-
             if (typeof Java !== "function" && typeof load !== "function" && typeof print !== "function") {
                 LazyDefineProperty(intrinsics, INTRINSICS.DOMWRAPPER,
                     NativeJSObjectWrapper(
@@ -23967,7 +23886,7 @@ LazyDefineBuiltinFunction(VMObject, "eval", 1, VMObject_eval);
     exports.COMPLETION = COMPLETION;
     exports.UNDEFINED = UNDEFINED;
     exports.NULL = NULL;
-    exports.SLOTS = SLOTS; // replace all string slots with the SLOTS.[[GET]](N)
+    exports.SLOTS = SLOTS;
     exports.INTRINSICS = INTRINSICS;
     exports.$$unscopables        = $$unscopables;
     exports.$$create             = $$create;
@@ -24142,7 +24061,6 @@ LazyDefineBuiltinFunction(VMObject, "eval", 1, VMObject_eval);
     exports.newEvalError = newEvalError;
     exports.newURIError = newURIError;
     exports.newReferenceError = newReferenceError;
-    // my own definitions between the ecma stuff
     exports.SetFunctionLength = SetFunctionLength;
     exports.LazyDefineProperty = LazyDefineProperty;
     exports.LazyDefineSelfHostingFunction = LazyDefineSelfHostingFunction;
@@ -24176,7 +24094,6 @@ LazyDefineBuiltinFunction(VMObject, "eval", 1, VMObject_eval);
     exports.createExceptionTextOutput = createExceptionTextOutput;
     exports.stringifyErrorStack = stringifyErrorStack;
     exports.addMissingProperties = addMissingProperties;
-//    exports.List = List; // never used (should be removed from code base)
     return exports;
 });
 
