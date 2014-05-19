@@ -4805,7 +4805,6 @@ define("parser", function () {
     var text;
     var builder = null;
     var compile = false;
-    var compiler;
     var cb;
     var notify = false;
     var stateStack = [];
@@ -4832,12 +4831,8 @@ define("parser", function () {
     var nodeId = 1;
 
     var withExtras = false;
-    // CST withExtras. The collection is now done in the tokenizer
-    // and fetched from it´s object.
 
-    function compile(node) {
-        // i replace the old compile call (with a little cost for callBuilder)
-        // to have an easier interface to maintain for debugging and POC impls
+    function compiler(node) {
         return builder.callBuilder(node);
     }
 
@@ -10709,10 +10704,7 @@ function ThisResolution () {
     var env = GetThisEnvironment();
     return env.GetThisBinding();
 }
-function GetGlobalObject () {
-    var realm = getRealm();
-    return realm.globalThis;
-}
+
 function FunctionEnvironment(F, T) {
     var fe = Object.create(FunctionEnvironment.prototype);
     fe.BoundFunction = F;
