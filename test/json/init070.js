@@ -22,12 +22,14 @@ let boolean = new Boolean(true);
 let string = new String("abc");
 let symbol = Symbol();
 let func = new Function("a", "return a");
-try {
-let generator = new GeneratorFunction("a", "yield a;");
-} catch(ex) {
-console.log("FAIL: at new GeneratorFunction('a','yield a;') *wonder*isYieldId===false*: "+ex.message);
-}
+//let generator = new GeneratorFunction("a", "yield a;");
 let date = new Date();
 let loader = new (Reflect.Loader);
 let realm = new (Reflect.Realm);
 let promise = new Promise((r,rej) => r('accepted'));
+let error = new Error("e");
+let typeerror = new TypeError("e");
+let referror = new ReferenceError("e");
+let evalerror = new EvalError("e");
+let syntaxerror = new SyntaxError("e");
+let urierror = new URIError("e");

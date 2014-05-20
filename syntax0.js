@@ -10550,7 +10550,8 @@ var ObjectPrototype_toString = function toString(thisArg, argList) {
     var O = ToObject(thisArg);
     var builtinTag, tag;
     var intrToStr = O.toString();
-    if (builtinTag = builtinTagsByToString[intrToStr]) {
+    if (builtinTagsByToString[intrToStr]) {
+	builtinTag = builtinTagsByToString[intrToStr]
     } else if (hasInternalSlot(O, SLOTS.SYMBOLDATA)) builtinTag = "Symbol";
     else if (hasInternalSlot(O, SLOTS.STRINGDATA)) builtinTag = "String";
     else if (hasInternalSlot(O, SLOTS.ERRORDATA)) builtinTag = "Error";
@@ -21502,13 +21503,11 @@ function createNativeError(nativeType, ctor, proto) {
         return O;
 
     });
-
     setInternalSlot(ctor, SLOTS.CONSTRUCT, function (thisArg, argList) {
         var F = this;
         var argumentsList = argList;
         return OrdinaryCreateFromConstructor(F, argumentsList);
     });
-
     DefineOwnProperty(ctor, $$create, {
         value: CreateBuiltinFunction(realm, function (thisArg, argList) {
             var F = thisArg;
@@ -21519,7 +21518,8 @@ function createNativeError(nativeType, ctor, proto) {
         configurable: false,
         writable: false
     });
-
+    NowDefineBuiltinFunction(proto, "toString", 0, ErrorPrototype_toString);
+    NowDefineBuiltinConstant(proto, $$toStringTag, name);
     NowDefineBuiltinConstant(ctor, "length", 1);
     NowDefineBuiltinConstant(ctor, "prototype", proto);
     NowDefineBuiltinConstant(proto, "constructor", ctor);
@@ -22426,7 +22426,7 @@ MakeConstructor(ProxyConstructor, true, ProxyPrototype);
 NowDefineBuiltinFunction(ProxyConstructor, "revocable", 2, ProxyConstructor_revocable);
 setInternalSlot(ProxyConstructor, SLOTS.CALL, ProxyConstructor_Call);
 setInternalSlot(ProxyConstructor, SLOTS.CONSTRUCT, ProxyConstructor_Construct);
-
+setInternalSlot(ProxyPrototype, SLOTS.PROTOTYPE, null);
 NowDefineBuiltinFunction(ReflectObject, "defineProperty", 2, ReflectObject_defineProperty);
 NowDefineBuiltinFunction(ReflectObject, "deleteProperty", 3, ReflectObject_deleteProperty);
 NowDefineBuiltinFunction(ReflectObject, "enumerate", 1, ReflectObject_enumerate);

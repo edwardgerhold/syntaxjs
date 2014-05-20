@@ -5,7 +5,7 @@
 	    "tests": 
 	    [
 		["object.toString()", "[object Object]"],
-		["array.toString()", ",,,,,"],
+		["array.toString()", ",,,,"],
 		["Object.prototype.toString.call(array)", "[object Array]"],
 		["set.toString()", "[object Set]"],
 		["map.toString()", "[object Map]"],		
@@ -36,7 +36,14 @@
 		["realm.toString()", "[object Reflect.Realm]"],
 		["promise.toString()","[object Promise]"],
 		["Object.prototype.toString.call(func)", "[object Function]"],
-		["Object.prototype.toString.call(proxy)", "[object Proxy]"]
+		["Object.prototype.toString.call(proxy)", "[object Proxy]"],
+		["error.toString","Error: e"],
+		["typeerror.toString","TypeError: e"],
+		["referror.toString","ReferenceError: e"],
+		["evalerror.toString","EvalError: e"],
+		["syntaxerror.toString","SyntaxError: e"],
+		["urierror.toString","URIError: e"],
+		["Object.prototype.toString.call(urierror)","[object URIError]"]
 	    ]
 	}
 }
