@@ -1,0 +1,42 @@
+{
+	"testing all constructors (plus toString), that i have an overview of them working or not all time":
+	{
+	    "initFile": "./init070.js",
+	    "tests": 
+	    [
+		["object.toString()", "[object Object]"],
+		["array.toString()", ",,,,,"],
+		["Object.prototype.toString.call(array)", "[object Array]"],
+		["set.toString()", "[object Set]"],
+		["map.toString()", "[object Map]"],		
+		["arraybuffer.toString()", "[object ArrayBuffer]"],		
+		["dataview.toString()", "[object DataView]"],		
+		["regexp.toString()", "/abc/"],
+		["Object.prototype.toString.call(regexp)", "[object RegExp]"],		
+		["i8.toString()", "[object Int8Array]"],
+		["ui8.toString()", "[object Uint8Array]"],		
+		["ui8c.toString()", "[object Uint8ClampedArray]"],
+		["i16.toString()", "[object Int16Array]"],
+		["ui16.toString()", "[object Uint16Array]"],
+		["i32.toString()", "[object Int32Array]"],
+		["ui32.toString()", "[object Uint32Array]"],
+		["f32.toString()", "[object Float32Array]"],
+		["f64.toString()", "[object Float64Array]"],
+		["number.toString()", "1"],
+		["Object.prototype.toString.call(number)", "[object Number]"],
+		["string.toString()", "abc"],
+		["Object.prototype.toString.call(string)", "[object String]"],
+		["boolean.toString()", "true"],
+		["Object.prototype.toString.call(boolean)", "[object Boolean]"],
+		["Object.prototype.toString.call(symbol)", "[object Symbol]"],
+		["symbol.toString()", "Symbol()"],
+		["Symbol('abc').toString()", "Symbol(abc)"],
+		["date.toString()", "[object Date]"],
+		["loader.toString()", "[object Reflect.Loader]"],
+		["realm.toString()", "[object Reflect.Realm]"],
+		["promise.toString()","[object Promise]"],
+		["Object.prototype.toString.call(func)", "[object Function]"],
+		["Object.prototype.toString.call(proxy)", "[object Proxy]"]
+	    ]
+	}
+}

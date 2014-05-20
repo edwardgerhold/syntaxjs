@@ -11233,8 +11233,7 @@ function ToObject(V) {
     if (V === null) return newTypeError("ToObject: can not convert null to object");
     if (Type(V) === OBJECT) return V;
     if (V instanceof SymbolPrimitiveType) {
-        var s = ObjectCreate();
-        setInternalSlot(s, SLOTS.PROTOTYPE, getIntrinsic(INTRINSICS.SYMBOLPROTOTYPE));
+        var s = ObjectCreate(getIntrinsic(INTRINSICS.SYMBOLPROTOTYPE));
         setInternalSlot(s, SLOTS.SYMBOLDATA, V);
         return s;
     }
@@ -14569,7 +14568,7 @@ var DateConstructor_call = function (thisArg, argList) {
         return Invoke(O, "toString", []);
     }
 };
-var DateConstructor_construct = function (thisArg, argList) {
+var DateConstructor_construct = function (argList) {
     return OrdinaryConstruct(this, argList);
 };
 var DateConstructor_parse = function (thisArg, argList) {
@@ -15238,7 +15237,7 @@ var arrayType2elementSize = {
     "Uint16": 2,
     "Int8": 1,
     "Uint8": 1,
-    "Uint8Clamped": 1
+    "Uint8C": 1
 };
 var typedConstructors = {
     "Float64": Float64Array,
@@ -16055,8 +16054,10 @@ var SymbolFunction_Construct = function Construct(argList) {
 };
 var SymbolPrototype_toString = function toString(thisArg, argList) {
     var s = thisArg;
-    if (hasInternalSlot(s, SLOTS.SYMBOLDATA)) return newTypeError(format("HAS_NO_SLOT_S", "[[SymbolData]]"));
-    var sym = getInternalSlot(s, SLOTS.SYMBOLDATA);
+    var sym;
+    if (Type(s) === SYMBOL) sym = s;
+    else if (!hasInternalSlot(s, SLOTS.SYMBOLDATA)) return newTypeError(format("HAS_NO_SLOT_S", "[[SymbolData]]"));
+    else sym = getInternalSlot(s, SLOTS.SYMBOLDATA);
     var desc = getInternalSlot(sym, SLOTS.DESCRIPTION);
     if (desc === undefined) desc = "";
     Assert(Type(desc) === STRING, format("SLOT_S_NOT_A_STRING", "[[Description]]"));
@@ -16065,7 +16066,8 @@ var SymbolPrototype_toString = function toString(thisArg, argList) {
 };
 var SymbolPrototype_valueOf = function valueOf(thisArg, argList) {
     var s = thisArg;
-    if (hasInternalSlot(s, SLOTS.SYMBOLDATA)) return newTypeError(format("HAS_NO_SLOT_S", "[[SymbolData]]"));
+    if (Type(s) === SYMBOL) return NormalCompletion(s);
+    if (!hasInternalSlot(s, SLOTS.SYMBOLDATA)) return newTypeError(format("HAS_NO_SLOT_S", "[[SymbolData]]"));
     var sym = getInternalSlot(s, SLOTS.SYMBOLDATA);
     return NormalCompletion(sym);
 };
@@ -16758,6 +16760,11 @@ var StringConstructor_raw = function (thisArg, argList) {
         stringElements.push(nextSub);
         nextIndex = nextIndex + 1;
     }
+};
+
+var StringPrototype_toString = function (thisArg, argList) {
+    var s = thisStringValue(thisArg);
+    return NormalCompletion(s);
 };
 var StringIteratorPrototype_$$iterator = function (thisArg, argList) {
     return thisArg;
@@ -22176,7 +22183,7 @@ NowDefineProperty(LoaderPrototype, "locate", CreateBuiltinFunction(realm,LoaderP
 NowDefineProperty(LoaderPrototype, "translate", CreateBuiltinFunction(realm,LoaderPrototype_instantiate, 1, "translate"));
 NowDefineProperty(LoaderPrototype, "instantiate", CreateBuiltinFunction(realm,LoaderPrototype_instantiate, 0, "instantiate"));
 NowDefineProperty(LoaderPrototype, $$iterator, CreateBuiltinFunction(realm,LoaderPrototype_$$iterator, 0, "[Symbol.iterator]"));
-NowDefineProperty(LoaderPrototype, $$toStringTag, SLOTS.LOADER);
+NowDefineProperty(LoaderPrototype, $$toStringTag, "Reflect.Loader");
 NowDefineBuiltinFunction(LoaderPrototype, "newModule", 1, LoaderPrototype_newModule);
 NowDefineProperty(LoaderIteratorPrototype, $$iterator, CreateBuiltinFunction(realm, LoaderIteratorPrototype_$$iterator, 0, "[Symbol.iterator]"));
 NowDefineProperty(LoaderIteratorPrototype, "next", CreateBuiltinFunction(realm, LoaderIteratorPrototype_next, 0, "next"));
@@ -22274,6 +22281,7 @@ NowDefineBuiltinFunction(StringPrototype, "toArray", 0, StringPrototype_toArray)
 NowDefineBuiltinFunction(StringPrototype, "toLocaleCompare", 0, StringPrototype_localeCompare);
 NowDefineBuiltinFunction(StringPrototype, "toLowerCase", 0, StringPrototype_toLowerCase);
 NowDefineBuiltinFunction(StringPrototype, "toUpperCase", 0, StringPrototype_toUpperCase);
+NowDefineBuiltinFunction(StringPrototype, "toString", 0, StringPrototype_toString);
 NowDefineBuiltinFunction(StringPrototype, "trim", 1, StringPrototype_trim);
 NowDefineBuiltinFunction(StringPrototype, "valueOf", 0, StringPrototype_valueOf);
 NowDefineBuiltinConstant(StringPrototype, $$toStringTag, "String");
@@ -22291,7 +22299,9 @@ NowDefineBuiltinFunction(BooleanConstructor, $$create, 1, BooleanConstructor_$$c
 NowDefineBuiltinFunction(BooleanPrototype, "toString", 0, BooleanPrototype_toString)
 NowDefineBuiltinFunction(BooleanPrototype, "valueOf", 0, BooleanPrototype_valueOf)
 NowDefineBuiltinConstant(BooleanConstructor, "prototype", BooleanPrototype);
-NowDefineBuiltinConstant(BooleanConstructor, "constructor", BooleanConstructor);
+NowDefineBuiltinConstant(BooleanPrototype, "constructor", BooleanConstructor);
+NowDefineBuiltinConstant(BooleanPrototype, $$toStringTag, "Boolean");
+
 MakeConstructor(SymbolFunction, true, SymbolPrototype);
 setInternalSlot(SymbolFunction, SLOTS.CALL, SymbolFunction_Call);
 setInternalSlot(SymbolFunction, SLOTS.CONSTRUCT, SymbolFunction_Construct);
@@ -22416,6 +22426,7 @@ MakeConstructor(ProxyConstructor, true, ProxyPrototype);
 NowDefineBuiltinFunction(ProxyConstructor, "revocable", 2, ProxyConstructor_revocable);
 setInternalSlot(ProxyConstructor, SLOTS.CALL, ProxyConstructor_Call);
 setInternalSlot(ProxyConstructor, SLOTS.CONSTRUCT, ProxyConstructor_Construct);
+
 NowDefineBuiltinFunction(ReflectObject, "defineProperty", 2, ReflectObject_defineProperty);
 NowDefineBuiltinFunction(ReflectObject, "deleteProperty", 3, ReflectObject_deleteProperty);
 NowDefineBuiltinFunction(ReflectObject, "enumerate", 1, ReflectObject_enumerate);
@@ -22532,7 +22543,7 @@ NowDefineProperty(PromiseConstructor, "all", CreateBuiltinFunction(realm, Promis
 NowDefineProperty(PromisePrototype, "then", CreateBuiltinFunction(realm, PromisePrototype_then, 2, "then"));
 NowDefineProperty(PromisePrototype, "catch", CreateBuiltinFunction(realm, PromisePrototype_catch, 1, "catch"));
 NowDefineProperty(PromisePrototype, "constructor", PromiseConstructor);
-NowDefineProperty(PromisePrototype, $$toStringTag, SLOTS.PROMISE);
+NowDefineProperty(PromisePrototype, $$toStringTag, "Promise");
 MakeConstructor(RegExpConstructor, true, RegExpPrototype);
 setInternalSlot(RegExpConstructor, SLOTS.CALL, RegExp_Call);
 setInternalSlot(RegExpConstructor, SLOTS.CONSTRUCT, RegExp_Construct);
@@ -22590,7 +22601,7 @@ NowDefineBuiltinFunction(DataViewPrototype, "setInt32", 2, DataViewPrototype_set
 NowDefineBuiltinFunction(DataViewPrototype, "setUint8", 2, DataViewPrototype_setUint8);
 NowDefineBuiltinFunction(DataViewPrototype, "setUint16", 2, DataViewPrototype_setUint16);
 NowDefineBuiltinFunction(DataViewPrototype, "setUint32", 2, DataViewPrototype_setUint32);
-NowDefineBuiltinConstant(DataViewConstructor, $$toStringTag, SLOTS.DATAVIEW);
+NowDefineBuiltinConstant(DataViewPrototype, $$toStringTag, "DataView");
 function createTypedArrayPrototype(proto) {
     NowDefineAccessor(proto, "buffer", CreateBuiltinFunction(realm, TypedArrayPrototype_get_buffer, 0, "get buffer"));
     NowDefineAccessor(proto, "byteLength", CreateBuiltinFunction(realm, TypedArrayPrototype_get_byteLength, 0, "get byteLength"));

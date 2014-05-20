@@ -1,5 +1,5 @@
 {
-	"testing call, bind, apply":
+	"testing call, bind, apply (after re-adding array.p.tostring i had to change data)":
 	{
 	    "init": 		
 		"function f() { 'use strict'; return [this, ...arguments] }\nfunction g() { return [this, ...arguments] }\n",
@@ -8,9 +8,9 @@
 		["f.call(null, 1,2).join()", "null,1,2" ],
 		["f.apply(null, [1,2]).join()", "null,1,2" ],
 		["(f.bind(null,1,2))().join()", "null,1,2" ],
-		["f.call(undefined, {},[]).join()", ",[object Object],[object Array]" ],
-		["f.apply(undefined, [{},[]]).join()", ",[object Object],[object Array]" ],
-		["(f.bind(undefined,{},[]))().join()", ",[object Object],[object Array]" ]
+		["f.call(undefined, {},[]).join()", ",[object Object]," ],
+		["f.apply(undefined, [{},[]]).join()", ",[object Object]," ],
+		["(f.bind(undefined,{},[]))().join()", ",[object Object]," ]
 
 	    ]
 	}

@@ -1,5 +1,5 @@
 {
-	"testing call, bind, apply":
+	"testing toString":
 	{
 	    "init": 		
 		"var toString = Object.prototype.toString;",
