@@ -10551,7 +10551,7 @@ var ObjectPrototype_toString = function toString(thisArg, argList) {
     var builtinTag, tag;
     var intrToStr = O.toString();
     if (builtinTagsByToString[intrToStr]) {
-	builtinTag = builtinTagsByToString[intrToStr]
+	builtinTag = builtinTagsByToString[intrToStr];
     } else if (hasInternalSlot(O, SLOTS.SYMBOLDATA)) builtinTag = "Symbol";
     else if (hasInternalSlot(O, SLOTS.STRINGDATA)) builtinTag = "String";
     else if (hasInternalSlot(O, SLOTS.ERRORDATA)) builtinTag = "Error";
@@ -11942,8 +11942,8 @@ function HasOwnProperty(O, P) {
     Assert(Type(O) === OBJECT, "GetOwnProperty: first argument has to be an object");
     Assert(IsPropertyKey(P), "HasOwnProperty: second argument has to be a valid property key, got " + P);
     var desc = callInternalSlot(SLOTS.GETOWNPROPERTY, O, P);
+    if (isAbrupt(desc)) return desc;
     return desc !== undefined;
-
 }
 function HasProperty(O, P) {
     do {
