@@ -14581,7 +14581,7 @@ var DateConstructor_now = function (thisArg, argList) {
     return NormalCompletion(Date.now());
 };
 var DateConstructor_$$create = function (thisArg, argList) {
-    var obj = OrdinaryCreateFromConstructor(DateConstructor, INTRINSICS.DATEPROTOTYPE, [
+    var obj = OrdinaryCreateFromConstructor(thisArg, INTRINSICS.DATEPROTOTYPE, [
         SLOTS.DATEVALUE
     ]);
     return obj;
@@ -16094,7 +16094,7 @@ var SymbolFunction_for = function (thisArg, argList) {
     return NormalCompletion(newSymbol); // There is a Typo newSumbol in the Spec.
 };
 var SymbolFunction_$$create = function (thisArg, argList) {
-    return newTypeError( format("SYMBOL_CREATE_ERROR"));
+    return newTypeError(format("SYMBOL_CREATE_ERROR"));
 };
 
 
@@ -16835,8 +16835,7 @@ var NumberConstructor_call = function (thisArg, argList) {
     return n;
 };
 var NumberConstructor_construct = function (argList) {
-    var F = NumberConstructor;
-    return OrdinaryConstruct(F, argList);
+    return OrdinaryConstruct(this, argList);
 }
 var NumberConstructor_$$create = function (thisArg, argList) {
     var F = thisArg;
@@ -17393,7 +17392,7 @@ function isProxy(o) {
 }
 function ProxyCreate(target, handler) {
     var proxy = ProxyExoticObject();
-    setInternalSlot(proxy, SLOTS.PROTOTYPE, ProxyPrototype);
+    setInternalSlot(proxy, SLOTS.PROTOTYPE, getIntrinsic(INTRINSICS.PROXYPROTOTYPE));
     setInternalSlot(proxy, SLOTS.PROXYTARGET, target);
     setInternalSlot(proxy, SLOTS.PROXYHANDLER, handler);
     if (!IsConstructor(target)) setInternalSlot(proxy, SLOTS.CONSTRUCT, undefined);
@@ -20811,8 +20810,7 @@ var MapPrototype_entries = function (thisArg, argList) {
 var MapPrototype_forEach = function (thisArg, argList) {};
 var MapPrototype_clear = function (thisArg, argList) {};
 var MapConstructor_$$create = function $$create(thisArg, argList) {
-    var F = thisArg;
-    return OrdinaryCreateFromConstructor(F, INTRINSICS.MAPPROTOTYPE, [
+    return OrdinaryCreateFromConstructor(thisArg, INTRINSICS.MAPPROTOTYPE, [
         SLOTS.MAPDATA,
         SLOTS.MAPCOMPARATOR
     ]);
@@ -21548,8 +21546,7 @@ var EmitterConstructor_construct = function (argList) {
     return OrdinaryConstruct(F, args);
 };
 var EmitterConstructor_$$create = function (thisArg, argList) {
-    var F = EmitterConstructor;
-    var proto = GetPrototypeFromConstructor(F, INTRINSICS.EMITTERPROTOTYPE);
+    var proto = GetPrototypeFromConstructor(thisArg, INTRINSICS.EMITTERPROTOTYPE);
     return ObjectCreate(proto, [SLOTS.EVENTLISTENERS]);
 };
 var EmitterPrototype_on = function (thisArg, argList) {
