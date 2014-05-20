@@ -37,12 +37,12 @@
 		["promise.toString()","[object Promise]"],
 		["Object.prototype.toString.call(func)", "[object Function]"],
 		["Object.prototype.toString.call(proxy)", "[object Proxy]"],
-		["error.toString","Error: e"],
-		["typeerror.toString","TypeError: e"],
-		["referror.toString","ReferenceError: e"],
-		["evalerror.toString","EvalError: e"],
-		["syntaxerror.toString","SyntaxError: e"],
-		["urierror.toString","URIError: e"],
+		["error.toString()","Error: e"],
+		["typeerror.toString()","TypeError: e"],
+		["referror.toString()","ReferenceError: e"],
+		["evalerror.toString()","EvalError: e"],
+		["syntaxerror.toString()","SyntaxError: e"],
+		["urierror.toString()","URIError: e"],
 		["Object.prototype.toString.call(urierror)","[object URIError]"]
 	    ]
 	}
