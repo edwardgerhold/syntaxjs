@@ -629,6 +629,8 @@ define("languages.de_DE", function (require, exports) {
 
     exports.ARGUMENTS_CALLER_STRICT_ERROR = "Kann nicht auf Caller im Strict Mode zugreifen";
 
+    exports.S_INITIALIZED_ERR = "%s ist bereits initialisiert";
+
     return exports;
 
 });
@@ -771,6 +773,10 @@ define("languages.en_US", function (require, exports) {
 
     exports.ARGUMENTS_CALLER_STRICT_ERROR = "Can not access 'caller' in strict mode";
 
+
+
+    exports.S_INITIALIZED_ERR = "%s is already initialized";
+
     return exports;
 });
 
@@ -912,8 +918,6 @@ exports.NOT_FOUND_ERR = "i18n-failure: '%s' not found."
 // I initialise this in lib/_main_.js
 
 });
-
-
 
 
     // the lexer and parser api ast and ast-to-string for es6 code
@@ -9587,10 +9591,14 @@ SLOTS.OPAQUEDESCRIPTOR = "OpaqueDescriptor";
 // Structured Clones
 SLOTS.TRANSFER = "Transfer";
 SLOTS.ONSUCCESSTRANSFER = "OnSuccessTransfer";
-
-
-SLOTS.WRAPPEDOBJECT = "Wrapped";
+SLOTS.WRAPPEDOBJECT = "WrappedObject";
 SLOTS.NATIVETHIS    = "NativeThis"
+// Ecma 402 Intl API
+SLOTS.AVAILABLELOCALES = "availableLocales";
+SLOTS.RELEVANTEXTENSIONKEYS = "relevantExtensionKeys";
+SLOTS.SORTLOCALEDATA = "sortLocaleData";
+SLOTS.INITIALIZEDINTLOBJECT = "initializedIntlObject";
+
 Object.freeze(SLOTS); // DOES A FREEZE HELP OPTIMIZING? The pointers can´t change anymore, or?
 
 var INTRINSICS = Object.create(null);
@@ -9715,6 +9723,13 @@ INTRINSICS.SETLANGUAGE = "%SetLanguage%";
 INTRINSICS.VM = "%VM%";
 INTRINSICS.DOMWRAPPER = "%DOMWrapper%";
 INTRINSICS.DEFAULTCOMPARE = "%DefaultCompare%";
+INTRINSICS.INTL = "%Intl%";
+INTRINSICS.COLLATOR = "%Collator%";
+INTRINSICS.COLLATORPROTOTYPE = "%CollatorPrototype%";
+INTRINSICS.NUMBERFORMAT = "%NumberFormat%";
+INTRINSICS.NUMBERFORMATPROTOTYPE = "%NumberFormatPrototype%";
+INTRINSICS.DATETIMEFORMAT = "%DateTimeFormat%";
+INTRINSICS.DATETIMEFORMATPROTOTYPE = "%DateTimeFormatPrototype%";
 Object.freeze(INTRINSICS);
 var floor = Math.floor;
 var ceil = Math.ceil;
@@ -9885,7 +9900,8 @@ function CodeRealm(intrinsics, gthis, genv, ldr) {
         stack: [],
         eventQueue:[],
         ObserverCallbacks: [],
-        GlobalSymbolRegistry: Object.create(null)
+        GlobalSymbolRegistry: Object.create(null),
+        defaultLocale: undefined
     };
 }
 CodeRealm.prototype.toString = CodeRealm_toString;
@@ -12148,7 +12164,7 @@ function HasOwnProperty(O, P) {
     Assert(Type(O) === OBJECT, "GetOwnProperty: first argument has to be an object");
     Assert(IsPropertyKey(P), "HasOwnProperty: second argument has to be a valid property key, got " + P);
     var desc = callInternalSlot(SLOTS.GETOWNPROPERTY, O, P);
-    if (isAbrupt(desc)) return desc;
+    //if (isAbrupt(desc)) return desc;
     return desc !== undefined;
 }
 function HasProperty(O, P) {
@@ -22157,6 +22173,100 @@ var RealmPrototype_indirectEval = function (thisArg, argList) {
     if (realm === undefined) return newTypeError(format("S_IS_UNDEFINED", "[[Realm]]"));
     return IndirectEval(realm, source);
 };
+var timeZones = Object.create(null);
+timeZones.UTC = "UTC";
+var regExps = Object.create(null);
+regExps.notAtoZ = /[^A-Z]/;
+function IsStructurallyValidLanguageTag (locale) {
+    Assert(Type(locale) === STRING, "locale must be a string");
+    // get a bcp 47 database and
+    // verify locale
+}
+function CanonicalizeLanguageTag (locale) {
+    // get bcp 47
+    // map to upper case
+    // get the right from hash
+    // return canon name
+}
+function DefaultLocale () {
+    return getRealm().defaultLocale;
+}
+function IsWellFormedCurrencyCode (currency) {
+    var c = ToString(currency);
+    var normalized = c.toUpperCase();
+    if (normalized.length != 3) return false;
+    if (regExps.notAtoZ.test(normalized)) return false;
+    return true;
+}
+function CanonicalizeLocaleList (locales) {
+
+}
+function BestAvailableLocale(availableLocales, locale) {
+
+}
+function LookupMatcher(availableLocales, requestedLocales) {
+
+}
+function BestFitMatcher (availableLocales, requestedLocales) {
+
+}
+function ResolveLocale (availableLocales, requestedLocales, options, relevantExtensionKeys, localeData) {
+
+}
+function LookupSupportedLocales (availableLocales, requestedLocales) {
+
+}
+function BestFitSupportedLocales (availableLocales, requestedLocales) {}
+function SupportedLocales (availableLocales, requestedLocales, options) {}
+function GetOption_Intl (options, property, type, values, fallback) {
+    var value = callInternalSlot(SLOTS.GET, options, property);
+    if (isAbrupt(value=ifAbrupt(value))) return value;
+    switch (type) {
+        case "boolean": value = ToBoolean(value);
+            break;
+        case "string": value = ToString(value);
+            break;
+    }
+    if (values !== undefined) {
+        if (values.indexOf(value) > -1) return value;
+        else return new RangeError(format("S_OUT_OF_RANGE", "value"));
+    }
+    return fallback;
+}
+function GetNumberOption (options, property, minimum, maximum, fallback) {
+    var value = callInternalSlot(SLOTS.GET, options, property);
+    if (isAbrupt(value=ifAbrupt(value))) return value;
+    if (value != undefined) {
+        value = ToNumber(value);
+        if ((value != value) || value < minimum || value > maximum) return new RangeError(format("S_OUT_OF_RANGE", "value"));
+        return floor(value);
+    }
+    return fallback;
+}
+function InitializeCollator(collator, locales, options) {
+    if (getInternalSlot(collator, SLOTS.INITIALIZEDINTLOBJECT) === true) return newTypeError(format("S_INITIALIZED_ERR", "Collator"));
+}
+var CollatorConstructor_call = function (thisArg, argList) {
+};
+var CollatorConstructor_construct = function (argList) {
+
+};
+var NumberFormatConstructor_call = function (thisArg, argList) {
+
+};
+var NumberFormatConstructor_construct = function (argList) {
+
+};
+var DateTimeFormatConstructor_call = function (thisArg, argList) {
+
+};
+var DateTimeFormatConstructor_construct = function (argList) {
+
+};
+
+
+
+
     var createGlobalThis, createIntrinsics;
     function define_intrinsic(intrinsics, intrinsicName, value) {
         var descriptor = {
@@ -22297,10 +22407,10 @@ var RealmPrototype_indirectEval = function (thisArg, argList) {
         var EmitterConstructor = createIntrinsicConstructor(intrinsics, "Emitter", 0, INTRINSICS.EMITTER);
         var EmitterPrototype = createIntrinsicPrototype(intrinsics, INTRINSICS.EMITTERPROTOTYPE);
         var NotifierPrototype = createIntrinsicPrototype(intrinsics, INTRINSICS.NOTIFIERPROTOTYPE);
-        var LoaderConstructor = createIntrinsicConstructor(intrinsics, "Loader", 0, INTRINSICS.LOADER);
+        var LoaderConstructor = createIntrinsicConstructor(intrinsics, "Reflect.Loader", 0, INTRINSICS.LOADER);
         var LoaderPrototype = createIntrinsicPrototype(intrinsics, INTRINSICS.LOADERPROTOTYPE);
         var LoaderIteratorPrototype = createIntrinsicPrototype(intrinsics, INTRINSICS.LOADERITERATORPROTOTYPE);
-        var RealmConstructor = createIntrinsicConstructor(intrinsics, "Realm", 0, INTRINSICS.REALM);
+        var RealmConstructor = createIntrinsicConstructor(intrinsics, "Reflect.Realm", 0, INTRINSICS.REALM);
         var RealmPrototype = createIntrinsicPrototype(intrinsics, INTRINSICS.REALMPROTOTYPE);
         var ModulePrototype = null;
         var EventConstructor = createIntrinsicConstructor(intrinsics, "Event", 0, INTRINSICS.EVENT);         // EventTarget and MessagePort are just stubs yet.
@@ -22317,7 +22427,16 @@ var RealmPrototype_indirectEval = function (thisArg, argList) {
         var TypePrototype = createIntrinsicPrototype(intrinsics, INTRINSICS.TYPEPROTOTYPE);
         var ThrowTypeError = createIntrinsicFunction(intrinsics, "ThrowTypeError", 0, INTRINSICS.THROWTYPEERROR);
         var ArrayProto_values = createIntrinsicFunction(intrinsics, "values", 0, INTRINSICS.ARRAYPROTO_VALUES);
-        var VMObject = createIntrinsicObject(intrinsics,INTRINSICS.VM); // that i can play with from inside the shell, too.
+        var VMObject = createIntrinsicObject(intrinsics,INTRINSICS.VM); // that i can play with bytecode from inside the shell, too.
+
+        var IntlObject = createIntrinsicObject(intrinsics,INTRINSICS.INTL);
+        var CollatorConstructor = createIntrinsicConstructor(intrinsics, "Intl.Collator", 0, INTRINSICS.COLLATOR);
+        var CollatorPrototype = createIntrinsicPrototype(intrinsics, INTRINSICS.COLLATORPROTOTYPE);
+        var NumberFormatConstructor = createIntrinsicConstructor(intrinsics, "Intl.NumberFormat", 0, INTRINSICS.NUMBERFORMAT);
+        var NumberFormatPrototype = createIntrinsicPrototype(intrinsics, INTRINSICS.NUMBERFORMATPROTOTYPE);
+        var DateTimeFormatConstructor = createIntrinsicConstructor(intrinsics, "Intl.DateTimeFormat", 0, INTRINSICS.DATETIMEFORMAT);
+        var DateTimeFormatPrototype = createIntrinsicPrototype(intrinsics, INTRINSICS.DATETIMEFORMATPROTOTYPE);
+
         var defaultCompareFn = createIntrinsicFunction(intrinsics, "compare", 2, INTRINSICS.DEFAULTCOMPARE)
         var ThrowTypeError_Call = function (thisArg, argList) {
             return newTypeError(format("THROW_TYPE_ERROR"));
@@ -22927,6 +23046,15 @@ NowDefineAccessor(TypePrototype, "prototype", TypePrototypePrototype_get);
 NowDefineBuiltinFunction(TypePrototype, "arrayType", 1, TypePrototype_arrayType);
 NowDefineBuiltinFunction(TypePrototype, "opaqueType", 1, TypePrototype_opaqueType);
 NowDefineBuiltinFunction(VMObject, "eval", 1, VMObject_eval);
+NowDefineProperty(IntlObject, "Collator", CollatorConstructor)
+NowDefineProperty(IntlObject, "NumberFormat", NumberFormatConstructor)
+NowDefineProperty(IntlObject, "DateTimeFormat", DateTimeFormatConstructor)
+setInternalSlot(CollatorConstructor, SLOTS.CALL, CollatorConstructor_call);
+setInternalSlot(CollatorConstructor, SLOTS.CONSTRUCT, CollatorConstructor_construct);
+setInternalSlot(NumberFormatConstructor, SLOTS.CALL, NumberFormatConstructor_call);
+setInternalSlot(NumberFormatConstructor, SLOTS.CONSTRUCT, NumberFormatConstructor_construct);
+setInternalSlot(DateTimeFormatConstructor, SLOTS.CALL, DateTimeFormatConstructor_call);
+setInternalSlot(DateTimeFormatConstructor, SLOTS.CONSTRUCT, DateTimeFormatConstructor_construct);
         createGlobalThis = function createGlobalThis(realm, globalThis, intrinsics) {
             SetPrototypeOf(globalThis, ObjectPrototype);
             setInternalSlot(globalThis, SLOTS.EXTENSIBLE, true);
@@ -22945,6 +23073,7 @@ NowDefineBuiltinFunction(VMObject, "eval", 1, VMObject_eval);
             DefineOwnProperty(globalThis, "Float64Array", GetOwnProperty(intrinsics, INTRINSICS.FLOAT64ARRAY));
             DefineOwnProperty(globalThis, "GeneratorFunction", GetOwnProperty(intrinsics, INTRINSICS.GENERATORFUNCTION));
             NowDefineBuiltinConstant(globalThis, "Infinity", Infinity);
+            DefineOwnProperty(globalThis, "Intl", GetOwnProperty(intrinsics, INTRINSICS.INTL));
             DefineOwnProperty(globalThis, "Int8Array", GetOwnProperty(intrinsics, INTRINSICS.INT8ARRAY));
             DefineOwnProperty(globalThis, "Int16Array", GetOwnProperty(intrinsics, INTRINSICS.INT16ARRAY));
             DefineOwnProperty(globalThis, "Int32Array", GetOwnProperty(intrinsics, INTRINSICS.INT32ARRAY));
@@ -30547,6 +30676,7 @@ define("runtime0", function () {
                     continue;
                 case "ConditionalExpression":
                     // // return {type:type,_id_:++nodeId,test:undefined,consequent:undefined,alternate:undefined,loc:undefined,extras:undefined};
+                    // // return {type:type,_id_:++nodeId,test:undefined,consequent:undefined,alternate:undefined,loc:undefined,extras:undefined};
                     stack[++pc] = node.test;
                     stack[++pc] = node.consequent;
                     stack[++pc] = node.alternate;
@@ -30693,7 +30823,7 @@ define("runtime0", function () {
 
 
     // experimental typed memory and compiler (development)
-    //--#include "lib/heap/heap.js"; // too high level (would be too slow)
+    //--#include "lib/heap/heap.js"; // too high level
     
 /**
  * asm-typechecker
