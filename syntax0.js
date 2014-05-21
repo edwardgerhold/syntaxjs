@@ -8892,6 +8892,208 @@ define("js-codegen", function (require, exports, module) {
     return build;
 });
 
+define("queryselector", function (require, exports) {
+
+function matchesQuery(node, query) {
+    "use strict";
+    var propName;
+    var typeName;
+    switch(query[0]) {
+        case ".":
+            propName = query.slice(1);
+            break;
+        default:
+            typeName = query;
+            break;
+    }
+    if (propName && (propName in node)) return true;
+    else if (typeName && (node.type === typeName)) return true;
+    return false;
+}
+
+function querySelectorAll(node, query) {
+    "use strict";
+    var stack = [];
+     var nodes = [];
+     var i, j;
+
+    // querySelector(node, "CallExpression") returns all CallExpressions from the node on
+    // querySelector(node, ".id") returns all nodes with an .id property from the node on
+
+    stack.push(node);
+
+    while (node = stack.pop()) {
+
+        if (matchesQuery(node, query)) nodes.push(node);
+
+        switch (node.type) {
+            case "Program":
+                // // return {type:type,_id_:++nodeId,strict:undefined,body:undefined,loc:undefined,extras:undefined};
+                for (i = node.body.length - 1; i >= 0; i--) {
+                    stack.push(node.body[i]);
+                }
+                break;
+            case "Identifier":
+                break;
+            // // return {type:type,_id_:++nodeId,name:undefined,loc:undefined,extras:undefined};
+            case "ParenthesizedExpression":
+            case "ExpressionStatement":
+                stack.push(node.expression);
+                break;
+            // // return {type:type,_id_:++nodeId,expression:undefined,loc:undefined,extras:undefined};
+            case "LexicalDeclaration":
+            case "VariableDeclaration":
+                for (i = node.declarations.length - 1; i >= 0; i--) {
+                    stack.push(node.declarations[i]);
+                }
+                break;
+            case "FunctionDeclaration":
+            case "FunctionExpression":
+            case "GeneratorDeclaration":
+            case "GeneratorExpression":
+            case "MethodDefinition":
+                for (i = node.body.length - 1; i >= 0; i--) {
+                    stack.push(node.body[i]);
+                }
+                // / // return {type:type,_id_:++nodeId,expression:undefined,generator:undefined,strict:undefined,id:undefined,params:undefined,body:undefined,loc:undefined,extras:undefined};
+                break;
+            case "ArrowExpression":
+                if (Array.isArray(node.body)) {
+                    for (i = node.body.length - 1; i >= 0; i--) {
+                        stack.push(node.body[i]);
+                    }
+                } else {
+                    stack.push(node.body);
+                }
+                // // return {type:type,_id_:++nodeId,params:undefined,body:undefined,loc:undefined,ebxtras:undefined};
+                //stack.push(node);
+                break;
+            case "NumericLiteral":
+            case "StringLiteral":
+            case "BooleanLiteral":
+            case "Literal":
+                // // return {type:type,_id_:++nodeId,value:undefined,loc:undefined,extras:undefined}
+
+                break;
+            case "TemplateLiteral":
+                // // return {type:type,_id_:++nodeId,spans:undefined,loc:undefined,extras:undefined}
+                break;
+            case "ObjectExpression":
+                // // return {type:type,_id_:++nodeId,properties:undefined,loc:undefined,extras:undefined};
+                for (i = node.properties.length - 1; i >= 0; i--) {
+                    stack.push(node.properties[i]);
+                }
+                break;
+            case "ArrayExpression":
+                // // return {type:type,_id_:++nodeId,elements:undefined,loc:undefined,extras:undefined};
+                for (i = node.body.length - 1; i >= 0; i--) {
+                    stack.push(node.body[i]);
+                }
+                break;
+            case "ObjectPattern":
+            case "ArrayPattern":
+                for (i = node.elements.length - 1; i >= 0; i--) {
+                    stack.push(node.elements[i]);
+                }
+                break;
+            // // return {type:type,_id_:++nodeId,elements:undefined,loc:undefined,extras:undefined};
+            case "WhileStatement":
+            case "DoWhileStatement":
+            // // return {type:type,_id_:++nodeId,test:undefined, body:undefined,loc:undefined,extras:undefined};
+            case "BlockStatement":
+                for (i = node.body.length - 1; i >= 0; i--) {
+                    stack.push(node.body[i]);
+                }
+                break;
+            // // return {type:type,_id_:++nodeId,body:undefined,loc:undefined,extras:undefined};
+            case "IfStatement":
+            // // return {type:type,_id_:++nodeId,test:undefined,consequent:undefined,alternate:undefined,loc:undefined,extras:undefined};
+                stack.push(node.test);
+                stack.push(node.consequent);
+                stack.push(node.alternate);
+                break;
+            case "ConditionalExpression":
+            // // return {type:type,_id_:++nodeId,test:undefined,consequent:undefined,alternate:undefined,loc:undefined,extras:undefined};
+                stack.push(node.test);
+                stack.push(node.consequent);
+                stack.push(node.alternate);
+                break;
+            case "BinaryExpression":
+            case "AssignmentExpression":
+            // // return {type:type,_id_:++nodeId,operator:undefined,left:undefined,right:undefined,loc:undefined,extras:undefined};
+                stack.push(node.left);
+                stack.push(node.right);
+                break;
+            case "ForInOfStatement":
+            // // return {type:type,_id_:++nodeId,left:undefined,right:undefined,body:undefined,loc:undefined,extras:undefined};
+                stack.push(node.left);
+                stack.push(node.right);
+                break;
+            case "ForStatement":
+                stack.push(node.init);
+                stack.push(node.condition);
+                stack.push(node.update);
+                break;
+            // // return {type:type,_id_:++nodeId,init:undefined,test:undefined,update:undefined,loc:undefined,extras:undefined};
+            case "NewExpression":
+            // // return {type:type,_id_:++nodeId, callee:undefined, arguments:undefined, loc:undefined, extras:undefined};
+            case "CallExpression":
+                stack.push(node.callee);
+                stack.push(node.arguments);
+                break;
+            // // return {type:type,_id_:++nodeId, callee:undefined, arguments:undefined, loc:undefined, extras:undefined};
+            case "RestParameter":
+            // // return {type:type,_id_:++nodeId, id:undefined, loc:undefined, extras:undefined};
+            case "SpreadExpression":
+            // // return {type:type,_id_:++nodeId, id:undefined, loc:undefined, extras:undefined};
+
+            case "BindingPattern":
+            // // return {type:type,_id_:++nodeId, id:undefined, target:undefined, loc:undefined, extras:undefined};
+                break;
+            case "ArrayComprehension":
+
+            // // return {type:type,_id_:++nodeId, blocks:undefined, filter:undefined, expression:undefined, loc:undefined, extras:undefined};
+            case "GeneratorComprehension":
+                for (i = node.blocks.length - 1; i >= 0; i--) {
+                    stack.push(node.blocks[i]);
+                }
+                for (i = node.filters.length - 1; i >= 0; i--) {
+                    stack.push(node.filters[i]);
+                }
+                break;
+            // // return {type:type,_id_:++nodeId, loc:undefined, extras:undefined};
+            case "SwitchStatement":
+                for (i = node.cases.length - 1; i >= 0; i--) {
+                    stack.push(node.cases[i]);
+                }
+                break;
+            // // return {type:type,_id_:++nodeId, discriminant:undefined, cases:undefined, loc:undefined, extras:undefined};
+            case "DefaultCase":
+
+            // // return {type:type,_id_:++nodeId, consequent:undefined, loc:undefined, extras:undefined};
+            case "SwitchCase":
+            // // return {type:type,_id_:++nodeId, test:undefined, consequent:undefined, loc:undefined, extras:undefined};
+            case "TryStatement":
+                stack.push(node.handler);
+                stack.push(node.finalizer);
+                break;
+            // // return {type:type,_id_:++nodeId, handler:undefined, guard:undefined, finalizer:undefined, loc:undefined, extras:undefined};
+            case "CatchClause":
+            // // return {type:type,_id_:++nodeId, block:undefined, loc:undefined, extras:undefined};
+            case "Finally":
+            // // return {type:type,_id_:++nodeId, block:undefined, loc:undefined, extras:undefined};
+            default:
+            // // return {type:type,_id_:++nodeId, loc:undefined, extras:undefined};
+        }
+    }
+
+    return nodes;
+}
+
+exports.matchesQuery = matchesQuery;
+exports.querySelectorAll = querySelectorAll;
+
+});
 
     // ecma-262 operations and astnode evaluation
     // lib/api.js #includes lib/api/*.js; lib/intrinsics/*.js
@@ -9650,19 +9852,19 @@ function GetGlobalObject() {
 function createPublicCodeRealm () {
     var realm = CreateRealm();
     return {
-        eval: function toValue() {
+        eval: function eval_() {
             return realm.eval.apply(realm, arguments);
         },
-        eval0: function toValue() {
+        eval0: function eval0() {
             return realm.eval0.apply(realm, arguments);
         },
-        evalFile: function fileToValue() {
+        evalFile: function evalFile() {
             return realm.evalFile.apply(realm, arguments);
         },
         evalAsync: function evalAsync() {
             return realm.evalAsync.apply(realm, arguments);
         },
-        evalByteCode: function () {
+        evalByteCode: function evalByteCode() {
             return realm.evalByteCode.apply(realm, arguments);
         },
 
@@ -9682,12 +9884,12 @@ function CodeRealm(intrinsics, gthis, genv, ldr) {
         loader: ldr,
         stack: [],
         eventQueue:[],
-        ObserverCallbacks: []
+        ObserverCallbacks: [],
+        GlobalSymbolRegistry: Object.create(null)
     };
 }
 CodeRealm.prototype.toString = CodeRealm_toString;
 CodeRealm.prototype.constructor = CodeRealm;
-CodeRealm.prototype.fileToValue =
     CodeRealm.prototype.evalFile = function (filename) {
         var rf = require("filesystem").readFileSync;
         if (typeof rf === "function") {
@@ -9697,9 +9899,7 @@ CodeRealm.prototype.fileToValue =
             throw new TypeError("can not read file "+filename+" with filesystem module");
         }
     };
-CodeRealm.prototype.eval =
-    CodeRealm.prototype.toValue = function (code) {
-        // overhead save realm
+CodeRealm.prototype.eval = function (code) {
         saveCodeRealm();
         setCodeRealm(this);
         if (typeof code === "string") code = parse(code);
@@ -9712,9 +9912,7 @@ CodeRealm.prototype.eval =
             ex.stack = Get(error,"stack");
             throw ex;
         }
-        var PromiseTasks = getTasks(getRealm(), "PromiseTasks")
-        var taskResults = NextTask(undefined, PromiseTasks);
-
+        evalTasks();
         restoreCodeRealm();
         return result;
     };
@@ -9733,9 +9931,7 @@ CodeRealm.prototype.eval0 = function (code) {
             ex.stack = Get(error,"stack");
             throw ex;
         }
-        var PromiseTasks = getTasks(getRealm(), "PromiseTasks")
-        var taskResults = NextTask(undefined, PromiseTasks);
-
+        evalTasks();
         restoreCodeRealm();
         return result;
     };
@@ -9773,8 +9969,7 @@ CodeRealm.prototype.evalByteCode = function (code) {
         ex.stack = Get(error,"stack");
         throw ex;
     }
-    var PromiseTasks = getTasks(getRealm(), "PromiseTasks");
-    var taskResults = NextTask(undefined, PromiseTasks);
+    evalTasks();
     restoreCodeRealm();
     return result;
 };
@@ -9796,41 +9991,27 @@ exports.IndirectEval = IndirectEval;
 exports.CreateRealm = CreateRealm;
 exports.createPublicCodeRealm = createPublicCodeRealm;
 function CreateRealm () {
-
     saveCodeRealm();
-
     var realmRec = CodeRealm();
     setCodeRealm(realmRec);
-    // i have to have a stack, realm, intriniscs
-    // and to remove the dependency
-    //var context = newContext(null);
-
     var context = ExecutionContext(null);
     context.realm = realmRec;
     realmRec.stack.push(context);
-
-
     var intrinsics = createIntrinsics(realmRec);
-
     var loader = OrdinaryConstruct(getIntrinsic(INTRINSICS.LOADER), []);
     if (isAbrupt(loader = ifAbrupt(loader))) return loader;
-
     realmRec.loader = loader;
     var newGlobal = createGlobalThis(realmRec, ObjectCreate(null), intrinsics);
     var newGlobalEnv = GlobalEnvironment(newGlobal);
-
     // i think this is a bug and no execution context should be required
     context.VarEnv = newGlobalEnv;
     context.LexEnv = newGlobalEnv;
-
-
     realmRec.globalThis = newGlobal;
     realmRec.globalEnv = newGlobalEnv;
     realmRec.directEvalTranslate = undefined;
     realmRec.directEvalFallback = undefined;
     realmRec.indirectEval = undefined;
     realmRec.Function = undefined;
-    realmRec.GlobalSymbolRegistry = Object.create(null);
     makeTaskQueues(realmRec);
     restoreCodeRealm();
     return realmRec;
@@ -9859,8 +10040,8 @@ function ExecutionContext(outerCtx, realm, state, generator) {
     return {
         __proto__: ExecutionContext.prototype,
         stack: [],
-        pc: 0,              //
-        operands: [],   // or use local variables and saveRegs() (nothing without a push to save)
+        operands: [],
+        pc: -1,
         sp: -1,
         realm: realm,
         outer: outerCtx||null,
@@ -17454,6 +17635,11 @@ var ProxyConstructor_Construct = function (argList) {
     return ProxyCreate(target, handler);
 };
 
+function evalTasks() {
+    var PromiseTasks = getTasks(getRealm(), "PromiseTasks")
+    var taskResults = NextTask(undefined, PromiseTasks);
+}
+
 function PendingTaskRecord_toString () {
     return "[object PendingTaskRecord]";
 }
@@ -17531,13 +17717,14 @@ function NextTask (result, nextQueue) {
     getStack().pop();
     return NextTask(result, nextQueue);
 }
+
 function ScriptEvaluationTask (source) {
     Assert(typeof source === "string", "ScriptEvaluationTask: Source has to be a string");
     var status = NormalCompletion(undefined);
     try {
 	var script = parse(source);
     } catch (ex) {
-	return newSyntaxError( ex.message);
+	return newSyntaxError(ex.message);
     }
     var realm = getRealm();
     status = ScriptEvaluation(script, realm, false); // evaluation.Program(ast)
@@ -26908,6 +27095,10 @@ define("runtime0", function () {
     var parseGoal = parse.parseGoal;
 
     var node;
+    var operands = Array(1000);
+    var stack;
+    var pc = -1;
+    var sp = -1;
 
     var debugmode = false;
     var isWorker = typeof importScripts === "function" && typeof window === "undefined";
@@ -27752,7 +27943,7 @@ define("runtime0", function () {
                 for (var k = 0, l = substitutions.length; k < l; k++) args.push(substitutions[k]);
                 return args;
             } else if (type === "SpreadExpression") {
-                var array = GetValue(operands.pop());
+                var array = GetValue(operands[sp--]);
                 if (isAbrupt(array = ifAbrupt(array))) return array;
                 var l = Get(array, "length");
                 if (isAbrupt(l=ifAbrupt(l))) return l;
@@ -27763,7 +27954,7 @@ define("runtime0", function () {
                 }
             } else {
                 // Identifer und Literals.
-                var argRef = operands.pop();
+                var argRef = operands[sp--];
                 if (isAbrupt(argRef = ifAbrupt(argRef))) return argRef;
                 var argValue = GetValue(argRef);
                 if (isAbrupt(argValue = ifAbrupt(argValue))) return argValue;
@@ -27821,7 +28012,7 @@ define("runtime0", function () {
         var calleeContext = ExecutionContext(getContext());
         var calleeName = Get(this, "name"); // costs time and money, is just for the context.name for stackframe
         var callerName = callerContext.callee;
-        stack[++sp] = calleeContext;
+        stack[++pc] = calleeContext;
         calleeContext.realm = realm;
         calleeContext.caller = callerName;
         calleeContext.callee = calleeName;
@@ -27870,9 +28061,8 @@ define("runtime0", function () {
     }
     evaluation.ThrowStatement = ThrowStatement;
     function ThrowStatement() {
-        var expr = operands.po();
 
-        var exprRef = operands.pop();
+        var exprRef = operands[sp--];
         if (isAbrupt(exprRef)) return exprRef;
         var exprValue = GetValue(exprRef);
 
@@ -27881,7 +28071,7 @@ define("runtime0", function () {
     evaluation.ReturnStatement = ReturnStatement;
     function ReturnStatement() {
 
-        var expr = operands.pop();
+        var expr = operands[sp--];
         var exprRef = Evaluate(expr);
         if (isAbrupt(exprRef)) return exprRef;
         var exprValue = GetValue(exprRef);
@@ -27958,7 +28148,7 @@ define("runtime0", function () {
         for (var i = 0, j = code.length; i < j; i++) {
             if (node = code[i]) {
                 // tellExecutionContext(node, i, code);
-                exprRef = operands.pop();
+                exprRef = operands[sp--];
                 if (isAbrupt(exprRef)) {
                     // untellExecutionContext()
                     if (exprRef.type === "return") {
@@ -28145,7 +28335,7 @@ define("runtime0", function () {
         var strict = cx.strict;
         var notSuperExpr = !isSuperCallExpression(node);
         if (notSuperExpr) {
-            exprRef = operands.pop()
+            exprRef = operands[sp--]
             if (isAbrupt(exprRef = ifAbrupt(exprRef))) return exprRef;
             callee = GetValue(exprRef);
         } else {
@@ -28181,6 +28371,7 @@ define("runtime0", function () {
         }
     }
     evaluation.LexicalDeclaration = VariableDeclaration;
+
     evaluation.VariableDeclaration = VariableDeclaration;
     function VariableDeclaration () {
         "use strict";
@@ -29022,7 +29213,7 @@ define("runtime0", function () {
         var isPrefixOperation = node.prefix;
         var op = node.operator;
         var argument = node.argument;
-        var exprRef = operands.pop();
+        var exprRef = operands[sp--];
         if (isAbrupt(exprRef = ifAbrupt(exprRef))) return exprRef;
         return applyUnaryOp(op, isPrefixOperation, exprRef);
     }
@@ -29202,8 +29393,8 @@ define("runtime0", function () {
 
         var op = node.operator;
 
-        var rref = operands.pop();
-        var lref = operands.pop();
+        var rref = operands[sp--];
+        var lref = operands[sp--];
 
         if (isAbrupt(lref = ifAbrupt(lref))) return lref;
         if (isAbrupt(rref = ifAbrupt(rref))) return rref;
@@ -30207,10 +30398,8 @@ define("runtime0", function () {
         var node;
         var V = undefined;
         var body = program.body;
-        // tellExecutionContext(body, 0, null);
         for (var i = 0, j = body.length; i < j; i += 1) {
             if (node = body[i]) {
-                // tellExecutionContext(node, i, body);
                 v = GetValue(Evaluate(node));
                 if (isAbrupt(v)) {
                     return v;
@@ -30218,11 +30407,10 @@ define("runtime0", function () {
                 if (v !== empty) V = v;
             }
         }
-        // untellExecutionContext();
         return NormalCompletion(V);
     }
 
-    function tellContext(node) {
+    function tellContext() {
         var loc = node.loc;
         var cx = getContext();
         if (loc && loc.start) {
@@ -30230,11 +30418,10 @@ define("runtime0", function () {
             cx.column = loc.start.column;
         }
     }
-    ecma.Evaluate = Evaluate;
 
+    ecma.Evaluate = Evaluate;
     function Evaluate(node, a, b, c) {
         var E, R;
-        var body, i, j;
         if (!node) return;
         if (typeof node === "string") {
             R = ResolveBinding(node);
@@ -30245,42 +30432,43 @@ define("runtime0", function () {
             else R = evaluation.StatementList(node, a, b, c);
             return R;
         }
-        // //debug("Evaluate(" + node.type + ")");
         if (E = evaluation[node.type]) {
-     //       tellContext(node);
-            // tellExecutionContext(node, 0);
+            tellContext();
             R = E(node, a, b, c);
-            // untellExecutionContext();
         }
         return R;
     }
 
-
-
-
     /*
-
         now i can take a break and redo all evaluation functions.
         i do it in runtime2.js and copy now.
 
+
+
+        if this doesnt work i guess
+        i need two loops
+        one to put all onto the stack
+        and one to pop them off and work with
      */
 
-    var sp = 0;
 
     ecma.loop = loop;
     function loop(ast) {
-        var i, j;
-        stack = getContext().stack;
-        sp = -1;
-        stack[++sp] = ast;
+        var i, j, R, E;
+        var cx = getContext();
+        stack = cx.stack;
+        operands = cx.operands;
+        pc = cx.pc|0;
+        sp = cx.sp|0;
 
-        while (node = stack[sp--]) {
+        stack[++pc] = ast;
+        while (node = stack[pc--]) {
 
             switch (node.type) {
                 case "Program":
                     // // return {type:type,_id_:++nodeId,strict:undefined,body:undefined,loc:undefined,extras:undefined};
                     for (i = node.body.length - 1; i >= 0; i--) {
-                        stack[++sp] = node.body[i];
+                        stack[++pc] = node.body[i];
                     }
                     break;
                 case "Identifier":
@@ -30288,32 +30476,32 @@ define("runtime0", function () {
                 // // return {type:type,_id_:++nodeId,name:undefined,loc:undefined,extras:undefined};
                 case "ParenthesizedExpression":
                 case "ExpressionStatement":
-                    stack[++sp] = node.expression;
-                    break;
+                    stack[++pc] = node.expression;
+                    continue;
                 // // return {type:type,_id_:++nodeId,expression:undefined,loc:undefined,extras:undefined};
                 case "LexicalDeclaration":
                 case "VariableDeclaration":
-                    break;
+                    continue;
                 case "FunctionDeclaration":
                 case "FunctionExpression":
                 case "GeneratorDeclaration":
                 case "GeneratorExpression":
                     for (i = node.body.length - 1; i >= 0; i--) {
-                        stack[++sp] = node.body[i];
+                        stack[++pc] = node.body[i];
                     }
                     // / // return {type:type,_id_:++nodeId,expression:undefined,generator:undefined,strict:undefined,id:undefined,params:undefined,body:undefined,loc:undefined,extras:undefined};
-                    break;
+                    continue;
                 case "ArrowExpression":
                     if (Array.isArray(node.body)) {
                         for (i = node.body.length - 1; i >= 0; i--) {
-                            stack[++sp] = node.body[i];
+                            stack[++pc] = node.body[i];
                         }
                     } else {
-                        stack[++sp] = node.body;
+                        stack[++pc] = node.body;
                     }
                     // // return {type:type,_id_:++nodeId,params:undefined,body:undefined,loc:undefined,ebxtras:undefined};
-                    //stack[++sp] = node;
-                    break;
+                    //stack[++pc] = node;
+                    continue;
                 case "NumericLiteral":
                 case "StringLiteral":
                 case "BooleanLiteral":
@@ -30322,70 +30510,70 @@ define("runtime0", function () {
                     break;
                 case "TemplateLiteral":
                     // // return {type:type,_id_:++nodeId,spans:undefined,loc:undefined,extras:undefined}
-                    break;
+                    continue;
                 case "ObjectExpression":
                     // // return {type:type,_id_:++nodeId,properties:undefined,loc:undefined,extras:undefined};
                     for (i = node.properties.length - 1; i >= 0; i--) {
-                        stack[++sp] = node.properties[i];
+                        stack[++pc] = node.properties[i];
                     }
-                    break;
+                    continue;
                 case "ArrayExpression":
                     // // return {type:type,_id_:++nodeId,elements:undefined,loc:undefined,extras:undefined};
                     for (i = node.body.length - 1; i >= 0; i--) {
-                        stack[++sp] = node.body[i];
+                        stack[++pc] = node.body[i];
                     }
-                    break;
+                    continue;
                 case "ObjectPattern":
                 case "ArrayPattern":
                     for (i = node.elements.length - 1; i >= 0; i--) {
-                        stack[++sp] = node.elements[i];
+                        stack[++pc] = node.elements[i];
                     }
-                    break;
+                    continue;
                 // // return {type:type,_id_:++nodeId,elements:undefined,loc:undefined,extras:undefined};
                 case "WhileStatement":
                 case "DoWhileStatement":
                 // // return {type:type,_id_:++nodeId,test:undefined, body:undefined,loc:undefined,extras:undefined};
                 case "BlockStatement":
                     for (i = node.body.length - 1; i >= 0; i--) {
-                        stack[++sp] = node.body[i];
+                        stack[++pc] = node.body[i];
                     }
-                    break;
+                    continue;
                 // // return {type:type,_id_:++nodeId,body:undefined,loc:undefined,extras:undefined};
                 case "IfStatement":
                     // // return {type:type,_id_:++nodeId,test:undefined,consequent:undefined,alternate:undefined,loc:undefined,extras:undefined};
-                    stack[++sp] = node.test;
-                    stack[++sp] = node.consequent;
-                    stack[++sp] = node.alternate;
-                    break;
+                    stack[++pc] = node.test;
+                    stack[++pc] = node.consequent;
+                    stack[++pc] = node.alternate;
+                    continue;
                 case "ConditionalExpression":
                     // // return {type:type,_id_:++nodeId,test:undefined,consequent:undefined,alternate:undefined,loc:undefined,extras:undefined};
-                    stack[++sp] = node.test;
-                    stack[++sp] = node.consequent;
-                    stack[++sp] = node.alternate;
-                    break;
+                    stack[++pc] = node.test;
+                    stack[++pc] = node.consequent;
+                    stack[++pc] = node.alternate;
+                    continue;
                 case "BinaryExpression":
                 case "AssignmentExpression":
                     // // return {type:type,_id_:++nodeId,operator:undefined,left:undefined,right:undefined,loc:undefined,extras:undefined};
-                    stack[++sp] = node.left;
-                    stack[++sp] = node.right;
-                    break;
+                    stack[++pc] = node.left;
+                    stack[++pc] = node.right;
+                    continue;
                 case "ForInOfStatement":
                     // // return {type:type,_id_:++nodeId,left:undefined,right:undefined,body:undefined,loc:undefined,extras:undefined};
-                    stack[++sp] = node.left;
-                    stack[++sp] = node.right;
-                    break;
+                    stack[++pc] = node.left;
+                    stack[++pc] = node.right;
+                    continue;
                 case "ForStatement":
-                    stack[++sp] = node.init;
-                    stack[++sp] = node.condition;
-                    stack[++sp] = node.update;
-                    break;
+                    stack[++pc] = node.init;
+                    stack[++pc] = node.condition;
+                    stack[++pc] = node.update;
+                    continue;
                 // // return {type:type,_id_:++nodeId,init:undefined,test:undefined,update:undefined,loc:undefined,extras:undefined};
                 case "NewExpression":
                 // // return {type:type,_id_:++nodeId, callee:undefined, arguments:undefined, loc:undefined, extras:undefined};
                 case "CallExpression":
-                    stack[++sp] = node.callee;
-                    stack[++sp] = node.arguments;
-                    break;
+                    stack[++pc] = node.callee;
+                    stack[++pc] = node.arguments;
+                    continue;
                 // // return {type:type,_id_:++nodeId, callee:undefined, arguments:undefined, loc:undefined, extras:undefined};
                 case "RestParameter":
                 // // return {type:type,_id_:++nodeId, id:undefined, loc:undefined, extras:undefined};
@@ -30394,18 +30582,18 @@ define("runtime0", function () {
 
                 case "BindingPattern":
                     // // return {type:type,_id_:++nodeId, id:undefined, target:undefined, loc:undefined, extras:undefined};
-                    break;
+                    continue;
                 case "ArrayComprehension":
 
                 // // return {type:type,_id_:++nodeId, blocks:undefined, filter:undefined, expression:undefined, loc:undefined, extras:undefined};
                 case "GeneratorComprehension":
                     for (i = node.blocks.length - 1; i >= 0; i--) {
-                        stack[++sp] = node.blocks[i];
+                        stack[++pc] = node.blocks[i];
                     }
                     for (i = node.filters.length - 1; i >= 0; i--) {
-                        stack[++sp] = node.filters[i];
+                        stack[++pc] = node.filters[i];
                     }
-                    break;
+                    continue;
                 // // return {type:type,_id_:++nodeId, loc:undefined, extras:undefined};
                 case "SwitchStatement":
                 // // return {type:type,_id_:++nodeId, discriminant:undefined, cases:undefined, loc:undefined, extras:undefined};
@@ -30413,28 +30601,28 @@ define("runtime0", function () {
                 // // return {type:type,_id_:++nodeId, consequent:undefined, loc:undefined, extras:undefined};
                 case "SwitchCase":
                 // // return {type:type,_id_:++nodeId, test:undefined, consequent:undefined, loc:undefined, extras:undefined};
-                    break;
+                    continue;
                 case "TryStatement":
-                    stack[++sp] = node.handler;
-                    stack[++sp] = node.finalizer;
-                    break;
+                    stack[++pc] = node.guard;
+                    stack[++pc] = node.finalizer;
+                    continue;
                 // // return {type:type,_id_:++nodeId, handler:undefined, guard:undefined, finalizer:undefined, loc:undefined, extras:undefined};
                 case "CatchClause":
                 // // return {type:type,_id_:++nodeId, block:undefined, loc:undefined, extras:undefined};
                 case "Finally":
                 // // return {type:type,_id_:++nodeId, block:undefined, loc:undefined, extras:undefined};
-                    break;
+                    continue;
                 case "UnaryExpression":
-                    stack[++sp] = node.argument;
+                    stack[++pc] = node.argument;
                 default:
-                // // return {type:type,_id_:++nodeId, loc:undefined, extras:undefined};
+
             }
 
             var result = Evaluate(node);
             if (isAbrupt(result = ifAbrupt(result))) return result;
-            operands.push(result);
+            operands[++sp] = result;
         }
-        return NormalCompletion(R);
+        return NormalCompletion(operands[sp--]);
     }
 
 
@@ -30449,7 +30637,7 @@ define("runtime0", function () {
                 func = task.func;
                 time = Date.now();
                 if (time >= (task.time + task.timeout)) {
-                    if (IsCallable(func)) result = callInternalSlot(SLOTS.CALL, func, ThisResolution(), []);
+                    if (IsCallable(func)) result = callInternalSlot(SLOTS.CALL, func, undefined, []);
                     if (isAbrupt(result)) {
                         try {
                             throw makeNativeException(result.value);
@@ -30492,12 +30680,10 @@ define("runtime0", function () {
         initializedTheRuntime = false;
     }
 
-    
     loop.evaluate = loop;
     loop.evaluation = evaluation;
     loop.setCodeRealm = setCodeRealm;
     loop.Evaluate = Evaluate;
-
     return loop;
 
 //    }
@@ -34165,9 +34351,7 @@ define("syntaxjs-shell", function (require, exports) {
         tokenizeIntoArrayWithWhiteSpaces: pdmacro(require("tokenizer").tokenizeIntoArrayWithWhiteSpaces),
         tokenizeIntoArray: pdmacro(require("tokenizer").tokenizeIntoArray),
         eval: pdmacro(require("runtime")),// <-- needs exports fixed
-        
-        eval0: pdmacro(require("runtime0").evaluate),
-        
+
         makeAdapter: pdmacro(require("filesystem").makeAdapter),
         readFile: pdmacro(require("filesystem").readFile),	
         readFileSync: pdmacro(require("filesystem").readFileSync),
