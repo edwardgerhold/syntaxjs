@@ -1,31 +1,21 @@
 /*
-    
-    syntax.js
+    syntax.js and it´s last foreign headers
     Cool Public Domain and Open Source written by Edward Gerhold
     www.linux-swt.de
-
     at opensource.org/osd/ per intellij idea i found a good explanation
     of what this means
-    
     built with ./build_syntax and node inlinefiles.js
-
     tools/inlinefiles.js
     reads these include directives in
     and processes each recursivly for more inclusions,
-
     - anything included inside these files is not runnable alone and
       only and of course modularised for better maintainability
-
     - lib/api.js: includes lib/api/*.js and lib/intrinsics/*.js
       which are sub-packages separated by ECMA-262 definitions
       in a just-cut-out format (i have to clean the code up)
-
 */
-
 Error.stackTraceLimit = 10;
-
 var syntaxjs;
-
 /* moved outside (temp for experiments with self running) */
     /**
      * a poorly failing A+ or better A- Promise which fails in 1/3 of the tests.
@@ -363,16 +353,11 @@ var syntaxjs;
     }
 
 
-
 (function () {
-
     "use strict";
-
     syntaxjs = Object.create(null);
-    
     // first i create syntaxjs and
     // add define, require, modules (require.cache link) and makePromise
-
 /**
  * Created by root on 12.05.14.
  */
@@ -393,10 +378,8 @@ define("detector", function () {
         isWindow: isWindow,
         isBrowser: isBrowser
     };
-});    
-
+});
     // then i have some fs operations
-
 
 // *******************************************************************************************************************************
 // file imports
@@ -524,9 +507,7 @@ define("filesystem", function (require, exports) {
     return exports;
 });
 
-
     // require("i18n").format("KEY", ...varags) translates from now on
-    
 //---#include "lib/intl/identifier-module.js"; // only loading takes longer, i need to learn more from m.bynens and norbert l. (seriously) and then go for Intl and Collator. :)
 define("languages.de_DE", function (require, exports) {
     "use strict";
@@ -606,7 +587,7 @@ define("languages.de_DE", function (require, exports) {
     exports.UNKNOWN_ERROR         = "Unbekannter Fehler";
 
     // Ranges
-    exports.OUT_OF_RANGE = "Nicht im Intervall";
+    exports.OUT_OF_RANGE = "Nicht im Rahmen";
     exports.S_OUT_OF_RANGE_S = "%s ist nicht im Intervall %s";
     exports.S_OUT_OF_RANGE = "%s ausserhalb des Bereichs.";
 
@@ -919,9 +900,7 @@ exports.NOT_FOUND_ERR = "i18n-failure: '%s' not found."
 
 });
 
-
     // the lexer and parser api ast and ast-to-string for es6 code
-    
 /**
  *
  *	These tables replace my first and follow sets
@@ -2992,15 +2971,15 @@ define("slower-static-semantics", function (require, exports) {
         if (debugmode && hasConsole) console.dir.apply(console, arguments);
     }
     function UTF16Encode(cp) {
-        Assert(0 <= cp <= 0x10FFFF, "utf16encode: cp has to be beetween 0 and 0x10FFFF");
+        Assert(0 <= cp && cp <= 0x10FFFF, "utf16encode: cp has to be beetween 0 and 0x10FFFF");
         if (cp <= 65535) return cp;
         var cu1 = Math.floor((cp - 65536) % 1024) + 55296;
         var cu2 = ((cp - 65536) % 1024) + 56320;
         return [cu1, cu2];
     }
     function UTF16Decode(lead, trail) {
-        Assert(0xD800 <= lead <= 0xD8FF, "utf16decode: lead has to be beetween 0xD800 and 0xD8FF");
-        Assert(0xDC00 <= trail <= 0xDFFF, "utf16decode: trail has to be beetween 0xDC00 and 0xDFFF");
+        Assert(0xD800 <= lead && lead <= 0xD8FF, "utf16decode: lead has to be beetween 0xD800 and 0xD8FF");
+        Assert(0xDC00 <= trail && trail <= 0xDFFF, "utf16decode: trail has to be beetween 0xDC00 and 0xDFFF");
         var cp = (lead - 55296) * 1024 + (trail - 564320);
         return cp;
     }
@@ -3100,7 +3079,6 @@ define("slower-static-semantics", function (require, exports) {
 
     }
     function IsStrict(node) {
-
         if (!Array.isArray(node)) {
             if (node) {
                 var type = node.type;
@@ -3111,7 +3089,6 @@ define("slower-static-semantics", function (require, exports) {
                 else if (type === "ClassDeclaration") return true;
             }
         } else if (node) {
-
             var i = 0;
             var n;
             while ((n = node[i]) && n.type === "Directive") {
@@ -3122,88 +3099,66 @@ define("slower-static-semantics", function (require, exports) {
         return false;
     }
     function Contains(R, S) {
-
         var contains = false;
         var body, node, type;
-
         if (typeof R !== "object") return false;
-
         if (!Array.isArray(S)) S = [S];
         if (Array.isArray(R)) body = R;
+
         else if (R.body) body = R.body;
 
+        else if (typeof R === "object" && R) {
+            return (S.indexOf(R.type) > -1);
+        }
         if (Array.isArray(body)) {
-
             for (var i = 0, j = body.length; i < j; i++) {
                 node = body[i];
                 type = node.type;
-                if (type === "ClassDeclaration") continue;
-                if (type === "FunctionDeclaration") continue;
-                if (type === "GeneratorDeclaration") continue;
-
-                if (IsIteration[type] && Contains(node, S)) {
-                    contains = true;
-                    return contains;
+                switch (type) {
+                        case "ClassDeclaration": continue;
+                        case "FunctionDeclaration": continue;
+                        case "FunctionExpression": continue;
+                        case "GeneratorDeclaration": continue;
+                        case "GeneratorExpression": continue;
+                        case "ArrowExpression": continue;
+                        case "ExpressionStatement":
+                            node = node.expression;
+                            break;
                 }
-
-                for (var k = 0, l = S.length; k < l; k++) {
-                    if (type === S[k]) {
-                        contains = true;
-                        return contains;
-                    }
-                }
-
+                if (IsIteration[type] && Contains(node, S)) return true;
+                if (S.indexOf(type) > -1) return true;
             }
         }
-        return contains;
+        return false;
     }
     function BoundNames(list, names) {
-        var item;
+        var item, name, node, type;
         names = names || [];
-        var name;
-        var node;
-        var type;
-
-
         if (typeof list === "string") {
             names.push(list);
             //debug("BoundNames: " + names.join(","));
             return names;
-
         } else if (!Array.isArray(list)) {
-
-            // BoundNames einzeln
             if (node = list) {
-
                 type = node.type;
-
-                if (type === "ArrayPattern" || type == "ObjectPattern") {
-                    names = BoundNames(node.elements, names);
-                } else if (type === "ForDeclaration") names = BoundNames(node.id, names);
-                else if (type === "ExportStatement") names = BoundNames(node.exports, names);
-
-
-                /*
-                 alle nach id.name (identifier node) transformieren !!!
-
-                 */
-
-                else if (type === "FunctionDeclaration")names.push(node.id);
-                else if (type === "VariableDeclarator") names.push(node.id.name);
-
-                else if (type === "GeneratorDeclaration") names.push(node.id);
-                else if (type === "Identifier") names.push(node.name);
-                else if (type === "DefaultParameter") names.push(node.id);
-                else if (type === "RestParameter") names.push(node.id);
-
+                switch (type) {
+                    case "ArrayPattern":
+                    case "ObjectPattern": names = BoundNames(node.elements, names); break;
+                    case "ForDeclaration": names = BoundNames(node.id, names); break;
+                    case "ExportStatement": names = BoundNames(node.exports, names); break;
+                    /* alle nach id.name (identifier node) transformieren !!! */
+                    case "FunctionDeclaration":names.push(node.id); break;
+                    case "VariableDeclarator": names.push(node.id.name); break;
+                    case "GeneratorDeclaration": names.push(node.id); break;
+                    case "Identifier": names.push(node.name); break;
+                    case "DefaultParameter": names.push(node.id); break;
+                    case "RestParameter": names.push(node.id); break;
+                }
             }
             //debug("BoundNames: " + names.join(","));
             return names;
-
         } else {
-
             // BoundNames Formals oder andere Listen.
-            var name;
             for (var i = 0, j = list.length; i < j; i++) {
                 if (node = list[i]) {
                     type = node.type;
@@ -3224,25 +3179,19 @@ define("slower-static-semantics", function (require, exports) {
                     }
                 }
             }
-
             //debug("BoundNames: " + names.join(","));
             return names;
-
         }
     }
     function VarDeclaredNames(body, names) {
-
         var node, decl, i, j, k, l;
-        if (!names) names = [];
+        names = names || [];
         if (!body) return names;
         for (i = 0, j = body.length; i < j; i++) {
-
             if (node = body[i]) {
-
                 var type = node.type;
                 if (type === "VariableDeclaration" && node.kind === "var") {
                     var decls = node.declarations;
-
                     for (k = 0, l = decls.length; k < l; k++) {
                         if (decl = decls[k]) {
                             names = BoundNames(decl, names);
@@ -3333,7 +3282,6 @@ define("slower-static-semantics", function (require, exports) {
                         if (node.left && node.left.type) {
                             if (node.left.type === "Identifier") list.push(node.left.name);
                         } else
-
                             list = VarScopedDeclarations(node.left, list);
                     } else if (type === "ForOfStatement") {
                         if (node.left && node.left.type) {
@@ -3577,7 +3525,7 @@ define("slower-static-semantics", function (require, exports) {
             case "GeneratorExpression":
             case "FunctionDeclaration":
             case "GeneratorDeclaration":
-                return node.id
+                return node.id;
         }
     }
     function PropName(node) {
@@ -3590,22 +3538,11 @@ define("slower-static-semantics", function (require, exports) {
         if (type === "MethodDefinition") return PropName(id);
         if (typeof id === "object") return StringValue(id);
     }
-    function PropNameList(node, checkList) {
-        var list, body;
-        if (body = node.properties) {
-
-        } else if (body = node.elements) {
-
-        } else if (body = node.body) {
-
-        }
-    }
     function ElisionWidth(E) {
         return (E && E.width)|0;
     }
     function IsConstantDeclaration(node) {
         return node.kind === "const";
-
     }
     function IsLexicalDeclaration(node) {
         var type = node.type;
@@ -3620,19 +3557,23 @@ define("slower-static-semantics", function (require, exports) {
     function dupesInTheTwoLists(list1, list2, memo) {
         var hasDupe = false;
         var memo = memo || Object.create(null);
-        for (var i = 0, j = list1.length; i < j; i++) memo[list1[i]] = true;
+        for (var i = 0, j = list1.length; i < j; i++) {
+            if (memo[list1[i]]) return true;
+            else memo[list1[i]] = true;
+        }
         for (i = 0, j = list2.length; i < j; i++)
-            if (memo[list2[i]]) hasDupe = true;
+            if (memo[list2[i]]) return true;
             else memo[list2[i]] = true;
+        return false;
     }
     function dupesInTheList(list, memo) {
         var hasDupe = false;
         var memo = memo || Object.create(null);
         for (var i = 0, j = list.length; i < j; i++) {
-            if (memo[list[i]]) hasDupe = true;
+            if (memo[list[i]]) return true;
             else memo[list[i]] = true;
         }
-        return hasDupe;
+        return false;
     }
     function TV(t) {}
     function TRV(t) {}
@@ -3690,7 +3631,6 @@ define("slower-static-semantics", function (require, exports) {
     exports.ExpectedArgumentCount = ExpectedArgumentCount;
     exports.IsValidSimpleAssignmentTarget = IsValidSimpleAssignmentTarget;
     exports.PropName = PropName;
-    exports.PropNameList = PropNameList;
     exports.IsConstantDeclaration = IsConstantDeclaration;
     exports.IsLexicalDeclaration = IsLexicalDeclaration;
     exports.ElisionWidth = ElisionWidth;
@@ -9098,10 +9038,8 @@ exports.matchesQuery = matchesQuery;
 exports.querySelectorAll = querySelectorAll;
 
 });
-
     // ecma-262 operations and astnode evaluation
     // lib/api.js #includes lib/api/*.js; lib/intrinsics/*.js
-    
 /*
  API contains ecma-262 specification devices
 
@@ -12160,6 +12098,7 @@ function OrdinaryObjectInvoke(O, P, A, R) {
     if (!IsCallable(method)) return newTypeError( "Invoke: method " + P + " is not callable");
     return method.Call(R, A);
 }
+
 function HasOwnProperty(O, P) {
     Assert(Type(O) === OBJECT, "GetOwnProperty: first argument has to be an object");
     Assert(IsPropertyKey(P), "HasOwnProperty: second argument has to be a valid property key, got " + P);
@@ -12167,12 +12106,14 @@ function HasOwnProperty(O, P) {
     //if (isAbrupt(desc)) return desc;
     return desc !== undefined;
 }
+
 function HasProperty(O, P) {
     do {
-        if (HasOwnProperty(O, P)) return true;
+        if (HasOwnProperty(O, P) === true) return true;
     } while (O = GetPrototypeOf(O));
     return false;
 }
+
 function Enumerate(O) {
     var name, proto, bindings, desc, index, denseList, isSparse;
     var duplicateMap = Object.create(null);
@@ -12211,7 +12152,6 @@ function Enumerate(O) {
         }
         return MakeListIterator(denseList);
     }
-    
     return MakeListIterator(propList);
 }
 function IsExtensible(O) {
@@ -12903,19 +12843,21 @@ var FunctionConstructor_call = function (thisArg, argList) {
     }
     bodyText = ToString(bodyText);
     if (isAbrupt(bodyText = ifAbrupt(bodyText))) return bodyText;
-    var parameters = parseGoal("FormalParameterList", P);
-    var funcBody = parseGoal("FunctionBody", bodyText);
-
-
-    /* old and from july draf */
+    if (P != "") {
+        var parameters = parseGoal("FormalParameterList", P);
+    } else {
+        parameters = [];
+    }
+    if (bodyText != "") {
+        var funcBody = parseGoal("FunctionBody", bodyText);
+    } else {
+        funcBody = [];
+    }
     var boundNames = BoundNames(parameters);
     if (!IsSimpleParameterList(parameters)) {
         if (dupesInTheTwoLists(boundNames, VarDeclaredNames(funcBody))) return newSyntaxError( "Duplicate Identifier in Parameters and VarDeclaredNames of funcBody");
     }
     if (dupesInTheTwoLists(boundNames, LexicallyDeclaredNames(funcBody))) return newSyntaxError( "Duplicate Identifier in Parameters and LexicallyDeclaredNames of funcBody");
-    /* one of the few edge cases to recall static semantics */
-
-
     var scope = getRealm().globalEnv;
     var F = thisArg;
     if (F === undefined || !hasInternalSlot(F, SLOTS.CODE)) {
@@ -12930,6 +12872,7 @@ var FunctionConstructor_call = function (thisArg, argList) {
     var status = MakeConstructor(F);
     if (isAbrupt(status)) return status;
     SetFunctionName(F, "anonymous");
+    SetFunctionLength(F, ExpectedArgumentCount(parameters));
     return NormalCompletion(F);
 };
 var FunctionConstructor_construct = function (argList) {
@@ -15192,8 +15135,19 @@ var GeneratorPrototype_throw = function (thisArg, argList) {
     Assert(methodContext === getContext());
     return result;
 };
+var GeneratorPrototype_$$create = function (thisArg, argList) {
+    var F = thisArg;
+    var obj = OrdinaryCreateFromConstructor(F, INTRINSICS.GENERATOR, [
+        SLOTS.GENERATORSTATE, SLOTS.GENERATORCONTEXT
+    ]);
+    return obj;
+};
+/**
+ * Created by root on 22.05.14.
+ */
+
 var GeneratorFunction_call = function (thisArg, argList) {
-    // GeneratorFunction(p1...pn, body)
+
     var GeneratorFunction = this;
     var argCount = argList.length;
     var P = "";
@@ -15217,13 +15171,18 @@ var GeneratorFunction_call = function (thisArg, argList) {
     }
     bodyText = ToString(bodyText);
     if (isAbrupt(bodyText = ifAbrupt(bodyText))) return bodyText;
-    var parameters = parseGoal("FormalParameterList", P);
-    var funcBody = parseGoal("GeneratorBody", bodyText);
-    /*
-     * this is very slow, asking for static semantics here with having to analyse the tree
-     * this should be captured by the ecmascript compliant parser
-     * */
-    if (!Contains(funcBody, "YieldExpression")) return newSyntaxError("GeneratorFunctions require some yield expression");
+    if (P != "") {
+        var parameters = parseGoal("FormalParameterList", P);
+    } else {
+        parameters = [];
+    }
+    if (bodyText != "") {
+        var funcBody = parseGoal("GeneratorBody", bodyText);
+    } else {
+        funcBody = [];
+    }
+
+    //if (!Contains(funcBody, "YieldExpression")) return newSyntaxError("GeneratorFunctions require some yield expression");
 
     var boundNames = BoundNames(parameters);
     if (!IsSimpleParameterList(parameters)) {
@@ -15238,9 +15197,9 @@ var GeneratorFunction_call = function (thisArg, argList) {
     }
     if (getInternalSlot(F, SLOTS.FUNCTIONKIND) !== "generator") return newTypeError( "function object not a generator");
     FunctionInitialize(F, "generator", parameters, funcBody, scope, true);
-    var proto = ObjectCreate(GeneratorPrototype);
+    var proto = ObjectCreate(getIntrinsic(INTRINSICS.GENERATORPROTOTYPE));
     MakeConstructor(F, true, proto);
-    SetFunctionLength(F, ExpectedArgumentCount(F.FormalParameters));
+    SetFunctionLength(F, ExpectedArgumentCount(parameters));
     return NormalCompletion(F);
 };
 var GeneratorFunction_construct = function (argList) {
@@ -15253,13 +15212,7 @@ var GeneratorFunction_$$create = function (thisArg, argList) {
     var obj = FunctionAllocate(proto, "generator");
     return obj;
 };
-var GeneratorPrototype_$$create = function (thisArg, argList) {
-    var F = thisArg;
-    var obj = OrdinaryCreateFromConstructor(F, INTRINSICS.GENERATOR, [
-        SLOTS.GENERATORSTATE, SLOTS.GENERATORCONTEXT
-    ]);
-    return obj;
-};
+
 function GetIterable (obj) {
     if (Type(obj) !== OBJECT) return undefined;
     var iteratorGetter = Get(obj, $$iterator);
@@ -22213,11 +22166,16 @@ function BestFitMatcher (availableLocales, requestedLocales) {
 function ResolveLocale (availableLocales, requestedLocales, options, relevantExtensionKeys, localeData) {
 
 }
+
 function LookupSupportedLocales (availableLocales, requestedLocales) {
 
 }
-function BestFitSupportedLocales (availableLocales, requestedLocales) {}
-function SupportedLocales (availableLocales, requestedLocales, options) {}
+function BestFitSupportedLocales (availableLocales, requestedLocales) {
+
+}
+function SupportedLocales (availableLocales, requestedLocales, options) {
+
+}
 function GetOption_Intl (options, property, type, values, fallback) {
     var value = callInternalSlot(SLOTS.GET, options, property);
     if (isAbrupt(value=ifAbrupt(value))) return value;
@@ -22238,6 +22196,7 @@ function GetNumberOption (options, property, minimum, maximum, fallback) {
     if (isAbrupt(value=ifAbrupt(value))) return value;
     if (value != undefined) {
         value = ToNumber(value);
+        if (isAbrupt(value)) return value;
         if ((value != value) || value < minimum || value > maximum) return new RangeError(format("S_OUT_OF_RANGE", "value"));
         return floor(value);
     }
@@ -22436,13 +22395,14 @@ var DateTimeFormatConstructor_construct = function (argList) {
         var NumberFormatPrototype = createIntrinsicPrototype(intrinsics, INTRINSICS.NUMBERFORMATPROTOTYPE);
         var DateTimeFormatConstructor = createIntrinsicConstructor(intrinsics, "Intl.DateTimeFormat", 0, INTRINSICS.DATETIMEFORMAT);
         var DateTimeFormatPrototype = createIntrinsicPrototype(intrinsics, INTRINSICS.DATETIMEFORMATPROTOTYPE);
-
         var defaultCompareFn = createIntrinsicFunction(intrinsics, "compare", 2, INTRINSICS.DEFAULTCOMPARE)
+
         var ThrowTypeError_Call = function (thisArg, argList) {
             return newTypeError(format("THROW_TYPE_ERROR"));
         };
         setInternalSlot(ThrowTypeError, SLOTS.CALL, ThrowTypeError_Call);
         setInternalSlot(ThrowTypeError, SLOTS.CONSTRUCT, undefined);
+
         var SetLanguage_Call = function (thisArg, argList) {
             try {var languages = require("i18n").languages;}
             catch (ex) {return newTypeError(ex.message);}
@@ -22466,6 +22426,7 @@ var DateTimeFormatConstructor_construct = function (argList) {
         var SetLanguage = createIntrinsicFunction(intrinsics, "setLanguage", 1, INTRINSICS.SETLANGUAGE)
         setInternalSlot(SetLanguage, SLOTS.CALL, SetLanguage_Call);
         setInternalSlot(SetLanguage, SLOTS.CONSTRUCT, undefined);
+
         // maybe it´s best on: Reflect.
 setInternalSlot(PrintFunction, SLOTS.CALL, PrintFunction_call);
 setInternalSlot(DebugFunction, SLOTS.CALL, DebugFunction_call);
@@ -23046,6 +23007,9 @@ NowDefineAccessor(TypePrototype, "prototype", TypePrototypePrototype_get);
 NowDefineBuiltinFunction(TypePrototype, "arrayType", 1, TypePrototype_arrayType);
 NowDefineBuiltinFunction(TypePrototype, "opaqueType", 1, TypePrototype_opaqueType);
 NowDefineBuiltinFunction(VMObject, "eval", 1, VMObject_eval);
+MakeConstructor(CollatorConstructor, true, CollatorPrototype);
+MakeConstructor(NumberFormatConstructor, true, NumberFormatPrototype);
+MakeConstructor(DateTimeFormatConstructor, true, DateTimeFormatPrototype);
 NowDefineProperty(IntlObject, "Collator", CollatorConstructor)
 NowDefineProperty(IntlObject, "NumberFormat", NumberFormatConstructor)
 NowDefineProperty(IntlObject, "DateTimeFormat", DateTimeFormatConstructor)
@@ -23055,6 +23019,10 @@ setInternalSlot(NumberFormatConstructor, SLOTS.CALL, NumberFormatConstructor_cal
 setInternalSlot(NumberFormatConstructor, SLOTS.CONSTRUCT, NumberFormatConstructor_construct);
 setInternalSlot(DateTimeFormatConstructor, SLOTS.CALL, DateTimeFormatConstructor_call);
 setInternalSlot(DateTimeFormatConstructor, SLOTS.CONSTRUCT, DateTimeFormatConstructor_construct);
+NowDefineBuiltinConstant(IntlObject, $$toStringTag, "Intl");
+NowDefineBuiltinConstant(CollatorPrototype, $$toStringTag, "Intl.Collator");
+NowDefineBuiltinConstant(NumberFormatPrototype, $$toStringTag, "Intl.NumberFormat");
+NowDefineBuiltinConstant(DateTimeFormatPrototype, $$toStringTag, "Intl.DateTimeFormat");
         createGlobalThis = function createGlobalThis(realm, globalThis, intrinsics) {
             SetPrototypeOf(globalThis, ObjectPrototype);
             setInternalSlot(globalThis, SLOTS.EXTENSIBLE, true);
@@ -23129,7 +23097,8 @@ setInternalSlot(DateTimeFormatConstructor, SLOTS.CONSTRUCT, DateTimeFormatConstr
             DefineOwnProperty(globalThis, "unescape", GetOwnProperty(intrinsics, INTRINSICS.UNESCAPE));
             NowDefineBuiltinConstant(globalThis, $$toStringTag, "syntaxjs");
             DefineOwnProperty(globalThis, "VM", GetOwnProperty(intrinsics, INTRINSICS.VM));
-            if (typeof Java !== "function" && typeof load !== "function" && typeof print !== "function") {
+
+            if (typeof Java !== "function" && typeof load !== "function" ) {
                 NowDefineProperty(intrinsics, INTRINSICS.DOMWRAPPER,
                     NativeJSObjectWrapper(
                             typeof importScripts === "function" ? self :
@@ -27361,7 +27330,6 @@ define("runtime0", function () {
     var abs = ecma.abs;
     var min = ecma.min;
     var max = ecma.max;
-    var IdentifierBinding = ecma.IdentifierBinding;
     var GlobalEnvironment = ecma.GlobalEnvironment;
     var ObjectEnvironment = ecma.ObjectEnvironment;
     var ToNumber = ecma.ToNumber;
@@ -27464,7 +27432,7 @@ define("runtime0", function () {
     var CheckObjectCoercible = ecma.CheckObjectCoercible;
     var line, column;
     var realm, intrinsics, globalEnv, globalThis;
-    var stack, eventQueue;
+    var eventQueue;
     var scriptLocation;
     var initializedTheRuntime = false;
     var shellMode;  // keep strict mode turned on
@@ -28141,7 +28109,7 @@ define("runtime0", function () {
         var calleeContext = ExecutionContext(getContext());
         var calleeName = Get(this, "name"); // costs time and money, is just for the context.name for stackframe
         var callerName = callerContext.callee;
-        stack[++pc] = calleeContext;
+        getStack().push(calleeContext);
         calleeContext.realm = realm;
         calleeContext.caller = callerName;
         calleeContext.callee = calleeName;
@@ -30576,6 +30544,8 @@ define("runtime0", function () {
 
         if this doesnt work i guess
         i need two loops
+
+
         one to put all onto the stack
         and one to pop them off and work with
      */
@@ -30701,9 +30671,7 @@ define("runtime0", function () {
                 case "NewExpression":
                 // // return {type:type,_id_:++nodeId, callee:undefined, arguments:undefined, loc:undefined, extras:undefined};
                 case "CallExpression":
-                    stack[++pc] = node.callee;
-                    stack[++pc] = node.arguments;
-                    continue;
+                    break;
                 // // return {type:type,_id_:++nodeId, callee:undefined, arguments:undefined, loc:undefined, extras:undefined};
                 case "RestParameter":
                 // // return {type:type,_id_:++nodeId, id:undefined, loc:undefined, extras:undefined};
@@ -30821,10 +30789,8 @@ define("runtime0", function () {
 });
 
 
-
     // experimental typed memory and compiler (development)
     //--#include "lib/heap/heap.js"; // too high level
-    
 /**
  * asm-typechecker
  *
@@ -32975,11 +32941,9 @@ define("vm", function (require, exports) {
     exports.CompileAndRun = CompileAndRun;
 
 });	// is not asm. but renamable.
-
     // syntax highlighter (the original application of syntax.js)
     // will be rewritten soon,
     // maybe with jquery for max effect with same simplicity
-
 
 // *******************************************************************************************************************************
 // Highlight (UI Independent Function translating JS into a string of spans)
@@ -34179,10 +34143,7 @@ if (typeof window != "undefined") {
     });
 
 }
-
-
     // evaluation in web workers should save some of the ux
-    
 /*
  *
  *  syntax.js web worker module
@@ -34262,10 +34223,7 @@ define("syntaxjs-worker", function (require, exports, module) {
     return exports;
 });
 
-
-
     // the commandline shell is my favorite playtoy
-    
 
 define("syntaxjs-shell", function (require, exports) {
     
@@ -34446,9 +34404,7 @@ define("syntaxjs-shell", function (require, exports) {
 
 
 
-
     // assembling and autostart of shell or browser highlighter
-
 // #######################################################################################################################
 // the closure around this is new in _main_.js, the main template
 // #######################################################################################################################
@@ -34563,7 +34519,5 @@ if (syntaxjs.system === "node") {
 }
 
 
-
     return syntaxjs;
-
 }());
