@@ -3240,11 +3240,83 @@ define("slower-static-semantics", function (require, exports) {
         //debug("VarDeclaresNames: " + names.join(","));
         return names;
     }
+
+    function VarScopedDeclarations1(body, list) {
+        var node, decl, i, j, k, l;
+        var top;
+        list = list || [];
+        if (!Array.isArray(body)) body = [body];
+
+        var stack = body.slice().reverse();
+
+        while (stack.length) {
+            node = stack.pop();
+            switch (node.type) {
+                    case "VariableDeclaration":
+                    if (node.kind === "var") {
+                        var decls = node.declarations;
+                        for (k = 0, l = decls.length; k < l; k++) {
+                            if (decl = decls[k]) {
+                                list.push(decl);
+                            }
+                        }
+                    }
+                    break;
+                    case "BlockStatement":
+                        VarScopedDeclarations(node.body, list);
+                    break;
+                    case "FunctionDeclaration":
+                        if (!node.expression) list.push(node);
+                    break;
+                    case "IfStatement":
+                        VarScopedDeclarations(node.consequent, list);
+                        VarScopedDeclarations(node.alternate, list);
+                    break;
+                    case "WhileStatement":
+                        VarScopedDeclarations(node.body, list);
+                    break;
+                    case "DoWhileStatement":
+                        VarScopedDeclarations(node.body, list);
+                    break;
+                    case "TryStatement":
+                        VarScopedDeclarations(node.handler, list);
+                    break;
+                    case "CatchClause":
+                        VarScopedDeclarations(node.block, list);
+                    break;
+                    case "Finally":
+                        VarScopedDeclarations(node.block, list);
+                    break;
+                    case "SwitchStatement":
+                        VarScopedDeclarations(node.cases, list);
+                    break;
+                    case "ForStatement":
+                            list = VarScopedDeclarations(node.init, list);
+                            list = VarScopedDeclarations(node.body, list);
+                    break;
+                    case "ForInStatement":
+                            if (node.left && node.left.type === "Identifier") list.push(node.left.name);
+                            else list = VarScopedDeclarations(node.left, list);
+                            list = VarScopedDeclarations(node.body, list);
+                    break;
+                    case "ForOfStatement":
+                            if (node.left && node.left.type === "Identifier") list.push(node.left.name);
+                            else list = VarScopedDeclarations(node.left, list);
+                            list = VarScopedDeclarations(node.body, list);
+                    break;
+            }
+        }
+        //debug("VarScopedDeclarations: " + list.length);
+        return list;
+    }
+
+
     function VarScopedDeclarations(body, list) {
         var node, decl, i, j, k, l;
         var top;
         list = list || [];
         if (!Array.isArray(body)) body = [body];
+
         for (i = 0, j = body.length; i < j; i++) {
             if (node = body[i]) {
                 var type = node.type;
@@ -9804,6 +9876,7 @@ function GetGlobalObject() {
 }
 function createPublicCodeRealm () {
     var realm = CreateRealm();
+
     return {
         eval: function eval_() {
             return realm.eval.apply(realm, arguments);
@@ -9819,9 +9892,17 @@ function createPublicCodeRealm () {
         },
         evalByteCode: function evalByteCode() {
             return realm.evalByteCode.apply(realm, arguments);
-        },
-
+        }
     };
+    /*
+    return {
+        eval: realm.eval,
+        eval0: realm.eval0,
+        evalFile: realm.evalFile,
+        evalAsync: realm.evalAsync,
+        evalByteCode: realm.evalByteCode
+    };
+    */
 }
 function CodeRealm(intrinsics, gthis, genv, ldr) {
     "use strict";
@@ -15650,6 +15731,44 @@ function IntegerIndexedElementSet(O, index, value) {
     if (isAbrupt(status = ifAbrupt(status))) return status;
     return numValue;
 }
+function createTypedArrayPrototype(proto) {
+    NowDefineAccessor(proto, "buffer", CreateBuiltinFunction(realm, TypedArrayPrototype_get_buffer, 0, "get buffer"));
+    NowDefineAccessor(proto, "byteLength", CreateBuiltinFunction(realm, TypedArrayPrototype_get_byteLength, 0, "get byteLength"));
+    NowDefineAccessor(proto, "byteOffset", CreateBuiltinFunction(realm, TypedArrayPrototype_get_byteOffset, 0, "get byteOffset"));
+    NowDefineAccessor(proto, $$toStringTag, CreateBuiltinFunction(realm, TypedArrayPrototype_get_$$toStringTag, 0, "get [Symbol.toStringTag]"));
+    NowDefineBuiltinFunction(proto, "forEach", 1, TypedArrayPrototype_map);
+    NowDefineBuiltinFunction(proto, "map", 1, TypedArrayPrototype_map);
+    NowDefineBuiltinFunction(proto, "reduce", 1, TypedArrayPrototype_reduce);
+    return proto;
+}
+function createTypedArrayVariant(_type, _bpe, _ctor, _proto, ctorName) {
+    setInternalSlot(_ctor, SLOTS.REALM, getRealm());
+    setInternalSlot(_ctor, SLOTS.TYPEDARRAYCONSTRUCTOR, ctorName);
+    setInternalSlot(_ctor, SLOTS.PROTOTYPE, getIntrinsic(INTRINSICS.TYPEDARRAY));
+    setInternalSlot(_ctor, SLOTS.CALL, function (thisArg, argList) {
+        var O = thisArg;
+        if (Type(O) !== OBJECT) return newTypeError( "O is not an object");
+        if (!hasInternalSlot(O, SLOTS.TYPEDARRAYNAME)) return newTypeError( "[[TypedArrayName]] is missing");
+        var suffix = "Array";
+        if (_type === "Uint8C") suffix = "lamped" + suffix;
+        setInternalSlot(O, SLOTS.TYPEDARRAYNAME, _type + suffix);
+        var F = this;
+        var realmF = getInternalSlot(F, SLOTS.REALM);
+        var sup = Get(realmF.intrinsics, INTRINSICS.TYPEDARRAY);
+        var args = argList;
+        return callInternalSlot(SLOTS.CALL, sup, O, args);
+    });
+    setInternalSlot(_ctor, SLOTS.CONSTRUCT, function (argList) {
+        return OrdinaryConstruct(this, argList);
+    });
+    NowDefineBuiltinConstant(_ctor, "BYTES_PER_ELEMENT", _bpe);
+    NowDefineBuiltinConstant(_ctor, "prototype", _proto);
+    NowDefineBuiltinConstant(_proto, "constructor", _ctor);
+    createTypedArrayPrototype(_proto);
+    return _ctor;
+}
+
+
 var TypedArrayConstructor_Call = function (thisArg, argList) {
     var array, typedArray, length, O,
     elementType,    numberLength,    elementLength,    elementSize,    byteLength,
@@ -22887,46 +23006,10 @@ NowDefineBuiltinFunction(DataViewPrototype, "setUint8", 2, DataViewPrototype_set
 NowDefineBuiltinFunction(DataViewPrototype, "setUint16", 2, DataViewPrototype_setUint16);
 NowDefineBuiltinFunction(DataViewPrototype, "setUint32", 2, DataViewPrototype_setUint32);
 NowDefineBuiltinConstant(DataViewPrototype, $$toStringTag, "DataView");
-function createTypedArrayPrototype(proto) {
-    NowDefineAccessor(proto, "buffer", CreateBuiltinFunction(realm, TypedArrayPrototype_get_buffer, 0, "get buffer"));
-    NowDefineAccessor(proto, "byteLength", CreateBuiltinFunction(realm, TypedArrayPrototype_get_byteLength, 0, "get byteLength"));
-    NowDefineAccessor(proto, "byteOffset", CreateBuiltinFunction(realm, TypedArrayPrototype_get_byteOffset, 0, "get byteOffset"));
-    NowDefineAccessor(proto, $$toStringTag, CreateBuiltinFunction(realm, TypedArrayPrototype_get_$$toStringTag, 0, "get [Symbol.toStringTag]"));
-    NowDefineBuiltinFunction(proto, "forEach", 1, TypedArrayPrototype_map);
-    NowDefineBuiltinFunction(proto, "map", 1, TypedArrayPrototype_map);
-    NowDefineBuiltinFunction(proto, "reduce", 1, TypedArrayPrototype_reduce);
-    return proto;
-}
-function createTypedArrayVariant(_type, _bpe, _ctor, _proto, ctorName) {
-    setInternalSlot(_ctor, SLOTS.REALM, getRealm());
-    setInternalSlot(_ctor, SLOTS.TYPEDARRAYCONSTRUCTOR, ctorName);
-    setInternalSlot(_ctor, SLOTS.PROTOTYPE, TypedArrayConstructor);
-    setInternalSlot(_ctor, SLOTS.CALL, function (thisArg, argList) {
-        var O = thisArg;
-        if (Type(O) !== OBJECT) return newTypeError( "O is not an object");
-        if (!hasInternalSlot(O, SLOTS.TYPEDARRAYNAME)) return newTypeError( "[[TypedArrayName]] is missing");
-        var suffix = "Array";
-        if (_type === "Uint8C") suffix = "lamped" + suffix;
-        setInternalSlot(O, SLOTS.TYPEDARRAYNAME, _type + suffix);
-        var F = this;
-        var realmF = getInternalSlot(F, SLOTS.REALM);
-        var sup = Get(realmF.intrinsics, INTRINSICS.TYPEDARRAY);
-        var args = argList;
-        return callInternalSlot(SLOTS.CALL, sup, O, args);
-    });
-    setInternalSlot(_ctor, SLOTS.CONSTRUCT, function (argList) {
-        return OrdinaryConstruct(this, argList);
-    });
-    NowDefineBuiltinConstant(_ctor, "BYTES_PER_ELEMENT", _bpe);
-    NowDefineBuiltinConstant(_ctor, "prototype", _proto);
-    NowDefineBuiltinConstant(_proto, "constructor", _ctor);
-    createTypedArrayPrototype(_proto);
-    return _ctor;
-}
 setInternalSlot(TypedArrayConstructor, SLOTS.CALL, TypedArrayConstructor_Call);
 NowDefineProperty(TypedArrayConstructor, $$create, CreateBuiltinFunction(realm, TypedArrayConstructor_$$create, 0, "[Symbol.create]"));
-NowDefineProperty(TypedArrayConstructor, "from", CreateBuiltinFunction(realm, TypedArrayConstructor_from, 1, "from"));
-NowDefineProperty(TypedArrayConstructor, "of", CreateBuiltinFunction(realm, TypedArrayConstructor_of, 2, "of"));
+NowDefineBuiltinFunction(TypedArrayConstructor, "from", 1, TypedArrayConstructor_from);
+NowDefineBuiltinFunction(TypedArrayConstructor, "of", 2, TypedArrayConstructor_of);
 createTypedArrayVariant("Int8", 1, Int8ArrayConstructor, Int8ArrayPrototype, "Int8Array");
 createTypedArrayVariant("Uint8", 1, Uint8ArrayConstructor, Int8ArrayPrototype, "Uint8Array");
 createTypedArrayVariant("Uint8C", 1, Uint8ClampedArrayConstructor, Uint8ClampedArrayPrototype, "Uint8Clamped");
@@ -26664,12 +26747,12 @@ define("runtime", function () {
     }
 
     function tellContext(node) {
-        var loc = node.loc;
+        /*var loc = node && node.loc;
         var cx = getContext();
         if (loc && loc.start) {
             cx.line = loc.start.line;
             cx.column = loc.start.column;
-        }
+        }*/
     }
     ecma.Evaluate = Evaluate;
 
@@ -28062,8 +28145,8 @@ define("runtime0", function () {
     }
 
     // tmp for require("vm") just to test
-    ecma.EvaluateCall = EvaluateCall;
-    ecma.ArgumentListEvaluation = ArgumentListEvaluation
+    //ecma.EvaluateCall = EvaluateCall;
+    //ecma.ArgumentListEvaluation = ArgumentListEvaluation
 
 
     function EvaluateCall(ref, args, tailPosition) {
@@ -28802,7 +28885,7 @@ define("runtime0", function () {
     }
     
     
-    ecma.debuggerOutput = debuggerOutput;
+    // ecma.debuggerOutput = debuggerOutput;
     function debuggerOutput() {
         banner("stack");
         if (hasConsole) console.dir(getStack());
@@ -29238,7 +29321,7 @@ define("runtime0", function () {
     }
     evaluation.ConditionalExpression = ConditionalExpression;
 
-    ecma.applyAssignmentBinOp = applyAssignmentBinOp;
+    // ecma.applyAssignmentBinOp = applyAssignmentBinOp;
     function applyAssignmentBinOp(op, lval, rval) {
         switch (op) {
             case "=": return rval;
@@ -29315,7 +29398,7 @@ define("runtime0", function () {
         return applyUnaryOp(op, isPrefixOperation, exprRef);
     }
 
-    ecma.applyUnaryOp = applyUnaryOp;
+    // ecma.applyUnaryOp = applyUnaryOp;
     function applyUnaryOp(op, isPrefixOperation, exprRef) {
         var oldValue, newValue, val, status;
         if (op === "typeof") {
@@ -29433,7 +29516,7 @@ define("runtime0", function () {
         return OrdinaryHasInstance(C, O);
     }
 
-    ecma.applyBinOp = applyBinOp;
+    // ecma.applyBinOp = applyBinOp;
     function applyBinOp(op, rval, lval) {
         switch (op) {
             case "in":
@@ -30508,7 +30591,7 @@ define("runtime0", function () {
     }
 
     function tellContext() {
-        var loc = node.loc;
+        var loc = node && node.loc;
         var cx = getContext();
         if (loc && loc.start) {
             cx.line = loc.start.line;
@@ -30516,7 +30599,7 @@ define("runtime0", function () {
         }
     }
 
-    ecma.Evaluate = Evaluate;
+    // ecma.Evaluate = Evaluate;
     function Evaluate(node, a, b, c) {
         var E, R;
         if (!node) return;
@@ -31145,6 +31228,9 @@ define("asm-compiler", function (require, exports) {
     var POOL, pp, poolDupeMap;
     var MEMORY, HEAP8, HEAPU8, HEAP16, HEAPU16, HEAPU32, HEAP32, HEAPF32, HEAPF64;
     var STACKBASE, STACKSIZE, STACKTOP;
+
+    var RETADDR = []; // save return addresses for the compiler (stack is better than passing by argument)
+
     /**
      * first bytecodes
      * currently intcodes
@@ -31247,7 +31333,6 @@ define("asm-compiler", function (require, exports) {
     var IFCMP = 0x95;  // if ()
     var IFNOTCMP = 0x96;   // if(!)
     
-
 
 
     var tables = require("tables");
@@ -31380,9 +31465,11 @@ define("asm-compiler", function (require, exports) {
         var codePoints = [];
         for (var i = 0, j = str.length; i < j; i++) {
             // perform codeunit check
-            var cu = str[i].charCodeAt(0);
-            // if (between 0x800 && ... i forgot it ten times)
+            var s = str[i];
+            var cu = s.charCodeAt(0);
+            // if (between 0xD800 && ... i forgot it ten times)
             codePoints.push(cu);
+            if (cu.length === 2) codePoints.push(s.charCodeAt(1));
         }
         // and then write them into the heap
         var len = codePoints.length;
@@ -32612,7 +32699,6 @@ define("vm", function (require, exports) {
                     }
                     // mit Assignment, heisst hier PutValue durchfuehren.
                     $5 = $2 >> $4;
-
                     $6 = PutValue($1, $5);
                     if (isAbrupt($6)) {
                         operands[++sp] = $6;
