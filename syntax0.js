@@ -10058,7 +10058,7 @@ function CreateRealm () {
     realmRec.indirectEval = undefined;
     realmRec.Function = undefined;
     makeTaskQueues(realmRec);
-    addWellKnowSymbolsToRealmsLeakySymbolMap(realmRec);
+    addWellKnownSymbolsToRealmsLeakySymbolMap(realmRec);
     restoreCodeRealm();
     return realmRec;
 }
@@ -16354,7 +16354,10 @@ var $$geti = SymbolPrimitiveType("@@geti",  "Symbol.geti");
 var $$seti = SymbolPrimitiveType("@@seti",  "Symbol.seti");
 var $$add  = SymbolPrimitiveType("@@ADD",  "Symbol.add");
 var $$addr = SymbolPrimitiveType("@@ADDR",  "Symbol.addR");
-function addWellKnowSymbolsToRealmsLeakySymbolMap(realm) {
+function addWellKnownSymbolsToRealmsLeakySymbolMap(realm) {
+    /**
+     * for getOwnPropertySymbols i need a lookup table
+     */
     var map = realm.leakySymbolMap;
     map['@@unscopables'] = $$unscopables;
     map['@@create'] = $$create;
@@ -16394,7 +16397,9 @@ var SymbolFunction_Call = function Call(thisArg, argList) {
      * for getOwnPropertySymbols i need a lookup table
      *
      */
+
     getRealm().leakySymbolMap[getInternalSlot(symbol, SLOTS.ES5ID)] = symbol;
+
     /**
      * should consider redoing with WeakMap if nativly available
      */
