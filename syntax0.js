@@ -22733,6 +22733,11 @@ setInternalSlot(StringConstructor, SLOTS.CALL, StringConstructor_call);
 setInternalSlot(StringConstructor, SLOTS.CONSTRUCT, StringConstructor_construct);
 NowDefineBuiltinFunction(StringConstructor, "raw", 1, StringConstructor_raw);
 NowDefineBuiltinFunction(StringConstructor, $$create, 1, StringConstructor_$$create);
+
+NowDefineBuiltinFunction(StringConstructor, "fromCharCode", 1, StringConstructor_fromCharCode);
+NowDefineBuiltinFunction(StringConstructor, "fromCodePoint", 1, StringConstructor_fromCodePoint);
+NowDefineBuiltinFunction(StringConstructor, "raw", 1, StringConstructor_raw);
+
 NowDefineBuiltinFunction(StringPrototype, "at", 1, StringPrototype_at);
 NowDefineBuiltinFunction(StringPrototype, "charAt", 1, StringPrototype_charAt);
 NowDefineBuiltinFunction(StringPrototype, "charCodeAt", 1, StringPrototype_charCodeAt);
