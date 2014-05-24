@@ -612,7 +612,7 @@ define("languages.de_DE", function (require, exports) {
 
     exports.S_INITIALIZED_ERR = "%s ist bereits initialisiert";
 
-    exports.UNITIALIZED_BINDING_S = "Nichtinitialisierte Bindung: %s";
+    exports.UNINITIALIZED_BINDING_S = "Nichtinitialisierte Bindung: %s";
     
 
     return exports;
@@ -9613,6 +9613,10 @@ SLOTS.AVAILABLELOCALES = "availableLocales";
 SLOTS.RELEVANTEXTENSIONKEYS = "relevantExtensionKeys";
 SLOTS.SORTLOCALEDATA = "sortLocaleData";
 SLOTS.INITIALIZEDINTLOBJECT = "initializedIntlObject";
+// compound iterator
+SLOTS.ITERATOR1 = "Iterator1";
+SLOTS.ITERATOR2 = "Iterator2";
+SLOTS.STATE = "State";
 
 Object.freeze(SLOTS); // DOES A FREEZE HELP OPTIMIZING? The pointers can´t change anymore, or?
 
@@ -9925,6 +9929,7 @@ function CodeRealm(intrinsics, gthis, genv, ldr) {
         eventQueue:[],
         ObserverCallbacks: [],
         GlobalSymbolRegistry: Object.create(null),
+        leakySymbolMap: Object.create(null), // for getOwnPropertySymbols
         defaultLocale: undefined
     };
 }
@@ -10053,6 +10058,7 @@ function CreateRealm () {
     realmRec.indirectEval = undefined;
     realmRec.Function = undefined;
     makeTaskQueues(realmRec);
+    addWellKnowSymbolsToRealmsLeakySymbolMap(realmRec);
     restoreCodeRealm();
     return realmRec;
 }
@@ -11946,13 +11952,15 @@ function OwnPropertyKeysAsList(O) {
     return keys;
 }
 function OwnPropertySymbols(O) {
+    var realm = getRealm();
+    var leakyMap = realm.leakySymbolMap;
     var keys = [];
     var symbols = getInternalSlot(O, SLOTS.SYMBOLS);
     var key, desc;
     for (key in symbols) {
         if (desc = symbols[key]) {
-            Assert(desc.symbol.es5id === key, "symbol key and backref should be the same");
-            keys.push(desc.symbol); // the backref desc.symbol is stuffed into in writePropertyDescriptor()
+            var s = leakyMap[key]
+            keys.push(s);
         }
     }
     return MakeListIterator(keys);
@@ -15402,6 +15410,30 @@ function CreateListIterator(list) {
     NowDefineProperty(iterator, "next", ListIterator_next);
     return iterator;
 }
+
+function CreateCompoundIterator(iterator1, iterator2) {
+    var iterator = ObjectCreate(getIntrinsic(INTRINSICS.OBJECTPROTOTYPE), [SLOTS.ITERATOR1, SLOTS.ITERATOR2, SLOTS.STATE]);
+    setInternalSlot(iterator, SLOTS.ITERATOR1, iterator1);
+    setInternalSlot(iterator, SLOTS.ITERATOR2, iterator2);
+    setInternalSlot(iterator, SLOTS.STATE, 1);
+    CreateDataProperty(iterator, "next", CompoundIterator_next)
+}
+
+var CompoundIterator_next = function (thisArg, argList) {
+    var O = thisArg;
+    if (!hasInternalSlot(O, SLOTS.ITERATOR)) return newTypeError(format("HAS_NO_SLOT_S", "[[Iterator]]"));
+    var state = getInternalSlot(O, SLOTS.STATE);
+    if (state === 1) {
+        var iterator1 = getInternalSlot(O, SLOTS.ITERATOR1);
+        var result1 = IteratorStep(iterator1);
+        if (isAbrupt(result1=ifAbrupt(result1))) return result1;
+        if (result1 != false) return result1;
+        setInternalSlot(O, SLOTS.STATE, 2);
+    }
+    var iterator2 = getInternalSlot(O, SLOTS.ITERATOR2);
+    return IteratorNext(iterator2);
+};
+
 function CopyDataBlockBytes(toBlock, toIndex, fromBlock, fromIndex, count) {
     for (var i = fromIndex, j = fromIndex + count, k = toIndex; i < j; i++, k++) toBlock[k] = fromBlock[i];
 }
@@ -16322,6 +16354,21 @@ var $$geti = SymbolPrimitiveType("@@geti",  "Symbol.geti");
 var $$seti = SymbolPrimitiveType("@@seti",  "Symbol.seti");
 var $$add  = SymbolPrimitiveType("@@ADD",  "Symbol.add");
 var $$addr = SymbolPrimitiveType("@@ADDR",  "Symbol.addR");
+function addWellKnowSymbolsToRealmsLeakySymbolMap(realm) {
+    var map = realm.leakySymbolMap;
+    map['@@unscopables'] = $$unscopables;
+    map['@@create'] = $$create;
+    map['@@toPrimitive'] = $$toPrimitive;
+    map['@@hasInstance'] = $$hasInstance;
+    map['@@toStringTag'] = $$toStringTag;
+    map['@@iterator'] = $$iterator;
+    map['@@isRegExp'] = $$isRegExp;
+    map['@@isConcatSpreadable'] = $$isConcatSpreadable;
+    map['@@geti'] = $$geti;
+    map['@@seti'] = $$seti;
+    map['@@ADD'] = $$add;
+    map['@@ADDR'] = $$addr;
+}
 exports.$$geti = $$geti;
 exports.$$seti = $$seti;
 exports.$$add = $$add;
@@ -16342,6 +16389,16 @@ var SymbolFunction_Call = function Call(thisArg, argList) {
     if (isAbrupt(descString = ifAbrupt(descString))) return descString;
     var symbol = SymbolPrimitiveType();
     setInternalSlot(symbol, SLOTS.DESCRIPTION, descString);
+
+    /**
+     * for getOwnPropertySymbols i need a lookup table
+     *
+     */
+    getRealm().leakySymbolMap[getInternalSlot(symbol, SLOTS.ES5ID)] = symbol;
+    /**
+     * should consider redoing with WeakMap if nativly available
+     */
+
     return NormalCompletion(symbol);
 };
 var SymbolFunction_Construct = function Construct(argList) {
