@@ -27871,8 +27871,296 @@ define("asm-compiler", function (require, exports) {
     var IFGT = 0x94;   // >
     var IFCMP = 0x95;  // if ()
     var IFNOTCMP = 0x96;   // if(!)
-    
 
+    var JMP;
+    var JEQ;
+    var JNE;
+    var JF;
+    var JT;
+    var JB;
+    var JA;
+    var JEB;
+    var JEA;
+
+    var NEWOBJECT;
+    var NEWARRAY;
+    var INVOKE;
+
+    /**
+     * The NEW Instruction Set
+     *
+     * working it out over time now
+     *
+     * This Bytecode may contain both,
+     * instructions and special code (instructions)
+     * used by the instructions
+     *
+     * @type {null}
+     */
+
+    var BYTECODE = Object.create(null);
+    BYTECODE.END = 0x00;
+    BYTECODE.SYSCALL = 0x01;  // SYSCALL with real args, not on the frame. CALL is with args on the frame.
+
+    BYTECODE.STRCONST = 0x20;
+    BYTECODE.NUMCONST = 0x21;
+    BYTECODE.IDREFCONST = 0x22;
+
+    BYTECODE.ADD = 0x60;
+    BYTECODE.ADDL = 0x61;
+    BYTECODE.SUB = 0x62;
+    BYTECODE.SUBL = 0x63;
+    BYTECODE.MUL = 0x64;
+    BYTECODE.MULL = 0x65;
+    BYTECODE.DIV = 0x66;
+    BYTECODE.DIVL = 0x67;
+    BYTECODE.MOD = 0x68;
+    BYTECODE.MODL = 0x69;
+    BYTECODE.SHL = 0x70;
+    BYTECODE.SHLL = 0x71
+    BYTECODE.SHR = 0x72;
+    BYTECODE.SHRL = 0x73;
+    BYTECODE.SSHR = 0x74;
+    BYTECODE.SSHRL = 0x75;
+
+    BYTECODE.AND = 0x76;
+    BYTECODE.OR = 0x77;
+    BYTECODE.LAND = 0x78;
+    BYTECODE.LOR = 0x79;
+
+    // Data Structures
+    BYTECODE.LIST = 0xB00;       // [0] = LIST, [1] = LEN, [2..2+LEN] = LISTITEMS
+    BYTECODE.HASH = 0xB01;
+
+    BYTECODE.INT32ARRAY = 0xB01; // access HEAP like array of these, could speed up typed arrays in the vm :-)
+    BYTECODE.FLOAT64ARRAY = 0xB02;
+
+    BYTECODE.HALT = 0xFF;
+
+    BYTECODE.NORMALCOMP = 0x100;
+    BYTECODE.THROWCOMP = 0x101;
+    BYTECODE.BREAKCOMP = 0x102;
+    BYTECODE.CONTINUECOMP = 0x103;
+    BYTECODE.RETURNCOMP = 0x104;
+
+    BYTECODE.NEWOBJECT = 0x200;
+    BYTECODE.NEWARRAY = 0x201;
+    BYTECODE.NEWSYMBOL = 0x202;
+    BYTECODE.NEWNUMBER = 0x203;
+    BYTECODE.NEWSTRING = 0x204;
+    BYTECODE.NEWARRAYBUFFER  = 0x205;
+    BYTECODE.NEWDATAVIEW = 0x206;
+    BYTECODE.NEWINT8ARRAY = 0x207;
+    BYTECODE.NEWINT16ARRAY = 0x208;
+    BYTECODE.NEWINT32ARRAY = 0x209;
+    BYTECODE.NEWUINT8ARRAY = 0x210;
+    BYTECODE.NEWUINT8CLAMPEDARRAY = 0x211;
+    BYTECODE.NEWUINT16ARRAY = 0x212;
+    BYTECODE.NEWUINT32ARRAY = 0x213;
+    BYTECODE.NEWFLOAT32ARRAY = 0x214;
+    BYTECODE.NEWFLOAT64ARRAY = 0x215;
+    BYTECODE.NEWFUNCTION = 0x216;
+    BYTECODE.NEWGENERATORFUNCTION = 0x217;
+
+    BYTECODE.GETSLOT = 0x300;
+    BYTECODE.SETSLOT = 0x301;
+    BYTECODE.HASSLOT = 0x302;
+
+    BYTECODE.CALL = 0x501;
+    BYTECODE.CONSTRUCT = 0x502;
+    BYTECODE.RET = 0x503;
+    BYTECODE.INVOKE = 0x504;
+    BYTECODE.FPROTOCALL = 0x505;
+    BYTECODE.FPROTOAPPLY = 0x506;
+    BYTECODE.SUPERCALL = 0x507;
+
+    BYTECODE.JMP = 0x600;
+    BYTECODE.JEQ = 0x601;
+    BYTECODE.JNEQ = 0x602;
+    BYTECODE.JLT = 0x603;
+    BYTECODE.JLTEQ = 0x604;
+    BYTECODE.JGT = 0x605;
+    BYTECODE.JGTEQ = 0x606;
+
+    BYTECODE.GETPROPERTY = 0x700;
+    BYTECODE.GET = 0x701;
+    BYTECODE.SET = 0x702;
+    BYTECODE.DEFINEOWNPROPERTY = 0x703;
+    BYTECODE.DELETEPROPERTY = 0x704;
+    BYTECODE.DEFINEOWNPROPERTYORTHROW = 0x705;
+    BYTECODE.DELETEPROPERTYORTHROW = 0x706;
+
+    BYTECODE.GETVALUE = 0x800;
+    BYTECODE.SETVALUE = 0x801;
+    BYTECODE.ISUNRESOLVABLE = 0x802;
+    BYTECODE.ISPROPERTYREF = 0x803;
+
+    BYTECODE.ITERATOR = 0x900;
+    BYTECODE.ITERATOR1 = 0x901;
+    BYTECODE.ITERATOR2 = 0x902;
+    BYTECODE.CREATELISTITERATOR = 0x903;
+    BYTECODE.CREATEARRAYITERATOR = 0x920;
+    BYTECODE.CREATELOADERITERATOR = 0x921;
+    BYTECODE.CREATESTRINGITERATOR = 0x922;
+    BYTECODE.CREATEMAPITERATOR = 0x923;
+    BYTECODE.CREATESETITERATOR = 0x924;
+
+    BYTECODE.ARRAYFROMLIST = 0xA00;
+    BYTECODE.LISTFROMARRAY = 0xA01;
+
+    BYTECODE.EXPRESSION = 0xE00;
+
+
+
+
+    var WORDCODE = Object.create(null);
+    WORDCODE[0x00] = "END";
+    WORDCODE[0x01] = "SYSCALL";  // SYSCALL with real args, not on the frame. CALL is with args on the frame.
+
+    WORDCODE[0x20] = "STRCONST";
+    WORDCODE[0x21] = "NUMCONST";
+    WORDCODE[0x22] = "IDREFCONST";
+
+    WORDCODE[0x60] = "ADD";
+    WORDCODE[0x61] = "ADDL";
+    WORDCODE[0x62] = "SUB";
+    WORDCODE[0x63] = "SUBL";
+    WORDCODE[0x64] = "MUL";
+    WORDCODE[0x65] = "MULL";
+    WORDCODE[0x66] = "DIV";
+    WORDCODE[0x67] = "DIVL";
+    WORDCODE[0x68] = "MOD";
+    WORDCODE[0x69] = "MODL";
+    WORDCODE[0x70] = "SHL";
+    WORDCODE[0x71] = "SHLL"
+    WORDCODE[0x72] = "SHR";
+    WORDCODE[0x73] = "SHRL";
+    WORDCODE[0x74] = "SSHR";
+    WORDCODE[0x75] = "SSHRL";
+
+    WORDCODE[0x76] = "AND";
+    WORDCODE[0x77] = "OR";
+    WORDCODE[0x78] = "LAND";
+    WORDCODE[0x79] = "LOR";
+
+    // Data Structures
+    WORDCODE[0xB00] = "LIST";
+    WORDCODE[0xB01] = "HASH";
+
+    WORDCODE[0xB01] = "INT32ARRAY";
+    WORDCODE[0xB02] = "FLOAT64ARRAY";
+
+    WORDCODE[0xFF] = "HALT";
+
+    WORDCODE[0x100] = "NORMALCOMP";
+    WORDCODE[0x101] = "THROWCOMP";
+    WORDCODE[0x102] = "BREAKCOMP";
+    WORDCODE[0x103] = "CONTINUECOMP";
+    WORDCODE[0x104] = "RETURNCOMP";
+
+    WORDCODE[0x200] = "NEWOBJECT";
+    WORDCODE[0x201] = "NEWARRAY";
+    WORDCODE[0x202] = "NEWSYMBOL";
+    WORDCODE[0x203] = "NEWNUMBER";
+    WORDCODE[0x204] = "NEWSTRING";
+    WORDCODE[0x205] = "NEWARRAYBUFFER";
+    WORDCODE[0x206] = "NEWDATAVIEW";
+    WORDCODE[0x207] = "NEWINT8ARRAY";
+    WORDCODE[0x208] = "NEWINT16ARRAY";
+    WORDCODE[0x209] = "NEWINT32ARRAY";
+    WORDCODE[0x210] = "NEWUINT8ARRAY";
+    WORDCODE[0x211] = "NEWUINT8CLAMPEDARRAY";
+    WORDCODE[0x212] = "NEWUINT16ARRAY";
+    WORDCODE[0x213] = "NEWUINT32ARRAY";
+    WORDCODE[0x214] = "NEWFLOAT32ARRAY";
+    WORDCODE[0x215] = "NEWFLOAT64ARRAY";
+    WORDCODE[0x216] = "NEWFUNCTION";
+    WORDCODE[0x217] = "NEWGENERATORFUNCTION";
+
+    WORDCODE[0x300] = "GETSLOT";
+    WORDCODE[0x301] = "SETSLOT";
+    WORDCODE[0x302] = "HASSLOT";
+
+    WORDCODE[0x501] = "CALL";
+    WORDCODE[0x502] = "CONSTRUCT";
+    WORDCODE[0x503] = "RET";
+
+    WORDCODE[0x600] = "JMP";
+    WORDCODE[0x601] = "JEQ";
+    WORDCODE[0x602] = "JNEQ";
+    WORDCODE[0x603] = "JLT";
+    WORDCODE[0x604] = "JLTEQ";
+    WORDCODE[0x605] = "JGT";
+    WORDCODE[0x606] = "JGTEQ";
+
+    WORDCODE[0x700] = "GETPROPERTY";
+    WORDCODE[0x701] = "GET";
+    WORDCODE[0x702] = "SET";
+    WORDCODE[0x703] = "DEFINEOWNPROPERTY";
+    WORDCODE[0x704] = "DELETEPROPERTY";
+    WORDCODE[0x705] = "DEFINEOWNPROPERTYORTHROW";
+    WORDCODE[0x706] = "DELETEPROPERTYORTHROW";
+
+    WORDCODE[0x800] = "GETVALUE";
+    WORDCODE[0x801] = "SETVALUE";
+    WORDCODE[0x802] = "ISUNRESOLVABLE";
+    WORDCODE[0x803] = "ISPROPERTYREF";
+
+    WORDCODE[0x900] = "ITERATOR";
+    WORDCODE[0x901] = "ITERATOR1";
+    WORDCODE[0x902] = "ITERATOR2";
+    WORDCODE[0x903] = "CREATELISTITERATOR";
+    WORDCODE[0x920] = "CREATEARRAYITERATOR";
+    WORDCODE[0x921] = "CREATELOADERITERATOR";
+    WORDCODE[0x922] = "CREATESTRINGITERATOR";
+    WORDCODE[0x923] = "CREATEMAPITERATOR";
+    WORDCODE[0x924] = "CREATESETITERATOR";
+
+    WORDCODE[0xA00] = "ARRAYFROMLIST";
+    WORDCODE[0xA01] = "LISTFROMARRAY";
+    /**
+     * I will use WordCode for Debugging
+     * This was quickly created by using regexp search and replace
+     * @type {exports}
+     */
+
+
+    /*
+
+        my old tables
+                propDefKinds
+                are the Code for what the property kind was...
+                i´ll move it into the bytecode list.
+                (these are the supplemental instructions i meant)
+                but maybe, i have an idea,
+                i add
+                PROPERTYFLAGS = PROPERTYFLAGS.GET | PROPERTYFLAGS.COMPUTED
+    */
+
+    var PROPERTY_FLAGS; // store once before evaling // like register flags
+    var PROPERTYFLAGS = Object.create(null);
+    PROPERTYFLAGS.STRICT = 1;
+    PROPERTYFLAGS.METHOD = 2;
+    PROPERTYFLAGS.GENERATOR = 4;
+    PROPERTYFLAGS.GETTER = 8;
+    PROPERTYFLAGS.SETTER = 16;
+    PROPERTYFLAGS.STATIC_METHOD = 32;            // static method() in class
+    PROPERTYFLAGS.PROTOTYPE_METHOD = 64;         // method() in class
+    PROPERTYFLAGS.EXPRESSION = 128; // [computed]
+    // i just poke the idea
+    var FUNCTIONFLAGS = Object.create(null);
+    FUNCTIONFLAGS.STRICT = 1;
+    FUNCTIONFLAGS.METHOD = 2;
+    FUNCTIONFLAGS.EXPRESSION = 4;
+    FUNCTIONFLAGS.GENERATOR = 8;
+    FUNCTIONFLAGS.THISMODE_LEXICAL = 16;
+    FUNCTIONFLAGS.ARROW = 16;
+    FUNCTIONFLAGS.THISMODE_GLOBAL = 128;
+    FUNCTIONFLAGS.BOUNDFUNCTION = 256;
+    // i just poke the idea
+    var REFERENCE_FLAGS = Object.create(null);
+    REFERENCE_FLAGS.STRICT = 1;
+    REFERENCE_FLAGS.SUPER = 2;
 
     var tables = require("tables");
     var propDefKinds = tables.propDefKinds;
