@@ -901,7 +901,7 @@ exports.format = format;
 exports.formatStr = formatStr;
 exports.NOT_FOUND_ERR = "i18n-failure: '%s' not found."
 
-// I initialise this in lib/_main_.js
+// I initialise this in lib/main.js
 
 });
 
@@ -9463,6 +9463,7 @@ var VMObject_eval = function (thisArg, argList) {
     else if (!(realmObject = getInternalSlot(realm, SLOTS.REALMOBJECT))) return newTypeError( "Sorry, only realm objects are accepted as realm object");
     return require("vm").CompileAndRun(realmObject, code);
 };
+
 var SLOTS = Object.create(null);
 // Object Properties
 SLOTS.BINDINGS = "Bindings";
@@ -10042,11 +10043,12 @@ function CreateRealm () {
     var context = ExecutionContext(null);
     context.realm = realmRec;
     realmRec.stack.push(context);
-    var intrinsics = createIntrinsics(realmRec);
+    var intrinsics = CreateIntrinsics(realmRec);
     var loader = OrdinaryConstruct(getIntrinsic(INTRINSICS.LOADER), []);
     if (isAbrupt(loader = ifAbrupt(loader))) return loader;
     realmRec.loader = loader;
-    var newGlobal = createGlobalThis(realmRec, ObjectCreate(null), intrinsics);
+    realmRec.globalThis = OrdinaryObject();
+    var newGlobal = SetDefaultGlobalBindings(realmRec);
     var newGlobalEnv = GlobalEnvironment(newGlobal);
     // i think this is a bug and no execution context should be required
     context.VarEnv = newGlobalEnv;
@@ -10080,7 +10082,30 @@ function setCodeRealm(r) {
     require("runtime").setCodeRealm(r);
 }
 
-
+function Initialization(sources) {
+    var realm = CreateRealm();
+    // context wird in create realm erzeugt
+    var status = InitializeFirstRealm(realm);
+    if (isAbrupt(status)) {
+        // Assert realm could not be created
+        // and cleanup, if there is something to close
+        return status;
+    }
+    for (var i = 0, j = sources.length; i < j; i++) {
+        EnqueueTask("ScriptTasks", ScriptEvaluationTask, [sources[i]])
+    }
+    return NextTask(NormalCompletion(undefined))
+}
+function InitializeFirstRealm(realm) {
+    var intrinsics = CreateIntrinsics(realm);
+    var global = undefined;
+    var status = SetRealmGlobalObject(realm, global)
+    if (isAbrupt(status)) return status;
+    var globalObj = SetDefaultGlobalBindings(realm);
+    if (isAbrupt(globalObj=ifAbrupt(globalObj))) return globalObj;
+    // CreateImplementationDefinedGlobalObjectProperties(globalObj);
+    return NormalCompletion(undefined);
+}
 function ExecutionContext(outerCtx, realm, state, generator) {
     "use strict";
     var VarEnv = NewDeclarativeEnvironment((outerCtx && outerCtx.LexEnv)||null);
@@ -12599,6 +12624,12 @@ OrdinaryFunction.prototype = {
     }
 };
 addMissingProperties(OrdinaryFunction.prototype, OrdinaryObject.prototype);
+function BoundFunction_call (thisArg, argList) {
+    var B = getInternalSlot(F, SLOTS.BOUNDTARGETFUNCTION);
+    var T = getInternalSlot(F, SLOTS.BOUNDTHIS);
+    var A = getInternalSlot(F, SLOTS.BOUNDARGUMENTS).concat(argList);
+    return callInternalSlot(SLOTS.CALL, B, T, A);
+}
 function BoundFunctionCreate(B, T, argList) {
     var F = OrdinaryFunction();
     setInternalSlot(F, SLOTS.BOUNDTARGETFUNCTION, B);
@@ -12606,13 +12637,29 @@ function BoundFunctionCreate(B, T, argList) {
     setInternalSlot(F, SLOTS.BOUNDARGUMENTS, argList.slice());
     setInternalSlot(F, SLOTS.PROTOTYPE, getIntrinsic(INTRINSICS.FUNCTIONPROTOTYPE));
     setInternalSlot(F, SLOTS.EXTENSIBLE, true);
-    setInternalSlot(F, SLOTS.CALL, function (thisArg, argList) {
-        var B = getInternalSlot(F, SLOTS.BOUNDTARGETFUNCTION);
-        var T = getInternalSlot(F, SLOTS.BOUNDTHIS);
-        var A = getInternalSlot(F, SLOTS.BOUNDARGUMENTS).concat(argList);
-        return callInternalSlot(SLOTS.CALL, B, T, A);
-    });
+    setInternalSlot(F, SLOTS.CALL, BoundFunction_call);
     return F;
+}
+function BoundFunctionClone(func) {
+    Assert(hasInternalSlot(func, SLOTS.BOUNDTARGETFUNCTION), "? func != bound function ?"); // don´t want to run "format()" each assert, is that lang indep.?
+    Assert(Type(newHome) === OBJECT, "? newHome != Object ?");
+    var newF = OrdinaryFunction();
+    setInternalSlot(newF, SLOTS.BOUNDTARGETFUNCTION, getInternalSlot(func, SLOTS.BOUNDTARGETFUNCTION));
+    setInternalSlot(newF, SLOTS.BOUNDTHIS, getInternalSlot(func, SLOTS.BOUNDTHIS));
+    setInternalSlot(newF, SLOTS.BOUNDARGUMENTS, getInternalSlot(func, SLOTS.BOUNDARGUMENTS));
+    setInternalSlot(newF, SLOTS.PROTOTYPE, getInternalSlot(func, SLOTS.PROTOTYPE));
+    setInternalSlot(newF, SLOTS.EXTENSIBLE, true);
+    var realm = BoundFunctionTargetRealm(newF);
+    var status = AddRestrictedFunctionProperties(newF, realm);
+    if (isAbrupt(status)) return status;
+    return newF;
+}
+function BoundFunctionTargetRealm(bound) {
+    Assert(hasInternalSlot(func, SLOTS.BOUNDTARGETFUNCTION), "? func != bound function ?"); // don´t want to run "format()" each assert, is that lang indep.?
+    var target = getInternalSlot(bound, SLOTS.BOUNDTARGETFUNCTION);
+    if (hasInternalSlot(target, SLOTS.BOUNDTARGETFUNCTION)) return BoundFunctionTargetRealm(target);
+    if (hasInternalSlot(target, SLOTS.REALM)) return getInternalSlot(target, SLOTS.REALM);
+    return getRealm();
 }
 function IsCallable(O) {
     if (O instanceof CompletionRecord) return IsCallable(O.value);
@@ -17795,16 +17842,26 @@ var ProxyConstructor_Construct = function (argList) {
 function evalTasks() {
     var PromiseTasks = getTasks(getRealm(), "PromiseTasks")
     var taskResults = NextTask(undefined, PromiseTasks);
+    var TimerTasks = getTasks(getRealm(), "TimerTasks")
+    var taskResults = NextTask(undefined, TimerTasks);
+    var LoadingTasks = getTasks(getRealm(), "LoadingTasks")
+    var taskResults = NextTask(undefined, LoadingTasks);
+    /*
+        managing multiple queues like this looks like errors,
+
+        will be changed soon
+     */
 }
 
 function PendingTaskRecord_toString () {
     return "[object PendingTaskRecord]";
 }
-function PendingTaskRecord (task, args, realm) {
+function PendingTaskRecord (task, args, realm, hostDefined) {
     var pendingTaskRecord = Object.create(PendingTaskRecord.prototype);
     pendingTaskRecord.Task = task;
     pendingTaskRecord.Arguments = args;
     pendingTaskRecord.Realm = realm;
+    pendingTaskRecord.HostDefined = hostDefined;
     return pendingTaskRecord;
 }
 PendingTaskRecord.prototype = Object.create(null);
@@ -17816,7 +17873,7 @@ function TaskQueue() {
 function makeTaskQueues(realm) {
     realm.LoadingTasks = TaskQueue();
     realm.PromiseTasks = TaskQueue();
-    realm.ScriptEvaluationTasks = TaskQueue();
+    realm.ScriptTasks = TaskQueue();
     realm.TimerTasks = TaskQueue();
 }
 function getTasks(realm, name) {
@@ -17826,25 +17883,50 @@ var queueNames = {
     __proto__:null,
     "LoadingTasks": true,
     "PromiseTasks": true,
-    "TimerTasks": true      // added for setTimeout
+    "ScriptTasks": true,
+    "TimerTasks": true
 };
-function EnqueueTask(queueName, task, args) {
+function EnqueueTask(queueName, task, args, hostDefined) {
     Assert(Type(queueName) === STRING && queueNames[queueName], "EnqueueTask: queueName has to be valid");
     Assert(Array.isArray(args), "arguments have to be a list and to be equal in the number of arguments of task");
-
     var callerRealm = getRealm();
-    var pending = PendingTaskRecord(task, args, callerRealm);
-
+    var pending = PendingTaskRecord(task, args, callerRealm, hostDefined);
     switch(queueName) {
         case "PromiseTasks": callerRealm.PromiseTasks.push(pending);
             break;
         case "LoadingTasks": callerRealm.LoadingTasks.push(pending);
+            break;
+        case "ScriptTasks": callerRealm.ScriptTasks.push(pending);
             break;
         case "TimerTasks": callerRealm.TimerTasks.push(pending);
             break;
     }
     return NormalCompletion(empty);
 }
+/**
+ * TO DO: Change nextTask to main loop of the runtime.
+ *
+ *
+ * NextTask shall become the main event loop
+ *
+ * instead of a "function" calling next Task recursivly
+ *
+ * an "iteration" popping the next Task off the queue(s).
+ *
+ * Then ScriptTasks make sense
+ *
+ * And of course nothing else was said than that. It´s the main event loop.
+ *
+ * I wrote this down as this recursive function, but-
+ * that´s the loop controlling the event stacks
+ * and stopping if all queues are empty.
+ *
+ * @param result
+ * @param nextQueue
+ * @returns {*}
+ * @constructor
+ */
+
 function NextTask (result, nextQueue) {
     if (!nextQueue || !nextQueue.length) return;
     if (isAbrupt(result = ifAbrupt(result))) {
@@ -17852,7 +17934,6 @@ function NextTask (result, nextQueue) {
         console.log("NextTask: Got exception - which will remain unhandled - for debugging, i print them out." );
         printException(result);
     }
-
 //  Assert(getStack().length === 0, "NextTask: The execution context stack has to be empty");
     var nextPending = nextQueue.shift();
     if (!nextPending) return;
@@ -17862,7 +17943,7 @@ function NextTask (result, nextQueue) {
     var result = callInternalSlot(SLOTS.CALL, nextPending.Task, undefined, nextPending.Arguments);
     if (isAbrupt(result=ifAbrupt(result))) {
         if (hasConsole) {
-            var ex = exports.makeNativeException(ex);
+            var ex = makeNativeException(ex);
             console.log("NextTask got abruptly completed on [[Call]] of nextPending.Task");
             if (typeof ex == "object") {
                 console.log(ex.name);
@@ -17879,13 +17960,53 @@ function ScriptEvaluationTask (source) {
     Assert(typeof source === "string", "ScriptEvaluationTask: Source has to be a string");
     var status = NormalCompletion(undefined);
     try {
-	var script = parse(source);
+        var script = parse(source);
     } catch (ex) {
-	return newSyntaxError(ex.message);
+        return newSyntaxError(ex.message);
     }
     var realm = getRealm();
     status = ScriptEvaluation(script, realm, false); // evaluation.Program(ast)
     return NextTask(status)
+}
+
+
+/**
+ * this is my personal old handler, not from the docs
+ * and is subject for removal, very soon
+ * @type {handleEventQueue}
+ */
+exports.HandleEventQueue = handleEventQueue;
+function handleEventQueue(shellMode, initialized) {
+    var task, func, time, result;
+    var LoadingTasks = getRealm().LoadingTasks;
+    var PromiseTasks = getRealm().PromiseTasks;
+    var result = NextTask(undefined, PromiseTasks); // PRomises are resolved here, is right
+    function handler() {
+        var eventQueue = getEventQueue();
+        if (task = eventQueue.shift()) {
+            func = task.func;
+            time = Date.now();
+            if (time >= (task.time + task.timeout)) {
+                if (IsCallable(func)) result = callInternalSlot(SLOTS.CALL, func, undefined, []);
+                if (isAbrupt(result)) {
+                    try {
+                        throw makeNativeException(result.value);
+                    } catch (ex) {
+                        consoleLog("Exception: happend async and is just a print of the exception´s object");
+                        consoleLog(ex.name);
+                        consoleLog(ex.message);
+                        consoleLog(ex.stack);
+                    }
+                }
+            } else eventQueue.push(task);
+        }
+        if (eventQueue.length) setTimeout(handler, 0);
+        else {
+            // if (!shellMode && initialized) exports.endRuntime();
+            // this will make a failure, but the function will be removed anyways very soon
+        }
+    }
+    setTimeout(handler, 0);
 }
 var standard_properties = {
     __proto__: null,
@@ -22414,7 +22535,7 @@ var DateTimeFormatConstructor_construct = function (argList) {
 
 
 
-    var createGlobalThis, createIntrinsics;
+
     function define_intrinsic(intrinsics, intrinsicName, value) {
         var descriptor = {
             configurable: true,
@@ -22449,12 +22570,17 @@ var DateTimeFormatConstructor_construct = function (argList) {
         define_intrinsic(intrinsics, intrinsicName, object);
         return object;
     }
-    createIntrinsics = function createIntrinsics(realm) {
+    function CreateIntrinsics(realm) {
         var intrinsics = OrdinaryObject(null);
         realm.intrinsics = intrinsics;
         var ObjectPrototype = createIntrinsicPrototype(intrinsics, INTRINSICS.OBJECTPROTOTYPE);
         setInternalSlot(ObjectPrototype, SLOTS.PROTOTYPE, null);
-        var FunctionPrototype = createIntrinsicPrototype(intrinsics, INTRINSICS.FUNCTIONPROTOTYPE);
+        var noSteps = function (thisArg,argList) {
+            return NormalCompletion(undefined)
+        };  // Function.prototype() is now returning undefined from [[Call]] since rev25
+        var FunctionPrototype = CreateBuiltinFunction(realm, noSteps);
+        setInternalSlot(FunctionPrototype, SLOTS.PROTOTYPE, ObjectPrototype);
+        define_intrinsic(intrinsics, INTRINSICS.FUNCTIONPROTOTYPE, FunctionPrototype);
         setInternalSlot(FunctionPrototype, SLOTS.PROTOTYPE, ObjectPrototype);
         var FunctionConstructor = createIntrinsicConstructor(intrinsics, "Function", 1, INTRINSICS.FUNCTION);
         setInternalSlot(FunctionConstructor, SLOTS.PROTOTYPE, FunctionPrototype);
@@ -22575,7 +22701,6 @@ var DateTimeFormatConstructor_construct = function (argList) {
         var ThrowTypeError = createIntrinsicFunction(intrinsics, "ThrowTypeError", 0, INTRINSICS.THROWTYPEERROR);
         var ArrayProto_values = createIntrinsicFunction(intrinsics, "values", 0, INTRINSICS.ARRAYPROTO_VALUES);
         var VMObject = createIntrinsicObject(intrinsics,INTRINSICS.VM); // that i can play with bytecode from inside the shell, too.
-
         var IntlObject = createIntrinsicObject(intrinsics,INTRINSICS.INTL);
         var CollatorConstructor = createIntrinsicConstructor(intrinsics, "Intl.Collator", 0, INTRINSICS.COLLATOR);
         var CollatorPrototype = createIntrinsicPrototype(intrinsics, INTRINSICS.COLLATORPROTOTYPE);
@@ -22584,13 +22709,12 @@ var DateTimeFormatConstructor_construct = function (argList) {
         var DateTimeFormatConstructor = createIntrinsicConstructor(intrinsics, "Intl.DateTimeFormat", 0, INTRINSICS.DATETIMEFORMAT);
         var DateTimeFormatPrototype = createIntrinsicPrototype(intrinsics, INTRINSICS.DATETIMEFORMATPROTOTYPE);
         var defaultCompareFn = createIntrinsicFunction(intrinsics, "compare", 2, INTRINSICS.DEFAULTCOMPARE)
-
         var ThrowTypeError_Call = function (thisArg, argList) {
             return newTypeError(format("THROW_TYPE_ERROR"));
         };
         setInternalSlot(ThrowTypeError, SLOTS.CALL, ThrowTypeError_Call);
         setInternalSlot(ThrowTypeError, SLOTS.CONSTRUCT, undefined);
-
+        callInternalSlot(SLOTS.SETPROTOTYPEOF, ThrowTypeError, [FunctionPrototype]);
         var SetLanguage_Call = function (thisArg, argList) {
             try {var languages = require("i18n").languages;}
             catch (ex) {return newTypeError(ex.message);}
@@ -22733,11 +22857,9 @@ setInternalSlot(StringConstructor, SLOTS.CALL, StringConstructor_call);
 setInternalSlot(StringConstructor, SLOTS.CONSTRUCT, StringConstructor_construct);
 NowDefineBuiltinFunction(StringConstructor, "raw", 1, StringConstructor_raw);
 NowDefineBuiltinFunction(StringConstructor, $$create, 1, StringConstructor_$$create);
-
 NowDefineBuiltinFunction(StringConstructor, "fromCharCode", 1, StringConstructor_fromCharCode);
 NowDefineBuiltinFunction(StringConstructor, "fromCodePoint", 1, StringConstructor_fromCodePoint);
 NowDefineBuiltinFunction(StringConstructor, "raw", 1, StringConstructor_raw);
-
 NowDefineBuiltinFunction(StringPrototype, "at", 1, StringPrototype_at);
 NowDefineBuiltinFunction(StringPrototype, "charAt", 1, StringPrototype_charAt);
 NowDefineBuiltinFunction(StringPrototype, "charCodeAt", 1, StringPrototype_charCodeAt);
@@ -23180,101 +23302,104 @@ NowDefineBuiltinConstant(IntlObject, $$toStringTag, "Intl");
 NowDefineBuiltinConstant(CollatorPrototype, $$toStringTag, "Intl.Collator");
 NowDefineBuiltinConstant(NumberFormatPrototype, $$toStringTag, "Intl.NumberFormat");
 NowDefineBuiltinConstant(DateTimeFormatPrototype, $$toStringTag, "Intl.DateTimeFormat");
-        createGlobalThis = function createGlobalThis(realm, globalThis, intrinsics) {
-            SetPrototypeOf(globalThis, ObjectPrototype);
-            setInternalSlot(globalThis, SLOTS.EXTENSIBLE, true);
-            DefineOwnProperty(globalThis, "Array", GetOwnProperty(intrinsics, INTRINSICS.ARRAY));
-            DefineOwnProperty(globalThis, "ArrayBuffer", GetOwnProperty(intrinsics, INTRINSICS.ARRAYBUFFER));
-            DefineOwnProperty(globalThis, "Boolean", GetOwnProperty(intrinsics, INTRINSICS.BOOLEAN));
-            DefineOwnProperty(globalThis, "DataView", GetOwnProperty(intrinsics, INTRINSICS.DATAVIEW));
-            DefineOwnProperty(globalThis, "Date", GetOwnProperty(intrinsics, INTRINSICS.DATE));
-            DefineOwnProperty(globalThis, "Emitter", GetOwnProperty(intrinsics, INTRINSICS.EMITTER));
-            DefineOwnProperty(globalThis, "Event", GetOwnProperty(intrinsics, INTRINSICS.EVENT));
-            DefineOwnProperty(globalThis, "EventTarget", GetOwnProperty(intrinsics, INTRINSICS.EVENTTARGET));
-            DefineOwnProperty(globalThis, "Error", GetOwnProperty(intrinsics, INTRINSICS.ERROR));
-            DefineOwnProperty(globalThis, "EvalError", GetOwnProperty(intrinsics, INTRINSICS.EVALERROR));
-            DefineOwnProperty(globalThis, "Function", GetOwnProperty(intrinsics, INTRINSICS.FUNCTION));
-            DefineOwnProperty(globalThis, "Float32Array", GetOwnProperty(intrinsics, INTRINSICS.FLOAT32ARRAY));
-            DefineOwnProperty(globalThis, "Float64Array", GetOwnProperty(intrinsics, INTRINSICS.FLOAT64ARRAY));
-            DefineOwnProperty(globalThis, "GeneratorFunction", GetOwnProperty(intrinsics, INTRINSICS.GENERATORFUNCTION));
-            NowDefineBuiltinConstant(globalThis, "Infinity", Infinity);
-            DefineOwnProperty(globalThis, "Intl", GetOwnProperty(intrinsics, INTRINSICS.INTL));
-            DefineOwnProperty(globalThis, "Int8Array", GetOwnProperty(intrinsics, INTRINSICS.INT8ARRAY));
-            DefineOwnProperty(globalThis, "Int16Array", GetOwnProperty(intrinsics, INTRINSICS.INT16ARRAY));
-            DefineOwnProperty(globalThis, "Int32Array", GetOwnProperty(intrinsics, INTRINSICS.INT32ARRAY));
-            DefineOwnProperty(globalThis, "JSON", GetOwnProperty(intrinsics, INTRINSICS.JSON));
-            DefineOwnProperty(globalThis, "Loader", GetOwnProperty(intrinsics, INTRINSICS.LOADER));
-            DefineOwnProperty(globalThis, "Math", GetOwnProperty(intrinsics, INTRINSICS.MATH));
-            DefineOwnProperty(globalThis, "Map", GetOwnProperty(intrinsics, INTRINSICS.MAP));
-            DefineOwnProperty(globalThis, "MessagePort", GetOwnProperty(intrinsics, INTRINSICS.MESSAGEPORT));
-            DefineOwnProperty(globalThis, "Module", GetOwnProperty(intrinsics, INTRINSICS.MODULE));
-            NowDefineBuiltinConstant(globalThis, "NaN", NaN);
-            DefineOwnProperty(globalThis, "Number", GetOwnProperty(intrinsics, INTRINSICS.NUMBER));
-            DefineOwnProperty(globalThis, "Proxy", GetOwnProperty(intrinsics, INTRINSICS.PROXY));
-            DefineOwnProperty(globalThis, "RangeError", GetOwnProperty(intrinsics, INTRINSICS.RANGEERROR));
-            DefineOwnProperty(globalThis, "Realm", GetOwnProperty(intrinsics, INTRINSICS.REALM));
-            DefineOwnProperty(globalThis, "ReferenceError", GetOwnProperty(intrinsics, INTRINSICS.REFERENCEERROR));
-            DefineOwnProperty(globalThis, "RegExp", GetOwnProperty(intrinsics, INTRINSICS.REGEXP));
-            DefineOwnProperty(globalThis, "StructType", GetOwnProperty(intrinsics, INTRINSICS.STRUCTTYPE));
-            DefineOwnProperty(globalThis, "SyntaxError", GetOwnProperty(intrinsics, INTRINSICS.SYNTAXERROR));
-            NowDefineProperty(globalThis, "System", realm.loader);
-            DefineOwnProperty(globalThis, "TypeError", GetOwnProperty(intrinsics, INTRINSICS.TYPEERROR));
-            DefineOwnProperty(globalThis, "URIError", GetOwnProperty(intrinsics, INTRINSICS.URIERROR));
-            DefineOwnProperty(globalThis, "Object", GetOwnProperty(intrinsics, INTRINSICS.OBJECT));
-            DefineOwnProperty(globalThis, "Promise", GetOwnProperty(intrinsics, INTRINSICS.PROMISE));
-            DefineOwnProperty(globalThis, "Reflect", GetOwnProperty(intrinsics, INTRINSICS.REFLECT));
-            DefineOwnProperty(globalThis, "Set", GetOwnProperty(intrinsics, INTRINSICS.SET));
-            DefineOwnProperty(globalThis, "String", GetOwnProperty(intrinsics, INTRINSICS.STRING));
-            DefineOwnProperty(globalThis, "Symbol", GetOwnProperty(intrinsics, INTRINSICS.SYMBOL));
-            DefineOwnProperty(globalThis, "Uint8Array", GetOwnProperty(intrinsics, INTRINSICS.UINT8ARRAY));
-            DefineOwnProperty(globalThis, "Uint8ClampedArray", GetOwnProperty(intrinsics, INTRINSICS.UINT8CLAMPEDARRAY));
-            DefineOwnProperty(globalThis, "Uint16Array", GetOwnProperty(intrinsics, INTRINSICS.UINT16ARRAY));
-            DefineOwnProperty(globalThis, "Uint32Array", GetOwnProperty(intrinsics, INTRINSICS.UINT32ARRAY));
-            DefineOwnProperty(globalThis, "WeakMap", GetOwnProperty(intrinsics, INTRINSICS.MAP));
-            DefineOwnProperty(globalThis, "WeakSet", GetOwnProperty(intrinsics, INTRINSICS.SET));
-            DefineOwnProperty(globalThis, "console", GetOwnProperty(intrinsics, INTRINSICS.CONSOLE));
-            DefineOwnProperty(globalThis, "debug", GetOwnProperty(intrinsics, INTRINSICS.DEBUGFUNCTION));
-            DefineOwnProperty(globalThis, "decodeURI", GetOwnProperty(intrinsics, INTRINSICS.DECODEURI));
-            DefineOwnProperty(globalThis, "decodeURIComponent", GetOwnProperty(intrinsics, INTRINSICS.DECODEURICOMPONENT));
-            DefineOwnProperty(globalThis, "encodeURI", GetOwnProperty(intrinsics, INTRINSICS.ENCODEURI));
-            DefineOwnProperty(globalThis, "encodeURIComponent", GetOwnProperty(intrinsics, INTRINSICS.ENCODEURICOMPONENT));
-            DefineOwnProperty(globalThis, "escape", GetOwnProperty(intrinsics, INTRINSICS.ESCAPE));
-            DefineOwnProperty(globalThis, "eval", GetOwnProperty(intrinsics, INTRINSICS.EVAL));
-            NowDefineBuiltinConstant(globalThis, "global", globalThis);
-            DefineOwnProperty(globalThis, "isFinite", GetOwnProperty(intrinsics, INTRINSICS.ISFINITE));
-            DefineOwnProperty(globalThis, "isNaN", GetOwnProperty(intrinsics, INTRINSICS.ISNAN));
-            DefineOwnProperty(globalThis, "load", GetOwnProperty(intrinsics, INTRINSICS.LOAD));
-            DefineOwnProperty(globalThis, "parseInt", GetOwnProperty(intrinsics, INTRINSICS.PARSEINT));
-            DefineOwnProperty(globalThis, "parseFloat", GetOwnProperty(intrinsics, INTRINSICS.PARSEFLOAT));
-            DefineOwnProperty(globalThis, "print", GetOwnProperty(intrinsics, INTRINSICS.PRINTFUNCTION));
-            DefineOwnProperty(globalThis, "request", GetOwnProperty(intrinsics, INTRINSICS.REQUEST));
-            DefineOwnProperty(globalThis, "setTimeout", GetOwnProperty(intrinsics, INTRINSICS.SETTIMEOUT));
-            DefineOwnProperty(globalThis, "setLanguage", GetOwnProperty(intrinsics, INTRINSICS.SETLANGUAGE));
-            NowDefineBuiltinConstant(globalThis, "undefined", undefined);
-            DefineOwnProperty(globalThis, "unescape", GetOwnProperty(intrinsics, INTRINSICS.UNESCAPE));
-            NowDefineBuiltinConstant(globalThis, $$toStringTag, "syntaxjs");
-            DefineOwnProperty(globalThis, "VM", GetOwnProperty(intrinsics, INTRINSICS.VM));
-
-            if (typeof Java !== "function" && typeof load !== "function" ) {
-                NowDefineProperty(intrinsics, INTRINSICS.DOMWRAPPER,
-                    NativeJSObjectWrapper(
-                            typeof importScripts === "function" ? self :
-                                typeof window === "object" ? window :
-                                typeof process === "object" ? process : {}
-                    )
-                );
-                if (typeof importScripts === "function") {
-                    DefineOwnProperty(globalThis, "self", GetOwnProperty(intrinsics, INTRINSICS.DOMWRAPPER));
-                } else if (typeof window === "object") {
-                    DefineOwnProperty(globalThis, "window", GetOwnProperty(intrinsics, INTRINSICS.DOMWRAPPER));
-                    NowDefineProperty(globalThis, "document", Get(Get(globalThis, "window"), "document"));
-                } else if (typeof process === "object") {
-                    DefineOwnProperty(globalThis, "process", GetOwnProperty(intrinsics, INTRINSICS.DOMWRAPPER));
-                }
-            }
-            return globalThis;
-        };
         return intrinsics;
+    };
+
+
+    function SetDefaultGlobalBindings(realmRec) {
+        var globalThis = realmRec.globalThis;
+        var intrinsics = realmRec.intrinsics;
+        SetPrototypeOf(globalThis, getIntrinsic(INTRINSICS.OBJECTPROTOTYPE));
+        setInternalSlot(globalThis, SLOTS.EXTENSIBLE, true);
+        DefineOwnProperty(globalThis, "Array", GetOwnProperty(intrinsics, INTRINSICS.ARRAY));
+        DefineOwnProperty(globalThis, "ArrayBuffer", GetOwnProperty(intrinsics, INTRINSICS.ARRAYBUFFER));
+        DefineOwnProperty(globalThis, "Boolean", GetOwnProperty(intrinsics, INTRINSICS.BOOLEAN));
+        DefineOwnProperty(globalThis, "DataView", GetOwnProperty(intrinsics, INTRINSICS.DATAVIEW));
+        DefineOwnProperty(globalThis, "Date", GetOwnProperty(intrinsics, INTRINSICS.DATE));
+        DefineOwnProperty(globalThis, "Emitter", GetOwnProperty(intrinsics, INTRINSICS.EMITTER));
+        DefineOwnProperty(globalThis, "Event", GetOwnProperty(intrinsics, INTRINSICS.EVENT));
+        DefineOwnProperty(globalThis, "EventTarget", GetOwnProperty(intrinsics, INTRINSICS.EVENTTARGET));
+        DefineOwnProperty(globalThis, "Error", GetOwnProperty(intrinsics, INTRINSICS.ERROR));
+        DefineOwnProperty(globalThis, "EvalError", GetOwnProperty(intrinsics, INTRINSICS.EVALERROR));
+        DefineOwnProperty(globalThis, "Function", GetOwnProperty(intrinsics, INTRINSICS.FUNCTION));
+        DefineOwnProperty(globalThis, "Float32Array", GetOwnProperty(intrinsics, INTRINSICS.FLOAT32ARRAY));
+        DefineOwnProperty(globalThis, "Float64Array", GetOwnProperty(intrinsics, INTRINSICS.FLOAT64ARRAY));
+        DefineOwnProperty(globalThis, "GeneratorFunction", GetOwnProperty(intrinsics, INTRINSICS.GENERATORFUNCTION));
+        NowDefineBuiltinConstant(globalThis, "Infinity", Infinity);
+        DefineOwnProperty(globalThis, "Intl", GetOwnProperty(intrinsics, INTRINSICS.INTL));
+        DefineOwnProperty(globalThis, "Int8Array", GetOwnProperty(intrinsics, INTRINSICS.INT8ARRAY));
+        DefineOwnProperty(globalThis, "Int16Array", GetOwnProperty(intrinsics, INTRINSICS.INT16ARRAY));
+        DefineOwnProperty(globalThis, "Int32Array", GetOwnProperty(intrinsics, INTRINSICS.INT32ARRAY));
+        DefineOwnProperty(globalThis, "JSON", GetOwnProperty(intrinsics, INTRINSICS.JSON));
+        DefineOwnProperty(globalThis, "Loader", GetOwnProperty(intrinsics, INTRINSICS.LOADER));
+        DefineOwnProperty(globalThis, "Math", GetOwnProperty(intrinsics, INTRINSICS.MATH));
+        DefineOwnProperty(globalThis, "Map", GetOwnProperty(intrinsics, INTRINSICS.MAP));
+        DefineOwnProperty(globalThis, "MessagePort", GetOwnProperty(intrinsics, INTRINSICS.MESSAGEPORT));
+        DefineOwnProperty(globalThis, "Module", GetOwnProperty(intrinsics, INTRINSICS.MODULE));
+        NowDefineBuiltinConstant(globalThis, "NaN", NaN);
+        DefineOwnProperty(globalThis, "Number", GetOwnProperty(intrinsics, INTRINSICS.NUMBER));
+        DefineOwnProperty(globalThis, "Proxy", GetOwnProperty(intrinsics, INTRINSICS.PROXY));
+        DefineOwnProperty(globalThis, "RangeError", GetOwnProperty(intrinsics, INTRINSICS.RANGEERROR));
+        DefineOwnProperty(globalThis, "Realm", GetOwnProperty(intrinsics, INTRINSICS.REALM));
+        DefineOwnProperty(globalThis, "ReferenceError", GetOwnProperty(intrinsics, INTRINSICS.REFERENCEERROR));
+        DefineOwnProperty(globalThis, "RegExp", GetOwnProperty(intrinsics, INTRINSICS.REGEXP));
+        DefineOwnProperty(globalThis, "StructType", GetOwnProperty(intrinsics, INTRINSICS.STRUCTTYPE));
+        DefineOwnProperty(globalThis, "SyntaxError", GetOwnProperty(intrinsics, INTRINSICS.SYNTAXERROR));
+        NowDefineProperty(globalThis, "System", realm.loader);
+        DefineOwnProperty(globalThis, "TypeError", GetOwnProperty(intrinsics, INTRINSICS.TYPEERROR));
+        DefineOwnProperty(globalThis, "URIError", GetOwnProperty(intrinsics, INTRINSICS.URIERROR));
+        DefineOwnProperty(globalThis, "Object", GetOwnProperty(intrinsics, INTRINSICS.OBJECT));
+        DefineOwnProperty(globalThis, "Promise", GetOwnProperty(intrinsics, INTRINSICS.PROMISE));
+        DefineOwnProperty(globalThis, "Reflect", GetOwnProperty(intrinsics, INTRINSICS.REFLECT));
+        DefineOwnProperty(globalThis, "Set", GetOwnProperty(intrinsics, INTRINSICS.SET));
+        DefineOwnProperty(globalThis, "String", GetOwnProperty(intrinsics, INTRINSICS.STRING));
+        DefineOwnProperty(globalThis, "Symbol", GetOwnProperty(intrinsics, INTRINSICS.SYMBOL));
+        DefineOwnProperty(globalThis, "Uint8Array", GetOwnProperty(intrinsics, INTRINSICS.UINT8ARRAY));
+        DefineOwnProperty(globalThis, "Uint8ClampedArray", GetOwnProperty(intrinsics, INTRINSICS.UINT8CLAMPEDARRAY));
+        DefineOwnProperty(globalThis, "Uint16Array", GetOwnProperty(intrinsics, INTRINSICS.UINT16ARRAY));
+        DefineOwnProperty(globalThis, "Uint32Array", GetOwnProperty(intrinsics, INTRINSICS.UINT32ARRAY));
+        DefineOwnProperty(globalThis, "WeakMap", GetOwnProperty(intrinsics, INTRINSICS.MAP));
+        DefineOwnProperty(globalThis, "WeakSet", GetOwnProperty(intrinsics, INTRINSICS.SET));
+        DefineOwnProperty(globalThis, "console", GetOwnProperty(intrinsics, INTRINSICS.CONSOLE));
+        DefineOwnProperty(globalThis, "debug", GetOwnProperty(intrinsics, INTRINSICS.DEBUGFUNCTION));
+        DefineOwnProperty(globalThis, "decodeURI", GetOwnProperty(intrinsics, INTRINSICS.DECODEURI));
+        DefineOwnProperty(globalThis, "decodeURIComponent", GetOwnProperty(intrinsics, INTRINSICS.DECODEURICOMPONENT));
+        DefineOwnProperty(globalThis, "encodeURI", GetOwnProperty(intrinsics, INTRINSICS.ENCODEURI));
+        DefineOwnProperty(globalThis, "encodeURIComponent", GetOwnProperty(intrinsics, INTRINSICS.ENCODEURICOMPONENT));
+        DefineOwnProperty(globalThis, "escape", GetOwnProperty(intrinsics, INTRINSICS.ESCAPE));
+        DefineOwnProperty(globalThis, "eval", GetOwnProperty(intrinsics, INTRINSICS.EVAL));
+        NowDefineBuiltinConstant(globalThis, "global", globalThis);
+        DefineOwnProperty(globalThis, "isFinite", GetOwnProperty(intrinsics, INTRINSICS.ISFINITE));
+        DefineOwnProperty(globalThis, "isNaN", GetOwnProperty(intrinsics, INTRINSICS.ISNAN));
+        DefineOwnProperty(globalThis, "load", GetOwnProperty(intrinsics, INTRINSICS.LOAD));
+        DefineOwnProperty(globalThis, "parseInt", GetOwnProperty(intrinsics, INTRINSICS.PARSEINT));
+        DefineOwnProperty(globalThis, "parseFloat", GetOwnProperty(intrinsics, INTRINSICS.PARSEFLOAT));
+        DefineOwnProperty(globalThis, "print", GetOwnProperty(intrinsics, INTRINSICS.PRINTFUNCTION));
+        DefineOwnProperty(globalThis, "request", GetOwnProperty(intrinsics, INTRINSICS.REQUEST));
+        DefineOwnProperty(globalThis, "setTimeout", GetOwnProperty(intrinsics, INTRINSICS.SETTIMEOUT));
+        DefineOwnProperty(globalThis, "setLanguage", GetOwnProperty(intrinsics, INTRINSICS.SETLANGUAGE));
+        NowDefineBuiltinConstant(globalThis, "undefined", undefined);
+        DefineOwnProperty(globalThis, "unescape", GetOwnProperty(intrinsics, INTRINSICS.UNESCAPE));
+        NowDefineBuiltinConstant(globalThis, $$toStringTag, "syntaxjs");
+        DefineOwnProperty(globalThis, "VM", GetOwnProperty(intrinsics, INTRINSICS.VM));
+        if (typeof Java !== "function" && typeof load !== "function" ) {
+            NowDefineProperty(intrinsics, INTRINSICS.DOMWRAPPER,
+                NativeJSObjectWrapper(
+                        typeof importScripts === "function" ? self :
+                            typeof window === "object" ? window :
+                            typeof process === "object" ? process : {}
+                )
+            );
+            if (typeof importScripts === "function") {
+                DefineOwnProperty(globalThis, "self", GetOwnProperty(intrinsics, INTRINSICS.DOMWRAPPER));
+            } else if (typeof window === "object") {
+                DefineOwnProperty(globalThis, "window", GetOwnProperty(intrinsics, INTRINSICS.DOMWRAPPER));
+                NowDefineProperty(globalThis, "document", Get(Get(globalThis, "window"), "document"));
+            } else if (typeof process === "object") {
+                DefineOwnProperty(globalThis, "process", GetOwnProperty(intrinsics, INTRINSICS.DOMWRAPPER));
+            }
+        }
+        return globalThis;
     };
     exports.NextTask = NextTask;
     exports.getTasks = getTasks;
@@ -23466,7 +23591,7 @@ NowDefineBuiltinConstant(DateTimeFormatPrototype, $$toStringTag, "Intl.DateTimeF
     exports.SetFunctionLength = SetFunctionLength;
     exports.NowDefineProperty = NowDefineProperty;
     exports.NowDefineSelfHostingFunction = NowDefineSelfHostingFunction;
-    exports.createIntrinsics = createIntrinsics;
+    exports.CreateIntrinsics = CreateIntrinsics;
     exports.setCodeRealm = setCodeRealm;
     exports.saveCodeRealm = saveCodeRealm;
     exports.restoreCodeRealm = restoreCodeRealm;
@@ -23787,6 +23912,7 @@ define("runtime", function () {
         "FunctionDeclaration": true,
         "GeneratorDeclaration": true
     };
+
     var makeNativeException = ecma.makeNativeException;
 
     function setCodeRealm(r) {
@@ -27037,6 +27163,8 @@ define("runtime", function () {
         }
         return NormalCompletion(R);
     }
+
+
     /*
         Downwards the EventQueue (setTimeout, Emitter):
         put the handler together with the new TaskQueue
@@ -27046,43 +27174,7 @@ define("runtime", function () {
 
      */
 
-    function HandleEventQueue(shellmode, initialized) {
-        var task, func, time, result;
-        // pendingExceptions = []
-
-        var LoadingTasks = getRealm().LoadingTasks;
-        var PromiseTasks = getRealm().PromiseTasks;
-
-        var result = NextTask(undefined, PromiseTasks); // PRomises are resolved here, is right
-        // result = NextTask(undefined,LoaderTasks);
-        //
-
-        function handler() {
-            var eventQueue = getEventQueue();
-            if (task = eventQueue.shift()) {
-                func = task.func;
-                time = Date.now();
-                if (time >= (task.time + task.timeout)) {
-                    if (IsCallable(func)) result = callInternalSlot(SLOTS.CALL, func, ThisResolution(), []);
-                    if (isAbrupt(result)) {
-                        try {
-                            throw makeNativeException(result.value);
-                        } catch (ex) {
-                                consoleLog("Exception: happend async and is just a print of the exception´s object");
-                                consoleLog(ex.name);
-                                consoleLog(ex.message);
-                                consoleLog(ex.stack);
-                        }
-                    }
-                } else eventQueue.push(task);
-            }
-            if (eventQueue.length) setTimeout(handler, 0);
-            else {
-                if (!shellmode && initialized) endRuntime();
-            }
-        }
-        setTimeout(handler, 0);
-    }
+    var HandleEventQueue = ecma.HandleEventQueue;
 
 
     function setScriptLocation (loc) {
@@ -27116,8 +27208,11 @@ define("runtime", function () {
         var node = typeof source === "string" ? parse(source) : source;
         if (!node) throw "example: Call execute(parse(source)) or execute(source)";
 
-        if (!initializedTheRuntime || !shellModeBool || resetEnvNowBool) {
-            var realm = CreateRealm();  // it´s our default realm. but i should use realm.eval below then, to uni- and simplify
+        // this stupid function is about to go away
+
+        if (!initializedTheRuntime || !shellModeBool || (shellModeBool && resetEnvNowBool)) {
+            var realm = CreateRealm();
+                                        // it´s our default realm. but i should use realm.eval below then, to uni- and simplify
                                         // and for that the task queues go behind the realm.eval code, wherever i am there
 
                                         // and this file gets rewritten to use a codestack for nodes
@@ -27166,6 +27261,7 @@ define("runtime", function () {
             }
         }
 
+
         /*
          my self-defined event queue shall become realm.TimerTasks, mainly
          for SetTimeout.
@@ -27176,7 +27272,6 @@ define("runtime", function () {
 
         var eventQueue = getEventQueue();
         var pt = getTasks(getRealm(), "PromiseTasks");
-
         if (!shellModeBool && initializedTheRuntime && !eventQueue.length && (!pt || !pt.length)) endRuntime();
         else if (eventQueue.length || (pt&& pt.length)) setTimeout(function () {HandleEventQueue(shellModeBool, initializedTheRuntime);}, 0);
 
@@ -30936,7 +31031,7 @@ define("syntaxjs-shell", function (require, exports) {
 
     // assembling and autostart of shell or browser highlighter
 // #######################################################################################################################
-// the closure around this is new in _main_.js, the main template
+// the closure around this is new in main.js, the main template
 // #######################################################################################################################
 
 // define("syntaxjs", function () {
