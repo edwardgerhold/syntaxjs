@@ -9461,7 +9461,7 @@ var VMObject_eval = function (thisArg, argList) {
     var realmObject;
     if (realm === undefined) realmObject = getRealm();
     else if (!(realmObject = getInternalSlot(realm, SLOTS.REALMOBJECT))) return newTypeError( "Sorry, only realm objects are accepted as realm object");
-    return require("vm").CompileAndRun(realmObject, code);
+    return require("asm-runtime").CompileAndRun(realmObject, code);
 };
 
 var SLOTS = Object.create(null);
@@ -10006,7 +10006,7 @@ CodeRealm.prototype.evalFileAsync = function (file) {
 CodeRealm.prototype.evalByteCode = function (code) {
     saveCodeRealm();
     setCodeRealm(this);
-    var result = require("vm").CompileAndRun(this, code);
+    var result = require("asm-runtime").CompileAndRun(this, code);
     result = GetValue(result);
     if (isAbrupt(result=ifAbrupt(result))) {
         var error = result.value;
@@ -24486,7 +24486,7 @@ define("runtime", function () {
         return args;
     }
 
-    // tmp for require("vm") just to test
+    // tmp for require("asm-runtime") just to test
     ecma.EvaluateCall = EvaluateCall;
     ecma.ArgumentListEvaluation = ArgumentListEvaluation
 
@@ -28027,6 +28027,9 @@ define("asm-compiler", function (require, exports) {
     defineBitFlags("R_SUPER", 2, "");
     defineBitFlags("R_UNDEFINED", 4, "");
 
+
+
+
     defineRegister("0", undefined, "")
     defineRegister("1", undefined, "")
     defineRegister("new", undefined, "")
@@ -28650,21 +28653,11 @@ define("asm-compiler", function (require, exports) {
 });
 
 
-/**
- *
- *  there is a difference between
- *  operand stack and a push of the result onto
- *
- *  or a r0 for result
- *  and a copy to r1 or r2 with and extra instruction
- *
- *  the same for the node.type headers, they can be factored out
- *
- *
- *
- */
-
-define("vm", function (require, exports) {
+define("asm-runtime", function (require, exports) {
+    /*
+        goal: a whole rewrite of runtime.js
+        with other kind of object and environment layout
+     */
 
 
     var realm, strict, tailCall;
@@ -28716,14 +28709,6 @@ define("vm", function (require, exports) {
     var fp = -1;
     var frame;
 
-    /**
-     * global operandStack
-     * @type {Array}
-     */
-
-    var operands = new Array(1000);
-    var sp = -1;
-
 
     /**
      * global registers
@@ -28732,18 +28717,6 @@ define("vm", function (require, exports) {
     var r0, r1, r2, r3, r4, r5, r6, r7, r8, r9;
     var reg = Array(10);
     var regs = [[],[],[],[],[],[],[],[],[],[],[]];  // if you have no operand stack, you need to save the regs.
-    // here i have to deal with javascript objects
-    // for a while.
-
-    // hmm, maybe, i should next try to rewrite the object on the heap
-    // or just point outside to the pool, where the object will not be
-    // gc´ed. Btw. it could be watched if it needs deletion there, i think
-    // it was seen and forgotten. Delete from pool if it needs collection.
-
-    // well, ObjectCreate() shall no longer return an object ordinary object
-    // but a memory location with, e.g. first a const pool index, where the new
-    // object exists, so i can smuggle the HEAP32 into the running system on the
-    // AST. nobody will care for the ms. It´s anyways the slowest es6 available ;-)
 
     function pushReg(nr) {
         regs[nr].push(reg[nr]);
@@ -28752,112 +28725,6 @@ define("vm", function (require, exports) {
     function popReg(nr) {
         reg[nr] = regs[nr].pop();
     }
-
-    /**
-     * @type {number}
-     */
-
-    var PRG = 0x05;
-    var SLIST = 0x06;
-    var STR = 0x10;     // A Uint16 encoded with length first (about 8 bytes longer than the string)
-    var NUM = 0x11;       // A Float64 with alignment (about 12 bytes)
-    var NUL = 0x12;
-    var UNDEF = 0x13;
-    var STRCONST = 0x15;  // load string from constant pool (index next nr)
-    var NUMCONST = 0x16;  // load number from constant pool
-    var IDCONST = 0x17;  // load identifername from constant pool (index is next int)
-    var TRUEBOOL = 0x20;       // BooleanLiteral "true"  (know the code, choose register)
-    var FALSEBOOL = 0x21;      // BooleanLiteral "false" (know the code, choose register)
-    var EXPRSTMT = 0x33;
-    var PARENEXPR = 0x34;
-    var SEQEXPR = 0x35;
-    var UNARYEXPR = 0x36;
-    var UNARYOP = 0x37;
-    var POSTFIXOP = 0x38;
-    var VARDECL = 0x40;
-    var IFEXPR = 0x61;
-    var IFOP = 0x62;
-    var WHILESTMT = 0x63;
-    var WHILEBODY = 0x64;
-    var DOWHILESTMT = 0x65;
-    var DOWHILECOND = 0x66;
-    var BLOCKSTMT = 0x67;
-
-    var ASSIGNEXPR  = 0xA0;
-    var ASSIGNMENTOPERATOR = 0xA1;
-    var BINEXPR = 0xB0;
-    var LOAD1   = 0xB1;
-    var LOAD2   = 0xB2;
-    var BINOP   = 0xB3;
-    var CALLEXPR = 0xC0;
-    var CALL = 0xC1;
-    var NEWEXPR = 0xC2;
-    var CONSTRUCT = 0xC3;
-    var FUNCDECL = 0xC4;
-    var ARGLIST = 0xC6;
-    var ARRAYEXPR = 0xD1;
-    var ARRAYINIT = 0xD2;
-    var OBJECTEXPR = 0xD4;
-    var PROPDEF = 0xD5;
-    var OBJECTINIT = 0xD6;
-    var RET = 0xD0;
-
-    var DEBUGGER = 0xFA;
-    var ERROR = 0xFE;
-    var HALT = 0xFF;
-    var EMPTY = -0x01;  // negative can not point into something
-
-
-    var PUSH = 0xE0;
-    var PUSH2 = 0xE1;
-    var PUSH3 = 0xE2;
-
-    var ADD = 0x70; // +
-    var SUB = 0x71; // -
-    var MUL = 0x72; // *
-    var DIV = 0x73; // /
-    var MOD = 0x74; // %
-    var AND = 0x75; // &
-    var OR  = 0x76; // |
-    var NOT = 0x77; // !
-    var L_OR = 0x78; // ||
-    var L_AND = 0x79; // &&
-    var GT = 0x7A; // >
-    var LT = 0x7B  // <
-    var GT_EQ = 0x7C; // >=
-    var LT_EQ = 0x7D; // <=
-    var EQ =    0x80;   // ==
-    var STRICT_EQ = 0x81; // ===
-    var NOT_EQ = 0x82;  // !=
-    var STRICT_NOT_EQ = 0x83; // !==
-    var SHL = 0x84;     // <<
-    var SHR  = 0x85;    // >>
-    var SSHR = 0x86;    // >>>
-
-    var A_ADD = 0xE3; // +
-    var A_SUB = 0xE4; // -
-    var A_MUL = 0xE5; // *
-    var A_DIV = 0xE6; // /
-    var A_MOD = 0xE7; // %
-    var A_SHR = 0x87;   // <<=
-    var A_SHL = 0x88;   // >>=
-    var A_SSHR = 0x89;  // >>>=
-
-    var REST = 0x90; // rest and spread "..." ? own instruction is cool, or? if i don´t find a common replacement
-    var SPREAD = 0x91;
-    var ASSIGN = 0xA2;  // =
-
-    var IFLT = 0x93;   // if (??? < ???)
-    var IFGT = 0x94;   // >
-    var IFCMP = 0x95;  // if ()
-    var IFNOTCMP = 0x96;   // if(!)
-
-    /**
-     * i knew from the beginning on, later i will replace them
-     * currently they will slow down and help a little within
-     * the code until it becomes replacable
-     * @type {exports}
-     */
 
     var ecma = require("api");
     var parse = require("parser");
@@ -28884,7 +28751,6 @@ define("vm", function (require, exports) {
         var $0 = POOL[index];
         operands[++sp] = $0;
     }
-
     /**
      * stack - contains the ip to the next instruction
      * should grow each statement list, and shrink each instruction
@@ -28893,11 +28759,10 @@ define("vm", function (require, exports) {
      * This will be replaced by smarter calculations of offsets
      *
      */
-
     var stackBuffer, stack, pc;
 
-
-    var states = [];    // save
+    var state = [];    // save
+    var st = -1;
     var MAINBODY = 2;
     var FUNCTIONCALL = 4;
     var GENERATOR = 8;
@@ -28908,661 +28773,82 @@ define("vm", function (require, exports) {
     var OBJECTLITERAL = 256;
     var ARRAYLITERAL = 512;
 
+    var PRG_STATE,
+        EXPR_STATE;
 
+    var TYPES = Object.create(null);
+    TYPES.REFERENCE = 1;
+    TYPES.NUMBER = 2;
+    TYPES.STRING = 3;
+    TYPES.SYMBOL = 4;
+    TYPES.OBJECT = 5;
+    TYPES.NULL = 6;
+    TYPES.UNDEFINED = 7;
+    TYPES.COMPLETION = 8;
+    TYPES.ENVIRONMENT = 9;
+    // function Type(O) should be inlined and manually testet in this file. maybe it helps. calls hurt too much.
+
+    /*
+        TODO:
+        - Surrogate pairs from the beginning
+
+        - FTABLE for all builtin functions,
+        if they are not implemented as bytecode now :-)
+
+        - CALL TO NATIVEJS BUILTINS which i´ve already written
+
+        (to REUSE ALL CALL FUNCTIONS AND CREATEINTRINSICS,
+        BUT CALLED FROM HERE (by replacing ordinary functions and stuff of course,
+        we speak about a few hundred or less than five thousand lines of code))
+
+     */
     function main(pc) {
         "use strict";
         // local registers
-
         var $0,$1,$2,$3,$4,$5,$6,$7,$8,$9,$A,$B,$C,$D,$E,$F;
-
+        var result; // oh, what register. maybe i learn.
         //  var state = 0;
-
-        do {
-            var ip = stack[pc];
-            var code = HEAP32[ip];
-            switch (code) {
-                case PUSH:
-                    stack[pc++] = HEAP32[ip+1];
-                    break;
-                case PUSH2:
-                    stack[pc++] = ip+2;
-                    stack[pc++] = HEAP32[ip+1];
-                    break;
-                case PUSH3:
-                    stack[pc++] = ip+3;
-                    stack[pc++] = HEAP32[ip+2];
-                    stack[pc++] = HEAP32[ip+1];
-                    break;
-                case PRG:
-                    strict = HEAP32[ip + 1];
-                    $1 = ip + 3;                    // first
-                    $3 = HEAP32[ip + 2];            // len
-                    $2 = $1 + $3 - 1;               // last
-                    for (; $2 >= $1; $2--) stack[pc++] = HEAP32[$2];
-                    break;
-
-                case STR:
-
-                    $3 = (ip+2) << 1;
-                    $2 = HEAP32[ip+1];
-                    $1 = HEAPU16.subarray($3, $3+$2);
-                    $0 = String.fromCharCode.apply(undefined, $1);
-                    operands[++sp] = $0;
-                    break;
-                case STRCONST:
-                    $1 = HEAP32[ip + 1];
-                    $0 = "" + POOL[$1];
-                    operands[++sp] = $0;
-                    break;
-                case NUMCONST:
-                    $1 = HEAP32[ip + 1];
-                    $0 = +POOL[$1];
-                    operands[++sp] = $0;
-                    break;
-                case IDCONST:
-                    $1 = HEAP32[ip + 1];
-                    $0 = GetIdentifierReference(getLexEnv(), POOL[$1], strict);
-                    operands[++sp] = $0; // uses pool outside of the block
-                    break;
-                case TRUEBOOL:
-                    operands[++sp] = true;  // JVM uses 0 and 1 integers for boolean
-                    break;
-                case FALSEBOOL:
-                    operands[++sp] = false;
-                    break;
-                case NUM:
-                    $0 = HEAPF64[(ip+1)>>1];
-                    operands[++sp] = $0;
-                    break;
-
-                case ADD:
-                    $1 = operands[sp--];
-                    $2 = GetValue($1);
-                    if (isAbrupt($2=ifAbrupt($2))) {
-                        operands[++sp] = $2;
-                        return;
+        while (1) {
+            code = HEAP32[pc];
+            switch(code) {
+                case BYTECODE.PRG:
+                case BYTECODE.EXPR:
+                case BYTECODE.SEQEXPR :
+                    state[++st] = code;
+                    pc = pc + 1;
+                    continue;
+                case BYTECODE.JMP:
+                    pc = HEAP32[pc+1];
+                    continue;
+                case BYTECODE.REFERENCE:
+                    // ReferenceRecord(HEAP32.subarray(pc,4);
+                    var PTR = STACKTOP >> 2;
+                    STACKTOP += 8;
+                    HEAP32[PTR] = TYPES.REFERENCE;
+                    HEAP32[PTR+1] = HEAP32[pc+1];
+                    HEAP32[PTR+2] = HEAP32[pc+2];
+                    HEAP32[PTR+3] = HEAP32[pc+3];
+                    HEAP32[PTR+4] = HEAP32[pc+4];
+                    pc = pc + 1;
+                    continue;
+                case BYTECODE.PUTVALUE:
+                    var lhs = HEAP32[pc+1];
+                    var value = HEAP32[pc+2];
+                    if (lhs[0] == TYPES.REFERENCE) {
+                        lhs[1] = value; // setting base
                     }
-                    $3 = operands[sp--];
-                    $4 = GetValue($3);
-                    if (isAbrupt($4=ifAbrupt($4))) {
-                        operands[++sp] = $4;
-                        return;
-                    }
-                    operands[++sp] = $4 + $2;
-                    break;
-                case SUB:
-                    $1 = operands[sp--];
-                    $2 = GetValue($1);
-                    if (isAbrupt($2=ifAbrupt($2))) {
-                        operands[++sp] = $2;
-                        return;
-                    }
-                    $3 = operands[sp--];
-                    $4 = GetValue($3);
-                    if (isAbrupt($4=ifAbrupt($4))) {
-                        operands[++sp] = $4;
-                        return;
-                    }
-                    operands[++sp] = $2 - $4;
-                    break;
-                case MUL:
-                    $1 = operands[sp--];
-                    $2 = GetValue($1);
-                    if (isAbrupt($2=ifAbrupt($2))) {
-                        operands[++sp] = $2;
-                        return;
-                    }
-                    $3 = operands[sp--];
-                    $4 = GetValue($3);
-                    if (isAbrupt($4=ifAbrupt($4))) {
-                        operands[++sp] = $4;
-                        return;
-                    }
-                    operands[++sp] = $2 * $4;
-                    break;
-                case DIV:
-                    $1 = operands[sp--];
-                    $2 = GetValue($1);
-                    if (isAbrupt($2=ifAbrupt($2))) {
-                        operands[++sp] = $2;
-                        return;
-                    }
-                    $3 = operands[sp--];
-                    $4 = GetValue($3);
-                    if (isAbrupt($4=ifAbrupt($4))) {
-                        operands[++sp] = $4;
-                        return;
-                    }
-                    operands[++sp] = $2 / $4;
-                    break;
-                case MOD:
-                    $1 = operands[sp--];
-                    $2 = GetValue($1);
-                    if (isAbrupt($2=ifAbrupt($2))) {
-                        operands[++sp] = $2;
-                        return;
-                    }
-                    $3 = operands[sp--];
-                    $4 = GetValue($3);
-                    if (isAbrupt($4=ifAbrupt($4))) {
-                        operands[++sp] = $4;
-                        return;
-                    }
-                    operands[++sp] = $2 % $4;
-                    break;
-                case AND:
-                    $1 = operands[sp--];
-                    $2 = GetValue($1);
-                    if (isAbrupt($2=ifAbrupt($2))) {
-                        operands[++sp] = $2;
-                        return;
-                    }
-                    $3 = operands[sp--];
-                    $4 = GetValue($3);
-                    if (isAbrupt($4=ifAbrupt($4))) {
-                        operands[++sp] = $4;
-                        return;
-                    }
-                    operands[++sp] = $2 & $4;
-                    break;
-                case OR :
-                    $1 = operands[sp--];
-                    $2 = GetValue($1);
-                    if (isAbrupt($2=ifAbrupt($2))) {
-                        operands[++sp] = $2;
-                        return;
-                    }
-                    $3 = operands[sp--];
-                    $4 = GetValue($3);
-                    if (isAbrupt($4=ifAbrupt($4))) {
-                        operands[++sp] = $4;
-                        return;
-                    }
-                    operands[++sp] = $2 | $4;
-                    break;
-                case NOT:
-                    $1 = operands[sp--];
-                    $2 = GetValue($1);
-                    if (isAbrupt($3=ifAbrupt($2))) {
-                        operands[++sp] = $3;
-                        return;
-                    }
-                    operands[++sp] = !$3;
-                    break;
-                case L_OR:
-                    $1 = operands[sp--];
-                    $2 = GetValue($1);
-                    if (isAbrupt($2=ifAbrupt($2))) {
-                        operands[++sp] = $2;
-                        return;
-                    }
-                    $3 = operands[sp--];
-                    $4 = GetValue($3);
-                    if (isAbrupt($4=ifAbrupt($4))) {
-                        operands[++sp] = $4;
-                        return;
-                    }
-                    operands[++sp] = $2 || $4;
-                    break;
-                case L_AND:
-                    $1 = operands[sp--];
-                    $2 = GetValue($1);
-                    if (isAbrupt($2=ifAbrupt($2))) {
-                        operands[++sp] = $2;
-                        return;
-                    }
-                    $3 = operands[sp--];
-                    $4 = GetValue($3);
-                    if (isAbrupt($4=ifAbrupt($4))) {
-                        operands[++sp] = $4;
-                        return;
-                    }
-                    operands[++sp] = $2 && $4;
-                    break;
-                case GT:
-                    $1 = operands[sp--];
-                    $2 = GetValue($1);
-                    if (isAbrupt($2=ifAbrupt($2))) {
-                        operands[++sp] = $2;
-                        return;
-                    }
-                    $3 = operands[sp--];
-                    $4 = GetValue($3);
-                    if (isAbrupt($4=ifAbrupt($4))) {
-                        operands[++sp] = $4;
-                        return;
-                    }
-                    operands[++sp] = $2 > $4;
-                    break;
-                case LT:
-                    $1 = operands[sp--];
-                    $2 = GetValue($1);
-                    if (isAbrupt($2=ifAbrupt($2))) {
-                        operands[++sp] = $2;
-                        return;
-                    }
-                    $3 = operands[sp--];
-                    $4 = GetValue($3);
-                    if (isAbrupt($4=ifAbrupt($4))) {
-                        operands[++sp] = $4;
-                        return;
-                    }
-                    operands[++sp] = $2 < $4;
-                    break;
-                case GT_EQ:
-                    $1 = operands[sp--];
-                    $2 = GetValue($1);
-                    if (isAbrupt($2=ifAbrupt($2))) {
-                        operands[++sp] = $2;
-                        return;
-                    }
-                    $3 = operands[sp--];
-                    $4 = GetValue($3);
-                    if (isAbrupt($4=ifAbrupt($4))) {
-                        operands[++sp] = $4;
-                        return;
-                    }
-                    operands[++sp] = $2 >= $4;
-                    break;
-                case LT_EQ:
-                    $1 = operands[sp--];
-                    $2 = GetValue($1);
-                    if (isAbrupt($2=ifAbrupt($2))) {
-                        operands[++sp] = $2;
-                        return;
-                    }
-                    $3 = operands[sp--];
-                    $4 = GetValue($3);
-                    if (isAbrupt($4=ifAbrupt($4))) {
-                        operands[++sp] = $4;
-                        return;
-                    }
-                    operands[++sp] = $1 + $2;
-                    break;
-                case EQ:
-                    $1 = operands[sp--];
-                    $2 = GetValue($1);
-                    if (isAbrupt($2=ifAbrupt($2))) {
-                        operands[++sp] = $2;
-                        return;
-                    }
-                    $3 = operands[sp--];
-                    $4 = GetValue($3);
-                    if (isAbrupt($4=ifAbrupt($4))) {
-                        operands[++sp] = $4;
-                        return;
-                    }
-                    operands[++sp] = $2 == $4;
-                    break;
-                case STRICT_EQ:
-                    $1 = operands[sp--];
-                    $2 = GetValue($1);
-                    if (isAbrupt($2=ifAbrupt($2))) {
-                        operands[++sp] = $2;
-                        return;
-                    }
-                    $3 = operands[sp--];
-                    $4 = GetValue($3);
-                    if (isAbrupt($4=ifAbrupt($4))) {
-                        operands[++sp] = $4;
-                        return;
-                    }
-                    operands[++sp] = $2 === $4;
-                    break;
-                case NOT_EQ:
-                    $1 = operands[sp--];
-                    $2 = GetValue($1);
-                    if (isAbrupt($2=ifAbrupt($2))) {
-                        operands[++sp] = $2;
-                        return;
-                    }
-                    $3 = operands[sp--];
-                    $4 = GetValue($3);
-                    if (isAbrupt($4=ifAbrupt($4))) {
-                        operands[++sp] = $4;
-                        return;
-                    }
-                    operands[++sp] = $2 != $4;
-                    break;
-                case STRICT_NOT_EQ:
-                    $1 = operands[sp--];
-                    $2 = GetValue($1);
-                    if (isAbrupt($2=ifAbrupt($2))) {
-                        operands[++sp] = $2;
-                        return;
-                    }
-                    $3 = operands[sp--];
-                    $4 = GetValue($3);
-                    if (isAbrupt($4=ifAbrupt($4))) {
-                        operands[++sp] = $4;
-                        return;
-                    }
-                    operands[++sp] = $2 !== $4;
-                    break;
-                case SHL:
-                    $1 = operands[sp--];
-                    $2 = GetValue($1);
-                    if (isAbrupt($2=ifAbrupt($2))) {
-                        operands[++sp] = $2;
-                        return;
-                    }
-                    $3 = operands[sp--];
-                    $4 = GetValue($3);
-                    if (isAbrupt($4=ifAbrupt($4))) {
-                        operands[++sp] = $4;
-                        return;
-                    }
-                    operands[++sp] = $2 << $4;
-                    break;
-                case SHR:
-                    $1 = operands[sp--];
-                    $2 = GetValue($1);
-                    if (isAbrupt($2=ifAbrupt($2))) {
-                        operands[++sp] = $2;
-                        return;
-                    }
-                    $3 = operands[sp--];
-                    $4 = GetValue($3);
-                    if (isAbrupt($4=ifAbrupt($4))) {
-                        operands[++sp] = $4;
-                        return;
-                    }
-                    operands[++sp] = $2 >> $4;
-                    break;
-                case SSHR:
-                    $1 = operands[sp--];
-                    $2 = GetValue($1);
-                    if (isAbrupt($2=ifAbrupt($2))) {
-                        operands[++sp] = $2;
-                        return;
-                    }
-                    $3 = operands[sp--];
-                    $4 = GetValue($3);
-                    if (isAbrupt($4=ifAbrupt($4))) {
-                        operands[++sp] = $4;
-                        return;
-                    }
-                    operands[++sp] = $1 >>> $2;
-                    break;
-                case A_SHR:
-                    $1 = operands[sp--];
-                    $2 = GetValue($1);
-                    if (isAbrupt($2=ifAbrupt($2))) {
-                        operands[++sp] = $2;
-                        return;
-                    }
-                    $3 = operands[sp--];
-                    $4 = GetValue($3);
-                    if (isAbrupt($4=ifAbrupt($4))) {
-                        operands[++sp] = $4;
-                        return;
-                    }
-                    // mit Assignment, heisst hier PutValue durchfuehren.
-                    $5 = $2 >> $4;
-                    $6 = PutValue($1, $5);
-                    if (isAbrupt($6)) {
-                        operands[++sp] = $6;
-                        return;
-                    }
-                    operands[++sp] = $5;
-                    break;
-                case A_SHL:
-                    $1 = operands[sp--];
-                    $2 = GetValue($1);
-                    if (isAbrupt($2=ifAbrupt($2))) {
-                        operands[++sp] = $2;
-                        return;
-                    }
-                    $3 = operands[sp--];
-                    $4 = GetValue($3);
-                    if (isAbrupt($4=ifAbrupt($4))) {
-                        operands[++sp] = $4;
-                        return;
-                    }
-                    $5 = $2 << $4;
-                    $6 = PutValue($1, $5);
-                    if (isAbrupt($6)) {
-                        operands[++sp] = $6;
-                        return;
-                    }
-                    operands[++sp] = $5;
-                    break;
-                case A_SSHR:
-                    $1 = operands[sp--];
-                    $2 = GetValue($1);
-                    if (isAbrupt($2=ifAbrupt($2))) {
-                        operands[++sp] = $2;
-                        return;
-                    }
-                    $3 = operands[sp--];
-                    $4 = GetValue($3);
-                    if (isAbrupt($4=ifAbrupt($4))) {
-                        operands[++sp] = $4;
-                        return;
-                    }
-                    $5 = $2 >>> $4;
-
-                    $6 = PutValue($1, $5);
-                    if (isAbrupt($6)) {
-                        operands[++sp] = $6;
-                        return;
-                    }
-                    operands[++sp] = $5;
-                    break;
-                case ASSIGN:
-                    $1 = operands[sp--];
-                    $2 = GetValue($1);
-                    if (isAbrupt($2=ifAbrupt($2))) {
-                        operands[++sp] = $2;
-                        return;
-                    }
-                    $3 = operands[sp--];
-                    $4 = GetValue($3);
-                    if (isAbrupt($4=ifAbrupt($4))) {
-                        operands[++sp] = $4;
-                        return;
-                    }
-                    $5 = $4;
-                    $6 = PutValue($1, $5);
-                    if (isAbrupt($6)) {
-                        operands[++sp] = $6;
-                        return;
-                    }
-                    operands[++sp] = $5;
-                    break;
-                case A_ADD:
-                    $1 = operands[sp--];
-                    $2 = GetValue($1);
-                    if (isAbrupt($2=ifAbrupt($2))) {
-                        operands[++sp] = $2;
-                        return;
-                    }
-                    $3 = operands[sp--];
-                    $4 = GetValue($3);
-                    if (isAbrupt($4=ifAbrupt($4))) {
-                        operands[++sp] = $4;
-                        return;
-                    }
-                    $5 = $2 + $4;
-                    $6 = PutValue($1, $5);
-                    if (isAbrupt($6)) {
-                        operands[++sp] = $6;
-                        return;
-                    }
-                    operands[++sp] = $5;
-                    break;
-                case A_SUB:
-                    $1 = operands[sp--];
-                    $2 = GetValue($1);
-                    if (isAbrupt($2=ifAbrupt($2))) {
-                        operands[++sp] = $2;
-                        return;
-                    }
-                    $3 = operands[sp--];
-                    $4 = GetValue($3);
-                    if (isAbrupt($4=ifAbrupt($4))) {
-                        operands[++sp] = $4;
-                        return;
-                    }
-                    $5 = $2 - $4;
-                    $6 = PutValue($1, $5);
-                    if (isAbrupt($6)) {
-                        operands[++sp] = $6;
-                        return;
-                    }
-                    operands[++sp] = $5;
-                    break;
-                case IFLT:
-                    $1 = operands[sp--];
-                    $2 = operands[sp--];
-
-                    break;
-                case IFGT:
-                    break;
-                case IFCMP:
-                    break;
-                case IFNOTCMP:
-                    break;
-                case BLOCKSTMT:
-                case SEQEXPR:
-                    $1 = ip + 2;
-                    $3 = HEAP32[ip + 1];
-                    $2 = $1 + $3 - 1;
-                    for (; $2 >= $1; $2--) stack[pc++] = HEAP32[$2];
-                    break;
-                case IFEXPR:
-                    stack[pc++] = ip+2; // IFOP (compares r0 to true)
-                    stack[pc++] = HEAP32[ip+1]; // eval test
-                    break;
-                case IFOP:
-                    $0 = operands[sp--];
-                    if (!!$0) stack[pc++] = HEAP32[ip+1];
-                    else stack[pc++] = HEAP32[ip+2];
-                    break;
-                case EXPRSTMT:
-                case PARENEXPR:
-                    stack[pc++] = HEAP32[ip+1];
-                    break;
-                case BINEXPR:
-                case ASSIGNEXPR:
-                case NEWEXPR:
-                case CALLEXPR:
-                    stack[pc++] = ip+3;         // call
-                    stack[pc++] = HEAP32[ip+2]; // ^args
-                    stack[pc++] = HEAP32[ip+1]; // callee
-                    break;
-                case ARGLIST:
-                    $1 = HEAP32[ptr+1]
-                    operands[++sp] = POOL[$1];
-                    break;
-                case CALL:
-                    // tailCall = HEAP32[ptr+1];
-                    $1 = operands[sp--]; // callee
-                    if (isAbrupt($1 = ifAbrupt($1))) {
-                        operands[++sp] = $1;
-                        return;
-                    }
-                    $2 = operands[sp--]; // args;
-                    if (isAbrupt($2 = ifAbrupt($2))) {
-                        operands[++sp] = $2;
-                        return;
-                    }
-                    operands[++sp] = EvaluateCall($1, $2, tailCall);
-                    break;
-
-                case CONSTRUCT:
-                    $2 = operands[sp--];
-                    $1 = operands[sp--];
-                    if (isAbrupt($1 = ifAbrupt($1))) $0 = $1;
-                    else if (isAbrupt($2 = ifAbrupt($2))) $0 = $2;
-                    else $0 = OrdinaryConstruct($1, $2);
-                    operands[++sp] = $0;
-                    break;
-
-                case UNARYEXPR:
-                    stack[pc++] = ip+2;         // prefix/postifx
-                    stack[pc++] = HEAP32[ip+1]; // .arg
-                    break;
-                case UNARYOP:
-                    $1 = HEAP32[ip+1]; // op
-                    var $2 = operands[sp--];
-                    $3 = GetValue($3);
-                    if (isAbrupt($2 = ifAbrupt($2))) $0 = $2;
-                    else $0 = applyUnaryOp(unaryOperatorFromCode[$1], true, $3);
-                    operands[++sp] = $0;
-                    break;
-                case POSTFIXOP:
-                    $1 = HEAP32[ip+1]; // op
-                    $2 = operands[sp--];
-                    $3 = GetValue($2)
-                    if (isAbrupt(r2 = ifAbrupt(r2))) $0 = $2;
-                    else $0 = applyUnaryOp(unaryOperatorFromCode[$1], false, $3);
-                    operands[++sp] = $0;
-                    break;
-
-                case WHILESTMT:
-                    stack[pc++] = ip+2;         // 2. goto whilebody
-                    stack[pc++] = HEAP32[ip+1]; // 1. condition
-                    break;
-                case WHILEBODY:
-                    $0 = !!operands[sp--]; // may not be in here. operands is DYNAMIC TYPED.
-
-                    if ($0) {
-                        $1 = ip + 2;            // first
-                        $3 = HEAP32[ip + 1];    // len
-                        $2 = $1 + $3 - 1;       // last
-                        stack[pc++] = $2+1;     // wexpr
-                        for (; $2 >= $1; $2--) stack[pc++] = HEAP32[$2];
-                    }
-                    break;
-                case DOWHILESTMT:
-                    $1 = ip + 2;            // first
-                    $3 = HEAP32[ip + 1];    // len
-                    $2 = $1 + $3 - 1;       // last
-                    stack[pc++] = $2+1;     // dowhilebody
-                    for (; $2 >= $1; $2--) stack[pc++] = HEAP32[$2];
-                    break;
-                case DOWHILECOND:
-                    $0 = !!operands[sp--]; // this may not happen in here
-                    if ($0) {
-                        stack[pc++] = HEAP32[ip+1];
-                    }
-                    break;
-
-
-                case ARRAYEXPR:
-                case ARRAYINIT:
-
-
-                case OBJECTEXPR:
-                    break;
-                case PROPDEF:
-                    break;
-                case OBJECTINIT:
-                    break;
-                case FUNCDECL:
-                    break;
-                case VARDECL:
-                    break;
-
-                case DEBUGGER:
-                    ecma.debuggerOutput();
-                    break;
-
-
-                case HALT:
-                    return;
-
-                case ERROR:
-                    operands[++sp] = newTypeError(format("UNKNOWN_ERROR"));
-                    return;
-
-                default:
-                    operands[++sp] = newTypeError(format("UNKNOWN_INSTRUCTION_S", code));
-                    return;
+                    pc = pc + 2;
+                    continue;
+                case BYTECODE.GETOWNPROPERTY:
+                    var O = HEAP32[pc+1];
+                    var P = HEAP32[pc+2];
+                    var propList = POOL[O[1]];  // O[1] ist die PropNameList (war auf Papier am Ende nach 1* type und bits, aber egal)
+                    var desc = O[propList[P]];
+                    result = desc[1];
+                    pc = pc + 3;    // CODE.GETOWNPROP, O, P = 3
+                    continue;
             }
-            pc = pc - 1;
-        } while (pc >= 0);
+        }
     }
 
     /**
@@ -29603,7 +28889,7 @@ define("vm", function (require, exports) {
         frame.pc = pc;
     }
 
-    function restore() {    // callstack down
+    function restore() {    // callstack down (wrong encoding)
         frame = frames[--fp];
         if (frame) {
             stack = frame.stack;
@@ -29640,7 +28926,6 @@ define("vm", function (require, exports) {
         return NormalCompletion($0);
     }
 
-
     function CompileAndRun(realm, src) {
         var ast;
         try {ast = parse(src)} catch (ex) {return newSyntaxError(ex.message)}
@@ -29656,7 +28941,6 @@ define("vm", function (require, exports) {
     }
     exports.CompileAndRun = CompileAndRun;
     exports.RunUnit = RunUnit;
-
 });	// is not asm. but renamable.
 define("asm-parser", function (require, exports) {
 
@@ -29665,7 +28949,7 @@ define("asm-parser", function (require, exports) {
     var token, token2;
 
     var compiler = require("asm-compiler");
-    var runtime = require("vm"); // asm-runtime.js (one day i will stop doing this with names)
+    var runtime = require("asm-runtime"); // asm-runtime.js (one day i will stop doing this with names)
 
     compiler.getEmptyUnit();
 
