@@ -27730,32 +27730,26 @@ define("asm-typechecker", function (require, exports){
     exports.validator = validator;
     exports.valueTypes = valueTypes;
 });
-/**
- * this compiler deconstructs the ast into INT Code.
- * I hope to refactor it into BYTECODE.
- * (much) later it should be valid numeric code to be run inside an asm js module.
- * the STACKTOP is count in BYTES.
- * the pointers are stored as STACKTOP >> 2 (means div by 4) for INTs
- *
- * I notice that BINEXPR, ASSIGNEXPR, CALLEXPR,
- * which take just two arguments can loose their heading code
- * and just store ptr to left, bytecode for load result into r1, ptr to right, bytecode to load result into r2, bytecode for operation of r1, r2
- * currently i emit another header int
- *  (the instruction set can be refactored into regular assembly, i just got behind)
- *
- * i see, the "node.type" gets lost when creating bytecode.
- * repeating patterns just make some loads/register transfers necessary
- * which can be done with the same code
- *
- * i switched from registers back to stack machine and i am
- * unsure which way to go, registers anyway make a pushreg and popreg
- * necessary, and the operandstack has the same problem. otherwise
- * sometimes i don´t need to save the registers ;)
- * i don´t know exactly, what the outcome will be, but i am sure, that
- * overworking the code will result in a typical bytecode with load,
- * store, add, branch, ifeq, iflt, ifgt or what their names are and i
- * think i´ll soon get it to design these codes.
- *
+/*
+    requirements
+
+    1) boundNames, lexNames, varNames
+    on each node
+    for setting them in the constant pool
+
+    2) re-writing 40% of the ecma api
+    to use a array basis for registers,
+    local variables, object slots
+
+    3) ObjectEnvironment stays old version
+    4) ObjectRecord is same, but new typed layout
+
+    must do strict separation of old ast runtime
+    and new binary runtime.
+
+    (it´s another 4-8 weeks of hard work, but
+    then it´s small, typed, fast and dynamic)
+
  */
 
 define("asm-compiler", function (require, exports) {
@@ -27769,156 +27763,20 @@ define("asm-compiler", function (require, exports) {
     var MEMORY, HEAP8, HEAPU8, HEAP16, HEAPU16, HEAPU32, HEAP32, HEAPF32, HEAPF64;
     var STACKBASE, STACKSIZE, STACKTOP;
 
-    var FLAGSET = flagSet(), CODESET = codeSet(); // CONSTANTS (need to integrate)
+    var LABELS;
+    var FLAGSET = flagSet();
+    var CODESET = codeSet();
+    var REGISTERSET = registerSet();
 
-
-
-
-
-    var RETADDR = []; // save return addresses for the compiler
-                      // LIST BLOCKS GEN BACKWARS (LAST COMPILE FIRST, ITS COMPILE, NOT CALC, GET GOTO AT RETURN PTR)
-
-    /**
-     * first bytecodes
-     * currently intcodes
-     *
-     * the compiler and the interpreter will go through a few refactorings
-     * i see instructions/annotations which are not needed anymore and could be replaced
-     *
-     *
-     * THEY ARE NO LONGER NEEDED
-     *
-     * EXCEPT FOR COMPILATION OF THE ALSO NO LONGER NEEDED COMPILER FUNCTIONS
-     *
-     * I GOT THE NEW INSTRUCTION SET WITH A MEDIUM KIND OF DEFINE FUNCTION BELOW
-     *
-     */
-    var PRG = 0x05;
-    var SLIST = 0x06;
-    var STR = 0x10;     // A Uint16 encoded with length first (about 8 bytes longer than the string)
-    var NUM = 0x11;       // A Float64 with alignment (about 12 bytes)
-    var NUL = 0x12;
-    var UNDEF = 0x13;
-    var STRCONST = 0x15;  // load string from constant pool (index next nr)
-    var NUMCONST = 0x16;  // load number from constant pool
-    var IDCONST = 0x17;  // load identifername from constant pool (index is next int)
-    var TRUEBOOL = 0x20;       // BooleanLiteral "true"  (know the code, choose register)
-    var FALSEBOOL = 0x21;      // BooleanLiteral "false" (know the code, choose register)
-    var EXPRSTMT = 0x33;
-    var PARENEXPR = 0x34;
-    var SEQEXPR = 0x35;
-    var UNARYEXPR = 0x36;
-    var UNARYOP = 0x37;
-    var POSTFIXOP = 0x38;
-    var VARDECL = 0x40;
-    var IFEXPR = 0x61;
-    var IFOP = 0x62;
-    var WHILESTMT = 0x63;
-    var WHILEBODY = 0x64;
-    var DOWHILESTMT = 0x65;
-    var DOWHILECOND = 0x66;
-    var BLOCKSTMT = 0x67;
-    
-    var ASSIGNEXPR  = 0xA0;
-    var ASSIGNMENTOPERATOR = 0xA1;
-    var BINEXPR = 0xB0;
-    var LOAD1   = 0xB1;
-    var LOAD2   = 0xB2;
-    var BINOP   = 0xB3;
-    var CALLEXPR = 0xC0;
-    var CALL = 0xC1;
-    var NEWEXPR = 0xC2;
-    var CONSTRUCT = 0xC3;
-    var FUNCDECL = 0xC4;
-    var ARGLIST = 0xC6;
-
-    var ARRAYEXPR = 0xD1;
-    var ARRAYINIT = 0xD2;
-    var OBJECTEXPR = 0xD4;
-    var PROPDEF = 0xD5;
-    var OBJECTINIT = 0xD6;
-    var RET = 0xD0;
-    var DEBUGGER = 0xFA;
-
-    var ERROR = 0xFE;
-    var HALT = 0xFF;
-    var EMPTY = -0x01;  // negative can not point into something
-
-    var PUSH = 0xE0;
-    var PUSH2 = 0xE1;
-    var PUSH3 = 0xE2;
-
-    var ADD = 0x70; // +
-    var SUB = 0x71; // -
-    var MUL = 0x72; // *
-    var DIV = 0x73; // /
-    var MOD = 0x74; // %
-    var AND = 0x75; // &
-    var OR  = 0x76; // |
-    var NOT = 0x77; // !
-    var L_OR = 0x78; // ||
-    var L_AND = 0x79; // &&
-    var GT = 0x7A; // >
-    var LT = 0x7B  // <
-    var GT_EQ = 0x7C; // >=
-    var LT_EQ = 0x7D; // <=
-    var EQ =    0x80;   // ==
-    var STRICT_EQ = 0x81; // ===
-    var NOT_EQ = 0x82;  // !=
-    var STRICT_NOT_EQ = 0x83; // !==
-    var SHL = 0x84;     // <<
-    var SHR  = 0x85;    // >> 
-    var SSHR = 0x86;    // >>>
-
-    var A_ADD = 0xE3; // +
-    var A_SUB = 0xE4; // -
-    var A_MUL = 0xE5; // *
-    var A_DIV = 0xE6; // /
-    var A_MOD = 0xE7; // %
-    var A_SHR = 0x87;   // <<=
-    var A_SHL = 0x88;   // >>=
-    var A_SSHR = 0x89;  // >>>=
-    
-    var REST = 0x90; // rest and spread "..." ? own instruction is cool, or? if i don´t find a common replacement
-    var SPREAD = 0x91;
-    var ASSIGN = 0xA2;  // =
-
-    var IFLT = 0x93;   // if (??? < ???)
-    var IFGT = 0x94;   // >
-    var IFCMP = 0x95;  // if ()
-    var IFNOTCMP = 0x96;   // if(!)
-
-    var JMP;
-    var JEQ;
-    var JNE;
-    var JF;
-    var JT;
-    var JB;
-    var JA;
-    var JEB;
-    var JEA;
-
-    var NEWOBJECT;
-    var NEWARRAY;
-    var INVOKE;
-
-    /**
-     * The NEW Instruction Set
-     *
-     * working it out over time now
-     *
-     * This Bytecode may contain both,
-     * instructions and special code (instructions)
-     * used by the instructions
-     *
-     * @type {null}
-     */
+    var RETADDR = [];   // stack for gotos.
+                        // parameter passing is too much
 
     defineByteCode(0x00, "END", "");
     defineByteCode(0x01, "SYSCALL", "");
     defineByteCode(0x20, "STRCONST", "");
     defineByteCode(0x21, "NUMCONST", "");
     defineByteCode(0x22, "IDREFCONST", "");
+
     defineByteCode(0x60, "ADD", "add");
     defineByteCode(0x61, "ADDL", "add and assign");
     defineByteCode(0x62, "SUB", "subtract");
@@ -27936,10 +27794,14 @@ define("asm-compiler", function (require, exports) {
     defineByteCode(0x74, "SSHR", "");
     defineByteCode(0x75, "SSHRL", "");
 
-    defineByteCode(0x76, "AND", "");
-    defineByteCode(0x77, "OR", "");
-    defineByteCode(0x78, "LAND", "");
-    defineByteCode(0x79, "LOR", "");
+    defineByteCode(0x76, "AND", "&");
+    defineByteCode(0x77, "OR", "|");
+    defineByteCode(0x78, "LAND", "&&");
+    defineByteCode(0x79, "LOR", "||");
+
+    defineByteCode(0x80, "NEG", "unary not with !");
+    defineByteCode(0x81, "XOR", "xor with ^");
+    defineByteCode(0x82, "INV", "invert with ~");
 
     // Data Structures
     defineByteCode(0xB00, "LIST", "Code telling that this HEAP/STACK Area is to be read as list");       // [0] = LIST, [1] = NEXT LISTNODE;
@@ -27951,19 +27813,25 @@ define("asm-compiler", function (require, exports) {
     defineByteCode(0xB11, "HASHKEY", "");
     defineByteCode(0xB12, "HASHVALUE", "");
     defineByteCode(0xB13, "HASHFUNC", "Pointer to Hashfunction in Function Table");
-
     defineByteCode(0xB20, "ARRAY", "Treat the following bytes as array structure");     // [0] = ARRAY [1] = LEN [2...2+LEN] ITEMS
-    
+
+    // use HEAP32 etc as typed array (it is already one, so let´s gain speed inside syntax)
     defineByteCode(0xB25, "INT32ARRAY", ""); // access HEAP like array of these, could speed up typed arrays in the vm :-)
     defineByteCode(0xB26, "FLOAT64ARRAY", "");
 
+    // some HALT CODE
     defineByteCode(0xFF, "HALT", "Stop script evaluation now and return whatever it is.");
 
+    // Signalling Completion Records
     defineByteCode(0x100, "NORMALCOMP", "Normal Completion");
     defineByteCode(0x101, "THROWCOMP", "Throw Completion");
     defineByteCode(0x102, "BREAKCOMP", "Break Completion");
     defineByteCode(0x103, "CONTINUECOMP", "Continue Completion");
     defineByteCode(0x104, "RETURNCOMP", "Return Completion");
+
+    /**
+     * Calling Builtin Constructors with one Instruction
+     */
 
     defineByteCode(0x200, "NEWOBJECT", "Shorty to create a new Object, hidden Class of PropNames from Parsing is in the Constant Pool");
     defineByteCode(0x201, "NEWARRAY", "Shorty to create a new Array");
@@ -27984,10 +27852,19 @@ define("asm-compiler", function (require, exports) {
     defineByteCode(0x216, "NEWFUNCTION", "");
     defineByteCode(0x217, "NEWGENERATORFUNCTION", "");
 
+    /**
+     * Accessing internal slots in one instruction
+     */
+
     defineByteCode(0x300, "GETSLOT", "lookup internal object slot");
     defineByteCode(0x301, "SETSLOT", "");
     defineByteCode(0x302, "HASSLOT", "");
 
+    /**
+     * Call Codes
+     *
+     *
+     */
     defineByteCode(0x501, "CALL", "");
     defineByteCode(0x502, "CONSTRUCT", "");
     defineByteCode(0x503, "RET", "");
@@ -27996,6 +27873,9 @@ define("asm-compiler", function (require, exports) {
     defineByteCode(0x506, "FPROTOAPPLY", "");
     defineByteCode(0x507, "SUPERCALL", "");
 
+    /*
+     * Conditional jumps
+     */
     defineByteCode(0x600, "JMP", "");
     defineByteCode(0x601, "JEQ", "if op1 === op2 goto op3");
     defineByteCode(0x602, "JNEQ", "");
@@ -28004,6 +27884,9 @@ define("asm-compiler", function (require, exports) {
     defineByteCode(0x605, "JGT", "");
     defineByteCode(0x606, "JGTEQ", "");
 
+    /**
+     * essentials in one instruction
+     */
     defineByteCode(0x700, "GETPROPERTY", "");
     defineByteCode(0x701, "GET", "");
     defineByteCode(0x702, "SET", "");
@@ -28011,12 +27894,20 @@ define("asm-compiler", function (require, exports) {
     defineByteCode(0x704, "DELETEPROPERTY", "");
     defineByteCode(0x705, "DEFINEOWNPROPERTYORTHROW", "");
     defineByteCode(0x706, "DELETEPROPERTYORTHROW", "");
+    defineByteCode(0x707, "OWNPROPERTYKEYS", "");
+    defineByteCode(0x708, "ENUMERATE", "");
 
+    /**
+     * reference
+     */
     defineByteCode(0x800, "GETVALUE", "");
     defineByteCode(0x801, "SETVALUE", "");
     defineByteCode(0x802, "ISUNRESOLVABLE", "");
     defineByteCode(0x803, "ISPROPERTYREF", "");
 
+    /**
+     * creating iterators fast
+     */
     defineByteCode(0x900, "ITERATOR", "");
     defineByteCode(0x901, "ITERATOR1", "");
     defineByteCode(0x902, "ITERATOR2", "");
@@ -28027,9 +27918,64 @@ define("asm-compiler", function (require, exports) {
     defineByteCode(0x923, "CREATEMAPITERATOR", "");
     defineByteCode(0x924, "CREATESETITERATOR", "");
 
+
+    /*
+        convert between lists and arrays
+     */
     defineByteCode(0xA00, "ARRAYFROMLIST", "");
     defineByteCode(0xA01, "LISTFROMARRAY", "");
+
+
+
     defineByteCode(0xE00, "EXPRESSION", "");
+    defineByteCode(0xE01, "SEQEXPR", "state[++st] = SEQ  if this is encountered seqexpr state is pushed onto stack (needed for , operator returning last result only)");
+    defineByteCode(0xE02, "PROGRAM", "state[++st] = PROG goes from first block to last block");
+
+
+
+
+
+    /*
+        declarative environments
+     */
+
+    defineByteCode(0xE20, "HASBINDING", "");
+    defineByteCode(0xE21, "CREATEMUTABLEBINDING", "");
+    defineByteCode(0xE22, "CREATEIMMUTABLEBINDING", "");
+    defineByteCode(0xE23, "INITIALIZEBINDING", "");
+    defineByteCode(0xE24, "SETMUTABLEBINDING", "");
+    defineByteCode(0xE25, "GETBINDINGVALUE", "");
+    defineByteCode(0xE26, "DELETEBINDING", "");
+    defineByteCode(0xE29, "HASTHISBINDING", "");
+    defineByteCode(0xE27, "WITHBASEOBJECT", "");
+    defineByteCode(0xE28, "HASSUPERBINDING", "");
+
+    var STATE;
+    var st = -1;
+
+    function pushState(state) {
+        STATE[++st] = state;
+    }
+
+    function popState() {
+        return STATE[st--];
+    }
+
+
+    function registerSet () {
+        return {
+            REGISTERS: Object.create(null),
+            REGNAMES: Object.create(null),
+            REGTYPES: Object.create(null)
+        };
+    }
+
+    function defineRegister($name, $type, $desc) {
+        REGISTERSET.REGISTERS[$name] = undefined;
+        REGISTERSET.REGNAMES[$name] = true;
+        REGISTERSET.REGTYPES[$name] = $type;
+    }
+
     function codeSet() {
         return {
             BYTECODE: Object.create(null),
@@ -28081,22 +28027,8 @@ define("asm-compiler", function (require, exports) {
     defineBitFlags("R_SUPER", 2, "");
     defineBitFlags("R_UNDEFINED", 4, "");
 
-    var REGISTERS = Object.create(null);
-    var REGNAMES = Object.create(null);
-    var REGTYPES = Object.create(null);
-
-    function defineRegister($name, $type, $desc) {
-        REGISTERS[$name] = undefined;
-        REGNAMES[$name] = true;
-        REGTYPES[$name] = $type;
-    }
-    /*
-        what about special registers
-        if calls werent so expensive i would write
-        cool registers with stack allocation each,
-        to save and restor
-        but calls are too much.
-     */
+    defineRegister("0", undefined, "")
+    defineRegister("1", undefined, "")
     defineRegister("new", undefined, "")
     defineRegister("return", undefined, "")
     defineRegister("class", undefined, "");
@@ -28104,23 +28036,7 @@ define("asm-compiler", function (require, exports) {
 
     Object.freeze(FLAGSET);
     Object.freeze(CODESET);
-
-/**
- *
- *  Better idea
- *
- *
- *  refactor back into
- *
- *  one FLAGS, one desc
- *
- *  and unique longer BITFLAG_NAMES
- *
- *
- *
- * @type {exports}
- */
-
+    Object.freeze(REGISTERSET);
 
     var tables = require("tables");
     var propDefKinds = tables.propDefKinds;
@@ -28129,14 +28045,6 @@ define("asm-compiler", function (require, exports) {
     var operatorForCode = tables.operatorForCode;
     var unaryOperatorFromString = tables.unaryOperatorFromString;
 
-
-    function getEmptyUnit() {
-        var oldUnit = get();
-        init();
-        var newUnit = get();
-        set(oldUnit);
-        return newUnit;
-    }
     /**
      * initialize the compiler for a new compilation
      * after compilation use exports.get() to get the data
@@ -28159,6 +28067,8 @@ define("asm-compiler", function (require, exports) {
         STACKBASE = 0;
         STACKSIZE = stackSize;
         STACKTOP = 0;
+        STATE = [];
+        LABELS = Object.create(null);
     }
 
     /**
@@ -28184,7 +28094,10 @@ define("asm-compiler", function (require, exports) {
             STACKSIZE: STACKSIZE,
             STACKTOP: STACKTOP,
             FLAGSET: FLAGSET,
-            CODESET: CODESET
+            CODESET: CODESET,
+            REGISTERSET: REGISTERSET,
+            STATE: STATE,
+            LABELS: LABELS
         };
     }
 
@@ -28210,21 +28123,27 @@ define("asm-compiler", function (require, exports) {
         STACKSIZE = unit.STACKSIZE;
         FLAGSET = unit.FLAGSET;
         CODESET = unit.CODESET;
+        REGISTERSET = unit.REGISTERSET;
+        STATE = unit.STATE;
+        LABELS = unit.LABELS;
     }
 
 
+
     /**
-     * add a value to the constant pool
-     * the index of the value in the array is returned
-     * i don´t check for dupes, so two stringliterals with
-     * the same value get added twice
      *
-     * This is something external, the integer for the poolIndex
-     * can be passed around, the rest must happen outside of the
-     * fast interpreter block (that will still save us some ms)
+     * @param ptr
+     * @param target
+     */
+    function jmp(ptr, target) {
+        HEAP32[ptr]   = JMP;
+        HEAP32[ptr+1] = target;
+    }
+
+    /**
      *
      * @param value
-     * @returns {number}
+     * @returns {*}
      */
     function addToConstantPool(value) {
         var poolIndex;
@@ -28255,7 +28174,6 @@ define("asm-compiler", function (require, exports) {
         HEAP32[ptr] = NUMCONST;
         HEAP32[ptr+1] = poolIndex;
         STACKTOP += 8;
-        //console.log("compiled numericLiteral to " + ptr);
         return ptr;
     }
 
@@ -28303,7 +28221,7 @@ define("asm-compiler", function (require, exports) {
         HEAP32[ptr+1] = len;
         var ptr2 = (ptr+2)<<1;
         for (var i = 0; i < len; i++) HEAPU16[ptr2+i] = codePoints[i];
-        //console.log("compiled str to " + ptr);
+
         return ptr;
     }
 
@@ -28322,7 +28240,6 @@ define("asm-compiler", function (require, exports) {
         HEAP32[ptr] = STRCONST;
         HEAP32[ptr+1] = poolIndex;
         STACKTOP += 8;
-        //console.log("compiled stringLiteral to " + ptr);
         return ptr;
     }
     /**
@@ -28334,44 +28251,20 @@ define("asm-compiler", function (require, exports) {
         if (node.value === "true") HEAP32[ptr] = TRUEBOOL;
         else HEAP32[ptr] = FALSEBOOL;
         STACKTOP += 4;
-        //console.log("compiled boolean to " + ptr);
         return ptr;
     }
     /**
      * I really compile the node.expression
-     * into one slot.
+     * into one slot. Or ? no.
      * @param node
      * @returns {number}
      */
-
-    /*
-
-
-        best is to read a little x86 assembly and jvm bytecode next
-        to get a better instruction set together. i don´t want to take
-        it, it should become developed out of the existing. but it´s better
-        to take some real world bytecode names, than redefining nodenames
-        so i better learn a bit more about
-        (and i am glad that i am later able to write assembly and jvm bytecode, ehe)
-
-     */
-
-
     function expressionStatement(node) {
-        var ptr = STACKTOP >> 2;
-        STACKTOP += 8;
-        HEAP32[ptr] = EXPRSTMT;
-        HEAP32[ptr+1] = compile(node.expression);
-        //console.log("compiled expr stmt to " + ptr);
-        return ptr;
+        return compile(node.expression);
     }
 
     function parenthesizedExpression(node) {
         var ptr = STACKTOP >> 2;
-        STACKTOP += 8;
-        HEAP32[ptr] = PARENEXPR;
-        HEAP32[ptr+1] = compile(node.expression);
-        //console.log("compiled paren expr to " + ptr);
         return ptr;
     }
 
@@ -28380,112 +28273,72 @@ define("asm-compiler", function (require, exports) {
      * @returns {*}
      */
     function sequenceExpression(node) {
-        var ptr = STACKTOP >> 2;
         var len = node.sequence.length
-        HEAP32[ptr] = SEQEXPR;
-        HEAP32[ptr+1] = len|0;
-        STACKTOP += 8 + (len << 2);
-        for (var i = 0; i < len; i++) HEAP32[ptr+2+i] = compile(node.sequence[i]);
-        //console.log("compiled seq expr stmt to " + ptr);
+        var ptr = STACKTOP >> 2;
+        STACKTOP += 12;
+        HEAP32[ptr] = BYTECODES.SEQEXPR;    // set eval state to "comma sequence";
+        for (var i = 0; i < len; i++) {
+            RETADDR.push(compile(node.sequence[i], RETADDR.pop())); // 2. compile last to first and set gotos
+        }
+        jmp(ptr+1, RETADDR.pop());  // 3. GOTO first compiled expression
         return ptr;
     }
 
     /**
      * @param node
      */
-    function assignmentExpression1(node) {
-        var ptr = STACKTOP >> 2;
-        STACKTOP += 20;
-        HEAP32[ptr] = ASSIGNEXPR;
-        HEAP32[ptr+1] = compile(node.left);
-        HEAP32[ptr+2] = compile(node.right);
-        HEAP32[ptr+3] = ASSIGNMENTOPERATOR;
-        HEAP32[ptr+4] = codeForOperator[node.operator];
-        //console.log("compiled assign expr to " + ptr);
-        return ptr;
-    }
 
     function assignmentExpression(node) {
         var ptr = STACKTOP >> 2;
-        STACKTOP += 16;
-        HEAP32[ptr] = PUSH3;
-        HEAP32[ptr+1] = compile(node.right);
-        HEAP32[ptr+2] = compile(node.left);
         var code;
         switch (node.operator) {
-            case "=": code = ASSIGN; break;
-            case "+=": code = A_ADD; break;
-            case "-=": code = A_SUB; break;
-            case "*=": code = A_MUL; break;
-            case "/=": code = A_DIV; break;
-            case "%=": code = A_MOD; break;
-            case "<<=": code = A_SHL; break;
-            case ">>=": code = A_SHR; break;
-            case ">>>=": code = A_SSHR; break;
+            case "=": code = BYTECODES.ASSIGN; break;
+            case "+=": code = BYTECODES.ADDL; break;
+            case "-=": code = BYTECODES.SUBL; break;
+            case "*=": code = BYTECODES.MULL; break;
+            case "/=": code = BYTECODES.DIVL; break;
+            case "%=": code = BYTECODES.MODL; break;
+            case "<<=": code = BYTECODES.SHLL; break;
+            case ">>=": code = BYTECODES.SHRL; break;
+            case ">>>=": code = BYTECODES.SSHRL; break;
         }
-        HEAP32[ptr+3] = code;
-
         return ptr;
     }
 
     function unaryExpression(node) {
         var ptr = STACKTOP >> 2;
-        STACKTOP += 12;
-        if (node.prefix)
-            HEAP32[ptr] = UNARYEXPR;
-        HEAP32[ptr+1] = compile(node.argument);
-        if (node.prefix) HEAP32[ptr+2] = UNARYOP;
-        else HEAP32[ptr+2] = POSTFIXOP;
-        HEAP32[ptr+2] = unaryOperatorFromString[node.operator];
-        //console.log("compiled unary expr to " + ptr);
+
         return ptr;
     }
     /**
      *
      */
-
-    function binaryExpression1(node) {
-        var ptr = STACKTOP >> 2;
-        STACKTOP += 20;
-        HEAP32[ptr] = BINEXPR;
-        HEAP32[ptr+1] = compile(node.right);
-        HEAP32[ptr+2] = compile(node.left);
-            HEAP32[ptr+3] = BINOP;
-                HEAP32[ptr+4] = codeForOperator[node.operator];
-                //console.log("compiled binary expr to " + ptr);
-                return ptr;
-        }
-
-
     function binaryExpression(node) {
         var ptr = STACKTOP >> 2;
-        STACKTOP += 16;
-        HEAP32[ptr] = PUSH3;
-        HEAP32[ptr+1] = compile(node.right);
-        HEAP32[ptr+2] = compile(node.left);
         var code;
         switch (node.operator) {
-            case "==": code = EQ; break;
-            case "===": code = STRICT_EQ; break;
-            case "!=": code = NOT_EQ; break;
-            case "!==": code = STRICT_NOT_EQ; break;
-            case "+": code = ADD; break;
-            case "-": code = SUB; break;
-            case "*": code = MUL; break;
-            case "/": code = DIV; break;
-            case "%": code = MOD; break;
-            case "<<": code = SHL; break;
-            case ">>": code = SHR; break;
-            case "|": code = OR; break;
-            case "&": code = AND; break;
-            case "&&": code = L_AND; break;
-            case "||": code = L_OR; break;
-            case "<": code = LT; break;
-            case ">": code = GT; break;
-            case ">=": code = GT_EQ; break;
-            case "<=": code = LT_EQ; break;
+            case "==": code = BYTECODES.EQ; break;
+            case "===":code = BYTECODES.SEQ; break;
+            case "!=": code = BYTECODES.NEQ; break;
+            case "!==":code = BYTECODES.SNEQ; break;
+            case "+": code = BYTECODES.ADD; break;
+            case "-":code = BYTECODES.SUB; break;
+            case "*":code = BYTECODES.MUL; break;
+            case "/":code = BYTECODES.DIV; break;
+            case "%":code = BYTECODES.MOD; break;
+            case "<<":code = BYTECODES.SHL; break;
+            case ">>":code = BYTECODES.SHR; break;
+            case "|":code = BYTECODES.OR; break;
+            case "&":code = BYTECODES.AND; break;
+            case "&&":code = BYTECODES.LOGOR; break;
+            case "||":code = BYTECODES.LOGAND; break;
+            case "<":code = BYTECODES.LT; break;
+            case ">":code = BYTECODES.GT; break;
+            case ">=":code = BYTECODES.GTEQ; break;
+            case "<=":code = BYTECODES.LTEQ; break;
+            break;
         }
-        HEAP32[ptr+3] = code; // push3 loads the stack with the next 3 positions
+
         return ptr;
     }
     /**
@@ -28496,12 +28349,6 @@ define("asm-compiler", function (require, exports) {
 
     function callExpression(node) {
         var ptr = STACKTOP >> 2;
-        STACKTOP += 16;
-        HEAP32[ptr] = PUSH3;
-        HEAP32[ptr+1] = argumentList(node.arguments);
-        HEAP32[ptr+2] = compile(node.callee);
-        HEAP32[ptr+3] = CALL;
-        //console.log("compiled call expr to " + ptr);
         return ptr;
     }
     /**
@@ -28510,37 +28357,14 @@ define("asm-compiler", function (require, exports) {
      */
     function newExpression(node) {
         var ptr = STACKTOP >> 2;
-        STACKTOP += 16;
-        HEAP32[ptr] = NEWEXPR;
-        HEAP32[ptr+1] = compile(node.callee);
-        HEAP32[ptr+2] = argumentList(node.arguments);
-        HEAP32[ptr+3] = CONSTRUCT;
-        //console.log("compiled new expr to " + ptr);
         return ptr;
     }
 
-    /*
-    function argumentList(list) {
-        var len = list.length;
-        var ptr = STACKTOP >> 2;
-        HEAP32[ptr] = ARGLIST;
-        HEAP32[ptr+1] = len|0;
-        STACKTOP += 8 + (len << 2);
-        for (var i = 0; i < len; i++) {
-            HEAP32[ptr+i] = compile(list[i]);
-        }
-        //console.log("compiled arguments List with length of "+len+ " to "+ ptr)
-        return ptr;
-    }
-    */
 
     function argumentList(list) {
         var poolIndex = ++pp;
         POOL[pp] = list;
         var ptr = STACKTOP >> 2;
-        STACKTOP += 8;
-        HEAP32[ptr] = ARGLIST;
-        HEAP32[ptr+1] = poolIndex;
         return ptr;
     }
 
@@ -28549,8 +28373,6 @@ define("asm-compiler", function (require, exports) {
         var poolIndex = ++pp;
         POOL[pp] = list;
         var ptr = STACKTOP >> 2;
-        STACKTOP += 4;
-        HEAP32[ptr] = poolIndex;
         return ptr;
     }
 
@@ -28558,56 +28380,30 @@ define("asm-compiler", function (require, exports) {
         POOL[++pp] = node;
         var poolIndex = pp;
         var ptr = STACKTOP;
-        STACKTOP += 8;
-        HEAP32[ptr] = FUNCDECL;
-        HEAP32[ptr+1] = poolIndex;
-        //console.log("compiled fdecl to " + ptr);
         return ptr;
     }
 
     function variableDeclaration(node) {
         POOL[++pp] = node;
         var poolIndex = pp;
-        var ptr = STACKTOP;
-        STACKTOP += 8;
-        HEAP32[ptr] = VARDECL;
-        HEAP32[ptr+1] = poolIndex;
-        //console.log("compiled var decl to " + ptr);
         return ptr;
     }
 
     function propertyDefinition(node) {
         var ptr = STACKTOP >> 2;
         POOL[++pp] = node.key;
-        var keyIndex = pp;
-        STACKTOP += 16;
-        HEAP32[ptr] = PROPDEF;
-        HEAP32[ptr+1] = propDefKinds[node.kind];
-        HEAP32[ptr+2] = keyIndex;
-        HEAP32[ptr+3] = compile(node.value);
-        //console.log("compiled prop def to " + ptr);
         return ptr;
     }
 
     function objectExpression(node) {
         var ptr = STACKTOP >> 2;
         var len = node.elements.length;
-        STACKTOP += 8 + (len<<2);
-        HEAP32[ptr] = OBJECTEXPR;
-        HEAP32[ptr+1] = len;
-        for (var i = 0; i < len; i++) HEAP32[ptr+1+i] = compile(node.properties[i]);
-        //console.log("compiled object expr to " + ptr);
         return ptr;
     }
 
     function arrayExpression(node) {
         var ptr = STACKTOP >> 2;
         var len = node.elements.length;
-        STACKTOP += 8 + (len<<2);
-        HEAP32[ptr] = ARRAYEXPR;
-        HEAP32[ptr+1] = len;
-        for (var i = 0; i < len; i++) HEAP32[ptr+1+i] = compile(node.elements[i]);
-        //console.log("compiled array expr to " + ptr);
         return ptr;
     }
 
@@ -28617,51 +28413,23 @@ define("asm-compiler", function (require, exports) {
         STACKTOP+=8;
         HEAP32[ptr] = ELISION;
         HEAP32[ptr+1] = width;
-        //console.log("compiled elision to " + ptr);
         return ptr;
     }
 
     function returnStatement(node) {
         var ptr = STACKTOP >> 2;
-        STACKTOP += 8;
-        HEAP32[ptr] = RET;
-        if (node.argument)
-            HEAP32[ptr+1] = compile(node.argument);
-        else HEAP32[ptr+1] = EMPTY;
-        //console.log("compiled return to " + ptr);
         return ptr;
     }
 
     function ifStatement(node) {
         var ptr = STACKTOP >> 2;
-        STACKTOP += 20;
-        HEAP32[ptr] = IFEXPR;
-        HEAP32[ptr+1] = compile(node.test);
-        HEAP32[ptr+2] = IFOP;
-        HEAP32[ptr+3] = compile(node.consequent);
-        HEAP32[ptr+4] = compile(node.alternate);
-        //console.log("compiled new expr to " + ptr);
         return ptr;
     }
-
-    /**
-     * the block
-     * has a code
-     * a length
-     * and slots with ptrs to each stmt
-     * @param node
-     * @returns {*}
-     */
 
     function blockStatement(node) {
         var len = node.body.length;
         var body = node.body;
         var ptr = STACKTOP >> 2;
-        STACKTOP += 8 + (len << 2);
-        HEAP32[ptr] = BLOCKSTMT;
-        HEAP32[ptr+1] = len|0;
-        for (var i = 0, j = len; i < j; i++) HEAP32[ptr+2+i] = compile(body[i]);
-        //console.log("compiled block to " + ptr);
         return ptr;
     }
 
@@ -28669,14 +28437,6 @@ define("asm-compiler", function (require, exports) {
         var len = node.body.length;
         var body = node.body;
         var ptr = STACKTOP >> 2;
-        STACKTOP += 20+(len<<2);
-        HEAP32[ptr] = WHILESTMT;
-        HEAP32[ptr+1] = compile(node.test);
-        HEAP32[ptr+2] = WHILEBODY;
-        HEAP32[ptr+3] = len;
-        for (var i = 0, j = len; i < j; i++) HEAP32[ptr+4+i] = compile(body[i]);
-        HEAP32[ptr+4+len] = ptr;
-        //console.log("compiled while to " + ptr);
         return ptr;
     }
 
@@ -28684,54 +28444,16 @@ define("asm-compiler", function (require, exports) {
         var len = node.body.length;
         var body = node.body;
         var ptr = STACKTOP >> 2;
-        STACKTOP += 20+(len<<2);
-
-        HEAP32[ptr] = DOWHILESTMT;
-        HEAP32[ptr+1] = len;
-        for (var i = 0, j = len; i < j; i++) HEAP32[ptr+2+i] = compile(body[i]);
-        HEAP32[ptr+2+len] = compile(node.test);
-
-        var ptr2 = ptr+2+len;
-        HEAP32[ptr2] = DOWHILECOND;
-        HEAP32[ptr2+1] = ptr;
-        //console.log("compiled doWhile to " + ptr);
         return ptr;
     }
-
-
-    /**
-     *
-     * @param node
-     * @returns {*}
-     */
-    function program(node) {
-        var body = node.body;
-        var strict = !!node.strict;
-        var len = body.length;
-        var ptr = STACKTOP >> 2; // /4
-        HEAP32[ptr] = PRG;          // "Program"
-        HEAP32[ptr+1] = strict|0;   // node.strict
-        HEAP32[ptr+2] = len|0;        // body.length
-        STACKTOP += 12;             //
-        STACKTOP += (len << 2);   // *4
-        for (var i = 0, j = len; i < j; i++) {
-            HEAP32[ptr+3+i] = compile(body[i]);// fill array with starting offsets
-        }
-        //console.log("compiled prg expr to " + ptr);
-        return ptr;
-    }
-
-    /**
-     *
-     * @param ast
-     * @returns {number}
-     */
 
 
     function forStatement (node) {
         var ptr = STACKTOP >> 2;
         return ptr;
     }
+
+
     function forInOfStatement (node) {
         var ptr = STACKTOP >> 2;
         return ptr;
@@ -28795,6 +28517,9 @@ define("asm-compiler", function (require, exports) {
 
     function continueStatement(node) {
         var ptr = STACKTOP >> 2;
+        HEAP32[ptr] = BYTECODE.CONTINUECOMP;
+        HEAP32[ptr+1] = LABELS[node.label];
+        jmp(ptr+2, RETADDR.pop())
         return ptr;
     }
 
@@ -28803,6 +28528,39 @@ define("asm-compiler", function (require, exports) {
         HEAP32[ptr] = DEBUGGER;
         return ptr;
     }
+
+
+
+    function labelledStatement(node) {
+        var ptr = STACKTOP >> 2;
+        HEAP32[ptr] = BYTECODE.LABEL;
+        LABELS[node.label] = ++LABELIDX;
+        HEAP32[ptr+1] = LABELIDX;
+
+        return ptr;
+
+    }
+
+
+    /**
+     *
+     * @param node
+     * @returns {*}
+     */
+    function program(node) {
+        var body = node.body;
+        var strict = !!node.strict;
+        var len = body.length;
+
+        var ptr = STACKTOP >> 2;
+        STACKTOP += 4;
+        HEAP32[ptr] = PRG;
+        c
+
+        return ptr;
+    }
+
+
 
 
     function compile(ast) {
@@ -28848,10 +28606,25 @@ define("asm-compiler", function (require, exports) {
             case "BreakStatement":          return breakStatement(ast);
             case "ContinueStatement":       return continueStatement(ast);
             case "DebuggerStatement":       return debuggerStatement(ast);
+            case "LabelledStatement":        return labelledStatement(ast);
             default:
                 throw new TypeError(format("NO_COMPILER_FOR_S", ast && ast.type));
         }
     }
+    /**
+     * this createas an empty compilation unit for use
+     * by asm-parser.js a synxtax directed translator for this bytecode dsl
+     *
+     * @returns {{POOL: *, HEAP32: *, STACKSIZE: *, STACKTOP: *}}
+     */
+    function getEmptyUnit() {
+        var oldUnit = get();
+        init();
+        var newUnit = get();
+        set(oldUnit);
+        return newUnit;
+    }
+
     /**
      * spent thirty seconds for showing how to use the compiler
      * @param ast
