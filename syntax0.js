@@ -27766,8 +27766,13 @@ define("asm-compiler", function (require, exports) {
     var DEFAULT_SIZE = 2*1024*1024; // 2 Meg of RAM (string, id, num) should be big enough to run this program
     var POOL, pp, poolDupeMap;
     var MEMORY, HEAP8, HEAPU8, HEAP16, HEAPU16, HEAPU32, HEAP32, HEAPF32, HEAPF64;
+    var MEMORY, HEAP8, HEAPU8, HEAP16, HEAPU16, HEAPU32, HEAP32, HEAPF32, HEAPF64;
     var STACKBASE, STACKSIZE, STACKTOP;
-    var FLAGSET = flagSet(), CODESET = codeSet();
+
+    var FLAGSET = flagSet(), CODESET = codeSet(); // CONSTANTS (need to integrate)
+
+
+
 
 
     var RETADDR = []; // save return addresses for the compiler
@@ -28024,10 +28029,7 @@ define("asm-compiler", function (require, exports) {
 
     defineByteCode(0xA00, "ARRAYFROMLIST", "");
     defineByteCode(0xA01, "LISTFROMARRAY", "");
-
     defineByteCode(0xE00, "EXPRESSION", "");
-
-
     function codeSet() {
         return {
             BYTECODE: Object.create(null),
@@ -28035,8 +28037,6 @@ define("asm-compiler", function (require, exports) {
             DESC: Object.create(null)
         };
     }
-
-
     function defineByteCode(num, name, desc) {
         if (typeof num != "number" || typeof name != "string" || (desc !== undefined && typeof desc != "string")) {
             throw new TypeError("invalid code definition. defineByteCode(0x01, 'ERROR', 'Code 0x01 is for the Error Example when wrong arguments are given to defineByteCode'");
@@ -28045,15 +28045,12 @@ define("asm-compiler", function (require, exports) {
         CODESET.WORDS[num] = ""+name;
         CODESET.DESC[name] = CODESET.DESC[num] = desc;
     }
-
-
     function flagSet () {
         return {
             FLAGS: Object.create(null),
             DESC: Object.create(null)
         };
     }
-
     function defineBitFlags(name, bitvalue, description) {
         if (typeof name != "string" || typeof bitvalue != "number" ||
             (description !== undefined && typeof description != "string")) {
@@ -28072,7 +28069,6 @@ define("asm-compiler", function (require, exports) {
     defineBitFlags("P_PROTOTYPE_METHOD", 64, "");         // method() in class
     defineBitFlags("P_EXPRESSION", 128, "");              // [computed]
 
-    var FUNCTIONFLAGS = Object.create(null);
     defineBitFlags("F_STRICT", 1, "");
     defineBitFlags("F_METHOD", 2, "");
     defineBitFlags("F_EXPRESSION", 4, "");
@@ -28081,12 +28077,33 @@ define("asm-compiler", function (require, exports) {
     defineBitFlags("F_ARROW", 16, "");
     defineBitFlags("F_THISMODE_GLOBAL", 128, "");
     defineBitFlags("F_BOUNDFUNCTION", 256, "");
-
-    var REFERENCE_FLAGS = Object.create(null);
     defineBitFlags("R_STRICT", 1, "");
     defineBitFlags("R_SUPER", 2, "");
     defineBitFlags("R_UNDEFINED", 4, "");
 
+    var REGISTERS = Object.create(null);
+    var REGNAMES = Object.create(null);
+    var REGTYPES = Object.create(null);
+
+    function defineRegister($name, $type, $desc) {
+        REGISTERS[$name] = undefined;
+        REGNAMES[$name] = true;
+        REGTYPES[$name] = $type;
+    }
+    /*
+        what about special registers
+        if calls werent so expensive i would write
+        cool registers with stack allocation each,
+        to save and restor
+        but calls are too much.
+     */
+    defineRegister("new", undefined, "")
+    defineRegister("return", undefined, "")
+    defineRegister("class", undefined, "");
+    defineRegister("number", undefined, "");
+
+    Object.freeze(FLAGSET);
+    Object.freeze(CODESET);
 
 /**
  *
@@ -28112,6 +28129,14 @@ define("asm-compiler", function (require, exports) {
     var operatorForCode = tables.operatorForCode;
     var unaryOperatorFromString = tables.unaryOperatorFromString;
 
+
+    function getEmptyUnit() {
+        var oldUnit = get();
+        init();
+        var newUnit = get();
+        set(oldUnit);
+        return newUnit;
+    }
     /**
      * initialize the compiler for a new compilation
      * after compilation use exports.get() to get the data
@@ -28135,6 +28160,7 @@ define("asm-compiler", function (require, exports) {
         STACKSIZE = stackSize;
         STACKTOP = 0;
     }
+
     /**
      * get returns the compiled data, the heap, the constant pool, the stacksize and stacktop
      * @returns {{POOL: *, HEAP32: *, STACKSIZE: *, STACKTOP: *}}
@@ -28161,6 +28187,32 @@ define("asm-compiler", function (require, exports) {
             CODESET: CODESET
         };
     }
+
+    /**
+     *
+     * @param unit
+     */
+    function set(unit) {
+        POOL = unit.POOL;
+        pp = unit.pp;
+        poolDupeMap = unit.poolDupeMap;
+        MEMORY = unit.MEMORY;
+        HEAP8 = unit.HEAP8;
+        HEAPU8 = unit.HEAPU8;
+        HEAP16 = unit.HEAP16;
+        HEAPU16 = unit.HEAPU16;
+        HEAPU32 = unit.HEAPU32;
+        HEAP32 = unit.HEAP32;
+        HEAPF32 = unit.HEAPF32;
+        HEAPF64 = unit.HEAPF64;
+        STACKBASE = unit.STACKBASE;
+        STACKTOP = unit.STACKTOP;
+        STACKSIZE = unit.STACKSIZE;
+        FLAGSET = unit.FLAGSET;
+        CODESET = unit.CODESET;
+    }
+
+
     /**
      * add a value to the constant pool
      * the index of the value in the array is returned
@@ -28819,6 +28871,9 @@ define("asm-compiler", function (require, exports) {
     exports.compile = compile;
     exports.get = get;
     exports.compileUnit = compileUnit;
+    exports.getEmptyUnit = getEmptyUnit;
+    exports.CODESET = CODESET;  // prolly rename
+    exports.FLAGSET = FLAGSET;  // better do (one day i will stop doing it wrong and just do it right and with a good name)
 });
 
 
@@ -29761,6 +29816,8 @@ define("vm", function (require, exports) {
         STACKBASE = unit.STACKBASE;
         STACKTOP = unit.STACKTOP;
         STACKSIZE = unit.STACKSIZE;
+        CODESET = unit.CODESET;
+        FLAGSET = unit.FLAGSET;
     }
 
     function init() {   // callstack up
@@ -29782,6 +29839,34 @@ define("vm", function (require, exports) {
         }
     }
 
+    /**
+     *
+     * new interface for the asm parser
+     * but the old code has to go now!!!
+     * next!! at once!! today!! tomorrow!!!
+     * YESTERDAY!!!
+     *
+     * @param realm
+     * @param unit
+     * @returns {*}
+     */
+
+
+    function RunUnit(unit, realm) {
+        if (realm = undefined) {
+            // Initialize
+            realm = CreateRealm();
+        }
+        set(unit);
+        init();
+        pc = 0;
+        stack[pc] = STACKBASE;
+        main(pc);
+        var $0 = operands[sp--];
+        if (isAbrupt($0=ifAbrupt($0))) return $0;
+        return NormalCompletion($0);
+    }
+
 
     function CompileAndRun(realm, src) {
         var ast;
@@ -29797,8 +29882,131 @@ define("vm", function (require, exports) {
         return NormalCompletion($0);
     }
     exports.CompileAndRun = CompileAndRun;
+    exports.RunUnit = RunUnit;
 
 });	// is not asm. but renamable.
+define("asm-parser", function (require, exports) {
+
+    var char, char2;
+    var cp1, cp2, cu;
+    var token, token2;
+
+    var compiler = require("asm-compiler");
+    var runtime = require("vm"); // asm-runtime.js (one day i will stop doing this with names)
+
+    compiler.getEmptyUnit();
+
+    function nextChar() {
+        pos = pos + 1;
+        char = char2;
+        char2 = source[pos+1];
+        return char;
+    }
+
+    function nextToken() {
+        switch (char) {
+            case undefined:
+                return;
+            default:
+                throw error ("unknown character " + char);
+        }
+    }
+
+    var LABEL = 0;
+    var OPCODE = 1;
+    var OPERAND = 2;
+    var ENDOFLINE = 3;
+    var END = 4;
+
+    var labels = Object.create(null);// forgot symbol table, eh
+    var registers = Object.create(null);
+
+
+    var numOperands;
+
+    function getValue(token) {
+
+        switch(token.type) {
+            case "register":   // %eax?
+                break;
+            case "value":   //
+            case "string":
+                // POOL[]
+                break;
+            default:
+                return token.value;
+        }
+    }
+
+    function parse(asmSource) {
+
+        source = asmSource;
+        pos = 0;
+        char = source[0];
+        char2 = source[1];
+        state = LABEL;
+        opcode
+
+        while (token = token2) {
+            token2 = nextToken();
+            switch (state) {
+                case LABEL:
+                    if (token.type === "label") {
+                        labels[token.value] = STACKTOP;
+                    }
+                    state = OPCODE;
+                    continue;
+                case OPCODE:
+
+                    HEAP32[ptr] = +token.value;
+                    STACKTOP += 4;
+                    // numOperands = 2; // numberOfOperators[opcode]; don´t know my new table yet
+                    state = OPERAND;
+                    var i = 0;
+                    while (state != ENDOFLINE) {
+                        nextToken();
+                        HEAP32[ptr+i] = getValue(token);    // and do registering and and transforming
+                        STACKTOP += 4;
+
+                    }
+
+            }
+
+            switch (token.type) {
+
+                case OPCODE:
+
+                case OPERAND:
+                    /*
+
+                    */
+
+                case OPERATOR:
+                    /*
+                        encode with code
+                     */
+                case LABEL:
+                    /*
+                        translate to current position
+                        like equ $-str, where $ is this/here
+                     */
+                    labels.push(STACKTOP);
+
+
+            }
+        }
+    }
+
+
+    function evalUnit() {
+
+
+    }
+
+    exports.parse = parse;
+    exports.eval = evalUnit;
+
+}); // time for the first dsl before lib/transpile and whole trees
     // syntax highlighter (the original application of syntax.js)
     // will be rewritten soon,
     // maybe with jquery for max effect with same simplicity
