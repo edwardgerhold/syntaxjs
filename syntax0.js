@@ -1,22 +1,17 @@
 /*
-    syntax.js and it´s last foreign headers
-    Cool Public Domain and Open Source written by Edward Gerhold
-    www.linux-swt.de
-    at opensource.org/osd/ per intellij idea i found a good explanation
-    of what this means
-    built with ./build_syntax and node inlinefiles.js
-    tools/inlinefiles.js
-    reads these include directives in
-    and processes each recursivly for more inclusions,
-    - anything included inside these files is not runnable alone and
-      only and of course modularised for better maintainability
-    - lib/api.js: includes lib/api/*.js and lib/intrinsics/*.js
-      which are sub-packages separated by ECMA-262 definitions
-      in a just-cut-out format (i have to clean the code up)
+
+    Cool Public Domain and Open Source
+    syntax.js - the ecmascript 6 experiment
+    From a ninety nine line syntax highlighter
+    to a pile of bugs and hack of edition six
+    going the way of ast interpreter and normal
+    objects first to understand why to go than the
+    other.
+
 */
-Error.stackTraceLimit = 10;
+//Error.stackTraceLimit = 10;
 var syntaxjs;
-/* moved outside (temp for experiments with self running) */
+/* lib/amdpromise.js is temporarily moved outside for self-execution investigation */
     /**
      * a poorly failing A+ or better A- Promise which fails in 1/3 of the tests.
      * The exports have the test adapter forgotten to be removed you can test it.
@@ -353,11 +348,9 @@ var syntaxjs;
     }
 
 
-(function () {
+(function syntaxjs_closure() {
     "use strict";
     syntaxjs = Object.create(null);
-    // first i create syntaxjs and
-    // add define, require, modules (require.cache link) and makePromise
 /**
  * Created by root on 12.05.14.
  */
@@ -379,7 +372,6 @@ define("detector", function () {
         isBrowser: isBrowser
     };
 });
-    // then i have some fs operations
 
 // *******************************************************************************************************************************
 // file imports
@@ -507,8 +499,7 @@ define("filesystem", function (require, exports) {
     return exports;
 });
 
-    // require("i18n").format("KEY", ...varags) translates from now on
-//---#include "lib/intl/identifier-module.js"; // only loading takes longer, i need to learn more from m.bynens and norbert l. (seriously) and then go for Intl and Collator. :)
+//---#include "lib/intl/identifier-module.js";
 define("languages.de_DE", function (require, exports) {
     "use strict";
 
@@ -905,7 +896,6 @@ exports.NOT_FOUND_ERR = "i18n-failure: '%s' not found."
 
 });
 
-    // the lexer and parser api ast and ast-to-string for es6 code
 /**
  *
  *	These tables replace my first and follow sets
@@ -9115,8 +9105,6 @@ exports.matchesQuery = matchesQuery;
 exports.querySelectorAll = querySelectorAll;
 
 });
-    // ecma-262 operations and astnode evaluation
-    // lib/api.js #includes lib/api/*.js; lib/intrinsics/*.js
 /*
  API contains ecma-262 specification devices
 
@@ -27412,8 +27400,413 @@ define("runtime", function () {
 
 
 //--#include "lib/parsenodes/runtime0.js";
-    // experimental typed memory and compiler (development)
-    //--#include "lib/heap/heap.js"; // too high level
+/**
+ * contains (but in an early and still evolving state)
+ *
+ * STATE
+ * TYPE
+ * RECORDTYPE
+ * BITS
+ * BYTECODE
+ * FLAGS
+ * REGISTERS
+ * functions to define bytecodes on some object,
+ * functions to define a register object
+ *
+ * needed by asm-compiler, asm-runtime for compiling and execution
+ * so i factor it out here
+ */
+
+
+/**
+ * Created by root on 27.05.14.
+ */
+define("asm-shared", function (require, exports, module) {
+
+    /**
+     *
+     * In my loop i may have the need for setting machine state
+     * The state may be allocated on the stack
+     *
+     * Maybe it´s not necessary
+     *
+     * @type {null}
+     */
+    var STATES = Object.create(null);
+    STATES.MAINBODY = 2;
+    STATES.FUNCTIONCALL = 4;
+    STATES.GENERATOR = 8;
+    STATES.METHOD = 16;
+    STATES.CLASS = 32;
+    STATES.ARGLIST = 64;
+    STATES.ASSIGNMENT = 128;
+    STATES.OBJECTLITERAL = 256;
+    STATES.ARRAYLITERAL = 512;
+
+
+    /**
+     * Bitsets
+     * They will be there, but the set is not known yet.
+     *
+     * To save memory, all kind of HEAP allocated Objects
+     * have some booleans compressed in a bitset. That is
+     * an | or += to set and to subtract the bitvalue to unset
+     * @type {null}
+     */
+    var BITS = Object.create(null);
+    BITS.IS_STRICT = 1;
+    BITS.IS_CALLABLE = 2;
+    BITS.IS_CONSTRUCTOR = 3;
+    BITS.IS_ARROW = 4;
+    BITS.HAS_BODY = 8;
+    BITS.IS_EXTENSIBLE = 16;
+    BITS.IS_SEALED = 32;
+    BITS.IS_FROZEN = 64;
+    BITS.IS_NATIVE_JS = 128;
+
+
+    /**
+     * The results of the Type abstract operation are the same.
+     * I compile with a type byte to identify the object and where
+     * to look up the essential methods.
+     *
+     * @type {null}
+     */
+    var TYPES = Object.create(null);
+    TYPES.REFERENCE = 1;
+    TYPES.NUMBER = 2;
+    TYPES.STRING = 3;
+    TYPES.SYMBOL = 4;
+    TYPES.OBJECT = 5;
+    TYPES.NULL = 6;
+    TYPES.UNDEFINED = 7;
+    TYPES.COMPLETION = 8;
+    TYPES.ENVIRONMENT = 9;
+    TYPES.CALLCONTEXT = 10;
+    // function Type(O) should be inlined and manually testet in this file. maybe it helps. calls hurt too much.
+
+    /**
+     * Record means EnvironmentRecord
+     * RECORDTYPE is an ID for the Environment Records
+     *
+     * @type {null}
+     */
+    var RECORDTYPE = Object.create(null);
+    RECORDTYPE.GLOBALREC = 1;
+    RECORDTYPE.FUNCTIONREC = 2;
+    RECORDTYPE.LOCALREC = 3;
+    RECORDTYPE.OBJECTREC = 4;
+    RECORDTYPE.GLOBALENV = 10;
+    RECORDTYPE.FUNCTIONENV = 11;
+    RECORDTYPE.LOCALENV = 12;
+    RECORDTYPE.OBJECTENV = 13;
+
+    // got to rename these
+    var BITFLAGSET = flagSet();         // the flag object itself can be decoupled from this structure
+    var BYTECODESET = codeSet();        // this holds the bytecode object plus description object
+    var REGISTERSET = registerSet();    // is compound object with a description object,
+    function registerSet () {
+        return {
+            REGISTERS: Object.create(null),
+            REGNAMES: Object.create(null),
+            REGTYPES: Object.create(null)
+        };
+    }
+    function codeSet() {
+        return {
+            BYTECODE: Object.create(null),
+            WORDS: Object.create(null),
+            DESC: Object.create(null)
+        };
+    }
+    function flagSet () {
+        return {
+            FLAGS: Object.create(null),
+            DESC: Object.create(null)
+        };
+    }
+
+    /**
+     * todo: pass set with call to defineRegister, or do the extra arg automatically
+     *
+     * DEFINE REGISTER
+     *
+     * define a special purpose register in the REGISTERS OBJECT, costs a [[Get]](P) each time,
+     * but can have any name, any length and any value, it´s a javascript dynamic register
+     *
+     * other register types in use are the typed array registers, which are just one int
+     * (special regs could be a number of slots, like a reference register with four slots for base,name,strict,thisValue)
+     *
+     * @param $name
+     * @param $type
+     * @param $desc
+     */
+    function defineRegister($name, $type, $desc) {
+        REGISTERSET.REGISTERS[$name] = undefined;
+        REGISTERSET.REGNAMES[$name] = true;
+        REGISTERSET.REGTYPES[$name] = $type;
+    }
+
+    function defineByteCode(num, name, desc) {
+        if (typeof num != "number" || typeof name != "string" || (desc !== undefined && typeof desc != "string")) {
+            throw new TypeError("invalid code definition. defineByteCode(0x01, 'ERROR', 'Code 0x01 is for the Error Example when wrong arguments are given to defineByteCode'");
+        }
+        BYTECODESET.BYTECODE[name] = num;
+        BYTECODESET.WORDS[num] = ""+name;
+        BYTECODESET.DESC[name] = BYTECODESET.DESC[num] = desc;
+    }
+    function defineBitFlags(name, bitvalue, description) {
+        if (typeof name != "string" || typeof bitvalue != "number" ||
+            (description !== undefined && typeof description != "string")) {
+            throw new TypeError("invalid flag definition. defineBitflags('flag_error', 0, 'for the example if the flag register is zero then an error occured.'");
+        }
+        BITFLAGSET.FLAGS[name] = bitvalue;
+        BITFLAGSET.DESC[name] = description;
+    }
+
+    /**
+     *
+     *  BYTECODES
+     *
+     *  i try to define an unique instruction set
+     *  in the meantime i do a rush on assembly to get everything together
+     *
+     *  i am already at paging or a the calling convention and stack allocation for procedures
+     *
+     *  and figuring out, but there is more to do for me until this becomes what it look likes it wants to become
+     *
+     */
+
+    defineByteCode(0x00, "END", "");
+    defineByteCode(0x01, "SYSCALL", "");
+    defineByteCode(0x20, "STRCONST", "");
+    defineByteCode(0x21, "NUMCONST", "");
+    defineByteCode(0x22, "IDREFCONST", "");
+    /**
+     * binary, relational, assignment expressions
+     * btw. it makes sense to separate relational expressions
+     * from arithmetic and assignments. but i didnt here now.
+     * let me think about doing it better. all relational expressions
+     * return a boolean result.
+     * all assignments store a value
+     * and compound assignments are two instructions, one to add, one to store
+     */
+    defineByteCode(0x60, "ADD", "add");
+    defineByteCode(0x61, "ADDL", "add and assign");
+    defineByteCode(0x62, "SUB", "subtract");
+    defineByteCode(0x63, "SUBL", "subtract and assign");
+    defineByteCode(0x64, "MUL", "multiply");
+    defineByteCode(0x65, "MULL", "multiply and assign");
+    defineByteCode(0x66, "DIV", "");
+    defineByteCode(0x67, "DIVL", "");
+    defineByteCode(0x68, "MOD", "");
+    defineByteCode(0x69, "MODL", "");
+    defineByteCode(0x70, "SHL", "");
+    defineByteCode(0x71, "SHLL", "");
+    defineByteCode(0x72, "SHR", "");
+    defineByteCode(0x73, "SHRL", "");
+    defineByteCode(0x74, "SSHR", "");
+    defineByteCode(0x75, "SSHRL", "");
+    defineByteCode(0x76, "AND", "&");
+    defineByteCode(0x77, "OR", "|");
+    defineByteCode(0x78, "LAND", "&&");
+    defineByteCode(0x79, "LOR", "||");
+    defineByteCode(0x80, "NEG", "unary not with !");
+    defineByteCode(0x81, "XOR", "xor with ^");
+    defineByteCode(0x82, "INV", "invert with ~");
+    // Data Structures (use the heap as structure)
+    defineByteCode(0xB00, "LIST", "Code telling that this HEAP/STACK Area is to be read as list");       // [0] = LIST, [1] = NEXT LISTNODE;
+    defineByteCode(0xB01, "LISTNODE", "ListNode with a pointer to next and it´s item"); // [0] LISTNODE [1] NEXT [2..DATA]
+    defineByteCode(0xB02, "DLISTNODE", "ListNode with a pointer to next, prev and it´s item"); // [0] LISTNODE [1] NEXT [2] PREV [3.. DATA]
+    defineByteCode(0xB03, "LISTLISTNODE", "ListNode with a pointer to next, prev, list and it´s item"); // [0] LISTNODE [1] NEXT [2] PREV [3] LIST [4.. DATA]
+    defineByteCode(0xB10, "HASH", "");
+    defineByteCode(0xB11, "HASHKEY", "");
+    defineByteCode(0xB12, "HASHVALUE", "");
+    defineByteCode(0xB13, "HASHFUNC", "Pointer to Hashfunction in Function Table");
+    defineByteCode(0xB20, "ARRAY", "Treat the following bytes as array structure");     // [0] = ARRAY [1] = LEN [2...2+LEN] ITEMS
+    // use HEAP32 etc as typed array (it is already one, so let´s gain speed inside syntax)
+    defineByteCode(0xB25, "INT32ARRAY", ""); // access HEAP like array of these, could speed up typed arrays in the vm :-)
+    defineByteCode(0xB26, "FLOAT64ARRAY", "");
+    // some HALT CODE
+    defineByteCode(0xFF, "HALT", "Stop script evaluation now and return whatever it is.");
+    // Signalling Completion Records
+    defineByteCode(0x100, "NORMALCOMP", "Normal Completion");
+    defineByteCode(0x101, "THROWCOMP", "Throw Completion");
+    defineByteCode(0x102, "BREAKCOMP", "Break Completion");
+    defineByteCode(0x103, "CONTINUECOMP", "Continue Completion");
+    defineByteCode(0x104, "RETURNCOMP", "Return Completion");
+    /**
+     * Calling Builtin Constructors with one Instruction
+     */
+    defineByteCode(0x200, "NEWOBJECT", "Shorty to create a new Object, hidden Class of PropNames from Parsing is in the Constant Pool");
+    defineByteCode(0x201, "NEWARRAY", "Shorty to create a new Array");
+    defineByteCode(0x202, "NEWSYMBOL", "Call Symbol()");
+    defineByteCode(0x203, "NEWNUMBER", "Call new Number()");
+    defineByteCode(0x204, "NEWSTRING", "");
+    defineByteCode(0x204, "NEWARRAYBUFFER", "");
+    defineByteCode(0x206, "NEWDATAVIEW", "");
+    defineByteCode(0x207, "NEWINT8ARRAY", "");
+    defineByteCode(0x208, "NEWINT16ARRAY", "");
+    defineByteCode(0x209, "NEWINT32ARRAY", "");
+    defineByteCode(0x210, "NEWUINT8ARRAY", "");
+    defineByteCode(0x211, "NEWUINT8CLAMPEDARRAY", "");
+    defineByteCode(0x212, "NEWUINT16ARRAY", "");
+    defineByteCode(0x213, "NEWUINT32ARRAY", "");
+    defineByteCode(0x214, "NEWFLOAT32ARRAY", "");
+    defineByteCode(0x215, "NEWFLOAT64ARRAY", "");
+    defineByteCode(0x216, "NEWFUNCTION", "");
+    defineByteCode(0x217, "NEWGENERATORFUNCTION", "");
+    /**
+     * Accessing internal slots in one instruction
+     */
+    defineByteCode(0x300, "GETSLOT", "lookup internal object slot");
+    defineByteCode(0x301, "SETSLOT", "");
+    defineByteCode(0x302, "HASSLOT", "");
+    /**
+     * Call Codes
+     */
+    defineByteCode(0x501, "CALL", "");
+    defineByteCode(0x502, "CONSTRUCT", "");
+    defineByteCode(0x503, "RET", "");
+    defineByteCode(0x504, "INVOKE", "");
+    defineByteCode(0x505, "FPROTOCALL", "");
+    defineByteCode(0x506, "FPROTOAPPLY", "");
+    defineByteCode(0x507, "SUPERCALL", "");
+    /*
+     * Conditional jumps
+     */
+    defineByteCode(0x600, "JMP", "");
+    defineByteCode(0x601, "JEQ", "if op1 === op2 goto op3");
+    defineByteCode(0x602, "JNEQ", "");
+    defineByteCode(0x603, "JLT", "");
+    defineByteCode(0x604, "JLTEQ", "");
+    defineByteCode(0x605, "JGT", "");
+    defineByteCode(0x606, "JGTEQ", "");
+    /**
+     * essentials in one instruction
+     */
+    defineByteCode(0x700, "GETPROPERTY", "");
+    defineByteCode(0x701, "GET", "");
+    defineByteCode(0x702, "SET", "");
+    defineByteCode(0x703, "DEFINEOWNPROPERTY", "");
+    defineByteCode(0x704, "DELETEPROPERTY", "");
+    defineByteCode(0x705, "DEFINEOWNPROPERTYORTHROW", "");
+    defineByteCode(0x706, "DELETEPROPERTYORTHROW", "");
+    defineByteCode(0x707, "OWNPROPERTYKEYS", "");
+    defineByteCode(0x708, "ENUMERATE", "");
+    /**
+     * reference
+     */
+    defineByteCode(0x800, "GETVALUE", "");
+    defineByteCode(0x801, "SETVALUE", "");
+    defineByteCode(0x802, "ISUNRESOLVABLE", "");
+    defineByteCode(0x803, "ISPROPERTYREF", "");
+    /**
+     * creating iterators fast
+     */
+    defineByteCode(0x900, "ITERATOR", "");
+    defineByteCode(0x901, "ITERATOR1", "");
+    defineByteCode(0x902, "ITERATOR2", "");
+    defineByteCode(0x903, "CREATELISTITERATOR", "");
+    defineByteCode(0x920, "CREATEARRAYITERATOR", "");
+    defineByteCode(0x921, "CREATELOADERITERATOR", "");
+    defineByteCode(0x922, "CREATESTRINGITERATOR", "");
+    defineByteCode(0x923, "CREATEMAPITERATOR", "");
+    defineByteCode(0x924, "CREATESETITERATOR", "");
+    /*
+     convert between lists and arrays
+     */
+    defineByteCode(0xA00, "ARRAYFROMLIST", "");
+    defineByteCode(0xA01, "LISTFROMARRAY", "");
+    defineByteCode(0xE00, "EXPRESSION", "");
+    defineByteCode(0xE01, "SEQEXPR", "state[++st] = SEQ  if this is encountered seqexpr state is pushed onto stack (needed for , operator returning last result only)");
+    defineByteCode(0xE02, "PROGRAM", "state[++st] = PROG goes from first block to last block");
+    /*
+     declarative environments
+     */
+    defineByteCode(0xE20, "HASBINDING", "");
+    defineByteCode(0xE21, "CREATEMUTABLEBINDING", "");
+    defineByteCode(0xE22, "CREATEIMMUTABLEBINDING", "");
+    defineByteCode(0xE23, "INITIALIZEBINDING", "");
+    defineByteCode(0xE24, "SETMUTABLEBINDING", "");
+    defineByteCode(0xE25, "GETBINDINGVALUE", "");
+    defineByteCode(0xE26, "DELETEBINDING", "");
+    defineByteCode(0xE29, "HASTHISBINDING", "");
+    defineByteCode(0xE27, "WITHBASEOBJECT", "");
+    defineByteCode(0xE28, "HASSUPERBINDING", "");
+
+
+    defineBitFlags("P_STRICT", 1, "");
+    defineBitFlags("P_METHOD", 2, "");
+    defineBitFlags("P_GENERATOR", 4, "");
+    defineBitFlags("P_GETTER", 8, "");
+    defineBitFlags("P_SETTER", 16, "");
+    defineBitFlags("P_STATIC_METHOD", 32, "");            // static method() in class
+    defineBitFlags("P_PROTOTYPE_METHOD", 64, "");         // method() in class
+    defineBitFlags("P_EXPRESSION", 128, "");              // [computed]
+
+    defineBitFlags("F_STRICT", 1, "");
+    defineBitFlags("F_METHOD", 2, "");
+    defineBitFlags("F_EXPRESSION", 4, "");
+    defineBitFlags("F_GENERATOR", 8, "");
+    defineBitFlags("F_THISMODE_LEXICAL", 16, "");
+    defineBitFlags("F_ARROW", 16, "");
+    defineBitFlags("F_THISMODE_GLOBAL", 128, "");
+    defineBitFlags("F_BOUNDFUNCTION", 256, "");
+    defineBitFlags("R_STRICT", 1, "");
+    defineBitFlags("R_SUPER", 2, "");
+    defineBitFlags("R_UNDEFINED", 4, "");
+
+    /**
+     *
+     * Define an object with special registers for special instructions
+     * other kind of register allocation is going per stack allocation
+     *
+     * i think i will continue with reading machine code assembly and stack
+     * and memory to get closer to what i want to
+     *
+     * having REGISTERS["t1"] for each SSA until REGISTERS["t9257285272"] free
+     * is cool, but what´s better or when is the tradeoff to be made?
+     *
+     */
+
+    defineRegister("0", undefined, "")
+    defineRegister("1", undefined, "")
+    defineRegister("new", undefined, "")
+    defineRegister("return", undefined, "")
+    defineRegister("class", undefined, "");
+    defineRegister("number", undefined, "");
+
+
+    /**
+     *
+     * Now i export the stuff and load them into the other components
+     * like i did with "tables" in parsenodes
+     *
+     * But anyways, this here has to be cleaned up.
+     *
+     */
+
+    // placeholder for switch decisions what to evaluate
+    exports.STATES = STATES;
+
+    // merge
+    exports.TYPES = TYPES;
+    exports.RECORDTYPE = RECORDTYPE;
+
+    // opcodes
+    exports.BYTECODESET = BYTECODESET;
+
+    // idea
+    exports.REGISTERSET = REGISTERSET;
+
+    // merge
+    exports.BITFLAGSET = BITFLAGSET;
+    exports.BITS = BITS;
+
+
+});
+
 /**
  * asm-typechecker
  *
@@ -27762,194 +28155,10 @@ define("asm-compiler", function (require, exports) {
     var POOL, pp, poolDupeMap;
     var MEMORY, HEAP8, HEAPU8, HEAP16, HEAPU16, HEAPU32, HEAP32, HEAPF32, HEAPF64;
     var MEMORY, HEAP8, HEAPU8, HEAP16, HEAPU16, HEAPU32, HEAP32, HEAPF32, HEAPF64;
-    var STACKBASE, STACKSIZE, STACKTOP;
+    var STACKBASE, STACKSIZE, STACKTOP, STACKLIMIT;
 
-    var LABELS;
-    var FLAGSET = flagSet();
-    var CODESET = codeSet();
-    var REGISTERSET = registerSet();
-
-    var RETADDR = [];   // stack for gotos.
-                        // parameter passing is too much
-
-    defineByteCode(0x00, "END", "");
-    defineByteCode(0x01, "SYSCALL", "");
-    defineByteCode(0x20, "STRCONST", "");
-    defineByteCode(0x21, "NUMCONST", "");
-    defineByteCode(0x22, "IDREFCONST", "");
-
-    defineByteCode(0x60, "ADD", "add");
-    defineByteCode(0x61, "ADDL", "add and assign");
-    defineByteCode(0x62, "SUB", "subtract");
-    defineByteCode(0x63, "SUBL", "subtract and assign");
-    defineByteCode(0x64, "MUL", "multiply");
-    defineByteCode(0x65, "MULL", "multiply and assign");
-    defineByteCode(0x66, "DIV", "");
-    defineByteCode(0x67, "DIVL", "");
-    defineByteCode(0x68, "MOD", "");
-    defineByteCode(0x69, "MODL", "");
-    defineByteCode(0x70, "SHL", "");
-    defineByteCode(0x71, "SHLL", "");
-    defineByteCode(0x72, "SHR", "");
-    defineByteCode(0x73, "SHRL", "");
-    defineByteCode(0x74, "SSHR", "");
-    defineByteCode(0x75, "SSHRL", "");
-
-    defineByteCode(0x76, "AND", "&");
-    defineByteCode(0x77, "OR", "|");
-    defineByteCode(0x78, "LAND", "&&");
-    defineByteCode(0x79, "LOR", "||");
-
-    defineByteCode(0x80, "NEG", "unary not with !");
-    defineByteCode(0x81, "XOR", "xor with ^");
-    defineByteCode(0x82, "INV", "invert with ~");
-
-    // Data Structures
-    defineByteCode(0xB00, "LIST", "Code telling that this HEAP/STACK Area is to be read as list");       // [0] = LIST, [1] = NEXT LISTNODE;
-    defineByteCode(0xB01, "LISTNODE", "ListNode with a pointer to next and it´s item"); // [0] LISTNODE [1] NEXT [2..DATA]
-    defineByteCode(0xB02, "DLISTNODE", "ListNode with a pointer to next, prev and it´s item"); // [0] LISTNODE [1] NEXT [2] PREV [3.. DATA]
-    defineByteCode(0xB03, "LISTLISTNODE", "ListNode with a pointer to next, prev, list and it´s item"); // [0] LISTNODE [1] NEXT [2] PREV [3] LIST [4.. DATA]
-
-    defineByteCode(0xB10, "HASH", "");
-    defineByteCode(0xB11, "HASHKEY", "");
-    defineByteCode(0xB12, "HASHVALUE", "");
-    defineByteCode(0xB13, "HASHFUNC", "Pointer to Hashfunction in Function Table");
-    defineByteCode(0xB20, "ARRAY", "Treat the following bytes as array structure");     // [0] = ARRAY [1] = LEN [2...2+LEN] ITEMS
-
-    // use HEAP32 etc as typed array (it is already one, so let´s gain speed inside syntax)
-    defineByteCode(0xB25, "INT32ARRAY", ""); // access HEAP like array of these, could speed up typed arrays in the vm :-)
-    defineByteCode(0xB26, "FLOAT64ARRAY", "");
-
-    // some HALT CODE
-    defineByteCode(0xFF, "HALT", "Stop script evaluation now and return whatever it is.");
-
-    // Signalling Completion Records
-    defineByteCode(0x100, "NORMALCOMP", "Normal Completion");
-    defineByteCode(0x101, "THROWCOMP", "Throw Completion");
-    defineByteCode(0x102, "BREAKCOMP", "Break Completion");
-    defineByteCode(0x103, "CONTINUECOMP", "Continue Completion");
-    defineByteCode(0x104, "RETURNCOMP", "Return Completion");
-
-    /**
-     * Calling Builtin Constructors with one Instruction
-     */
-
-    defineByteCode(0x200, "NEWOBJECT", "Shorty to create a new Object, hidden Class of PropNames from Parsing is in the Constant Pool");
-    defineByteCode(0x201, "NEWARRAY", "Shorty to create a new Array");
-    defineByteCode(0x202, "NEWSYMBOL", "Call Symbol()");
-    defineByteCode(0x203, "NEWNUMBER", "Call new Number()");
-    defineByteCode(0x204, "NEWSTRING", "");
-    defineByteCode(0x204, "NEWARRAYBUFFER", "");
-    defineByteCode(0x206, "NEWDATAVIEW", "");
-    defineByteCode(0x207, "NEWINT8ARRAY", "");
-    defineByteCode(0x208, "NEWINT16ARRAY", "");
-    defineByteCode(0x209, "NEWINT32ARRAY", "");
-    defineByteCode(0x210, "NEWUINT8ARRAY", "");
-    defineByteCode(0x211, "NEWUINT8CLAMPEDARRAY", "");
-    defineByteCode(0x212, "NEWUINT16ARRAY", "");
-    defineByteCode(0x213, "NEWUINT32ARRAY", "");
-    defineByteCode(0x214, "NEWFLOAT32ARRAY", "");
-    defineByteCode(0x215, "NEWFLOAT64ARRAY", "");
-    defineByteCode(0x216, "NEWFUNCTION", "");
-    defineByteCode(0x217, "NEWGENERATORFUNCTION", "");
-
-    /**
-     * Accessing internal slots in one instruction
-     */
-
-    defineByteCode(0x300, "GETSLOT", "lookup internal object slot");
-    defineByteCode(0x301, "SETSLOT", "");
-    defineByteCode(0x302, "HASSLOT", "");
-
-    /**
-     * Call Codes
-     *
-     *
-     */
-    defineByteCode(0x501, "CALL", "");
-    defineByteCode(0x502, "CONSTRUCT", "");
-    defineByteCode(0x503, "RET", "");
-    defineByteCode(0x504, "INVOKE", "");
-    defineByteCode(0x505, "FPROTOCALL", "");
-    defineByteCode(0x506, "FPROTOAPPLY", "");
-    defineByteCode(0x507, "SUPERCALL", "");
-
-    /*
-     * Conditional jumps
-     */
-    defineByteCode(0x600, "JMP", "");
-    defineByteCode(0x601, "JEQ", "if op1 === op2 goto op3");
-    defineByteCode(0x602, "JNEQ", "");
-    defineByteCode(0x603, "JLT", "");
-    defineByteCode(0x604, "JLTEQ", "");
-    defineByteCode(0x605, "JGT", "");
-    defineByteCode(0x606, "JGTEQ", "");
-
-    /**
-     * essentials in one instruction
-     */
-    defineByteCode(0x700, "GETPROPERTY", "");
-    defineByteCode(0x701, "GET", "");
-    defineByteCode(0x702, "SET", "");
-    defineByteCode(0x703, "DEFINEOWNPROPERTY", "");
-    defineByteCode(0x704, "DELETEPROPERTY", "");
-    defineByteCode(0x705, "DEFINEOWNPROPERTYORTHROW", "");
-    defineByteCode(0x706, "DELETEPROPERTYORTHROW", "");
-    defineByteCode(0x707, "OWNPROPERTYKEYS", "");
-    defineByteCode(0x708, "ENUMERATE", "");
-
-    /**
-     * reference
-     */
-    defineByteCode(0x800, "GETVALUE", "");
-    defineByteCode(0x801, "SETVALUE", "");
-    defineByteCode(0x802, "ISUNRESOLVABLE", "");
-    defineByteCode(0x803, "ISPROPERTYREF", "");
-
-    /**
-     * creating iterators fast
-     */
-    defineByteCode(0x900, "ITERATOR", "");
-    defineByteCode(0x901, "ITERATOR1", "");
-    defineByteCode(0x902, "ITERATOR2", "");
-    defineByteCode(0x903, "CREATELISTITERATOR", "");
-    defineByteCode(0x920, "CREATEARRAYITERATOR", "");
-    defineByteCode(0x921, "CREATELOADERITERATOR", "");
-    defineByteCode(0x922, "CREATESTRINGITERATOR", "");
-    defineByteCode(0x923, "CREATEMAPITERATOR", "");
-    defineByteCode(0x924, "CREATESETITERATOR", "");
-
-
-    /*
-        convert between lists and arrays
-     */
-    defineByteCode(0xA00, "ARRAYFROMLIST", "");
-    defineByteCode(0xA01, "LISTFROMARRAY", "");
-
-
-
-    defineByteCode(0xE00, "EXPRESSION", "");
-    defineByteCode(0xE01, "SEQEXPR", "state[++st] = SEQ  if this is encountered seqexpr state is pushed onto stack (needed for , operator returning last result only)");
-    defineByteCode(0xE02, "PROGRAM", "state[++st] = PROG goes from first block to last block");
-
-
-
-
-
-    /*
-        declarative environments
-     */
-
-    defineByteCode(0xE20, "HASBINDING", "");
-    defineByteCode(0xE21, "CREATEMUTABLEBINDING", "");
-    defineByteCode(0xE22, "CREATEIMMUTABLEBINDING", "");
-    defineByteCode(0xE23, "INITIALIZEBINDING", "");
-    defineByteCode(0xE24, "SETMUTABLEBINDING", "");
-    defineByteCode(0xE25, "GETBINDINGVALUE", "");
-    defineByteCode(0xE26, "DELETEBINDING", "");
-    defineByteCode(0xE29, "HASTHISBINDING", "");
-    defineByteCode(0xE27, "WITHBASEOBJECT", "");
-    defineByteCode(0xE28, "HASSUPERBINDING", "");
+    var LABELS;         // goto indizes
+    var RETADDR = [];   // stack for saving addr during compilation
 
     var STATE;
     var st = -1;
@@ -27963,84 +28172,9 @@ define("asm-compiler", function (require, exports) {
     }
 
 
-    function registerSet () {
-        return {
-            REGISTERS: Object.create(null),
-            REGNAMES: Object.create(null),
-            REGTYPES: Object.create(null)
-        };
-    }
-
-    function defineRegister($name, $type, $desc) {
-        REGISTERSET.REGISTERS[$name] = undefined;
-        REGISTERSET.REGNAMES[$name] = true;
-        REGISTERSET.REGTYPES[$name] = $type;
-    }
-
-    function codeSet() {
-        return {
-            BYTECODE: Object.create(null),
-            WORDS: Object.create(null),
-            DESC: Object.create(null)
-        };
-    }
-    function defineByteCode(num, name, desc) {
-        if (typeof num != "number" || typeof name != "string" || (desc !== undefined && typeof desc != "string")) {
-            throw new TypeError("invalid code definition. defineByteCode(0x01, 'ERROR', 'Code 0x01 is for the Error Example when wrong arguments are given to defineByteCode'");
-        }
-        CODESET.BYTECODE[name] = num;
-        CODESET.WORDS[num] = ""+name;
-        CODESET.DESC[name] = CODESET.DESC[num] = desc;
-    }
-    function flagSet () {
-        return {
-            FLAGS: Object.create(null),
-            DESC: Object.create(null)
-        };
-    }
-    function defineBitFlags(name, bitvalue, description) {
-        if (typeof name != "string" || typeof bitvalue != "number" ||
-            (description !== undefined && typeof description != "string")) {
-            throw new TypeError("invalid flag definition. defineBitflags('flag_error', 0, 'for the example if the flag register is zero then an error occured.'");
-        }
-        FLAGSET.FLAGS[name] = bitvalue;
-        FLAGSET.DESC[name] = description;
-    }
-
-    defineBitFlags("P_STRICT", 1, "");
-    defineBitFlags("P_METHOD", 2, "");
-    defineBitFlags("P_GENERATOR", 4, "");
-    defineBitFlags("P_GETTER", 8, "");
-    defineBitFlags("P_SETTER", 16, "");
-    defineBitFlags("P_STATIC_METHOD", 32, "");            // static method() in class
-    defineBitFlags("P_PROTOTYPE_METHOD", 64, "");         // method() in class
-    defineBitFlags("P_EXPRESSION", 128, "");              // [computed]
-
-    defineBitFlags("F_STRICT", 1, "");
-    defineBitFlags("F_METHOD", 2, "");
-    defineBitFlags("F_EXPRESSION", 4, "");
-    defineBitFlags("F_GENERATOR", 8, "");
-    defineBitFlags("F_THISMODE_LEXICAL", 16, "");
-    defineBitFlags("F_ARROW", 16, "");
-    defineBitFlags("F_THISMODE_GLOBAL", 128, "");
-    defineBitFlags("F_BOUNDFUNCTION", 256, "");
-    defineBitFlags("R_STRICT", 1, "");
-    defineBitFlags("R_SUPER", 2, "");
-    defineBitFlags("R_UNDEFINED", 4, "");
-
-
-
-
-    defineRegister("0", undefined, "")
-    defineRegister("1", undefined, "")
-    defineRegister("new", undefined, "")
-    defineRegister("return", undefined, "")
-    defineRegister("class", undefined, "");
-    defineRegister("number", undefined, "");
-
-    Object.freeze(FLAGSET);
-    Object.freeze(CODESET);
-    Object.freeze(REGISTERSET);
+    var BYTECODESET = require("asm-shared").BYTECODESET;
+    var BYTECODE = BYTECODESET.BYTECODE;
+    var BITFLAGSET = require("asm-shared").BITFLAGSET;
 
     var tables = require("tables");
     var propDefKinds = tables.propDefKinds;
@@ -28048,91 +28182,6 @@ define("asm-compiler", function (require, exports) {
     var codeForOperator = tables.codeForOperator;
     var operatorForCode = tables.operatorForCode;
     var unaryOperatorFromString = tables.unaryOperatorFromString;
-
-    /**
-     * initialize the compiler for a new compilation
-     * after compilation use exports.get() to get the data
-     *
-     * @param stackSize
-     */
-    function init(stackSize, poolSize) {
-        POOL = new Array(poolSize||10000);
-        pp = -1;
-        poolDupeMap = Object.create(null); // dupe check for identifiers, etc.
-        MEMORY = new ArrayBuffer(stackSize||1024*1024);
-        HEAP8 = new Int8Array(MEMORY);
-        HEAPU8 = new Uint8Array(MEMORY);
-        HEAP16 = new Int16Array(MEMORY);
-        HEAPU16 = new Uint16Array(MEMORY);
-        HEAP32 = new Int32Array(MEMORY);
-        HEAPU32 = new Uint32Array(MEMORY);
-        HEAPF32 = new Float32Array(MEMORY);
-        HEAPF64 = new Float64Array(MEMORY);
-        STACKBASE = 0;
-        STACKSIZE = stackSize;
-        STACKTOP = 0;
-        STATE = [];
-        LABELS = Object.create(null);
-    }
-
-    /**
-     * get returns the compiled data, the heap, the constant pool, the stacksize and stacktop
-     * @returns {{POOL: *, HEAP32: *, STACKSIZE: *, STACKTOP: *}}
-     *
-     */
-    function get() {
-        return {
-            POOL: POOL,
-            pp: pp,
-            poolDupeMap: poolDupeMap,
-            MEMORY: MEMORY,
-            HEAP8: HEAP8,
-            HEAPU8: HEAPU8,
-            HEAP16: HEAP16,
-            HEAPU16: HEAPU16,
-            HEAPU32: HEAPU32,
-            HEAP32: HEAP32,
-            HEAPF32: HEAPF32,
-            HEAPF64: HEAPF64,
-            STACKBASE: STACKBASE,
-            STACKSIZE: STACKSIZE,
-            STACKTOP: STACKTOP,
-            FLAGSET: FLAGSET,
-            CODESET: CODESET,
-            REGISTERSET: REGISTERSET,
-            STATE: STATE,
-            LABELS: LABELS
-        };
-    }
-
-    /**
-     *
-     * @param unit
-     */
-    function set(unit) {
-        POOL = unit.POOL;
-        pp = unit.pp;
-        poolDupeMap = unit.poolDupeMap;
-        MEMORY = unit.MEMORY;
-        HEAP8 = unit.HEAP8;
-        HEAPU8 = unit.HEAPU8;
-        HEAP16 = unit.HEAP16;
-        HEAPU16 = unit.HEAPU16;
-        HEAPU32 = unit.HEAPU32;
-        HEAP32 = unit.HEAP32;
-        HEAPF32 = unit.HEAPF32;
-        HEAPF64 = unit.HEAPF64;
-        STACKBASE = unit.STACKBASE;
-        STACKTOP = unit.STACKTOP;
-        STACKSIZE = unit.STACKSIZE;
-        FLAGSET = unit.FLAGSET;
-        CODESET = unit.CODESET;
-        REGISTERSET = unit.REGISTERSET;
-        STATE = unit.STATE;
-        LABELS = unit.LABELS;
-    }
-
-
 
     /**
      *
@@ -28639,18 +28688,96 @@ define("asm-compiler", function (require, exports) {
         compile(ast);
         return get();
     }
+
+
+    /**
+     * initialize the compiler for a new compilation
+     * after compilation use exports.get() to get the data
+     *
+     * @param stackSize
+     */
+    function init(stackSize, poolSize) {
+        POOL = new Array(poolSize||10000);
+        pp = -1;
+        poolDupeMap = Object.create(null); // dupe check for identifiers, etc.
+        MEMORY = new ArrayBuffer(stackSize||1024*1024);
+        HEAP8 = new Int8Array(MEMORY);
+        HEAPU8 = new Uint8Array(MEMORY);
+        HEAP16 = new Int16Array(MEMORY);
+        HEAPU16 = new Uint16Array(MEMORY);
+        HEAP32 = new Int32Array(MEMORY);
+        HEAPU32 = new Uint32Array(MEMORY);
+        HEAPF32 = new Float32Array(MEMORY);
+        HEAPF64 = new Float64Array(MEMORY);
+        STACKBASE = 0;
+        STACKSIZE = stackSize;
+        STACKTOP = 0;
+        STATE = [];
+        LABELS = Object.create(null);
+    }
+
+    /**
+     * get returns the compiled data, the heap, the constant pool, the stacksize and stacktop
+     * @returns {{POOL: *, HEAP32: *, STACKSIZE: *, STACKTOP: *}}
+     *
+     */
+    function get() {
+        return {
+            POOL: POOL,
+            pp: pp,
+            poolDupeMap: poolDupeMap,
+            MEMORY: MEMORY,
+            HEAP8: HEAP8,
+            HEAPU8: HEAPU8,
+            HEAP16: HEAP16,
+            HEAPU16: HEAPU16,
+            HEAPU32: HEAPU32,
+            HEAP32: HEAP32,
+            HEAPF32: HEAPF32,
+            HEAPF64: HEAPF64,
+            STACKBASE: STACKBASE,
+            STACKSIZE: STACKSIZE,
+            STACKTOP: STACKTOP,
+            STATE: STATE,
+            LABELS: LABELS
+        };
+    }
+
+    /**
+     *
+     * @param unit
+     */
+    function set(unit) {
+        POOL = unit.POOL;
+        pp = unit.pp;
+        poolDupeMap = unit.poolDupeMap;
+        MEMORY = unit.MEMORY;
+        HEAP8 = unit.HEAP8;
+        HEAPU8 = unit.HEAPU8;
+        HEAP16 = unit.HEAP16;
+        HEAPU16 = unit.HEAPU16;
+        HEAPU32 = unit.HEAPU32;
+        HEAP32 = unit.HEAP32;
+        HEAPF32 = unit.HEAPF32;
+        HEAPF64 = unit.HEAPF64;
+        STACKBASE = unit.STACKBASE;
+        STACKTOP = unit.STACKTOP;
+        STACKSIZE = unit.STACKSIZE;
+        STATE = unit.STATE;
+        LABELS = unit.LABELS;
+    }
+
+
     /**
      * the steps are to call init, compile and get
      * and to unify it i add the method compileUnit
      * @type {null}
      */
-    exports.init = init;
+/*    exports.init = init;
     exports.compile = compile;
-    exports.get = get;
+    exports.get = get; */
     exports.compileUnit = compileUnit;
     exports.getEmptyUnit = getEmptyUnit;
-    exports.CODESET = CODESET;  // prolly rename
-    exports.FLAGSET = FLAGSET;  // better do (one day i will stop doing it wrong and just do it right and with a good name)
 });
 
 
@@ -28659,12 +28786,8 @@ define("asm-compiler", function (require, exports) {
  */
 
 define("asm-runtime", function (require, exports) {
-
-
     var realm, strict, tailCall;
-
     var compiler = require("asm-compiler");
-
     var tables = require("tables");
     var codeForOperator = tables.codeForOperator;
     var operatorForCode = tables.operatorForCode;
@@ -28672,19 +28795,36 @@ define("asm-runtime", function (require, exports) {
     var propDefCodes = tables.propDefCodes;
     var detector = require("detector");
     var hasConsole = detector.hasConsole;
-
-    /**
-     * intl functions to translate messages from the beginning on
-     * @type {Function|format}
-     */
-
     var format = require("i18n").format;
     var formatStr = require("i18n").formatStr;
     var trans = require("i18n").trans;
 
+
+
+    var CODESET = require("asm-shared").BYTECODESET;
+    var FLAGSET = require("asm-shared").BITFLAGSET;
+    var REGISTERSET = require("asm-shared").REGISTERSET;    // dynamic. but there are other registers in HEAP32 format in use
+
     /**
+     * Now HEAP*:
      * this is just the bytecode memory
+     *
+     * i will redo it
+     *
+     * for CS (Code segment, the below)
+     * for SS (Stack Segment, a large area for executing code, registers, local vars)
+     * for DS (Data Segment, the runtime HEAP for allocating objects)
+     *
+     * a POOL: Constant Pool shared by everyone.
+     *
+     *
+     * If i do all in one Array Buffer.
+     * A resize of the heap will cost also to copy all the compiled code
+     * and the whole stack. A resize of the stack will shrink the heap.
+     * A resize of the code isn´t usual. But i need to copy it, if i resize
+     * the ArrayBuffer (replace with a new, larger, or smaller)
      */
+
     var POOL;
     var pp;
     var poolDupeMap;
@@ -28698,37 +28838,28 @@ define("asm-runtime", function (require, exports) {
     var HEAPF32;
     var HEAPF64;
     var STACKBASE;
+    var STACKLIMIT;
     var STACKTOP;
     var STACKSIZE;
-
     var CALLSTACK;
-
-
-    /**
-     * call frames (execution context)
-     * @type {Array}
-     */
-    var frames =  new Array(1000);
-    var fp = -1;
+    var frames;
     var frame;
-
-
-    /**
-     * global registers
-     */
+    var fp = -1;
 
     var r0, r1, r2, r3, r4, r5, r6, r7, r8, r9;
-    var reg = Array(10);
+
     var regs = [[],[],[],[],[],[],[],[],[],[],[]];  // if you have no operand stack, you need to save the regs.
+    // in the HEAP32 the registers are stack allocated and should have a couple of slots in advance
+    // i have to figure out, which numbers are good and fight to teach myself
 
-    function pushReg(nr) {
-        regs[nr].push(reg[nr]);
-    }
-
-    function popReg(nr) {
-        reg[nr] = regs[nr].pop();
-    }
-
+    /**
+     * old imports.
+     * i think the runtime will be compatible later,
+     * because the syntax tree eval can use HEAP32 objects without mourns
+     * and the other way round i make it compatible by knowing the pointer
+     * or the type. and if not, no, and if, two sep impl to compare are as good as always.
+     * @type {exports}
+     */
     var ecma = require("api");
     var parse = require("parser");
     var CodeRealm = ecma.CodeRealm;
@@ -28749,69 +28880,15 @@ define("asm-runtime", function (require, exports) {
     var GetValue = ecma.GetValue;
     var PutValue = ecma.PutValue;
     var ExecutionContext = ecma.ExecutionContext;
-
-    function getFromPool(index) {
-        var $0 = POOL[index];
-        operands[++sp] = $0;
-    }
-    /**
-     * stack - contains the ip to the next instruction
-     * should grow each statement list, and shrink each instruction
-     * the program should halt (or run nextTask) if the stack is empty.
-     *
-     * This will be replaced by smarter calculations of offsets
-     *
-     */
-    var stackBuffer, stack, pc;
-
+    var stack, pc;
     var state = [];    // save
     var st = -1;
-    var MAINBODY = 2;
-    var FUNCTIONCALL = 4;
-    var GENERATOR = 8;
-    var METHOD = 16;
-    var CLASS = 32;
-    var ARGLIST = 64;
-    var ASSIGNMENT = 128;
-    var OBJECTLITERAL = 256;
-    var ARRAYLITERAL = 512;
 
-    var PRG_STATE,
-        EXPR_STATE;
-
-    var BITS = Object.create(null);
-    BITS.IS_STRICT = 1;
-    BITS.IS_CALLABLE = 2;
-    BITS.IS_CONSTRUCTOR = 3;
-    BITS.IS_ARROW = 4;
-    BITS.HAS_BODY = 8;
-
-
-    var TYPES = Object.create(null);
-    TYPES.REFERENCE = 1;
-    TYPES.NUMBER = 2;
-    TYPES.STRING = 3;
-    TYPES.SYMBOL = 4;
-    TYPES.OBJECT = 5;
-    TYPES.NULL = 6;
-    TYPES.UNDEFINED = 7;
-    TYPES.COMPLETION = 8;
-    TYPES.ENVIRONMENT = 9;
-    TYPES.CALLCONTEXT = 10;
-    // function Type(O) should be inlined and manually testet in this file. maybe it helps. calls hurt too much.
-
-    var RECORDTYPE = Object.create(null);
-    // array version
-    RECORDTYPE.GLOBALREC = 1;
-    RECORDTYPE.FUNCTIONREC = 2;
-    RECORDTYPE.LOCALREC = 3;
-    RECORDTYPE.OBJECTREC = 4;
-    // but also recognizing ast version (interop)
-    RECORDTYPE.GLOBALENV = 10;
-    RECORDTYPE.FUNCTIONENV = 11;
-    RECORDTYPE.LOCALENV = 12;
-    RECORDTYPE.OBJECTENV = 13;
-
+    /**
+     *  Data Structures
+     *  Objects, Functions, Environments
+     *  Callstack,
+     */
     function newContext() {
         var context = new Int32Array(STACKTOP, 8);
         STACKTOP += 32;
@@ -28856,20 +28933,7 @@ define("asm-runtime", function (require, exports) {
     }
 
 
-    /*
-        TODO:
-        - Surrogate pairs from the beginning
 
-        - FTABLE for all builtin functions,
-        if they are not implemented as bytecode now :-)
-
-        - CALL TO NATIVEJS BUILTINS which i´ve already written
-
-        (to REUSE ALL CALL FUNCTIONS AND CREATEINTRINSICS,
-        BUT CALLED FROM HERE (by replacing ordinary functions and stuff of course,
-        we speak about a few hundred or less than five thousand lines of code))
-
-     */
     function main(pc) {
         "use strict";
         // local registers
@@ -28877,7 +28941,7 @@ define("asm-runtime", function (require, exports) {
         var result; // oh, what register. maybe i learn.
         //  var state = 0;
         while (1) {
-            code = HEAP32[pc];
+            var code = HEAP32[pc];
             switch(code) {
                 case BYTECODE.PRG:
                 case BYTECODE.EXPR:
@@ -28904,6 +28968,9 @@ define("asm-runtime", function (require, exports) {
                     var value = HEAP32[pc+2];
                     if (lhs[0] == TYPES.REFERENCE) {
                         lhs[1] = value; // setting base
+                        r0 = undefined;
+                    } else {
+                        r0 = newReferenceError();
                     }
                     pc = pc + 2;
                     continue;
@@ -28912,7 +28979,7 @@ define("asm-runtime", function (require, exports) {
                     var P = HEAP32[pc+2];
                     var propList = POOL[O[1]];  // O[1] ist die PropNameList (war auf Papier am Ende nach 1* type und bits, aber egal)
                     var desc = O[propList[P]];
-                    result = desc[1];
+                    r0 = desc[1];
                     pc = pc + 3;    // CODE.GETOWNPROP, O, P = 3
                     continue;
             }
@@ -28978,14 +29045,36 @@ define("asm-runtime", function (require, exports) {
         return ptr;
     }
 
-    function ExecutionRecord(numVars, outer, stack) {
+    function ExecutionRecord(numVars, outer, stack, realm) {
         var ptr = STACKTOP >> 2;
+        STACKTOP += 7 << 2;
         HEAP32[0] = TYPES.CALLCONTEXT;
         HEAP32[1] = allocateLocalVars(numVars, outer, stack);//write start offset, block is numVars + sizeOfVar
         HEAP32[2] = allocateRegisters(numRegs); //write start offset
-
         HEAP32[3] = stack;
+        //HEAP32[4] = getPtr(realm.globalThis);
+        //HEAP32[5] = getPtr(realm.globalEnv);
+        //HEAP32[6] =
         return ptr;
+    }
+
+    function getType(O) {
+        if (typeof O === "number") {
+            // try ptr
+        } else if (typeof O === "object") {
+            // return native type
+        }
+
+    }
+
+    function getPtr(obj) {
+        if (typeof obj === "object" && hasInternalSlot(obj, Bindings)) {
+            var ptr = STACKTOP;
+            STACKTOP += 8;
+            HEAP32[ptr] = TYPES.OBJECT;
+            //HEAP32[ptr+1] = addToConstantPool(obj);
+            return ptr;
+        }
     }
 
     /**
@@ -29011,8 +29100,8 @@ define("asm-runtime", function (require, exports) {
         pc = 0;
         stack[pc] = STACKBASE;
         main(pc);
-        if (isAbrupt($0=ifAbrupt($0))) return $0;
-        return NormalCompletion($0);
+        if (isAbrupt(r0=ifAbrupt(r0))) return r0;
+        return NormalCompletion(r0);
     }
 
     function CompileAndRun(realm, src) {
@@ -29024,12 +29113,12 @@ define("asm-runtime", function (require, exports) {
         pc = 0;
         stack[pc] = STACKBASE; // ip to first bytecode at HEAP32[stack[0]]
         main(pc);
-        if (isAbrupt($0=ifAbrupt($0))) return $0;
-        return NormalCompletion($0);
+        if (isAbrupt(r0=ifAbrupt(r0))) return r0;
+        return NormalCompletion(r0);
     }
     exports.CompileAndRun = CompileAndRun;
     exports.RunUnit = RunUnit;
-});	// is not asm. but renamable.
+});
 define("asm-parser", function (require, exports) {
 
     var char, char2;
@@ -29151,10 +29240,7 @@ define("asm-parser", function (require, exports) {
     exports.parse = parse;
     exports.eval = evalUnit;
 
-}); // time for the first dsl before lib/transpile and whole trees
-    // syntax highlighter (the original application of syntax.js)
-    // will be rewritten soon,
-    // maybe with jquery for max effect with same simplicity
+});
 
 // *******************************************************************************************************************************
 // Highlight (UI Independent Function translating JS into a string of spans)
@@ -30354,7 +30440,6 @@ if (typeof window != "undefined") {
     });
 
 }
-    // evaluation in web workers should save some of the ux
 /*
  *
  *  syntax.js web worker module
@@ -30434,7 +30519,6 @@ define("syntaxjs-worker", function (require, exports, module) {
     return exports;
 });
 
-    // the commandline shell is my favorite playtoy
 
 define("syntaxjs-shell", function (require, exports) {
     
@@ -30615,7 +30699,6 @@ define("syntaxjs-shell", function (require, exports) {
 
 
 
-    // assembling and autostart of shell or browser highlighter
 // #######################################################################################################################
 // the closure around this is new in main.js, the main template
 // #######################################################################################################################
