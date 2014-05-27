@@ -28656,82 +28656,9 @@ define("asm-compiler", function (require, exports) {
 
 /**
  * asm-runtime
- *
- * not a asm.js runtime
- * but on the way to or just related
- *
- *
- * this one will be the ultimate update
- * of parsenodes/runtime.js
- * (which will get upgrade to stack loop
- * instead of recursion for each task queue
- * while there are tasks)
- *
- *
- * it will have typed access to a HEAP32,
- * and FLOAT64 for numbers, with align to 8,
- * wasting 4 bytes,
- *
- * with intcode anyways, wasting 3 bytes or
- * having place for bitflags in the upper half.
-
- *
- * modeled after EMSCRIPTEN/DOCS/PAPER.PDF
- * (not wordwise, but what i could make of
- * now, and what will come when i have my own
- * basic block linker, thanks to AZakai for some
- * pionieering work, LLVM will play a huge part in
- * my following C++ Implementation Tries for the year
- * after)
- *
- *  real documentation will follow
- *
- *  purposed is a DESCRIPTION Attribute for each defined
- *  bytecode, flag or register, that one can generate and
- *  internationalize/localize from
- *
  */
 
 define("asm-runtime", function (require, exports) {
-    /*
-        goal: a whole rewrite of runtime.js
-        with other kind of object and environment layout
-
-
-        but: with possibility to identify the old context,
-        old environment, old ordinary objects and to use them
-        the regular way.
-
-        That syntax tree and bytecode can work hand in hand without
-        incompatiblities (syntaxtree version is from scratch on, except
-        for a few arrays, where push(array, ..) and length(array, ) was
-        forgotten, designed, to be replaced with typed arrays) After ten
-        months of EcmaScript Edition 6 i have enough of my lame and slow
-        AST evaluator.
-
-        But i´ve made experience, which other people would like to get for
-        free. Like what the limit´s of recursion are, when you call Evaluate(node.type);.
-
-        Or what the main problems of the Mozilla AST are, being put in place of
-        the current Edition (just incompleteness for the current version, and a lack
-        of boundNames, lexNames, varNames, wherever possible, to give a direct accessible
-        list for the compiler..
-
-
-
-        The question is "How to encode Identifiers, PropertyNames"
-
-        String.fromCharCode() each String Property Name each Time,
-        oder better chache them in a regular JavaScript Object Hash
-        in the constant Pool?
-
-
-        PropNameList is a good template for an Object´s first hidden class. And btw.
-        That each instance needs a copy reminds me of testing out, whether encoding the
-        names together with the propertydescriptor makes sense.
-        Symbols and Propertys have just a slot.
-
-     */
 
 
     var realm, strict, tailCall;
@@ -28903,14 +28830,12 @@ define("asm-runtime", function (require, exports) {
         var ptr = STACKTOP >> 2;
         HEAP32[ptr] = TYPES.OBJECT;
         HEAP32[ptr+1] = BITS.IS_CALLABLE | BITS.IS_CONSTRUCTABLE | BITS.IS_EXTENSIBLE;
-        HEAP32[ptr+2] = SLOTKIND.ORDINARYFUNCTION;
         STACKTOP += 32;
         return ptr;
     }
     function DeclarativeRecord() {
         var ptr = STACKTOP >> 2;
         HEAP32[ptr] = TYPES.LOCALREC;   // Kenne funktionstabelle durch den typen
-        HEAP32[ptr+2] = allocateBindingRecords(numberLocalBindings);
         HEAP32[ptr+2] = allocateBindingRecords(numberLocalBindings);
         return ptr;
     }
@@ -29086,7 +29011,6 @@ define("asm-runtime", function (require, exports) {
         pc = 0;
         stack[pc] = STACKBASE;
         main(pc);
-        var $0 = operands[sp--];
         if (isAbrupt($0=ifAbrupt($0))) return $0;
         return NormalCompletion($0);
     }
@@ -29100,7 +29024,6 @@ define("asm-runtime", function (require, exports) {
         pc = 0;
         stack[pc] = STACKBASE; // ip to first bytecode at HEAP32[stack[0]]
         main(pc);
-        var $0 = operands[sp--];
         if (isAbrupt($0=ifAbrupt($0))) return $0;
         return NormalCompletion($0);
     }
