@@ -10873,6 +10873,7 @@ var ObjectPrototype_set_proto = function (thisArg, argList) {
     if (status === false) return newTypeError( "__proto__: SetPrototypeOf failed.");
     return proto;
 };
+
 function DeclarativeEnvironment(outer) {
     var de = Object.create(DeclarativeEnvironment.prototype);
     de.Bindings = Object.create(null);
@@ -28653,10 +28654,83 @@ define("asm-compiler", function (require, exports) {
 });
 
 
+/**
+ * asm-runtime
+ *
+ * not a asm.js runtime
+ * but on the way to or just related
+ *
+ *
+ * this one will be the ultimate update
+ * of parsenodes/runtime.js
+ * (which will get upgrade to stack loop
+ * instead of recursion for each task queue
+ * while there are tasks)
+ *
+ *
+ * it will have typed access to a HEAP32,
+ * and FLOAT64 for numbers, with align to 8,
+ * wasting 4 bytes,
+ *
+ * with intcode anyways, wasting 3 bytes or
+ * having place for bitflags in the upper half.
+
+ *
+ * modeled after EMSCRIPTEN/DOCS/PAPER.PDF
+ * (not wordwise, but what i could make of
+ * now, and what will come when i have my own
+ * basic block linker, thanks to AZakai for some
+ * pionieering work, LLVM will play a huge part in
+ * my following C++ Implementation Tries for the year
+ * after)
+ *
+ *  real documentation will follow
+ *
+ *  purposed is a DESCRIPTION Attribute for each defined
+ *  bytecode, flag or register, that one can generate and
+ *  internationalize/localize from
+ *
+ */
+
 define("asm-runtime", function (require, exports) {
     /*
         goal: a whole rewrite of runtime.js
         with other kind of object and environment layout
+
+
+        but: with possibility to identify the old context,
+        old environment, old ordinary objects and to use them
+        the regular way.
+
+        That syntax tree and bytecode can work hand in hand without
+        incompatiblities (syntaxtree version is from scratch on, except
+        for a few arrays, where push(array, ..) and length(array, ) was
+        forgotten, designed, to be replaced with typed arrays) After ten
+        months of EcmaScript Edition 6 i have enough of my lame and slow
+        AST evaluator.
+
+        But i´ve made experience, which other people would like to get for
+        free. Like what the limit´s of recursion are, when you call Evaluate(node.type);.
+
+        Or what the main problems of the Mozilla AST are, being put in place of
+        the current Edition (just incompleteness for the current version, and a lack
+        of boundNames, lexNames, varNames, wherever possible, to give a direct accessible
+        list for the compiler..
+
+
+
+        The question is "How to encode Identifiers, PropertyNames"
+
+        String.fromCharCode() each String Property Name each Time,
+        oder better chache them in a regular JavaScript Object Hash
+        in the constant Pool?
+
+
+        PropNameList is a good template for an Object´s first hidden class. And btw.
+        That each instance needs a copy reminds me of testing out, whether encoding the
+        names together with the propertydescriptor makes sense.
+        Symbols and Propertys have just a slot.
+
      */
 
 
@@ -28699,6 +28773,8 @@ define("asm-runtime", function (require, exports) {
     var STACKBASE;
     var STACKTOP;
     var STACKSIZE;
+
+    var CALLSTACK;
 
 
     /**
@@ -28776,6 +28852,14 @@ define("asm-runtime", function (require, exports) {
     var PRG_STATE,
         EXPR_STATE;
 
+    var BITS = Object.create(null);
+    BITS.IS_STRICT = 1;
+    BITS.IS_CALLABLE = 2;
+    BITS.IS_CONSTRUCTOR = 3;
+    BITS.IS_ARROW = 4;
+    BITS.HAS_BODY = 8;
+
+
     var TYPES = Object.create(null);
     TYPES.REFERENCE = 1;
     TYPES.NUMBER = 2;
@@ -28786,7 +28870,66 @@ define("asm-runtime", function (require, exports) {
     TYPES.UNDEFINED = 7;
     TYPES.COMPLETION = 8;
     TYPES.ENVIRONMENT = 9;
+    TYPES.CALLCONTEXT = 10;
     // function Type(O) should be inlined and manually testet in this file. maybe it helps. calls hurt too much.
+
+    var RECORDTYPE = Object.create(null);
+    // array version
+    RECORDTYPE.GLOBALREC = 1;
+    RECORDTYPE.FUNCTIONREC = 2;
+    RECORDTYPE.LOCALREC = 3;
+    RECORDTYPE.OBJECTREC = 4;
+    // but also recognizing ast version (interop)
+    RECORDTYPE.GLOBALENV = 10;
+    RECORDTYPE.FUNCTIONENV = 11;
+    RECORDTYPE.LOCALENV = 12;
+    RECORDTYPE.OBJECTENV = 13;
+
+    function newContext() {
+        var context = new Int32Array(STACKTOP, 8);
+        STACKTOP += 32;
+        CALLSTACK.push(context);
+    }
+    function oldContext() {
+        CALLSTACK.pop();
+    }
+    function OrdinaryObject() {
+        var ptr = STACKTOP >> 2;
+        HEAP32[ptr] = TYPES.OBJECT;
+        STACKTOP += 32;
+        return ptr;
+    }
+    function OrdinaryFunction () {
+        var ptr = STACKTOP >> 2;
+        HEAP32[ptr] = TYPES.OBJECT;
+        HEAP32[ptr+1] = BITS.IS_CALLABLE | BITS.IS_CONSTRUCTABLE | BITS.IS_EXTENSIBLE;
+        HEAP32[ptr+2] = SLOTKIND.ORDINARYFUNCTION;
+        STACKTOP += 32;
+        return ptr;
+    }
+    function DeclarativeRecord() {
+        var ptr = STACKTOP >> 2;
+        HEAP32[ptr] = TYPES.LOCALREC;   // Kenne funktionstabelle durch den typen
+        HEAP32[ptr+2] = allocateBindingRecords(numberLocalBindings);
+        HEAP32[ptr+2] = allocateBindingRecords(numberLocalBindings);
+        return ptr;
+    }
+    function ObjectRecord() {
+        var ptr = STACKTOP >> 2;
+        HEAP32[ptr] = TYPES.OBJECTREC;
+        return ptr;
+    }
+    function FunctionRecord() {
+        var ptr = STACKTOP >> 2;
+        HEAP32[ptr] = TYPES.FUNCTIONREC;
+        return ptr;
+    }
+    function GlobalRecord() {
+        var ptr = STACKTOP >> 2;
+        HEAP32[ptr] = TYPES.GLOBALREC;
+        return ptr;
+    }
+
 
     /*
         TODO:
@@ -28813,7 +28956,7 @@ define("asm-runtime", function (require, exports) {
             switch(code) {
                 case BYTECODE.PRG:
                 case BYTECODE.EXPR:
-                case BYTECODE.SEQEXPR :
+                case BYTECODE.SEQEXPR:
                     state[++st] = code;
                     pc = pc + 1;
                     continue;
@@ -28823,13 +28966,13 @@ define("asm-runtime", function (require, exports) {
                 case BYTECODE.REFERENCE:
                     // ReferenceRecord(HEAP32.subarray(pc,4);
                     var PTR = STACKTOP >> 2;
-                    STACKTOP += 8;
+                    STACKTOP += 20;
                     HEAP32[PTR] = TYPES.REFERENCE;
                     HEAP32[PTR+1] = HEAP32[pc+1];
                     HEAP32[PTR+2] = HEAP32[pc+2];
                     HEAP32[PTR+3] = HEAP32[pc+3];
                     HEAP32[PTR+4] = HEAP32[pc+4];
-                    pc = pc + 1;
+                    pc = pc + 5;
                     continue;
                 case BYTECODE.PUTVALUE:
                     var lhs = HEAP32[pc+1];
@@ -28847,6 +28990,12 @@ define("asm-runtime", function (require, exports) {
                     result = desc[1];
                     pc = pc + 3;    // CODE.GETOWNPROP, O, P = 3
                     continue;
+            }
+
+            if (STACKTOP >= MEMORY.byteLength - 1024) {
+                /**
+                 * time to do the magic garbage colletion
+                 */
             }
         }
     }
@@ -28877,25 +29026,41 @@ define("asm-runtime", function (require, exports) {
         STACKSIZE = unit.STACKSIZE;
         CODESET = unit.CODESET;
         FLAGSET = unit.FLAGSET;
+        BITS = unit.BITS;
     }
 
-    function init() {   // callstack up
-        stackBuffer = new ArrayBuffer(4096 * 16);
-        stack = new Int32Array(stackBuffer);
-        ++fp;
-        frame = frames[fp] = ExecutionContext(frames[fp-1]);
-        frame.stackBuffer = stackBuffer;
-        frame.stack = stack;
-        frame.pc = pc;
+    function init(numGlobalLocalVars) {   // callstack up
+        stack = new Int32Array(MEMORY, STACKTOP);
+        STACKTOP += 4096 * 16;
+        framesArrayBuffer = new ArrayBuffer(4096 * 16);
+        frames = new Int32Array(MEMORY, STACKTOP);
+        var nul = STACKTOP;
+        STACKTOP += 4096 * 16;      // we run out of
+        fp = 0;
+        frame = frames[fp] = ExecutionRecord(numGlobalLocalVars, nul, realm);
     }
 
-    function restore() {    // callstack down (wrong encoding)
-        frame = frames[--fp];
-        if (frame) {
-            stack = frame.stack;
-            stackBuffer = frame.stackBuffer;
-            pc = frame.pc;
-        }
+    function allocateLocalVars(numVars) {
+        // can be determined by static source analysis how many _exactly_
+        var ptr = STACKTOP >> 2;
+        STACKTOP += numVars * 16;   // 16? too much? 4 slots each variable with no design for now
+        return ptr;
+    }
+
+    function allocateRegisters(numRegs) {
+        var ptr = STACKTOP >> 2;
+        STACKTOP += numRegs * 20; // can hold a full reference and completion, don´t know if this is an useful thought
+        return ptr;
+    }
+
+    function ExecutionRecord(numVars, outer, stack) {
+        var ptr = STACKTOP >> 2;
+        HEAP32[0] = TYPES.CALLCONTEXT;
+        HEAP32[1] = allocateLocalVars(numVars, outer, stack);//write start offset, block is numVars + sizeOfVar
+        HEAP32[2] = allocateRegisters(numRegs); //write start offset
+
+        HEAP32[3] = stack;
+        return ptr;
     }
 
     /**
