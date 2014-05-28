@@ -1,0 +1,86 @@
+BYTECODE DOCUMENTATION
+======================
+
+This document will describe the design and the background of the compiled JavaScript ByteCode which
+gets invented for syntax.js.
+
+Flexibility and faster computation is one goal as well as learning how to do it from a syntax tree to
+a typed, stack allocated collection of numbers and constant pool indexes.
+
+
+Influences Emscripten memory model
+----------------------------------
+I have taken emscripten/docs/paper.pdf and read a little to try to find out, if
+it makes sense to build a bridge over the river or if that´s some new miss for me.
+
+STACKTOP is count in bytes and the top of the stack, used for stackallocation.
+Whenever we need memory, we ask for the current stacktop. Align it, increasingly,
+if needed so. Add up the Bytes we want to have and let the next one use the newly
+updated STACKTOP.
+
+
+
+Constant Pool to the Rescue
+---------------------------
+
+There are various ways to store things which don´t belong directly into the typed array.
+One of these things are Strings. We could encode and decode them with .charCodeAt and
+String.fromCharCode. Or anyways use code points and only do one way encoding to put them
+back onto screen. Another possibility is to add them to a constant pool which holds all
+literals, function declarations, propertylists, boundNames for direct and fast access aside
+the strongly typed HEAP array.
+The Pool maintains a dupe map, that we don´t add each identifier "x" each time it´s referred
+as a new identifier name.
+
+Identifier encoding: The identifiers will get a running number and unique id for their scope,
+which can be referenced on the call frame, where the environment records belong to. But for now
+i will just show how to use the constant pool. The array design of the numeric slots for local
+vars will be explained very shortly.
+
+var POOL = Object.create(null);    // keeps key = poolIndex and value = value
+var dupeMapConstantPool = Object.create(null); // keeps key = value and value = poolIndex
+var poolIndex = -1;
+
+```js
+function addToConstantPool(value) {
+    var _poolIndex;
+    if (!(_poolIndex = dupeMapConstantPool[value])) {
+        ++poolIndex;
+        POOL[poolIndex] = value;                    // 1* memory
+        dupeMapConstantPool[value] = poolIndex;     // 2* memory cost
+    }
+    return _poolIndex;
+}
+```
+
+Storing in Int32 Format at the beginning
+----------------------------------------
+```js
+var ptr = STACKTOP >> 2;    // Get the current Stacktop in Bytes and divide by 4 to have a HEAP32[ptr] for 4 Byte Slots.
+```
+
+Storing a double with alignment
+--------------------------------
+```js
+var align = STACKTOP % 8;       // We want to store a float, it has to be aligned with 8
+if (align === 0) STACKTOP += 4; // I can be sure, that the rest is always 4 in this code, so i can add 4 hardcoded.
+var ptr = STACKTOP >> 2;        // Now i get the real first pointer to the number type
+STACKTOP+=12;                   // add 4 bytes for the types integer and 8 bytes for the number itself
+HEAP32[ptr] = TYPES.NUMBER;     // here is the identificator. Now we can '|-or' some things into the 4 bytes to use them
+HEAPF64[(ptr+1)>>1] = value;    // store the number but use FLOAT64 view
+```
+
+
+Compiling the Syntax Tree
+-------------------------
+Iteration One: Compiling into AST like Instructions
+Iteration Two: Basic Blocks and Instruction Set
+
+
+
+
+
+
+
+
+
