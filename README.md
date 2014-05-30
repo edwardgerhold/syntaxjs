@@ -96,7 +96,104 @@ crunched version of the ast repeat, and a regular machine language instruction s
 
 So this project will get a assembly-bytecode-dsl (with own parser for writing assembly scripts run by the interpreter as a project tool to play around with).
 
-This project will proove the speed of compiled JavaScript Code versus the speed of recursivly evaluating a syntax tree.
+This project will proove the speed of compiled JavaScript Code versus the speed 
+of recursivly evaluating a syntax tree. As well as compare the version using JavaScript
+Objects for simulating the internal object´s structures with the version using a 
+few numbers behind some array slots and a lot reads and writes on the Buffer.
+
+Both have to use distinct API´s.
+
+My first thought when creating the AST Version was, to make it changeable for
+TypedArrays. But i didn´t really know, that my register machine has the slots
+on the context for the registers and the local vars. Which look like the environment
+records on the ast, but .LexEnv and .VarEnv won´t work anymore. My old aim was to
+reuse these and just to move the code to STACK32 and the objects to HEAP32 and to
+edit these to work with both
+
+Now i will write a complete second version in the same branch. And show how both
+versions will execute javascript code and care for
+
+a) cleaning up the old version
+b) making a competitive second version which is still around when es7 is prototyped,
+but then running everything from a few compiled intcodes
+c) writing papers up for both version
+
+
+Main goal: Education
+====================
+Telling the world my experiences with implementing EcmaScript. There are so many
+people which want to know what a virtual machine is, how these engines work, and
+where the differences are in the approach of coding such a machine. 
+
+
+If i had a boss, i bet i´d worked cleverer, because of the team around and the
+experience of these people i hadn´t taken the wrong branch. 
+
+
+
+Register blueprint
+==================
+* Unlimited registers are cool
+* Push and pop of the registers must be possibly
+* There will be typed registers and dynamic registers
+* Each callframe get´s local registers, which can be saved
+*
+
+Constant Pool
+=============
+* How much, Function Declaration Nodes, VariableDeclaration Nodes, BoundNames Lists, lexNames Lists, and what lands in the constant pool is unclear. It´s from anything which isn´t fitting into the Int32Array to nothing, because we encoded all.
+  Will be discovered by development. But the POOL is available and has ByteCodes and Operations.
+* Maybe i store additional compiler information here. Do i encode the boundNames and
+just use the numbers and restore the name behind the number on demand or do i keep a 
+hidden class in the constant pool (so each objectliteral produces some garbage there?)  
+  
+
+
+Memory blueprint
+================
+* Three (or four) Segments. At last CODE, STACK and HEAP. And a constant POOL (which isn´t a typed array, but a dynamic pool) 
+  Code is reserved space from the compiler. Three Segments to make it more readable.
+* Stack is the runtime organization and the memory scratchpad and heap is allocating space for objects
+  and storing compiled code of in the runtime created function expressions.
+
+Compiler blueprint:
+===================
+* Compile each expression down to basic blocks, label the entrance. Have a goto at the end. Each block is atomic and can not be left.
+* The compiled gotos make sense in this very expressive language form.The compiled jumps make it unecessary to load the program counter manually by doing stack[++pc] = nextPtr and the code walks from beginning to end.
+* Compile CODE into a Code segment.
+* the STACK gets it´s own segment above the compiled code
+* The HEAP and the STACK may meet
+
+Code Optimization
+=================
+* Learning to generate three address code
+* This is analyzable and optimizable
+* There are a dozen well-known optimizer techniques which all have to have their
+interface and their use in this system, but writing this down is new for me.
+
+Runtime blueprint
+=================
+* HEAP32[0] = TYPES_OBJECT | ((BITS_EXTENSIBLE|SLOTS_ORDINARYOBJECT) << 16) 
+* Objects have a refcount int, And another free int
+* A freed object´s space gets typed to TYPES.FREELISTNODE and has the size of
+* the Object, so it could serve a new object, for example.
+
+
+Cleaning up the old syntax.js:
+==============================
+
+1. I´ll make the Generator possible like i promised (it wasn´t the problem, the whole vm 101 was more to learn than how suspending and resuming a cc will work)
+2.I´ll fix the unicode interpretation for the source code and all stringLiterals
+3. I´ll replace recursive descent AssignmentExpression with a LOOP to get more depth
+4. I´ll replace the main loop of the interpreter with a main loop doing all task queues
+and then if the script task is available i execute the code there. And that execution
+will do the following:  Put all nodes into a Queue (no more stack, FIFO is the easy way round here,
+don´t use shift, just ++pos)) and work them off and keep the counter.
+Replacing the RD-eval with a LOOP-eval will make the system clean.
+5. And making static semantics cache their values will help much saving timne when executing
+functions multiple times with their boundnames and loops. 
+6. Removing "execute" and other functions which are not clear and not needed.
+
 
 
 
