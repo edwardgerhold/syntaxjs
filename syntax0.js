@@ -2384,6 +2384,32 @@ define("tables", function (require, exports, module) {
         "LineTerminator": true
     };
 
+
+    var SkipMeDeclarations = {
+        __proto__: null,
+        "FunctionDeclaration": true,
+        "GeneratorDeclaration": true
+    };
+
+
+    var isValidSimpleAssignmentTarget = {
+        "ObjectPattern": true,
+        "ArrayPattern": true,
+        "ObjectExpression": true,
+        "ArrayExpression": true
+    };
+
+    var isFuncDecl = {
+        "GeneratorDeclaration":true,
+        "FunctionDeclaration":true,
+        __proto__:null
+    };
+    var IsBindingPattern = {
+        __proto__: null,
+        "ObjectPattern": true,
+        "ArrayPattern": true
+    };
+
     /**
      * used in lib/compile/asm-runtime and asm-compiler to map the operator which are plain text
      *
@@ -2657,6 +2683,11 @@ define("tables", function (require, exports, module) {
     exports.unaryOperatorFromString = unaryOperatorFromString;
     exports.propDefKinds = propDefKinds;
     exports.propDefCodes = propDefCodes;
+
+    exports.isFuncDecl = isFuncDecl;
+    exports.IsBindingPattern = IsBindingPattern;
+    exports.isValidSimpleAssignmentTarget = isValidSimpleAssignmentTarget;
+    exports.SkipMeDeclarations = SkipMeDeclarations;
 
 
     return exports;
@@ -3134,7 +3165,11 @@ define("slower-static-semantics", function (require, exports) {
             //debug("BoundNames: " + names.join(","));
             return names;
         } else if (!Array.isArray(list)) {
+
             if (node = list) {
+
+                if (node.boundNames) return node.boundNames;
+
                 type = node.type;
                 switch (type) {
                     case "ArrayPattern":
@@ -3151,8 +3186,9 @@ define("slower-static-semantics", function (require, exports) {
                 }
             }
             //debug("BoundNames: " + names.join(","));
-            return names;
+            return node.boundNames = names;
         } else {
+            if (list.boundNames) return list.boundNames;
             // BoundNames Formals oder andere Listen.
             for (var i = 0, j = list.length; i < j; i++) {
                 if (node = list[i]) {
@@ -3175,13 +3211,18 @@ define("slower-static-semantics", function (require, exports) {
                 }
             }
             //debug("BoundNames: " + names.join(","));
-            return names;
+            return list.boundNames = names;
         }
     }
-    function VarDeclaredNames(body, names) {
-        var node, decl, i, j, k, l;
+    function VarDeclaredNames(node, names) {
+        var decl, body, i, j, k, l;
         names = names || [];
-        if (!body) return names;
+
+        if (!node) return names;
+        if (node.varDeclaredNames) return node.varDeclaredNames;
+        if (!Array.isArray(node) && node.body) body = node.body;
+        if (!body) body = node;
+
         for (i = 0, j = body.length; i < j; i++) {
             if (node = body[i]) {
                 var type = node.type;
@@ -3228,11 +3269,14 @@ define("slower-static-semantics", function (require, exports) {
                     }
                     names = VarDeclaredNames(node.body, names);
                 } else if (type === "ExportStatement") {
-                    if (node.exports.type === "VariableDeclaration") names = VarDeclaredNames(node.exports, names);
                 }
+
+
             }
+            node.varDeclaredNames = names;
         }
         //debug("VarDeclaresNames: " + names.join(","));
+        node.varDeclaredNames = names;
         return names;
     }
 
@@ -3240,6 +3284,7 @@ define("slower-static-semantics", function (require, exports) {
         var node, decl, i, j, k, l;
         var top;
         list = list || [];
+
         if (!Array.isArray(body)) body = [body];
 
         var stack = body.slice().reverse();
@@ -3306,15 +3351,29 @@ define("slower-static-semantics", function (require, exports) {
     }
 
 
-    function VarScopedDeclarations(body, list) {
-        var node, decl, i, j, k, l;
+    function VarScopedDeclarations(input, list) {
+        var node, body, decl, i, j, k, l;
         var top;
         list = list || [];
-        if (!Array.isArray(body)) body = [body];
+        if (!input) return list;
+        if (!Array.isArray(input)) {
+            if (input.varScopedDeclarations) return input.varScopedDeclarations;
+            if (input.body) body = input.body;
+        }
+        if (!body) {
+            body = input;
+        }
 
+        if (!Array.isArray(body)) body = [body];
         for (i = 0, j = body.length; i < j; i++) {
             if (node = body[i]) {
                 var type = node.type;
+
+                if (node.varScopedDeclarations) {
+                    list = list.concat(node.varScopedDeclarations);
+                    continue;
+                }
+
                 if (type === "VariableDeclaration" && node.kind === "var") {
                     var decls = node.declarations;
                     for (k = 0, l = decls.length; k < l; k++) {
@@ -3363,13 +3422,16 @@ define("slower-static-semantics", function (require, exports) {
         }
 
         //debug("VarScopedDeclarations: " + list.length);
-
+        input.varScopedDeclarations = list;
         return list;
     }
-    function LexicallyDeclaredNames(body, names) {
-        var node, decl, i, j, k, l;
+    function LexicallyDeclaredNames(node, names) {
+        var body, decl, i, j, k, l, input = node;
         if (!names) names = [];
-        if (!body) return names;
+        if (!node) return names;
+        if (node.lexicallyDeclaredNames) return node.lexicallyDeclaredNames;
+        if (!Array.isArray(node) && node.body) body = node.body;
+        if (!body) body = node;
 
         for (i = 0, j = body.length; i < j; i++) {
             if (node = body[i]) {
@@ -3388,15 +3450,22 @@ define("slower-static-semantics", function (require, exports) {
         }
 
         //debug("LexicallyDeclaresNames: " + names.join(","));
-
+        input.lexicallyDeclaredNames = names;
         return names;
     }
-    function LexicallyScopedDeclarations(body, list) {
-        if (!body) return;
-        var node, decl, i, j, k, l;
+
+    var LexicalDeclarations = LexicallyScopedDeclarations;
+    function LexicallyScopedDeclarations(node, list) {
+        if (!node) return;
+        var body, decl, i, j, k, l, input = node;
+
         list = list || [];
-        if (!body) return list;
+        if (!node) return list;
+        if (node.lexicallyScopedDeclarations) return node.lexicallyScopedDeclarations;
+        if (!Array.isArray(node) && node.body) body = node.body;
+        if (!body) body = node;
         if (!Array.isArray(body)) body = [body];
+
         for (i = 0, j = body.length; i < j; i++) {
             if (node = body[i]) {
 
@@ -3415,9 +3484,12 @@ define("slower-static-semantics", function (require, exports) {
             }
         }
         //debug("LexicallyScopedDeclarations: " + list.length);
+        input.lexicallyScopedDeclarations = list;
 
         return list;
     }
+
+    /*
     function LexicalDeclarations(body, list) {
         if (!body) return;
         var node, decl, i, j, k, l;
@@ -3450,8 +3522,10 @@ define("slower-static-semantics", function (require, exports) {
         //debug("LexicalDeclarations: " + list.length);
         //debug(list.map(function (x) { return x.id; }).join());
 
+
         return list;
     }
+    */
     function DeclaredNames (node) {
         var lexNames = LexicallyDeclaredNames(node);
         var varNames = VarDeclaredNames(node);
@@ -10973,6 +11047,15 @@ function ThisResolution () {
     var env = GetThisEnvironment();
     return env.GetThisBinding();
 }
+
+
+function FunctionRecord() {
+    /*
+        move the typed memory into the api range
+        or don´t place the record here
+     */
+}
+
 
 function FunctionEnvironment(F, T) {
     var fe = Object.create(FunctionEnvironment.prototype);
@@ -23642,11 +23725,14 @@ NowDefineBuiltinConstant(DateTimeFormatPrototype, $$toStringTag, "Intl.DateTimeF
 });
 
 define("runtime", function () {
-//    function makeRuntime() {
+
+
     "use strict";
-    var parse = require("parser");// .makeParser(); // soon: CREATE A _NEW_ PARSER (which creates a new tokenizer) HERE (when realm creates a NEW RUNTIME) (creating one now just slows down startup but brings no completly own closure)
+    var parse = require("parser");
     var ecma = require("api");
     var statics = require("slower-static-semantics");
+    var tables = require("tables");
+
     var parseGoal = parse.parseGoal;
 
     var debugmode = false;
@@ -23669,22 +23755,32 @@ define("runtime", function () {
         else if (hasPrint) print.apply(undefined, arguments);
     }
 
-    // Assignment, backrefs, temp solution
+    /**
+     *
+     * Attention: Backrefs to API.js which has to call a function from runtime.js
+     * mainly in function.js and generator.js or in eval.js which calls evaluate
+     * and GeneratorResume.
+     *
+     * Still a temporary solution.
+     *
+     */
     ecma.OrdinaryFunction.prototype.Call = Call;
     ecma.EvaluateBody = EvaluateBody;
     ecma.Evaluate = Evaluate;
     ecma.CreateGeneratorInstance = CreateGeneratorInstance;
+    /**
+     *
+     *
+     */
     var DeclaredNames = statics.DeclaredNames;
     var BoundNames = statics.BoundNames;
     var VarScopedDeclarations = statics.VarScopedDeclarations;
-    var LexicallyScopedDeclarations = statics.LexicallyScopedDeclarations;
     var VarDeclaredNames = statics.VarDeclaredNames;
     var LexicallyDeclaredNames = statics.LexicallyDeclaredNames;
     var LexicalDeclarations = statics.LexicalDeclarations;
     var IsLexicalDeclaration = statics.IsLexicalDeclaration;
     var IsConstantDeclaration = statics.IsConstantDeclaration;
     var ReferencesSuper = statics.ReferencesSuper;
-
     var ConstructorMethod = statics.ConstructorMethod;
     var PrototypeMethodDefinitions = statics.PrototypeMethodDefinitions;
     var StaticMethodDefinitions = statics.StaticMethodDefinitions;
@@ -23716,21 +23812,13 @@ define("runtime", function () {
     var getTasks = ecma.getTasks;
     var RegExpCreate = ecma.RegExpCreate;
     var Assert = ecma.Assert;
-    var assert = ecma.assert;
     var CreateRealm = ecma.CreateRealm;
     var CreateDataProperty = ecma.CreateDataProperty;
-    var CreateAccessorProperty = ecma.CreateAccessorProperty;
     var ToPropertyKey = ecma.ToPropertyKey;
     var IsPropertyKey = ecma.IsPropertyKey;
     var IsSymbol = ecma.IsSymbol;
     var IsAccessorDescriptor = ecma.IsAccessorDescriptor;
     var IsDataDescriptor = ecma.IsDataDescriptor;
-    var IsGenericDescriptor = ecma.IsGenericDescriptor;
-    var FromPropertyDescriptor = ecma.FromPropertyDescriptor;
-    var ToPropertyDescriptor = ecma.ToPropertyDescriptor;
-    var CompletePropertyDescriptor = ecma.CompletePropertyDescriptor;
-    var ValidateAndApplyPropertyDescriptor = ecma.ValidateAndApplyPropertyDescriptor;
-    var ThrowTypeError = ecma.ThrowTypeError;
     var $$unscopables = ecma.$$unscopables;
     var $$create = ecma.$$create;
     var $$toPrimitive = ecma.$$toPrimitive;
@@ -23741,42 +23829,21 @@ define("runtime", function () {
     var $$isConcatSpreadable = ecma.$$isConcatSpreadable;
     var MakeMethod = ecma.MakeMethod;
     var NewFunctionEnvironment = ecma.NewFunctionEnvironment;
-    var NewObjectEnvironment = ecma.NewObjectEnvironment;
     var NewDeclarativeEnvironment = ecma.NewDeclarativeEnvironment;
-    var OrdinaryObject = ecma.OrdinaryObject;
     var ObjectCreate = ecma.ObjectCreate;
     var IsCallable = ecma.IsCallable;
     var IsConstructor = ecma.IsConstructor;
     var OrdinaryConstruct = ecma.OrdinaryConstruct;
-    var Construct = ecma.Construct;
-    var CreateFromConstructor = ecma.CreateFromConstructor;
     var OrdinaryCreateFromConstructor = ecma.OrdinaryCreateFromConstructor;
     var FunctionCreate = ecma.FunctionCreate;
-    var FunctionAllocate = ecma.FunctionAllocate;
-    var FunctionInitialize = ecma.FunctionInitialize;
     var GeneratorFunctionCreate = ecma.GeneratorFunctionCreate;
-    var OrdinaryFunction = ecma.OrdinaryFunction;
-    var FunctionEnvironment = ecma.FunctionEnvironment;
-    var SymbolPrimitiveType = ecma.SymbolPrimitiveType;
     var ExecutionContext = ecma.ExecutionContext;
-    var CodeRealm = ecma.CodeRealm;
     var CompletionRecord = ecma.CompletionRecord;
     var NormalCompletion = ecma.NormalCompletion;
     var Completion = ecma.Completion;
     var OrdinaryHasInstance = ecma.OrdinaryHasInstance;
-    var floor = ecma.floor;
-    var ceil = ecma.ceil;
-    var sign = ecma.sign;
-    var abs = ecma.abs;
-    var min = ecma.min;
-    var max = ecma.max;
-    var IdentifierBinding = ecma.IdentifierBinding;
-    var GlobalEnvironment = ecma.GlobalEnvironment;
     var ObjectEnvironment = ecma.ObjectEnvironment;
     var ToNumber = ecma.ToNumber;
-    var ToUint16 = ecma.ToUint16;
-    var ToInt32 = ecma.ToInt32;
-    var ToUint32 = ecma.ToUint32;
     var ToString = ecma.ToString;
     var ToObject = ecma.ToObject;
     var Type = ecma.Type;
@@ -23788,22 +23855,13 @@ define("runtime", function () {
     var GetValue = ecma.GetValue;
     var PutValue = ecma.PutValue;
     var SameValue = ecma.SameValue;
-    var SameValueZero = ecma.SameValueZero;
-    var ToPrimitive = ecma.ToPrimitive;
-    var GetGlobalObject = ecma.GetGlobalObject;
     var ThisResolution = ecma.ThisResolution;
-    var CreateArrayFromList = ecma.CreateArrayFromList;
-    var CreateListFromArrayLike = ecma.CreateListFromArrayLike;
-    var TestIntegrityLevel = ecma.TestIntegrityLevel;
     var SetIntegrityLevel = ecma.SetIntegrityLevel;
-    var Intrinsics;
     var MakeConstructor = ecma.MakeConstructor;
     var ArrayCreate = ecma.ArrayCreate;
     var ArraySetLength = ecma.ArraySetLength;
     var GeneratorStart = ecma.GeneratorStart;
     var GeneratorYield = ecma.GeneratorYield;
-    var GeneratorResume = ecma.GeneratorResume;
-    var CreateEmptyIterator = CreateEmptyIterator;
     var ToBoolean = ecma.ToBoolean;
     var CreateItrResultObject = ecma.CreateItrResultObject;
     var IteratorNext = ecma.IteratorNext;
@@ -23813,17 +23871,12 @@ define("runtime", function () {
     var SetFunctionName = ecma.SetFunctionName;
     var Invoke = ecma.Invoke;
     var Get = ecma.Get;
-    var Set = ecma.Set;
     var DefineOwnProperty = ecma.DefineOwnProperty;
     var DefineOwnPropertyOrThrow = ecma.DefineOwnPropertyOrThrow;
     var Delete = ecma.Delete;
     var Enumerate = ecma.Enumerate;
-    var OwnPropertyKeys = ecma.OwnPropertyKeys;
     var OwnPropertyKeysAsList = ecma.OwnPropertyKeysAsList;
-    var SetPrototypeOf = ecma.SetPrototypeOf;
     var GetPrototypeOf = ecma.GetPrototypeOf;
-    var PreventExtensions = ecma.PreventExtensions;
-    var IsExtensible = ecma.IsExtensible;
     var Put = ecma.Put;
     var GetMethod = ecma.GetMethod;
     var HasProperty = ecma.HasProperty;
@@ -23832,15 +23885,10 @@ define("runtime", function () {
     var MakeSuperReference = ecma.MakeSuperReference;
     var IsUnresolvableReference = ecma.IsUnresolvableReference;
     var IsStrictReference = ecma.IsStrictReference;
-    var HasPrimitiveBase = ecma.HasPrimitiveBase;
     var GetBase = ecma.GetBase;
     var GetReferencedName = ecma.GetReferencedName;
     var GetThisValue = ecma.GetThisValue;
     var empty = ecma.empty;
-    var all = ecma.all;
-    var StrictEqualityComparison = ecma.StrictEqualityComparison;
-    var AbstractEqualityComparison = ecma.AbstractEqualityComparison;
-    var AbstractRelationalComparion = ecma.AbstractRelationalComparison;
     var ArgumentsExoticObject = ecma.ArgumentsExoticObject;
 
     var AddRestrictedFunctionProperties = ecma.AddRestrictedFunctionProperties;
@@ -23849,7 +23897,6 @@ define("runtime", function () {
     var unwrap = ecma.unwrap;
     var setInternalSlot = ecma.setInternalSlot;
     var getInternalSlot = ecma.getInternalSlot;
-    var hasInternalSlot = ecma.hasInternalSlot;
     var callInternalSlot = ecma.callInternalSlot;
     var getRealm = ecma.getRealm;
     var getLexEnv = ecma.getLexEnv;
@@ -23863,73 +23910,32 @@ define("runtime", function () {
     var getEventQueue = ecma.getEventQueue;
     var SetFunctionLength = ecma.SetFunctionLength;
     var writePropertyDescriptor = ecma.writePropertyDescriptor;
-    var withError = ecma.withError;
     var newSyntaxError = ecma.newSyntaxError;
     var newTypeError = ecma.newTypeError;
     var newReferenceError = ecma.newReferenceError;
-
-    var printException = ecma.printException;
-    var createExceptionTextOutput = ecma.createExceptionTextOutput;
     var CheckObjectCoercible = ecma.CheckObjectCoercible;
     var line, column;
     var realm, intrinsics, globalEnv, globalThis;
     var stack, eventQueue;
     var scriptLocation;
     var initializedTheRuntime = false;
-    var shellMode;  // keep strict mode turned on
-    var keepStrict; // idea for legacy shell mode (until i remove whole syntaxjs.eval for syntaxjs.createRealm().eval() and kick shared state with factories)
+    var shellMode;
+    var keepStrict;
     var evaluation = Object.create(null);
-    var strictModeStack = [];
-    var inStrictMode = false;
     var loc = {};
-    var generatorState;
     var IsFunctionDeclaration = statics.IsFunctionDeclaration;
-    var IsFunctionExpression = statics.IsFunctionExpression;
     var IsGeneratorDeclaration = statics.IsGeneratorDeclaration;
-    var IsGeneratorExpression = statics.IsGeneratorExpression;
     var IsVarDeclaration = statics.IsVarDeclaration;
-    var isDuplicateProperty = statics.isDuplicateProperty;
-    var IsIdentifier = statics.IsIdentifier;
-    var CV = statics.CV;
     var MV = statics.MV;
-    var SV = statics.SV;
-    var TV = statics.TV;
-    var TRV = statics.TRV;
-    var isFuncDecl = {
-        "GeneratorDeclaration":true,
-        "FunctionDeclaration":true,
-        __proto__:null
-    };
-    var IsBindingPattern = {
-        __proto__: null,
-        "ObjectPattern": true,
-        "ArrayPattern": true
-    };
-    var ControlStatement = {
-        "IfStatement": true,
-        "SwitchStatement": true
-    };
-    var isUndefined = {__proto__:null, "undefined":true, "null":true};
-    var isValidSimpleAssignmentTarget = {
-        "ObjectPattern": true,
-        "ArrayPattern": true,
-        "ObjectExpression": true,
-        "ArrayExpression": true
-    };
-    var IterationStatements = {
-        "ForStatement": true
-    };
-    var BreakableStatements = {
-        "WhileStatement": true,
-        "DoWhileStatement": true,
-        "SwitchStatement": true
-    };
-    var SkipMeDeclarations = {
-        __proto__: null,
-        "FunctionDeclaration": true,
-        "GeneratorDeclaration": true
-    };
 
+
+    var isFuncDecl = tables.isFuncDecl;
+    var IsBindingPattern = tables.IsBindingPattern;
+    var isValidSimpleAssignmentTarget = isValidSimpleAssignmentTarget;
+    var SkipMeDeclarations = tables.SkipMeDeclarations;
+
+    var isStrictDirective = tables.isStrictDirective;
+    var isAsmDirective = tables.isAsmDirective;
     var makeNativeException = ecma.makeNativeException;
 
     function setCodeRealm(r) {
@@ -26887,16 +26893,8 @@ define("runtime", function () {
         }
         return F;
     }
-    var isStrictDirective = {
-        __proto__:null,
-        "'use strict'": true,
-        '"use strict"': true
-    };
-    var isAsmDirective = {
-        __proto__:null,
-        "'use asm'": true,
-        '"use asm"': true
-    };
+
+
     evaluation.Directive = Directive;
     function Directive(node) {
         if (isStrictDirective[node.value]) {
@@ -26906,29 +26904,6 @@ define("runtime", function () {
         }
         return NormalCompletion(empty);
     }
-
-    var nodeWithList = {
-        "Program": "body",
-        "FunctionDeclaration": "body",
-        "FunctionExpression": "body",
-        "GeneratorDeclaration": "body",
-        "GeneratorExpression": "body",
-        "SwitchStatement": "cases",
-        "SequenceExpression": "sequence",
-        "DoWhileStatement": "body",
-        "WhileStatement": "body",
-        "ForStatement" :"body",
-        "ForInStatement": "body",
-        "ForOfStatement": "body"
-    };
-
-    /* 
-     Have to take a pencil an write the stack up,
-     to check out which to put onto and what to pop
-     off the stack for only one purpose: GENERATOR.
-     (The only thing which really needs some memory,
-     coz a visitor can´t break and resume a walk)
-     */
 
 
     evaluation.ScriptBody =
@@ -26986,12 +26961,8 @@ define("runtime", function () {
             else R = evaluation.StatementList(node, a, b, c);
             return R;
         }
-        // //debug("Evaluate(" + node.type + ")");
         if (E = evaluation[node.type]) {
-     //       tellContext(node);
-            // tellExecutionContext(node, 0);
             R = E(node, a, b, c);
-            // untellExecutionContext();
         }
         return R;
     }
@@ -27218,6 +27189,9 @@ define("runtime", function () {
 
 
     function execute(source, shellModeBool, resetEnvNowBool) {
+
+
+
         var exprRef, exprValue, text, type, message, stack, error, name, callstack;
 
         shellMode =  shellModeBool; // prolly just for this legacy execute function
@@ -27229,30 +27203,13 @@ define("runtime", function () {
 
         if (!initializedTheRuntime || !shellModeBool || (shellModeBool && resetEnvNowBool)) {
             var realm = CreateRealm();
-                                        // it´s our default realm. but i should use realm.eval below then, to uni- and simplify
-                                        // and for that the task queues go behind the realm.eval code, wherever i am there
-
-                                        // and this file gets rewritten to use a codestack for nodes
-                                        // and to pop left and right from the opstack after evaluate
-
-                                        // i put the node on the stack
-                                        // it´s time, i eval left and right and put them onto the stack
-                                        // then i call node[node.type] and inside i first fetch two from
-                                        // the opstack
-
-                                        // the idea i refine and we are fine with generators, reducing just
-                                        // the rest of their stack.
-
-                                        // i should start with the lists, just the lists.
-                                        // if they find themself on the stack, they are finished.
-
             ecma.setCodeRealm(realm);
             keepStrict = false;
             initializeTheRuntime();
             setScriptLocation();
             NormalCompletion(undefined);
         }
-        // convert references into values to return values to the user (toValue())
+
         try {
             exprRef = Evaluate(node);
             if (Type(exprRef) === REFERENCE) exprValue = GetValue(exprRef);
@@ -27264,7 +27221,8 @@ define("runtime", function () {
             consoleLog(ex.stack);
             throw ex;
         }
-        // exception handling. really temporarily in this place like this
+
+
         if (isAbrupt(exprValue = ifAbrupt(exprValue))) {
             if (exprValue.type === "throw") {
                 error = exprValue.value;
@@ -27279,19 +27237,10 @@ define("runtime", function () {
         }
 
 
-        /*
-         my self-defined event queue shall become realm.TimerTasks, mainly
-         for SetTimeout.
-         Now i should consider reworking this part and intrinsics/settimeout.js
-         to use getRealm().TimerTasks instead of realm.eventQueue and schedule
-         in the MicroTask Format supplied with ES6 Promises.
-         */
-
         var eventQueue = getEventQueue();
         var pt = getTasks(getRealm(), "PromiseTasks");
         if (!shellModeBool && initializedTheRuntime && !eventQueue.length && (!pt || !pt.length)) endRuntime();
         else if (eventQueue.length || (pt&& pt.length)) setTimeout(function () {HandleEventQueue(shellModeBool, initializedTheRuntime);}, 0);
-
         return exprValue;
     }
 
@@ -27414,6 +27363,7 @@ define("runtime", function () {
     // but even there i think about lowering the first char,
     // because i read, how confusing it is. i´m learning from
     // my first project.)
+
     execute.Evaluate = Evaluate;
     execute.ExecuteAsync = ExecuteAsync;
     execute.ExecuteAsyncTransform = ExecuteAsyncTransform;
@@ -27511,7 +27461,7 @@ define("asm-shared", function (require, exports, module) {
     TYPES.COMPLETION = 8;
     TYPES.ENVIRONMENT = 9;
     TYPES.CALLCONTEXT = 10;
-    // function Type(O) should be inlined and manually testet in this file. maybe it helps. calls hurt too much.
+
 
     /**
      * Record means EnvironmentRecord
