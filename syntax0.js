@@ -28165,47 +28165,31 @@ define("asm-typechecker", function (require, exports){
     exports.validator = validator;
     exports.valueTypes = valueTypes;
 });
-/*
-    requirements
-
-    1) boundNames, lexNames, varNames
-    on each node
-    for setting them in the constant pool
-
-    2) re-writing 40% of the ecma api
-    to use a array basis for registers,
-    local variables, object slots
-
-    3) ObjectEnvironment stays old version
-    4) ObjectRecord is same, but new typed layout
-
-    must do strict separation of old ast runtime
-    and new binary runtime.
-
-    (it´s another 4-8 weeks of hard work, but
-    then it´s small, typed, fast and dynamic)
-
- */
-
 define("asm-compiler", function (require, exports) {
 
     "use strict";
     var format = require("i18n").format;
 
     var DEFAULT_SIZE = 2*1024*1024; // 2 Meg of RAM (string, id, num) should be big enough to run this program
-    var POOL, pp, poolDupeMap;
+    var POOL, DUPEPOOL;
 
     // HEAP32 here in the compiler is CODE32 in the runtime, the runtime stack will have arrays called STACK32 etc.
     var MEMORY, HEAP8, HEAPU8, HEAP16, HEAPU16, HEAPU32, HEAP32, HEAPF32, HEAPF64;
     var STACKBASE, STACKSIZE, STACKTOP, STACKLIMIT;
 
-    var LABELS;         // goto indizes
+    var LABELS;         // goto indizes LABEL[name] ==> offset
+    var LABELNAMES;     // LABELNAMES[offset] ==> name
+
     var RETADDR = [];   // stack for saving addr during compilation
+                        // otherwise i pass them per function argument
     var STATE;
 
+    /*
     function UTF16Encode(cp) {
         Assert(0 <= cp && cp <= 0x10FFFF, "utf16encode: cp has to be beetween 0 and 0x10FFFF");
+
         if (cp <= 65535) return cp;
+
         var cu1 = Math.floor((cp - 65536) % 1024) + 55296;
         var cu2 = ((cp - 65536) % 1024) + 56320;
         return [cu1, cu2];
@@ -28217,67 +28201,13 @@ define("asm-compiler", function (require, exports) {
         var cp = (lead - 55296) * 1024 + (trail - 564320);
         return cp;
     }
+    */
 
-    // can do them again
-    // i decide to catch numbers for all identifiers
-    // strings go into the constant pool like in jvm etc.
 
-    // but i decided to hard-code the encoded string into
-    // the HEAP Memory, associating a key with a binding,
-    // a property descriptor
-    //
 
-    /**
-     *
-     * can do them again and i have to develop a testing interface for
-     *
-     * writing and reading
-     * to drive independent tests of reading/writing the memory
-     * away from script evaluation to be sure the thing works and
-     * to measure it (i knew it was slow. but against the ast,
-     * it is still small, very small)
-     *
-     */
-    function writeString(str) {
-        var points = stringToPoints(str);
-        var len = points.length;
-        var ptr32 = STACKTOP >> 2;
-        HEAP32[ptr32] = TYPES.STRING;
-        HEAP32[ptr32+1] = len;
-        var ptr16 = (ptr32 + 2) << 1;
-        for (var i = 0; i < len; i++) {
-            HEAPU16[ptr16+i] = points[i];
-        }
-        return ptr32;
-    }
-    function readString(ptr) {
-        var a = [];
-        if (HEAP32[ptr] != TYPES.STRING) {
-            throw new Error("memory i/o error: is not a string");
-        }
-        var len = HEAP32[ptr+1];
-        var ptr16 = (ptr+2) << 1;
-        for (var i = 0; i < len; i++) {
-            var cp = HEAP32[ptr16+i];
-            a.push(cp);
-        }
-        return String.fromCharCode.apply(undefined, a);
-    }
-    function stringToPoints(str) {
-        var a = [];
-        for (var i = 0, j = str.length; i < j; i++) {
-            var c = str.charAt(i);
-            if (c.length == 1) {
-                a.push(c.charCodeAt(0));
-            } else {
-                a.push(c.charCodeAt(0));
-                a.push(c.charCodeAt(1));
-            }
-        }
-        return a;
-    }
-    function pointsToString(cpArr)  {
-      return String.fromCharCode.apply(undefined, cpArr);
+
+    function pointsToString(points)  {
+      return String.fromCharCode.apply(undefined, points);
     }
 
 
@@ -28301,45 +28231,73 @@ define("asm-compiler", function (require, exports) {
      * @param target
      */
 
-    function jmp(ptr, target) {
-        HEAP32[ptr]   = JMP;
-        HEAP32[ptr+1] = target;
+    function jmp(target) {
+        if (target === undefined) return;       // simplified (returns if not needed)
+        var ptr = STACKTOP >> 2;                // actual position
+        HEAP32[ptr]   = BYTECODE.JMP;           // a jump
+        HEAP32[ptr+1] = target;                 // to offset passed
     }
-
-    function gotoNextBlock(ptr, target) {
-        HEAP32[ptr]   = JMP;
-        HEAP32[ptr+1] = target;
-    }
-
 
     /**
      *
      * @param value
      * @returns {*}
      */
+    
     function addToConstantPool(value) {
         var poolIndex;
-        if (poolIndex=poolDupeMap[value]) return poolIndex;
-        POOL[++pp] = value;
-        return pp;
+        if (poolIndex=DUPEPOOL[value]) return poolIndex;
+        return POOL.push(value) - 1;
     }
+
     /**
+     *
+     * Identifier:
+     *
+     * context relative is what is to be generated
+     *
+     * IDENTIFIERNAME       (or Unresolved Identifier)
+     * or
+     * REFERENCE            (real Reference Type with Identifier Name set to Identifier)
+     *
+     * got to figure out in practice
+     *
      * @param node
      * @returns {*}
      */
-    function identifier (node, nextBlockAddr) {
+
+    function identifier (node) {
         var poolIndex = addToConstantPool(node.name);
         var ptr = STACKTOP >> 2;
-        HEAP32[ptr] = IDCONST;
+        HEAP32[ptr] = BYTECODE.IDNAMECONST;
         HEAP32[ptr+1] = poolIndex;
         STACKTOP += 8;
         return ptr;
     }
+
+
+    /*
+        this creates a reference type
+        will be aligned with the code for reference type
+        and be the same function to allocate a four field record
+    */
+
+    function identifierReference(name, base, strict, thisValue) {
+        var ptr = STACKTOP >> 2;
+        HEAP32[ptr] = BYTECODE.IDENTIFIERREFERENCE;
+        HEAP32[ptr+1] = 0;
+        HEAP32[ptr+2] = 0;
+        HEAP32[ptr+3] = 0;
+    }
+
+    // GetValue(ptr): erstmal base = HEAP32[HEAP32[ptr+1]]  base = heap[heap[ptr]]  dort wo der ptr der records hinzeigt
+
+    
     /**
      * @param node
      * @returns {*}
      */
-    function numericLiteralPool (node, nextBlockAddr) {
+    function numericLiteralPool (node) {
         var poolIndex = addToConstantPool(node.value);
         var ptr = STACKTOP >> 2;
         HEAP32[ptr] = NUMCONST;
@@ -28356,44 +28314,16 @@ define("asm-compiler", function (require, exports) {
      * @param node
      * @returns {*}
      */
-    function numericLiteral(node, nextBlockAddr) {
+    function numericLiteral(node) {
         var value = node.computed;
         if (value === undefined) value = +node.value;
-        var align;
-        align = STACKTOP % 8;
-        if (align === 0) STACKTOP += 4;
-        var ptr = STACKTOP >> 2;
-        STACKTOP+=12;
-        HEAP32[ptr] = NUM;
-        HEAPF64[(ptr+1)>>1] = value;
-        //console.log("compiled numlit to " + ptr);
-        return ptr;
+        return NumberPrimitiveType(value);
     }
 
-    function stringLiteral(node, nextBlockAddr) {
+    function stringLiteral(node) {
         var str = node.computed;
-        if (str === undefined) str = str.slice(1, str.length-2);
-        var ptr = STACKTOP >> 2;
-        // 1. encode into code points, that i can find pairs.
-        var codePoints = [];
-        for (var i = 0, j = str.length; i < j; i++) {
-            // perform codeunit check
-            var s = str[i];
-            var cu = s.charCodeAt(0);
-            // if (between 0xD800 && ... i forgot it ten times)
-            codePoints.push(cu);
-            if (cu.length === 2) codePoints.push(s.charCodeAt(1));
-        }
-        // and then write them into the heap
-        var len = codePoints.length;
-        // because str.length && codePoints.length could differ
-        STACKTOP += (8 + Math.ceil(len>>1));
-        HEAP32[ptr] = STR;
-        HEAP32[ptr+1] = len;
-        var ptr2 = (ptr+2)<<1;
-        for (var i = 0; i < len; i++) HEAPU16[ptr2+i] = codePoints[i];
-
-        return ptr;
+        if (str === undefined) str = str.slice(1, str.length-2);    // here is an issue in StringLiteral/SV (long time noticed)
+        return StringPrimitiveType(str);
     }
 
     /**
@@ -28404,24 +28334,20 @@ define("asm-compiler", function (require, exports) {
      * 4. increase STACKTOP
      * @param node
      */
-    function stringLiteralPool (node, nextBlockAddr) {
-        addToConstantPool(node.computed);
-        var poolIndex = pp;
-        var ptr = STACKTOP >> 2;
-        HEAP32[ptr] = STRCONST;
-        HEAP32[ptr+1] = poolIndex;
-        STACKTOP += 8;
-        return ptr;
+    function stringLiteralPool (node) {
+        var str = node.computed;
+        if (str === undefined) str = str.slice(1, str.length-2);    // here is an issue in StringLiteral/SV (long time noticed)
+        return ConstantPoolStringPrimitiveType(str);
     }
     /**
      * @param node
      * @returns {*}
      */
-    function booleanLiteral(node, nextBlockAddr) {
+    function booleanLiteral(node) {
         var ptr = STACKTOP >> 2;
-        if (node.value === "true") HEAP32[ptr] = TRUEBOOL;
-        else HEAP32[ptr] = FALSEBOOL;
-        STACKTOP += 4;
+        HEAP32[ptr] = BYTECODE.BOOLEAN;
+        HEAP32[ptr+1] = (node.value === "true") ? 1 : 0;
+        STACKTOP += 8;
         return ptr;
     }
     /**
@@ -28430,28 +28356,24 @@ define("asm-compiler", function (require, exports) {
      * @param node
      * @returns {number}
      */
-    function expressionStatement(node, nextBlockAddr) {
-        return compile(node.expression);
+    function expressionStatement(node, next) {
+        return compile(node.expression, next);
     }
 
-    function parenthesizedExpression(node, nextBlockAddr) {
-        var ptr = STACKTOP >> 2;
-        return ptr;
+    function parenthesizedExpression(node, next) {
+        return compile(node.expression, next);
     }
 
     /**
      * @param node
      * @returns {*}
      */
-    function sequenceExpression(node, nextBlockAddr) {
-        var len = node.sequence.length
+    function sequenceExpression(node, nextAddr) {   // no code, i take the result of the last in the code where i compiled it. i think that works
+        var len = node.sequence.length;
         var ptr = STACKTOP >> 2;
-        STACKTOP += 12;
-        HEAP32[ptr] = BYTECODES.SEQEXPR;    // set eval state to "comma sequence";
         for (var i = 0; i < len; i++) {
-            RETADDR.push(compile(node.sequence[i], RETADDR.pop())); // 2. compile last to first and set gotos
+            nextAddr = compile(node.sequence[i], nextAddr);
         }
-        jmp(ptr+1, RETADDR.pop());  // 3. GOTO first compiled expression
         return ptr;
     }
 
@@ -28459,35 +28381,52 @@ define("asm-compiler", function (require, exports) {
      * @param node
      */
 
-    function assignmentExpression(node, nextBlockAddr) {
+    function assignmentExpression(node, nextAddr) {
         var ptr = STACKTOP >> 2;
         var code;
         switch (node.operator) {
-            case "=": code = BYTECODES.ASSIGN; break;
-            case "+=": code = BYTECODES.ADDL; break;
-            case "-=": code = BYTECODES.SUBL; break;
-            case "*=": code = BYTECODES.MULL; break;
-            case "/=": code = BYTECODES.DIVL; break;
-            case "%=": code = BYTECODES.MODL; break;
-            case "<<=": code = BYTECODES.SHLL; break;
-            case ">>=": code = BYTECODES.SHRL; break;
-            case ">>>=": code = BYTECODES.SSHRL; break;
+            case "=": code = BYTECODE.ASSIGN; break;
+            case "+=": code = BYTECODE.ADDL; break;
+            case "-=": code = BYTECODE.SUBL; break;
+            case "*=": code = BYTECODE.MULL; break;
+            case "/=": code = BYTECODE.DIVL; break;
+            case "%=": code = BYTECODE.MODL; break;
+            case "<<=": code = BYTECODE.SHLL; break;
+            case ">>=": code = BYTECODE.SHRL; break;
+            case ">>>=": code = BYTECODE.SSHRL; break;
         }
+        HEAP32[ptr] = code;
+
+        // runtime should get now a result
+        // and, it´s an assignment.
+        // just putvalue to the left.
+        // more details later.
+
+        if (nextAddr != undefined) jmp(nextAddr);
         return ptr;
     }
 
-    function unaryExpression(node, nextBlockAddr) {
-        var ptr = STACKTOP >> 2;
-
+    function unaryExpression(node, next) {
+        var ptr = compile(node.argument);   // erst die value berechnen
+        var code;
+        switch (node.operator) {
+            case "!": code = BYTECODE.NEG; break;
+            case "~": code = BYTECODE.INV; break;
+            case "++": code = node.prefix ? BYTECODE.PREINCREMENT : BYTECODE.POSTINCREMENT; break;
+            case "--": code = node.prefix ? BYTECODE.PREDECREMENT : BYTECODE.POSTDECREMENT; break;
+            case "!!": code = BYTECODE.TOBOOLEAN; break;
+        }
+        var ptr2 = STACKTOP >> 2;
+        HEAP32[ptr2] = code;
+        if (next !== undefined) jmp(next);              // maybe it´s too much here and is only in "Expression" and not in "piece of expression"
         return ptr;
     }
     /**
      *
      */
-    function binaryExpression(node, nextBlockAddr) {
+    function binaryExpression(node, nextAddr) {
         var ptr = STACKTOP >> 2;
         var code;
-
         switch (node.operator) {
             case "==": code = BYTECODES.EQ; break;
             case "===":code = BYTECODES.SEQ; break;
@@ -28510,7 +28449,8 @@ define("asm-compiler", function (require, exports) {
             case "<=":code = BYTECODES.LTEQ; break;
             break;
         }
-
+        HEAP32[ptr] = code; // fetch operator left and operator right (left and right gets one stack each, or i save them to the stack and pop them to left and right back like asm, we´ll see)
+        if (nextAddr!==undefined) jmp(nextAddr);
         return ptr;
     }
     /**
@@ -28519,7 +28459,7 @@ define("asm-compiler", function (require, exports) {
      * @returns {*}
      */
 
-    function callExpression(node, nextBlockAddr) {
+    function callExpression(node) {
         var ptr = STACKTOP >> 2;
         return ptr;
     }
@@ -28527,7 +28467,7 @@ define("asm-compiler", function (require, exports) {
      *
      * @param node
      */
-    function newExpression(node, nextBlockAddr) {
+    function newExpression(node) {
         var ptr = STACKTOP >> 2;
         return ptr;
     }
@@ -28548,32 +28488,32 @@ define("asm-compiler", function (require, exports) {
         return ptr;
     }
 
-    function functionDeclaration(node, nextBlockAddr) {
+    function functionDeclaration(node) {
         POOL[++pp] = node;
         var poolIndex = pp;
         var ptr = STACKTOP;
         return ptr;
     }
 
-    function variableDeclaration(node, nextBlockAddr) {
+    function variableDeclaration(node) {
         POOL[++pp] = node;
         var poolIndex = pp;
         return ptr;
     }
 
-    function propertyDefinition(node, nextBlockAddr) {
+    function propertyDefinition(node) {
         var ptr = STACKTOP >> 2;
         POOL[++pp] = node.key;
         return ptr;
     }
 
-    function objectExpression(node, nextBlockAddr) {
+    function objectExpression(node) {
         var ptr = STACKTOP >> 2;
         var len = node.elements.length;
         return ptr;
     }
 
-    function arrayExpression(node, nextBlockAddr) {
+    function arrayExpression(node) {
         var ptr = STACKTOP >> 2;
         var len = node.elements.length;
         return ptr;
@@ -28588,31 +28528,31 @@ define("asm-compiler", function (require, exports) {
         return ptr;
     }
 
-    function returnStatement(node, nextBlockAddr) {
+    function returnStatement(node) {
         var ptr = STACKTOP >> 2;
         return ptr;
     }
 
-    function ifStatement(node, nextBlockAddr) {
+    function ifStatement(node) {
         var ptr = STACKTOP >> 2;
         return ptr;
     }
 
-    function blockStatement(node, nextBlockAddr) {
+    function blockStatement(node) {
         var len = node.body.length;
         var body = node.body;
         var ptr = STACKTOP >> 2;
         return ptr;
     }
 
-    function whileStatement(node, nextBlockAddr) {
+    function whileStatement(node) {
         var len = node.body.length;
         var body = node.body;
         var ptr = STACKTOP >> 2;
         return ptr;
     }
 
-    function doWhileStatement(node, nextBlockAddr) {
+    function doWhileStatement(node) {
         var len = node.body.length;
         var body = node.body;
         var ptr = STACKTOP >> 2;
@@ -28620,82 +28560,81 @@ define("asm-compiler", function (require, exports) {
     }
 
 
-    function forStatement (node, nextBlockAddr) {
+    function forStatement (node) {
         var ptr = STACKTOP >> 2;
         return ptr;
     }
 
 
-    function forInOfStatement (node, nextBlockAddr) {
+    function forInOfStatement (node) {
         var ptr = STACKTOP >> 2;
         return ptr;
     }
 
-    function switchStatement(node, nextBlockAddr) {
+    function switchStatement(node) {
         var ptr = STACKTOP >> 2;
         return ptr;
     }
-    function switchCase(node, nextBlockAddr) {
+    function switchCase(node) {
         var ptr = STACKTOP >> 2;
         return ptr;
     }
-    function defaultCase(node, nextBlockAddr) {
+    function defaultCase(node) {
         var ptr = STACKTOP >> 2;
         return ptr;
     }
-    function tryStatement(node, nextBlockAddr) {
+    function tryStatement(node) {
         var ptr = STACKTOP >> 2;
         return ptr;
     }
-    function catchClause(node, nextBlockAddr) {
+    function catchClause(node) {
         var ptr = STACKTOP >> 2;
         return ptr;
     }
-    function finally_(node, nextBlockAddr) {
+    function finally_(node) {
         var ptr = STACKTOP >> 2;
         return ptr;
     }
-    function objectPattern(node, nextBlockAddr) {
+    function objectPattern(node) {
         var ptr = STACKTOP >> 2;
         return ptr;
     }
-    function arrayPattern(node, nextBlockAddr) {
+    function arrayPattern(node) {
         var ptr = STACKTOP >> 2;
         return ptr;
     }
-    function moduleDeclaration(node, nextBlockAddr) {
+    function moduleDeclaration(node) {
         var ptr = STACKTOP >> 2;
         return ptr;
     }
-    function importStatement(node, nextBlockAddr) {
-        var ptr = STACKTOP >> 2;
-        return ptr;
-    }
-
-    function exportStatement(node, nextBlockAddr) {
+    function importStatement(node) {
         var ptr = STACKTOP >> 2;
         return ptr;
     }
 
-    function throwStatement(node, nextBlockAddr) {
+    function exportStatement(node) {
         var ptr = STACKTOP >> 2;
         return ptr;
     }
 
-    function breakStatement(node, nextBlockAddr) {
+    function throwStatement(node) {
         var ptr = STACKTOP >> 2;
         return ptr;
     }
 
-    function continueStatement(node, nextBlockAddr) {
+    function breakStatement(node) {
+        var ptr = STACKTOP >> 2;
+        return ptr;
+    }
+
+    function continueStatement(node) {
         var ptr = STACKTOP >> 2;
         HEAP32[ptr] = BYTECODE.CONTINUECOMP;
         HEAP32[ptr+1] = LABELS[node.label];
-        jmp(ptr+2, RETADDR.pop())
         return ptr;
     }
 
-    function debuggerStatement(node, nextBlockAddr) {
+    function debuggerStatement(node) {
         var ptr = STACKTOP >> 2;
         HEAP32[ptr] = DEBUGGER;
         return ptr;
@@ -28703,44 +28642,43 @@ define("asm-compiler", function (require, exports) {
 
 
 
-    function labelledStatement(node, nextBlockAddr) {
+    function labelledStatement(node, next) {    // [label|nextoffset] code to start with label is ok to interpret as label and ptr? or more verbose? no, costs speed, or?
         var ptr = STACKTOP >> 2;
         HEAP32[ptr] = BYTECODE.LABEL;
-        LABELS[node.label] = ++LABELIDX;
-        HEAP32[ptr+1] = LABELIDX;
+
+        LABELS[node.label] = ptr;
+        LABELNAMES[ptr] = node.label;
+
+        HEAP32[ptr+1] = compile(node.statement, next);  // goto direkt nach dem statement. das label belongs now to the statement
 
         return ptr;
-
     }
 
 
     /**
-     *
      * @param node
      * @returns {*}
      */
-    function program(node, nextBlockAddr) {
+
+    function program(node) {
         var body = node.body;
         var strict = !!node.strict;
         var len = body.length;
-
-        nextBlockAddr = undefined;
-
+        var nextBlockAddr = lastBlock();
         for (var i = body.length-1; i >= 0;i--) {
-            var startAddr = compile(body[i], nextBlockAddr);
+            nextBlockAddr = compile(body[i], nextBlockAddr);
         }
-
-
         var ptr = STACKTOP >> 2;
-
-
-        gotoNextBlock(ptr, nextBlockAddr);
+        jmp(ptr);
         return ptr;
     }
 
-
-
-
+    function lastBlock() {
+        var ptr = STACKTOP >> 2;
+        STACKTOP += 4;
+        HEAP32[ptr] = BYTECODE.END;
+        return ptr;
+    }
 
     function compile(ast) {
         if (!ast) return -1;
@@ -28824,8 +28762,7 @@ define("asm-compiler", function (require, exports) {
      */
     function init(stackSize, poolSize) {
         POOL = new Array(poolSize||10000);
-        pp = -1;
-        poolDupeMap = Object.create(null); // dupe check for identifiers, etc.
+        DUPEPOOL = Object.create(null); // dupe check for identifiers, etc.
         MEMORY = new ArrayBuffer(stackSize||1024*1024);
         HEAP8 = new Int8Array(MEMORY);
         HEAPU8 = new Uint8Array(MEMORY);
@@ -28850,8 +28787,7 @@ define("asm-compiler", function (require, exports) {
     function get() {
         return {
             POOL: POOL,
-            pp: pp,
-            poolDupeMap: poolDupeMap,
+            DUPEPOOL: DUPEPOOL,
             MEMORY: MEMORY,
             HEAP8: HEAP8,
             HEAPU8: HEAPU8,
@@ -28865,7 +28801,8 @@ define("asm-compiler", function (require, exports) {
             STACKSIZE: STACKSIZE,
             STACKTOP: STACKTOP,
             STATE: STATE,
-            LABELS: LABELS
+            LABELS: LABELS,
+            LABELNAMES: LABELNAMES
         };
     }
 
@@ -28875,8 +28812,7 @@ define("asm-compiler", function (require, exports) {
      */
     function set(unit) {
         POOL = unit.POOL;
-        pp = unit.pp;
-        poolDupeMap = unit.poolDupeMap;
+        DUPEPOOL = unit.DUPEPOOL;
         MEMORY = unit.MEMORY;
         HEAP8 = unit.HEAP8;
         HEAPU8 = unit.HEAPU8;
@@ -28891,6 +28827,7 @@ define("asm-compiler", function (require, exports) {
         STACKSIZE = unit.STACKSIZE;
         STATE = unit.STATE;
         LABELS = unit.LABELS;
+        LABELNAMES = unit.LABELNAMES;
     }
 
 
@@ -28910,10 +28847,12 @@ define("asm-compiler", function (require, exports) {
         xs outside
 
      */
+
     var debug = {};
     exports.debug = debug;
-    debug.writeString = writeString;
-    debug.readString = readString;
+
+
+
     debug.compile = compile;
 
 
@@ -28925,6 +28864,7 @@ define("asm-compiler", function (require, exports) {
  */
 
 define("asm-runtime", function (require, exports) {
+
     var realm, strict, tailCall;
     var compiler = require("asm-compiler");
     var tables = require("tables");
@@ -28937,36 +28877,14 @@ define("asm-runtime", function (require, exports) {
     var format = require("i18n").format;
     var formatStr = require("i18n").formatStr;
     var trans = require("i18n").trans;
-
-
-
     var CODESET = require("asm-shared").BYTECODESET;
     var FLAGSET = require("asm-shared").BITFLAGSET;
     var REGISTERSET = require("asm-shared").REGISTERSET;    // dynamic. but there are other registers in HEAP32 format in use
 
-    /**
-     * Now HEAP*:
-     * this is just the bytecode memory
-     *
-     * i will redo it
-     *
-     * for CS (Code segment, the below)
-     * for SS (Stack Segment, a large area for executing code, registers, local vars)
-     * for DS (Data Segment, the runtime HEAP for allocating objects)
-     *
-     * a POOL: Constant Pool shared by everyone.
-     *
-     *
-     * If i do all in one Array Buffer.
-     * A resize of the heap will cost also to copy all the compiled code
-     * and the whole stack. A resize of the stack will shrink the heap.
-     * A resize of the code isn´t usual. But i need to copy it, if i resize
-     * the ArrayBuffer (replace with a new, larger, or smaller)
-     */
 
     var POOL;
     var pp;
-    var poolDupeMap;
+    var DUPEPOOL;
     var MEMORY;
     var HEAP8;
     var HEAPU8;
@@ -28987,9 +28905,7 @@ define("asm-runtime", function (require, exports) {
 
     var r0, r1, r2, r3, r4, r5, r6, r7, r8, r9;
 
-    var regs = [[],[],[],[],[],[],[],[],[],[],[]];  // if you have no operand stack, you need to save the regs.
-    // in the HEAP32 the registers are stack allocated and should have a couple of slots in advance
-    // i have to figure out, which numbers are good and fight to teach myself
+    var regs = [[],[],[],[],[],[],[],[],[],[],[]];  // if you have no operand stack, you need to save the regs
 
 
     var ecma = require("old-api");
@@ -29047,6 +28963,7 @@ define("asm-runtime", function (require, exports) {
     var CTX_GENV = 2;
     var CTX_GENERATOR = 3;
     var CTX_REALM = 4;
+
     var CTX_VARENV = 5;
     var CTX_LEXENV = 6;
 
@@ -29056,6 +28973,8 @@ define("asm-runtime", function (require, exports) {
     var ENV_TYPE = 0;
     var ENV_FLAGS = 1;
     var ENV_DYN_MAP = 2;
+    var ENV_SLOTS = 3;
+
 
     /*
         binding record fields
@@ -29078,25 +28997,115 @@ define("asm-runtime", function (require, exports) {
 
 
     /**
+     *
      *  Data Structures
      *  Objects, Functions, Environments
      *  Callstack,
      */
+
+    /**** I need the functions already in the compiler, so i should move them out, like into asm-shared.js or asm-api.js **/
+
+    function SymbolPrimitiveType(desc) {
+        var ptr = STACKTOP >> 2;
+        STACKTOP += 8;
+        HEAP32[ptr] = TYPES.SYMBOL;
+        HEAP32[ptr+1] = StringPrimitiveType()
+        return ptr;
+    }
+
+    function StringPrimitiveType(str) {
+        var ptr = STACKTOP >> 2;
+        HEAP32[ptr] = TYPES.STRING;
+        var strLen = str.length;
+        var realLen = 0;
+        var ptr16 = (ptr+1) << 1;
+        var i = 0;
+        var cp1, cp2;
+        while (i < strLen) {
+            cp1 = str[i].charCodeAt(0);
+            HEAP32[ptr16+i] = cp1;
+            if (cp1 > 0xD800 && cp1 < 0xD8FF) {
+                cp2 = str[i].charCodeAt(1);
+                strLen = strLen + 1;
+                i = i + 1;
+                HEAP32[ptr16+i] = cp2;
+            }
+            i = i + 1;
+        }
+        HEAP32[ptr+1] = strLen;
+        STACKTOP += 8 + Math.ceil(strLen / 2) * 4;
+        return ptr;
+    }
+    function ConstantPoolStringPrimitiveType(str) {
+        var ptr = STACKTOP >> 2;
+        HEAP32[ptr] = BYTECODE.STRINGCONST;
+        HEAP32[ptr+1] = addToConstantPool(str);
+        return ptr;
+    }
+    function ConstantPoolNumberPrimitiveType(v) {
+        var ptr = STACKTOP >> 2;
+        HEAP32[ptr] = BYTECODE.NUMBERCONST;
+        HEAP32[ptr+1] = addToConstantPool(v);
+        return ptr;
+    }
+    function NumberPrimitiveType(v) {   // Number kann man zentral aendern
+        var ptr = STACKTOP >> 2;
+        HEAP32[ptr] = TYPES.NUMBER;         // F32 is lossless??? it´s untested that´s why its here
+        HEAPF32[ptr+1] = v >> 32;           // schneide unteren Teil ab
+        HEAPF32[ptr+2] = v & 0xFFFFFFFF;    // Maskiere oberen Teil weg?
+        STACKTOP += 12;                     // F64 needs alignment. I´ve never tried to merge to F32. 8*I8 to F64 fails of course.
+        return ptr;
+    }
+    function BooleanPrimitiveType(v) {
+        var ptr = STACKTOP >> 2;
+        STACKTOP += 8;
+        HEAP32[ptr] = TYPES.BOOLEAN;
+        HEAP32[ptr+1] = (+(!!v));
+        return ptr;
+    }
+    function NullPrimitiveType() {
+        var ptr = STACKTOP >> 2;
+        STACKTOP += 4;
+        HEAP32[ptr] = TYPES.NULL;
+        return ptr;
+    }
+    function UndefinedPrimitiveType() {
+        var ptr = STACKTOP >> 2;
+        STACKTOP += 4;
+        HEAP32[ptr] = TYPES.UNDEFINED;
+        return ptr;
+    }
+
+    function allocateProperties(n) {
+        var ptr = STACKTOP >> 2;
+        STACKTOP += n * 4;
+        return ptr;
+    }
+
     function OrdinaryObject() {
         var ptr = STACKTOP >> 2;
-        HEAP32[ptr] = TYPES.OBJECT;
-        STACKTOP += 32;
+        HEAP32[ptr] = BYTECODE.OBJECT;
+        HEAP32[ptr+1] = 0;  // TYPE ORDINARY (klärt slots)
+        HEAP32[ptr+2] = allocateProperties(10);
+        STACKTOP += 8;
         return ptr;
     }
     function OrdinaryFunction () {
         var ptr = STACKTOP >> 2;
-        HEAP32[ptr] = TYPES.OBJECT;
-        HEAP32[ptr+1] = BITS.IS_CALLABLE | BITS.IS_CONSTRUCTABLE | BITS.IS_EXTENSIBLE;
-        STACKTOP += 32;
+        HEAP32[ptr] = BYTECODE.OBJECT;
+        HEAP32[ptr+1] = 0;
+        STACKTOP += 8;
         return ptr;
     }
     function ArrayExoticObject() {
+        var ptr = STACKTOP >> 2;
+        HEAP32[ptr] = BYTECODE.OBJECT;
+        HEAP32[ptr+1] = 0;
+        STACKTOP += 8;
+        return ptr;
     }
+
+
     /**
      * TYPES.BINDING
      * FLAGS
@@ -29104,7 +29113,17 @@ define("asm-runtime", function (require, exports) {
      * ptr key
      * @constructor
      */
-    function BindingRecord() {
+    function BindingRecord(v, c, i) {
+        var ptr = STACKTOP >> 2;
+        HEAP32[ptr] = BYTECODE.BINDINGRECORD;
+        var flags = 0;
+        if (c) flags |= FLAGS.CONFIGURABLE;
+        if (i) flags |= FLAGS.INITIALIZED;
+        if (k) flags |= FLAGS.KEY;
+        HEAP32[ptr+1] = flags;
+        HEAP32[ptr+2] = v;
+        if (k) HEAP32[ptr+3] = k;
+        return ptr;
     }
     /**
      * TYPES.DATADESC // TYPES.ACCESSORDESC
@@ -29114,9 +29133,34 @@ define("asm-runtime", function (require, exports) {
      * ptr key
      * @constructor
      */
-    function DataPropertyDescriptor() {
+
+    function DataPropertyDescriptor(c,e,v,w,k) {
+        var ptr = STACKTOP >> 2;
+        HEAP32[ptr] = BYTECODE.DATADESCRIPTOR;
+        var flags = 0;
+        if (c) flags |= FLAGS.CONFIGURABLE;
+        if (e) flags |= FLAGS.ENUMERABLE;
+        if (w) flags |= FLAGS.WRITABLE;
+        if (k) flags |= FLAGS.KEY;
+        HEAP32[ptr+1] = flags;
+        HEAP32[ptr+2] = v;
+        if (k) HEAP32[ptr+3] = k;
+        return ptr;
     }
-    function AccessorPropertyDescriptor() {
+
+
+    function AccessorPropertyDescriptor(c,e,g,s, k) {
+        var ptr = STACKTOP >> 2;
+        HEAP32[ptr] = BYTECODE.ACCESSORDESCRIPTOR;
+        var flags = 0;
+        if (c) flags |= FLAGS.CONFIGURABLE;
+        if (e) flags |= FLAGS.ENUMERABLE;
+        if (k) flags |= FLAGS.KEY;
+        HEAP32[ptr+1] = flags;
+        HEAP32[ptr+2] = g|0;
+        HEAP32[ptr+3] = s|0;
+        if (k) HEAP32[ptr+4] = k;
+        return ptr;
     }
 
 
@@ -29125,9 +29169,9 @@ define("asm-runtime", function (require, exports) {
     function DeclarativeRecord() {
         var ptr = STACKTOP >> 2;
         HEAP32[ptr] = TYPES.LOCALREC;   // Kenne funktionstabelle durch den typen
-        HEAP32[ptr+2] = allocateBindingRecords(numberLocalBindings);
         return ptr;
     }
+
     function ObjectRecord() {
         var ptr = STACKTOP >> 2;
         HEAP32[ptr] = TYPES.OBJECTREC;
@@ -29209,7 +29253,7 @@ define("asm-runtime", function (require, exports) {
     function set(unit) {
         POOL = unit.POOL;
         pp = unit.pp;
-        poolDupeMap = unit.poolDupeMap;
+        DUPEPOOL = unit.DUPEPOOL;
         MEMORY = unit.MEMORY;
         HEAP8 = unit.HEAP8;
         HEAPU8 = unit.HEAPU8;
@@ -29335,9 +29379,10 @@ define("asm-parser", function (require, exports) {
 
 
     var compiler = require("asm-compiler");
-    var runtime = require("asm-runtime"); // asm-runtime.js (one day i will stop doing this with names)
+    var runtime = require("asm-runtime");
+    var shared = require("asm-shared");
+    var unit = compiler.getEmptyUnit();
 
-    compiler.getEmptyUnit();
 
     function nextChar() {
         pos = pos + 1;
