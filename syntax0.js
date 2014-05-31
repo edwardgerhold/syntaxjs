@@ -2805,15 +2805,15 @@ define("tables", function (require, exports, module) {
  */
 define("symboltable", function (require, exports, module) {
 
+
 	function Environment (outer) {
         if (!(this instanceof Environment)) return new Environment(outer);
-		var env = this;
-		env.bindings = Object.create(null);
-		env.names = Object.create(null);
-		env.outer = outer || null;
-		return env;
+		this.bindings = Object.create(null);
+		this.names = Object.create(null);
+		this.outer = outer || null;
  	}
-	Environment.prototype = {
+
+    Environment.prototype = {
         putVar: function (decl, type) {
             var name = getName(decl);
             var thisName = this.names[name];            
@@ -2841,12 +2841,10 @@ define("symboltable", function (require, exports, module) {
 
 	function Scope (outer) {
         if (!(this instanceof Scope)) return new Scope(outer);
-		var scope = this;
-		scope.varEnv = new Environment(scope.varEnv);
-		scope.lexEnv = scope.varEnv;
-		scope.contains = Object.create(null);
-		scope.outer = outer || null;		
-		return scope;		
+		this.varEnv = new Environment(this.varEnv);
+		this.lexEnv = this.varEnv;
+		this.contains = Object.create(null);
+		this.outer = outer || null;
 	}
     Scope.prototype = Object.create(null);
 
@@ -2882,22 +2880,30 @@ define("symboltable", function (require, exports, module) {
             return Object.hasOwnProperty.call(this.scope.lexEnv.names, name);
         },
         varNames: function () {
-            return getList.call(this, this.scope.varEnv.names);
+            return getNameList.call(this, this.scope.varEnv.names);
         },
         lexNames: function () {
-            return getList.call(this, this.scope.lexEnv.names);
+            return getNameList.call(this, this.scope.lexEnv.names);
         },
         varDecls: function () {
-            return getList.call(this, this.scope.varEnv.bindings);
+            return getDeclList.call(this, this.scope.varEnv.bindings);
         },
         lexDecls: function () {
-            return getList.call(this, this.scope.lexEnv.bindings);
+            return getDeclList.call(this, this.scope.lexEnv.bindings);
         }
     };
-    function getList(names) {
+
+    function getNameList(names) {
         var list = [];
         for (var name in names) {
             list.push(name);
+        }
+        return list;
+    }
+    function getDeclList(bindings) {
+        var list = [];
+        for (var name in bindings) {
+            list.push(bindings[name]);
         }
         return list;
     }
@@ -8953,16 +8959,15 @@ function matchesQuery(node, query) {
             typeName = query;
             break;
     }
-    if (propName && (propName in node)) return true;
-    else if (typeName && (node.type === typeName)) return true;
-    return false;
+    return ((propName && (propName in node)) || (typeName && (node.type === typeName)));
 }
 
 function querySelectorAll(node, query) {
     "use strict";
+
     var stack = [];
-     var nodes = [];
-     var i, j;
+    var nodes = [];
+    var i, j;
 
     // querySelector(node, "CallExpression") returns all CallExpressions from the node on
     // querySelector(node, ".id") returns all nodes with an .id property from the node on
