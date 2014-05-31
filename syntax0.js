@@ -13,20 +13,6 @@
 var syntaxjs;
 /* lib/amdpromise.js is temporarily moved outside for self-execution investigation */
     /**
-     * a poorly failing A+ or better A- Promise which fails in 1/3 of the tests.
-     * The exports have the test adapter forgotten to be removed you can test it.
-     * While writing this, i have tested it and see the issue at the throw err handler
-     * a console.log(err) prints the error, but a throw err is caught away. Hmm. Should
-     * compare what´s really going on some day. And maybe rename makePromise to Promise.
-     *
-     * var realm = syntaxjs.createRealm();
-     * realm.evalAsync("let x = 10; x;").then(function (value) { console.log(v); return v; }, function (err) { throw err; });
-     * // now let´s invoke the exception handler by repeating it, let x is already declared will be asyntax error
-     * realm.evalAsync("let x = 10; x;").then(function (value) { console.log(v); return v; }, function (err) { console.log(err); });
-     * // console.log(err) prints the syntax error
-     *
-     * @param resolver
-     * @returns {*}
      */
     function makePromise(resolver) {
 
@@ -352,9 +338,13 @@ var syntaxjs;
     "use strict";
     syntaxjs = Object.create(null);
 /**
- * Created by root on 12.05.14.
+ * I have repeating ducktype tests for system facilities in the code
+ * To DRY it, i added "detector". It does something like tools like Modrnizr do.
+ * It tests and saves boolean results.
  */
 define("detector", function () {
+
+
     var hasConsole = typeof console == "object" && console && typeof console.log === "function";
     var hasPrint = typeof print === "function";
     var isWindow = typeof window === "object";
@@ -362,51 +352,18 @@ define("detector", function () {
     var isWorker = typeof importScripts === "function" && typeof window === "undefined";
     var isNode = typeof process !== "undefined" && typeof global !== "undefined";
     var isBrowser = isWindow && !isWorker && !isNode && !isJava;
-    return {
-        hasConsole: hasConsole,
-        hasPrint: hasPrint,
-        isJava: isJava,
-        isNode:   isNode,
-        isWorker: isWorker,
-        isWindow: isWindow,
-        isBrowser: isBrowser
-    };
-});
+    var hasWeakMap = typeof WeakMap === "function";
+    var hasProxy = typeof Proxy === "function";
+    var hasXHR = typeof XMLHttpRequest === "function";
 
-// *******************************************************************************************************************************
-// file imports
-// *******************************************************************************************************************************
-
-define("filesystem", function (require, exports) {
 
     /*
-     var concreteAdapter = makeAdapter({
-     test: {
-     node: function
-     browser: function
-     worker: function
-     sm: function
-     any: function
-     }
-     work: {
-     node: function
-     browser: function
-     worker: function
-     sm: function
-     any: function
-     },
-     default: function () {
-     }
-     });
 
-     returns a function calling to call work[k] if test[k]
-     starts only a work[k] if a test[k] is existing and returning true
-
-
-
+        move makeAdapter from "filesystem" here to
+        and better: merge these nothing-saying modules
+        you always forget to remove the fifth-class code.
 
      */
-
 
     function makeAdapter(methods) {
         if (arguments.length == 0 || typeof methods !== "object" || methods === null) {
@@ -430,6 +387,33 @@ define("filesystem", function (require, exports) {
     }
 
 
+
+
+    return {
+        makeAdapter: makeAdapter,
+
+        hasConsole: hasConsole,
+        hasPrint: hasPrint,
+
+        isJava:    isJava,
+        isNode:    isNode,
+        isWorker:  isWorker,
+        isWindow:  isWindow,
+        isBrowser: isBrowser,
+
+        hasWeakMap: hasWeakMap,
+        hasProxy: hasProxy,
+        hasXHR: hasXHR
+    };
+});
+
+// *******************************************************************************************************************************
+// file imports
+// *******************************************************************************************************************************
+
+define("filesystem", function (require, exports) {
+
+
     function readFileP(name) {
         return makePromise(function (resolve, reject) {
             return readFile(name, resolve, reject);
@@ -445,8 +429,6 @@ define("filesystem", function (require, exports) {
                 if (err) errback(err);
                 else callback(data);
             });
-
-
         } else if (syntaxjs.system == "browser") {
             var xhr = new XMLHttpRequest();
             xhr.open("GET", name, true);
@@ -494,7 +476,6 @@ define("filesystem", function (require, exports) {
     exports.readFileP = readFileP;
     exports.readFile = readFile;
     exports.readFileSync = readFileSync;
-    exports.makeAdapter = makeAdapter;
 
     return exports;
 });
@@ -4789,7 +4770,7 @@ define("parser", function () {
     var SymbolTable = require("symboltable").SymbolTable;
     var BoundNames = require("slower-static-semantics").BoundNames;
 
-    // JSON uses the api.
+    // JSON uses the old-api.
     var api, newSyntaxError, ifAbrupt, isAbrupt;
     // separation of the independent parser
     // should be reconsidered, or a wrap in
@@ -6506,7 +6487,7 @@ define("parser", function () {
             match("function");
             if (v === "*") {
                 node = Node("GeneratorDeclaration");
-                node.generator = true; // i am a legacy man :) (otherwise my node.type is violating the parser api)
+                node.generator = true; // i am a legacy man :) (otherwise my node.type is violating the parser old-api)
                 match("*");
             } else {
                 node = Node("FunctionDeclaration");
@@ -7460,9 +7441,9 @@ define("parser", function () {
     }
     function JSONText() {
         if (!newSyntaxError) {
-            newSyntaxError = require("api").newSyntaxError;
-            ifAbrupt = require("api").ifAbrupt;
-            isAbrupt = require("api").isAbrupt;
+            newSyntaxError = require("old-api").newSyntaxError;
+            ifAbrupt = require("old-api").ifAbrupt;
+            isAbrupt = require("old-api").isAbrupt;
         }
         return this.JSONValue();
     }
@@ -9171,7 +9152,7 @@ exports.querySelectorAll = querySelectorAll;
  */
 
 
-define("api", function (require, exports) {
+define("old-api", function (require, exports) {
     "use strict";
     var realm;
     var intrinsics;
@@ -11164,7 +11145,7 @@ function ThisResolution () {
 
 function FunctionRecord() {
     /*
-        move the typed memory into the api range
+        move the typed memory into the old-api range
         or don´t place the record here
      */
 }
@@ -22375,6 +22356,7 @@ var MessagePortPrototype_postMessage = function (thisArg, argList) {
 };
 /**
  * Created by root on 17.05.14.
+ * Created by root on 17.05.14.
  */
 var PrintFunction_call = function (thisArg, argList) {
     var str = "";
@@ -23836,7 +23818,7 @@ NowDefineBuiltinConstant(DateTimeFormatPrototype, $$toStringTag, "Intl.DateTimeF
     exports.addMissingProperties = addMissingProperties;
     // this will be funny moving around again
     // have to put AST under one root and INTCODE under another
-    // api/intrinsics will go to parsenodes.
+    // old-api/intrinsics will go to parsenodes.
     // and i will rewrite most again
     // if the native functions are better than the compiled,
     // i´ll use the constant pool and the old, else we rewrite all.
@@ -23849,7 +23831,7 @@ define("runtime", function () {
 
     "use strict";
     var parse = require("parser");
-    var ecma = require("api");
+    var ecma = require("old-api");
     var statics = require("slower-static-semantics");
     var tables = require("tables");
 
@@ -29005,7 +28987,7 @@ define("asm-runtime", function (require, exports) {
     // i have to figure out, which numbers are good and fight to teach myself
 
 
-    var ecma = require("api");
+    var ecma = require("old-api");
     var parse = require("parser");
     var CodeRealm = ecma.CodeRealm;
     var CreateRealm = ecma.CreateRealm;
@@ -30667,7 +30649,7 @@ if (typeof window != "undefined") {
  *  syntax.js web worker module
  *
  *  if it´s loaded, it provides a message handler for the worker thread
- *  the file lib/app.js calls syntaxjs.subscribeWorker which registers a
+ *  the file lib/app.js calls syntaxjs.registerWorker which registers a
  *  predefined message handler.
  *  You can program your own handlers and call syntax.js in
  *  But this defines some builtin commands
@@ -30731,29 +30713,47 @@ define("syntaxjs-worker", function (require, exports, module) {
                     break;
             }
         };
-        var subscribeWorker = function subscribeWorker() {
+
+        var registerWorker = function registerWorker() {
             var message_handler = exports.messageHandler;
             self.addEventListener("message", messageHandler, false);
         };
+
         exports.messageHandler = messageHandler;
-        exports.subscribeWorker = subscribeWorker;
+        exports.registerWorker = registerWorker;
     }
     return exports;
 });
 
-
 define("syntaxjs-shell", function (require, exports) {
     
     var fs, readline, rl, prefix, evaluate, startup, evaluateFile, prompt, haveClosedAllParens, shell;
-    
     var defaultPrefix = "es6> ";
     var multilinePrefix = "...> ";
     var inputBuffer = "";
+    var savedInput ="";
+    var isOpenParen = {
+        __proto__:null,
+        "(":true,
+        "{":true,
+        "[":true
+    };
+    var isCloseParen = {
+        __proto__:null,
+        ")": true,
+        "}": true,
+        "]": true
+    };
+    var isRightParen = {
+        __proto__: null,
+        "(":")",
+        "[":"]",
+        "{":"}"
+    };
 
     if (typeof process !== "undefined" && typeof module !== "undefined") {
 
         prefix = defaultPrefix;
-
         startup = function startup() {
             console.time("Uptime");
             fs = module.require("fs");
@@ -30763,7 +30763,6 @@ define("syntaxjs-shell", function (require, exports) {
                 output: process.stdout
             });
         };
-
         evaluate = function evaluate(code, continuation) {
                 var val;
                 try {
@@ -30775,7 +30774,6 @@ define("syntaxjs-shell", function (require, exports) {
                     if (continuation) setTimeout(continuation, 0);
                 }
         };
-
         evaluateFile = function evaluateFile(file, continuation) {
             var code;
             console.log("-evaluating " + file + "-");
@@ -30792,27 +30790,7 @@ define("syntaxjs-shell", function (require, exports) {
         //
         // this is some additional hack to emulate multiline input
         //
- 
-        var savedInput ="";
-        var isOpenParen = {
-            __proto__:null,
-            "(":true,
-            "{":true,
-            "[":true
-        };
-        var isCloseParen = {
-            __proto__:null,
-            ")": true,
-            "}": true,
-            "]": true
-        };
-        var isRightParen = {
-            __proto__: null,
-            "(":")",
-            "[":"]",
-            "{":"}"
-        };
-        
+
         haveClosedAllParens = function (code) {
             var parens = [];
             for (var i = 0, j = code.length; i < j; i++) {
@@ -30829,16 +30807,12 @@ define("syntaxjs-shell", function (require, exports) {
             }
             return parens.length === 0;
         };
-        
         //
         // prompt is now called again, and the savedInput is prepending the new inputted code.
         //
-
         prompt = function prompt() {
-            
             rl.question(prefix, function (code) {
                 if (code == "") return setTimeout(prompt);
-
                 if (code === ".break") {
                     savedInput = "";
                     prefix = defaultPrefix;
@@ -30880,7 +30854,6 @@ define("syntaxjs-shell", function (require, exports) {
 
                 }
                 if (savedInput) code = savedInput + code;
-                
                 try {
                     var valid = haveClosedAllParens(code);
                 } catch (ex) {
@@ -30902,7 +30875,6 @@ define("syntaxjs-shell", function (require, exports) {
                 }
             });
         };
-
         shell = function main() {
             var file;
             startup();
@@ -30914,8 +30886,7 @@ define("syntaxjs-shell", function (require, exports) {
                 console.timeEnd("Uptime");
             });
         };
-
-    } else shell = function () {};
+    } else shell = function () { return "the shell function is not supported on this system"; };
     return shell;
 });
 
@@ -30938,35 +30909,21 @@ define("syntaxjs-shell", function (require, exports) {
 
     var VERSION = "0.0.1";
     var syntaxjs_public_api_readonly = {
-    // essential functions
-	note: pdmacro("Use realm = syntaxjs.createRealm() and realm.eval*(*) instead of the syntaxjs.eval*(*) functions."),
+	    note: pdmacro("s.createRealm() returns a realm object with a .eval function."),
         version: pdmacro(VERSION),
         define: pdmacro(define),
         require: pdmacro(require),
         Promise: pdmacro(makePromise),
         tokenize: pdmacro(require("tokenizer")),// <-- needs exports fixed
-        parse: pdmacro(require("parser")),// <-- needs exports fixed
-        parseGoal: pdmacro(require("parser").parseGoal),
-        createRealm: pdmacro(require("api").createPublicCodeRealm),
-        toJsLang: pdmacro(require("js-codegen")),// <-- needs exports fixed
-        
         tokenizeIntoArrayWithWhiteSpaces: pdmacro(require("tokenizer").tokenizeIntoArrayWithWhiteSpaces),
         tokenizeIntoArray: pdmacro(require("tokenizer").tokenizeIntoArray),
+        parse: pdmacro(require("parser")),// <-- needs exports fixed
+        parseGoal: pdmacro(require("parser").parseGoal),
+        createRealm: pdmacro(require("old-api").createPublicCodeRealm),
+        toJsLang: pdmacro(require("js-codegen")),// <-- needs exports fixed
         eval: pdmacro(require("runtime")),// <-- needs exports fixed
-
-        makeAdapter: pdmacro(require("filesystem").makeAdapter),
-        readFile: pdmacro(require("filesystem").readFile),	
+        readFile: pdmacro(require("filesystem").readFile),
         readFileSync: pdmacro(require("filesystem").readFileSync),
-  // put into filesystem.js please
-    /*
-	i willl remove them for
-	
-	realm = syntaxjs.createRealm();
-	realm.eval(code);
-	realm.evalAsync(code, callback, errback);
-
-	realm.evalByteCode(code); // just begun - experimental
-    */
         evalFile: pdmacro(function (name, callback, errback) {
             var syntaxjs = this;
             return this.readFile(name, function (code) {
@@ -30978,9 +30935,7 @@ define("syntaxjs-shell", function (require, exports) {
         evalFileSync: pdmacro(function (name) {
             return this.eval(this.readFileSync(name));
         }),
-        evalStaticXform: pdmacro(require("runtime").ExecuteAsyncStaticXform),
         evalAsync: pdmacro(require("runtime").ExecuteAsync),
-        evalAsyncXform: pdmacro(require("runtime").ExecuteAsyncTransform)
     };
     
     var syntaxjs_highlighter_api = {
@@ -30989,14 +30944,12 @@ define("syntaxjs-shell", function (require, exports) {
     
     if (typeof window == "undefined" && typeof self !== "undefined" && typeof importScripts !== "undefined") {
         syntaxjs.system = "worker";
-        syntaxjs_public_api_readonly.subscribeWorker = pdmacro(require("syntaxjs-worker").subscribeWorker);
-
+        syntaxjs_public_api_readonly.registerWorker = pdmacro(require("syntaxjs-worker").registerWorker);
     } else if (typeof window !== "undefined") {
         syntaxjs.system = "browser";
-        syntaxjs_public_api_readonly.subscribeWorker = pdmacro(require("syntaxjs-worker").subscribeWorker);
+        syntaxjs_public_api_readonly.registerWorker = pdmacro(require("syntaxjs-worker").registerWorker);
         syntaxjs_highlighter_api.highlightElements = pdmacro(require("highlight-gui").highlightElements);
         syntaxjs_highlighter_api.startHighlighterOnLoad = pdmacro(require("highlight-gui").startHighlighterOnLoad);
-
     } else if (typeof process !== "undefined") {
         if (typeof exports !== "undefined") exports.syntaxjs = syntaxjs;
         syntaxjs.system = "node";
@@ -31027,7 +30980,10 @@ if (syntaxjs.system === "node") {
 } else if (syntaxjs.system === "browser") {
     syntaxjs.startHighlighterOnLoad();
 } else if (syntaxjs.system === "worker") {
-    syntaxjs.subscribeWorker();
+    syntaxjs.registerWorker();
+
+
+// this is unreliable and nothing for a good project
 } else if (syntaxjs.system === "spidermonkey") {
     print("syntax.js was successfully loaded but all console/node deps may not be removed yet");
 } else if (syntaxjs.system === "nashorn") {
