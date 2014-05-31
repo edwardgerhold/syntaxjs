@@ -232,9 +232,14 @@ function runTestStarter(json, testnames) {
         about();
         console.log(rawjson);
     }
+    Test.resetStats();
     if (writetests) {
         writeTestStarter(testfile, json, testnames);
     } else {
         runTestStarter(json, testnames);
     }
+    var status = Test.getStats();
+    var util = require("util");
+    util.inspect(status);
+    
 }(process.argv.slice(2)));

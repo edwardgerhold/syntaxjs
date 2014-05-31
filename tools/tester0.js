@@ -16,7 +16,51 @@
 
 var testerjs = (function () {
 
-if (typeof exports !== "undefined") exports.Test = SimpleTest;
+
+var s = {
+allTests: 0,
+allAsserts: 0,
+allFails: 0,
+allPasses: 0,
+allExceptions: 0
+};
+function resetStats() {
+var old = getStats();
+s.allTests = 0;
+s.allAsserts = 0;
+s.allFails = 0;
+s.allPasses= 0;
+s.allExceptions=0;
+return old;
+}
+function getStats() {
+    return {
+	allTests: s.allTests,
+	allAsserts: s.allAsserts,
+	allFails: s.allFails,
+	allPasses: s.allPasses,
+	allExceptions: s.allExceptions
+    };
+}
+function addStats(tests, asserts, fails, passes, exceptions) {
+    s.allTests += tests;
+    s.allAsserts += asserts;
+    s.allFails += fails;
+    s.allPasses += passes;
+    s.allExceptions += exceptions;
+}
+
+
+if (typeof exports !== "undefined") { 
+    exports.Test = Test;
+}
+if (typeof process !== "undefined") {
+    var fs = require("fs");
+    var util = require("util");
+}
+
+
+    
 
 var ClassNames = {
     "test": "testerjs-test",
@@ -48,8 +92,8 @@ var Colors = {
     "expected": "darkgrey"
 };
 
-function SimpleTest () {
-    var test = Object.create(SimpleTest.prototype);
+function Test () {
+    var test = Object.create(Test.prototype);
     
     test.tests = [];
     test.results = [];
@@ -63,35 +107,45 @@ function SimpleTest () {
 }
 
 /* Assertions */
-SimpleTest.prototype = Object.create(null);
-SimpleTest.prototype.add = add_test;
-SimpleTest.prototype.assert = assert;
 
-SimpleTest.prototype.throws = throws;
+Test.prototype = Object.create(null);
+Test.prototype.add = add_test;
+Test.prototype.assert = assert;
 
-SimpleTest.prototype.throwsNot = throwsNot;
-SimpleTest.prototype.deepEquals = deepEquals;
-SimpleTest.prototype.equals = equals;
-SimpleTest.prototype.instanceOf = instanceOf;
-SimpleTest.prototype.notEquals = notEquals;
-SimpleTest.prototype.throws = throws;
+
+Test.prototype.throws = throws;
+
+Test.prototype.throwsNot = throwsNot;
+Test.prototype.deepEquals = deepEquals;
+Test.prototype.equals = equals;
+Test.prototype.instanceOf = instanceOf;
+Test.prototype.notEquals = notEquals;
+Test.prototype.throws = throws;
 /* Run */
-SimpleTest.prototype.add = add_test;
-SimpleTest.prototype.run = run_tests;
+Test.prototype.add = add_test;
+Test.prototype.run = run_tests;
 /* Utils */
-SimpleTest.prototype.load = load;
-SimpleTest.prototype.record = record;
-SimpleTest.prototype.stringify = stringify;
+Test.prototype.load = load;
+Test.prototype.record = record;
+Test.prototype.stringify = stringify;
 /* Output */
-SimpleTest.prototype.print = print_results;
-SimpleTest.prototype.html = print_html;
-SimpleTest.prototype.process = process_results;
+Test.prototype.print = print_results;
+Test.prototype.html = print_html;
+Test.prototype.process = process_results;
+
+// just a counter
+Test.getStats = Test.prototype.getStats = getStats;
+Test.resetStats = Test.prototype.resetStats = resetStats;
 
 /* load, record, stringify */
+
 function load(file) {
     var fs = require("fs");
     return fs.readFileSync(file);
 }
+
+
+
 function struct(pass, type, actual, expected, message) {
     var print = Pass[pass]+": "+type+": actual="+stringify(actual)+", expected="+stringify(expected)+": message="+message;
     var rec = {
@@ -254,16 +308,30 @@ function run_tests() {
     }
     console.timeEnd(t);
 }
+/*
+    statistics with testmaker.js 
+*/
+function count_results() {
+    
+}
+
 /* print, html, draw */
 function process_results(f) {
     this.results.forEach(f);
 }
 function print_results() {
-    var str = "[Tests: "+this.tests.length;
-    str += ", Asserts: "+this.count.assertions;
-    str += ", Passed: "+this.count.passed;
-    str += ", Failed: "+this.count.failed;
-    str += ", Exceptions: "+this.count.exceptions;
+    var t = this.tests.length,
+    a =this.count.assertions,
+    p =this.count.passed,
+    f =this.count.failed,
+    e =this.count.exceptions;
+    addStats(t,a,f,p,e);
+
+    var str = "[Tests: "+t;
+    str += ", Asserts: "+a;
+    str += ", Passed: "+p;
+    str += ", Failed: "+f;
+    str += ", Exceptions: "+e
     str += "]";
     console.log(str);
     this.results.forEach(function (rec) {
@@ -318,11 +386,11 @@ function print_html(options) {
 
 var tester = {
     id: "testerjs",
-    Test: SimpleTest
+    Test: Test
 };
 
 if (typeof exports !== "undefined") {
-    exports.Test = SimpleTest
+    exports.Test = Test;
 } else if (typeof module === "object") module.exports = exports;
 else if (typeof require === "function" && typeof require.cache === "object" && !require.cache[tester.id]) require.cache[tester.id] = tester;
 
@@ -331,3 +399,4 @@ return tester;
 }());
 
 if (typeof Test === "undefined") Test = testerjs.Test;
+

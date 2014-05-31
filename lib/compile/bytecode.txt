@@ -59,6 +59,8 @@ Storing in Int32 Format at the beginning
 var ptr = STACKTOP >> 2;    // Get the current Stacktop in Bytes and divide by 4 to have a HEAP32[ptr] for 4 Byte Slots.
 ```
 
+
+
 Storing a double with alignment
 --------------------------------
 ```js

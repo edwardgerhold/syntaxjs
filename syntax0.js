@@ -9664,6 +9664,7 @@ SLOTS.STATE = "State";
 
 Object.freeze(SLOTS); // DOES A FREEZE HELP OPTIMIZING? The pointers can´t change anymore, or?
 
+
 var INTRINSICS = Object.create(null);
 INTRINSICS.OBJECT = "%Object%";
 INTRINSICS.OBJECTPROTOTYPE = "%ObjectPrototype%";
@@ -9794,6 +9795,137 @@ INTRINSICS.NUMBERFORMATPROTOTYPE = "%NumberFormatPrototype%";
 INTRINSICS.DATETIMEFORMAT = "%DateTimeFormat%";
 INTRINSICS.DATETIMEFORMATPROTOTYPE = "%DateTimeFormatPrototype%";
 Object.freeze(INTRINSICS);
+
+var INTINTRINSICS = Object.create(null);
+INTINTRINSICS.OBJECT = 1;
+INTINTRINSICS.OBJECTPROTOTYPE = 2;
+INTINTRINSICS.FUNCTION = 3;
+INTINTRINSICS.FUNCTIONPROTOTYPE = 4;
+INTINTRINSICS.ARRAY = 5;
+INTINTRINSICS.ARRAYPROTOTYPE = 6;
+INTINTRINSICS.ARRAYITERATORPROTOTYPE = 7;
+INTINTRINSICS.GENERATOR = 8;
+INTINTRINSICS.GENERATORPROTOTYPE = 9;
+INTINTRINSICS.MATH = 10;
+INTINTRINSICS.JSON = 11;
+INTINTRINSICS.REFLECT = 12;
+INTINTRINSICS.LOADER = 13;
+INTINTRINSICS.LOADERPROTOTYPE = 14;
+INTINTRINSICS.LOADERITERATORPROTOTYPE = 15;
+INTINTRINSICS.GENERATORFUNCTION = 16;
+INTINTRINSICS.ARRAYBUFFER = 17;
+INTINTRINSICS.ARRAYBUFFERPROTOTYPE = 18;
+INTINTRINSICS.DATAVIEW = 19;
+INTINTRINSICS.DATAVIEWPROTOTYPE = 20;
+INTINTRINSICS.ERROR = 21;
+INTINTRINSICS.ERRORPROTOTYPE = 22;
+INTINTRINSICS.TYPEERROR = 23;
+INTINTRINSICS.TYPEERRORPROTOTYPE = 24;
+INTINTRINSICS.REFERENCEERROR = 25;
+INTINTRINSICS.REFERENCEERRORPROTOTYPE = 26;
+INTINTRINSICS.STRING = 27;
+INTINTRINSICS.STRINGPROTOTYPE = 28;
+INTINTRINSICS.STRINGITERATORPROTOTYPE = 29;
+INTINTRINSICS.SETITERATORPROTOTYPE = 30;
+INTINTRINSICS.MAPITERATORPROTOTYPE = 31;
+INTINTRINSICS.MAP = 32;
+INTINTRINSICS.SET = 33;
+INTINTRINSICS.MAPPROTOTYPE = 34;
+INTINTRINSICS.SETPROTOTYPE = 35;
+INTINTRINSICS.SYNTAXERROR = 36;
+INTINTRINSICS.SYNTAXERRORPROTOTYPE = 37;
+INTINTRINSICS.URIERROR = 38;
+INTINTRINSICS.URIERRORPROTOTYPE = 39;
+INTINTRINSICS.EVALERROR = 40;
+INTINTRINSICS.EVALERRORPROTOTYPE = 41;
+INTINTRINSICS.RANGEERROR = 42;
+INTINTRINSICS.RANGEERRORPROTOTYPE = 43;
+INTINTRINSICS.CONSOLE = 44;
+INTINTRINSICS.EMITTER = 45;
+INTINTRINSICS.EMITTERPROTOTYPE = 46;
+INTINTRINSICS.SYMBOL = 47;
+INTINTRINSICS.SYMBOLPROTOTYPE = 48;
+INTINTRINSICS.NUMBER = 49;
+INTINTRINSICS.NUMBERPROTOTYPE = 50;
+INTINTRINSICS.REGEXP   = 51;
+INTINTRINSICS.REGEXPPROTOTYPE  = 52;
+INTINTRINSICS.DATE = 53;
+INTINTRINSICS.DATEPROTOTYPE = 54;
+INTINTRINSICS.TYPEDARRAY = 55;
+INTINTRINSICS.TYPEDARRAYPROTOTYPE = 56;
+INTINTRINSICS.UINT8ARRAY = 57;
+INTINTRINSICS.INT8ARRAY = 58;
+INTINTRINSICS.INT16ARRAY = 59;
+INTINTRINSICS.UINT16ARRAY = 60;
+INTINTRINSICS.INT32ARRAY = 61;
+INTINTRINSICS.UINT32ARRAY = 62;
+INTINTRINSICS.FLOAT32ARRAY = 63;
+INTINTRINSICS.FLOAT64ARRAY = 64;
+INTINTRINSICS.UINT8ARRAYPROTOTYPE = 65;
+INTINTRINSICS.INT8ARRAYPROTOTYPE = 66;
+INTINTRINSICS.INT16ARRAYPROTOTYPE = 67;
+INTINTRINSICS.UINT16ARRAYPROTOTYPE = 68;
+INTINTRINSICS.INT32ARRAYPROTOTYPE = 69;
+INTINTRINSICS.UINT32ARRAYPROTOTYPE = 70;
+INTINTRINSICS.FLOAT32ARRAYPROTOTYPE = 71;
+INTINTRINSICS.FLOAT64ARRAYPROTOTYPE = 72;
+INTINTRINSICS.UINT8CLAMPEDARRAY = 73;
+INTINTRINSICS.UINT8CLAMPEDARRAYPROTOTYPE = 74;
+INTINTRINSICS.PROMISE = 75;
+INTINTRINSICS.PROMISEPROTOTYPE = 76;
+INTINTRINSICS.ISNAN = 77;
+INTINTRINSICS.ISFINITE = 78;
+INTINTRINSICS.ESCAPE = 79;
+INTINTRINSICS.UNESCAPE = 80;
+INTINTRINSICS.DECODEURI = 81;
+INTINTRINSICS.ENCODEURI = 82;
+INTINTRINSICS.DECODEURICOMPONENT = 83;
+INTINTRINSICS.ENCODEURICOMPONENT = 84;
+INTINTRINSICS.PARSEINT = 85;
+INTINTRINSICS.PARSEFLOAT = 86;
+INTINTRINSICS.PROXY = 87;
+INTINTRINSICS.PROXYPROTOTYPE = 88;
+INTINTRINSICS.REALM = 89;
+INTINTRINSICS.REALMPROTOTYPE = 90;
+INTINTRINSICS.SETTIMEOUT = 91;
+INTINTRINSICS.SETIMMEDIATE = 92;
+INTINTRINSICS.EVAL = 93;
+INTINTRINSICS.MODULE = 94;
+INTINTRINSICS.REQUEST = 95;
+INTINTRINSICS.LOAD = 96;
+INTINTRINSICS.WEAKSET = 97;
+INTINTRINSICS.WEAKMAP = 98;
+INTINTRINSICS.WEAKSETPROTOTYPE = 99;
+INTINTRINSICS.WEAKMAPPROTOTYPE = 100;
+INTINTRINSICS.BOOLEAN = 101;
+INTINTRINSICS.BOOLEANPROTOTYPE = 102;
+INTINTRINSICS.EVENT = 103;
+INTINTRINSICS.EVENTTARGET = 104;
+INTINTRINSICS.EVENTPROTOTYPE = 105;
+INTINTRINSICS.EVENTTARGETPROTOTYPE = 106;
+INTINTRINSICS.NOTIFIERPROTOTYPE = 107;
+INTINTRINSICS.DEBUGFUNCTION = 108;
+INTINTRINSICS.PRINTFUNCTION = 109;
+INTINTRINSICS.MESSAGEPORT = 110;
+INTINTRINSICS.MESSAGEPORTPROTOTYPE = 111;
+INTINTRINSICS.THROWTYPEERROR = 112;
+INTINTRINSICS.STRUCTTYPE = 113;
+INTINTRINSICS.STRUCTTYPEPROTOTYPE = 114;
+INTINTRINSICS.TYPE = 115;
+INTINTRINSICS.TYPEPROTOTYPE = 116;
+INTINTRINSICS.ARRAYPROTO_VALUES = 117;
+INTINTRINSICS.SETLANGUAGE = 118;
+INTINTRINSICS.VM = 119;
+INTINTRINSICS.DOMWRAPPER = 120;
+INTINTRINSICS.DEFAULTCOMPARE = 121;
+INTINTRINSICS.INTL = 122;
+INTINTRINSICS.COLLATOR = 123;
+INTINTRINSICS.COLLATORPROTOTYPE = 124;
+INTINTRINSICS.NUMBERFORMAT = 125;
+INTINTRINSICS.NUMBERFORMATPROTOTYPE = 126;
+INTINTRINSICS.DATETIMEFORMAT = 127;
+INTINTRINSICS.DATETIMEFORMATPROTOTYPE = 128;
+Object.freeze(INTINTRINSICS);
 var floor = Math.floor;
 var ceil = Math.ceil;
 var abs = Math.abs;
@@ -23702,6 +23834,13 @@ NowDefineBuiltinConstant(DateTimeFormatPrototype, $$toStringTag, "Intl.DateTimeF
     exports.createExceptionTextOutput = createExceptionTextOutput;
     exports.stringifyErrorStack = stringifyErrorStack;
     exports.addMissingProperties = addMissingProperties;
+    // this will be funny moving around again
+    // have to put AST under one root and INTCODE under another
+    // api/intrinsics will go to parsenodes.
+    // and i will rewrite most again
+    // if the native functions are better than the compiled,
+    // i´ll use the constant pool and the old, else we rewrite all.
+    exports.INTINTRINSICS = INTINTRINSICS;
     return exports;
 });
 
@@ -26951,66 +27090,40 @@ define("runtime", function () {
 
 
 
-    /*
-
-        now i can take a break and redo all evaluation functions.
-        i do it in runtime2.js and copy now.
-
-     */
 
 
-    function loop() {
-
-        var stack = [];
-        var nodes = [];
-
-
-        stack.push(node);
-        while (node = stack.pop()) {
-
-            var result = Evaluate(node);
-            if (isAbrupt(result = ifAbrupt(result))) return result;
-            operands.push(result);
-
-
+    function putOnStack(node) {
+            var stack = [];
             switch (node.type) {
                 case "Program":
-                    // // return {type:type,_id_:++nodeId,strict:undefined,body:undefined,loc:undefined,extras:undefined};
                     for (i = node.body.length - 1; i >= 0; i--) {
-                        stack.push(node.body[i]);
+                        putOnStack(node.body[i]);
                     }
+                    stack.push(node);
                     break;
+
                 case "Identifier":
+                    stack.push(node);
                     break;
                 // // return {type:type,_id_:++nodeId,name:undefined,loc:undefined,extras:undefined};
                 case "ParenthesizedExpression":
                 case "ExpressionStatement":
                     stack.push(node.expression);
+                    stack.push(node);
                     break;
                 // // return {type:type,_id_:++nodeId,expression:undefined,loc:undefined,extras:undefined};
                 case "LexicalDeclaration":
                 case "VariableDeclaration":
-                    for (i = node.declarations.length - 1; i >= 0; i--) {
-                        stack.push(node.declarations[i]);
-                    }
                     break;
                 case "FunctionDeclaration":
                 case "FunctionExpression":
                 case "GeneratorDeclaration":
                 case "GeneratorExpression":
-                    for (i = node.body.length - 1; i >= 0; i--) {
-                        stack.push(node.body[i]);
-                    }
+                    stack.push(node);
                     // / // return {type:type,_id_:++nodeId,expression:undefined,generator:undefined,strict:undefined,id:undefined,params:undefined,body:undefined,loc:undefined,extras:undefined};
                     break;
                 case "ArrowExpression":
-                    if (Array.isArray(node.body)) {
-                        for (i = node.body.length - 1; i >= 0; i--) {
-                            stack.push(node.body[i]);
-                        }
-                    } else {
-                        stack.push(node.body);
-                    }
+                    stack.push(node);
                     // // return {type:type,_id_:++nodeId,params:undefined,body:undefined,loc:undefined,ebxtras:undefined};
                     //stack.push(node);
                     break;
@@ -27026,21 +27139,15 @@ define("runtime", function () {
                     break;
                 case "ObjectExpression":
                     // // return {type:type,_id_:++nodeId,properties:undefined,loc:undefined,extras:undefined};
-                    for (i = node.properties.length - 1; i >= 0; i--) {
-                        stack.push(node.properties[i]);
-                    }
+                    stack.push(node);
                     break;
                 case "ArrayExpression":
                     // // return {type:type,_id_:++nodeId,elements:undefined,loc:undefined,extras:undefined};
-                    for (i = node.body.length - 1; i >= 0; i--) {
-                        stack.push(node.body[i]);
-                    }
+                    stack.push(node);
                     break;
                 case "ObjectPattern":
                 case "ArrayPattern":
-                    for (i = node.elements.length - 1; i >= 0; i--) {
-                        stack.push(node.elements[i]);
-                    }
+                    stack.push(node);
                     break;
                 // // return {type:type,_id_:++nodeId,elements:undefined,loc:undefined,extras:undefined};
                 case "WhileStatement":
@@ -27048,7 +27155,7 @@ define("runtime", function () {
                 // // return {type:type,_id_:++nodeId,test:undefined, body:undefined,loc:undefined,extras:undefined};
                 case "BlockStatement":
                     for (i = node.body.length - 1; i >= 0; i--) {
-                        stack.push(node.body[i]);
+                        putOnStack(node.body[i]);
                     }
                     break;
                 // // return {type:type,_id_:++nodeId,body:undefined,loc:undefined,extras:undefined};
@@ -27092,12 +27199,10 @@ define("runtime", function () {
                 // // return {type:type,_id_:++nodeId, id:undefined, loc:undefined, extras:undefined};
                 case "SpreadExpression":
                 // // return {type:type,_id_:++nodeId, id:undefined, loc:undefined, extras:undefined};
-
                 case "BindingPattern":
                     // // return {type:type,_id_:++nodeId, id:undefined, target:undefined, loc:undefined, extras:undefined};
                     break;
                 case "ArrayComprehension":
-
                 // // return {type:type,_id_:++nodeId, blocks:undefined, filter:undefined, expression:undefined, loc:undefined, extras:undefined};
                 case "GeneratorComprehension":
                     for (i = node.blocks.length - 1; i >= 0; i--) {
@@ -27129,8 +27234,7 @@ define("runtime", function () {
                 default:
                 // // return {type:type,_id_:++nodeId, loc:undefined, extras:undefined};
             }
-        }
-        return NormalCompletion(R);
+        return stack;
     }
 
 
@@ -28051,7 +28155,7 @@ define("asm-typechecker", function (require, exports){
                 for (var i = 0; i  < len; i++) {
                     if (!(result = validate(body[i]))) return result;
                 }
-            case "ExpressionStatement":
+            case "Expression Statement":
                 if (!(result = validate(node.expression))) return result;
                 break;
             case "AssignmentExpression":
@@ -28103,23 +28207,92 @@ define("asm-compiler", function (require, exports) {
 
     var DEFAULT_SIZE = 2*1024*1024; // 2 Meg of RAM (string, id, num) should be big enough to run this program
     var POOL, pp, poolDupeMap;
-    var MEMORY, HEAP8, HEAPU8, HEAP16, HEAPU16, HEAPU32, HEAP32, HEAPF32, HEAPF64;
+
+    // HEAP32 here in the compiler is CODE32 in the runtime, the runtime stack will have arrays called STACK32 etc.
     var MEMORY, HEAP8, HEAPU8, HEAP16, HEAPU16, HEAPU32, HEAP32, HEAPF32, HEAPF64;
     var STACKBASE, STACKSIZE, STACKTOP, STACKLIMIT;
 
     var LABELS;         // goto indizes
     var RETADDR = [];   // stack for saving addr during compilation
-
     var STATE;
-    var st = -1;
 
-    function pushState(state) {
-        STATE[++st] = state;
+    function UTF16Encode(cp) {
+        Assert(0 <= cp && cp <= 0x10FFFF, "utf16encode: cp has to be beetween 0 and 0x10FFFF");
+        if (cp <= 65535) return cp;
+        var cu1 = Math.floor((cp - 65536) % 1024) + 55296;
+        var cu2 = ((cp - 65536) % 1024) + 56320;
+        return [cu1, cu2];
     }
 
-    function popState() {
-        return STATE[st--];
+    function UTF16Decode(lead, trail) {
+        Assert(0xD800 <= lead && lead <= 0xD8FF, "utf16decode: lead has to be beetween 0xD800 and 0xD8FF");
+        Assert(0xDC00 <= trail && trail <= 0xDFFF, "utf16decode: trail has to be beetween 0xDC00 and 0xDFFF");
+        var cp = (lead - 55296) * 1024 + (trail - 564320);
+        return cp;
     }
+
+    // can do them again
+    // i decide to catch numbers for all identifiers
+    // strings go into the constant pool like in jvm etc.
+
+    // but i decided to hard-code the encoded string into
+    // the HEAP Memory, associating a key with a binding,
+    // a property descriptor
+    //
+
+    /**
+     *
+     * can do them again and i have to develop a testing interface for
+     *
+     * writing and reading
+     * to drive independent tests of reading/writing the memory
+     * away from script evaluation to be sure the thing works and
+     * to measure it (i knew it was slow. but against the ast,
+     * it is still small, very small)
+     *
+     */
+    function writeString(str) {
+        var points = stringToPoints(str);
+        var len = points.length;
+        var ptr32 = STACKTOP >> 2;
+        HEAP32[ptr32] = TYPES.STRING;
+        HEAP32[ptr32+1] = len;
+        var ptr16 = (ptr32 + 2) << 1;
+        for (var i = 0; i < len; i++) {
+            HEAPU16[ptr16+i] = points[i];
+        }
+        return ptr32;
+    }
+    function readString(ptr) {
+        var a = [];
+        if (HEAP32[ptr] != TYPES.STRING) {
+            throw new Error("memory i/o error: is not a string");
+        }
+        var len = HEAP32[ptr+1];
+        var ptr16 = (ptr+2) << 1;
+        for (var i = 0; i < len; i++) {
+            var cp = HEAP32[ptr16+i];
+            a.push(cp);
+        }
+        return String.fromCharCode.apply(undefined, a);
+    }
+    function stringToPoints(str) {
+        var a = [];
+        for (var i = 0, j = str.length; i < j; i++) {
+            var c = str.charAt(i);
+            if (c.length == 1) {
+                a.push(c.charCodeAt(0));
+            } else {
+                a.push(c.charCodeAt(0));
+                a.push(c.charCodeAt(1));
+            }
+        }
+        return a;
+    }
+    function pointsToString(cpArr)  {
+      return String.fromCharCode.apply(undefined, cpArr);
+    }
+
 
 
     var BYTECODESET = require("asm-shared").BYTECODESET;
@@ -28134,14 +28307,23 @@ define("asm-compiler", function (require, exports) {
     var unaryOperatorFromString = tables.unaryOperatorFromString;
 
     /**
+     * This jmp function is used at the end of each basic block
+     * or between alternatives
      *
      * @param ptr
      * @param target
      */
+
     function jmp(ptr, target) {
         HEAP32[ptr]   = JMP;
         HEAP32[ptr+1] = target;
     }
+
+    function gotoNextBlock(ptr, target) {
+        HEAP32[ptr]   = JMP;
+        HEAP32[ptr+1] = target;
+    }
+
 
     /**
      *
@@ -28158,20 +28340,19 @@ define("asm-compiler", function (require, exports) {
      * @param node
      * @returns {*}
      */
-    function identifier (node) {
+    function identifier (node, nextBlockAddr) {
         var poolIndex = addToConstantPool(node.name);
         var ptr = STACKTOP >> 2;
         HEAP32[ptr] = IDCONST;
         HEAP32[ptr+1] = poolIndex;
         STACKTOP += 8;
-        //console.log("compiled identifier to " + ptr);
         return ptr;
     }
     /**
      * @param node
      * @returns {*}
      */
-    function numericLiteralPool (node) {
+    function numericLiteralPool (node, nextBlockAddr) {
         var poolIndex = addToConstantPool(node.value);
         var ptr = STACKTOP >> 2;
         HEAP32[ptr] = NUMCONST;
@@ -28188,7 +28369,7 @@ define("asm-compiler", function (require, exports) {
      * @param node
      * @returns {*}
      */
-    function numericLiteral(node) {
+    function numericLiteral(node, nextBlockAddr) {
         var value = node.computed;
         if (value === undefined) value = +node.value;
         var align;
@@ -28202,7 +28383,7 @@ define("asm-compiler", function (require, exports) {
         return ptr;
     }
 
-    function stringLiteral(node) {
+    function stringLiteral(node, nextBlockAddr) {
         var str = node.computed;
         if (str === undefined) str = str.slice(1, str.length-2);
         var ptr = STACKTOP >> 2;
@@ -28236,7 +28417,7 @@ define("asm-compiler", function (require, exports) {
      * 4. increase STACKTOP
      * @param node
      */
-    function stringLiteralPool (node) {
+    function stringLiteralPool (node, nextBlockAddr) {
         addToConstantPool(node.computed);
         var poolIndex = pp;
         var ptr = STACKTOP >> 2;
@@ -28249,7 +28430,7 @@ define("asm-compiler", function (require, exports) {
      * @param node
      * @returns {*}
      */
-    function booleanLiteral(node) {
+    function booleanLiteral(node, nextBlockAddr) {
         var ptr = STACKTOP >> 2;
         if (node.value === "true") HEAP32[ptr] = TRUEBOOL;
         else HEAP32[ptr] = FALSEBOOL;
@@ -28262,11 +28443,11 @@ define("asm-compiler", function (require, exports) {
      * @param node
      * @returns {number}
      */
-    function expressionStatement(node) {
+    function expressionStatement(node, nextBlockAddr) {
         return compile(node.expression);
     }
 
-    function parenthesizedExpression(node) {
+    function parenthesizedExpression(node, nextBlockAddr) {
         var ptr = STACKTOP >> 2;
         return ptr;
     }
@@ -28275,7 +28456,7 @@ define("asm-compiler", function (require, exports) {
      * @param node
      * @returns {*}
      */
-    function sequenceExpression(node) {
+    function sequenceExpression(node, nextBlockAddr) {
         var len = node.sequence.length
         var ptr = STACKTOP >> 2;
         STACKTOP += 12;
@@ -28291,7 +28472,7 @@ define("asm-compiler", function (require, exports) {
      * @param node
      */
 
-    function assignmentExpression(node) {
+    function assignmentExpression(node, nextBlockAddr) {
         var ptr = STACKTOP >> 2;
         var code;
         switch (node.operator) {
@@ -28308,7 +28489,7 @@ define("asm-compiler", function (require, exports) {
         return ptr;
     }
 
-    function unaryExpression(node) {
+    function unaryExpression(node, nextBlockAddr) {
         var ptr = STACKTOP >> 2;
 
         return ptr;
@@ -28316,9 +28497,10 @@ define("asm-compiler", function (require, exports) {
     /**
      *
      */
-    function binaryExpression(node) {
+    function binaryExpression(node, nextBlockAddr) {
         var ptr = STACKTOP >> 2;
         var code;
+
         switch (node.operator) {
             case "==": code = BYTECODES.EQ; break;
             case "===":code = BYTECODES.SEQ; break;
@@ -28350,7 +28532,7 @@ define("asm-compiler", function (require, exports) {
      * @returns {*}
      */
 
-    function callExpression(node) {
+    function callExpression(node, nextBlockAddr) {
         var ptr = STACKTOP >> 2;
         return ptr;
     }
@@ -28358,7 +28540,7 @@ define("asm-compiler", function (require, exports) {
      *
      * @param node
      */
-    function newExpression(node) {
+    function newExpression(node, nextBlockAddr) {
         var ptr = STACKTOP >> 2;
         return ptr;
     }
@@ -28379,32 +28561,32 @@ define("asm-compiler", function (require, exports) {
         return ptr;
     }
 
-    function functionDeclaration(node) {
+    function functionDeclaration(node, nextBlockAddr) {
         POOL[++pp] = node;
         var poolIndex = pp;
         var ptr = STACKTOP;
         return ptr;
     }
 
-    function variableDeclaration(node) {
+    function variableDeclaration(node, nextBlockAddr) {
         POOL[++pp] = node;
         var poolIndex = pp;
         return ptr;
     }
 
-    function propertyDefinition(node) {
+    function propertyDefinition(node, nextBlockAddr) {
         var ptr = STACKTOP >> 2;
         POOL[++pp] = node.key;
         return ptr;
     }
 
-    function objectExpression(node) {
+    function objectExpression(node, nextBlockAddr) {
         var ptr = STACKTOP >> 2;
         var len = node.elements.length;
         return ptr;
     }
 
-    function arrayExpression(node) {
+    function arrayExpression(node, nextBlockAddr) {
         var ptr = STACKTOP >> 2;
         var len = node.elements.length;
         return ptr;
@@ -28419,31 +28601,31 @@ define("asm-compiler", function (require, exports) {
         return ptr;
     }
 
-    function returnStatement(node) {
+    function returnStatement(node, nextBlockAddr) {
         var ptr = STACKTOP >> 2;
         return ptr;
     }
 
-    function ifStatement(node) {
+    function ifStatement(node, nextBlockAddr) {
         var ptr = STACKTOP >> 2;
         return ptr;
     }
 
-    function blockStatement(node) {
+    function blockStatement(node, nextBlockAddr) {
         var len = node.body.length;
         var body = node.body;
         var ptr = STACKTOP >> 2;
         return ptr;
     }
 
-    function whileStatement(node) {
+    function whileStatement(node, nextBlockAddr) {
         var len = node.body.length;
         var body = node.body;
         var ptr = STACKTOP >> 2;
         return ptr;
     }
 
-    function doWhileStatement(node) {
+    function doWhileStatement(node, nextBlockAddr) {
         var len = node.body.length;
         var body = node.body;
         var ptr = STACKTOP >> 2;
@@ -28451,74 +28633,74 @@ define("asm-compiler", function (require, exports) {
     }
 
 
-    function forStatement (node) {
+    function forStatement (node, nextBlockAddr) {
         var ptr = STACKTOP >> 2;
         return ptr;
     }
 
 
-    function forInOfStatement (node) {
+    function forInOfStatement (node, nextBlockAddr) {
         var ptr = STACKTOP >> 2;
         return ptr;
     }
 
-    function switchStatement(node) {
+    function switchStatement(node, nextBlockAddr) {
         var ptr = STACKTOP >> 2;
         return ptr;
     }
-    function switchCase(node) {
+    function switchCase(node, nextBlockAddr) {
         var ptr = STACKTOP >> 2;
         return ptr;
     }
-    function defaultCase(node) {
+    function defaultCase(node, nextBlockAddr) {
         var ptr = STACKTOP >> 2;
         return ptr;
     }
-    function tryStatement(node) {
+    function tryStatement(node, nextBlockAddr) {
         var ptr = STACKTOP >> 2;
         return ptr;
     }
-    function catchClause(node) {
+    function catchClause(node, nextBlockAddr) {
         var ptr = STACKTOP >> 2;
         return ptr;
     }
-    function finally_(node) {
+    function finally_(node, nextBlockAddr) {
         var ptr = STACKTOP >> 2;
         return ptr;
     }
-    function objectPattern(node) {
+    function objectPattern(node, nextBlockAddr) {
         var ptr = STACKTOP >> 2;
         return ptr;
     }
-    function arrayPattern(node) {
+    function arrayPattern(node, nextBlockAddr) {
         var ptr = STACKTOP >> 2;
         return ptr;
     }
-    function moduleDeclaration(node) {
+    function moduleDeclaration(node, nextBlockAddr) {
         var ptr = STACKTOP >> 2;
         return ptr;
     }
-    function importStatement(node) {
-        var ptr = STACKTOP >> 2;
-        return ptr;
-    }
-
-    function exportStatement(node) {
+    function importStatement(node, nextBlockAddr) {
         var ptr = STACKTOP >> 2;
         return ptr;
     }
 
-    function throwStatement(node) {
+    function exportStatement(node, nextBlockAddr) {
         var ptr = STACKTOP >> 2;
         return ptr;
     }
 
-    function breakStatement(node) {
+    function throwStatement(node, nextBlockAddr) {
         var ptr = STACKTOP >> 2;
         return ptr;
     }
 
-    function continueStatement(node) {
+    function breakStatement(node, nextBlockAddr) {
+        var ptr = STACKTOP >> 2;
+        return ptr;
+    }
+
+    function continueStatement(node, nextBlockAddr) {
         var ptr = STACKTOP >> 2;
         HEAP32[ptr] = BYTECODE.CONTINUECOMP;
         HEAP32[ptr+1] = LABELS[node.label];
@@ -28526,7 +28708,7 @@ define("asm-compiler", function (require, exports) {
         return ptr;
     }
 
-    function debuggerStatement(node) {
+    function debuggerStatement(node, nextBlockAddr) {
         var ptr = STACKTOP >> 2;
         HEAP32[ptr] = DEBUGGER;
         return ptr;
@@ -28534,7 +28716,7 @@ define("asm-compiler", function (require, exports) {
 
 
 
-    function labelledStatement(node) {
+    function labelledStatement(node, nextBlockAddr) {
         var ptr = STACKTOP >> 2;
         HEAP32[ptr] = BYTECODE.LABEL;
         LABELS[node.label] = ++LABELIDX;
@@ -28550,18 +28732,25 @@ define("asm-compiler", function (require, exports) {
      * @param node
      * @returns {*}
      */
-    function program(node) {
+    function program(node, nextBlockAddr) {
         var body = node.body;
         var strict = !!node.strict;
         var len = body.length;
 
-        var ptr = STACKTOP >> 2;
-        STACKTOP += 4;
-        HEAP32[ptr] = PRG;
-        c
+        nextBlockAddr = undefined;
 
+        for (var i = body.length-1; i >= 0;i--) {
+            var startAddr = compile(body[i], nextBlockAddr);
+        }
+
+
+        var ptr = STACKTOP >> 2;
+
+
+        gotoNextBlock(ptr, nextBlockAddr);
         return ptr;
     }
+
 
 
 
@@ -28728,6 +28917,19 @@ define("asm-compiler", function (require, exports) {
     exports.get = get; */
     exports.compileUnit = compileUnit;
     exports.getEmptyUnit = getEmptyUnit;
+
+
+    /*
+        xs outside
+
+     */
+    var debug = {};
+    exports.debug = debug;
+    debug.writeString = writeString;
+    debug.readString = readString;
+    debug.compile = compile;
+
+
 });
 
 
@@ -28802,51 +29004,97 @@ define("asm-runtime", function (require, exports) {
     // in the HEAP32 the registers are stack allocated and should have a couple of slots in advance
     // i have to figure out, which numbers are good and fight to teach myself
 
-    /**
-     * old imports.
-     * i think the runtime will be compatible later,
-     * because the syntax tree eval can use HEAP32 objects without mourns
-     * and the other way round i make it compatible by knowing the pointer
-     * or the type. and if not, no, and if, two sep impl to compare are as good as always.
-     * @type {exports}
-     */
+
     var ecma = require("api");
     var parse = require("parser");
     var CodeRealm = ecma.CodeRealm;
     var CreateRealm = ecma.CreateRealm;
     var parseGoal = parse.parseGoal;
-    var newTypeError = ecma.newTypeError;
-    var newSyntaxError = ecma.newSyntaxError;
-    var ifAbrupt = ecma.ifAbrupt;
-    var isAbrupt = ecma.isAbrupt;
-    var getRealm = ecma.getRealm;
-    var getLexEnv = ecma.getLexEnv;
-    var getContext = ecma.getContext;
-    var GetIdentifierReference = ecma.GetIdentifierReference;
-    var NormalCompletion = ecma.NormalCompletion;
-    var applyBinOp = ecma.applyBinOp;
-    var applyAssignmentBinOp = ecma.applyAssignmentBinOp;
-    var EvaluateCall = EvaluateCall;
-    var GetValue = ecma.GetValue;
-    var PutValue = ecma.PutValue;
-    var ExecutionContext = ecma.ExecutionContext;
     var stack, pc;
     var state = [];    // save
     var st = -1;
+
+    /**
+     * need a dispatch or do i compile them away?
+     */
+    function hasInternalSlot() {
+
+    }
+    function callInternalSlot() {
+
+    }
+    function getInternalSlot() {
+
+    }
+    function setInternalSlot() {
+
+    }
+
+    var REALM_TYPE = 0;
+    var REALM_INTR = 1;
+
+
+    function CodeRealm() {
+
+    }
+
+    function Intrinsics() {
+
+    }
+
+    /**
+     * long list of substitutions
+     */
+
+    /*
+        object field access
+     */
+    var OBJ_TYPE = 0;
+    var OBJ_FLAGS = 1;
+
+    /*
+        execution context fields
+     */
+    var CTX_RETADDR = 0;
+    var CTX_GTHIS = 1;
+    var CTX_GENV = 2;
+    var CTX_GENERATOR = 3;
+    var CTX_REALM = 4;
+    var CTX_VARENV = 5;
+    var CTX_LEXENV = 6;
+
+    /*
+        environment record fields
+     */
+    var ENV_TYPE = 0;
+    var ENV_FLAGS = 1;
+    var ENV_DYN_MAP = 2;
+
+    /*
+        binding record fields
+     */
+    var BINDING_TYPE = 0;
+    var BINDING_FLAGS = 1;
+    var BINDING_KEY = 3;
+    var BINDING_VALUE = 4;
+
+    /*
+        property descriptor fields
+     */
+    var PROP_TYPE = 0;
+    var PROP_FLAGS = 1;
+    var PROP_KEY= 2;
+    var PROP_VALUE = 3;
+    var PROP_GET = 3;
+    var PROP_SET = 4;
+
+
 
     /**
      *  Data Structures
      *  Objects, Functions, Environments
      *  Callstack,
      */
-    function newContext() {
-        var context = new Int32Array(STACKTOP, 8);
-        STACKTOP += 32;
-        CALLSTACK.push(context);
-    }
-    function oldContext() {
-        CALLSTACK.pop();
-    }
     function OrdinaryObject() {
         var ptr = STACKTOP >> 2;
         HEAP32[ptr] = TYPES.OBJECT;
@@ -28860,6 +29108,33 @@ define("asm-runtime", function (require, exports) {
         STACKTOP += 32;
         return ptr;
     }
+    function ArrayExoticObject() {
+    }
+    /**
+     * TYPES.BINDING
+     * FLAGS
+     * ptr VALUE
+     * ptr key
+     * @constructor
+     */
+    function BindingRecord() {
+    }
+    /**
+     * TYPES.DATADESC // TYPES.ACCESSORDESC
+     * FLAGS (conf, write, enum)
+     * ptr VALUE | ptr GET
+     *             ptr SET
+     * ptr key
+     * @constructor
+     */
+    function DataPropertyDescriptor() {
+    }
+    function AccessorPropertyDescriptor() {
+    }
+
+
+
+
     function DeclarativeRecord() {
         var ptr = STACKTOP >> 2;
         HEAP32[ptr] = TYPES.LOCALREC;   // Kenne funktionstabelle durch den typen
@@ -28893,12 +29168,6 @@ define("asm-runtime", function (require, exports) {
         while (1) {
             var code = HEAP32[pc];
             switch(code) {
-                case BYTECODE.PRG:
-                case BYTECODE.EXPR:
-                case BYTECODE.SEQEXPR:
-                    state[++st] = code;
-                    pc = pc + 1;
-                    continue;
                 case BYTECODE.JMP:
                     pc = HEAP32[pc+1];
                     continue;
