@@ -28633,9 +28633,9 @@ var RecordFunctions = {
 
     var ecma = require("ast-api");
     var parse = require("parser");
-    var CodeRealm = ecma.CodeRealm;
-    var CreateRealm = ecma.CreateRealm;
     var parseGoal = parse.parseGoal;
+    
+    
     var stack, pc;
     var state = [];    // save
     var st = -1;
@@ -28700,28 +28700,6 @@ var RecordFunctions = {
      * @returns {*}
      * @constructor
      */
-
-    function set(unit) {
-        POOL = unit.POOL;
-        pp = unit.pp;
-        DUPEPOOL = unit.DUPEPOOL;
-        MEMORY = unit.MEMORY;
-        HEAP8 = unit.HEAP8;
-        HEAPU8 = unit.HEAPU8;
-        HEAP16 = unit.HEAP16;
-        HEAPU16 = unit.HEAPU16;
-        HEAPU32 = unit.HEAPU32;
-        HEAP32 = unit.HEAP32;
-        HEAPF32 = unit.HEAPF32;
-        HEAPF64 = unit.HEAPF64;
-        STACKBASE = unit.STACKBASE;
-        STACKTOP = unit.STACKTOP;
-        STACKSIZE = unit.STACKSIZE;
-        CODESET = unit.CODESET;
-        FLAGSET = unit.FLAGSET;
-        BITS = unit.BITS;
-    }
-
     function initRuntime(numGlobalLocalVars) {
         stack = new Int32Array(MEMORY, STACKTOP);
         STACKTOP += 4096 * 16;
