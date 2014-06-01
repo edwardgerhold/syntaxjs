@@ -33,7 +33,6 @@ Splitting up continues
 
 * intrinsics/
     createIntrinsics is called once every realm
-
     covers what was in create_intrinsics.js
     this means the ECMA-262 standard builtin library
     definitions
