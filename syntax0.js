@@ -30222,8 +30222,16 @@ if (typeof window != "undefined") {
         
         function defaultOptions() {
             var options = Object.create(null);
-            options["PRE"] = {};
-            options["CODE"] = {};
+            options["PRE"] = {
+        	annotate: true,
+        	syntaxerrors:true,
+        	controls: false
+            };
+            options["CODE"] = {
+            	annotate: true,
+        	syntaxerrors:true,
+        	controls: false
+            };
             return options;
         }
 
