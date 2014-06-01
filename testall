@@ -1,4 +1,5 @@
 CWD=`pwd`
-cd /s/test/json/
+cd test/json/
+echo "testall in `pwd`"
 ./testall $1
 cd $CWD
