@@ -5,13 +5,14 @@
     From a ninety nine line syntax highlighter
     to a pile of bugs and hack of edition six
     going the way of ast interpreter and normal
-    objects first to understand why to go than the
-    other.
+    objects first, to understand by practice,
+    why to go then the other way to do machine
+    instructions.
 
 */
 //Error.stackTraceLimit = 10;
 var syntaxjs;
-/* lib/amdpromise.js is temporarily moved outside for self-execution investigation */
+/* lib/misc/amdpromise.js is temporarily moved outside for self-execution investigation */
     /**
      */
     function makePromise(resolver) {
@@ -244,7 +245,7 @@ var syntaxjs;
         var exports = {};
         var children = [];
         var imports = [];
-        var returned = {};
+        var returned;
         var m = new Module(id, exports, children);
         var d;
         /*
@@ -30156,8 +30157,42 @@ define("syntaxjs-worker", function (require, exports, module) {
     return exports;
 });
 
+/**
+ *
+ * This shell is quite a stub for a shell
+ *
+ * It´s just a quick hack. Not a fully implemented minimalistic application
+ *
+ * It´s dirty.
+ *
+ * But it´s worth to continue developing it.
+ *
+ * When this happens is not clear. It serves for the most important.
+ *
+ * Letting me input javascript on the prompt.
+ * Parsing and interpreting it.
+ *
+ * I can execute files with, if the shell is starting and an process.argv[2] argument is present.
+ * I start with executing the file.
+ * Until now the shell is landing on the prompt after executing, that i could enter and debug.
+ * I think i do something crazier now.
+ *
+ * I allow a filenames array, to execute in order.
+ * And a "--dontQuit" argument, that it goes into shellmode after executing all files.
+ * And a "--collectExceptions" argument to tell, that all files shall be executed and all exceptions be reported
+ * and "errorInstance.followingException" property on the thrown error. (or a shell.exceptions in the module)
+ *
+ */
+
+
 define("syntaxjs-shell", function (require, exports) {
-    
+
+
+
+    var collectExceptions = false; // hmm, shell doesnt throw out anyways..hmmm,too much?
+    var exceptions = [];
+    var dontQuit = false;
+
     var fs, readline, rl, prefix, evaluate, startup, evaluateFile, prompt, haveClosedAllParens, shell;
     var defaultPrefix = "es6> ";
     var multilinePrefix = "...> ";
@@ -30194,27 +30229,62 @@ define("syntaxjs-shell", function (require, exports) {
                 output: process.stdout
             });
         };
+
         evaluate = function evaluate(code, continuation) {
                 var val;
                 try {
                     val = syntaxjs.eval(code, true);
                 } catch (ex) {
                     val = ex.message + "\n" + ("" + ex.stack).split("\n").join("\r\n");
+                    if (collectExceptions) exceptions.push(ex);
+                }
+                console.log(val);
+                if (continuation) setTimeout(continuation, 0);
+        };
+
+        evaluateFiles = function evaluateFiles(files, continuation) {
+            exceptions = [];
+            var code, val;
+            for (var i = 0, j = files.length; i <j ; i++) {
+                var file = files[i];
+
+                try {
+                    code = fs.readFileSync(file, "utf8");
+                    val = syntaxjs.eval(code, true)
+                } catch (ex) {
+                    if (collectExceptions) {
+                        val = undefined;
+                        exceptions.push(ex);
+                    }
+                    else {
+                        val = ex.message + "\n" + ("" + ex.stack).split("\n").join("\r\n");
+                    }
                 } finally {
                     console.log(val);
-                    if (continuation) setTimeout(continuation, 0);
                 }
+            }
+
+
+            if (continuation) setTimeout(continuation, 0);
+            else if (!continuation && dontQuit) setTimeout(prompt, 0);
+            shell.exceptions = exceptions;
+            exceptions = [];
         };
+
         evaluateFile = function evaluateFile(file, continuation) {
             var code;
             console.log("-evaluating " + file + "-");
             try {
                 code = fs.readFileSync(file, "utf8");
             } catch (err) {
-                code = undefined;
-                console.log(file + " not readable!");
-                console.dir(err);
+                if (collectExceptions) exceptions.push(ex);
+                else {
+                    code = undefined;
+                    console.log(file + " not readable!");
+                    console.dir(err);
+                }
             }
+            if (!continuation && dontQuit) continuation = prompt;
             if (code) evaluate(code, continuation);
         };
 
@@ -30272,12 +30342,16 @@ define("syntaxjs-shell", function (require, exports) {
                         return;
                     } else if (/^(\.load\s)/.test(code)) {
                         var file = code.split(/\s/)[1]; // substr(6);
-                        evaluateFile(file, prompt);
+                        try {
+                            evaluateFile(file, prompt);
+                        } catch (ex) {
+
+                        }
                         return;
                     } else if (/.help/.test(code)) {
                         console.log("shell.js> available commands:");
                         console.log(".print <expression> (print the abstract syntax tree of expression)");
-                        console.log(".load <file> (return file from disc as a string)");
+                        console.log(".load <file> (load with node and evaluate file with the syntax interpreter)");
                         console.log(".quit (quit the shell with process.exit instead of ctrl-c)");
                         setTimeout(prompt);
                         return;
@@ -30307,11 +30381,20 @@ define("syntaxjs-shell", function (require, exports) {
             });
         };
         shell = function main() {
+            var files = [];
             var file;
+
             startup();
-            if (process.argv[2]) file = process.argv[2];
-            if (!file) setTimeout(prompt);
-            else evaluateFile(file, prompt);
+
+            for (var i = 2, j = process.argv.length; i < j; i++) {
+                var par = process.argv[i];
+                if (par == "--dontQuit") dontQuit = true;
+                else if (par == "--collectExceptions") collectExceptions = true;
+                else files.push(par);
+            }
+            exceptions = [];
+            if (!files.length) setTimeout(prompt);
+            else evaluateFiles(files); // --dontQuit means keep alive
             process.on("exit", function () {
                 console.log("\nHave a nice day.");
                 console.timeEnd("Uptime");
