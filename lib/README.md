@@ -1,3 +1,17 @@
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 These files have to be reordered inside some days. Two, three, four get merged.
 Maybe i split out another piece. Then i can write up again, what´s inside these directories.
 
@@ -7,24 +21,39 @@ Splitting up continues
 
 (comment in between)
 
-new subdirectories
-* api/ 
+
+
+* ast-api/
+
+
     covers what was in api.js
     this means the ECMA-262 api functions 
     plus primitive types and exotic objects
-* intrinsics/ 
+
+
+* intrinsics/
+    createIntrinsics is called once every realm
+
     covers what was in create_intrinsics.js
-    this means the ECMA-262 standard library
+    this means the ECMA-262 standard builtin library
+    definitions
+
+    the declarations have been moved independent
+
+
 * parsenodes/
     covers mozilla parser_api related stupp
+
 * compile/
     currently the compiler is fiction but some files exist
     (this will stay no fiction like others did the same before)
-* unicode/ 
+
+* unicode/
     here i will put some work for unicde support in
     first is the table from mister bynens i edited for fast xs of code points
     in the identifier part and start sets.
-* highlighter/ 
+
+* highlighter/
     the syntax highlighter has an app and a separate text-to-span-html function.
     
 some exchange from intrinsics to api is already seen

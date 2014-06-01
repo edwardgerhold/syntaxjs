@@ -244,7 +244,7 @@ var syntaxjs;
         var exports = {};
         var children = [];
         var imports = [];
-        var returned;
+        var returned = {};
         var m = new Module(id, exports, children);
         var d;
         /*
@@ -4776,7 +4776,7 @@ define("parser", function () {
     var SymbolTable = require("symboltable").SymbolTable;
     var BoundNames = require("slower-static-semantics").BoundNames;
 
-    // JSON uses the old-api.
+    // JSON uses the ast-api.
     var api, newSyntaxError, ifAbrupt, isAbrupt;
     // separation of the independent parser
     // should be reconsidered, or a wrap in
@@ -6493,7 +6493,7 @@ define("parser", function () {
             match("function");
             if (v === "*") {
                 node = Node("GeneratorDeclaration");
-                node.generator = true; // i am a legacy man :) (otherwise my node.type is violating the parser old-api)
+                node.generator = true; // i am a legacy man :) (otherwise my node.type is violating the parser ast-api)
                 match("*");
             } else {
                 node = Node("FunctionDeclaration");
@@ -7447,9 +7447,9 @@ define("parser", function () {
     }
     function JSONText() {
         if (!newSyntaxError) {
-            newSyntaxError = require("old-api").newSyntaxError;
-            ifAbrupt = require("old-api").ifAbrupt;
-            isAbrupt = require("old-api").isAbrupt;
+            newSyntaxError = require("ast-api").newSyntaxError;
+            ifAbrupt = require("ast-api").ifAbrupt;
+            isAbrupt = require("ast-api").isAbrupt;
         }
         return this.JSONValue();
     }
@@ -9157,7 +9157,7 @@ exports.querySelectorAll = querySelectorAll;
  */
 
 
-define("old-api", function (require, exports) {
+define("ast-api", function (require, exports) {
     "use strict";
     var realm;
     var intrinsics;
@@ -11150,7 +11150,7 @@ function ThisResolution () {
 
 function FunctionRecord() {
     /*
-        move the typed memory into the old-api range
+        move the typed memory into the ast-api range
         or don´t place the record here
      */
 }
@@ -23823,7 +23823,7 @@ NowDefineBuiltinConstant(DateTimeFormatPrototype, $$toStringTag, "Intl.DateTimeF
     exports.addMissingProperties = addMissingProperties;
     // this will be funny moving around again
     // have to put AST under one root and INTCODE under another
-    // old-api/intrinsics will go to parsenodes.
+    // ast-api/intrinsics will go to parsenodes.
     // and i will rewrite most again
     // if the native functions are better than the compiled,
     // i´ll use the constant pool and the old, else we rewrite all.
@@ -23836,7 +23836,7 @@ define("runtime", function () {
 
     "use strict";
     var parse = require("parser");
-    var ecma = require("old-api");
+    var ecma = require("ast-api");
     var statics = require("slower-static-semantics");
     var tables = require("tables");
 
@@ -28557,7 +28557,7 @@ var RecordFunctions = {
 
 
 
-    var ecma = require("old-api");
+    var ecma = require("ast-api");
     var parse = require("parser");
     var CodeRealm = ecma.CodeRealm;
     var CreateRealm = ecma.CreateRealm;
@@ -30350,7 +30350,7 @@ define("syntaxjs-shell", function (require, exports) {
         tokenizeIntoArray: pdmacro(require("tokenizer").tokenizeIntoArray),
         parse: pdmacro(require("parser")),// <-- needs exports fixed
         parseGoal: pdmacro(require("parser").parseGoal),
-        createRealm: pdmacro(require("old-api").createPublicCodeRealm),
+        createRealm: pdmacro(require("ast-api").createPublicCodeRealm),
         toJsLang: pdmacro(require("js-codegen")),// <-- needs exports fixed
         eval: pdmacro(require("runtime")),// <-- needs exports fixed
         readFile: pdmacro(require("filesystem").readFile),
