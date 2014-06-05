@@ -5192,7 +5192,7 @@ define("parser", function () {
         return lkhdTok;
     }
 
-    function Node2(type) {   // this one seems to get optimized and costs nothing more than inlined {}
+    function Node2(type) {
         return {
             type: type,
             _id_: ++nodeId
@@ -27523,6 +27523,77 @@ define("runtime", function () {
 });
 
 
+define("ssa-tool", function (require, exports) {
+    /*
+        cases where to extract expressions
+        1. assignment = binaryexpression : extract the binary expressions and convert to ssa´s
+        2. binaryexpression: extract nested binaries and convert to ssa
+        3. callexpression : extract the arguments and convert to ssa and write them in front of the call
+        4.
+        5.
+        6.
+     */
+
+
+
+    function rewrite(input) {
+
+        var scope;
+        var output;
+        var stack = [input];
+
+        while (node = stack.pop()) {
+            switch (node.type) {
+                case "Program":
+                case "Identifier":
+                case "ParenthesizedExpression":
+                case "ExpressionStatement":
+                case "LexicalDeclaration":
+                case "VariableDeclaration":
+                case "FunctionDeclaration":
+                case "FunctionExpression":
+                case "GeneratorDeclaration":
+                case "GeneratorExpression":
+                case "ArrowExpression":
+                case "NumericLiteral":
+                case "StringLiteral":
+                case "BooleanLiteral":
+                case "Literal":
+                case "TemplateLiteral":
+                case "ObjectExpression":
+                case "ArrayExpression":
+                case "ObjectPattern":
+                case "ArrayPattern":
+                case "WhileStatement":
+                case "DoWhileStatement":
+                case "BlockStatement":
+                case "IfStatement":
+                case "ConditionalExpression":
+                case "BinaryExpression":
+                case "AssignmentExpression":
+                case "ForInOfStatement":
+                case "ForStatement":
+                case "NewExpression":
+                case "CallExpression":
+                case "RestParameter":
+                case "SpreadExpression":
+                case "BindingPattern":
+                case "ArrayComprehension":
+                case "GeneratorComprehension":
+                case "SwitchStatement":
+                case "DefaultCase":
+                case "SwitchCase":
+                case "TryStatement":
+                case "CatchClause":
+                case "Finally":
+                default:
+            }
+        }
+    }
+
+    exports.rewrite = rewrite;
+
+});
 /**
  * asm-typechecker
  *
@@ -27882,6 +27953,7 @@ define("asm-compiler", function (require, exports) {
         STACKTOP = 0;
         STATE = [];
         LABELS = Object.create(null);
+        LABELNAMES = Object.create(null);
     }
     function get() {
         return {
@@ -28214,8 +28286,8 @@ function flagSet () {
     defineByteCode(0xA00, "ARRAYFROMLIST", "");
     defineByteCode(0xA01, "LISTFROMARRAY", "");
     defineByteCode(0xE00, "EXPRESSION", "");
-    defineByteCode(0xE01, "SEQEXPR", "state[++st] = SEQ  if this is encountered seqexpr state is pushed onto stack (needed for , operator returning last result only)");
-    defineByteCode(0xE02, "PROGRAM", "state[++st] = PROG goes from first block to last block");
+    defineByteCode(0xE01, "SEQEXPR", "");
+    defineByteCode(0xE02, "PROGRAM", "");
     /*
      declarative environments
      */
@@ -28320,6 +28392,8 @@ var CTX_GENERATOR = 3;
 var CTX_REALM = 4;
 var CTX_VARENV = 5;
 var CTX_LEXENV = 6;
+var CTX_OUTER = 7;
+var CTX_SIZEOF = 8 * 4;
 /*
  environment record fields
  */
@@ -28327,6 +28401,7 @@ var ENV_TYPE = 0;
 var ENV_FLAGS = 1;
 var ENV_DYN_MAP = 2;
 var ENV_SLOTS = 3;
+var ENV_SIZEOF = 4 * 4;
 /*
  binding record fields
  */
@@ -28334,6 +28409,7 @@ var BINDING_TYPE = 0;
 var BINDING_FLAGS = 1;
 var BINDING_KEY = 3;
 var BINDING_VALUE = 4;
+var BINDING_SIZEOF = 4 * 4;
 /*
  property descriptor fields
  */
@@ -28343,6 +28419,7 @@ var PROP_KEY = 2;
 var PROP_VALUE = 3;
 var PROP_GET = 3;
 var PROP_SET = 4;
+var PROP_SIZEOF = 4 * 4;
 /**
  *
  *  Data Structures
@@ -28356,7 +28433,7 @@ function SymbolPrimitiveType(desc) {
     var ptr = STACKTOP >> 2;
     STACKTOP += 8;
     HEAP32[ptr] = BYTECODE.SYMBOL;
-    HEAP32[ptr + 1] = StringPrimitiveType()
+    HEAP32[ptr + 1] = StringPrimitiveType(desc);
     return ptr;
 }
 
@@ -28378,7 +28455,6 @@ function StringPrimitiveType(str) {
     var ptr = STACKTOP >> 2;
 
     HEAP32[ptr] = BYTECODE.STRING;
-    HEAP32[ptr + 1] = strLen;
 
     while (i < strLen) {
         cp1 = str[i].charCodeAt(0);
@@ -28391,6 +28467,8 @@ function StringPrimitiveType(str) {
         }
         i = i + 1;
     }
+
+    HEAP32[ptr + 1] = strLen;
 
     STACKTOP += 8 + Math.ceil(strLen / 2) * 4;
     return ptr;
@@ -28420,7 +28498,7 @@ function NumberPrimitiveType(v) {       // kann man zentral aendern
     HEAP32[ptr] = BYTECODE.NUMBER;         // F32 is lossless??? it´s untested that´s why its here
     HEAPF32[ptr + 1] = v >> 32;           // schneide unteren Teil ab
     HEAPF32[ptr + 2] = v & 0xFFFFFFFF;    // Maskiere oberen Teil weg?
-    STACKTOP += 12;                     // F64 needs alignment. I´ve never tried to merge to F32. 8*I8 to F64 fails of course.
+    STACKTOP += 12;                     // F64 needs alignment. I´ve never tried to merge two F32. 8*I8 to F64 fails of course.
     return ptr;
 }
 
@@ -28555,6 +28633,8 @@ function FunctionRecord() {
     HEAP32[ptr] = BYTECODE.FUNCTIONREC;
     return ptr;
 }
+
+
 function FR_CreateMutableBinding() {}
 function FR_CreateImmutableBinding() {}
 function FR_HasBinding() {}
@@ -28569,6 +28649,8 @@ function GlobalRecord() {
     return ptr;
 }
 
+
+
 function GR_CreateMutableBinding() {}
 function GR_CreateImmutableBinding() {}
 function GR_HasBinding() {}
@@ -28579,24 +28661,44 @@ function GR_GetBindingValue() {}
 
 /*
  next is the function table for environment records.
-
  a typed array with numbers to array indices of these functions
  can be generated from. whether it´s necessary, nicer, cleverer
  or not, gotta find out, by trying it out, what´s better to maintain.
 
+
+
+
  */
+
+
 var RecordFunctions = {
     // Declarative Record
+
     // Object Record
+
     // Function Record
     FR_CreateMutableBinding: FR_CreateMutableBinding,
     FR_CreateImmutableBinding: FR_CreateImmutableBinding,
     FR_HasBinding: FR_HasBinding,
+
     // Global Record
     GR_CreateMutableBinding: GR_CreateMutableBinding,
     GR_CreateImmutableBinding: GR_CreateImmutableBinding,
     GR_HasBinding: GR_HasBinding,
 };
+
+
+
+var FunctionTable = [
+
+    FR_CreateMutableBinding,
+    FR_CreateImmutableBinding,
+    FR_HasBinding
+
+];
+
+
+
 //#include "lib/compile/asm-compiler.js
 /**
  * asm-runtime is now an include file
@@ -28936,8 +29038,30 @@ define("asm-parser", function (require, exports) {
 define("highlight", function (require, exports) {
 
     "use strict";
+
+    // export into tokenizer or parser
+    function RegExpToString(word) {
+        return ("/" + word[0] + "/" + word[1]);
+    }
+
+    function TemplateToString(word) {
+        var val = word;
+        word = "`";
+        word += val[0];
+        if (val.length > 1) {
+            for (var k = 1, l = val.length; k < l; k += 2) {
+                word += "${" + val[k] + "}";
+                val2 = val[k + 1];
+                if (val2 != undefined) word += val2;
+            }
+        }
+        word += "`";
+        return word;
+    }
+
     var tables = require("tables");
     var tokenize = require("tokenizer").tokenizeIntoArrayWithWhiteSpaces;
+
 
     var HighlighterClassNames = {
         __proto__: null,
@@ -28954,17 +29078,30 @@ define("highlight", function (require, exports) {
         "Punctuator": "syntaxjs-punctuator",
         "TemplateLiteral": "syntaxjs-template"
     };
+    var HighlighterClassNamesByValue = {
+        "undefined": "syntaxjs-undefined"
+    };
+
     highlight.HighlighterClassNames = HighlighterClassNames;
+    highlight.HighlighterClassNamesByValue = HighlighterClassNamesByValue;
 
     function stringifyTokens(array) {
-        //        return array.join("");
         var string = "";
         for (var i = 0, j = array.length; i < j; i++) {
-    	    string += array[i].value;
+            string += array[i].value;
         }
         return string;
     }
-    
+/*
+    switch(type) {
+        case "RegularExpressionLiteral":
+            word = RegExpToString(word);
+            break;
+        case "TemplateLiteral":
+            word = TemplateToString(word);
+            break;
+    }
+*/
     var parse;
     function highlight(text, options, rec) {
         var highlighted = [];
@@ -29012,38 +29149,24 @@ define("highlight", function (require, exports) {
             rec.tokens = tokens;
         }
 
-	var val, val2;
+        var val, val2;
         for (m = 0, n = tokens.length; m < n; m++) {
+
             type = tokens[m].type;
             word = tokens[m].value;
-            //    oid = tokens[m]._oid_;
 
-    	    switch(type) {
-    	    case "RegularExpressionLiteral":
-    		word = ("/"+word[0]+"/"+word[1]);
-    		break;
-	    case "TemplateLiteral":
-		var val = word;
-		
-		word = "`";
-		word += val[0];
-		if (val.length > 1) {
-		    for (var k = 1, l = val.length; k < l; k+=2) {
-			word += "${" + val[k] + "}";
-			val2 = val[k+1];
-			if (val2 != undefined) word += val2;
-		    }
-		}
-		word += "`";
-    		break;
-    	    }
+            switch(type) {
+                case "RegularExpressionLiteral":
+                    word = RegExpToString(word);
+                    break;
+                case "TemplateLiteral":
+                    word = TemplateToString(word);
+                    break;
+            }
 
-
-            if (cln = HighlighterClassNames[type]) {
-        	word = "<span class='" + cln + "'" + ">" + word + "</span>";
-    	    }
-            
-            /*(oid?("data-syntaxjs-oid='"+oid+"'"):"")*/
+            if ((cln = HighlighterClassNamesByValue[word]) || (cln = HighlighterClassNames[type])) {
+                word = "<span class='" + cln + "'" + ">" + word + "</span>";
+            }
 
             highlighted.push({
                 type: type,
@@ -29051,7 +29174,8 @@ define("highlight", function (require, exports) {
             });
         }
 
-        text = stringifyTokens(highlighted);
+        text = stringifyTokens(highlighted);    // "works" with template and value arrays, because it´s already concatted and highlighter,
+                                                // and there are no arrays, that´s why it works
 
         if (rec) {
             rec.highlightedTokens = highlighted;
@@ -29077,7 +29201,8 @@ define("annotations.de_DE", function (require, exports) {
         "syntaxjs-number": "Der Number Type ist ein 64 Bit Floating Point mit 11 Bit Exponent und 53 Bit Mantisse. Das MSB steht für das Vorzeichen.",
         "syntaxjs-null": "Das NullLiteral ist der NULL-Pointer im JavaScript. Sein Boolean Wert ist false.",
         "syntaxjs-boolean": "Booleans stehen fuer 0 und 1 und koennen falsch oder wahr, false oder true sein. Damit kann man logische Verknuepfungen aufstellen.",
-        "syntaxjs-identifier": "Identifier sind Bezeichner. Der Parser liest Labels, die mit einem Doppelpunkt enden als Identifier ein. Identifier sind in der Regel die Namen von Variablen, oder von Objekteigenschaften. Sie werden aufgeloest (sie zeigen auf einen Speicherbereich) und geben einen Datentypen zurueck. In JavaScript entweder einen Primitive Type wie true, false, null oder undefined, oder einen Reference Type wie Object. Identifier identifizieren Objekte oder Variablen."
+        "syntaxjs-identifier": "Identifier sind Bezeichner. Der Parser liest Labels, die mit einem Doppelpunkt enden als Identifier ein. Identifier sind in der Regel die Namen von Variablen, oder von Objekteigenschaften. Sie werden aufgeloest (sie zeigen auf einen Speicherbereich) und geben einen Datentypen zurueck. In JavaScript entweder einen Primitive Type wie true, false, null oder undefined, oder einen Reference Type wie Object. Identifier identifizieren Objekte oder Variablen.",
+        "syntaxjs-undefined": "undefined ist der spezielle Wert, der sagt, dass die Variable undefiniert ist und sein Booleanwert ist false"
     };
 
     var buttonNames = {
@@ -29180,7 +29305,8 @@ define("annotations.en_US", function (require, exports) {
         "syntaxjs-number": "A sixty-four bit floating point, with 11 bits for the exponent, 1 bit for the sign and 52 bits for the normalized number",
         "syntaxjs-null": "null is the NULL-Pointer equivalent for javascript. It´s useful that it´s different from undefined.",
         "syntaxjs-boolean": "booleans are true or false and equal to the numbers 1..n or 0, empty strings '' are false, {} and [] are true",
-        "syntaxjs-identifier": "Identifier are names for variables, and can be the name of a label: for a labelled statement."
+        "syntaxjs-identifier": "Identifier are names for variables, and can be the name of a label: for a labelled statement.",
+        "syntaxjs-undefined": "undefined is the special value which tells that this value is undefined and it´s boolean value is false"
     };
     var buttonNames = {
         __proto__: null,
