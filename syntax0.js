@@ -12900,6 +12900,7 @@ OrdinaryFunction.prototype = {
 };
 addMissingProperties(OrdinaryFunction.prototype, OrdinaryObject.prototype);
 function BoundFunction_call (thisArg, argList) {
+    var F = this;
     var B = getInternalSlot(F, SLOTS.BOUNDTARGETFUNCTION);
     var T = getInternalSlot(F, SLOTS.BOUNDTHIS);
     var A = getInternalSlot(F, SLOTS.BOUNDARGUMENTS).concat(argList);
@@ -29209,6 +29210,7 @@ function labelledStatement(node, next) {    // [label|nextoffset] code to start 
     return ptr;
 }
 
+// todo: is compiling backwards
 function program(node) {
     var body = node.body;
     var strict = !!node.strict;
@@ -29223,6 +29225,7 @@ function program(node) {
     jmp(nextBlockAddr);
     return nextBlockAddr;
 }
+
 
 function lastBlock() {
     var ptr = STACKTOP >> 2;
@@ -31278,6 +31281,7 @@ define("syntaxjs-shell", function (require, exports) {
 
             if (continuation) setTimeout(continuation, 0);
             else if (!continuation && dontQuit) setTimeout(prompt, 0);
+            
             shell.exceptions = exceptions;
             exceptions = [];
         };
@@ -31405,7 +31409,8 @@ define("syntaxjs-shell", function (require, exports) {
             }
             exceptions = [];
             if (!files.length) setTimeout(prompt);
-            else evaluateFiles(files); // --dontQuit means keep alive
+            else evaluateFiles(files, prompt); // --dontQuit means keep alive
+            
             process.on("exit", function () {
                 console.log("\nHave a nice day.");
                 console.timeEnd("Uptime");
