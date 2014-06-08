@@ -4846,8 +4846,8 @@ define("parser", function () {
     var gotSemi;
     var tokens;
     var token = Object.create(null);
-    var lkhdTok;
-    var lkhdVal, lkhdTyp;
+    var lookTok;
+    var lookVal, lookTyp;
     var t; // current token type
     var v; // current token value
     var pos; // tokens[pos] pointer     (array version)
@@ -5026,7 +5026,7 @@ define("parser", function () {
     function atLineCol() {
         var line = loc.start.line;
         var column = loc.start.column;
-        return " [[value="+v+" type="+t+" lkhdVal="+lkhdVal+" at line "+line+", column "+column+"]]";
+        return " [[value="+v+" type="+t+" lookVal="+lookVal+" at line "+line+", column "+column+"]]";
     }
     var uqrx = /^("|')|("|')$/g;
     function unquote(str) {
@@ -5126,14 +5126,14 @@ define("parser", function () {
         }
     }
     function eos() {
-        return lkhdVal === undefined;
+        return lookVal === undefined;
     }
 
     var nextToken = nextToken__array__;
 
     function next() {
-        if (lkhdTok) {
-            token = lkhdTok;
+        if (lookTok) {
+            token = lookTok;
             if (token) {
                 t = token.type;
                 v = token.value;
@@ -5150,22 +5150,22 @@ define("parser", function () {
         ltNext = false;
         lookPos = pos;
         for(;;) {
-            lkhdTok = tokens[++lookPos];
-            if (lkhdTok === undefined) {
-                lkhdVal = lkhdTyp = undefined;
+            lookTok = tokens[++lookPos];
+            if (lookTok === undefined) {
+                lookVal = lookTyp = undefined;
                 break;
             }
-            lkhdTyp = lkhdTok.type;
-            lkhdVal = lkhdTok.value;
-            if (lkhdTyp === "LineTerminator") {
+            lookTyp = lookTok.type;
+            lookVal = lookTok.value;
+            if (lookTyp === "LineTerminator") {
                 ltNext = true;
                 continue;
             }
-            if (SkipableToken[lkhdTyp]) continue;
+            if (SkipableToken[lookTyp]) continue;
             break;
         }
         pos = lookPos;
-        return lkhdTok;
+        return lookTok;
     }
     function nextToken__step__() {
         ltPassedBy = ltNext;
@@ -5173,23 +5173,23 @@ define("parser", function () {
         lookPos = pos;
         for(;;) {
             ++lookPos;
-            lkhdTok = tokenize.nextToken();
-            if (lkhdTok === undefined) {
-                lkhdVal = lkhdTyp = undefined;
+            lookTok = tokenize.nextToken();
+            if (lookTok === undefined) {
+                lookVal = lookTyp = undefined;
                 break;
             }
-            lkhdTyp = lkhdTok.type;
-            lkhdVal = lkhdTok.value;
+            lookTyp = lookTok.type;
+            lookVal = lookTok.value;
             ltNext = tokenize.ltNext;
-            if (lkhdTyp === "LineTerminator") {
+            if (lookTyp === "LineTerminator") {
                 ltNext = true;
                 continue;
             }
-            if (SkipableToken[lkhdTyp]) continue;
+            if (SkipableToken[lookTyp]) continue;
             break;
         }
         pos = lookPos;
-        return lkhdTok;
+        return lookTok;
     }
 
     function Node2(type) {
@@ -5295,9 +5295,9 @@ define("parser", function () {
             v: v,
             nextToken: nextToken,
             lookPos: lookPos,
-            lkhdTok: lkhdTok,
-            lkhdVal: lkhdVal,
-            lkhdTyp: lkhdTyp,
+            lookTok: lookTok,
+            lookVal: lookVal,
+            lookTyp: lookTyp,
             isIn: isIn,
             inStack: inStack,
             isYieldId: isYieldId,
@@ -5325,9 +5325,9 @@ define("parser", function () {
 
             nextToken = memento.nextToken;
             lookPos = memento.lookPos;
-            lkhdTok = memento.lkhdTok;
-            lkhdVal = memento.lkhdVal;
-            lkhdTyp = memento.lkhdTyp;
+            lookTok = memento.lookTok;
+            lookVal = memento.lookVal;
+            lookTyp = memento.lookTyp;
 
             isIn = memento.isIn;
             inStack = memento.inStack;
@@ -5513,7 +5513,7 @@ define("parser", function () {
         var list = [], el;
         if (v === "]") return list;
         do {
-            if (v === "," && lkhdVal == ",") {
+            if (v === "," && lookVal == ",") {
                 el = null;
                 do {
                     el = this.Elision(el);
@@ -5524,7 +5524,7 @@ define("parser", function () {
             if (v === "...") el = this.SpreadExpression()
             else el = this.AssignmentExpression();
             if (el) list.push(el);
-            if (v === "," && lkhdVal !== ",") match(",");
+            if (v === "," && lookVal !== ",") match(",");
         } while (v && v !== "]");
         return list;
     }
@@ -5532,7 +5532,7 @@ define("parser", function () {
         var node, l1, l2;
         if (v === "[") {
             l1 = loc.start;
-            if (lkhdVal === "for") return this.ArrayComprehension();
+            if (lookVal === "for") return this.ArrayComprehension();
             match("[");
             var node = Node("ArrayExpression");
             node.elements = this.ElementList();
@@ -5585,7 +5585,7 @@ define("parser", function () {
 
             if (v == "}") break;
 
-            if ((v === "get" || v === "set") && lkhdVal !== ":" && lkhdVal !== "(") {
+            if ((v === "get" || v === "set") && lookVal !== ":" && lookVal !== "(") {
 
                 node = Node("PropertyDefinition");
                 node.kind = v;
@@ -5611,7 +5611,7 @@ define("parser", function () {
 
                     node = Node("PropertyDefinition");
 
-                    if (!computedPropertyName && (lkhdVal === "," || lkhdVal === "}") && (BindingIdentifiers[t] || v === "constructor")) { // {x,y}
+                    if (!computedPropertyName && (lookVal === "," || lookVal === "}") && (BindingIdentifiers[t] || v === "constructor")) { // {x,y}
 
                         node.kind = "init";
                         id = this.PropertyKey();
@@ -5630,7 +5630,7 @@ define("parser", function () {
                         if (!node.value) throw new SyntaxError("error parsing objectliteral := [symbol_expr]: assignmentexpression"+atLineCol());
                         list.push(node);
 
-                    } else if (lkhdVal === ":") { // key: AssignmentExpression
+                    } else if (lookVal === ":") { // key: AssignmentExpression
 
                         node.kind = "init";
                         node.key = this.PropertyKey();
@@ -5649,7 +5649,7 @@ define("parser", function () {
                         node.value = method;
                         list.push(node);
 
-                    } else if (((v == "[" || BindingIdentifiers[t] || v === "constructor") && lkhdVal === "(") || (v === "*" && (lkhdVal == "[" || BindingIdentifiers[lkhdTyp] || lkhdVal === "constructor"))) {
+                    } else if (((v == "[" || BindingIdentifiers[t] || v === "constructor") && lookVal === "(") || (v === "*" && (lookVal == "[" || BindingIdentifiers[lookTyp] || lookVal === "constructor"))) {
 
                         node.kind = "method";
                         method = this.MethodDefinition(true);
@@ -5718,14 +5718,14 @@ define("parser", function () {
         var cover = false;
         var expr, node, l1, l2;
         l1 = loc.start;
-        if (t === "Identifier" && lkhdVal === "=>") {
+        if (t === "Identifier" && lookVal === "=>") {
             expr = this.Identifier();
             cover = true;
-        } else if (v === "..." && lkhdTyp === "Identifier") {
+        } else if (v === "..." && lookTyp === "Identifier") {
             expr = this.RestParameter();
             cover = true;
         } else if (v === "(") {
-            if (lkhdVal === "for") return this.GeneratorComprehension();
+            if (lookVal === "for") return this.GeneratorComprehension();
             cover = true;
             parens.push(v);
 
@@ -5767,10 +5767,10 @@ define("parser", function () {
     function PrimaryExpression() {
         var fn, node;
         fn = PrimaryExpressionByTypeAndFollowByValue[t];
-        if (fn) fn = this[fn[lkhdVal]];
+        if (fn) fn = this[fn[lookVal]];
         else {
             fn = PrimaryExpressionByValueAndFollowByType[v];
-            if (fn) fn = this[fn[lkhdTyp]];
+            if (fn) fn = this[fn[lookTyp]];
         }
         if (!fn) fn = this[PrimaryExpressionByValue[v]];
         if (!fn) fn = this[PrimaryExpressionByType[t]];
@@ -6058,7 +6058,7 @@ define("parser", function () {
         return this.NewExpression(callee) || this.CallExpression(callee);
     }
     function ExpressionStatement() {
-        if (!ExprNoneOfs[v] && !(v === "let" && lkhdVal=="[")) {
+        if (!ExprNoneOfs[v] && !(v === "let" && lookVal=="[")) {
             var expression = this.Expression();
             if (!expression) return null;
             var node = Node("ExpressionStatement");
@@ -6279,7 +6279,7 @@ define("parser", function () {
         var node, decl, l1, l2;
         if (v === "var" || v === "let" || v === "const") {
 
-            if (v == "const" && lkhdVal == "class") {
+            if (v == "const" && lookVal == "class") {
                 return this.ConstClassDeclaration();
             }
 
@@ -6461,7 +6461,7 @@ define("parser", function () {
     }
     function DefaultParameter() { // ES6
         var node;
-        if (t == "Identifier" && lkhdVal == "=") {
+        if (t == "Identifier" && lookVal == "=") {
             var l1 = loc.start;
             node = Node("DefaultParameter");
             var id = this.Identifier();
@@ -6487,7 +6487,7 @@ define("parser", function () {
                     id = this.BindingPattern();
                     list.push(id);
                 } else if (t === "Identifier") {
-                    if (lkhdVal == "=") {
+                    if (lookVal == "=") {
                         id = this.DefaultParameter();
                     } else {
                         id = this.Identifier();
@@ -6768,7 +6768,7 @@ define("parser", function () {
         return null;
     }
     function LabelledStatement() {
-        if (t === "Identifier" && lkhdVal === ":") {
+        if (t === "Identifier" && lookVal === ":") {
             var node = Node("LabelledStatement");
             var l1 = loc.start;
             var label = this.Identifier();
@@ -7095,7 +7095,7 @@ define("parser", function () {
         var fn = this[StatementParsers[v]];
         if (fn) node = fn.call(this);
         if (!node) {
-            if (t === "Identifier" && lkhdVal == ":") node = this.LabelledStatement();
+            if (t === "Identifier" && lookVal == ":") node = this.LabelledStatement();
             else node = this.ExpressionStatement();
         }
 
@@ -7337,7 +7337,7 @@ define("parser", function () {
         return null;
     }
     function DefaultCase() {
-        if (v === "default" && lkhdVal === ":") {
+        if (v === "default" && lookVal === ":") {
             var node = Node("DefaultCase");
             match("default");
             match(":");
@@ -7606,7 +7606,7 @@ define("parser", function () {
     }
 
     function initNewLexer(sourceOrTokens, opts) {
-        currentNode = loc = lastloc = pos = t = v = token = lkhdTok = lkhdVal = lkhdTyp = undefined;
+        currentNode = loc = lastloc = pos = t = v = token = lookTok = lookVal = lookTyp = undefined;
         ast = null;
         symtab = SymbolTable();
         if (typeof opts == "object" && opts) {
@@ -7620,7 +7620,7 @@ define("parser", function () {
                 initOldLexer(sourceOrTokens, opts);
             } else {
                 nextToken = nextToken__step__;
-                lkhdTok = tokenize(sourceOrTokens);
+                lookTok = tokenize(sourceOrTokens);
                 next();
             }
         }
@@ -27527,44 +27527,51 @@ define("runtime", function () {
 
 define("ssa-tool", function (require, exports) {
     /*
-        cases where to extract expressions
-        1. assignment = binaryexpression : extract the binary expressions and convert to ssa´s
-        2. binaryexpression: extract nested binaries and convert to ssa
-        3. callexpression : extract the arguments and convert to ssa and write them in front of the call
-        4.
-        5.
-        6.
+     cases where to extract expressions
+     1. assignment = binaryexpression : extract the binary expressions and convert to ssa´s
+     2. binaryexpression: extract nested binaries and convert to ssa
+     3. callexpression : extract the arguments and convert to ssa and write them in front of the call
+     4.
+     5.
+     6.
      */
 
 
+    /*
+        is cloning to complex?
+        definitly yes.
+        maybe it´s an option
+        or better be deleted
+     */
+
     function clone(node) {
-	/*this function does not clone array or objects*/
-	var newNode = {};
-	for (var k in node) {
-	    if (Object.prototype.hasOwnProperty.call(node, k)) {
-		newNode[k] = node[k];
-	    }
-	}
-	return newNode;
+        /*this function does not clone array or objects*/
+        var newNode = {};
+        for (var k in node) {
+            if (Object.prototype.hasOwnProperty.call(node, k)) {
+                newNode[k] = node[k];
+            }
+        }
+        return newNode;
     }
     function deep_clone(node) {
-	var newNode = {}, p;
-	for (var k in node) {
-	    if (Object.prototype.hasOwnProperty.call(node, k)) {
-		p = node[k];
-		if (p && typeof p === "object") p = clone(p);
-		newNode[k] = p;
-	    }
-	}
-	return newNode;
+        var newNode = {}, p;
+        for (var k in node) {
+            if (Object.prototype.hasOwnProperty.call(node, k)) {
+                p = node[k];
+                if (p && typeof p === "object") p = clone(p);
+                newNode[k] = p;
+            }
+        }
+        return newNode;
     }
 
     /**
-	best idea so far:
-	----------------
-	input 1 node or array
-	output 1..n nodes in an array
-    */
+     best idea so far:
+     ----------------
+     input 1 node or array
+     output 1..n nodes in an array
+     */
 
 
 
@@ -27572,154 +27579,154 @@ define("ssa-tool", function (require, exports) {
 
     function ssa_rewriter(node) {
 
-	    var newNode;
-	    
-	    if (Array.isArray(node)) {
-		var newNodes = [];
-		for (var i = 0, j = node.length; i < j; i++) {
-		    newNodes = newNodes.concat(rewrite(node[i]));
-		}
-		return newNodes;
-	    }
+        var newNode;
 
-            switch (node.type) {
-                case "Program":
-		    
-		    newNode = clone(node);
-		    newNode.body = rewrite(node.body);
-		    return newNode;
-		    
-		break;    
-		
-                case "Identifier":
-            	    newNode = clone(node);
-            	    return newNode;
-            	    
-            	break;
-                case "ParenthesizedExpression":
-                break;
-                case "ExpressionStatement":
-                break;
-                case "LexicalDeclaration":
-                case "VariableDeclaration":
-            	break;
-                case "FunctionDeclaration":
-                case "FunctionExpression":
-                case "GeneratorDeclaration":
-                case "GeneratorExpression":
-                case "ArrowExpression":
-                case "NumericLiteral":
-                case "StringLiteral":
-                case "BooleanLiteral":
-                case "Literal":
-                case "TemplateLiteral":
-                case "ObjectExpression":
-                case "ArrayExpression":
-                case "ObjectPattern":
-                case "ArrayPattern":
-                case "WhileStatement":
-                case "DoWhileStatement":
-                case "BlockStatement":
-                case "IfStatement":
-                case "ConditionalExpression":
-                
-                
-            	    newNode = clone(node);
-            	    
-            	    break;
-                case "BinaryExpression":
-		    if (node.left === "BinaryExpression") {
-			newNodes = newNodes.concat(rewrite(node.left));
-			var tLeft = tNum;
-		    } else tLeft = undefined;
-
-		    
-		    if (node.right === "BinaryExpression") {
-			newNodes = newNodes.concat(rewrite(node.right));
-			var tRight = tNum;
-		    } else tRight = undefined;
-		    
-            	    newNode = {
-            		type: "AssignmentExpression",
-            		operator: "=",
-            		left: {
-            		    type: "Identifier",
-            		    name: "t"+ (++tNum)
-            		},
-
-            		right: {
-            		    type: "BinaryExpression",
-            		    operator: node.operator,
-            		    left: tLeft ? { type: "Identifier", name: "t"+tLeft } : node.left,
-            		    right: tRight ? { type: "Identifier", name: "t"+tRight } : node.right
-            		}
-            		    
-            	    
-            	    }
-                
-            	    break;
-                case "AssignmentExpression":
-                
-                
-            	    break;
-                case "ForInOfStatement":
-                case "ForStatement":
-                case "NewExpression":
-                case "CallExpression":
-                case "RestParameter":
-                case "SpreadExpression":
-                case "BindingPattern":
-                case "ArrayComprehension":
-                case "GeneratorComprehension":
-                case "SwitchStatement":
-                case "DefaultCase":
-                case "SwitchCase":
-                case "TryStatement":
-                case "CatchClause":
-                case "Finally":
-                default:
-            	    newNode = clone(node);
-            	    
+        if (Array.isArray(node)) {
+            var newNodes = [];
+            for (var i = 0, j = node.length; i < j; i++) {
+                newNodes = newNodes.concat(rewrite(node[i]));
             }
-            if (node && node.loc) {
-        	newNode.loc = node.loc;
-            }
-            
-	    return newNode;
+            return newNodes;
+        }
+
+        switch (node.type) {
+            case "Program":
+
+                newNode = clone(node);
+                newNode.body = rewrite(node.body);
+                return newNode;
+
+                break;
+
+            case "Identifier":
+                newNode = clone(node);
+                return newNode;
+
+                break;
+            case "ParenthesizedExpression":
+                break;
+            case "ExpressionStatement":
+                break;
+            case "LexicalDeclaration":
+            case "VariableDeclaration":
+                break;
+            case "FunctionDeclaration":
+            case "FunctionExpression":
+            case "GeneratorDeclaration":
+            case "GeneratorExpression":
+            case "ArrowExpression":
+            case "NumericLiteral":
+            case "StringLiteral":
+            case "BooleanLiteral":
+            case "Literal":
+            case "TemplateLiteral":
+            case "ObjectExpression":
+            case "ArrayExpression":
+            case "ObjectPattern":
+            case "ArrayPattern":
+            case "WhileStatement":
+            case "DoWhileStatement":
+            case "BlockStatement":
+            case "IfStatement":
+            case "ConditionalExpression":
+
+
+                newNode = clone(node);
+
+                break;
+            case "BinaryExpression":
+                if (node.left === "BinaryExpression") {
+                    newNodes = newNodes.concat(rewrite(node.left));
+                    var tLeft = tNum;
+                } else tLeft = undefined;
+
+
+                if (node.right === "BinaryExpression") {
+                    newNodes = newNodes.concat(rewrite(node.right));
+                    var tRight = tNum;
+                } else tRight = undefined;
+
+                newNode = {
+                    type: "AssignmentExpression",
+                    operator: "=",
+                    left: {
+                        type: "Identifier",
+                        name: "t"+ (++tNum)
+                    },
+
+                    right: {
+                        type: "BinaryExpression",
+                        operator: node.operator,
+                        left: tLeft ? { type: "Identifier", name: "t"+tLeft } : node.left,
+                        right: tRight ? { type: "Identifier", name: "t"+tRight } : node.right
+                    }
+
+
+                }
+
+                break;
+            case "AssignmentExpression":
+
+
+                break;
+            case "ForInOfStatement":
+            case "ForStatement":
+            case "NewExpression":
+            case "CallExpression":
+            case "RestParameter":
+            case "SpreadExpression":
+            case "BindingPattern":
+            case "ArrayComprehension":
+            case "GeneratorComprehension":
+            case "SwitchStatement":
+            case "DefaultCase":
+            case "SwitchCase":
+            case "TryStatement":
+            case "CatchClause":
+            case "Finally":
+            default:
+                newNode = clone(node);
+
+        }
+        if (node && node.loc) {
+            newNode.loc = node.loc;
+        }
+
+        return newNode;
     }
-    
 
-	function createTempVariables() {
-	
-	var varDecls = [];
-	if (tNum > 1) {
-	    for (var i = 1, j = tNum; i <= j; i++) {
-		varDecls.push({
-		    type: "VariableDeclarator",
-		    id: "t"+i,
-		    kind: "var"
-		});
-	    }
-	}
-	
-	var varDecl = {
-	    type: "VariableDeclaration",
-	    kind: "var",
-	    declarations: varDecls
-	};
-	
-	return varDecls;
-	}
-	
+
+    function createTempVariables() {
+
+        var varDecls = [];
+        if (tNum > 1) {
+            for (var i = 1, j = tNum; i <= j; i++) {
+                varDecls.push({
+                    type: "VariableDeclarator",
+                    id: "t"+i,
+                    kind: "var"
+                });
+            }
+        }
+
+        var varDecl = {
+            type: "VariableDeclaration",
+            kind: "var",
+            declarations: varDecls
+        };
+
+        return varDecls;
+    }
+
 
     function rewrite(ast) {
-	tNum = 0;
-	var newAST = ssa_rewriter(ast);
-	var varDecl = createTempVariables();
-	if (ast.body) {
-	    ast.body = ast.body.unshift(varDecl);
-	}
-	return newAST;
+        tNum = 0;
+        var newAST = ssa_rewriter(ast);
+        var varDecl = createTempVariables();
+        if (ast.body) {
+            ast.body = ast.body.unshift(varDecl);
+        }
+        return newAST;
     }
 
     exports.rewrite = rewrite;
@@ -28082,7 +28089,7 @@ define("asm-compiler", function (require, exports) {
     var LABELNAMES;     // LABELNAMES[offset] ==> name
     var RETADDR = [];
     var STATE;
-    
+    var PROGSTART;
     var BYTECODE;
 
     function init(stackSize, poolSize) {
@@ -28100,6 +28107,7 @@ define("asm-compiler", function (require, exports) {
         STACKBASE = 0;
         STACKSIZE = stackSize;
         STACKTOP = 0;
+        PROGSTART = undefined;
         STATE = [];
         LABELS = Object.create(null);
         LABELNAMES = Object.create(null);
@@ -28125,7 +28133,8 @@ define("asm-compiler", function (require, exports) {
             STACKTOP: STACKTOP,
             STATE: STATE,
             LABELS: LABELS,
-            LABELNAMES: LABELNAMES
+            LABELNAMES: LABELNAMES,
+            PROGSTART: PROGSTART
         };
     }
     function set(unit) {
@@ -28146,6 +28155,7 @@ define("asm-compiler", function (require, exports) {
         STATE = unit.STATE;
         LABELS = unit.LABELS;
         LABELNAMES = unit.LABELNAMES;
+        PROGSTART = unit.PROGSTART;
     }
 
     /**
@@ -28262,10 +28272,10 @@ function flagSet () {
      *  BYTECODES
      */
 
-    defineByteCode(0x00, "END", "");
-    defineByteCode(0x01, "SYSCALL", "");
+    defineByteCode(0x01, "END", "");
+    defineByteCode(0x02, "SYSCALL", "");
 
-    defineByteCode(0x02, "DEBUGGER", "The debugger; Statement");
+    defineByteCode(0x03, "DEBUGGER", "The debugger; Statement");
 
     /*
         ByteCodes to Identify
@@ -28284,29 +28294,29 @@ function flagSet () {
         but i will work it out before the solution is clear
 
      */
-    defineByteCode(0x30, "STRINGCONST")
-    defineByteCode(0x30, "NUMCONST")
-    defineByteCode(0x30, "IDCONST")
-    defineByteCode(0x30, "NULL");
-    defineByteCode(0x30, "UNDEFINED");
-    defineByteCode(0x30, "SYMBOL");
-    defineByteCode(0x30, "STRING");
-    defineByteCode(0x30, "BOOLEAN");
-    defineByteCode(0x30, "NUMBER");
-    defineByteCode(0x30, "OBJECT");
-    defineByteCode(0x30, "LOCALREC");
-    defineByteCode(0x30, "OBJECTREC");
-    defineByteCode(0x30, "FUNCTIONREC");
-    defineByteCode(0x30, "GLOBALREC");
-    defineByteCode(0x30, "REFERENCE");
+    defineByteCode(0x21, "STRINGCONST")
+    defineByteCode(0x22, "NUMCONST")
+    defineByteCode(0x23, "IDCONST")
+    defineByteCode(0x24, "NULL");
+    defineByteCode(0x25, "UNDEFINED");
+    defineByteCode(0x26, "SYMBOL");
+    defineByteCode(0x27, "STRING");
+    defineByteCode(0x28, "BOOLEAN");
+    defineByteCode(0x29, "NUMBER");
+    defineByteCode(0x2A, "OBJECT");
+    defineByteCode(0x2B, "LOCALREC");
+    defineByteCode(0x2C, "OBJECTREC");
+    defineByteCode(0x2D, "FUNCTIONREC");
+    defineByteCode(0x2E, "GLOBALREC");
+    defineByteCode(0x2F, "REFERENCE");
     defineByteCode(0x30, "UNRESOLVEDREFERENCE");
-    defineByteCode(0x30, "EXECUTIONCONTEXT");
-    defineByteCode(0x30, "NORMALCOMPLETION");
-    defineByteCode(0x30, "THROWCOMPLETION");
-    defineByteCode(0x30, "RETURNCOMPLETION");
-    defineByteCode(0x30, "BREAKCOMPLETION");
-    defineByteCode(0x30, "CONTINUECOMPLETION");
-    defineByteCode(0x30, "CODEREALM");
+    defineByteCode(0x31, "EXECUTIONCONTEXT");
+    defineByteCode(0x32, "NORMALCOMPLETION");
+    defineByteCode(0x33, "THROWCOMPLETION");
+    defineByteCode(0x34, "RETURNCOMPLETION");
+    defineByteCode(0x35, "BREAKCOMPLETION");
+    defineByteCode(0x36, "CONTINUECOMPLETION");
+    defineByteCode(0x37, "CODEREALM");
     /**
      * binary, relational, assignment expressions
      * btw. it makes sense to separate relational expressions
@@ -28560,8 +28570,8 @@ var ENV_SIZEOF = 4 * 4;
  */
 var BINDING_TYPE = 0;
 var BINDING_FLAGS = 1;
-var BINDING_KEY = 3;
-var BINDING_VALUE = 4;
+var BINDING_KEY = 2;
+var BINDING_VALUE = 3;
 var BINDING_SIZEOF = 4 * 4;
 /*
  property descriptor fields
@@ -28572,7 +28582,9 @@ var PROP_KEY = 2;
 var PROP_VALUE = 3;
 var PROP_GET = 3;
 var PROP_SET = 4;
-var PROP_SIZEOF = 4 * 4;
+var PROP_SIZEOF = 5 * 4;
+
+
 /**
  *
  *  Data Structures
@@ -28607,7 +28619,7 @@ function StringPrimitiveType(str) {
     var cp1, cp2;
     var ptr = STACKTOP >> 2;
 
-    HEAP32[ptr] = BYTECODE.STRING;
+    HEAP32[ptr] = BYTECODE.STRING;      // I decided to rename TYPES.* to BYTECODE.*
 
     while (i < strLen) {
         cp1 = str[i].charCodeAt(0);
@@ -28855,13 +28867,18 @@ var FunctionTable = [
 /**
  * Created by root on 01.06.14.
  */
+function debug(str) {
+    console.log(str)
+}
 
 
 var varNum;
 var currentScope;
 var varMap;
+var varMapNum;
 function mapVariable(name) {
-    varmap[name] = ++varNum;
+    varMap[name] = ++varNum;
+    varMapNum[varNum] = name;
 }
 function newScope(current) {
     varMap=Object.create(null);
@@ -28869,12 +28886,22 @@ function newScope(current) {
     currentScope = current;
 }
 
+
+
 function jmp(target) {
+
     if (target === undefined) return;       // simplified (returns if not needed)
     var ptr = STACKTOP >> 2;                // actual position
     HEAP32[ptr]   = BYTECODE.JMP;           // a jump
     HEAP32[ptr+1] = target;                 // to offset passed
+    STACKTOP += 8;
+    debug("compiling jump at "+ptr+" to "+target);
+
+    return ptr;
 }
+
+
+
 function addToConstantPool(value) {
     var poolIndex;
     if (poolIndex=DUPEPOOL[value]) return poolIndex;
@@ -28890,10 +28917,12 @@ function identifier (node) {
 }
 function identifierReference(name, base, strict, thisValue) {
     var ptr = STACKTOP >> 2;
+    STACKTOP += 20;
     HEAP32[ptr] = BYTECODE.IDENTIFIERREFERENCE;
-    HEAP32[ptr+1] = 0;
-    HEAP32[ptr+2] = 0;
-    HEAP32[ptr+3] = 0;
+    HEAP32[ptr+1] = name;
+    HEAP32[ptr+2] = base;
+    HEAP32[ptr+3] = strict;
+    HEAP32[ptr+4] = thisValue;
 }
 function numericLiteralPool (node) {
     var poolIndex = addToConstantPool(node.value);
@@ -28925,12 +28954,15 @@ function booleanLiteral(node) {
     STACKTOP += 8;
     return ptr;
 }
+
 function expressionStatement(node, next) {
     return compile(node.expression, next);
 }
+
 function parenthesizedExpression(node, next) {
     return compile(node.expression, next);
 }
+
 function sequenceExpression(node, nextAddr) {   // no code, i take the result of the last in the code where i compiled it. i think that works
     var len = node.sequence.length;
     var ptr = STACKTOP >> 2;
@@ -28941,6 +28973,7 @@ function sequenceExpression(node, nextAddr) {   // no code, i take the result of
 }
 function unaryExpression(node, next) {
     var ptr = compile(node.argument);   // erst die value berechnen
+
     var code;
     switch (node.operator) {
         case "!": code = BYTECODE.NEG; break;
@@ -28973,13 +29006,14 @@ function binaryExpression(node, nextAddr) {
         case "&":code = BYTECODE.AND; break;
         case "&&":code = BYTECODE.LOGOR; break;
         case "||":code = BYTECODE.LOGAND; break;
-        case "<":code = BYTECODE.LT; break;
-        case ">":code = BYTECODE.GT; break;
+        case "<":code =  BYTECODE.LT; break;
+        case ">":code =  BYTECODE.GT; break;
         case ">=":code = BYTECODE.GTEQ; break;
         case "<=":code = BYTECODE.LTEQ; break;
             break;
     }
-    HEAP32[ptr] = code; // fetch operator left and operator right (left and right gets one stack each, or i save them to the stack and pop them to left and right back like asm, we´ll see)
+    HEAP32[ptr] = code;
+
     if (nextAddr!==undefined) jmp(nextAddr);
     return ptr;
 }
@@ -29150,14 +29184,17 @@ function breakStatement(node) {
     return ptr;
 }
 function continueStatement(node) {
-    var ptr = STACKTOP >> 2;
+    var ptr = STACKTOP >> 2;ugger
     HEAP32[ptr] = BYTECODE.CONTINUECOMP;
     HEAP32[ptr+1] = LABELS[node.label];
     return ptr;
 }
-function debuggerStatement(node) {
+function debuggerStatement(node, next) {
     var ptr = STACKTOP >> 2;
+    STACKTOP += 4;
     HEAP32[ptr] = BYTECODE.DEBUGGER;
+    debug("compiling debugger to "+ptr);
+    jmp(next);
     return ptr;
 }
 function labelledStatement(node, next) {    // [label|nextoffset] code to start with label is ok to interpret as label and ptr? or more verbose? no, costs speed, or?
@@ -29171,30 +29208,30 @@ function labelledStatement(node, next) {    // [label|nextoffset] code to start 
 
     return ptr;
 }
+
 function program(node) {
     var body = node.body;
     var strict = !!node.strict;
     var len = body.length;
-
     var nextBlockAddr = lastBlock();
-
+    var ptr = STACKTOP >> 2;
     newScope(ptr);
-
-    for (var i = body.length-1; i >= 0;i--) {
+    for (var i = body.length-1; i >= 0; i--) {
+        debug("compiling program item "+i)
         nextBlockAddr = compile(body[i], nextBlockAddr);
     }
-    
-    var ptr = STACKTOP >> 2;
-    jmp(ptr);
-    
-    return ptr;
+    jmp(nextBlockAddr);
+    return nextBlockAddr;
 }
+
 function lastBlock() {
     var ptr = STACKTOP >> 2;
     STACKTOP += 4;
     HEAP32[ptr] = BYTECODE.END;
+    debug("compiling BYTECODE.END to "+ptr)
     return ptr;
 }
+
 function compile(ast, next) {
     if (!ast) return -1;
     switch (ast.type) {
@@ -29255,7 +29292,7 @@ function getEmptyUnit() {
 
 function compileUnit(ast, next) {
     init(DEFAULT_SIZE); // invent a good guess and a resize for the emergency case
-    compile(ast, next);
+    PROGSTART = compile(ast, next);
     return get();
 }
 
@@ -29269,236 +29306,238 @@ exports.getEmptyUnit = getEmptyUnit;
  *
  */
 
-    /*
-	move into the main file
-	give me all variables in overview
-	that i can remove the dead code
-	and start over
+/*
+ move into the main file
+ give me all variables in overview
+ that i can remove the dead code
+ and start over
 
-     */
+ */
 
-    var realm, strict, tailCall;
-    var tables = require("tables");
-    var codeForOperator = tables.codeForOperator;
-    var operatorForCode = tables.operatorForCode;
-    var unaryOperatorFromCode = tables.unaryOperatorFromCode;
-    var propDefCodes = tables.propDefCodes;
-    var detector = require("detector");
-    var hasConsole = detector.hasConsole;
-    var formatStr = require("i18n").formatStr;
-    var translate = require("i18n").translate;
-
-
-    var frames;
-    var frame;
-    var fp = -1;
-    var r0, r1, r2, r3, r4, r5, r6, r7, r8, r9;
+var realm, strict, tailCall;
+var tables = require("tables");
+var codeForOperator = tables.codeForOperator;
+var operatorForCode = tables.operatorForCode;
+var unaryOperatorFromCode = tables.unaryOperatorFromCode;
+var propDefCodes = tables.propDefCodes;
+var detector = require("detector");
+var hasConsole = detector.hasConsole;
+var formatStr = require("i18n").formatStr;
+var translate = require("i18n").translate;
 
 
-
-    var ecma = require("ast-api");
-    var parse = require("parser");
-    var parseGoal = parse.parseGoal;
-    
-    
-    var stack, pc;
-    var state = [];    // save
-    var st = -1;
+var frames;
+var frame;
+var fp = -1;
+var r0, r1, r2, r3, r4, r5, r6, r7, r8, r9;
+var pc;
 
 
-    function throwUnknownByteCode(code) {
-	throw new TypeError(format("UNKNOWN_INSTRUCTION_S", code));
-    }
-    
-    var putOut;
-    if (hasConsole) putOut = console.log;
-    else if (hasPrint) putOut = print;
-    else putOut = function () {};
-    
-    function showDebuggingStats() {
-	putOut("DEBUGGER STATUS:");
-	putOut("----------------");
-	putOut("HEAP32.byteLength: "+HEAP32.byteLength);
-    }
+var ecma = require("ast-api");
+var parse = require("parser");
+var parseGoal = parse.parseGoal;
 
 
-    function main(pc) {
-        "use strict";
-        // local registers
-        var $0,$1,$2,$3,$4,$5,$6,$7,$8,$9,$A,$B,$C,$D,$E,$F;
-        var result; // oh, what register. maybe i learn.
-        //  var state = 0;
-        while (1) {
-            var code = HEAP32[pc];
-            switch(code) {
-                case BYTECODE.JMP:
-                    pc = HEAP32[pc+1];
-                    continue;
-                case BYTECODE.REFERENCE:
-                    // ReferenceRecord(HEAP32.subarray(pc,4);
-                    var PTR = STACKTOP >> 2;
-                    STACKTOP += 20;
-                    HEAP32[PTR] = TYPES.REFERENCE;
-                    HEAP32[PTR+1] = HEAP32[pc+1];
-                    HEAP32[PTR+2] = HEAP32[pc+2];
-                    HEAP32[PTR+3] = HEAP32[pc+3];
-                    HEAP32[PTR+4] = HEAP32[pc+4];
-                    pc = pc + 5;
-                    continue;
-                case BYTECODE.PUTVALUE:
-                    var lhs = HEAP32[pc+1];
-                    var value = HEAP32[pc+2];
-                    if (lhs[0] == TYPES.REFERENCE) {
-                        lhs[1] = value; // setting base
-                        r0 = undefined;
-                    } else {
-                        r0 = newReferenceError();
-                    }
-                    pc = pc + 2;
-                    continue;
-                case BYTECODE.GETOWNPROPERTY:
-                    var O = HEAP32[pc+1];
-                    var P = HEAP32[pc+2];
-                    var propList = POOL[O[1]];  // O[1] ist die PropNameList (war auf Papier am Ende nach 1* type und bits, aber egal)
-                    var desc = O[propList[P]];
-                    r0 = desc[1];
-                    pc = pc + 3;    // CODE.GETOWNPROP, O, P = 3
-                    continue;
-                    
-                case BYTECODE.DEBUGGER:
-            	    showDebuggingStats();
-            	    pc = pc + 1;
-            	    break;
-            	default:
-            	    throwUnknownByteCode();
-            	    return;
-            }
+var stack, pc;
+var state = [];    // save
+var st = -1;
 
-            if (STACKTOP >= MEMORY.byteLength - 128) {
-                /**
-                 * time to do the magic garbage colletion
-                 */
-            }
+
+function throwUnknownByteCode(code) {
+    throw new TypeError(format("UNKNOWN_INSTRUCTION_S", code));
+}
+
+
+var putOut;
+if (hasConsole) putOut = console.log.bind(console);
+else if (hasPrint) putOut = print;
+else putOut = function () {};
+
+
+function showDebuggingStats() {
+    putOut("DEBUGGER STATUS:");
+    putOut("----------------");
+    putOut("HEAP32.byteLength: "+HEAP32.byteLength);
+
+}
+
+
+function main() {
+    "use strict";
+    var $0,$1,$2,$3,$4,$5,$6,$7,$8,$9,$A,$B,$C,$D,$E,$F;
+
+    while (1) {
+
+        var code = HEAP32[pc];
+        debug("decoded "+code+" at "+pc+" ("+(pc<<2)+")");
+        switch(code) {
+
+
+            case BYTECODE.JMP:
+                pc = HEAP32[pc+1];
+                continue;
+            case BYTECODE.DEBUGGER:
+                showDebuggingStats();
+                pc = pc + 1;
+                break;
+            case BYTECODE.END:
+                return;
+                break;
+
+
+
+
+
+            case BYTECODE.REFERENCE:
+                r0 = ptr;
+
+                pc = pc + 5;
+                continue;
+            case BYTECODE.PUTVALUE:
+                var lhs = HEAP32[pc+1];
+                var value = HEAP32[pc+2];
+                if (lhs[0] == TYPES.REFERENCE) {
+                    lhs[1] = value; // setting base
+                    r0 = undefined;
+                } else {
+                    r0 = newReferenceError();
+                }
+                pc = pc + 2;
+                continue;
+
+            case BYTECODE.GETOWNPROPERTY:
+                var O = HEAP32[pc+1];
+                var P = HEAP32[pc+2];
+                var propList = POOL[O[1]];  // O[1] ist die PropNameList (war auf Papier am Ende nach 1* type und bits, aber egal)
+                var desc = O[propList[P]];
+                r0 = desc[1];
+                pc = pc + 3;    // CODE.GETOWNPROP, O, P = 3
+                continue;
+
+
+
+            default:
+                throwUnknownByteCode();
+                return;
+        }
+
+        if (STACKTOP >= MEMORY.byteLength - 128) {
+            /**
+             * time to do the magic garbage colletion
+             */
         }
     }
+}
 
-    /**
-     *
-     * @param realm
-     * @param src
-     * @returns {*}
-     * @constructor
-     */
-    function initRuntime(numGlobalLocalVars) {
-        stack = new Int32Array(MEMORY, STACKTOP);
-        STACKTOP += 4096 * 16;
-        frames = new Int32Array(MEMORY, STACKTOP);
-        var frameStart = STACKTOP;
-        STACKTOP += 4096 * 16;
-        fp = 0;
-        frame = frames[fp] = ExecutionRecord(numGlobalLocalVars, frameStart, realm);
+/**
+ *
+ * @param realm
+ * @param src
+ * @returns {*}
+ * @constructor
+ */
+function initRuntime(numGlobalLocalVars) {
+    stack = new Int32Array(MEMORY, STACKTOP);
+    STACKTOP += 4096 * 16;
+
+    frames = new Int32Array(MEMORY, STACKTOP);
+    var frameStart = STACKTOP;
+    STACKTOP += 4096 * 16;
+
+    fp = 0;
+    frame = frames[fp] = ExecutionRecord();
+}
+
+function allocateLocalVars(numVars) {
+    var ptr = STACKTOP >> 2;
+    STACKTOP += numVars * 4;
+    return ptr;
+}
+function allocateRegisters(numRegs) {
+    var ptr = STACKTOP >> 2;
+    numRegs = numRegs|0;
+    STACKTOP += numRegs * 4;
+    return ptr;
+}
+
+function ExecutionRecord(numVars, numRegs, outer) {
+    numVars = numVars|0;
+    numRegs = numRegs|0;
+    var ptr = STACKTOP >> 2;
+    STACKTOP += 16;
+    HEAP32[0] = BYTECODE.CALLCONTEXT;
+    HEAP32[1] = allocateLocalVars(numVars);
+    HEAP32[2] = allocateRegisters(numRegs);
+    //HEAP32[4] = getPtr(realm.globalThis);
+    //HEAP32[5] = getPtr(realm.globalEnv);
+    //HEAP32[6] =
+    return ptr;
+}
+
+
+/**
+ *
+ * new interface for the asm parser
+ * but the old code has to go now!!!
+ * next!! at once!! today!! tomorrow!!!
+ * YESTERDAY!!!
+ *
+ * @param realm
+ * @param unit
+ * @returns {*}
+ */
+
+/**
+
+
+ These function should set registers like "extern" functions do
+ and return "void" instead of returning the pointer
+ */
+
+
+function isAbrupt(ptr) {
+    switch(HEAP32[ptr]) {
+        case BYTECODE.THROWCOMPLETION:
+        case BYTECODE.BREAKCOMPLETION:
+        case BYTECODE.CONTINUECOMPLETION:
+        case BYTECODE.RETURNCOMPLETION:
+            return true;
+        default:
+            return false;
     }
+}
 
-    function allocateLocalVars(numVars) {
-        var ptr = STACKTOP >> 2;
-        STACKTOP += numVars * 4;
-        return ptr;
+function ifAbrupt(ptr) {
+    switch(HEAP32[ptr]) {
+        case BYTECODE.THROWCOMPLETION:
+        case BYTECODE.BREAKCOMPLETION:
+        case BYTECODE.CONTINUECOMPLETION:
+        case BYTECODE.RETURNCOMPLETION:
+            return ptr;
+        default:
+            return HEAP32[ptr+1];	// [0] = COMPLTYPE [1] VALUE PTR
     }
-    function allocateRegisters(numRegs) {
-        var ptr = STACKTOP >> 2;
-        numRegs = numRegs|0;
-        STACKTOP += numRegs * 4;
-        return ptr;
+}
+
+function RunUnit(unit, realm) {
+    if (realm === undefined) {
+        realm = CreateRealm();
     }
+    initRuntime();
+    pc = PROGSTART;
+    main();
+    if (isAbrupt(r0=ifAbrupt(r0))) return r0;
+    return r0;
+}
+function CompileAndRun(realm, src) {
+    var ast;
+    try {ast = parse(src)} catch (ex) {return newSyntaxError(ex.message)}
+    var unit = compileUnit(ast);
+    return RunUnit(unit, realm)
+}
 
-    function ExecutionRecord(numVars, numRegs, outer, stack, realm) {
-        var ptr = STACKTOP >> 2;
-        STACKTOP += 16;
-        HEAP32[0] = BYTECODE.CALLCONTEXT;
-        HEAP32[1] = allocateLocalVars(numVars, outer, stack);
-        HEAP32[2] = allocateRegisters(numRegs);
-        HEAP32[3] = stack;
-        //HEAP32[4] = getPtr(realm.globalThis);
-        //HEAP32[5] = getPtr(realm.globalEnv);
-        //HEAP32[6] =
-        return ptr;
-    }
-
-
-    /**
-     *
-     * new interface for the asm parser
-     * but the old code has to go now!!!
-     * next!! at once!! today!! tomorrow!!!
-     * YESTERDAY!!!
-     *
-     * @param realm
-     * @param unit
-     * @returns {*}
-     */
-    
-    /**
-    
-    
-	These function should set registers like "extern" functions do
-	and return "void" instead of returning the pointer
-    */
-     
-    function isAbrupt(ptr) {
-	switch(HEAP32[ptr]) {
-	    case BYTECODE.THROWCOMP:
-	    case BYTECODE.BREAKCOMP:
-	    case BYTECODE.CONTINUECOMP:
-	    case BYTECODE.RETURNCOMP:
-		return true;
-	    default:
-		return false;
-	}
-    }
-    
-    function ifAbrupt(ptr) {
-	switch(HEAP32[ptr]) {
-	    case BYTECODE.THROWCOMP:
-	    case BYTECODE.BREAKCOMP:
-	    case BYTECODE.CONTINUECOMP:
-	    case BYTECODE.RETURNCOMP:
-		return ptr;
-	    default:
-		return HEAP32[ptr+1];	// [0] = COMPLTYPE [1] VALUE PTR
-	}
-    }
-
-    function RunUnit(unit, realm) {
-        if (realm === undefined) {
-            // Initialize
-            realm = CreateRealm();
-        }
-        //set(unit);
-        init();
-        pc = 0;
-        stack[pc] = STACKBASE;
-        main(pc);
-        if (isAbrupt(r0=ifAbrupt(r0))) return r0;
-        return NormalCompletion(r0);
-    }
-
-    function CompileAndRun(realm, src) {
-        var ast;
-        try {ast = parse(src)} catch (ex) {return newSyntaxError(ex.message)}
-
-        compileUnit(ast);
-
-        //set(unit);
-        initRuntime();
-        pc = 0;
-        stack[pc] = STACKBASE; // ip to first bytecode at HEAP32[stack[0]]
-        main(pc);
-        if (isAbrupt(r0=ifAbrupt(r0))) return r0;
-        return NormalCompletion(r0);
-    }
-
-    exports.CompileAndRun = CompileAndRun;
-    exports.RunUnit = RunUnit;
+exports.CompileAndRun = CompileAndRun;
+exports.RunUnit = RunUnit;
 
 
 
