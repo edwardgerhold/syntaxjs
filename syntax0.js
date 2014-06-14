@@ -27532,9 +27532,14 @@ define("ssa-tool", function (require, exports) {
      1. assignment = binaryexpression : extract the binary expressions and convert to ssa´s
      2. binaryexpression: extract nested binaries and convert to ssa
      3. callexpression : extract the arguments and convert to ssa and write them in front of the call
-     4.
-     5.
+     4. newexpression: arguments
+     5. loops: independent arguments, same-value assignments each loop (invariant extracting or what it is)
      6.
+
+
+     smuggle some optimization tricks into while extracting to save time with one pass. we possibly need
+     a two pass, coz we are amateurisch. The trick is. The compiler is like my parser is 4x esprima´s speed,
+     but the program then should run constantly lower. I hope so. Whatever, to find out, i program this :-)
      */
 
 
@@ -27698,24 +27703,25 @@ define("ssa-tool", function (require, exports) {
 
 
     function createTempVariables() {
-
         var varDecls = [];
         if (tNum > 1) {
             for (var i = 1, j = tNum; i <= j; i++) {
                 varDecls.push({
                     type: "VariableDeclarator",
-                    id: "t"+i,
+                    id: "t"+i,                                      /* big issue: t1 can not be used by a program
+                                                using this ssa-converter. that means i have to change t* naming to
+                                                some syntaxjs_fuzzyid_0001 variable and hope that i fully compile it
+                                                to stringless numbers (there is no access from the code so i can skip
+                                                saving the strings) */
                     kind: "var"
                 });
             }
         }
-
         var varDecl = {
             type: "VariableDeclaration",
             kind: "var",
             declarations: varDecls
         };
-
         return varDecls;
     }
 
@@ -28051,6 +28057,7 @@ define("asm-typechecker", function (require, exports){
     exports.valueTypes = valueTypes;
 });
 define("asm-compiler", function (require, exports) {
+
     /*
     
 	if you wonder, that "BYTECODE"
@@ -28070,9 +28077,7 @@ define("asm-compiler", function (require, exports) {
     "use strict";
 
     var format = require("i18n").format;
-
     var tables = require("tables");
-
     // temp
     var propDefKinds = tables.propDefKinds;
     var propDefCodes = tables.propDefCodes;
@@ -28080,6 +28085,54 @@ define("asm-compiler", function (require, exports) {
     var operatorForCode = tables.operatorForCode;
     var unaryOperatorFromString = tables.unaryOperatorFromString;
 
+
+    /*
+     move into the main file
+     give me all variables in overview
+     that i can remove the dead code
+     and start over
+
+     */
+
+    var realm, strict, tailCall;
+    var tables = require("tables");
+    var codeForOperator = tables.codeForOperator;
+    var operatorForCode = tables.operatorForCode;
+    var unaryOperatorFromCode = tables.unaryOperatorFromCode;
+    var propDefCodes = tables.propDefCodes;
+    var detector = require("detector");
+    var hasConsole = detector.hasConsole;
+    var formatStr = require("i18n").formatStr;
+    var translate = require("i18n").translate;
+
+
+    var frames;
+    var frame;
+    var fp = -1;
+    var r0, r1, r2, r3, r4, r5, r6, r7, r8, r9;
+    var pc;
+
+
+    var ecma = require("ast-api");
+    var parse = require("parser");
+    var parseGoal = parse.parseGoal;
+
+
+    var stack, pc;
+    var state = [];    // save
+    var st = -1;
+
+
+    /*
+
+        todo: rename the stuff to intel like machine
+
+        secondly: prefer heap8 for the bytecode dispatch
+        and the operand bytecodes. the original machine uses
+        the same technology and oring the operandflags into
+        the heap32 int is more difficult to understand than the heap8 assignments
+
+     */
 
 
     var DEFAULT_SIZE = 5*1024*1024; // 5MB
@@ -28160,15 +28213,16 @@ define("asm-compiler", function (require, exports) {
     }
 
     /**
+     *
      * Include files:
      * --------------
      * bytecode: contains the bytecode definitions
      * library: contains a typed array/bytecode driven version of ecma 262
      * compiler: compiles the syntax tree into bytecode
-     * runtime: dispatcher to execute the compiled basic blocks
+     *                      (attention eddie: 'target-independent/multi-target' should be considered earlier, maybe there could be a bytecode transfer to some other machine, what´s then? e.g. jvm, not arm instead of intel. what about 2 bytecodes generated from one compiler? or three or ten? this piece of the compiler is important.)
+     * runtime: dispatcher to execute the compiled basic blocks with ecma 262 semantics
      *
      */
-
 
 // the first assignments for the definition are more verbose, to store an in-doc description
 // for simpler access to the bytecodes meaning
@@ -28197,9 +28251,11 @@ function defineRegister($name, $type, $desc) {
 // compound objects just to hold bytecodes, flags, descriptions (for doc generation)
 // assign bytecode = bytecodeset.bytecode before accessing
 // as a shorthand
+
 var BITFLAGSET = flagSet();         // the flag object itself can be decoupled from this structure
 var BYTECODESET = codeSet();        // this holds the bytecode object plus description object
 var REGISTERSET = registerSet();    // is compound object with a description object,
+
 function registerSet () {
     return {
         REGISTERS: Object.create(null),
@@ -28207,6 +28263,7 @@ function registerSet () {
         REGTYPES: Object.create(null)
     };
 }
+
 function codeSet() {
     return {
         BYTECODE: Object.create(null),
@@ -28214,6 +28271,7 @@ function codeSet() {
         DESC: Object.create(null)
     };
 }
+
 function flagSet () {
     return {
         FLAGS: Object.create(null),
@@ -28239,13 +28297,13 @@ function flagSet () {
     var BITS = Object.create(null);
     BITS.IS_STRICT = 1;
     BITS.IS_CALLABLE = 2;
-    BITS.IS_CONSTRUCTOR = 3;
-    BITS.IS_ARROW = 4;
-    BITS.HAS_BODY = 8;
-    BITS.IS_EXTENSIBLE = 16;
-    BITS.IS_SEALED = 32;
-    BITS.IS_FROZEN = 64;
-    BITS.IS_NATIVE_JS = 128;
+    BITS.IS_CONSTRUCTOR = 4;
+    BITS.IS_ARROW = 8;
+    BITS.HAS_BODY = 16;
+    BITS.IS_EXTENSIBLE = 32;
+    BITS.IS_SEALED = 64;
+    BITS.IS_FROZEN = 128;
+    BITS.IS_NATIVE_JS = 256;    // 2nd byte? grrr
 
     var TYPES = Object.create(null);
     TYPES.REFERENCE = 1;                    // Merge with BYTECODE Object. Give them free numbers of the code.
@@ -28294,7 +28352,14 @@ function flagSet () {
 
         but i will work it out before the solution is clear
 
-     */
+
+        /* THE TWO BYTE CODE IS NOT NEEDED,
+        256 COMMANDS ARE DEFINITLY ENOUGH FOR THE VM
+        AND I WILL RENUMBER THEM ALL TO FIT IN THE BYTE.
+
+         */
+
+
     defineByteCode(0x21, "STRINGCONST")
     defineByteCode(0x22, "NUMCONST")
     defineByteCode(0x23, "IDCONST")
@@ -28865,6 +28930,10 @@ var FunctionTable = [
 
 
 
+
+
+
+
 /**
  * Created by root on 01.06.14.
  */
@@ -29309,43 +29378,6 @@ exports.getEmptyUnit = getEmptyUnit;
  *
  */
 
-/*
- move into the main file
- give me all variables in overview
- that i can remove the dead code
- and start over
-
- */
-
-var realm, strict, tailCall;
-var tables = require("tables");
-var codeForOperator = tables.codeForOperator;
-var operatorForCode = tables.operatorForCode;
-var unaryOperatorFromCode = tables.unaryOperatorFromCode;
-var propDefCodes = tables.propDefCodes;
-var detector = require("detector");
-var hasConsole = detector.hasConsole;
-var formatStr = require("i18n").formatStr;
-var translate = require("i18n").translate;
-
-
-var frames;
-var frame;
-var fp = -1;
-var r0, r1, r2, r3, r4, r5, r6, r7, r8, r9;
-var pc;
-
-
-var ecma = require("ast-api");
-var parse = require("parser");
-var parseGoal = parse.parseGoal;
-
-
-var stack, pc;
-var state = [];    // save
-var st = -1;
-
-
 function throwUnknownByteCode(code) {
     throw new TypeError(format("UNKNOWN_INSTRUCTION_S", code));
 }
@@ -29543,7 +29575,6 @@ exports.CompileAndRun = CompileAndRun;
 exports.RunUnit = RunUnit;
 
 
-
 });
 
 
@@ -29707,6 +29738,7 @@ define("highlight", function (require, exports) {
 
     function TemplateToString(word) {
         var val = word;
+        var val2;
         word = "`";
         word += val[0];
         if (val.length > 1) {
