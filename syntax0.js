@@ -8626,7 +8626,6 @@ define("js-codegen", function (require, exports, module) {
         else src += "." + callBuilder(property);
         return src;
     };
-
     builder.callExpression = function (callee, args, loc, extras) {
         var src = "";
         src += callBuilder(callee);
@@ -8818,7 +8817,6 @@ define("js-codegen", function (require, exports, module) {
     	if (extras && extras.after) src += callBuilder(extras.after);
         return src;
     };
-
     builder.parenthesizedExpression = function (expression, loc, extras) {
         var src = "";
         src += "(";
