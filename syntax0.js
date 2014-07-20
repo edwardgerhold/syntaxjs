@@ -10193,7 +10193,7 @@ CodeRealm.prototype.eval = function (code) {
             ex.stack = Get(error,"stack");
             throw ex;
         }
-        evalTasks();
+        evalJobs();
         restoreCodeRealm();
         return result;
     };
@@ -10212,7 +10212,7 @@ CodeRealm.prototype.eval0 = function (code) {
             ex.stack = Get(error,"stack");
             throw ex;
         }
-        evalTasks();
+        evalJobs();
         restoreCodeRealm();
         return result;
     };
@@ -10250,7 +10250,7 @@ CodeRealm.prototype.evalByteCode = function (code) {
         ex.stack = Get(error,"stack");
         throw ex;
     }
-    evalTasks();
+    evalJobs();
     restoreCodeRealm();
     return result;
 };
@@ -10294,7 +10294,7 @@ function CreateRealm () {
     realmRec.directEvalFallback = undefined;
     realmRec.indirectEval = undefined;
     realmRec.Function = undefined;
-    makeTaskQueues(realmRec);
+    makeJobQueues(realmRec);
     addWellKnownSymbolsToRealmsLeakySymbolMap(realmRec);
     restoreCodeRealm();
     return realmRec;
@@ -10327,9 +10327,9 @@ function Initialization(sources) {
         return status;
     }
     for (var i = 0, j = sources.length; i < j; i++) {
-        EnqueueTask("ScriptTasks", ScriptEvaluationTask, [sources[i]])
+        EnqueueJob("ScriptJobs", ScriptEvaluationJob, [sources[i]])
     }
-    return NextTask(NormalCompletion(undefined))
+    return NextJob(NormalCompletion(undefined))
 }
 function InitializeFirstRealm(realm) {
     var intrinsics = CreateIntrinsics(realm);
@@ -10340,6 +10340,23 @@ function InitializeFirstRealm(realm) {
     if (isAbrupt(globalObj=ifAbrupt(globalObj))) return globalObj;
     // CreateImplementationDefinedGlobalObjectProperties(globalObj);
     return NormalCompletion(undefined);
+}
+
+
+function GetFunctionRealm(obj) {
+    Assert(IsCallable(obj), "MUST_BE_CALLABLE");
+    if (hasInternalSlot(obj, SLOTS.REALM)) {
+       return getInternalSlot(obj, SLOTS.REALM);
+    }
+    if (hasInternalSlot(obj, SLOTS.BOUNDTARGETFUNCTION)) {
+        var target = getInternalSlot(obj, SLOTS.BOUNDTARGETFUNCTION);
+        return GetFunctionRealm(target);
+    }
+    if (hasInternalSlot(obj, SLOTS.PROXYTARGET)) {
+        var proxyTarget = getInternalSlot(obj, SLOTS.PROXYTARGET);
+        return GetFunctionRealm(proxyTarget);
+    }
+    return getRealm();
 }
 function ExecutionContext(outerCtx, realm, state, generator) {
     "use strict";
@@ -11793,6 +11810,54 @@ function CanonicalNumericString (argument) {
     if (SameValue(ToString(n), argument) === false) return undefined;
     return n;
 }
+
+
+var CVTBUF = new ArrayBuffer(8);
+var F64BUF = new Float64Array(CVTBUF);
+var F32BUF = new Float32Array(CVTBUF);
+var UI32BUF = new Uint32Array(CVTBUF);
+var I32BUF = new Int32Array(CVTBUF);
+var UI16BUF = new Uint16Array(CVTBUF);
+var I16BUF = new Int16Array(CVTBUF);
+var UI8BUF = new Uint8Array(CVTBUF);
+var I8BUF = new Int8Array(CVTBUF);
+
+function _ToFloat32(num) {
+    if (isAbrupt(num)) return num;
+    F64BUF[0] = num;
+    return F32BUF[0];
+}
+function _ToInt32(num) {
+    if (isAbrupt(num)) return num;
+    F64BUF[0] = num;
+    return I32BUF[0];
+}
+function _ToUint32(num) {
+    if (isAbrupt(num)) return num;
+    F64BUF[0] = num;
+    return UI32BUF[0];
+}
+function _ToUint16(num) {
+    if (isAbrupt(num)) return num;
+    F64BUF[0] = num;
+    return UI16BUF[0];
+}
+function _ToInt16(num) {
+    if (isAbrupt(num)) return num;
+    F64BUF[0] = num;
+    return I16BUF[0];
+}
+function _ToUint8(num) {
+    if (isAbrupt(num)) return num;
+    F64BUF[0] = num;
+    return UI8BUF[0];
+}
+function _ToInt8(num) {
+    if (isAbrupt(num)) return num;
+    F64BUF[0] = num;
+    return I8BUF[0];
+}
+
 function SameValue(x, y) {
     if (isAbrupt(x = ifAbrupt(x))) return x;
     if (isAbrupt(y = ifAbrupt(y))) return y;
@@ -18113,13 +18178,13 @@ var ProxyConstructor_Construct = function (argList) {
     return ProxyCreate(target, handler);
 };
 
-function evalTasks() {
-    var PromiseTasks = getTasks(getRealm(), "PromiseTasks")
-    var taskResults = NextTask(undefined, PromiseTasks);
-    var TimerTasks = getTasks(getRealm(), "TimerTasks")
-    var taskResults = NextTask(undefined, TimerTasks);
-    var LoadingTasks = getTasks(getRealm(), "LoadingTasks")
-    var taskResults = NextTask(undefined, LoadingTasks);
+function evalJobs() {
+    var PromiseJobs = getJobs(getRealm(), "PromiseJobs")
+    var taskResults = NextJob(undefined, PromiseJobs);
+    var TimerJobs = getJobs(getRealm(), "TimerJobs")
+    var taskResults = NextJob(undefined, TimerJobs);
+    var LoadingJobs = getJobs(getRealm(), "LoadingJobs")
+    var taskResults = NextJob(undefined, LoadingJobs);
     /*
         managing multiple queues like this looks like errors,
 
@@ -18127,67 +18192,67 @@ function evalTasks() {
      */
 }
 
-function PendingTaskRecord_toString () {
-    return "[object PendingTaskRecord]";
+function PendingJobRecord_toString () {
+    return "[object PendingJobRecord]";
 }
-function PendingTaskRecord (task, args, realm, hostDefined) {
-    var pendingTaskRecord = Object.create(PendingTaskRecord.prototype);
-    pendingTaskRecord.Task = task;
-    pendingTaskRecord.Arguments = args;
-    pendingTaskRecord.Realm = realm;
-    pendingTaskRecord.HostDefined = hostDefined;
-    return pendingTaskRecord;
+function PendingJobRecord (task, args, realm, hostDefined) {
+    var pendingJobRecord = Object.create(PendingJobRecord.prototype);
+    pendingJobRecord.Job = task;
+    pendingJobRecord.Arguments = args;
+    pendingJobRecord.Realm = realm;
+    pendingJobRecord.HostDefined = hostDefined;
+    return pendingJobRecord;
 }
-PendingTaskRecord.prototype = Object.create(null);
-PendingTaskRecord.prototype.constructor = PendingTaskRecord;
-PendingTaskRecord.prototype.toString = PendingTaskRecord_toString;
-function TaskQueue() {
+PendingJobRecord.prototype = Object.create(null);
+PendingJobRecord.prototype.constructor = PendingJobRecord;
+PendingJobRecord.prototype.toString = PendingJobRecord_toString;
+function JobQueue() {
     return [];
 }
-function makeTaskQueues(realm) {
-    realm.LoadingTasks = TaskQueue();
-    realm.PromiseTasks = TaskQueue();
-    realm.ScriptTasks = TaskQueue();
-    realm.TimerTasks = TaskQueue();
+function makeJobQueues(realm) {
+    realm.LoadingJobs = JobQueue();
+    realm.PromiseJobs = JobQueue();
+    realm.ScriptJobs = JobQueue();
+    realm.TimerJobs = JobQueue();
 }
-function getTasks(realm, name) {
+function getJobs(realm, name) {
     if (realm) return realm[name];
 }
 var queueNames = {
     __proto__:null,
-    "LoadingTasks": true,
-    "PromiseTasks": true,
-    "ScriptTasks": true,
-    "TimerTasks": true
+    "LoadingJobs": true,
+    "PromiseJobs": true,
+    "ScriptJobs": true,
+    "TimerJobs": true
 };
-function EnqueueTask(queueName, task, args, hostDefined) {
-    Assert(Type(queueName) === STRING && queueNames[queueName], "EnqueueTask: queueName has to be valid");
+function EnqueueJob(queueName, task, args, hostDefined) {
+    Assert(Type(queueName) === STRING && queueNames[queueName], "EnqueueJob: queueName has to be valid");
     Assert(Array.isArray(args), "arguments have to be a list and to be equal in the number of arguments of task");
     var callerRealm = getRealm();
-    var pending = PendingTaskRecord(task, args, callerRealm, hostDefined);
+    var pending = PendingJobRecord(task, args, callerRealm, hostDefined);
     switch(queueName) {
-        case "PromiseTasks": callerRealm.PromiseTasks.push(pending);
+        case "PromiseJobs": callerRealm.PromiseJobs.push(pending);
             break;
-        case "LoadingTasks": callerRealm.LoadingTasks.push(pending);
+        case "LoadingJobs": callerRealm.LoadingJobs.push(pending);
             break;
-        case "ScriptTasks": callerRealm.ScriptTasks.push(pending);
+        case "ScriptJobs": callerRealm.ScriptJobs.push(pending);
             break;
-        case "TimerTasks": callerRealm.TimerTasks.push(pending);
+        case "TimerJobs": callerRealm.TimerJobs.push(pending);
             break;
     }
     return NormalCompletion(empty);
 }
 /**
- * TO DO: Change nextTask to main loop of the runtime.
+ * TO DO: Change nextJob to main loop of the runtime.
  *
  *
- * NextTask shall become the main event loop
+ * NextJob shall become the main event loop
  *
- * instead of a "function" calling next Task recursivly
+ * instead of a "function" calling next Job recursivly
  *
- * an "iteration" popping the next Task off the queue(s).
+ * an "iteration" popping the next Job off the queue(s).
  *
- * Then ScriptTasks make sense
+ * Then ScriptJobs make sense
  *
  * And of course nothing else was said than that. It´s the main event loop.
  *
@@ -18201,24 +18266,24 @@ function EnqueueTask(queueName, task, args, hostDefined) {
  * @constructor
  */
 
-function NextTask (result, nextQueue) {
+function NextJob (result, nextQueue) {
     if (!nextQueue || !nextQueue.length) return;
     if (isAbrupt(result = ifAbrupt(result))) {
         // performing implementation defined unhandled exception processing
-        console.log("NextTask: Got exception - which will remain unhandled - for debugging, i print them out." );
+        console.log("NextJob: Got exception - which will remain unhandled - for debugging, i print them out." );
         printException(result);
     }
-//  Assert(getStack().length === 0, "NextTask: The execution context stack has to be empty");
+//  Assert(getStack().length === 0, "NextJob: The execution context stack has to be empty");
     var nextPending = nextQueue.shift();
     if (!nextPending) return;
     var newContext = ExecutionContext(null, getRealm());
     newContext.realm = nextPending.Realm;
     getStack().push(newContext);
-    var result = callInternalSlot(SLOTS.CALL, nextPending.Task, undefined, nextPending.Arguments);
+    var result = callInternalSlot(SLOTS.CALL, nextPending.Job, undefined, nextPending.Arguments);
     if (isAbrupt(result=ifAbrupt(result))) {
         if (hasConsole) {
             var ex = makeNativeException(ex);
-            console.log("NextTask got abruptly completed on [[Call]] of nextPending.Task");
+            console.log("NextJob got abruptly completed on [[Call]] of nextPending.Job");
             if (typeof ex == "object") {
                 console.log(ex.name);
                 console.log(ex.message);
@@ -18227,11 +18292,11 @@ function NextTask (result, nextQueue) {
         }
     }
     getStack().pop();
-    return NextTask(result, nextQueue);
+    return NextJob(result, nextQueue);
 }
 
-function ScriptEvaluationTask (source) {
-    Assert(typeof source === "string", "ScriptEvaluationTask: Source has to be a string");
+function ScriptEvaluationJob (source) {
+    Assert(typeof source === "string", "ScriptEvaluationJob: Source has to be a string");
     var status = NormalCompletion(undefined);
     try {
         var script = parse(source);
@@ -18240,7 +18305,7 @@ function ScriptEvaluationTask (source) {
     }
     var realm = getRealm();
     status = ScriptEvaluation(script, realm, false); // evaluation.Program(ast)
-    return NextTask(status)
+    return NextJob(status)
 }
 
 
@@ -18252,9 +18317,9 @@ function ScriptEvaluationTask (source) {
 exports.HandleEventQueue = handleEventQueue;
 function handleEventQueue(shellMode, initialized) {
     var task, func, time, result;
-    var LoadingTasks = getRealm().LoadingTasks;
-    var PromiseTasks = getRealm().PromiseTasks;
-    var result = NextTask(undefined, PromiseTasks); // PRomises are resolved here, is right
+    var LoadingJobs = getRealm().LoadingJobs;
+    var PromiseJobs = getRealm().PromiseJobs;
+    var result = NextJob(undefined, PromiseJobs); // PRomises are resolved here, is right
     function handler() {
         var eventQueue = getEventQueue();
         if (task = eventQueue.shift()) {
@@ -21097,10 +21162,10 @@ var PromisePrototype_then = function (thisArg, argList) {
 
     } else if (PromiseState === "fulfilled") {
         var resolution = getInternalSlot(promise, SLOTS.PROMISERESULT);
-        EnqueueTask("PromiseTasks", PromiseReactionTask(), [resolveReaction, resolution]);
+        EnqueueJob("PromiseJobs", PromiseReactionJob(), [resolveReaction, resolution]);
     } else if (PromiseState === "rejected") {
         var reason = getInternalSlot(promise, SLOTS.PROMISERESULT);
-        EnqueueTask("PromiseTasks", PromiseReactionTask(), [rejectReaction, reason]);
+        EnqueueJob("PromiseJobs", PromiseReactionJob(), [rejectReaction, reason]);
     }
     return NormalCompletion(promiseCapability.Promise);
 };
@@ -21165,29 +21230,29 @@ function TriggerPromiseReactions(reactions, argument) {
     if (Array.isArray(reactions)) {
         for (var i = 0, j = reactions.length; i < j; i++) {
             var reaction = reactions[i];
-            EnqueueTask("PromiseTasks", PromiseReactionTask(), [reaction, argument])
+            EnqueueJob("PromiseJobs", PromiseReactionJob(), [reaction, argument])
         }
     }
     return NormalCompletion(undefined);
 }
-function PromiseReactionTask() {
+function PromiseReactionJob() {
     var F;
-    var PromiseReactionTask_call = function (thisArg, argList) {
+    var PromiseReactionJob_call = function (thisArg, argList) {
         var reaction = argList[0];
         var argument = argList[1];
         Assert(reaction && reaction.Capability && reaction.Handler, "reaction must be a PromiseReaction record");
         var promiseCapability = reaction.Capability;
         var handler = reaction.Handler;
-        var PromiseTaskQueue = getTasks(getRealm(), SLOTS.PROMISE);
+        var PromiseJobQueue = getJobs(getRealm(), SLOTS.PROMISE);
         var handlerResult = callInternalSlot(SLOTS.CALL, handler, undefined, [argument]);
         if (isAbrupt(handlerResult = ifAbrupt(handlerResult))) {
             var status = callInternalSlot(SLOTS.CALL, promiseCapability.Reject, undefined, [handlerResult.value]);
-            return NextTask(status, PromiseTaskQueue);
+            return NextJob(status, PromiseJobQueue);
         }
         status = callInternalSlot(SLOTS.CALL, promiseCapability.Resolve, undefined, [handlerResult]);
-        return NextTask(status, PromiseTaskQueue);
+        return NextJob(status, PromiseJobQueue);
     };
-    F = CreateBuiltinFunction(getRealm(), PromiseReactionTask_call, "PromiseReactionTask", 2);
+    F = CreateBuiltinFunction(getRealm(), PromiseReactionJob_call, "PromiseReactionJob", 2);
     return F;
 }
 function IfAbruptRejectPromise(value, capability) {
@@ -23676,8 +23741,8 @@ NowDefineBuiltinConstant(DateTimeFormatPrototype, $$toStringTag, "Intl.DateTimeF
         }
         return globalThis;
     };
-    exports.NextTask = NextTask;
-    exports.getTasks = getTasks;
+    exports.NextJob = NextJob;
+    exports.getJobs = getJobs;
     exports.OBJECT = OBJECT;
     exports.NUMBER = NUMBER;
     exports.STRING = STRING;
@@ -23990,8 +24055,8 @@ define("runtime", function () {
     var COMPLETION = ecma.COMPLETION;
     var UNDEFINED = ecma.UNDEFINED;
     var NULL = ecma.NULL;
-    var NextTask = ecma.NextTask;
-    var getTasks = ecma.getTasks;
+    var NextJob = ecma.NextJob;
+    var getJobs = ecma.getJobs;
     var RegExpCreate = ecma.RegExpCreate;
     var Assert = ecma.Assert;
     var CreateRealm = ecma.CreateRealm;
@@ -27302,8 +27367,8 @@ define("runtime", function () {
 
     /*
         Downwards the EventQueue (setTimeout, Emitter):
-        put the handler together with the new TaskQueue
-        and use "TimerTasks" for your "setTimeout" Tasks.
+        put the handler together with the new JobQueue
+        and use "TimerJobs" for your "setTimeout" Jobs.
         but change to use their task structure, my "task"
         here is different.
 
@@ -27385,7 +27450,7 @@ define("runtime", function () {
 
 
         var eventQueue = getEventQueue();
-        var pt = getTasks(getRealm(), "PromiseTasks");
+        var pt = getJobs(getRealm(), "PromiseJobs");
         if (!shellModeBool && initializedTheRuntime && !eventQueue.length && (!pt || !pt.length)) endRuntime();
         else if (eventQueue.length || (pt&& pt.length)) setTimeout(function () {HandleEventQueue(shellModeBool, initializedTheRuntime);}, 0);
         return exprValue;
