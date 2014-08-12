@@ -489,7 +489,7 @@ define("languages.de_DE", function (require, exports) {
 
     exports.PUT_FAILS_AT_S = "Put versagt bei Eigenschaft %s";
     exports.DEFINEPROPERTYORTHROW_FAILS_AT_S = "DefinePropertyOrThrow versagt bei Eigenschaft %s";
-    exports.DELETEPROPERTYORTHROW_FAILS_AT_S ="DeletePropertyOrThrow versagt bei Eigenschaft %s";
+    exports.DELETEPROPERTYORTHROW_FAILS_AT_S = "DeletePropertyOrThrow versagt bei Eigenschaft %s";
 
 
     exports.REFERENCE_S_UNRESOLVABLE = "Referenz %s ist unauflösbar";
@@ -504,7 +504,7 @@ define("languages.de_DE", function (require, exports) {
     exports.S_NOT_AN_OBJECT = "%s ist kein Object";
 
     exports.S_HAS_NO_S = "%s hat kein %s";
-    
+
     exports.S_IS_FROZEN = "%s ist bereits eingefroren.";
 
     exports.FUNCTION_TOSTRING_ERROR = "Function.prototype.toString geht nur mit Funktionen!";
@@ -517,7 +517,7 @@ define("languages.de_DE", function (require, exports) {
     exports.SLOT_NOT_AVAILABLE = "slot is not available";
 
     exports.CAN_NOT_MAKE_SUPER_REF = "Kann keine Superreferenz erzeugen."
-    exports.PROXY_CALL_ERROR =  "The Proxy Constructor ist gebaut eine Exception zu werfen, wird er ohne new gerufen..";
+    exports.PROXY_CALL_ERROR = "The Proxy Constructor ist gebaut eine Exception zu werfen, wird er ohne new gerufen..";
 
     exports.CREATEDATAPROPERTY_FAILED = "CreateDataProperty hat versagt."
     exports.ARRAY_LENGTH_ERROR = "Fehler beim Überprüfen der Arraylängenwerte.";
@@ -557,7 +557,7 @@ define("languages.de_DE", function (require, exports) {
 
 
     exports.UNKNOWN_INSTRUCTION_S = "Unbekannte Instruktion: %s";
-    exports.UNKNOWN_ERROR         = "Unbekannter Fehler";
+    exports.UNKNOWN_ERROR = "Unbekannter Fehler";
 
     // Ranges
     exports.OUT_OF_RANGE = "Nicht im Rahmen";
@@ -594,7 +594,6 @@ define("languages.de_DE", function (require, exports) {
 
 });
 
-
 /**
  *
  * syntax.js Language Packs
@@ -621,7 +620,7 @@ define("languages.en_US", function (require, exports) {
 
     exports.PUT_FAILS_AT_S = "Put fails at property %s";
     exports.DEFINEPROPERTYORTHROW_FAILS_AT_S = "DefinePropertyOrThrow fails at property %s";
-    exports.DELETEPROPERTYORTHROW_FAILS_AT_S ="DeletePropertyOrThrow fails at property %s";
+    exports.DELETEPROPERTYORTHROW_FAILS_AT_S = "DeletePropertyOrThrow fails at property %s";
 
     exports.CREATEDATAPROPERTYORTHROW_FAILED = "CreateDataPropertyOrThrow failed.";
 
@@ -638,7 +637,7 @@ define("languages.en_US", function (require, exports) {
     // Primitives
     exports.TOSTRING_ERROR = "Can not cast argument into a string."
     exports.SYMBOL_CREATE_ERROR = "The Symbol[@@create] method of the Symbol function is supposed to throw a Type Error";
-    exports.SYMBOL_TOPRIMITIVE_ERROR =  "Symbol.prototype[@@toPrimitive] is supposed to throw a Type Error!";
+    exports.SYMBOL_TOPRIMITIVE_ERROR = "Symbol.prototype[@@toPrimitive] is supposed to throw a Type Error!";
     exports.GLOBAL_SYMBOL_REGISTRY_ERROR = "Assertion Error. Duplicate in GlobalSymbolRegistry which MUST NOT be.";
     exports.S_NOT_A_SYMBOL = "%s is not a symbol";
 
@@ -649,13 +648,13 @@ define("languages.en_US", function (require, exports) {
     exports.S_NOT_OBJECT = "%s is not an object.";
 
     exports.S_NOT_UNDEFINED = "%s is not undefined."
-        exports.S_NOT_COMPLETE = "%s is not complete with all intrinsic properties."
+    exports.S_NOT_COMPLETE = "%s is not complete with all intrinsic properties."
 
     exports.S_HAS_NO_S = "%s has no %s";
-    
-    
+
+
     exports.S_IS_FROZEN = "%s is frozen.";
-    
+
 
     // Arrays
     exports.CREATEDATAPROPERTY_FAILED = "CreateDataProperty failed but shouldn´t."
@@ -691,7 +690,7 @@ define("languages.en_US", function (require, exports) {
     exports.CAN_NOT_MAKE_SUPER_REF = "Can not make super reference.";
 
 
-    exports.PROXY_CALL_ERROR =  "The Proxy Constructor is supposed to throw when called without new.";
+    exports.PROXY_CALL_ERROR = "The Proxy Constructor is supposed to throw when called without new.";
 
     // Ranges
     exports.OUT_OF_RANGE = "Out of range";
@@ -711,7 +710,7 @@ define("languages.en_US", function (require, exports) {
 
     // VM.eval
     exports.UNKNOWN_INSTRUCTION_S = "Unknown instruction: %s";
-    exports.UNKNOWN_ERROR         = "Unknown Error";
+    exports.UNKNOWN_ERROR = "Unknown Error";
 
     exports.AVAILABLE_LANGUAGES = "Available Languages";
     exports.LANGUAGE_NOT_FOUND_S = "Language not found: %s";
@@ -733,7 +732,6 @@ define("languages.en_US", function (require, exports) {
     exports.ARGUMENTS_CALLER_STRICT_ERROR = "Can not access 'caller' in strict mode";
 
 
-
     exports.S_INITIALIZED_ERR = "%s is already initialized";
 
     exports.UNINITIALIZED_BINDING_S = "Uninitialized Binding: %s";
@@ -743,9 +741,8 @@ define("languages.en_US", function (require, exports) {
     return exports;
 });
 
-
 define("i18n", function (require, exports) {
-"use strict";
+    "use strict";
 
     var languages = exports.languages = Object.create(null);
     var currentLanguage = undefined;
@@ -778,7 +775,7 @@ define("i18n", function (require, exports) {
             currentLanguage = lang;
             exports.languages.lang = exports.languages[lang];
         }
-        else throw new TypeError("the following language has not been added with setLang(): "+lang);
+        else throw new TypeError("the following language has not been added with setLang(): " + lang);
     }
 
 
@@ -796,9 +793,9 @@ define("i18n", function (require, exports) {
 
     function setFallback(lang) {
         "use strict";
-        if(exports.languages[lang])
-        exports.languages.fallback = exports.languages[lang];
-        else throw new TypeError("can not set fallback to '"+lang+"'. language doesn´t exist. Use addLang('"+lang+"') to require('languages."+lang+"')");
+        if (exports.languages[lang])
+            exports.languages.fallback = exports.languages[lang];
+        else throw new TypeError("can not set fallback to '" + lang + "'. language doesn´t exist. Use addLang('" + lang + "') to require('languages." + lang + "')");
     }
 
     /**
@@ -816,7 +813,7 @@ define("i18n", function (require, exports) {
         var c1, c2;
         var aCount = 1;
         var str = exports.languages.lang[index];
-        if (str===undefined) return format("LANGUAGE_NOT_FOUND_S", index);
+        if (str === undefined) return format("LANGUAGE_NOT_FOUND_S", index);
         c2 = str[0];
         var out = "";
         for (var i = 1, j = str.length; i < j; i++) {
@@ -825,16 +822,17 @@ define("i18n", function (require, exports) {
             if (c1 == "%" && c2 == "s") {
                 out += arguments[aCount];
                 aCount += 1;
-                i+=1;
-                c1 = str[i-1];
+                i += 1;
+                c1 = str[i - 1];
                 c2 = str[i];
             } else {
                 out += c1;
             }
         }
-        if (c2 != undefined) out+=c2;
+        if (c2 != undefined) out += c2;
         return out;
     }
+
     /**
      * formatStr is the same as format
      * returns "i am tool" or in german
@@ -856,14 +854,14 @@ define("i18n", function (require, exports) {
             if (c1 == "%" && c2 == "s") {
                 out += arguments[aCount];
                 aCount += 1;
-                i+=1;
-                c1 = str[i-1];
+                i += 1;
+                c1 = str[i - 1];
                 c2 = str[i];
             } else {
                 out += c1;
             }
         }
-        if (c2 != undefined) out+=c2;
+        if (c2 != undefined) out += c2;
         return out;
     }
 
@@ -882,17 +880,17 @@ define("i18n", function (require, exports) {
     }
 
 
-exports.languages = languages;
-exports.addLang = addLang;
-exports.setLang = setLang;
-exports.getCurrentLanguage = getCurrentLanguage;
+    exports.languages = languages;
+    exports.addLang = addLang;
+    exports.setLang = setLang;
+    exports.getCurrentLanguage = getCurrentLanguage;
 
 
-exports.setFallback = setFallback;
-exports.translate = translate;
-exports.format = format;
-exports.formatStr = formatStr;
-exports.NOT_FOUND_ERR = "i18n-failure: '%s' not found."
+    exports.setFallback = setFallback;
+    exports.translate = translate;
+    exports.format = format;
+    exports.formatStr = formatStr;
+    exports.NOT_FOUND_ERR = "i18n-failure: '%s' not found."
 
 // I initialise this in lib/main.js
 
@@ -900,13 +898,13 @@ exports.NOT_FOUND_ERR = "i18n-failure: '%s' not found."
 
 /**
  *
- *	These tables replace my first and follow sets
- *	Because i didn´t know first what they where
- *	For first you just generate the first token type into the list
- *	recursivly the deeper productions firsts bubble up into the top
- * 	level table which is starting with multiple possibilities
+ *    These tables replace my first and follow sets
+ *    Because i didn´t know first what they where
+ *    For first you just generate the first token type into the list
+ *    recursivly the deeper productions firsts bubble up into the top
+ *    level table which is starting with multiple possibilities
  *
- *	These tables here are for use in a if (isInThisObj[key]) comparison to save a
+ *    These tables here are for use in a if (isInThisObj[key]) comparison to save a
  *      lot of if´s and switch statements on the way down.
  *
  */
@@ -916,11 +914,11 @@ define("tables", function (require, exports, module) {
 
 
     var captureExtraTypes = {
-        __proto__:null,
-        "WhiteSpace":true,
+        __proto__: null,
+        "WhiteSpace": true,
         "LineTerminator": true,
-        "MultiLineComment":true,
-        "LineComment":true
+        "MultiLineComment": true,
+        "LineComment": true
     };
 
 
@@ -938,25 +936,25 @@ define("tables", function (require, exports, module) {
     };
 
     var FewUnaryKeywords = { // for setting input element regex in the standalone version of the tokenizer
-	__proto_:null,
-	"yield":true, // yield inputelement=regexp nolthere assignmentexpr 
-	"void": true,
-	"typeof": true,
-	"delete": true
+        __proto_: null,
+        "yield": true, // yield inputelement=regexp nolthere assignmentexpr
+        "void": true,
+        "typeof": true,
+        "delete": true
     };
     exports.FewUnaryKeywords = FewUnaryKeywords;
 
     var StartOfThreeFourPunctuators = {	// for punctuator in the tokenizer
-        __proto__:null,
-        "!":true,
-        "=":true,
-        ">":true,
-        "<":true,
-        ".":true
+        __proto__: null,
+        "!": true,
+        "=": true,
+        ">": true,
+        "<": true,
+        ".": true
     };
 
     var IsTemplateToken = {
-        __proto__:null,
+        __proto__: null,
         "NoSubstitutionTemplate": true,
         "TemplateHead": true,
         "TemplateMiddle": true,
@@ -964,29 +962,29 @@ define("tables", function (require, exports, module) {
     };
 
     var ReservedWordsInStrictMode = {
-        __proto__:null,
-        "implements":true,
-        "interface":true,
-        "private":true,
-        "package":true,
-        "static":true,
-        "public":true,
-        "protected":true,
+        __proto__: null,
+        "implements": true,
+        "interface": true,
+        "private": true,
+        "package": true,
+        "static": true,
+        "public": true,
+        "protected": true,
         "let": true,
-        "yield":true,
-        "enum":true
+        "yield": true,
+        "enum": true
     };
 
     var forbiddenIdentifierNamesInStrictMode = {
-        __proto__:null,
-        "implements":true,
-        "package":true,
-        "interface":true,
-        "let":true,
-        "private":true,
-        "protected":true,
-        "public":true,
-        "static":true
+        __proto__: null,
+        "implements": true,
+        "package": true,
+        "interface": true,
+        "let": true,
+        "private": true,
+        "protected": true,
+        "public": true,
+        "static": true
     };
 
 
@@ -1038,7 +1036,6 @@ define("tables", function (require, exports, module) {
         "{": true,
         "[": true
     };
-
 
 
     var SkipableToken = {
@@ -1112,8 +1109,8 @@ define("tables", function (require, exports, module) {
     var PrimaryExpressionByValue = {
         __proto__: null,
         "(": "CoverParenthesizedExpressionAndArrowParameterList",
-        
-        "[": "ArrayExpression",	
+
+        "[": "ArrayExpression",
         "{": "ObjectExpression",
         "class": "ClassExpression",
         "function": "FunctionExpression",
@@ -1126,11 +1123,11 @@ define("tables", function (require, exports, module) {
         "--": "UnaryExpression",
         "!!": "UnaryExpression",
         "!": "UnaryExpression",
-        "void":"UnaryExpression",
-        "typeof":"UnaryExpression",
-        "delete":"UnaryExpression"
+        "void": "UnaryExpression",
+        "typeof": "UnaryExpression",
+        "delete": "UnaryExpression"
     };
-    
+
     var PrimaryExpressionByTypeAndFollowByValue = {
         "Identifier": { "=>": "CoverParenthesizedExpressionAndArrowParameterList" }
     };
@@ -1141,7 +1138,7 @@ define("tables", function (require, exports, module) {
 
     exports.PrimaryExpressionByValueAndFollowByType = PrimaryExpressionByValueAndFollowByType;
     exports.PrimaryExpressionByTypeAndFollowByValue = PrimaryExpressionByTypeAndFollowByValue;
-    
+
     var PrimaryExpressionByType = {
         __proto__: null,
         "Identifier": "Identifier",
@@ -1151,7 +1148,7 @@ define("tables", function (require, exports, module) {
         "TemplateHead": "TemplateLiteral",
         "StringLiteral": "Literal",
         "BooleanLiteral": "Literal",
-        "Literal":"Literal",
+        "Literal": "Literal",
         "NullLiteral": "Literal",
         "RegularExpressionLiteral": "RegularExpressionLiteral"
     };
@@ -1428,10 +1425,10 @@ define("tables", function (require, exports, module) {
     };
 
     var StandardBuiltinNames = {
-        __proto__:null,
+        __proto__: null,
         "Infinity": true,
-        "NaN":true,
-        "undefined":true
+        "NaN": true,
+        "undefined": true
 
     };
 
@@ -1932,7 +1929,7 @@ define("tables", function (require, exports, module) {
         "instanceof": "Keyword",
 
 
-    // "let": "Keyword",
+        // "let": "Keyword",
         "let": "Identifier",
 
 
@@ -1959,7 +1956,6 @@ define("tables", function (require, exports, module) {
         "protected": "Identifier",//"Keyword",
         "public": "Identifier",//"Keyword",
         "static": "Identifier",//"Keyword",
-
 
 
         "yield": "Keyword",
@@ -2027,7 +2023,7 @@ define("tables", function (require, exports, module) {
         "StringLiteral": true,
         "TemplateLiteral": true,
         "RegularExpressionLiteral": true,
-        "Literal":true // with escape sequence.
+        "Literal": true // with escape sequence.
     };
 
     var PunctToExprName = {
@@ -2245,11 +2241,10 @@ define("tables", function (require, exports, module) {
 
         "+": 50,
         "-": 50,
-        
+
         "*": 60,
         "/": 60,
         "%": 60,
-
 
 
         ".": 80,
@@ -2259,17 +2254,17 @@ define("tables", function (require, exports, module) {
     };
 
     var UnaryOperatorPrecedence = {
-	__proto__: null,
-	    "-":70,   
-        "+":70,   
+        __proto__: null,
+        "-": 70,
+        "+": 70,
         "!!": 70,
         "~": 70,
-        "!":70,
-        "++":70,
-        "--":70,
-        "delete":70,
-        "void":70,
-        "typeof":70
+        "!": 70,
+        "++": 70,
+        "--": 70,
+        "delete": 70,
+        "void": 70,
+        "typeof": 70
     };
 
     var RegExpFlags = {
@@ -2296,9 +2291,9 @@ define("tables", function (require, exports, module) {
         "RegularExpressionLiteral": true
     };
     var RegExpNoneOfsVal = {
-	__proto__:null,
-	"]": true,
-	")": true
+        __proto__: null,
+        "]": true,
+        ")": true
     };
     var UnicodeIDStart = {
         __proto__: null
@@ -2348,24 +2343,24 @@ define("tables", function (require, exports, module) {
         "SwitchStatement": true
     };
     var isDirective = {
-        __proto__:null,
-        "\"use strict\"":true,
-        "\'use strict\'":true,
-        "\"use asm\"":true,
-        "\'use asm\'":true
+        __proto__: null,
+        "\"use strict\"": true,
+        "\'use strict\'": true,
+        "\"use asm\"": true,
+        "\'use asm\'": true
     };
     var isStrictDirective = {
-        __proto__:null,
-        "\"use strict\"":true,
-        "\'use strict\'":true
+        __proto__: null,
+        "\"use strict\"": true,
+        "\'use strict\'": true
     };
     var isAsmDirective = {
-        __proto__:null,
-        "\"use asm\"":true,
-        "\'use asm\'":true
+        __proto__: null,
+        "\"use asm\"": true,
+        "\'use asm\'": true
     };
     var AllowedLastChars = {
-        __proto__:true,
+        __proto__: true,
         "}": true,
         ";": true,
         ":": true,
@@ -2373,7 +2368,7 @@ define("tables", function (require, exports, module) {
         "++": true
     };
     var OneOfThesePunctuators = {
-        __proto__:true,
+        __proto__: true,
         ")": true,
         "]": true,
         "--": true,
@@ -2381,7 +2376,7 @@ define("tables", function (require, exports, module) {
         "/": true
     };
     var PunctOrLT = {
-        __proto__:null,
+        __proto__: null,
         "Punctuator": true,
         "LineTerminator": true
     };
@@ -2402,9 +2397,9 @@ define("tables", function (require, exports, module) {
     };
 
     var isFuncDecl = {
-        "GeneratorDeclaration":true,
-        "FunctionDeclaration":true,
-        __proto__:null
+        "GeneratorDeclaration": true,
+        "FunctionDeclaration": true,
+        __proto__: null
     };
     var IsBindingPattern = {
         __proto__: null,
@@ -2418,12 +2413,12 @@ define("tables", function (require, exports, module) {
      * @type {{>>: number, >=: number, >>>: number, instanceof: number, in: number, of: number, =>: number, ...: number, .: number, ,: number, &: number, &&: number, &=: number, |=: number, |: number, ||: number, !: number, !!: number, !=: number, !==: number, =: number, ==: number, ===: number, {: number, }: number, (: number, ): number, [: number, ]: number, <: number, >: number, <=: number, <<: number, <<=: number, >>=: number, <<<: number, >>>=: number, ;: number, ::: number, :=: number, :: number, +: number, -: number, *: number, /: number, +=: number, -=: number, *=: number, /=: number, %: number, %=: number, ++: number, --: number, ^: number, ^=: number, ?: number, <|: number, #: number, ~: number}}
      */
     var codeForOperator = {
-        ">>":17,
+        ">>": 17,
         ">=": 18,
-        ">>>":19,
-        "instanceof":20,
-        "in":21,
-        "of":22,
+        ">>>": 19,
+        "instanceof": 20,
+        "in": 21,
+        "of": 22,
         "=>": 23,
         "...": 24,
         ".": 25,
@@ -2468,7 +2463,7 @@ define("tables", function (require, exports, module) {
         "*=": 66,
         "/=": 67,
         "%": 68,
-        "%=":  69,
+        "%=": 69,
         "++": 70,
         "--": 71,
         "^": 72,
@@ -2479,65 +2474,65 @@ define("tables", function (require, exports, module) {
         "~": 77
     };
     var operatorForCode = {
-        17:">>",
-        18:">=",
-        19:">>>",
-        20:"instanceof",
-        21:"in",
-        22:"of",
-         23:"=>",
-         24:"...",
-         25:".",
-         26:",",
-         27:"&",
-         28:"&&",
-         29:"&=",
-         30:"|=",
-         31:"|",
-         32:"||",
-         33:"!",
-         34:"!!",
-         35:"!=",
-         36:"!==",
-         37:"=",
-         38:"==",
-         39:"===",
-         40:"{",
-         41:"}",
-         42:"(",
-         43:")",
-         44:"[",
-         45:"]",
-         46:"<",
-         47:">",
-         48:"<=",
-         51:"<<",
-         52:"<<=",
-         53:">>=",
-         54:"<<<",
-         55:">>>=",
-         56:";",
-         57:"::",
-         58:":=",
-         59:":",
-         60:"+",
-         61:"-",
-         62:"*",
-         63:"/",
-         64:"+=",
-         65:"-=",
-         66:"*=",
-         67:"/=",
-         68:"%",
-          69:"%=",
-         70:"++",
-         71:"--",
-         72:"^",
-         73:"^=",
-         74:"?",
-         75:"<|",
-         76:"#",
-        77:"~"
+        17: ">>",
+        18: ">=",
+        19: ">>>",
+        20: "instanceof",
+        21: "in",
+        22: "of",
+        23: "=>",
+        24: "...",
+        25: ".",
+        26: ",",
+        27: "&",
+        28: "&&",
+        29: "&=",
+        30: "|=",
+        31: "|",
+        32: "||",
+        33: "!",
+        34: "!!",
+        35: "!=",
+        36: "!==",
+        37: "=",
+        38: "==",
+        39: "===",
+        40: "{",
+        41: "}",
+        42: "(",
+        43: ")",
+        44: "[",
+        45: "]",
+        46: "<",
+        47: ">",
+        48: "<=",
+        51: "<<",
+        52: "<<=",
+        53: ">>=",
+        54: "<<<",
+        55: ">>>=",
+        56: ";",
+        57: "::",
+        58: ":=",
+        59: ":",
+        60: "+",
+        61: "-",
+        62: "*",
+        63: "/",
+        64: "+=",
+        65: "-=",
+        66: "*=",
+        67: "/=",
+        68: "%",
+        69: "%=",
+        70: "++",
+        71: "--",
+        72: "^",
+        73: "^=",
+        74: "?",
+        75: "<|",
+        76: "#",
+        77: "~"
     };
 
     /**
@@ -2566,8 +2561,8 @@ define("tables", function (require, exports, module) {
         "-": 5,
         "~": 6,
         "!": 7,
-        "++":8,
-        "--":9
+        "++": 8,
+        "--": 9
     };
 
 
@@ -2583,13 +2578,12 @@ define("tables", function (require, exports, module) {
     };
 
 
-
     exports.forbiddenIdentifierNamesInStrictMode = forbiddenIdentifierNamesInStrictMode;
     exports.isDirective = isDirective;
     exports.isStrictDirective = isStrictDirective;
     exports.isAsmDirective = isAsmDirective;
     exports.FinishStatementList = FinishStatementList;
-    exports.FinishSwitchStatementList = FinishSwitchStatementList;    
+    exports.FinishSwitchStatementList = FinishSwitchStatementList;
     exports.varKinds = varKinds;
     exports.StatementParsers = StatementParsers;
     exports.PrimaryExpressionByValue = PrimaryExpressionByValue;
@@ -2695,207 +2689,209 @@ define("tables", function (require, exports, module) {
     return exports;
 
     /*
-        need for the node.type replacements
+     need for the node.type replacements
 
-        have to look into the ide if i can
-        replace and convert to upper on e.g. regexp,
-        or if i have to do it manually
-        ctrl-shift-arrow mark + 2x strg-shift-u sucks
+     have to look into the ide if i can
+     replace and convert to upper on e.g. regexp,
+     or if i have to do it manually
+     ctrl-shift-arrow mark + 2x strg-shift-u sucks
 
-    exports.JSONTEXT = "JSONText";
-    exports.JSONVALUE = "JSONValue";
-    exports.JSONSTRING = "JSONString";
-    exports.JSONNUMBER = "JSONNumber";
-    exports.JSONFRACTION = "JSONFraction";
-    exports.JSONNULLLITERAL = "JSONNullLiteral";
-    exports.JSONBOOLEANLITERAL = "JSONBooleanLiteral";
-    exports.JSONARRAY = "JSONArray";
-    exports.JSONELEMENTLIST = "JSONElementList";
-    exports.JSONOBJECT = "JSONObject";
-    exports.JSONMember = "JSONMember";
-    exports.JSONMemberList = "JSONMemberList";
-    exports.ConditionalExpressionNoIn = "ConditionalExpressionNoIn";
-    exports.ConditionalExpression = "ConditionalExpression";
-    exports.LeftHandSideExpression = "LeftHandSideExpression";
-    exports.ExpressionStatement = "ExpressionStatement";
-    exports.Expression = "Expression";
-    exports.PrimaryExpression = "PrimaryExpression";
-    exports.PostfixExpression = "PostfixExpression";
-    exports.UnaryExpression = "UnaryExpression";
-    exports.YieldExpression = "YieldExpression";
-    exports.YieldStatement = "YieldStatement";
-    exports.DefaultAsIdentifier = "DefaultAsIdentifier";
-    exports.YieldAsIdentifier = "YieldAsIdentifier";
-    exports.AssignmentExpression = "AssignmentExpression";
-    exports.SuperExpression = "SuperExpression";
-    exports.ThisExpression = "ThisExpression";
-    exports.Initializer = "Initializer";
-    exports.BindingElementList = "BindingElementList";
-    exports.BindingPattern = "BindingPattern";
-    exports.VariableDeclaration = "VariableDeclaration";
-    exports.VariableDeclarationList = "VariableDeclarationList";
-    exports.VariableStatement = "VariableStatement";
-    exports.Expression = "Expression";
-    exports.ExpressionNoIn = "ExpressionNoIn";
-    exports.AssignmentExpressionNoIn = "AssignmentExpressionNoIn";
-    exports.ParenthesizedExpression = "ParenthesizedExpression";
-    exports.ParenthesizedExpressionNode = "ParenthesizedExpressionNode";
-    exports.ArrowParameterList = "ArrowParameterList";
-    exports.CoverParenthesisedExpressionAndArrowParameterList = "CoverParenthesisedExpressionAndArrowParameterList";
-    exports.ConciseBody = "ConciseBody";
-    exports.CoverParenthesizedExpression = "CoverParenthesizedExpression";
-    exports.Literal = "Literal";
-    exports.Identifier = "Identifier";
-    exports.ClassExpression = "ClassExpression";
-    exports.TemplateLiteral = "TemplateLiteral";
-    exports.Elision = "Elision";
-    exports.ElementList = "ElementList";
-    exports.ArrayExpression = "ArrayExpression";
-    exports.StrictFormalParameters = "StrictFormalParameters";
-    exports.PropertyDefinitionList = "PropertyDefinitionList";
-    exports.ComputedPropertyName = "ComputedPropertyName";
-    exports.PropertyKey = "PropertyKey";
-    exports.ObjectExpression = "ObjectExpression";
-    exports.MemberExpression = "MemberExpression";
-    exports.Arguments = "Arguments";
-    exports.CallExpression = "CallExpression";
-    exports.NewExpression = "NewExpression";
-    exports.ComprehensionForList = "ComprehensionForList";
-    exports.ComprehensionFilters = "ComprehensionFilters";
-    exports.ArrayComprehension = "ArrayComprehension";
-    exports.GeneratorComprehension = "GeneratorComprehension";
-    exports.ExpressionStatement = "ExpressionStatement";
-    exports.SequenceExpression = "SequenceExpression";
-    exports.GeneratorBody = "GeneratorBody";
-    exports.FunctionBody = "FunctionBody";
-    exports.MethodDefinition = "MethodDefinition";
-    exports.ClassDeclaration = "ClassDeclaration";
-    exports.RestParameter = "RestParameter";
-    exports.SpreadExpression = "SpreadExpression";
-    exports.DefaultParameter = "DefaultParameter";
-    exports.FormalParameterList = "FormalParameterList";
-    exports.FunctionExpression = "FunctionExpression";
-    exports.FunctionDeclaration = "FunctionDeclaration";
-    exports.BlockStatement = "BlockStatement";
-    exports.ContinueStatement = "ContinueStatement";
-    exports.BreakStatement = "BreakStatement";
-    exports.ReturnStatement = "ReturnStatement";
-    exports.WithStatement = "WithStatement";
-    exports.ThrowStatement = "ThrowStatement";
-    exports.LabelledStatement = "LabelledStatement";
-    exports.TryStatement = "TryStatement";
-    exports.Catch = "Catch";
-    exports.Finally = "Finally";
-    exports.DebuggerStatement = "DebuggerStatement";
-    exports.ModuleDeclaration = "ModuleDeclaration";
-    exports.ModuleSpecifier = "ModuleSpecifier";
-    exports.ModuleBody = "ModuleBody";
-    exports.FromClause = "FromClause";
-    exports.ImportClause = "ImportClause";
-    exports.NamedImports = "NamedImports";
-    exports.ImportStatement = "ImportStatement";
-    exports.ExportsClause = "ExportsClause";
-    exports.DeclarationDefault = "DeclarationDefault";
-    exports.ExportStatement = "ExportStatement";
-    exports.StatementList = "StatementList";
-    exports.SwitchStatementList = "SwitchStatementList";
-    exports.Statement = "Statement";
-    exports.IterationStatement = "IterationStatement";
-    exports.ForStatement = "ForStatement";
-    exports.ForDeclaration = "ForDeclaration";
-    exports.ForBinding = "ForBinding";
-    exports.VARIABLESTATEMENTNOIN = "VariableStatementNoIn";
-    exports.SOURCEELEMENTS = "SourceElements";
-    exports.EMPTYSTATEMENT = "EmptyStatement";
-    exports.DIRECTIVEPROLOGUE = "DirectivePrologue";
-    exports.MODULE = "Module";
-    exports.PROGRAM = "Program";
-    exports.REGULAREXPRESSIONLITERAL = "RegularExpressionLiteral";
-    exports.FORSTATEMENT = "ForStatement";
-    exports.WHILESTATEMENT = "WhileStatement";
-    exports.IFSTATEMENT = "IfStatement";
-    exports.DOWHILESTATEMENT = "DoWhileStatement";
-    exports.SWITCHSTATEMENT = "SwitchStatement";
-    exports.DEFAULTCASE = "DefaultCase";
-    exports.SWITCHCASE = "SwitchCase";
-    */
+     exports.JSONTEXT = "JSONText";
+     exports.JSONVALUE = "JSONValue";
+     exports.JSONSTRING = "JSONString";
+     exports.JSONNUMBER = "JSONNumber";
+     exports.JSONFRACTION = "JSONFraction";
+     exports.JSONNULLLITERAL = "JSONNullLiteral";
+     exports.JSONBOOLEANLITERAL = "JSONBooleanLiteral";
+     exports.JSONARRAY = "JSONArray";
+     exports.JSONELEMENTLIST = "JSONElementList";
+     exports.JSONOBJECT = "JSONObject";
+     exports.JSONMember = "JSONMember";
+     exports.JSONMemberList = "JSONMemberList";
+     exports.ConditionalExpressionNoIn = "ConditionalExpressionNoIn";
+     exports.ConditionalExpression = "ConditionalExpression";
+     exports.LeftHandSideExpression = "LeftHandSideExpression";
+     exports.ExpressionStatement = "ExpressionStatement";
+     exports.Expression = "Expression";
+     exports.PrimaryExpression = "PrimaryExpression";
+     exports.PostfixExpression = "PostfixExpression";
+     exports.UnaryExpression = "UnaryExpression";
+     exports.YieldExpression = "YieldExpression";
+     exports.YieldStatement = "YieldStatement";
+     exports.DefaultAsIdentifier = "DefaultAsIdentifier";
+     exports.YieldAsIdentifier = "YieldAsIdentifier";
+     exports.AssignmentExpression = "AssignmentExpression";
+     exports.SuperExpression = "SuperExpression";
+     exports.ThisExpression = "ThisExpression";
+     exports.Initializer = "Initializer";
+     exports.BindingElementList = "BindingElementList";
+     exports.BindingPattern = "BindingPattern";
+     exports.VariableDeclaration = "VariableDeclaration";
+     exports.VariableDeclarationList = "VariableDeclarationList";
+     exports.VariableStatement = "VariableStatement";
+     exports.Expression = "Expression";
+     exports.ExpressionNoIn = "ExpressionNoIn";
+     exports.AssignmentExpressionNoIn = "AssignmentExpressionNoIn";
+     exports.ParenthesizedExpression = "ParenthesizedExpression";
+     exports.ParenthesizedExpressionNode = "ParenthesizedExpressionNode";
+     exports.ArrowParameterList = "ArrowParameterList";
+     exports.CoverParenthesisedExpressionAndArrowParameterList = "CoverParenthesisedExpressionAndArrowParameterList";
+     exports.ConciseBody = "ConciseBody";
+     exports.CoverParenthesizedExpression = "CoverParenthesizedExpression";
+     exports.Literal = "Literal";
+     exports.Identifier = "Identifier";
+     exports.ClassExpression = "ClassExpression";
+     exports.TemplateLiteral = "TemplateLiteral";
+     exports.Elision = "Elision";
+     exports.ElementList = "ElementList";
+     exports.ArrayExpression = "ArrayExpression";
+     exports.StrictFormalParameters = "StrictFormalParameters";
+     exports.PropertyDefinitionList = "PropertyDefinitionList";
+     exports.ComputedPropertyName = "ComputedPropertyName";
+     exports.PropertyKey = "PropertyKey";
+     exports.ObjectExpression = "ObjectExpression";
+     exports.MemberExpression = "MemberExpression";
+     exports.Arguments = "Arguments";
+     exports.CallExpression = "CallExpression";
+     exports.NewExpression = "NewExpression";
+     exports.ComprehensionForList = "ComprehensionForList";
+     exports.ComprehensionFilters = "ComprehensionFilters";
+     exports.ArrayComprehension = "ArrayComprehension";
+     exports.GeneratorComprehension = "GeneratorComprehension";
+     exports.ExpressionStatement = "ExpressionStatement";
+     exports.SequenceExpression = "SequenceExpression";
+     exports.GeneratorBody = "GeneratorBody";
+     exports.FunctionBody = "FunctionBody";
+     exports.MethodDefinition = "MethodDefinition";
+     exports.ClassDeclaration = "ClassDeclaration";
+     exports.RestParameter = "RestParameter";
+     exports.SpreadExpression = "SpreadExpression";
+     exports.DefaultParameter = "DefaultParameter";
+     exports.FormalParameterList = "FormalParameterList";
+     exports.FunctionExpression = "FunctionExpression";
+     exports.FunctionDeclaration = "FunctionDeclaration";
+     exports.BlockStatement = "BlockStatement";
+     exports.ContinueStatement = "ContinueStatement";
+     exports.BreakStatement = "BreakStatement";
+     exports.ReturnStatement = "ReturnStatement";
+     exports.WithStatement = "WithStatement";
+     exports.ThrowStatement = "ThrowStatement";
+     exports.LabelledStatement = "LabelledStatement";
+     exports.TryStatement = "TryStatement";
+     exports.Catch = "Catch";
+     exports.Finally = "Finally";
+     exports.DebuggerStatement = "DebuggerStatement";
+     exports.ModuleDeclaration = "ModuleDeclaration";
+     exports.ModuleSpecifier = "ModuleSpecifier";
+     exports.ModuleBody = "ModuleBody";
+     exports.FromClause = "FromClause";
+     exports.ImportClause = "ImportClause";
+     exports.NamedImports = "NamedImports";
+     exports.ImportStatement = "ImportStatement";
+     exports.ExportsClause = "ExportsClause";
+     exports.DeclarationDefault = "DeclarationDefault";
+     exports.ExportStatement = "ExportStatement";
+     exports.StatementList = "StatementList";
+     exports.SwitchStatementList = "SwitchStatementList";
+     exports.Statement = "Statement";
+     exports.IterationStatement = "IterationStatement";
+     exports.ForStatement = "ForStatement";
+     exports.ForDeclaration = "ForDeclaration";
+     exports.ForBinding = "ForBinding";
+     exports.VARIABLESTATEMENTNOIN = "VariableStatementNoIn";
+     exports.SOURCEELEMENTS = "SourceElements";
+     exports.EMPTYSTATEMENT = "EmptyStatement";
+     exports.DIRECTIVEPROLOGUE = "DirectivePrologue";
+     exports.MODULE = "Module";
+     exports.PROGRAM = "Program";
+     exports.REGULAREXPRESSIONLITERAL = "RegularExpressionLiteral";
+     exports.FORSTATEMENT = "ForStatement";
+     exports.WHILESTATEMENT = "WhileStatement";
+     exports.IFSTATEMENT = "IfStatement";
+     exports.DOWHILESTATEMENT = "DoWhileStatement";
+     exports.SWITCHSTATEMENT = "SwitchStatement";
+     exports.DEFAULTCASE = "DefaultCase";
+     exports.SWITCHCASE = "SwitchCase";
+     */
 });
 
 /**
- 
+
  */
 define("symboltable", function (require, exports, module) {
 
 
-	function Environment (outer) {
+    function Environment(outer) {
         if (!(this instanceof Environment)) return new Environment(outer);
-		this.bindings = Object.create(null);
-		this.names = Object.create(null);
-		this.outer = outer || null;
- 	}
+        this.bindings = Object.create(null);
+        this.names = Object.create(null);
+        this.outer = outer || null;
+    }
 
     Environment.prototype = {
         putVar: function (decl, type) {
             var name = getName(decl);
-            var thisName = this.names[name];            
+            var thisName = this.names[name];
             this.bindings[name] = decl;
             this.names[name] = type || true;
         },
-		put: function (decl, type) {
+        put: function (decl, type) {
             var name = getName(decl);
-			var thisName = this.names[name];
-			if ((thisName === true && type != "static") ||
+            var thisName = this.names[name];
+            if ((thisName === true && type != "static") ||
                 (thisName === "static" && type != true) ||
-			    (thisName === "get" && type !== "set") ||
-			    (thisName === "set" && type !== "get")) { 			    
-				throw new SyntaxError("Duplicate identifier in environment scope: "+name);
-			}
-			this.bindings[name] = decl;
-			this.names[name] = type || true;
-		}
-	};
+                (thisName === "get" && type !== "set") ||
+                (thisName === "set" && type !== "get")) {
+                throw new SyntaxError("Duplicate identifier in environment scope: " + name);
+            }
+            this.bindings[name] = decl;
+            this.names[name] = type || true;
+        }
+    };
 
     function getName(decl) {
         if (typeof decl.id === "object") return decl.id.name;
         if (typeof decl.id === "string") return decl.name;
     }
 
-	function Scope (outer) {
+    function Scope(outer) {
         if (!(this instanceof Scope)) return new Scope(outer);
-		this.varEnv = new Environment(this.varEnv);
-		this.lexEnv = this.varEnv;
-		this.contains = Object.create(null);
-		this.outer = outer || null;
-	}
+        this.varEnv = new Environment(this.varEnv);
+        this.lexEnv = this.varEnv;
+        this.contains = Object.create(null);
+        this.outer = outer || null;
+    }
+
     Scope.prototype = Object.create(null);
 
     function SymbolTable() {
         if (!(this instanceof SymbolTable)) return new SymbolTable();
         this.scope = new Scope(this.Scope);
     }
+
     SymbolTable.prototype = {
-    	newScope: function () {
-    		this.scope = new Scope(this.scope);
-    	},
-    	oldScope: function () {
-    		if (this.scope)
-    		this.scope = this.scope.outer;
-    	},    	
-    	newBlock: function () {
-    		this.scope.lexEnv = new Environment(this.scope.lexEnv);
-    	},
-    	oldBlock: function () {
+        newScope: function () {
+            this.scope = new Scope(this.scope);
+        },
+        oldScope: function () {
             if (this.scope)
-    		this.scope.lexEnv = this.scope.lexEnv.outer;
-    	},
-    	putVar: function (decl, type) {
-    		return this.scope.varEnv.putVar(decl, type);
-    	},
-    	putLex: function (decl, type) {
-    		return this.scope.lexEnv.put(decl, type);
-    	},
+                this.scope = this.scope.outer;
+        },
+        newBlock: function () {
+            this.scope.lexEnv = new Environment(this.scope.lexEnv);
+        },
+        oldBlock: function () {
+            if (this.scope)
+                this.scope.lexEnv = this.scope.lexEnv.outer;
+        },
+        putVar: function (decl, type) {
+            return this.scope.varEnv.putVar(decl, type);
+        },
+        putLex: function (decl, type) {
+            return this.scope.lexEnv.put(decl, type);
+        },
         hasVar: function (name) {
-           return this.scope.varEnv.names[name] === true;
+            return this.scope.varEnv.names[name] === true;
         },
         hasLex: function (name) {
             return Object.hasOwnProperty.call(this.scope.lexEnv.names, name);
@@ -2921,6 +2917,7 @@ define("symboltable", function (require, exports, module) {
         }
         return list;
     }
+
     function getDeclList(bindings) {
         var list = [];
         for (var name in bindings) {
@@ -2928,6 +2925,7 @@ define("symboltable", function (require, exports, module) {
         }
         return list;
     }
+
     return module.exports = {
         SymbolTable: SymbolTable,
         Scope: Scope,
@@ -2951,9 +2949,9 @@ define("slower-static-semantics", function (require, exports) {
         "DoWhileStatement": true
     };
     var BreakableStatement = {
-        "BreakStatement":true,
-        "ContinueStatement":true,
-        "ThrowStatement":true
+        "BreakStatement": true,
+        "ContinueStatement": true,
+        "ThrowStatement": true
     };
     var IterationStatement = {
         "ForStatement": true,
@@ -2998,12 +2996,15 @@ define("slower-static-semantics", function (require, exports) {
         "ArrayPattern": true,
         "Identifier": false
     };
+
     function debug() {
         if (debugmode && hasConsole) console.log.apply(console, arguments);
     }
+
     function debugdir() {
         if (debugmode && hasConsole) console.dir.apply(console, arguments);
     }
+
     function UTF16Encode(cp) {
         Assert(0 <= cp && cp <= 0x10FFFF, "utf16encode: cp has to be beetween 0 and 0x10FFFF");
         if (cp <= 65535) return cp;
@@ -3011,15 +3012,18 @@ define("slower-static-semantics", function (require, exports) {
         var cu2 = ((cp - 65536) % 1024) + 56320;
         return [cu1, cu2];
     }
+
     function UTF16Decode(lead, trail) {
         Assert(0xD800 <= lead && lead <= 0xD8FF, "utf16decode: lead has to be beetween 0xD800 and 0xD8FF");
         Assert(0xDC00 <= trail && trail <= 0xDFFF, "utf16decode: trail has to be beetween 0xDC00 and 0xDFFF");
         var cp = (lead - 55296) * 1024 + (trail - 564320);
         return cp;
     }
+
     function TailPosition(node, nonTerminal) {
         // Assert(nonTerminal is a parsed grammar production)
     }
+
     function HasProductionInTailPosition(node, nonTerminal) {
         if (Array.isArray(node)) {
             for (var i = 0, j = node.length; i < j; i++) {
@@ -3030,6 +3034,7 @@ define("slower-static-semantics", function (require, exports) {
             if (node.type === "ReturnStatement" && node.argument === nonTerminal) return true;
         }
     }
+
     function IsAnonymousFunctionDefinition(node) {
         var type = node.type;
         var id = node.id;
@@ -3041,6 +3046,7 @@ define("slower-static-semantics", function (require, exports) {
         }
         return false;
     }
+
     function IsIdentifierRef(node) {
         var type = node.type;
         if (type === "Identifier") return true;
@@ -3048,12 +3054,15 @@ define("slower-static-semantics", function (require, exports) {
         else if (type === "DefaultParameter") return true;
         return false;
     }
+
     function ImportEntriesForModule(module, importClause) {
 
     }
+
     function ExportEntriesForModule(module, exportClause) {
 
     }
+
     function UnknownExportEntries(node, list) {
         var nodetype = node.type;
         list = list || [];
@@ -3068,6 +3077,7 @@ define("slower-static-semantics", function (require, exports) {
         }
         return list;
     }
+
     function KnownExportEntries(node) {
         var nodetype = node.type;
         list = list || [];
@@ -3082,36 +3092,56 @@ define("slower-static-semantics", function (require, exports) {
         }
         return list;
     }
-    function ExportedBindings(node) {}
-    function ExportedEntries(node) {}
-    function ImportedBindings(node) {}
-    function ImportedEntries(node) {}
-    function ModuleRequests(node) {}
-    function ImportedNames(node) {}
-    function ExportedNames(node) {}
+
+    function ExportedBindings(node) {
+    }
+
+    function ExportedEntries(node) {
+    }
+
+    function ImportedBindings(node) {
+    }
+
+    function ImportedEntries(node) {
+    }
+
+    function ModuleRequests(node) {
+    }
+
+    function ImportedNames(node) {
+    }
+
+    function ExportedNames(node) {
+    }
 
     function IsIdentifier(obj) {
         return obj.type == "Identifier";
     }
+
     function IsFunctionDeclaration(node) {
         return node.type === "FunctionDeclaration";
     }
+
     function IsFunctionExpression(node) {
         var type = node.type;
         return (type === "FunctionDeclaration" && node.expression) || type === "FunctionExpression";
     }
+
     function IsGeneratorDeclaration(node) {
         var type = node.type;
         return (type === "FunctionDeclaration" && node.generator) || type === "GeneratorDeclaration";
     }
+
     function IsGeneratorExpression(node) {
         var type = node.type;
         return (type === "FunctionDeclaration" && node.expression && node.generator) || type === "GeneratorExpression";
     }
+
     function IsVarDeclaration(node) {
         return node.kind === "var" && node.type === "VariableDeclaration";
 
     }
+
     function IsStrict(node) {
         if (!Array.isArray(node)) {
             if (node) {
@@ -3132,6 +3162,7 @@ define("slower-static-semantics", function (require, exports) {
         }
         return false;
     }
+
     function Contains(R, S) {
         var contains = false;
         var body, node, type;
@@ -3149,15 +3180,21 @@ define("slower-static-semantics", function (require, exports) {
                 node = body[i];
                 type = node.type;
                 switch (type) {
-                        case "ClassDeclaration": continue;
-                        case "FunctionDeclaration": continue;
-                        case "FunctionExpression": continue;
-                        case "GeneratorDeclaration": continue;
-                        case "GeneratorExpression": continue;
-                        case "ArrowExpression": continue;
-                        case "ExpressionStatement":
-                            node = node.expression;
-                            break;
+                    case "ClassDeclaration":
+                        continue;
+                    case "FunctionDeclaration":
+                        continue;
+                    case "FunctionExpression":
+                        continue;
+                    case "GeneratorDeclaration":
+                        continue;
+                    case "GeneratorExpression":
+                        continue;
+                    case "ArrowExpression":
+                        continue;
+                    case "ExpressionStatement":
+                        node = node.expression;
+                        break;
                 }
                 if (IsIteration[type] && Contains(node, S)) return true;
                 if (S.indexOf(type) > -1) return true;
@@ -3165,6 +3202,7 @@ define("slower-static-semantics", function (require, exports) {
         }
         return false;
     }
+
     function BoundNames(list, names) {
         var item, name, node, type;
         names = names || [];
@@ -3181,16 +3219,34 @@ define("slower-static-semantics", function (require, exports) {
                 type = node.type;
                 switch (type) {
                     case "ArrayPattern":
-                    case "ObjectPattern": names = BoundNames(node.elements, names); break;
-                    case "ForDeclaration": names = BoundNames(node.id, names); break;
-                    case "ExportStatement": names = BoundNames(node.exports, names); break;
+                    case "ObjectPattern":
+                        names = BoundNames(node.elements, names);
+                        break;
+                    case "ForDeclaration":
+                        names = BoundNames(node.id, names);
+                        break;
+                    case "ExportStatement":
+                        names = BoundNames(node.exports, names);
+                        break;
                     /* alle nach id.name (identifier node) transformieren !!! */
-                    case "FunctionDeclaration":names.push(node.id); break;
-                    case "VariableDeclarator": names.push(node.id.name); break;
-                    case "GeneratorDeclaration": names.push(node.id); break;
-                    case "Identifier": names.push(node.name); break;
-                    case "DefaultParameter": names.push(node.id); break;
-                    case "RestParameter": names.push(node.id); break;
+                    case "FunctionDeclaration":
+                        names.push(node.id);
+                        break;
+                    case "VariableDeclarator":
+                        names.push(node.id.name);
+                        break;
+                    case "GeneratorDeclaration":
+                        names.push(node.id);
+                        break;
+                    case "Identifier":
+                        names.push(node.name);
+                        break;
+                    case "DefaultParameter":
+                        names.push(node.id);
+                        break;
+                    case "RestParameter":
+                        names.push(node.id);
+                        break;
                 }
             }
             //debug("BoundNames: " + names.join(","));
@@ -3222,6 +3278,7 @@ define("slower-static-semantics", function (require, exports) {
             return list.boundNames = names;
         }
     }
+
     function VarDeclaredNames(node, names) {
         var decl, body, i, j, k, l;
         names = names || [];
@@ -3248,7 +3305,7 @@ define("slower-static-semantics", function (require, exports) {
                 } else if (type === "IfStatement") {
                     names = VarDeclaredNames(node.consequent, names);
                     names = VarDeclaredNames(node.alternate, names);
-	            } else if (type === "WhileStatement") {
+                } else if (type === "WhileStatement") {
                     VarDeclaredNames(node.body, names);
                 } else if (type === "DoWhileStatement") {
                     VarDeclaredNames(node.body, names);
@@ -3300,7 +3357,7 @@ define("slower-static-semantics", function (require, exports) {
         while (stack.length) {
             node = stack.pop();
             switch (node.type) {
-                    case "VariableDeclaration":
+                case "VariableDeclaration":
                     if (node.kind === "var") {
                         var decls = node.declarations;
                         for (k = 0, l = decls.length; k < l; k++) {
@@ -3310,47 +3367,47 @@ define("slower-static-semantics", function (require, exports) {
                         }
                     }
                     break;
-                    case "BlockStatement":
-                        VarScopedDeclarations(node.body, list);
+                case "BlockStatement":
+                    VarScopedDeclarations(node.body, list);
                     break;
-                    case "FunctionDeclaration":
-                        if (!node.expression) list.push(node);
+                case "FunctionDeclaration":
+                    if (!node.expression) list.push(node);
                     break;
-                    case "IfStatement":
-                        VarScopedDeclarations(node.consequent, list);
-                        VarScopedDeclarations(node.alternate, list);
+                case "IfStatement":
+                    VarScopedDeclarations(node.consequent, list);
+                    VarScopedDeclarations(node.alternate, list);
                     break;
-                    case "WhileStatement":
-                        VarScopedDeclarations(node.body, list);
+                case "WhileStatement":
+                    VarScopedDeclarations(node.body, list);
                     break;
-                    case "DoWhileStatement":
-                        VarScopedDeclarations(node.body, list);
+                case "DoWhileStatement":
+                    VarScopedDeclarations(node.body, list);
                     break;
-                    case "TryStatement":
-                        VarScopedDeclarations(node.handler, list);
+                case "TryStatement":
+                    VarScopedDeclarations(node.handler, list);
                     break;
-                    case "CatchClause":
-                        VarScopedDeclarations(node.block, list);
+                case "CatchClause":
+                    VarScopedDeclarations(node.block, list);
                     break;
-                    case "Finally":
-                        VarScopedDeclarations(node.block, list);
+                case "Finally":
+                    VarScopedDeclarations(node.block, list);
                     break;
-                    case "SwitchStatement":
-                        VarScopedDeclarations(node.cases, list);
+                case "SwitchStatement":
+                    VarScopedDeclarations(node.cases, list);
                     break;
-                    case "ForStatement":
-                            list = VarScopedDeclarations(node.init, list);
-                            list = VarScopedDeclarations(node.body, list);
+                case "ForStatement":
+                    list = VarScopedDeclarations(node.init, list);
+                    list = VarScopedDeclarations(node.body, list);
                     break;
-                    case "ForInStatement":
-                            if (node.left && node.left.type === "Identifier") list.push(node.left.name);
-                            else list = VarScopedDeclarations(node.left, list);
-                            list = VarScopedDeclarations(node.body, list);
+                case "ForInStatement":
+                    if (node.left && node.left.type === "Identifier") list.push(node.left.name);
+                    else list = VarScopedDeclarations(node.left, list);
+                    list = VarScopedDeclarations(node.body, list);
                     break;
-                    case "ForOfStatement":
-                            if (node.left && node.left.type === "Identifier") list.push(node.left.name);
-                            else list = VarScopedDeclarations(node.left, list);
-                            list = VarScopedDeclarations(node.body, list);
+                case "ForOfStatement":
+                    if (node.left && node.left.type === "Identifier") list.push(node.left.name);
+                    else list = VarScopedDeclarations(node.left, list);
+                    list = VarScopedDeclarations(node.body, list);
                     break;
             }
         }
@@ -3386,12 +3443,12 @@ define("slower-static-semantics", function (require, exports) {
                     VarScopedDeclarations(node.elements, list)
                 } else if (type === "BindingElement") {
                     /*
-                        how to treat binding element in this list
-                        make it same as variable declarator
-                        binding element === variable declarator
-                        for properties, type should be recognized
-                        boundnames should deliver .target and not
-                        .id
+                     how to treat binding element in this list
+                     make it same as variable declarator
+                     binding element === variable declarator
+                     for properties, type should be recognized
+                     boundnames should deliver .target and not
+                     .id
                      */
                 } else if (type === "ForDeclaration") {
                     VarScopedDeclaration(node.id, list);
@@ -3439,6 +3496,7 @@ define("slower-static-semantics", function (require, exports) {
         input.varScopedDeclarations = list;
         return list;
     }
+
     function LexicallyDeclaredNames(node, names) {
         var body, decl, i, j, k, l, input = node;
         if (!names) names = [];
@@ -3469,6 +3527,7 @@ define("slower-static-semantics", function (require, exports) {
     }
 
     var LexicalDeclarations = LexicallyScopedDeclarations;
+
     function LexicallyScopedDeclarations(node, list) {
         if (!node) return;
         var body, decl, i, j, k, l, input = node;
@@ -3503,12 +3562,13 @@ define("slower-static-semantics", function (require, exports) {
         return list;
     }
 
-    function DeclaredNames (node) {
+    function DeclaredNames(node) {
         var lexNames = LexicallyDeclaredNames(node);
         var varNames = VarDeclaredNames(node);
         var names = lexNames.concat(varNames);
         return names;
     }
+
     function ReferencesSuper(node) {
         var type;
         var stmt, contains = false;
@@ -3555,6 +3615,7 @@ define("slower-static-semantics", function (require, exports) {
         node.needsSuper = false;
         return false;
     }
+
     function ConstructorMethod(defs) {
         var C, def;
         if (Array.isArray(defs)) {
@@ -3574,6 +3635,7 @@ define("slower-static-semantics", function (require, exports) {
         }
         return null;
     }
+
     function PrototypeMethodDefinitions(defs, checkList) {
         var def, list = [];
         for (var i = 0, j = defs.length; i < j; i++) {
@@ -3585,6 +3647,7 @@ define("slower-static-semantics", function (require, exports) {
         }
         return list;
     }
+
     function StaticMethodDefinitions(defs, checkList) {
         var def, list = [],
             checkList = Object.create(null);
@@ -3593,7 +3656,7 @@ define("slower-static-semantics", function (require, exports) {
             if (def && def.type === "MethodDefinition") {
                 if (def.static) {
                     var id = def.id && def.id.name;
-                    if (id && checkList[id] && def.kind !== "get" && def.kind !== "set") return newSyntaxError( "duplicate static method definition: " + id);
+                    if (id && checkList[id] && def.kind !== "get" && def.kind !== "set") return newSyntaxError("duplicate static method definition: " + id);
                     else {
                         checkList[id] = def.kind;
                         list.push(def);
@@ -3603,9 +3666,11 @@ define("slower-static-semantics", function (require, exports) {
         }
         return list;
     }
+
     function SpecialMethod() {
         if (node.kind === "get" || node.kind === "set") return true;
     }
+
     function HasInitializer(node) {
         var type = node.type;
         if (node.id && node.init) return true;
@@ -3613,6 +3678,7 @@ define("slower-static-semantics", function (require, exports) {
         else if (type === "VariableDeclarator" && node.init) return true;
         else if (type === "DefaultParameter") return true;
     }
+
     function IsSimpleParameterList(list) {
         var p;
         for (var i = 0, j = list.length; i < j; i++) {
@@ -3622,6 +3688,7 @@ define("slower-static-semantics", function (require, exports) {
         }
         return true;
     }
+
     function ExpectedArgumentCount(list) {
         var p;
         for (var i = 0, j = list.length; i < j; i++) {
@@ -3631,6 +3698,7 @@ define("slower-static-semantics", function (require, exports) {
         }
         return j;
     }
+
     function IsValidSimpleAssignmentTarget(node) {
         var type = node.type;
         if (type === "Identifier") return true;
@@ -3639,6 +3707,7 @@ define("slower-static-semantics", function (require, exports) {
         if (type === "BinaryExpression") return false;
         return false;
     }
+
     function StringValue(node) {
         if (!node) return;
         switch (node.type) {
@@ -3658,6 +3727,7 @@ define("slower-static-semantics", function (require, exports) {
                 return node.id;
         }
     }
+
     function PropName(node) {
         if (typeof node === "string") return node;
         var type = node.type;
@@ -3668,12 +3738,15 @@ define("slower-static-semantics", function (require, exports) {
         if (type === "MethodDefinition") return PropName(id);
         if (typeof id === "object") return StringValue(id);
     }
+
     function ElisionWidth(E) {
-        return (E && E.width)|0;
+        return (E && E.width) | 0;
     }
+
     function IsConstantDeclaration(node) {
         return node.kind === "const";
     }
+
     function IsLexicalDeclaration(node) {
         var type = node.type;
         var kind = node.kind;
@@ -3684,6 +3757,7 @@ define("slower-static-semantics", function (require, exports) {
         }
         return false;
     }
+
     function dupesInTheTwoLists(list1, list2, memo) {
         var hasDupe = false;
         var memo = memo || Object.create(null);
@@ -3696,6 +3770,7 @@ define("slower-static-semantics", function (require, exports) {
             else memo[list2[i]] = true;
         return false;
     }
+
     function dupesInTheList(list, memo) {
         var hasDupe = false;
         var memo = memo || Object.create(null);
@@ -3705,20 +3780,28 @@ define("slower-static-semantics", function (require, exports) {
         }
         return false;
     }
-    function TV(t) {}
-    function TRV(t) {}
+
+    function TV(t) {
+    }
+
+    function TRV(t) {
+    }
+
     function CV(lit) {
         return lit.name || lit.value;
     }
+
     function MV(value) {
         return +value;
     }
+
     function SV(value) {
         return "" + value;
     }
+
     function isDuplicateProperty(id, checkList) {
         if (checkList[id]) {
-            return newTypeError( "duplicate property or method definition: " + id);
+            return newTypeError("duplicate property or method definition: " + id);
         } else return false;
     }
 
@@ -3841,6 +3924,7 @@ define("tokenizer", function () {
     var withExtras = false;
     var debugmode = false;
     var hasConsole = typeof console === "object" && console && typeof console.log === "function";
+
     function debug() {
         if (debugmode && hasConsole) {
             if (typeof arguments[0] == "object") {
@@ -3848,40 +3932,52 @@ define("tokenizer", function () {
             } else console.log.apply(console, arguments);
         }
     }
+
     function match(c) {
         if (c == ch) next();
-        else throw new SyntaxError("tokenizer: "+ c + " expected, saw "+ch)
+        else throw new SyntaxError("tokenizer: " + c + " expected, saw " + ch)
     }
+
     function Assert(test, message) {
-        if (!test) throw new SyntaxError("assertion failed in tokenizer: "+message);
+        if (!test) throw new SyntaxError("assertion failed in tokenizer: " + message);
     }
+
     function updateStack(se) {
         var oldstack = se.stack;
-        se.stack = "syntax.js tokenizer,\nfunction tokenize,\n does not recognize actual input. ch=" + ch + ", lookahead=" + lookahead + ", line=" + line + ", col=" + column + ", offset=" + offset + ", pos="+pos+" " +sourceCode+" \n" + oldstack;
-    }    function atLineCol() {
-        return ch + " at offset " + pos + " at line " + line + " at column " + column + ", lookahead="+lookahead;
+        se.stack = "syntax.js tokenizer,\nfunction tokenize,\n does not recognize actual input. ch=" + ch + ", lookahead=" + lookahead + ", line=" + line + ", col=" + column + ", offset=" + offset + ", pos=" + pos + " " + sourceCode + " \n" + oldstack;
     }
-    function setCustomTokenMaker (func) {
+
+    function atLineCol() {
+        return ch + " at offset " + pos + " at line " + line + " at column " + column + ", lookahead=" + lookahead;
+    }
+
+    function setCustomTokenMaker(func) {
         if (typeof func === null) {
             createCustomToken = null;
         } else if (typeof func === "function") {
             createCustomToken = func;
         } else throw new TypeError("tokenmaker must be a 'function token_maker(my_token) returns your_token' to return a custom token. Please fix that and try again.");
     }
-    function unsetCustomTokenMaker () {
+
+    function unsetCustomTokenMaker() {
         createCustomToken = null;
     }
+
     function setWithExtras(bool) {
         withExtras = !!bool;
     }
+
     var extraBuffer = [];
+
     function exchangeExtraBuffer() {
         var b = extraBuffer;
         extraBuffer = [];
         tokenize.extraBuffer = b; // available in the parser.
         return b;
     }
+
     var saved = [];
+
     function saveState() {
         saved.push({
             sourceCode: sourceCode,
@@ -3894,6 +3990,7 @@ define("tokenizer", function () {
             inputElementGoal: inputElementGoal
         });
     }
+
     function restoreState() {
         var memento;
         if (memento = saved.pop()) {
@@ -3907,15 +4004,17 @@ define("tokenizer", function () {
             inputElementGoal = memento.inputElementGoal;
         }
     }
+
     function LineTerminator() {
         if (LineTerminators[ch]) {
             makeToken("LineTerminator", ch);
-            if (!(ch  === "\r" && lookahead === "\n")) nextLine();
+            if (!(ch === "\r" && lookahead === "\n")) nextLine();
             next();
             return token;
         }
         return false;
     }
+
     function WhiteSpace() {
         var spaces = "";
         var spc;
@@ -3932,6 +4031,7 @@ define("tokenizer", function () {
         }
         return false;
     }
+
     function StringLiteral() {
         var quotecharacter;
         var string = "";
@@ -3958,7 +4058,7 @@ define("tokenizer", function () {
                             n -= 2;
                         } else {
                             multiline = true;
-                            string = string.substr(0, string.length-1);
+                            string = string.substr(0, string.length - 1);
                             if (lookahead == "\r") next();// pass \n
                             if (lookahead == "\n") next();
                             nextLine();
@@ -3966,7 +4066,6 @@ define("tokenizer", function () {
                         }
                     }
                 }
-
 
 
                 if (LineTerminators[ch]) {
@@ -3981,7 +4080,8 @@ define("tokenizer", function () {
 
         return false;
     }
-    function TemplateLiteral () {
+
+    function TemplateLiteral() {
         // `edward ${ ""+ist+y } toll ${ oder } nicht?`
         // [ "edward ", " \""+ist+y ", " toll ", " oder ", " nicht" ]
 
@@ -4029,6 +4129,7 @@ define("tokenizer", function () {
         }
         return false;
     }
+
     function Comments() {
         var comment = "";
         var type;
@@ -4064,6 +4165,7 @@ define("tokenizer", function () {
         }
         return false;
     }
+
     function RegularExpressionLiteral() {
         if (ch === "/" && !NotBeforeRegExp[tokenType] && !RegExpNoneOfsVal[tokenValue]) {
             var expr = "";
@@ -4098,7 +4200,7 @@ define("tokenizer", function () {
                     hasFlags[ch] = true;
                     next();
                 }
-                if (!(WhiteSpaces[ch]||Punctuators[ch]||LineTerminators[ch]) && ch != undefined) {
+                if (!(WhiteSpaces[ch] || Punctuators[ch] || LineTerminators[ch]) && ch != undefined) {
                     throw new SyntaxError("unexpected token illegal");
                 }
                 makeToken("RegularExpressionLiteral", [expr, flags]);
@@ -4109,6 +4211,7 @@ define("tokenizer", function () {
         }
         return false;
     }
+
     function DivPunctuator() {
         var tok;
         if (ch === "/") {
@@ -4135,6 +4238,7 @@ define("tokenizer", function () {
         }
         return false;
     }
+
     function Punctuation() {
         if (ch == "/") return DivPunctuator();
         if (ParensSemicolonComma[ch]) {
@@ -4148,14 +4252,17 @@ define("tokenizer", function () {
         } else {
             punct = sourceCode[pos] + sourceCode[pos + 1] + sourceCode[pos + 2] + sourceCode[pos + 3];
             if (punct === ">>>=") {
-                next();next();next();
+                next();
+                next();
+                next();
                 makeToken("Punctuator", punct, undefined, PunctToExprName[punct]);
                 next();
                 return token;
             }
             punct = punct[0] + punct[1] + punct[2];
             if (Punctuators[punct]) {
-                next();next();
+                next();
+                next();
                 makeToken("Punctuator", punct, undefined, PunctToExprName[punct]);
                 next();
                 return token;
@@ -4176,16 +4283,17 @@ define("tokenizer", function () {
         }
         return false;
     }
+
     function getDecimalDigits(number) {
         var dot = false, exp = false;
-        if (DecimalDigits[ch] || (ch === "." && DecimalDigits[lookahead] && (dot=true))) {
+        if (DecimalDigits[ch] || (ch === "." && DecimalDigits[lookahead] && (dot = true))) {
             number += ch;
-            for (;;) {
+            for (; ;) {
                 if (DecimalDigits[lookahead] || (lookahead === "." && !dot)) {
                     next();
                     number += ch;
                     if (ExponentIndicator[lookahead]) {
-                        if(!exp) {
+                        if (!exp) {
                             exp = true;
                             next();
                             number += ch;
@@ -4212,6 +4320,7 @@ define("tokenizer", function () {
         }
         return false;
     }
+
     function NumericLiteral() {
         var number = "", longName, computed = 0;
         if (ch === "0" && NumericLiteralLetters[lookahead]) {
@@ -4249,8 +4358,8 @@ define("tokenizer", function () {
             }
             makeToken("NumericLiteral", number, computed, longName);
             // syntax error works for all three above
-            if (!(WhiteSpaces[lookahead]||Punctuators[lookahead]||LineTerminators[lookahead]) && lookahead != undefined) {
-                throw new SyntaxError("unexpected token illegal in "+longName);
+            if (!(WhiteSpaces[lookahead] || Punctuators[lookahead] || LineTerminators[lookahead]) && lookahead != undefined) {
+                throw new SyntaxError("unexpected token illegal in " + longName);
             }
             next();
             return token;
@@ -4260,14 +4369,15 @@ define("tokenizer", function () {
 
             computed = +number; // code for MV function
             makeToken("NumericLiteral", number, computed, "DecimalLiteral");
-            if (!(WhiteSpaces[lookahead]||Punctuators[lookahead]||LineTerminators[lookahead]) && lookahead != undefined) {
-                throw new SyntaxError("unexpected token illegal in "+longName);
+            if (!(WhiteSpaces[lookahead] || Punctuators[lookahead] || LineTerminators[lookahead]) && lookahead != undefined) {
+                throw new SyntaxError("unexpected token illegal in " + longName);
             }
             next();
             return token;
         }
         return false;
     }
+
     function getUnicodeBody() {
         var max, now = 0, raw = "";
         if (lookahead == "1") max = 5;
@@ -4279,9 +4389,10 @@ define("tokenizer", function () {
             raw += ch;
             if (now === max) break;
         }
-        if (now < max) throw new SyntaxError("unexpected kind of unicode literal "+max+" digits expected");
+        if (now < max) throw new SyntaxError("unexpected kind of unicode literal " + max + " digits expected");
         return raw;
     }
+
     function EscapeSequence() {
         var raw = "";
         var value = "";
@@ -4329,12 +4440,13 @@ define("tokenizer", function () {
                 value = eval("\'" + raw + "\'");
             }
             else {
-                throw new SyntaxError("invalid escape sequence "+ch+ " "+lookahead);
+                throw new SyntaxError("invalid escape sequence " + ch + " " + lookahead);
             }
             return value;
         }
         return false;
     }
+
     /*
      function UnicodeEscape() {
      var raw = "",
@@ -4429,7 +4541,9 @@ define("tokenizer", function () {
             pos += 1;
             ch = lookahead;
             lookahead = sourceCode[pos + 1];
-            if (k) { return next(--k); }
+            if (k) {
+                return next(--k);
+            }
             return ch;
         }
         return !!(ch = lookahead = undefined);
@@ -4440,11 +4554,11 @@ define("tokenizer", function () {
         token = Object.create(null);
         ltLast = ltNext;
         if (type === "LineTerminator") ltNext = true;
-        else ltNext =false;
+        else ltNext = false;
         token.type = type;
         token.longName = longName;
         token.value = value;
-        token.computed =  computed;
+        token.computed = computed;
         if ((FewUnaryKeywords[value] || PunctOrLT[type]) && !OneOfThesePunctuators[value]) {
             inputElementGoal = inputElementRegExp;
         }
@@ -4504,7 +4618,7 @@ define("tokenizer", function () {
         else if (WhiteSpaces[ch]) WhiteSpace();
         else if (LineTerminators[ch]) LineTerminator();
 
-        if (!token && pos < length) throw new SyntaxError("Unknown Character: "+atLineCol());
+        if (!token && pos < length) throw new SyntaxError("Unknown Character: " + atLineCol());
         else if (!token) return finishToken();
         if (SkipableToken[token.type]) {
             if (token.type === "LineTerminator") ltNext = true;
@@ -4533,7 +4647,7 @@ define("tokenizer", function () {
         line = 1;
         column = 1;
         pos = -1;
-        length = (sourceCode&&sourceCode.length)|0;
+        length = (sourceCode && sourceCode.length) | 0;
         ch = undefined;
         lookahead = sourceCode[0];
         next();
@@ -4548,21 +4662,25 @@ define("tokenizer", function () {
             token = undefined;
 
             /*
-                        if (WhiteSpaces[ch]) WhiteSpace();
-                        else if (LineTerminators[ch]) LineTerminator();
-                        else if (DecimalDigits[ch] || ch == ".") NumericLiteral();
-                        if (!token) {
-                            if (Punctuators[ch]) Punctuation();
-                            else if (IdentifierStart[ch]) KeywordOrIdentifier();
-                            else if (Quotes[ch]) StringLiteral();
-                            else if (ch == "`") TemplateLiteral();
-                        }
-                    */
+             if (WhiteSpaces[ch]) WhiteSpace();
+             else if (LineTerminators[ch]) LineTerminator();
+             else if (DecimalDigits[ch] || ch == ".") NumericLiteral();
+             if (!token) {
+             if (Punctuators[ch]) Punctuation();
+             else if (IdentifierStart[ch]) KeywordOrIdentifier();
+             else if (Quotes[ch]) StringLiteral();
+             else if (ch == "`") TemplateLiteral();
+             }
+             */
             switch (ch) {
                 case " ":
-                case "\t": WhiteSpace(); break;
+                case "\t":
+                    WhiteSpace();
+                    break;
                 case "\r":
-                case "\n": LineTerminator(); break;
+                case "\n":
+                    LineTerminator();
+                    break;
                 case "0":
                 case "1":
                 case "2":
@@ -4573,10 +4691,16 @@ define("tokenizer", function () {
                 case "7":
                 case "8":
                 case "9":
-                case ".": NumericLiteral(); break;
+                case ".":
+                    NumericLiteral();
+                    break;
                 case "'":
-                case "\"": StringLiteral(); break;
-                case "`":  TemplateLiteral(); break;
+                case "\"":
+                    StringLiteral();
+                    break;
+                case "`":
+                    TemplateLiteral();
+                    break;
                 default:
                     if (IdentifierStart[ch]) KeywordOrIdentifier();
                     break;
@@ -4584,34 +4708,33 @@ define("tokenizer", function () {
             if (!token && Punctuators[ch]) Punctuation();
 
 
-	    /*
-	    
-	    // slowest ist the ORing of Functions() which have to be called,
-	    // which means a whole EvaluateCall Situation. On node it´s 20% more
-	    // just for calling 6 function EACH CHARACTER.
-	    
-	    // The second biggest lost is currently in parser´s OLD next,
-	    // which skips WhiteSpaces and Co. TWICE. Simply removing causes
-	    // in faults, and i didn´t see it, although it´s simple.
-	    
+            /*
+
+             // slowest ist the ORing of Functions() which have to be called,
+             // which means a whole EvaluateCall Situation. On node it´s 20% more
+             // just for calling 6 function EACH CHARACTER.
+
+             // The second biggest lost is currently in parser´s OLD next,
+             // which skips WhiteSpaces and Co. TWICE. Simply removing causes
+             // in faults, and i didn´t see it, although it´s simple.
+
              WhiteSpace() || LineTerminator() || DivPunctuator() || NumericLiteral() || Punctuation()|| KeywordOrIdentifier() || StringLiteral() || TemplateLiteral();
 
-	    */
+             */
 
             if (!token && pos < length) {
-                var errorMsg = "Unknown Character: "+ch+" at offset "+pos+" at line "+line+" at column "+column;
+                var errorMsg = "Unknown Character: " + ch + " at offset " + pos + " at line " + line + " at column " + column;
                 restoreState();
                 throw new SyntaxError(errorMsg);
             }
             if (withExtras) {
                 exchangeExtraBuffer();
             }
-            
+
         } while (ch !== undefined);
         restoreState();
         return tokens;
     }
-
 
 
     function tokenizeIntoArrayWithWhiteSpaces(jsSourceText, callback) {
@@ -4664,20 +4787,20 @@ define("tokenizer", function () {
 /*
  * Created by root on 06.03.14.
  *
-   * Early Errors is now separated from the parser.
-   * -------------------------------------------
-   * This "visitor" performs a check on each node,
-   * whether the data is valid or not.
-   * What´s valid and what´s not is listed in the spec.
-   *
-   * If the data is invalid it throws a new SyntaxError()
-   *
-   * CONTAINS is the second experiment
-   * ----------------------------------
-   * Contains is now becoming a blacklist
-   * test with
-   * if (Contains[node.type][field]) throw SyntaxError;
-   *
+ * Early Errors is now separated from the parser.
+ * -------------------------------------------
+ * This "visitor" performs a check on each node,
+ * whether the data is valid or not.
+ * What´s valid and what´s not is listed in the spec.
+ *
+ * If the data is invalid it throws a new SyntaxError()
+ *
+ * CONTAINS is the second experiment
+ * ----------------------------------
+ * Contains is now becoming a blacklist
+ * test with
+ * if (Contains[node.type][field]) throw SyntaxError;
+ *
  *
  */
 define("earlyerrors", function () {
@@ -4702,26 +4825,46 @@ define("earlyerrors", function () {
     };
     EarlyErrors.FunctionDeclaration = function (node) {
     };
-    EarlyErrors.ModuleDeclaration = function (node) {};
-    EarlyErrors.Statement = function (node) {};
-    EarlyErrors.StatementList = function (node) {};
-    EarlyErrors.ObjectExpression = function (node) {};
-    EarlyErrors.ArrayExpression = function (node) {};
-    EarlyErrors.ArrayComprehension = function (node) {};
-    EarlyErrors.GeneratorComprehension = function (node) {};
-    EarlyErrors.GeneratorDeclaration = function (node) {};
-    EarlyErrors.ForStatement = function (node) {};
-    EarlyErrors.WhileStatement = function (node) {};
-    EarlyErrors.DoWhileStatement = function (node) {};
-    EarlyErrors.IfStatement = function (node) {};
-    EarlyErrors.SwitchStatement = function (node) {};
-    EarlyErrors.VariableDeclaration = function (node) {};
-    EarlyErrors.LexicalDeclaration = function (node) {};
-    EarlyErrors.ClassDeclaration = function (node) {};
-    EarlyErrors.BlockDeclaration = function (node) {};
-    EarlyErrors.Expression = function (node) {};
-    EarlyErrors.ArrowExpression = function (node) {};
-    EarlyErrors.FormalParameterList = function (node) {};
+    EarlyErrors.ModuleDeclaration = function (node) {
+    };
+    EarlyErrors.Statement = function (node) {
+    };
+    EarlyErrors.StatementList = function (node) {
+    };
+    EarlyErrors.ObjectExpression = function (node) {
+    };
+    EarlyErrors.ArrayExpression = function (node) {
+    };
+    EarlyErrors.ArrayComprehension = function (node) {
+    };
+    EarlyErrors.GeneratorComprehension = function (node) {
+    };
+    EarlyErrors.GeneratorDeclaration = function (node) {
+    };
+    EarlyErrors.ForStatement = function (node) {
+    };
+    EarlyErrors.WhileStatement = function (node) {
+    };
+    EarlyErrors.DoWhileStatement = function (node) {
+    };
+    EarlyErrors.IfStatement = function (node) {
+    };
+    EarlyErrors.SwitchStatement = function (node) {
+    };
+    EarlyErrors.VariableDeclaration = function (node) {
+    };
+    EarlyErrors.LexicalDeclaration = function (node) {
+    };
+    EarlyErrors.ClassDeclaration = function (node) {
+    };
+    EarlyErrors.BlockDeclaration = function (node) {
+    };
+    EarlyErrors.Expression = function (node) {
+    };
+    EarlyErrors.ArrowExpression = function (node) {
+    };
+    EarlyErrors.FormalParameterList = function (node) {
+    };
 
 
     /**
@@ -4742,33 +4885,33 @@ define("earlyerrors", function () {
 
 
     Contains.Program = {
-        __proto__:null,
-       "BreakStatement":true,
-       "ContinueStatement": true,
-       "ReturnStatement": true,
-       "SuperExpression": true
+        __proto__: null,
+        "BreakStatement": true,
+        "ContinueStatement": true,
+        "ReturnStatement": true,
+        "SuperExpression": true
     };
 
 
     /*
-	Problem:
-	
-	"ExpressionStatement"
-	
-	blocks contains.
-    
-    */
+     Problem:
+
+     "ExpressionStatement"
+
+     blocks contains.
+
+     */
 
     Contains.FunctionDeclaration = {
-	__proto__:null,
-       "BreakStatement":true,
-       "ContinueStatement": true
+        __proto__: null,
+        "BreakStatement": true,
+        "ContinueStatement": true
     };
 
 
     Contains.ModuleDeclaration = {
-        __proto__:null,
-        "BreakStatement":true,
+        __proto__: null,
+        "BreakStatement": true,
         "ContinueStatement": true,
         "ReturnStatement": true,
         "SuperExpression": true
@@ -4780,7 +4923,6 @@ define("earlyerrors", function () {
         Contains: Contains
     };
 });
-
 
 define("parser", function () {
 
@@ -4885,9 +5027,9 @@ define("parser", function () {
     var state = "";
     var parseGoalState;
     var ContainNoSuperIn = {
-        "Program" : true,
+        "Program": true,
         "ModuleDeclaration": true,
-        "Module" : true
+        "Module": true
     };
     var PatternName = {
         __proto__: null,
@@ -4926,6 +5068,7 @@ define("parser", function () {
         node.extras[prop][dir] = extraBuffer;
         tokenize.extraBuffer = [];
     }
+
     function dumpExtras2(node, prop) {   // dumpExtras(id, "id", "before");
         var extras;
         var extraBuffer = tokenize.extraBuffer;
@@ -4938,6 +5081,7 @@ define("parser", function () {
     function startLoc() {
         return loc.start;
     }
+
     function endLoc(node, l1) {
         node.loc = makeLoc(l1, loc.end);
     }
@@ -4950,36 +5094,45 @@ define("parser", function () {
         }
         if (hasPrint) print.apply(null, arguments);
     }
+
     function debugdir() {
         if (debugmode && hasConsole) console.dir.apply(console, arguments);
     }
+
     function pushStrict(v) {
         strictStack.push(isStrict);
         isStrict = v;
     }
+
     function popStrict() {
         isStrict = strictStack.pop();
     }
+
     function pushState(newState) {
         stateStack.push(state);
         state = newState;
     }
+
     function popState() {
         state = stateStack.pop();
     }
+
     function pushNoIn(new_state) {
         inStack.push(isIn);
         isIn = new_state;
     }
+
     function popNoIn() {
         isIn = inStack.pop();
     }
+
     function build(node) {
         if (!compile) return node;
         var type = node.type;
         var work = builder[type];
         return work(node);
     }
+
     function rotate_binexps(node) {
         if (node.right) {
             var tmp,
@@ -4994,6 +5147,7 @@ define("parser", function () {
         }
         return node;
     }
+
     function makeLoc(start, end, filename, source) {
         return {
             start: start || {},
@@ -5002,6 +5156,7 @@ define("parser", function () {
             filename: filename
         };
     }
+
     function stringifyTokens(array) {
         var string = "";
         for (var i = 0, j = array.length; i < j; i++) {
@@ -5009,6 +5164,7 @@ define("parser", function () {
         }
         return string;
     }
+
     function augmentErrorStack(error) {
         var stack = error.stack;
         var line = loc.start.line;
@@ -5018,39 +5174,51 @@ define("parser", function () {
         if (stack) error.stack += stack;
         return error;
     }
+
     function charExpectedString(C) {
         var line = loc.start.line;
         var column = loc.start.column;
-        return C + " expected "+atLineCol();
+        return C + " expected " + atLineCol();
     }
+
     function atLineCol() {
         var line = loc.start.line;
         var column = loc.start.column;
-        return " [[value="+v+" type="+t+" lookVal="+lookVal+" at line "+line+", column "+column+"]]";
+        return " [[value=" + v + " type=" + t + " lookVal=" + lookVal + " at line " + line + ", column " + column + "]]";
     }
+
     var uqrx = /^("|')|("|')$/g;
+
     function unquote(str) {
         return str.replace(uqrx, ""); //'
     }
+
     var observers = [];
+
     function registerObserver(f) {
         if (typeof f === "function")
             observers.push(f);
         else
             throw new TypeError("registerObserver: argument f is not a function")
     }
+
     function unregisterObserver(f) {
-        observers = observers.filter(function (g) { return f !== g; });
+        observers = observers.filter(function (g) {
+            return f !== g;
+        });
     }
+
     function notifyObserver(observer) {
         observer(node);
     }
+
     function notifyObservers(node) {
         observers.forEach(notifyObserver);
         return node;
     }
 
     var saveBuilder = [];
+
     function unsetBuilder(builderObj) {
         var state;
         if (builder === builderObj) state = saveBuilder.pop();
@@ -5059,6 +5227,7 @@ define("parser", function () {
             compile = state.compile;
         }
     }
+
     function setBuilder(builderObj, boolCompile) {
         saveBuilder.push({
             builder: builder,
@@ -5071,11 +5240,12 @@ define("parser", function () {
         if (boolCompile !== undefined) compile = !!boolCompile;
         return true;
     }
-    function enableExtras () {
+
+    function enableExtras() {
         Object.keys(parser).forEach(function (k) {
             var f = parser[k];
             if (typeof f === "function" && !f.wrapped) {
-                if (k.indexOf("JSON")===0) return;
+                if (k.indexOf("JSON") === 0) return;
                 var originalFunction = f;
                 var parseFunction = function () {
                     var b = exchangeBuffer();
@@ -5091,32 +5261,42 @@ define("parser", function () {
             }
         });
     }
-    function disableExtras () {
+
+    function disableExtras() {
         Object.keys(parser).forEach(function (k) {
             var f = parser[k];
             if (typeof f === "function" && f.wrapped)
                 parser[k] = f.wrapped;
         });
     }
+
     function setWithExtras(value) {
         withExtras = !!value;
     }
+
     function isWithExtras() {
         return !!withExtras;
     }
+
     function consume(i) {
-        while (i > 0) { next(); i--; }
+        while (i > 0) {
+            next();
+            i--;
+        }
     }
+
     function match(C) { // match
         if (v === C) next();
         else throw new SyntaxError(charExpectedString(C));
     }
+
     function skip(C) {
         if (v === C) {
             next();
             return true;
         } else return false;
     }
+
     function semicolon() {
         if (v == ";") {
             gotSemi = true;
@@ -5125,6 +5305,7 @@ define("parser", function () {
             gotSemi = false;
         }
     }
+
     function eos() {
         return lookVal === undefined;
     }
@@ -5145,11 +5326,12 @@ define("parser", function () {
         }
         return token = v = t = undefined;
     }
+
     function nextToken__array__() {
         ltPassedBy = ltNext;
         ltNext = false;
         lookPos = pos;
-        for(;;) {
+        for (; ;) {
             lookTok = tokens[++lookPos];
             if (lookTok === undefined) {
                 lookVal = lookTyp = undefined;
@@ -5167,11 +5349,12 @@ define("parser", function () {
         pos = lookPos;
         return lookTok;
     }
+
     function nextToken__step__() {
         ltPassedBy = ltNext;
         ltNext = false;
         lookPos = pos;
-        for(;;) {
+        for (; ;) {
             ++lookPos;
             lookTok = tokenize.nextToken();
             if (lookTok === undefined) {
@@ -5198,91 +5381,93 @@ define("parser", function () {
             _id_: ++nodeId
         };
     }
+
     function Node(type) {
-        switch(type) {
+        switch (type) {
             case "Program":
-                return {type:type,_id_:++nodeId,strict:undefined,body:undefined,loc:undefined,extras:undefined};
+                return {type: type, _id_: ++nodeId, strict: undefined, body: undefined, loc: undefined, extras: undefined};
             case "Identifier":
-                return {type:type,_id_:++nodeId,name:undefined,loc:undefined,extras:undefined};
+                return {type: type, _id_: ++nodeId, name: undefined, loc: undefined, extras: undefined};
             case "ParenthesizedExpression":
             case "ExpressionStatement":
-                return {type:type,_id_:++nodeId,expression:undefined,loc:undefined,extras:undefined};
+                return {type: type, _id_: ++nodeId, expression: undefined, loc: undefined, extras: undefined};
             case "LexicalDeclaration":
             case "VariableDeclaration":
-                return {type:type,_id_:++nodeId,kind:undefined,declarations:undefined,loc:undefined,extras:undefined};
+                return {type: type, _id_: ++nodeId, kind: undefined, declarations: undefined, loc: undefined, extras: undefined};
             case "VariableDeclarator":
-                return {type:type,_id_:++nodeId,kind:undefined,id:undefined,init:undefined};
+                return {type: type, _id_: ++nodeId, kind: undefined, id: undefined, init: undefined};
             case "FunctionDeclaration":
             case "FunctionExpression":
             case "GeneratorDeclaration":
             case "GeneratorExpression":
-                return {type:type,_id_:++nodeId,expression:undefined,generator:undefined,strict:undefined,id:undefined,params:undefined,body:undefined,loc:undefined,extras:undefined};
+                return {type: type, _id_: ++nodeId, expression: undefined, generator: undefined, strict: undefined, id: undefined, params: undefined, body: undefined, loc: undefined, extras: undefined};
             case "ArrowExpression":
-                return {type:type,_id_:++nodeId,params:undefined,body:undefined,loc:undefined,ebxtras:undefined};
+                return {type: type, _id_: ++nodeId, params: undefined, body: undefined, loc: undefined, ebxtras: undefined};
             case "NumericLiteral":
             case "StringLiteral":
             case "BooleanLiteral":
             case "Literal":
-                return {type:type,_id_:++nodeId,value:undefined,loc:undefined,extras:undefined}
+                return {type: type, _id_: ++nodeId, value: undefined, loc: undefined, extras: undefined}
             case "TemplateLiteral":
-                return {type:type,_id_:++nodeId,spans:undefined,loc:undefined,extras:undefined}
+                return {type: type, _id_: ++nodeId, spans: undefined, loc: undefined, extras: undefined}
             case "ObjectExpression":
-                return {type:type,_id_:++nodeId,properties:undefined,loc:undefined,extras:undefined};
+                return {type: type, _id_: ++nodeId, properties: undefined, loc: undefined, extras: undefined};
             case "ArrayExpression":
-                return {type:type,_id_:++nodeId,elements:undefined,loc:undefined,extras:undefined};
+                return {type: type, _id_: ++nodeId, elements: undefined, loc: undefined, extras: undefined};
             case "ObjectPattern":
             case "ArrayPattern":
-                return {type:type,_id_:++nodeId,elements:undefined,loc:undefined,extras:undefined};
+                return {type: type, _id_: ++nodeId, elements: undefined, loc: undefined, extras: undefined};
             case "WhileStatement":
             case "DoWhileStatement":
-                return {type:type,_id_:++nodeId,test:undefined, body:undefined,loc:undefined,extras:undefined};
+                return {type: type, _id_: ++nodeId, test: undefined, body: undefined, loc: undefined, extras: undefined};
             case "BlockStatement":
-                return {type:type,_id_:++nodeId,body:undefined,loc:undefined,extras:undefined};
+                return {type: type, _id_: ++nodeId, body: undefined, loc: undefined, extras: undefined};
             case "IfStatement":
-                return {type:type,_id_:++nodeId,test:undefined,consequent:undefined,alternate:undefined,loc:undefined,extras:undefined};
+                return {type: type, _id_: ++nodeId, test: undefined, consequent: undefined, alternate: undefined, loc: undefined, extras: undefined};
             case "ConditionalExpression":
-                return {type:type,_id_:++nodeId,test:undefined,consequent:undefined,alternate:undefined,loc:undefined,extras:undefined};
+                return {type: type, _id_: ++nodeId, test: undefined, consequent: undefined, alternate: undefined, loc: undefined, extras: undefined};
             case "BinaryExpression":
             case "AssignmentExpression":
-                return {type:type,_id_:++nodeId,operator:undefined,left:undefined,right:undefined,loc:undefined,extras:undefined};
+                return {type: type, _id_: ++nodeId, operator: undefined, left: undefined, right: undefined, loc: undefined, extras: undefined};
             case "ForInOfStatement":
-                return {type:type,_id_:++nodeId,left:undefined,right:undefined,body:undefined,loc:undefined,extras:undefined};
+                return {type: type, _id_: ++nodeId, left: undefined, right: undefined, body: undefined, loc: undefined, extras: undefined};
             case "ForStatement":
-                return {type:type,_id_:++nodeId,init:undefined,test:undefined,update:undefined,loc:undefined,extras:undefined};
+                return {type: type, _id_: ++nodeId, init: undefined, test: undefined, update: undefined, loc: undefined, extras: undefined};
             case "NewExpression":
-                return {type:type,_id_:++nodeId, callee:undefined, arguments:undefined, loc:undefined, extras:undefined};
+                return {type: type, _id_: ++nodeId, callee: undefined, arguments: undefined, loc: undefined, extras: undefined};
             case "CallExpression":
-                return {type:type,_id_:++nodeId, callee:undefined, arguments:undefined, loc:undefined, extras:undefined};
+                return {type: type, _id_: ++nodeId, callee: undefined, arguments: undefined, loc: undefined, extras: undefined};
             case "RestParameter":
-                return {type:type,_id_:++nodeId, id:undefined, loc:undefined, extras:undefined};
+                return {type: type, _id_: ++nodeId, id: undefined, loc: undefined, extras: undefined};
             case "SpreadExpression":
-                return {type:type,_id_:++nodeId, id:undefined, loc:undefined, extras:undefined};
+                return {type: type, _id_: ++nodeId, id: undefined, loc: undefined, extras: undefined};
             case "BindingPattern":
-                return {type:type,_id_:++nodeId, id:undefined, target:undefined, loc:undefined, extras:undefined};
+                return {type: type, _id_: ++nodeId, id: undefined, target: undefined, loc: undefined, extras: undefined};
             case "ArrayComprehension":
-                return {type:type,_id_:++nodeId, blocks:undefined, filter:undefined, expression:undefined, loc:undefined, extras:undefined};
+                return {type: type, _id_: ++nodeId, blocks: undefined, filter: undefined, expression: undefined, loc: undefined, extras: undefined};
             case "GeneratorComprehension":
-                return {type:type,_id_:++nodeId, loc:undefined, extras:undefined};
+                return {type: type, _id_: ++nodeId, loc: undefined, extras: undefined};
             case "SwitchStatement":
-                return {type:type,_id_:++nodeId, discriminant:undefined, cases:undefined, loc:undefined, extras:undefined};
+                return {type: type, _id_: ++nodeId, discriminant: undefined, cases: undefined, loc: undefined, extras: undefined};
             case "DefaultCase":
-                return {type:type,_id_:++nodeId, consequent:undefined, loc:undefined, extras:undefined};
+                return {type: type, _id_: ++nodeId, consequent: undefined, loc: undefined, extras: undefined};
             case "SwitchCase":
-                return {type:type,_id_:++nodeId, test:undefined, consequent:undefined, loc:undefined, extras:undefined};
+                return {type: type, _id_: ++nodeId, test: undefined, consequent: undefined, loc: undefined, extras: undefined};
             case "TryStatement":
-                return {type:type,_id_:++nodeId, handler:undefined, guard:undefined, finalizer:undefined, loc:undefined, extras:undefined};
+                return {type: type, _id_: ++nodeId, handler: undefined, guard: undefined, finalizer: undefined, loc: undefined, extras: undefined};
             case "CatchClause":
-                return {type:type,_id_:++nodeId, block:undefined, loc:undefined, extras:undefined};
+                return {type: type, _id_: ++nodeId, block: undefined, loc: undefined, extras: undefined};
             case "Finally":
-                return {type:type,_id_:++nodeId, block:undefined, loc:undefined, extras:undefined};
+                return {type: type, _id_: ++nodeId, block: undefined, loc: undefined, extras: undefined};
             case "Elision":
-                return {type:type,_id_:++nodeId, width: undefined, loc: undefined, extras: undefined};
+                return {type: type, _id_: ++nodeId, width: undefined, loc: undefined, extras: undefined};
             default:
-                return {type:type,_id_:++nodeId, loc:undefined, extras:undefined};
+                return {type: type, _id_: ++nodeId, loc: undefined, extras: undefined};
         }
     }
 
     var positions = [];
+
     function saveTheDot() {
         var memento = {
             ast: ast,
@@ -5310,6 +5495,7 @@ define("parser", function () {
         positions.push(memento);
         return memento;
     }
+
     function restoreTheDot(memento) {
         memento = memento || positions.pop();
         if (memento) {
@@ -5338,6 +5524,7 @@ define("parser", function () {
             //         nodeTable = memento.nodeTable;
         }
     }
+
     function Literal() {
         var node;
         if (IsAnyLiteral[t]) {
@@ -5360,7 +5547,7 @@ define("parser", function () {
             node.name = v;
             node.loc = token.loc;
             if (isStrict && forbiddenIdentifierNamesInStrictMode[v]) {
-                throw new SyntaxError(v+" is no valid identifier name in strict mode");
+                throw new SyntaxError(v + " is no valid identifier name in strict mode");
             }
             match(v);
 
@@ -5387,6 +5574,7 @@ define("parser", function () {
         }
         return list.length ? list : null;
     }
+
     function ComprehensionFilters() {
         var list = [];
         while (v == "if") {
@@ -5397,6 +5585,7 @@ define("parser", function () {
         }
         return list.length ? list : null
     }
+
     function ArrayComprehension() {
         var node, blocks, filter;
         if (v === "[") {
@@ -5421,6 +5610,7 @@ define("parser", function () {
         }
         return null;
     }
+
     function GeneratorComprehension() {
         var node;
         if (v === "(") {
@@ -5442,6 +5632,7 @@ define("parser", function () {
         }
         return null;
     }
+
     function YieldAsIdentifier() {
         if (v === "yield") {
             if (isYieldId) {
@@ -5455,6 +5646,7 @@ define("parser", function () {
         }
         return null;
     }
+
     function YieldExpression() {
         if (v === "yield" && !isYieldId) {
             match("yield");
@@ -5465,6 +5657,7 @@ define("parser", function () {
         }
         return null;
     }
+
     function ClassExpression() {
         if (v === "class") {
             var isExpr = true;
@@ -5474,6 +5667,7 @@ define("parser", function () {
         }
         return null;
     }
+
     function TemplateLiteral() {
         if (t === "TemplateLiteral") {
             var l1, l2;
@@ -5488,6 +5682,7 @@ define("parser", function () {
         }
         return null;
     }
+
     function Elision(node) {
         if (v === ",") {
             var l1, l2;
@@ -5509,6 +5704,7 @@ define("parser", function () {
         }
         return null;
     }
+
     function ElementList() {
         var list = [], el;
         if (v === "]") return list;
@@ -5528,6 +5724,7 @@ define("parser", function () {
         } while (v && v !== "]");
         return list;
     }
+
     function ArrayExpression() {
         var node, l1, l2;
         if (v === "[") {
@@ -5544,6 +5741,7 @@ define("parser", function () {
         }
         return null;
     }
+
     function StrictFormalParameters() {
         return this.FormalParameterList.apply(this, arguments);
     }
@@ -5558,6 +5756,7 @@ define("parser", function () {
         }
         return null;
     }
+
     function PropertyKey() {
         var node = /*this.ComputedPropertyName() ||*/ this.Identifier() || this.Literal();
 
@@ -5572,9 +5771,10 @@ define("parser", function () {
             return node;
         }
 
-        throw new SyntaxError("invalid property key in definition"+atLineCol());
+        throw new SyntaxError("invalid property key in definition" + atLineCol());
 
     }
+
     function PropertyDefinitionList() {
         var list = [];
         list.type = "PropertyDefinitionList";
@@ -5615,7 +5815,7 @@ define("parser", function () {
 
                         node.kind = "init";
                         id = this.PropertyKey();
-                        if (!id) throw new SyntaxError("error parsing objectliteral shorthand"+atLineCol());
+                        if (!id) throw new SyntaxError("error parsing objectliteral shorthand" + atLineCol());
                         node.key = id;
                         node.value = id;
                         list.push(node);
@@ -5627,7 +5827,7 @@ define("parser", function () {
                         node.computed = true;
                         match(":");
                         node.value = this.AssignmentExpression();
-                        if (!node.value) throw new SyntaxError("error parsing objectliteral := [symbol_expr]: assignmentexpression"+atLineCol());
+                        if (!node.value) throw new SyntaxError("error parsing objectliteral := [symbol_expr]: assignmentexpression" + atLineCol());
                         list.push(node);
 
                     } else if (lookVal === ":") { // key: AssignmentExpression
@@ -5643,7 +5843,7 @@ define("parser", function () {
 
                         node.kind = "method";
                         method = this.MethodDefinition(true, computedPropertyName);
-                        if (!method) throw new SyntaxError("Error parsing method definition in ObjectExpression"+atLineCol());
+                        if (!method) throw new SyntaxError("Error parsing method definition in ObjectExpression" + atLineCol());
                         node.key = method.id;
                         node.computed = method.computed;
                         node.value = method;
@@ -5653,7 +5853,7 @@ define("parser", function () {
 
                         node.kind = "method";
                         method = this.MethodDefinition(true);
-                        if (!method) throw new SyntaxError("Error parsing method definition in ObjectExpression"+atLineCol());
+                        if (!method) throw new SyntaxError("Error parsing method definition in ObjectExpression" + atLineCol());
                         node.key = method.id;
                         node.computed = method.computed;
                         node.value = method;
@@ -5671,6 +5871,7 @@ define("parser", function () {
 
         return list;
     }
+
     function ObjectExpression() {
         var node, l1, l2;
         if (v === "{") {
@@ -5688,6 +5889,7 @@ define("parser", function () {
         }
         return null;
     }
+
     function ExpressionNoIn() {
         inStack.push(isIn);
         isIn = false;
@@ -5695,9 +5897,11 @@ define("parser", function () {
         isIn = inStack.pop();
         return node;
     }
+
     function CoverParenthesizedExpression(tokens) {
         return parseGoal("ParenthesizedExpression", tokens);
     }
+
     function ParenthesizedExpression() {
         var l1 = loc.start;
         var node = Node("ParenthesizedExpression");
@@ -5709,9 +5913,11 @@ define("parser", function () {
         if (compile) return compiler(node);
         return node;
     }
+
     function ArrowParameterList(tokens) {
         return parseGoal("FormalParameterList", tokens);
     }
+
     function CoverParenthesizedExpressionAndArrowParameterList() {
         var parens = [];
         var covered = [];
@@ -5739,7 +5945,7 @@ define("parser", function () {
                     }
                 }
                 covered.push(token);
-                if (v === undefined) throw new SyntaxError("no tokens left over covering expression"+atLineCol());
+                if (v === undefined) throw new SyntaxError("no tokens left over covering expression" + atLineCol());
             }
             match(")");
         }
@@ -5764,6 +5970,7 @@ define("parser", function () {
         }
         return null;
     }
+
     function PrimaryExpression() {
         var fn, node;
         fn = PrimaryExpressionByTypeAndFollowByValue[t];
@@ -5783,6 +5990,7 @@ define("parser", function () {
         if (node) return this.PostfixExpression(node);
         return null;
     }
+
     function MemberExpression(obj) {
         var node, l1, l2;
         if (obj = obj || this.PrimaryExpression()) {
@@ -5828,7 +6036,7 @@ define("parser", function () {
                  // setzt .eventual auf true
                  } */
                 else {
-                    throw new SyntaxError("MemberExpression . Identifier expects a valid IdentifierString or an Integer or null,true,false as PropertyKey"+atLineCol());
+                    throw new SyntaxError("MemberExpression . Identifier expects a valid IdentifierString or an Integer or null,true,false as PropertyKey" + atLineCol());
                 }
                 node.property = property;
             } else {
@@ -5847,6 +6055,7 @@ define("parser", function () {
         }
         return null;
     }
+
     function Arguments() {
         var args, arg;
         if (v === "(") {
@@ -5862,7 +6071,7 @@ define("parser", function () {
                         args.push(arg);
 
                     if (v === ",") match(",");
-                    else if (v != ")" && v != undefined) throw new SyntaxError("illegal argument list"+atLineCol());
+                    else if (v != ")" && v != undefined) throw new SyntaxError("illegal argument list" + atLineCol());
 
                 } while (v !== undefined);
             }
@@ -5871,6 +6080,7 @@ define("parser", function () {
         }
         return null;
     }
+
     function ConditionalExpressionNoIn(test) {
         inStack.push(isIn);
         isIn = false;
@@ -5878,6 +6088,7 @@ define("parser", function () {
         isIn = inStack.pop();
         return r;
     }
+
     function ConditionalExpression(test) {
         if (test && v === "?") {
             var l1 = loc.start,
@@ -5904,6 +6115,7 @@ define("parser", function () {
         }
         return null;
     }
+
     function PostfixExpression(lhs) {
         var l1 = loc.start;
         lhs = lhs || this.LeftHandSideExpression();
@@ -5919,6 +6131,7 @@ define("parser", function () {
         }
         return lhs;
     }
+
     function UnaryExpression() {
         if (UnaryOperators[v] || UpdateOperators[v]) {
             var l1 = loc.start;
@@ -5929,13 +6142,14 @@ define("parser", function () {
             if (UnaryOperators[v]) node.argument = this.UnaryExpression();
             else node.argument = this.PostfixExpression();
             var l2 = loc.end;
-            if (node.argument == null) throw new SyntaxError("invalid unary expression "+node.operator+", operand missing " + atLineCol());
+            if (node.argument == null) throw new SyntaxError("invalid unary expression " + node.operator + ", operand missing " + atLineCol());
             node.loc = makeLoc(l1, l2);
             if (compile) return compiler(node);
             return node;
         }
         return this.PostfixExpression();
     }
+
     function AssignmentExpressionNoIn() {
         inStack.push(isIn);
         isIn = false;
@@ -5943,6 +6157,7 @@ define("parser", function () {
         isIn = inStack.pop();
         return node;
     }
+
     function StartAssignmentExpressionNoIn() {
         inStack.push(isIn);
         isIn = false;
@@ -5962,7 +6177,7 @@ define("parser", function () {
             node.left = leftHand;
             match(v);
             node.right = this.StartAssignmentExpression();
-            if (!node.right) throw new SyntaxError("can not parse a valid righthandside for this assignment expression"+atLineCol());
+            if (!node.right) throw new SyntaxError("can not parse a valid righthandside for this assignment expression" + atLineCol());
             var l2 = loc.end;
             node.loc = makeLoc(l1, l2);
             node = rotate_binexps(node);
@@ -5974,7 +6189,7 @@ define("parser", function () {
             match(v);
             node.right = this.StartAssignmentExpression();
             if (!node.right) {
-                throw new SyntaxError("can not parse a valid righthandside for this binary expression "+atLineCol());
+                throw new SyntaxError("can not parse a valid righthandside for this binary expression " + atLineCol());
             }
             var l2 = loc.end;
             node.loc = makeLoc(l1, l2);
@@ -5984,15 +6199,17 @@ define("parser", function () {
         if (compile) return compiler(node);
         return node;
     }
+
     function AssignmentExpression() {
         var node = this.StartAssignmentExpression();
         if (v == "?") return this.ConditionalExpressionNoIn(node);
         return node;
     }
+
     function CallExpression(callee) {
         var node, l1, l2;
         l1 = l2 = (loc.start);
-        if (callee = (callee||this.MemberExpression())) {
+        if (callee = (callee || this.MemberExpression())) {
             l1 = callee.loc && callee.loc.start;
             node = Node("CallExpression");
             node.callee = callee;
@@ -6028,6 +6245,7 @@ define("parser", function () {
         }
         return null;
     }
+
     function NewExpression() {
         var node, l1, l2;
         if (v === "new") {
@@ -6054,11 +6272,13 @@ define("parser", function () {
         }
         return null;
     }
+
     function LeftHandSideExpression(callee) {
         return this.NewExpression(callee) || this.CallExpression(callee);
     }
+
     function ExpressionStatement() {
-        if (!ExprNoneOfs[v] && !(v === "let" && lookVal=="[")) {
+        if (!ExprNoneOfs[v] && !(v === "let" && lookVal == "[")) {
             var expression = this.Expression();
             if (!expression) return null;
             var node = Node("ExpressionStatement");
@@ -6069,6 +6289,7 @@ define("parser", function () {
         }
         return null;
     }
+
     function SequenceExpressionNode(list, l1, l2) {
         var node = Node("SequenceExpression");
         node.sequence = list;
@@ -6076,6 +6297,7 @@ define("parser", function () {
         if (compile) return compiler(node);
         return node;
     }
+
     function Expression() {
         var list = [];
         var node;
@@ -6091,11 +6313,15 @@ define("parser", function () {
         }
         l2 = loc.end;
         switch (list.length) {
-            case 0: return null;
-            case 1: return list[0];
-            default: return this.SequenceExpressionNode(list, l1, l2);
+            case 0:
+                return null;
+            case 1:
+                return list[0];
+            default:
+                return this.SequenceExpressionNode(list, l1, l2);
         }
     }
+
     function SuperExpression() {
         if (v === "super") {
             var l1 = loc.start;
@@ -6106,7 +6332,7 @@ define("parser", function () {
             if (withExtras && tokenize.extraBuffer.length) dumpExtras2(node, "after");
             if (currentNode) {
                 if (ContainNoSuperIn[currentNode.type]) {
-                    throw new SyntaxError("contains: super is not allowed in "+currentNode.type);
+                    throw new SyntaxError("contains: super is not allowed in " + currentNode.type);
                 }
                 currentNode.needsSuper = true;
             }
@@ -6115,6 +6341,7 @@ define("parser", function () {
         }
         return null;
     }
+
     function ThisExpression() {
         if (v === "this") {
             var l1 = loc.start;
@@ -6128,6 +6355,7 @@ define("parser", function () {
         }
         return null;
     }
+
     function Initializer() {
         if (v === "=") {
             match("=");
@@ -6135,6 +6363,7 @@ define("parser", function () {
         }
         return null;
     }
+
     function BindingElementList() {
         var list = [];
         var id, bindEl, l1, l2;
@@ -6185,7 +6414,7 @@ define("parser", function () {
         } else if (v === "[") {
             match("[");
             while (v !== "]") {
-                switch(v) {
+                switch (v) {
                     case "...":
                         id = this.RestParameter();
                         break;
@@ -6213,6 +6442,7 @@ define("parser", function () {
         }
         return list;
     }
+
     function BindingPattern() {
         var node, l1, l2;
         if (StartBinding[v]) {
@@ -6227,6 +6457,7 @@ define("parser", function () {
         }
         return null;
     }
+
     function VariableDeclaration(kind) {
         var node = this.BindingPattern();
         if (node) {
@@ -6255,10 +6486,11 @@ define("parser", function () {
         }
         return null;
     }
+
     function VariableDeclarationList(kind) {
         var list = [];
         var decl;
-        for (;;) {
+        for (; ;) {
             decl = this.VariableDeclaration(kind);
             if (decl) list.push(decl);
             else throw new SyntaxError(kind + " declaration expected");
@@ -6272,9 +6504,10 @@ define("parser", function () {
             } else break;
             // else throw new SyntaxError("illegal "+v+" after "+kind);
         }
-        if (!list.length) throw new SyntaxError("expecting identifier names after "+kind);
+        if (!list.length) throw new SyntaxError("expecting identifier names after " + kind);
         return list;
     }
+
     function VariableStatement() {
         var node, decl, l1, l2;
         if (v === "var" || v === "let" || v === "const") {
@@ -6297,6 +6530,7 @@ define("parser", function () {
         }
         return null;
     }
+
     function VariableStatementNoIn() {
         inStack.push(isIn);
         isIn = false;
@@ -6318,8 +6552,8 @@ define("parser", function () {
             node = Node("ClassDeclaration");
             node.id = null;
             node.strict = true;
-            node.expression = !! isExpr;
-            node.const = !! isConst;
+            node.expression = !!isExpr;
+            node.const = !!isConst;
             node.extends = null;
             node.elements = [];
 
@@ -6345,6 +6579,7 @@ define("parser", function () {
         }
         return null;
     }
+
     function MethodDefinition(isObjectMethod, computedPropertyName) {
         var l1, l2;
         var node;
@@ -6397,7 +6632,7 @@ define("parser", function () {
         if (computedPropertyName) {
             node.id = computedPropertyName;
             node.computed = true;
-        } else if (v =="[") {
+        } else if (v == "[") {
             node.id = this.ComputedPropertyName();
             node.computed = true;
         } else {
@@ -6426,6 +6661,7 @@ define("parser", function () {
         return node;
 
     }
+
     function RestParameter() {
         if (v === "...") {
             var l1 = loc.start;
@@ -6446,6 +6682,7 @@ define("parser", function () {
         }
         return null;
     }
+
     function SpreadExpression() {
         if (v === "...") {
             var l1 = loc.start;
@@ -6459,6 +6696,7 @@ define("parser", function () {
         }
         return null;
     }
+
     function DefaultParameter() { // ES6
         var node;
         if (t == "Identifier" && lookVal == "=") {
@@ -6474,6 +6712,7 @@ define("parser", function () {
         }
         return null;
     }
+
     function FormalParameterList() {
         var list = [];
         list.type = "FormalParameterList";
@@ -6500,11 +6739,12 @@ define("parser", function () {
                 if (v === ",") {
                     match(",");
                 } else if (v !== undefined && v !== ")") {
-                    throw new SyntaxError("error parsing formal parameter list "+atLineCol());
+                    throw new SyntaxError("error parsing formal parameter list " + atLineCol());
                 }
             } while (v !== undefined && v !== ")");
         return list;
     }
+
     function FunctionDeclaration(isExpr) {
         var node, start, end, sourceStart, sourceEnd;
         if (v === "function") {
@@ -6567,9 +6807,11 @@ define("parser", function () {
         }
         return null;
     }
+
     function FunctionExpression() {
         return this.FunctionDeclaration(true);
     }
+
     function GeneratorBody(parent) {
         yieldStack.push(isYieldId);
         isYieldId = false;
@@ -6577,6 +6819,7 @@ define("parser", function () {
         isYieldId = yieldStack.pop();
         return body;
     }
+
     function FunctionBody(parent) {
         var contains = Contains["FunctionDeclaration"];
         var node;
@@ -6586,19 +6829,28 @@ define("parser", function () {
         pushStrict(this.DirectivePrologue(parent, body) || isStrict);
         while (v !== undefined && v !== "}") {
             switch (v) {
-                case "function": node = this.FunctionDeclaration(); break;
-                case "module": node = this.ModuleDeclaration(); break;
-                case "class": node = this.ClassDeclaration(); break;
-                default: node = this.Statement(); break;
+                case "function":
+                    node = this.FunctionDeclaration();
+                    break;
+                case "module":
+                    node = this.ModuleDeclaration();
+                    break;
+                case "class":
+                    node = this.ClassDeclaration();
+                    break;
+                default:
+                    node = this.Statement();
+                    break;
             }
             if (node) {
                 if (!contains[node.type]) body.push(node);
-                else throw new SyntaxError("contains: "+node.type+" is not allowed in a functionBody");
+                else throw new SyntaxError("contains: " + node.type + " is not allowed in a functionBody");
             }
         }
         popStrict();
         return body;
     }
+
     function ConciseBody(parent) {
         if (v == "{") {
             var body;
@@ -6612,7 +6864,8 @@ define("parser", function () {
         }
         return this.AssignmentExpression();
     }
-    function CreateTablePlusAddParentPointerIds (node, parent, nodeTable) {
+
+    function CreateTablePlusAddParentPointerIds(node, parent, nodeTable) {
         nodeTable = nodeTable || Object.create(null);
         if (Array.isArray(node)) {
             for (var i = 0, j = node.length; i < j; i++) {
@@ -6632,6 +6885,7 @@ define("parser", function () {
         }
         return nodeTable;
     }
+
     function AddParentPointers(node, parent) {
         var n;
         if (Array.isArray(node)) {
@@ -6650,6 +6904,7 @@ define("parser", function () {
             if (node && parent) node.parent = parent;
         }
     }
+
     function BlockStatement() {
         if (v === "{") {
             symtab.newBlock();
@@ -6672,6 +6927,7 @@ define("parser", function () {
         }
         return null;
     }
+
     function BreakStatement() {
         if (v === "break") {
             var node, l1, l2;
@@ -6681,7 +6937,7 @@ define("parser", function () {
             if (v !== ";") {
                 if (ltPassedBy) {
                     l2 = loc.start;
-                    node.loc = makeLoc(l1,l2);
+                    node.loc = makeLoc(l1, l2);
                     return node;
 
                 }
@@ -6698,6 +6954,7 @@ define("parser", function () {
         }
         return null;
     }
+
     function ContinueStatement() {
         var node, l1, l2;
         if (v === "continue") {
@@ -6707,7 +6964,7 @@ define("parser", function () {
             if (v !== ";") {
                 if (ltPassedBy) {
                     l2 = loc.start;
-                    node.loc = makeLoc(l1,l2);
+                    node.loc = makeLoc(l1, l2);
                     return node;
                 }
                 if (t === "Identifier") {
@@ -6722,6 +6979,7 @@ define("parser", function () {
             return node;
         }
     }
+
     function ReturnStatement() {
         var node, l1, l2;
         if (v === "return") {
@@ -6746,6 +7004,7 @@ define("parser", function () {
         }
         return null;
     }
+
     function ThrowStatement() {
         if (v === "throw") {
             var node, l1, l2;
@@ -6767,6 +7026,7 @@ define("parser", function () {
         }
         return null;
     }
+
     function LabelledStatement() {
         if (t === "Identifier" && lookVal === ":") {
             var node = Node("LabelledStatement");
@@ -6786,6 +7046,7 @@ define("parser", function () {
         }
         return null;
     }
+
     function TryStatement() {
         if (v === "try") {
             var node = Node("TryStatement");
@@ -6802,6 +7063,7 @@ define("parser", function () {
         }
         return null;
     }
+
     function Catch() {
         if (v === "catch") {
             var node, l1, l2;
@@ -6819,6 +7081,7 @@ define("parser", function () {
         }
         return null;
     }
+
     function Finally() {
         if (v === "finally") {
             var node, l1, l2;
@@ -6833,6 +7096,7 @@ define("parser", function () {
         }
         return null;
     }
+
     function WithStatement() {
         if (v === "with") {
             if (isStrict) {
@@ -6854,6 +7118,7 @@ define("parser", function () {
         }
         return null;
     }
+
     function DebuggerStatement() {
         if (v === "debugger") {
             var node, l1, l2;
@@ -6868,6 +7133,7 @@ define("parser", function () {
         }
         return null;
     }
+
     function ModuleDeclaration() {
         if (v === "module") {
             var node, l1, l2;
@@ -6893,13 +7159,14 @@ define("parser", function () {
             //popDecls(node);
             // EarlyErrors(node);
             currentNode = nodeStack.pop();
-            currentModule =  moduleStack.pop();
+            currentModule = moduleStack.pop();
             symtab.oldScope();
             if (compile) return compiler(node);
             return node;
         }
         return null;
     }
+
     function ModuleSpecifier() {
         if (t === "StringLiteral") {
             var specifier = v.slice(1, v.length - 1);
@@ -6908,17 +7175,21 @@ define("parser", function () {
         }
         throw new SyntaxError("can not make out ModuleSpecifier");
     }
+
     function ModuleBody() {
         var list = [];
         match("{");
         var item;
         while (v !== undefined && v !== "}") {
             switch (v) {
-                case "export": item = this.ExportStatement();
+                case "export":
+                    item = this.ExportStatement();
                     break;
-                case "module": item = this.ModuleDeclaration();
+                case "module":
+                    item = this.ModuleDeclaration();
                     break;
-                case "import": item = this.ImportStatement();
+                case "import":
+                    item = this.ImportStatement();
                     break;
                 default:
                     item = this.Statement();
@@ -6926,17 +7197,19 @@ define("parser", function () {
             }
             if (item) {
                 if (!Contains.ModuleDeclaration[item.type]) list.push(item);
-                else throw new SyntaxError("contains: "+item.type+" not allowed in ModuleDeclarations" + atLineCol());
+                else throw new SyntaxError("contains: " + item.type + " not allowed in ModuleDeclarations" + atLineCol());
             }
         }
         match("}");
         return list;
     }
+
     function FromClause() {
         match("from");
         var frm = this.ModuleSpecifier();
         return frm;
     }
+
     function ImportClause() {
         var node = Node("ImportClause");
         var id = this.Identifier();
@@ -6951,6 +7224,7 @@ define("parser", function () {
         if (compile) return compiler(node);
         return node;
     }
+
     function NamedImports() {
         if (v === "{") {
             var list = [];
@@ -6973,6 +7247,7 @@ define("parser", function () {
         }
         return null;
     }
+
     function ImportStatement() {
         if (v === "import") {
             var l1 = loc.start;
@@ -7007,6 +7282,7 @@ define("parser", function () {
         }
         return null;
     }
+
     function ExportsClause() {
         if (v === "{") {
             var list = [];
@@ -7029,6 +7305,7 @@ define("parser", function () {
         }
         return null;
     }
+
     function DeclarationDefault() {
         defaultStack.push(isDefaultId);
         isDefaultId = true;
@@ -7036,6 +7313,7 @@ define("parser", function () {
         isDefaultId = defaultStack.pop();
         return node;
     }
+
     function ExportStatement() {
         if (v === "export") {
             var l1 = loc.start;
@@ -7069,6 +7347,7 @@ define("parser", function () {
         }
         return null;
     }
+
     function SwitchStatementList() {
         var list = [];
         list.type = "StatementList";
@@ -7077,9 +7356,10 @@ define("parser", function () {
         if (v)
             do {
                 list.push(this.Statement());
-            } while (!FinishSwitchStatementList[v] && v != undefined );
+            } while (!FinishSwitchStatementList[v] && v != undefined);
         return list;
     }
+
     function StatementList() {
         var list = [];
         list.type = "StatementList";
@@ -7090,6 +7370,7 @@ define("parser", function () {
             } while (!FinishStatementList[v] && v != undefined);
         return list;
     }
+
     function Statement() {
         var node;
         var fn = this[StatementParsers[v]];
@@ -7111,12 +7392,14 @@ define("parser", function () {
         if (compile) return compiler(node);
         return node;
     }
+
     function IterationStatement() {
         if (v === "for") return this.ForStatement();
         if (v === "do") return this.DoWhileStatement();
         if (v === "while") return this.WhileStatement();
         return null;
     }
+
     function ForDeclaration() {
         var node;
         if (LetOrConst[v]) {
@@ -7127,15 +7410,16 @@ define("parser", function () {
             match(v);
             node.id = this.ForBinding();
             l2 = loc.end;
-            node.loc = makeLoc(l1,l2);
+            node.loc = makeLoc(l1, l2);
             if (v != "in" && v != "of") {
-                throw new SyntaxError("invalid token '"+v+"' after let or const declaration at the for statement "+atLineCol() );
+                throw new SyntaxError("invalid token '" + v + "' after let or const declaration at the for statement " + atLineCol());
             }
             if (compile) return compiler(node);
             return node;
         }
         return null;
     }
+
     function ForBinding() {
         switch (v) {
             case "{":
@@ -7146,6 +7430,7 @@ define("parser", function () {
         }
         return null;
     }
+
     function ForStatementHead() {
         var node = Node("ForStatement");
         if (v === ";") {
@@ -7172,6 +7457,7 @@ define("parser", function () {
         else node.update = this.Expression();
         return node;
     }
+
     function ForInOfStatementHead() {
         var node = Node("ForInOfStatement");
         if (v === "var") {
@@ -7192,11 +7478,12 @@ define("parser", function () {
             match("of");
             node.right = this.AssignmentExpression();
         } else {
-            throw new SyntaxError("in or of expected "+atLineCol());
+            throw new SyntaxError("in or of expected " + atLineCol());
         }
         if (!node.right) throw new SyntaxError("can not parse a valid righthandside expression for for statement");
         return node;
     }
+
     function ForStatement() {
         var node;
         var statement;
@@ -7213,10 +7500,11 @@ define("parser", function () {
             parens.push("(");
             var collected = [];
             loop:
-                for (;;) {
+                for (; ;) {
                     peek = token && token.value;
-                    switch(peek) {
-                        case ";": numSemi += 1;
+                    switch (peek) {
+                        case ";":
+                            numSemi += 1;
                             break;
                         case "in":
                         case "of":
@@ -7253,6 +7541,7 @@ define("parser", function () {
         }
         return null;
     }
+
     function IfStatement() {
         if (v === "if") {
             var node = Node("IfStatement");
@@ -7270,6 +7559,7 @@ define("parser", function () {
         }
         return null;
     }
+
     function WhileStatement() {
         if (v === "while") {
             var l1, l2;
@@ -7286,6 +7576,7 @@ define("parser", function () {
         }
         return null;
     }
+
     function DoWhileStatement() {
         if (v === "do") {
             var l1, l2;
@@ -7305,6 +7596,7 @@ define("parser", function () {
         }
         return null;
     }
+
     function SwitchStatement() {
         if (v === "switch") {
             defaultStack.push(isDefaultId);
@@ -7321,8 +7613,12 @@ define("parser", function () {
             var cases = node.cases = [];
             while (v !== "}") {
                 switch (v) {
-                    case "case": cases.push(this.SwitchCase()); break;
-                    case "default": cases.push(this.DefaultCase()); break;
+                    case "case":
+                        cases.push(this.SwitchCase());
+                        break;
+                    case "default":
+                        cases.push(this.DefaultCase());
+                        break;
                     default:
                         throw new SyntaxError("invalid statment in switch")
                 }
@@ -7336,6 +7632,7 @@ define("parser", function () {
         }
         return null;
     }
+
     function DefaultCase() {
         if (v === "default" && lookVal === ":") {
             var node = Node("DefaultCase");
@@ -7348,6 +7645,7 @@ define("parser", function () {
         }
         return null;
     }
+
     function SwitchCase() {
         if (v === "case") {
             var node = Node("SwitchCase");
@@ -7361,6 +7659,7 @@ define("parser", function () {
         }
         return null;
     }
+
     function EmptyStatement() {
         var node;
         if (v === ";") {
@@ -7374,6 +7673,7 @@ define("parser", function () {
         }
         return null;
     }
+
     function DirectivePrologue(containingNode, nodes) {
         var strict = false;
         while (t === "StringLiteral" && isDirective[v]) {
@@ -7391,6 +7691,7 @@ define("parser", function () {
         }
         return strict;
     }
+
     function SourceElements(program) {
         var body = [];
         var node;
@@ -7398,22 +7699,31 @@ define("parser", function () {
         var contains = Contains["Program"];
         do {
             switch (v) {
-                case "function": node = this.FunctionDeclaration(); break;
-                case "class": node = this.ClassDeclaration(); break;
-                case "module": node = this.ModuleDeclaration(); break;
-                default: node = this.Statement(); break;
+                case "function":
+                    node = this.FunctionDeclaration();
+                    break;
+                case "class":
+                    node = this.ClassDeclaration();
+                    break;
+                case "module":
+                    node = this.ModuleDeclaration();
+                    break;
+                default:
+                    node = this.Statement();
+                    break;
             }
             if (node) {
                 if (!contains[node.type]) body.push(node);
-                else throw new SyntaxError("contains: "+node.type+" is not allowed in Program");
+                else throw new SyntaxError("contains: " + node.type + " is not allowed in Program");
             } else {
                 if (token != undefined)
-                    throw new SyntaxError("unexpected token " + t + " with value " +v);
+                    throw new SyntaxError("unexpected token " + t + " with value " + v);
             }
         } while (token != undefined);
         popStrict();
         return body;
     }
+
     function Module() {
         var root = Node("Module");
         var l1 = loc.start;
@@ -7424,6 +7734,7 @@ define("parser", function () {
         if (compile) return compiler(root);
         return root;
     }
+
     function DefaultAsIdentifier() {
         if (v === "default") {
             if (isDefaultId) {
@@ -7437,6 +7748,7 @@ define("parser", function () {
         }
         return null;
     }
+
     function Program() {
         var node = Node("Program");
         node.loc = loc = makeLoc();
@@ -7452,6 +7764,7 @@ define("parser", function () {
         if (compile) return compiler(node);
         return node;
     }
+
     function RegularExpressionLiteral() {
         if (t === "RegularExpressionLiteral") {
             var l1 = loc.start;
@@ -7459,13 +7772,14 @@ define("parser", function () {
             node.value = v[0];
             node.flags = v[1];
             var l2 = loc.end;
-            node.loc = makeLoc(l1,l2);
+            node.loc = makeLoc(l1, l2);
             next();
             if (compile) return compiler(node);
             return node;
         }
         return null;
     }
+
     function JSONText() {
         if (!newSyntaxError) {
             newSyntaxError = require("ast-api").newSyntaxError;
@@ -7474,11 +7788,13 @@ define("parser", function () {
         }
         return this.JSONValue();
     }
+
     function JSONValue() {
         return this.JSONObject() || this.JSONArray() || this.JSONNumber() || this.JSONString() || this.JSONBooleanLiteral() || this.JSONNullLiteral();
     }
+
     function JSONString() {
-        if (t === "StringLiteral" || (t == "Literal" && typeof v == "string"))  {
+        if (t === "StringLiteral" || (t == "Literal" && typeof v == "string")) {
             var q1, q2;
             q1 = v[0];
             q2 = v[v.length - 1];
@@ -7490,6 +7806,7 @@ define("parser", function () {
         }
         return null;
     }
+
     function JSONNumber() {
         if (t === "NumericLiteral" || (t == "Literal" && typeof v === "number")) {
             var node = Node("JSONNumber");
@@ -7498,9 +7815,11 @@ define("parser", function () {
             return node;
         }
     }
+
     function JSONFraction() {
         return null;
     }
+
     function JSONNullLiteral() {
         if (t === "NullLiteral") {
             var node = Node("JSONNullLiteral");
@@ -7510,6 +7829,7 @@ define("parser", function () {
         }
         return null;
     }
+
     function JSONBooleanLiteral() {
         if (t === "BooleanLiteral") {
             var node = Node("JSONBooleanLiteral");
@@ -7519,6 +7839,7 @@ define("parser", function () {
         }
         return null;
     }
+
     function JSONArray() {
         if (v === "[") {
             var node = Node("JSONArray");
@@ -7532,6 +7853,7 @@ define("parser", function () {
         return null;
 
     }
+
     function JSONElementList() {
         var list = [];
         while (v !== "]" && v !== undefined) {
@@ -7545,6 +7867,7 @@ define("parser", function () {
         }
         return list;
     }
+
     function JSONObject() {
         if (v === "{") {
             var node = Node("JSONObject");
@@ -7557,10 +7880,11 @@ define("parser", function () {
         }
         return null;
     }
+
     function JSONMember() {
         var node = Node("JSONMember");
         var key = this.JSONString();
-        if (!key) return newSyntaxError( "JSONMember: Expecting double quoted string keys in object literals.");
+        if (!key) return newSyntaxError("JSONMember: Expecting double quoted string keys in object literals.");
         if (isAbrupt(key = ifAbrupt(key))) return key;
         match(":");
         var value = this.JSONValue();
@@ -7569,6 +7893,7 @@ define("parser", function () {
         node.value = value;
         return node;
     }
+
     function JSONMemberList() {
         var list = [];
         while (v !== "}" && v !== undefined) {
@@ -7582,6 +7907,7 @@ define("parser", function () {
         }
         return list;
     }
+
     function initOldLexer(sourceOrTokens, opts) {
         if (!Array.isArray(sourceOrTokens)) tokens = tokenize.tokenizeIntoArray(sourceOrTokens);
         else tokens = sourceOrTokens;
@@ -7596,7 +7922,7 @@ define("parser", function () {
         pos = -1;
         lookPos = 0;
         token = t = v = undefined;
-        tokenArrayLength = (tokens&&tokens.length)|0;
+        tokenArrayLength = (tokens && tokens.length) | 0;
         ast = null;
         loc = lastloc = undefined;
         currentNode = undefined;
@@ -7625,6 +7951,7 @@ define("parser", function () {
             }
         }
     }
+
     function parse(sourceOrTokens, opts) {
         tokenize.saveState();
         if (tokenize === tokenize.tokenizeIntoArray) initOldLexer(sourceOrTokens, opts);
@@ -7632,7 +7959,7 @@ define("parser", function () {
         try {
             ast = parser.Program();
         } catch (ex) {
-            console.log("[ParserException@parse]: " + ex.name + " "+atLineCol());
+            console.log("[ParserException@parse]: " + ex.name + " " + atLineCol());
             console.log(ex.message);
             console.log(ex.stack);
             ast = ex;
@@ -7641,9 +7968,11 @@ define("parser", function () {
         }
         return ast;
     }
+
     function initParseGoal(source) {
         initOldLexer(source);
     }
+
     function parseGoal(goal, source, opts) {
         tokenize.saveState();
         saveTheDot();
@@ -7653,7 +7982,7 @@ define("parser", function () {
         try {
             var node = fn.call(parser);
         } catch (ex) {
-            console.log("[ParserException@parseGoal]: " + ex.name + " " +atLineCol());
+            console.log("[ParserException@parseGoal]: " + ex.name + " " + atLineCol());
             console.log(ex.name);
             console.log(ex.message);
             console.log(ex.stack);
@@ -7805,23 +8134,23 @@ define("parser", function () {
 
 /*
 
-    The tokenizer is different from the remaining tokenization.
-    I just need the array of code points.
+ The tokenizer is different from the remaining tokenization.
+ I just need the array of code points.
 
-    So i thought it´s better to separate it.
+ So i thought it´s better to separate it.
 
-    Mistakes will be resolved when i´m through the whole evaluation specification
-    and have completed implementing the RegExp.prototype methods.
+ Mistakes will be resolved when i´m through the whole evaluation specification
+ and have completed implementing the RegExp.prototype methods.
 
-      MY own question to myself is, how do i generate the automaton from (without violating spec)?
+ MY own question to myself is, how do i generate the automaton from (without violating spec)?
 
-      Starting one from scratch is easy for me. But to see through the
-      mist here, i got still some work to do. I will answer the question soon.
+ Starting one from scratch is easy for me. But to see through the
+ mist here, i got still some work to do. I will answer the question soon.
 
  */
 
 define("regexp-parser", function (require, exports) {
-"use strict";
+    "use strict";
     var tables = require("tables");
 
     var ch, lookahead, index, input, length;
@@ -8120,7 +8449,8 @@ define("regexp-parser", function (require, exports) {
 
     function CharacterClass() {
         var node = Node("CharacterClass");
-        match("[");e;
+        match("[");
+        e;
         if (ch == "^") {
             node.negation = true;
             match("^");
@@ -8146,7 +8476,7 @@ define("regexp-parser", function (require, exports) {
             var term = this.Term();
             alternative.push(term);
         } while (term && ch != "|" && ch != undefined);
-	return alternative;
+        return alternative;
     }
 
     function Pattern() {
@@ -8154,7 +8484,7 @@ define("regexp-parser", function (require, exports) {
         node.disjunction = this.Disjunction();
         return node;
     }
-    
+
     function parse(string) {
         input = string || "";
         length = input.length;
@@ -8163,12 +8493,12 @@ define("regexp-parser", function (require, exports) {
         lookahead = string[0];
         next();
         try {
-        var result = Pattern.call(parser);
+            var result = Pattern.call(parser);
         } catch (ex) {
-    	    console.log("DEBUG REGULAR EXPRESSION PARSER EXCEPTION");
-    	    console.log(ex.name);
-    	    console.log(ex.message);
-    	    console.log(""+ex.stack);
+            console.log("DEBUG REGULAR EXPRESSION PARSER EXCEPTION");
+            console.log(ex.name);
+            console.log(ex.message);
+            console.log("" + ex.stack);
         }
         return result;
     }
@@ -8181,14 +8511,13 @@ define("regexp-parser", function (require, exports) {
     parser.Term = Term;
     parser.CharacterClass = CharacterClass;
     parser.AtomEscape = AtomEscape;
-        
+
     exports.parser = parser;
     exports.parse = parse;
     return exports;
 });
 define("js-codegen", function (require, exports, module) {
     "use strict";
-
 
 
     var builder = {};
@@ -8225,9 +8554,9 @@ define("js-codegen", function (require, exports, module) {
         "VariableDeclarator": "variableDeclarator",
         "BinaryExpression": "binaryExpression"
     };
-     Object.keys(parser).forEach(function (k) {
+    Object.keys(parser).forEach(function (k) {
         names[k] = (k[0]).toLowerCase() + k.slice(1);
-     });
+    });
 
     function callBuilder(node) {
         var args;
@@ -8276,8 +8605,10 @@ define("js-codegen", function (require, exports, module) {
                 case "VariableDeclarator":
                     return this.variableDeclarator(node.id, node.init, node.loc, node.extras);
                     break;
-                case "VariableDeclaration": return this.variableDeclaration(node.kind, node.declarations, node.loc, node.extras);
-                case "LexicalDeclaration": return this.lexicalDeclaration(node.kind, node.declarations, node.loc, node.extras);
+                case "VariableDeclaration":
+                    return this.variableDeclaration(node.kind, node.declarations, node.loc, node.extras);
+                case "LexicalDeclaration":
+                    return this.lexicalDeclaration(node.kind, node.declarations, node.loc, node.extras);
                 case "EmptyStatement":
                     return this.emptyStatement(node.loc, node.extras);
                     break;
@@ -8396,7 +8727,7 @@ define("js-codegen", function (require, exports, module) {
             var fn;
             // name = name[0].toLowerCase() + name.slice(1);
             //if (name)
-                fn = builder[names[name]];
+            fn = builder[names[name]];
 
             if (fn) return fn.apply(builder, args);
             else throw new TypeError("can not generate code for " + name);
@@ -8472,7 +8803,7 @@ define("js-codegen", function (require, exports, module) {
         return src;
     };
     builder.arrayPattern = function (elements, loc, extras) {
-        var src ="", e;
+        var src = "", e;
         src += "[";
         for (var i = 0, j = elements.length; i < j; i++) {
             if (e = elements[i]) {
@@ -8494,11 +8825,11 @@ define("js-codegen", function (require, exports, module) {
             builder.numericLiteral =
                 builder.booleanLiteral =
                     builder.nullLiteral =
-                    builder.literal = function (literal, loc, extras) {
-                        var src = "";
-                        src += literal;
-                        return src;
-                    };
+                        builder.literal = function (literal, loc, extras) {
+                            var src = "";
+                            src += literal;
+                            return src;
+                        };
 
     builder.emptyStatement = function emptyStatement(loc, extras) {
         var src = "";
@@ -8712,7 +9043,7 @@ define("js-codegen", function (require, exports, module) {
     };
 
     var isOneOfThoseUnaryOperators = {
-       "typeof": true,
+        "typeof": true,
         "void": true,
         "delete": true
     };
@@ -8741,7 +9072,8 @@ define("js-codegen", function (require, exports, module) {
         return src;
     };
 
-    builder.pattern = function () {};
+    builder.pattern = function () {
+    };
     builder.expressionStatement = function expressionStatement(expr, loc, extras) {
         var src = "";
         src += callBuilder(expr);
@@ -8814,7 +9146,7 @@ define("js-codegen", function (require, exports, module) {
         var src = "";
         if (extras && extras.before) src += callBuilder(extras.before);
         src += "debugger";
-    	if (extras && extras.after) src += callBuilder(extras.after);
+        if (extras && extras.after) src += callBuilder(extras.after);
         return src;
     };
     builder.parenthesizedExpression = function (expression, loc, extras) {
@@ -8911,10 +9243,10 @@ define("js-codegen", function (require, exports, module) {
     };
 
     builder.conditionalExpression = function (test, consequent, alternate, loc, extras) {
-       var src = "";
-       src += callBuilder(test);
-       src += " ? ";
-       src += callBuilder(consequent);
+        var src = "";
+        src += callBuilder(test);
+        src += " ? ";
+        src += callBuilder(consequent);
         src += " : ";
         src += callBuilder(alternate);
         return src;
@@ -8923,7 +9255,7 @@ define("js-codegen", function (require, exports, module) {
     builder.whiteSpace = function (value, loc) {
         return value;
     };
-    builder.lineComment = function(value, loc) {
+    builder.lineComment = function (value, loc) {
         return value + "\n";
     };
     builder.multiLineComment = function (value, loc) {
@@ -8966,203 +9298,203 @@ define("js-codegen", function (require, exports, module) {
 
 define("queryselector", function (require, exports) {
 
-function matchesQuery(node, query) {
-    "use strict";
-    var propName;
-    var typeName;
-    switch(query[0]) {
-        case ".":
-            propName = query.slice(1);
-            break;
-        default:
-            typeName = query;
-            break;
+    function matchesQuery(node, query) {
+        "use strict";
+        var propName;
+        var typeName;
+        switch (query[0]) {
+            case ".":
+                propName = query.slice(1);
+                break;
+            default:
+                typeName = query;
+                break;
+        }
+        return ((propName && (propName in node)) || (typeName && (node.type === typeName)));
     }
-    return ((propName && (propName in node)) || (typeName && (node.type === typeName)));
-}
 
-function querySelectorAll(node, query) {
-    "use strict";
+    function querySelectorAll(node, query) {
+        "use strict";
 
-    var stack = [];
-    var nodes = [];
-    var i, j;
+        var stack = [];
+        var nodes = [];
+        var i, j;
 
-    // querySelector(node, "CallExpression") returns all CallExpressions from the node on
-    // querySelector(node, ".id") returns all nodes with an .id property from the node on
+        // querySelector(node, "CallExpression") returns all CallExpressions from the node on
+        // querySelector(node, ".id") returns all nodes with an .id property from the node on
 
-    stack.push(node);
+        stack.push(node);
 
-    while (node = stack.pop()) {
+        while (node = stack.pop()) {
 
-        if (matchesQuery(node, query)) nodes.push(node);
+            if (matchesQuery(node, query)) nodes.push(node);
 
-        switch (node.type) {
-            case "Program":
-                // // return {type:type,_id_:++nodeId,strict:undefined,body:undefined,loc:undefined,extras:undefined};
-                for (i = node.body.length - 1; i >= 0; i--) {
-                    stack.push(node.body[i]);
-                }
-                break;
-            case "Identifier":
-                break;
-            // // return {type:type,_id_:++nodeId,name:undefined,loc:undefined,extras:undefined};
-            case "ParenthesizedExpression":
-            case "ExpressionStatement":
-                stack.push(node.expression);
-                break;
-            // // return {type:type,_id_:++nodeId,expression:undefined,loc:undefined,extras:undefined};
-            case "LexicalDeclaration":
-            case "VariableDeclaration":
-                for (i = node.declarations.length - 1; i >= 0; i--) {
-                    stack.push(node.declarations[i]);
-                }
-                break;
-            case "FunctionDeclaration":
-            case "FunctionExpression":
-            case "GeneratorDeclaration":
-            case "GeneratorExpression":
-            case "MethodDefinition":
-                for (i = node.body.length - 1; i >= 0; i--) {
-                    stack.push(node.body[i]);
-                }
-                // / // return {type:type,_id_:++nodeId,expression:undefined,generator:undefined,strict:undefined,id:undefined,params:undefined,body:undefined,loc:undefined,extras:undefined};
-                break;
-            case "ArrowExpression":
-                if (Array.isArray(node.body)) {
+            switch (node.type) {
+                case "Program":
+                    // // return {type:type,_id_:++nodeId,strict:undefined,body:undefined,loc:undefined,extras:undefined};
                     for (i = node.body.length - 1; i >= 0; i--) {
                         stack.push(node.body[i]);
                     }
-                } else {
-                    stack.push(node.body);
-                }
-                // // return {type:type,_id_:++nodeId,params:undefined,body:undefined,loc:undefined,ebxtras:undefined};
-                //stack.push(node);
-                break;
-            case "NumericLiteral":
-            case "StringLiteral":
-            case "BooleanLiteral":
-            case "Literal":
-                // // return {type:type,_id_:++nodeId,value:undefined,loc:undefined,extras:undefined}
+                    break;
+                case "Identifier":
+                    break;
+                // // return {type:type,_id_:++nodeId,name:undefined,loc:undefined,extras:undefined};
+                case "ParenthesizedExpression":
+                case "ExpressionStatement":
+                    stack.push(node.expression);
+                    break;
+                // // return {type:type,_id_:++nodeId,expression:undefined,loc:undefined,extras:undefined};
+                case "LexicalDeclaration":
+                case "VariableDeclaration":
+                    for (i = node.declarations.length - 1; i >= 0; i--) {
+                        stack.push(node.declarations[i]);
+                    }
+                    break;
+                case "FunctionDeclaration":
+                case "FunctionExpression":
+                case "GeneratorDeclaration":
+                case "GeneratorExpression":
+                case "MethodDefinition":
+                    for (i = node.body.length - 1; i >= 0; i--) {
+                        stack.push(node.body[i]);
+                    }
+                    // / // return {type:type,_id_:++nodeId,expression:undefined,generator:undefined,strict:undefined,id:undefined,params:undefined,body:undefined,loc:undefined,extras:undefined};
+                    break;
+                case "ArrowExpression":
+                    if (Array.isArray(node.body)) {
+                        for (i = node.body.length - 1; i >= 0; i--) {
+                            stack.push(node.body[i]);
+                        }
+                    } else {
+                        stack.push(node.body);
+                    }
+                    // // return {type:type,_id_:++nodeId,params:undefined,body:undefined,loc:undefined,ebxtras:undefined};
+                    //stack.push(node);
+                    break;
+                case "NumericLiteral":
+                case "StringLiteral":
+                case "BooleanLiteral":
+                case "Literal":
+                    // // return {type:type,_id_:++nodeId,value:undefined,loc:undefined,extras:undefined}
 
-                break;
-            case "TemplateLiteral":
-                // // return {type:type,_id_:++nodeId,spans:undefined,loc:undefined,extras:undefined}
-                break;
-            case "ObjectExpression":
-                // // return {type:type,_id_:++nodeId,properties:undefined,loc:undefined,extras:undefined};
-                for (i = node.properties.length - 1; i >= 0; i--) {
-                    stack.push(node.properties[i]);
-                }
-                break;
-            case "ArrayExpression":
+                    break;
+                case "TemplateLiteral":
+                    // // return {type:type,_id_:++nodeId,spans:undefined,loc:undefined,extras:undefined}
+                    break;
+                case "ObjectExpression":
+                    // // return {type:type,_id_:++nodeId,properties:undefined,loc:undefined,extras:undefined};
+                    for (i = node.properties.length - 1; i >= 0; i--) {
+                        stack.push(node.properties[i]);
+                    }
+                    break;
+                case "ArrayExpression":
+                    // // return {type:type,_id_:++nodeId,elements:undefined,loc:undefined,extras:undefined};
+                    for (i = node.body.length - 1; i >= 0; i--) {
+                        stack.push(node.body[i]);
+                    }
+                    break;
+                case "ObjectPattern":
+                case "ArrayPattern":
+                    for (i = node.elements.length - 1; i >= 0; i--) {
+                        stack.push(node.elements[i]);
+                    }
+                    break;
                 // // return {type:type,_id_:++nodeId,elements:undefined,loc:undefined,extras:undefined};
-                for (i = node.body.length - 1; i >= 0; i--) {
-                    stack.push(node.body[i]);
-                }
-                break;
-            case "ObjectPattern":
-            case "ArrayPattern":
-                for (i = node.elements.length - 1; i >= 0; i--) {
-                    stack.push(node.elements[i]);
-                }
-                break;
-            // // return {type:type,_id_:++nodeId,elements:undefined,loc:undefined,extras:undefined};
-            case "WhileStatement":
-            case "DoWhileStatement":
-            // // return {type:type,_id_:++nodeId,test:undefined, body:undefined,loc:undefined,extras:undefined};
-            case "BlockStatement":
-                for (i = node.body.length - 1; i >= 0; i--) {
-                    stack.push(node.body[i]);
-                }
-                break;
-            // // return {type:type,_id_:++nodeId,body:undefined,loc:undefined,extras:undefined};
-            case "IfStatement":
-            // // return {type:type,_id_:++nodeId,test:undefined,consequent:undefined,alternate:undefined,loc:undefined,extras:undefined};
-                stack.push(node.test);
-                stack.push(node.consequent);
-                stack.push(node.alternate);
-                break;
-            case "ConditionalExpression":
-            // // return {type:type,_id_:++nodeId,test:undefined,consequent:undefined,alternate:undefined,loc:undefined,extras:undefined};
-                stack.push(node.test);
-                stack.push(node.consequent);
-                stack.push(node.alternate);
-                break;
-            case "BinaryExpression":
-            case "AssignmentExpression":
-            // // return {type:type,_id_:++nodeId,operator:undefined,left:undefined,right:undefined,loc:undefined,extras:undefined};
-                stack.push(node.left);
-                stack.push(node.right);
-                break;
-            case "ForInOfStatement":
-            // // return {type:type,_id_:++nodeId,left:undefined,right:undefined,body:undefined,loc:undefined,extras:undefined};
-                stack.push(node.left);
-                stack.push(node.right);
-                break;
-            case "ForStatement":
-                stack.push(node.init);
-                stack.push(node.condition);
-                stack.push(node.update);
-                break;
-            // // return {type:type,_id_:++nodeId,init:undefined,test:undefined,update:undefined,loc:undefined,extras:undefined};
-            case "NewExpression":
-            // // return {type:type,_id_:++nodeId, callee:undefined, arguments:undefined, loc:undefined, extras:undefined};
-            case "CallExpression":
-                stack.push(node.callee);
-                stack.push(node.arguments);
-                break;
-            // // return {type:type,_id_:++nodeId, callee:undefined, arguments:undefined, loc:undefined, extras:undefined};
-            case "RestParameter":
-            // // return {type:type,_id_:++nodeId, id:undefined, loc:undefined, extras:undefined};
-            case "SpreadExpression":
-            // // return {type:type,_id_:++nodeId, id:undefined, loc:undefined, extras:undefined};
+                case "WhileStatement":
+                case "DoWhileStatement":
+                // // return {type:type,_id_:++nodeId,test:undefined, body:undefined,loc:undefined,extras:undefined};
+                case "BlockStatement":
+                    for (i = node.body.length - 1; i >= 0; i--) {
+                        stack.push(node.body[i]);
+                    }
+                    break;
+                // // return {type:type,_id_:++nodeId,body:undefined,loc:undefined,extras:undefined};
+                case "IfStatement":
+                    // // return {type:type,_id_:++nodeId,test:undefined,consequent:undefined,alternate:undefined,loc:undefined,extras:undefined};
+                    stack.push(node.test);
+                    stack.push(node.consequent);
+                    stack.push(node.alternate);
+                    break;
+                case "ConditionalExpression":
+                    // // return {type:type,_id_:++nodeId,test:undefined,consequent:undefined,alternate:undefined,loc:undefined,extras:undefined};
+                    stack.push(node.test);
+                    stack.push(node.consequent);
+                    stack.push(node.alternate);
+                    break;
+                case "BinaryExpression":
+                case "AssignmentExpression":
+                    // // return {type:type,_id_:++nodeId,operator:undefined,left:undefined,right:undefined,loc:undefined,extras:undefined};
+                    stack.push(node.left);
+                    stack.push(node.right);
+                    break;
+                case "ForInOfStatement":
+                    // // return {type:type,_id_:++nodeId,left:undefined,right:undefined,body:undefined,loc:undefined,extras:undefined};
+                    stack.push(node.left);
+                    stack.push(node.right);
+                    break;
+                case "ForStatement":
+                    stack.push(node.init);
+                    stack.push(node.condition);
+                    stack.push(node.update);
+                    break;
+                // // return {type:type,_id_:++nodeId,init:undefined,test:undefined,update:undefined,loc:undefined,extras:undefined};
+                case "NewExpression":
+                // // return {type:type,_id_:++nodeId, callee:undefined, arguments:undefined, loc:undefined, extras:undefined};
+                case "CallExpression":
+                    stack.push(node.callee);
+                    stack.push(node.arguments);
+                    break;
+                // // return {type:type,_id_:++nodeId, callee:undefined, arguments:undefined, loc:undefined, extras:undefined};
+                case "RestParameter":
+                // // return {type:type,_id_:++nodeId, id:undefined, loc:undefined, extras:undefined};
+                case "SpreadExpression":
+                // // return {type:type,_id_:++nodeId, id:undefined, loc:undefined, extras:undefined};
 
-            case "BindingPattern":
-            // // return {type:type,_id_:++nodeId, id:undefined, target:undefined, loc:undefined, extras:undefined};
-                break;
-            case "ArrayComprehension":
+                case "BindingPattern":
+                    // // return {type:type,_id_:++nodeId, id:undefined, target:undefined, loc:undefined, extras:undefined};
+                    break;
+                case "ArrayComprehension":
 
-            // // return {type:type,_id_:++nodeId, blocks:undefined, filter:undefined, expression:undefined, loc:undefined, extras:undefined};
-            case "GeneratorComprehension":
-                for (i = node.blocks.length - 1; i >= 0; i--) {
-                    stack.push(node.blocks[i]);
-                }
-                for (i = node.filters.length - 1; i >= 0; i--) {
-                    stack.push(node.filters[i]);
-                }
-                break;
-            // // return {type:type,_id_:++nodeId, loc:undefined, extras:undefined};
-            case "SwitchStatement":
-                for (i = node.cases.length - 1; i >= 0; i--) {
-                    stack.push(node.cases[i]);
-                }
-                break;
-            // // return {type:type,_id_:++nodeId, discriminant:undefined, cases:undefined, loc:undefined, extras:undefined};
-            case "DefaultCase":
+                // // return {type:type,_id_:++nodeId, blocks:undefined, filter:undefined, expression:undefined, loc:undefined, extras:undefined};
+                case "GeneratorComprehension":
+                    for (i = node.blocks.length - 1; i >= 0; i--) {
+                        stack.push(node.blocks[i]);
+                    }
+                    for (i = node.filters.length - 1; i >= 0; i--) {
+                        stack.push(node.filters[i]);
+                    }
+                    break;
+                // // return {type:type,_id_:++nodeId, loc:undefined, extras:undefined};
+                case "SwitchStatement":
+                    for (i = node.cases.length - 1; i >= 0; i--) {
+                        stack.push(node.cases[i]);
+                    }
+                    break;
+                // // return {type:type,_id_:++nodeId, discriminant:undefined, cases:undefined, loc:undefined, extras:undefined};
+                case "DefaultCase":
 
-            // // return {type:type,_id_:++nodeId, consequent:undefined, loc:undefined, extras:undefined};
-            case "SwitchCase":
-            // // return {type:type,_id_:++nodeId, test:undefined, consequent:undefined, loc:undefined, extras:undefined};
-            case "TryStatement":
-                stack.push(node.handler);
-                stack.push(node.finalizer);
-                break;
-            // // return {type:type,_id_:++nodeId, handler:undefined, guard:undefined, finalizer:undefined, loc:undefined, extras:undefined};
-            case "CatchClause":
-            // // return {type:type,_id_:++nodeId, block:undefined, loc:undefined, extras:undefined};
-            case "Finally":
-            // // return {type:type,_id_:++nodeId, block:undefined, loc:undefined, extras:undefined};
-            default:
-            // // return {type:type,_id_:++nodeId, loc:undefined, extras:undefined};
+                // // return {type:type,_id_:++nodeId, consequent:undefined, loc:undefined, extras:undefined};
+                case "SwitchCase":
+                // // return {type:type,_id_:++nodeId, test:undefined, consequent:undefined, loc:undefined, extras:undefined};
+                case "TryStatement":
+                    stack.push(node.handler);
+                    stack.push(node.finalizer);
+                    break;
+                // // return {type:type,_id_:++nodeId, handler:undefined, guard:undefined, finalizer:undefined, loc:undefined, extras:undefined};
+                case "CatchClause":
+                // // return {type:type,_id_:++nodeId, block:undefined, loc:undefined, extras:undefined};
+                case "Finally":
+                // // return {type:type,_id_:++nodeId, block:undefined, loc:undefined, extras:undefined};
+                default:
+                // // return {type:type,_id_:++nodeId, loc:undefined, extras:undefined};
+            }
         }
+
+        return nodes;
     }
 
-    return nodes;
-}
-
-exports.matchesQuery = matchesQuery;
-exports.querySelectorAll = querySelectorAll;
+    exports.matchesQuery = matchesQuery;
+    exports.querySelectorAll = querySelectorAll;
 
 });
 /*
@@ -9328,7 +9660,7 @@ function hasInternalSlot(O, N) {
     return N in O;
 }
 function callInternalSlot(name, object, a, b, c, d) {
-    return object[name](a,b,c,d);
+    return object[name](a, b, c, d);
 }
 function assignConstructorAndPrototype(Function, Prototype) {
     setInternalSlot(Function, SLOTS.PROTOTYPE, Prototype);
@@ -9382,7 +9714,7 @@ function NowDefineBuiltinFunction(O, name, arity, fproto, e, w, c) {
     return callInternalSlot(SLOTS.DEFINEOWNPROPERTY, O, name, {
         configurable: c,
         enumerable: e,
-        value: CreateBuiltinFunction(getRealm(),fproto, arity, name),
+        value: CreateBuiltinFunction(getRealm(), fproto, arity, name),
         writable: w
     });
 }
@@ -9391,12 +9723,12 @@ function NowDefineAccessorFunction(O, name, arity, g, s, e, c) {
     if (e === undefined) e = false;
     if (c === undefined) c = true;
     var fname = name;
-    if (IsSymbol(name)) fname = "["+(getInternalSlot(name, SLOTS.DESCRIPTION)||"")+"]";
+    if (IsSymbol(name)) fname = "[" + (getInternalSlot(name, SLOTS.DESCRIPTION) || "") + "]";
     return callInternalSlot(SLOTS.DEFINEOWNPROPERTY, O, name, {
         configurable: c,
         enumerable: e,
-        get: g ? CreateBuiltinFunction(getRealm(), g, arity, "get "+fname) : undefined,
-        set: s ? CreateBuiltinFunction(getRealm(), s, arity, "set "+fname) : undefined
+        get: g ? CreateBuiltinFunction(getRealm(), g, arity, "get " + fname) : undefined,
+        set: s ? CreateBuiltinFunction(getRealm(), s, arity, "set " + fname) : undefined
     });
 }
 function NowDefineAccessor(obj, name, g, s, e, c) {
@@ -9429,7 +9761,7 @@ function NowDefineProperty(O, P, V, w, e, c) {
 }
 function getContext() {
     var stack = realm.stack;
-    return stack[stack.length-1];
+    return stack[stack.length - 1];
 }
 function getEventQueue() {
     return realm.eventQueue;
@@ -9467,7 +9799,7 @@ function getVarEnv() {
 function getStack() {
     return realm.stack;
 }
-function printException (error) {
+function printException(error) {
     var name = Get(error, "name");
     var message = Get(error, "message");
     var callstack = Get(error, "stack");
@@ -9486,16 +9818,18 @@ function stringifyErrorStack(type, message) {
     var len = callStack.length || 0;
     var frame = getContext();
     var start = 0;
-    var node, ntype, line ,column, pos, fn, clr;
+    var node, ntype, line , column, pos, fn, clr;
     var stackTraceLimit = realm.stackTraceLimit;
     var url = realm.scriptLocation;
     var cnt = 1;
 
     if (type === undefined) {
-        type = ""; message = ""; stack = "";
+        type = "";
+        message = "";
+        stack = "";
     } else {
         if (message === undefined) message = "";
-        stack = type+": ";
+        stack = type + ": ";
         stack += message;
         stack += "\r\n";
     }
@@ -9511,14 +9845,14 @@ function stringifyErrorStack(type, message) {
             clr = frame.caller;
             stack += cnt + ". ";
             stack += fn + "/" + ntype + "  " + format("AT_LINE_S_COLUMN_S", line, column);
-            stack += "[caller " + clr + " @ "+url+"]";
+            stack += "[caller " + clr + " @ " + url + "]";
             stack += "\r\n";
             cnt = cnt + 1;
         }
     }
     return stack;
 }
-function makeNativeException (error) {
+function makeNativeException(error) {
     if (Type(error) != OBJECT) return error;
     var name = unwrap(Get(error, "name"));
     var message = unwrap(Get(error, "message"));
@@ -9563,7 +9897,7 @@ var VMObject_eval = function (thisArg, argList) {
     var realm = argList[1];
     var realmObject;
     if (realm === undefined) realmObject = getRealm();
-    else if (!(realmObject = getInternalSlot(realm, SLOTS.REALMOBJECT))) return newTypeError( "Sorry, only realm objects are accepted as realm object");
+    else if (!(realmObject = getInternalSlot(realm, SLOTS.REALMOBJECT))) return newTypeError("Sorry, only realm objects are accepted as realm object");
     return require("asm-compiler").CompileAndRun(realmObject, code);
 };
 
@@ -9711,7 +10045,7 @@ SLOTS.OPAQUEDESCRIPTOR = "OpaqueDescriptor";
 SLOTS.TRANSFER = "Transfer";
 SLOTS.ONSUCCESSTRANSFER = "OnSuccessTransfer";
 SLOTS.WRAPPEDOBJECT = "WrappedObject";
-SLOTS.NATIVETHIS    = "NativeThis"
+SLOTS.NATIVETHIS = "NativeThis"
 // Ecma 402 Intl API
 SLOTS.AVAILABLELOCALES = "availableLocales";
 SLOTS.RELEVANTEXTENSIONKEYS = "relevantExtensionKeys";
@@ -9776,8 +10110,8 @@ INTRINSICS.SYMBOL = "%Symbol%";
 INTRINSICS.SYMBOLPROTOTYPE = "%SymbolPrototype%";
 INTRINSICS.NUMBER = "%Number%";
 INTRINSICS.NUMBERPROTOTYPE = "%NumberPrototype%";
-INTRINSICS.REGEXP   = "%RegExp%";
-INTRINSICS.REGEXPPROTOTYPE  = "%RegExpPrototype%";
+INTRINSICS.REGEXP = "%RegExp%";
+INTRINSICS.REGEXPPROTOTYPE = "%RegExpPrototype%";
 INTRINSICS.DATE = "%Date%";
 INTRINSICS.DATEPROTOTYPE = "%DatePrototype%";
 INTRINSICS.TYPEDARRAY = "%TypedArray%";
@@ -9907,8 +10241,8 @@ INTINTRINSICS.SYMBOL = 47;
 INTINTRINSICS.SYMBOLPROTOTYPE = 48;
 INTINTRINSICS.NUMBER = 49;
 INTINTRINSICS.NUMBERPROTOTYPE = 50;
-INTINTRINSICS.REGEXP   = 51;
-INTINTRINSICS.REGEXPPROTOTYPE  = 52;
+INTINTRINSICS.REGEXP = 51;
+INTINTRINSICS.REGEXPPROTOTYPE = 52;
 INTINTRINSICS.DATE = 53;
 INTINTRINSICS.DATEPROTOTYPE = 54;
 INTINTRINSICS.TYPEDARRAY = 55;
@@ -10069,7 +10403,7 @@ var MathObject_atan = function (thisArg, argList) {
 var MathObject_atan2 = function (thisArg, argList) {
     var x = +argList[0];
     var y = +argList[1];
-    return NormalCompletion(Math.atan2(x,y));
+    return NormalCompletion(Math.atan2(x, y));
 };
 var MathObject_max = function (thisArg, argList) {
     var args = CreateListFromArrayLike(argList);
@@ -10119,7 +10453,7 @@ function GetGlobalObject() {
     var globalThis = realm.globalThis;
     return globalThis;
 }
-function createPublicCodeRealm () {
+function createPublicCodeRealm() {
     var realm = CreateRealm();
 
     return {
@@ -10140,14 +10474,14 @@ function createPublicCodeRealm () {
         }
     };
     /*
-    return {
-        eval: realm.eval,
-        eval0: realm.eval0,
-        evalFile: realm.evalFile,
-        evalAsync: realm.evalAsync,
-        evalByteCode: realm.evalByteCode
-    };
-    */
+     return {
+     eval: realm.eval,
+     eval0: realm.eval0,
+     evalFile: realm.evalFile,
+     evalAsync: realm.evalAsync,
+     evalByteCode: realm.evalByteCode
+     };
+     */
 }
 function CodeRealm(intrinsics, gthis, genv, ldr) {
     "use strict";
@@ -10159,10 +10493,10 @@ function CodeRealm(intrinsics, gthis, genv, ldr) {
         directEvalTranslate: undefined,
         directEvalFallback: undefined,
         indirectEval: undefined,
-        Function:undefined,
+        Function: undefined,
         loader: ldr,
         stack: [],
-        eventQueue:[],
+        eventQueue: [],
         ObserverCallbacks: [],
         GlobalSymbolRegistry: Object.create(null),
         leakySymbolMap: Object.create(null), // for getOwnPropertySymbols
@@ -10171,51 +10505,51 @@ function CodeRealm(intrinsics, gthis, genv, ldr) {
 }
 CodeRealm.prototype.toString = CodeRealm_toString;
 CodeRealm.prototype.constructor = CodeRealm;
-    CodeRealm.prototype.evalFile = function (filename) {
-        var rf = require("filesystem").readFileSync;
-        if (typeof rf === "function") {
-            var code = rf(filename);
-            return this.eval(code);
-        } else {
-            throw new TypeError("can not read file "+filename+" with filesystem module");
-        }
-    };
+CodeRealm.prototype.evalFile = function (filename) {
+    var rf = require("filesystem").readFileSync;
+    if (typeof rf === "function") {
+        var code = rf(filename);
+        return this.eval(code);
+    } else {
+        throw new TypeError("can not read file " + filename + " with filesystem module");
+    }
+};
 CodeRealm.prototype.eval = function (code) {
-        saveCodeRealm();
-        setCodeRealm(this);
-        if (typeof code === "string") code = parse(code);
-        var result = exports.Evaluate(code);
-        result = GetValue(result);
-        if (isAbrupt(result=ifAbrupt(result))) {
-            var error = result.value;
-            var ex = new Error(Get(error, "message"));
-            ex.name = Get(error, "name");
-            ex.stack = Get(error,"stack");
-            throw ex;
-        }
-        evalJobs();
-        restoreCodeRealm();
-        return result;
-    };
+    saveCodeRealm();
+    setCodeRealm(this);
+    if (typeof code === "string") code = parse(code);
+    var result = exports.Evaluate(code);
+    result = GetValue(result);
+    if (isAbrupt(result = ifAbrupt(result))) {
+        var error = result.value;
+        var ex = new Error(Get(error, "message"));
+        ex.name = Get(error, "name");
+        ex.stack = Get(error, "stack");
+        throw ex;
+    }
+    evalJobs();
+    restoreCodeRealm();
+    return result;
+};
 
 CodeRealm.prototype.eval0 = function (code) {
-        // overhead save realm
-        saveCodeRealm();
-        setCodeRealm(this);
-        if (typeof code === "string") code = parse(code);
-        var result = exports.loop(code);
-        result = GetValue(result);
-        if (isAbrupt(result=ifAbrupt(result))) {
-            var error = result.value;
-            var ex = new Error(Get(error, "message"));
-            ex.name = Get(error, "name");
-            ex.stack = Get(error,"stack");
-            throw ex;
-        }
-        evalJobs();
-        restoreCodeRealm();
-        return result;
-    };
+    // overhead save realm
+    saveCodeRealm();
+    setCodeRealm(this);
+    if (typeof code === "string") code = parse(code);
+    var result = exports.loop(code);
+    result = GetValue(result);
+    if (isAbrupt(result = ifAbrupt(result))) {
+        var error = result.value;
+        var ex = new Error(Get(error, "message"));
+        ex.name = Get(error, "name");
+        ex.stack = Get(error, "stack");
+        throw ex;
+    }
+    evalJobs();
+    restoreCodeRealm();
+    return result;
+};
 
 
 CodeRealm.prototype.evalAsync =
@@ -10243,11 +10577,11 @@ CodeRealm.prototype.evalByteCode = function (code) {
     setCodeRealm(this);
     var result = require("asm-runtime").CompileAndRun(this, code);
     result = GetValue(result);
-    if (isAbrupt(result=ifAbrupt(result))) {
+    if (isAbrupt(result = ifAbrupt(result))) {
         var error = result.value;
         var ex = new Error(Get(error, "message"));
         ex.name = Get(error, "name");
-        ex.stack = Get(error,"stack");
+        ex.stack = Get(error, "stack");
         throw ex;
     }
     evalJobs();
@@ -10271,7 +10605,7 @@ function IndirectEval(realm, source) {
 exports.IndirectEval = IndirectEval;
 exports.CreateRealm = CreateRealm;
 exports.createPublicCodeRealm = createPublicCodeRealm;
-function CreateRealm () {
+function CreateRealm() {
     saveCodeRealm();
     var realmRec = CodeRealm();
     setCodeRealm(realmRec);
@@ -10337,7 +10671,7 @@ function InitializeFirstRealm(realm) {
     var status = SetRealmGlobalObject(realm, global)
     if (isAbrupt(status)) return status;
     var globalObj = SetDefaultGlobalBindings(realm);
-    if (isAbrupt(globalObj=ifAbrupt(globalObj))) return globalObj;
+    if (isAbrupt(globalObj = ifAbrupt(globalObj))) return globalObj;
     // CreateImplementationDefinedGlobalObjectProperties(globalObj);
     return NormalCompletion(undefined);
 }
@@ -10346,7 +10680,7 @@ function InitializeFirstRealm(realm) {
 function GetFunctionRealm(obj) {
     Assert(IsCallable(obj), "MUST_BE_CALLABLE");
     if (hasInternalSlot(obj, SLOTS.REALM)) {
-       return getInternalSlot(obj, SLOTS.REALM);
+        return getInternalSlot(obj, SLOTS.REALM);
     }
     if (hasInternalSlot(obj, SLOTS.BOUNDTARGETFUNCTION)) {
         var target = getInternalSlot(obj, SLOTS.BOUNDTARGETFUNCTION);
@@ -10360,7 +10694,7 @@ function GetFunctionRealm(obj) {
 }
 function ExecutionContext(outerCtx, realm, state, generator) {
     "use strict";
-    var VarEnv = NewDeclarativeEnvironment((outerCtx && outerCtx.LexEnv)||null);
+    var VarEnv = NewDeclarativeEnvironment((outerCtx && outerCtx.LexEnv) || null);
     return {
         __proto__: ExecutionContext.prototype,
         stack: [],
@@ -10368,7 +10702,7 @@ function ExecutionContext(outerCtx, realm, state, generator) {
         pc: -1,
         sp: -1,
         realm: realm,
-        outer: outerCtx||null,
+        outer: outerCtx || null,
         VarEnv: VarEnv,
         LexEnv: VarEnv,
         generator: generator
@@ -10380,40 +10714,40 @@ function ExecutionContext_toString() {
     return "[object ExecutionContext]";
 }
 /*
-    // completion re-use
+ // completion re-use
 
 
 
-var completion = newCompletionRecord();
+ var completion = newCompletionRecord();
 
-function newCompletionRecord(type, value, target) {
-    "use strict";
-    return {
-        __proto__:CompletionRecord.prototype,
-        type: type,
-        value: value,
-        target: target
-    };
-}
+ function newCompletionRecord(type, value, target) {
+ "use strict";
+ return {
+ __proto__:CompletionRecord.prototype,
+ type: type,
+ value: value,
+ target: target
+ };
+ }
 
-function cloneCompletion(completion) {
-    // pending exceptions would get lost, so we got to clone the completion
-    return newCompletionRecord(completion.type, completion.value, completion.target);
-}
+ function cloneCompletion(completion) {
+ // pending exceptions would get lost, so we got to clone the completion
+ return newCompletionRecord(completion.type, completion.value, completion.target);
+ }
 
+ function CompletionRecord(type, value, target) {
+ "use strict";
+ completion.type = type;
+ completion.value = value;
+ completion.target = target;
+ return completion;
+ }
+
+ */
 function CompletionRecord(type, value, target) {
     "use strict";
-    completion.type = type;
-    completion.value = value;
-    completion.target = target;
-    return completion;
-}
-
-*/
-function CompletionRecord(type, value, target) {
-    "use strict";
     return {
-        __proto__:CompletionRecord.prototype,
+        __proto__: CompletionRecord.prototype,
         type: type,
         value: value,
         target: target
@@ -10536,7 +10870,7 @@ function GetValue(V) {
 
     var base = V.base;
 
-    if (IsUnresolvableReference(V)) return newReferenceError( format("REFERENCE_S_UNRESOLVABLE", V.name));
+    if (IsUnresolvableReference(V)) return newReferenceError(format("REFERENCE_S_UNRESOLVABLE", V.name));
 
     if (IsPropertyReference(V)) {
 
@@ -10562,7 +10896,7 @@ function PutValue(V, W) {
     if (IsUnresolvableReference(V)) {
 
         //console.log("unresolvable "+V.name);
-        if (V.strict) return newReferenceError( translate("UNRESOLVABLE_REFERENCE"));
+        if (V.strict) return newReferenceError(translate("UNRESOLVABLE_REFERENCE"));
         var globalObj = GetGlobalObject();
         return Put(globalObj, V.name, W, false);
 
@@ -10606,7 +10940,7 @@ function GetBase(V) {
 }
 function HasPrimitiveBase(V) {
     var type = Type(GetBase(V));
-    switch(type) {
+    switch (type) {
         case STRING:
         case BOOLEAN:
         case NUMBER:
@@ -10619,17 +10953,17 @@ function HasPrimitiveBase(V) {
 function GetThisValue(V) {
     if (isAbrupt(V = ifAbrupt(V))) return V;
     if (Type(V) !== REFERENCE) return V;
-    if (IsUnresolvableReference(V)) return newReferenceError( "GetThisValue: unresolvable reference");
+    if (IsUnresolvableReference(V)) return newReferenceError("GetThisValue: unresolvable reference");
     if (IsSuperReference(V)) return V.thisValue;
     return GetBase(V);
 }
 function OrdinaryObject(prototype) {
     var O = Object.create(OrdinaryObject.prototype);
     prototype = prototype === undefined ? getIntrinsic(INTRINSICS.OBJECTPROTOTYPE) || null : prototype;
-    setInternalSlot(O,SLOTS.BINDINGS, Object.create(null));
-    setInternalSlot(O,SLOTS.SYMBOLS, Object.create(null));
-    setInternalSlot(O,SLOTS.PROTOTYPE,prototype || null);
-    setInternalSlot(O,SLOTS.EXTENSIBLE, true);
+    setInternalSlot(O, SLOTS.BINDINGS, Object.create(null));
+    setInternalSlot(O, SLOTS.SYMBOLS, Object.create(null));
+    setInternalSlot(O, SLOTS.PROTOTYPE, prototype || null);
+    setInternalSlot(O, SLOTS.EXTENSIBLE, true);
     return O;
 }
 OrdinaryObject.prototype = {
@@ -10697,7 +11031,7 @@ function ObjectCreate(proto, internalDataList) {
 
     var O = OrdinaryObject(proto);
     /*
-        new
+     new
      */
     if (internalDataList && Array.isArray(internalDataList)) {
         for (var i = 0, j = internalDataList.length; i < j; i++) {
@@ -10705,7 +11039,7 @@ function ObjectCreate(proto, internalDataList) {
         }
     }
     /*
-        legacy
+     legacy
      */
     else if (internalDataList && typeof internalDataList === "object") {
         for (var k in internalDataList) {
@@ -10718,15 +11052,15 @@ function ObjectCreate(proto, internalDataList) {
 }
 function ObjectDefineProperty(O, P, Desc) {
     if (IsDataDescriptor(Desc)) {
-        callInternalSlot(SLOTS.DEFINEOWNPROPERTY, O,P, Desc);
+        callInternalSlot(SLOTS.DEFINEOWNPROPERTY, O, P, Desc);
     } else if (IsAccessorDescriptor(Desc)) {
-        callInternalSlot(SLOTS.DEFINEOWNPROPERTY, O,P, Desc);
+        callInternalSlot(SLOTS.DEFINEOWNPROPERTY, O, P, Desc);
     }
     return O;
 }
 function ObjectDefineProperties(O, Properties) {
     var pendingException;
-    if (Type(O) !== OBJECT) return newTypeError( "first argument is not an object");
+    if (Type(O) !== OBJECT) return newTypeError("first argument is not an object");
     var props = ToObject(Properties);
     var names = OwnPropertyKeysAsList(props);
     var P, descriptors = [];
@@ -10789,7 +11123,7 @@ var ObjectConstructor_assign = function (thisArg, argList) {
 var ObjectConstructor_create = function (thisArg, argList) {
     var O = argList[0];
     var Properties = argList[1];
-    if (Type(O) !== OBJECT && Type(O) !== NULL) return newTypeError( "create: argument is not an object or null");
+    if (Type(O) !== OBJECT && Type(O) !== NULL) return newTypeError("create: argument is not an object or null");
     var obj = ObjectCreate(O);
     if (Properties !== undefined) {
         return ObjectDefineProperties(obj, Properties);
@@ -10800,7 +11134,7 @@ var ObjectConstructor_defineProperty = function (thisArg, argList) {
     var O = argList[0];
     var P = argList[1];
     var Attributes = argList[2];
-    if (Type(O) !== OBJECT) return newTypeError( "defineProperty: argument 1 is not an object");
+    if (Type(O) !== OBJECT) return newTypeError("defineProperty: argument 1 is not an object");
     var key = ToPropertyKey(P);
     var desc = ToPropertyDescriptor(Attributes);
     if (isAbrupt(desc = ifAbrupt(desc))) return desc;
@@ -10835,19 +11169,19 @@ var ObjectConstructor_construct = function (argList) {
 var ObjectConstructor_seal = function (thisArg, argList) {
     var O;
     O = argList[0];
-    if (Type(O) !== OBJECT) return newTypeError( "First argument is object");
+    if (Type(O) !== OBJECT) return newTypeError("First argument is object");
     var status = SetIntegrityLevel(O, "sealed");
     if (isAbrupt(status = ifAbrupt(status))) return status;
-    if (status === false) return newTypeError( "seal: can not seal object");
+    if (status === false) return newTypeError("seal: can not seal object");
     return O;
 };
-var ObjectConstructor_freeze =function (thisArg, argList) {
+var ObjectConstructor_freeze = function (thisArg, argList) {
     var O;
     O = argList[0];
-    if (Type(O) !== OBJECT) return newTypeError( "First argument is object");
+    if (Type(O) !== OBJECT) return newTypeError("First argument is object");
     var status = SetIntegrityLevel(O, "frozen");
     if (isAbrupt(status = ifAbrupt(status))) return status;
-    if (status === false) return newTypeError( "freeze: can not freeze object");
+    if (status === false) return newTypeError("freeze: can not freeze object");
     return O;
 };
 var ObjectConstructor_getOwnPropertyDescriptor = function (thisArg, argList) {
@@ -10896,10 +11230,10 @@ var ObjectConstructor_isFrozen = function (thisArg, argList) {
 };
 var ObjectConstructor_preventExtensions = function (thisArg, argList) {
     var O = argList[0];
-    if (Type(O) !== OBJECT) return newTypeError( "argument is not an object");
+    if (Type(O) !== OBJECT) return newTypeError("argument is not an object");
     var status = PreventExtensions(O);
     if (isAbrupt(status = ifAbrupt(status))) return status;
-    if (status === false) return newTypeError( "can not prevent extensions");
+    if (status === false) return newTypeError("can not prevent extensions");
     return O;
 };
 var ObjectConstructor_keys = function (thisArg, argList) {
@@ -11001,16 +11335,16 @@ var ObjectConstructor_getOwnPropertyDescriptors = function (thisArg, argList) {
     var gotAllNames = false;
     while (gotAllNames === false) {
         var next = IteratorStep(keys);
-        if (isAbrupt(next=ifAbrupt(next))) return next;
+        if (isAbrupt(next = ifAbrupt(next))) return next;
         if (next === false) gotAllNames = true;
         else {
             var nextKey = IteratorValue(next);
             nextKey = ToPropertyKey(nextKey);
-            if (isAbrupt(nextKey=ifAbrupt(nextKey))) return nextKey;
+            if (isAbrupt(nextKey = ifAbrupt(nextKey))) return nextKey;
             var desc = callInternalSlot(SLOTS.GETOWNPROPERTY, obj, nextKey);
-            if (isAbrupt(desc=ifAbrupt(desc))) return desc;
+            if (isAbrupt(desc = ifAbrupt(desc))) return desc;
             var descriptor = FromPropertyDescriptor(desc);
-            if (isAbrupt(descriptor=ifAbrupt(descriptor))) return descriptor;
+            if (isAbrupt(descriptor = ifAbrupt(descriptor))) return descriptor;
             var status = CreateDataProperty(descriptors, nextKey, descriptor);
             // Assert(!isAbrupt(status));
             if (isAbrupt(status)) return status;
@@ -11036,7 +11370,7 @@ var ObjectPrototype_isPrototypeOf = function (thisArg, argList) {
     if (Type(O) !== OBJECT) return false;
     var O = ToObject(thisArg);
     if (isAbrupt(O = ifAbrupt(O))) return O;
-    for (;;) {
+    for (; ;) {
         V = GetPrototypeOf(V);
         if (V == null) return false;
         if (SameValue(O, V)) return true;
@@ -11081,7 +11415,7 @@ var ObjectPrototype_toString = function toString(thisArg, argList) {
     var builtinTag, tag;
     var intrToStr = O.toString();
     if (builtinTagsByToString[intrToStr]) {
-	builtinTag = builtinTagsByToString[intrToStr];
+        builtinTag = builtinTagsByToString[intrToStr];
     } else if (hasInternalSlot(O, SLOTS.SYMBOLDATA)) builtinTag = "Symbol";
     else if (hasInternalSlot(O, SLOTS.STRINGDATA)) builtinTag = "String";
     else if (hasInternalSlot(O, SLOTS.ERRORDATA)) builtinTag = "Error";
@@ -11122,10 +11456,9 @@ var ObjectPrototype_set_proto = function (thisArg, argList) {
     if (Type(O) !== OBJECT) return proto;
     var status = callInternalSlot(SLOTS.SETPROTOTYPEOF, O, proto);
     if (isAbrupt(status = ifAbrupt(status))) return status;
-    if (status === false) return newTypeError( "__proto__: SetPrototypeOf failed.");
+    if (status === false) return newTypeError("__proto__: SetPrototypeOf failed.");
     return proto;
 };
-
 function DeclarativeEnvironment(outer) {
     var de = Object.create(DeclarativeEnvironment.prototype);
     de.Bindings = Object.create(null);
@@ -11143,14 +11476,14 @@ DeclarativeEnvironment.prototype = {
     CreateMutableBinding: function CreateMutableBinding(N, D) {
         var envRec = this.Bindings;
         var configValue = !!(D === true || D === undefined);
-        if (N in envRec) return newReferenceError("CreateMutableBinding: "+ N + " is already declared");
+        if (N in envRec) return newReferenceError("CreateMutableBinding: " + N + " is already declared");
         else createIdentifierBinding(envRec, N, undefined, configValue);
         return NormalCompletion();
     },
     CreateImmutableBinding: function CreateImmutableBinding(N) {
         var envRec = this.Bindings;
         var configValue = false;
-        if (N in envRec) return newReferenceError( "CreateMutableBinding: " +N + " is already declared");
+        if (N in envRec) return newReferenceError("CreateMutableBinding: " + N + " is already declared");
         else createIdentifierBinding(envRec, N, undefined, configValue, false);
         return NormalCompletion();
     },
@@ -11183,9 +11516,9 @@ DeclarativeEnvironment.prototype = {
         if (this.HasBinding(N)) {
             b = this.Bindings[N];
             if (!b.initialized) {
-        	if (S === true) return newReferenceError(format("UNINITIALIZED_BINDING_S", N));
-        	return NormalCompletion(undefined);
-    	    }
+                if (S === true) return newReferenceError(format("UNINITIALIZED_BINDING_S", N));
+                return NormalCompletion(undefined);
+            }
             return NormalCompletion(b.value);
         } else if (this.outer) return this.outer.GetBindingValue(N, S);
     },
@@ -11213,7 +11546,7 @@ function createIdentifierBinding(envRec, N, V, D, W) {
         __proto__: null,
         name: N,
         value: V,
-        writable: W === undefined? true : W,
+        writable: W === undefined ? true : W,
         configurable: !!D
     };
 }
@@ -11227,22 +11560,21 @@ function GetIdentifierReference(lex, name, strict) {
         return GetIdentifierReference(outer, name, strict);
     }
 }
-function GetThisEnvironment () {
+function GetThisEnvironment() {
     var env = getLexEnv();
     do {
         if (env.HasThisBinding()) return env;
     } while (env = env.outer);
 }
-function ThisResolution () {
+function ThisResolution() {
     var env = GetThisEnvironment();
     return env.GetThisBinding();
 }
 
-
 function FunctionRecord() {
     /*
-        move the typed memory into the ast-api range
-        or don´t place the record here
+     move the typed memory into the ast-api range
+     or don´t place the record here
      */
 }
 
@@ -11252,7 +11584,7 @@ function FunctionEnvironment(F, T) {
     fe.BoundFunction = F;
     fe.thisValue = T;
     fe.Bindings = Object.create(null);
-    fe.outer = getInternalSlot(F,SLOTS.ENVIRONMENT);
+    fe.outer = getInternalSlot(F, SLOTS.ENVIRONMENT);
     return fe;
 }
 FunctionEnvironment.prototype = assign(FunctionEnvironment.prototype, {
@@ -11325,7 +11657,7 @@ ObjectEnvironment.prototype = {
     CreateMutableBinding: function (N, D) {
         var O = this.BoundObject;
         var configValue = D === true;
-        return callInternalSlot(SLOTS.DEFINEOWNPROPERTY, O,N, {
+        return callInternalSlot(SLOTS.DEFINEOWNPROPERTY, O, N, {
             value: undefined,
             writable: true,
             enumerable: false,
@@ -11334,7 +11666,7 @@ ObjectEnvironment.prototype = {
     },
     CreateImmutableBinding: function (N) {
         var O = this.BoundObject;
-        return callInternalSlot(SLOTS.DEFINEOWNPROPERTY, O,N, {
+        return callInternalSlot(SLOTS.DEFINEOWNPROPERTY, O, N, {
             value: undefined,
             writable: false,
             enumerable: false,
@@ -11527,7 +11859,7 @@ var object_tostring_to_type_table = {
     "[object TypeExoticObject]": OBJECT
 };
 var primitive_type_string_table = {
-    __proto__:null,
+    __proto__: null,
     "[object SymbolPrimitiveType]": "symbol",
     "number": "number",
     "string": "string",
@@ -11535,12 +11867,12 @@ var primitive_type_string_table = {
     "undefined": "undefined"
 };
 var EnvironmentType = {
-    __proto__:null,
-    "[object ObjectEnvironment]":true,
+    __proto__: null,
+    "[object ObjectEnvironment]": true,
     "[object DeclarativeEnvironment]": true,
     "[object FunctionEnvironment]": true,
     "[object GlobalLexicalEnvironment]": true,
-    "[object GlobalVariableEnvironment]":true,
+    "[object GlobalVariableEnvironment]": true,
     "[object GlobalEnvironment]": true
 };
 var ReturnZero = {
@@ -11567,7 +11899,7 @@ function Type(O) {
         if (O instanceof CompletionRecord) return Type(O.value);
         return object_tostring_to_type_table[O.toString && O.toString()] || OBJECT;
     }
-    switch(type) {
+    switch (type) {
         case "number":
             return NUMBER;
         case "boolean":
@@ -11620,11 +11952,11 @@ function ToPrimitive(V, prefType) {
     if (isAbrupt(exoticToPrim = ifAbrupt(exoticToPrim))) return exoticToPrim;
     var result;
     if (exoticToPrim !== undefined) {
-        if (!IsCallable(exoticToPrim)) return newTypeError( "exotic ToPrimitive of object is not a function");
+        if (!IsCallable(exoticToPrim)) return newTypeError("exotic ToPrimitive of object is not a function");
         result = exoticToPrim.Call(V, [hint]);
         if (isAbrupt(result = ifAbrupt(result))) return result;
         if (result !== undefined && Type(result) !== OBJECT) return result;
-        else return newTypeError( "Can not convert the object to a primitive with exotic ToPrimitive")
+        else return newTypeError("Can not convert the object to a primitive with exotic ToPrimitive")
     }
     if (hint === "default") hint = "number";
     return OrdinaryToPrimitive(V, hint);
@@ -11643,10 +11975,10 @@ function OrdinaryToPrimitive(O, hint) {
             result = func.Call(O, []);
             if (isAbrupt(result = ifAbrupt(result))) return result;
             if (result !== undefined && Type(result) !== OBJECT) return result;
-            else return newTypeError( "Can not convert the object to a primitive with OrdinaryToPrimitive by calling " + list[i]);
+            else return newTypeError("Can not convert the object to a primitive with OrdinaryToPrimitive by calling " + list[i]);
         }
     }
-    return newTypeError( "Can not convert object to primitive with OrdinaryToPrimitive (end)");
+    return newTypeError("Can not convert object to primitive with OrdinaryToPrimitive (end)");
 }
 function ToInt8(V) {
     var view = new Int8Array(1);
@@ -11665,7 +11997,7 @@ function ToUint16(V) {
     if (ReturnZero[number]) return +0;
     var int = sign(number) * floor(abs(number));
     var int16bit = int % (Math.pow(2, 16));
- //   return NormalCompletion(int16Bit);
+    //   return NormalCompletion(int16Bit);
     return int16bit;
 }
 function ToInt32(V) {
@@ -11697,7 +12029,7 @@ function ToInteger(V) {
     if (ReturnNum[number]) return number;
     // return sign(number) * floor(abs(number));
     //return NormalCompletion(number|0);
-    return number|0;
+    return number | 0;
 }
 function ToLength(V) {
     var len = ToInteger(V);
@@ -11759,10 +12091,10 @@ function ToString(V) {
         return "" + V;
     }
     if (t === SYMBOL) {
-        return newTypeError( "Can not convert symbol to string");
+        return newTypeError("Can not convert symbol to string");
     }
     if (t === OBJECT) {
-        if (hasInternalSlot(V, SLOTS.SYMBOLDATA)) return newTypeError( "Can not convert symbol to string");
+        if (hasInternalSlot(V, SLOTS.SYMBOLDATA)) return newTypeError("Can not convert symbol to string");
         var primVal = ToPrimitive(V, "string");
         return ToString(primVal);
     }
@@ -11780,9 +12112,12 @@ function ToObject(V) {
         return s;
     }
     switch (typeof V) {
-        case "number":return OrdinaryConstruct(getIntrinsic(INTRINSICS.NUMBER), [V]);
-        case "string":return OrdinaryConstruct(getIntrinsic(INTRINSICS.STRING), [V]);
-        case "boolean":return OrdinaryConstruct(getIntrinsic(INTRINSICS.BOOLEAN), [V]);
+        case "number":
+            return OrdinaryConstruct(getIntrinsic(INTRINSICS.NUMBER), [V]);
+        case "string":
+            return OrdinaryConstruct(getIntrinsic(INTRINSICS.STRING), [V]);
+        case "boolean":
+            return OrdinaryConstruct(getIntrinsic(INTRINSICS.BOOLEAN), [V]);
     }
 }
 function CheckObjectCoercible(argument) {
@@ -11803,7 +12138,7 @@ function CheckObjectCoercible(argument) {
     }
     return argument;
 }
-function CanonicalNumericString (argument) {
+function CanonicalNumericString(argument) {
     Assert(Type(argument) === STRING, "CanonicalNumericString: argument has to be a string");
     var n = ToNumber(argument);
     if (n === -0) return +0;
@@ -11821,6 +12156,11 @@ var UI16BUF = new Uint16Array(CVTBUF);
 var I16BUF = new Int16Array(CVTBUF);
 var UI8BUF = new Uint8Array(CVTBUF);
 var I8BUF = new Int8Array(CVTBUF);
+
+function _ToNumber(num) {
+    F64BUF[0] = num;
+    return F64BUF[0];
+}
 
 function _ToFloat32(num) {
     if (isAbrupt(num)) return num;
@@ -11893,11 +12233,11 @@ function SameValueZero(x, y) {
     if (Type(x) !== Type(y)) return false;
 
     if (IsTypeObject(x)) {
-          // IsTypeObject(y)
-         return SameValue(getInternalSlot(x, SLOTS.TYPEDESCRIPTOR), getInternalSlot(y, SLOTS.TYPEDESCRIPTOR))
-             && SameValue(getInternalSlot(x, SLOTS.VIEWEDARRAYBUFFER), getInternalSlot(y, SLOTS.VIEWEDARRAYBUFFER))
-             && SameValue(getInternalSlot(x, SLOTS.BYTEOFFSET), getInternalSlot(y, SLOTS.BYTEOFFSET))
-             && SameValue(getInternalSlot(x, SLOTS.OPACITY), getInternalSlot(y, SLOTS.OPACITY));
+        // IsTypeObject(y)
+        return SameValue(getInternalSlot(x, SLOTS.TYPEDESCRIPTOR), getInternalSlot(y, SLOTS.TYPEDESCRIPTOR))
+            && SameValue(getInternalSlot(x, SLOTS.VIEWEDARRAYBUFFER), getInternalSlot(y, SLOTS.VIEWEDARRAYBUFFER))
+            && SameValue(getInternalSlot(x, SLOTS.BYTEOFFSET), getInternalSlot(y, SLOTS.BYTEOFFSET))
+            && SameValue(getInternalSlot(x, SLOTS.OPACITY), getInternalSlot(y, SLOTS.OPACITY));
 
     }
 
@@ -11946,7 +12286,7 @@ function AbstractEqualityComparison(x, y) {
     if (ty === UNDEFINED && tx === NULL) return true;
 
 }
-function AbstractRelationalComparison(x,y,leftFirst) {
+function AbstractRelationalComparison(x, y, leftFirst) {
     var tx = Type(x);
     var ty = Type(y);
 
@@ -11998,8 +12338,8 @@ function PropertyDescriptor(V, W, E, C) {
     var D = Object.create(null);
     D.value = V;
     D.writable = W !== undefined ? W : true;
-    D.enumerable =  E !== undefined ? E : true;
-    D.configurable =  C !== undefined ? C : true;
+    D.enumerable = E !== undefined ? E : true;
+    D.configurable = C !== undefined ? C : true;
     return D;
 }
 function IsAccessorDescriptor(desc) {
@@ -12022,12 +12362,12 @@ function FromPropertyDescriptor(desc) {
     if (desc == undefined) return undefined;
     if (desc.Origin) return desc.Origin;
     var obj = ObjectCreate();
-    callInternalSlot(SLOTS.DEFINEOWNPROPERTY, obj,"value",        PropertyDescriptor(desc.value, true, true, true));
-    callInternalSlot(SLOTS.DEFINEOWNPROPERTY, obj,"writable",     PropertyDescriptor(desc.writable, true, true, true));
-    callInternalSlot(SLOTS.DEFINEOWNPROPERTY, obj,"get",          PropertyDescriptor(desc.get, true, true, true));
-    callInternalSlot(SLOTS.DEFINEOWNPROPERTY, obj,"set",          PropertyDescriptor(desc.set, true, true, true));
-    callInternalSlot(SLOTS.DEFINEOWNPROPERTY, obj,"enumerable",   PropertyDescriptor(desc.enumerable, true, true, true));
-    callInternalSlot(SLOTS.DEFINEOWNPROPERTY, obj,"configurable", PropertyDescriptor(desc.configurable, true, true, true));
+    callInternalSlot(SLOTS.DEFINEOWNPROPERTY, obj, "value", PropertyDescriptor(desc.value, true, true, true));
+    callInternalSlot(SLOTS.DEFINEOWNPROPERTY, obj, "writable", PropertyDescriptor(desc.writable, true, true, true));
+    callInternalSlot(SLOTS.DEFINEOWNPROPERTY, obj, "get", PropertyDescriptor(desc.get, true, true, true));
+    callInternalSlot(SLOTS.DEFINEOWNPROPERTY, obj, "set", PropertyDescriptor(desc.set, true, true, true));
+    callInternalSlot(SLOTS.DEFINEOWNPROPERTY, obj, "enumerable", PropertyDescriptor(desc.enumerable, true, true, true));
+    callInternalSlot(SLOTS.DEFINEOWNPROPERTY, obj, "configurable", PropertyDescriptor(desc.configurable, true, true, true));
     return obj;
 }
 function ToPropertyDescriptor(O) {
@@ -12100,7 +12440,7 @@ function ValidateAndApplyPropertyDescriptor(O, P, extensible, Desc, current) {
 
     if (O) Assert(IsPropertyKey(P), "ValidateAndApplyPropertyDescriptor: expecting property key if object is present");
 
-    Assert(typeof Desc === "object", "ValidateAndApplyPropertyDescriptor: Desc must be a descriptor object (btw. !!current is " + ( !! current) + ")");
+    Assert(typeof Desc === "object", "ValidateAndApplyPropertyDescriptor: Desc must be a descriptor object (btw. !!current is " + ( !!current) + ")");
 
     var changeType = "reconfigure"; // o.observe
     if (!current) {
@@ -12283,14 +12623,14 @@ function GetOwnPropertyKeys(O, type) {
     while (!gotAllNames) {
         next = IteratorStep(keys);
         if (isAbrupt(next = ifAbrupt(next))) {
-    	    return next;
-    	}
+            return next;
+        }
         if (!next) gotAllNames = true;
         else {
             nextKey = IteratorValue(next);
             if (isAbrupt(nextKey = ifAbrupt(nextKey))) return nextKey;
             // differs from spec if (Type(nextKey)==type) by if (type == "") above
-        	nameList.push(nextKey);
+            nameList.push(nextKey);
 
         }
     }
@@ -12298,7 +12638,7 @@ function GetOwnPropertyKeys(O, type) {
 }
 function OwnPropertyKeys(O, type) {
     var keys = [];
-    var bindings = getInternalSlot(O,SLOTS.BINDINGS);
+    var bindings = getInternalSlot(O, SLOTS.BINDINGS);
     var key;
     for (key in bindings) {
         keys.push(key);
@@ -12333,13 +12673,13 @@ function GetMethod(O, P) {
     var method = callInternalSlot(SLOTS.GET, O, P, O);
     if (isAbrupt(method = ifAbrupt(method))) return method;
     if (IsCallable(method)) return method;
-    else return newTypeError( "GetMethod: " + P + " can not be retrieved");
+    else return newTypeError("GetMethod: " + P + " can not be retrieved");
 }
 function SetIntegrityLevel(O, level) {
     Assert(Type(O) === OBJECT, "object expected");
     Assert(level === "sealed" || level === "frozen", "level must be sealed or frozen");
     var desc;
-    
+
     if (level === "sealed" || level === "frozen") {
         var pendingException;
         var keys = OwnPropertyKeysAsList(O); // Array statt iterator
@@ -12397,7 +12737,7 @@ function SetIntegrityLevel(O, level) {
     }
 }
 function TestIntegrityLevel(O, level) {
-    Assert(TyType(O) === OBJECT,"object expected");
+    Assert(TyType(O) === OBJECT, "object expected");
     Assert(level === "sealed" || level === "frozen", "level must be sealed or frozen");
     var status = IsExtensible(O);
     if (isAbrupt(status = ifAbrupt(status))) return status;
@@ -12429,11 +12769,11 @@ function TestIntegrityLevel(O, level) {
     if (configurable) return false;
 }
 function GetPrototypeOf(V) {
-    if (Type(V) !== OBJECT) return newTypeError( "argument is not an object");
+    if (Type(V) !== OBJECT) return newTypeError("argument is not an object");
     return getInternalSlot(V, SLOTS.PROTOTYPE) || null;
 }
 function SetPrototypeOf(O, V) {
-    if (Type(V) !== OBJECT && V !== null) return newTypeError( "Assertion: argument is either object or null, but it is not.");
+    if (Type(V) !== OBJECT && V !== null) return newTypeError("Assertion: argument is either object or null, but it is not.");
     var extensible = getInternalSlot(O, SLOTS.EXTENSIBLE);
     var current = getInternalSlot(O, SLOTS.PROTOTYPE);
     if (SameValue(V, current)) return true;
@@ -12470,7 +12810,7 @@ function Delete(O, P) {
 }
 function Get(O, P) {
     Assert(Type(O) === OBJECT, "[[Get]] expecting object");
-    Assert(IsPropertyKey(P), "[[Get]] expecting valid property key, got "+ P);
+    Assert(IsPropertyKey(P), "[[Get]] expecting valid property key, got " + P);
     return callInternalSlot(SLOTS.GET, O, P, O);
 }
 function OrdinaryObjectGet(O, P, R) {
@@ -12502,7 +12842,7 @@ function Set(O, P, V, R) {
         parent = GetPrototypeOf(O);
         if (isAbrupt(parent = ifAbrupt(parent))) return parent;
         if (parent !== null) {
-            return callInternalSlot(SLOTS.SET, parent,P, V, R);
+            return callInternalSlot(SLOTS.SET, parent, P, V, R);
         }
     }
     // von unter isdata hoch gehoben
@@ -12544,7 +12884,7 @@ function Invoke(O, P, args) {
     obj = ToObject(O);
     if (isAbrupt(obj = ifAbrupt(obj))) return obj;
     var func = callInternalSlot(SLOTS.GET, obj, P, O);
-    if (!IsCallable(func)) return newTypeError( "Invoke: expected function is not callable");
+    if (!IsCallable(func)) return newTypeError("Invoke: expected function is not callable");
     if (isAbrupt(func = ifAbrupt(func))) return func;
     return callInternalSlot(SLOTS.CALL, func, O, args);
 }
@@ -12553,8 +12893,8 @@ function OrdinaryObjectInvoke(O, P, A, R) {
     Assert(Array.isArray(A), "expecting arguments list");
     var method = callInternalSlot(SLOTS.GET, O, P, R);
     if (isAbrupt(method = ifAbrupt(method))) return method;
-    if (Type(method) !== OBJECT) return newTypeError( "Invoke: method " + P + " is not an object");
-    if (!IsCallable(method)) return newTypeError( "Invoke: method " + P + " is not callable");
+    if (Type(method) !== OBJECT) return newTypeError("Invoke: method " + P + " is not an object");
+    if (!IsCallable(method)) return newTypeError("Invoke: method " + P + " is not callable");
     return method.Call(R, A);
 }
 
@@ -12585,7 +12925,7 @@ function Enumerate(O) {
         proto = GetPrototypeOf(proto);
     }
     // read the list backwards, coz O is the index 0 in the list.
-    for (var k = chain.length-1; k >= 0; k--) {
+    for (var k = chain.length - 1; k >= 0; k--) {
         var obj = chain[k];
         bindings = obj.Bindings;
         for (name in bindings) {
@@ -12633,7 +12973,7 @@ function GetNotifier(O) {
     }
     return notifier;
 }
-function BeginChange(O,changeType) {
+function BeginChange(O, changeType) {
     var notifier = GetNotifier(O);
     var activeChanges = getInternalSlot(notifier, SLOTS.ACTIVECHANGES);
     var changeCount = Get(activeChanges, changeType);
@@ -12653,7 +12993,7 @@ function ShouldDeliverToObserver(activeChanges, acceptList, changeType) {
     var doesAccept = false;
     for (var i = 0, j = acceptList.length; i < j; i++) {
         var accept = acceptList[i];
-        if (Get(activeChanges,accept) > 0) return false;
+        if (Get(activeChanges, accept) > 0) return false;
         if (accept === changeType) doesAccept = true;
     }
     return doesAccept;
@@ -12781,7 +13121,7 @@ function CreateSpliceChanceRecord(object, index, removed, addedCount) {
 var NotifierPrototype_notify = function notify(thisArg, argListdgn) {
     var changeRecord = argList[0];
     var notifier = thisArg;
-    if (Type(notifier) !== OBJECT) return newTypeError( "Notifier is not an object.");
+    if (Type(notifier) !== OBJECT) return newTypeError("Notifier is not an object.");
     var target = getInternalSlot(notifier, SLOTS.TARGET);
     var newRecord = ObjectCreate();
     var status = callInternalSlot(SLOTS.DEFINEOWNPROPERTY, newRecord, "object", {
@@ -12813,16 +13153,16 @@ var NotifierPrototype_notify = function notify(thisArg, argListdgn) {
     //if (isAbrupt(status)) return status;
     return NormalCompletion();
 };
-var NotifierPrototype_performChange =  function performChange(thisArg, argList) {
+var NotifierPrototype_performChange = function performChange(thisArg, argList) {
     var changeType = argList[0];
     var changeFn = argList[1];
     var notifier = thisArg;
     var status;
-    if (Type(notifier) !== OBJECT) return newTypeError( "notifier is not an object");
+    if (Type(notifier) !== OBJECT) return newTypeError("notifier is not an object");
     var target = getInternalSlot(notifier, SLOTS.TARGET);
     if (target === undefined) return NormalCompletion(undefined);
-    if (Type(changeType) !== STRING) return newTypeError( "changeType has to be a string");
-    if (!IsCallable(changeFn)) return newTypeError( "changeFn is not a callable");
+    if (Type(changeType) !== STRING) return newTypeError("changeType has to be a string");
+    if (!IsCallable(changeFn)) return newTypeError("changeFn is not a callable");
     status = BeginChange(target, changeType);
     var changeRecord = callInternalSlot(SLOTS.CALL, changeFn, undefined, []);
     status = EndChange(target, changeType);
@@ -12896,8 +13236,8 @@ var ObjectConstructor_observe = function (thisArg, argList) {
 var ObjectConstructor_unobserve = function (thisArg, argList) {
     var O = argList[0];
     var callback = argList[1];
-    if (Type(O) !== OBJECT) return newTypeError( "first argument is not an object");
-    if (!IsCallable(callback)) return newTypeError( "second argument is not callable");
+    if (Type(O) !== OBJECT) return newTypeError("first argument is not an object");
+    if (!IsCallable(callback)) return newTypeError("second argument is not callable");
     var notifier = GetNotifier(O);
     var changeObservers = getInternalSlot(notifier, SLOTS.CHANGEOBSERVERS);
     changeObservers = changeObservers.filter(function (record) {
@@ -12908,9 +13248,9 @@ var ObjectConstructor_unobserve = function (thisArg, argList) {
 };
 var ObjectConstructor_deliverChangeRecords = function (thisArg, argList) {
     var callback = argList[0];
-    if (!IsCallable(callback)) return newTypeError( "first argument is not callable.");
+    if (!IsCallable(callback)) return newTypeError("first argument is not callable.");
     var status;
-    for (;;) {
+    for (; ;) {
         status = DeliverChangeRecords(callback);
         status = ifAbrupt(status);
         if (status === false || isAbrupt(status)) break;
@@ -12920,7 +13260,7 @@ var ObjectConstructor_deliverChangeRecords = function (thisArg, argList) {
 };
 var ObjectConstructor_getNotifier = function (thisArg, argList) {
     var O = argList[0];
-    if (Type(O) !== OBJECT) return newTypeError( "first argument is not an object");
+    if (Type(O) !== OBJECT) return newTypeError("first argument is not an object");
     if (TestIntegrityLevel(O, "frozen")) return NormalCompletion(null);
     return GetNotifier(O);
 };
@@ -12962,7 +13302,7 @@ OrdinaryFunction.prototype = {
     }
 };
 addMissingProperties(OrdinaryFunction.prototype, OrdinaryObject.prototype);
-function BoundFunction_call (thisArg, argList) {
+function BoundFunction_call(thisArg, argList) {
     var F = this;
     var B = getInternalSlot(F, SLOTS.BOUNDTARGETFUNCTION);
     var T = getInternalSlot(F, SLOTS.BOUNDTHIS);
@@ -13021,7 +13361,7 @@ function SetFunctionLength(F, L) {
 function SetFunctionName(F, name, prefix) {
     var success;
     var t = Type(name);
-    Assert(t === STRING || t === SYMBOL, "SetFunctionName: name must be a symbol or a string ("+name+" is "+t+")");
+    Assert(t === STRING || t === SYMBOL, "SetFunctionName: name must be a symbol or a string (" + name + " is " + t + ")");
     Assert(IsCallable(F), "SetFunctionName: F has to be an EcmaScript Function Object");
     Assert(!HasOwnProperty(F, "name"), "SetFunctionName: Function may not have a name property");
     if (t === SYMBOL) {
@@ -13039,7 +13379,7 @@ function SetFunctionName(F, name, prefix) {
         configurable: false
     });
     if (isAbrupt(success = ifAbrupt(success))) return success;
-    if (success === false) return newTypeError( "Sorry, can not set the f.name property");
+    if (success === false) return newTypeError("Sorry, can not set the f.name property");
     return NormalCompletion(undefined);
 }
 function GeneratorFunctionCreate(kind, paramList, body, scope, strict, fProto, homeObject, methodName) {
@@ -13086,7 +13426,7 @@ function FunctionInitialize(F, kind, paramList, body, scope, strict, homeObject,
 function GetPrototypeFromConstructor(C, intrinsicDefaultProto) {
     var realm, intrinsics;
     Assert((typeof intrinsicDefaultProto === "string"), "intrinsicDefaultProto has to be a string");
-    if (!IsConstructor(C)) return newTypeError( "GetPrototypeFromConstructor: C is no constructor");
+    if (!IsConstructor(C)) return newTypeError("GetPrototypeFromConstructor: C is no constructor");
     var proto = Get(C, "prototype");
     if (isAbrupt(proto = ifAbrupt(proto))) return proto;
     if (Type(proto) !== OBJECT) {
@@ -13108,10 +13448,10 @@ function CreateFromConstructor(F) {
     var creator = Get(F, $$create);
     if (isAbrupt(creator = ifAbrupt(creator))) return creator;
     if (creator === undefined) return undefined;
-    if (IsCallable(creator) === false) return newTypeError( "CreateFromConstructor: creator has to be callable");
+    if (IsCallable(creator) === false) return newTypeError("CreateFromConstructor: creator has to be callable");
     var obj = callInternalSlot(SLOTS.CALL, creator, F, []);
     if (isAbrupt(obj = ifAbrupt(obj))) return obj;
-    if (Type(obj) !== OBJECT) return newTypeError( "CreateFromConstructor: obj has to be an object");
+    if (Type(obj) !== OBJECT) return newTypeError("CreateFromConstructor: obj has to be an object");
     return obj;
 }
 function Construct(F, argList) {
@@ -13121,7 +13461,7 @@ function Construct(F, argList) {
     if (obj === undefined) {
         obj = OrdinaryCreateFromConstructor(F, INTRINSICS.OBJECTPROTOTYPE);
         if (isAbrupt(obj = ifAbrupt(obj))) return obj;
-        if (Type(obj) !== OBJECT) return newTypeError( "essential Construct: obj is not an object");
+        if (Type(obj) !== OBJECT) return newTypeError("essential Construct: obj is not an object");
     }
     var result = callInternalSlot(SLOTS.CALL, F, obj, argList);
     if (isAbrupt(result = ifAbrupt(result))) return result;
@@ -13132,13 +13472,13 @@ function OrdinaryConstruct(F, argList) {
     var creator = Get(F, $$create);
     var obj;
     if (creator) {
-        if (!IsCallable(creator)) return newTypeError( "OrdinaryConstruct: creator is not callable");
+        if (!IsCallable(creator)) return newTypeError("OrdinaryConstruct: creator is not callable");
         obj = callInternalSlot(SLOTS.CALL, creator, F, argList);
     } else {
         obj = OrdinaryCreateFromConstructor(F, INTRINSICS.OBJECTPROTOTYPE);
     }
     if (isAbrupt(obj = ifAbrupt(obj))) return obj;
-    if (Type(obj) !== OBJECT) return newTypeError( "OrdinaryConstruct: Type(obj) is not object");
+    if (Type(obj) !== OBJECT) return newTypeError("OrdinaryConstruct: Type(obj) is not object");
     var result = callInternalSlot(SLOTS.CALL, F, obj, argList);
     if (isAbrupt(result = ifAbrupt(result))) return result;
     if (Type(result) === OBJECT) return result;
@@ -13178,7 +13518,7 @@ function OrdinaryHasInstance(C, O) {
     if (Type(O) !== OBJECT) return false;
     P = Get(C, "prototype");
     if (isAbrupt(P = ifAbrupt(P))) return P;
-    if (Type(P) !== OBJECT) return newTypeError( "OrdinaryHasInstance: P not object");
+    if (Type(P) !== OBJECT) return newTypeError("OrdinaryHasInstance: P not object");
     while (O = GetPrototypeOf(O)) {
         if (isAbrupt(O = ifAbrupt(O))) return O;
         if (O === null) return false;
@@ -13210,18 +13550,20 @@ function CreateBuiltinFunction(realm, steps, len, name, internalSlots) {
     // this is probably/oc unneccessary, coz all builtins have make no use of the environments anyways
     // because they are plain javascript functions
     /*
-    function Call() {
-        var result;
-        var oldContext = getContext();
-        var callContext = ExecutionContext(getContext(), realm);
-        var stack = getStack();
-        stack.push(callContext);
-        result = steps.apply(this, arguments);
-        Assert(callContext === stack.pop(), "CreateBuiltinFunction: Wrong Context popped from the Stack.");
-        return result;
-    }
-*/
-    steps = steps || function () {return NormalCompletion(undefined);};
+     function Call() {
+     var result;
+     var oldContext = getContext();
+     var callContext = ExecutionContext(getContext(), realm);
+     var stack = getStack();
+     stack.push(callContext);
+     result = steps.apply(this, arguments);
+     Assert(callContext === stack.pop(), "CreateBuiltinFunction: Wrong Context popped from the Stack.");
+     return result;
+     }
+     */
+    steps = steps || function () {
+        return NormalCompletion(undefined);
+    };
     // var Call = steps;
     // the .steps reference is needed by function.prototype.toString to put out the right function
     //Call.steps = steps;
@@ -13256,12 +13598,12 @@ function CreateBuiltinFunction(realm, steps, len, name, internalSlots) {
                 setInternalSlot(F, slot, undefined);
             });
         }
-    }    
+    }
     return F;
 }
 var FunctionPrototype_apply = function (thisArg, argList) {
     var func = thisArg;
-    if (!IsCallable(func)) return newTypeError( "fproto.apply: func is not callable");
+    if (!IsCallable(func)) return newTypeError("fproto.apply: func is not callable");
     var T = argList[0];
     if (T !== undefined && T !== null) T = ToObject(argList[0]);
     var argArray = argList[1] || ArrayCreate(0);
@@ -13291,8 +13633,8 @@ var FunctionPrototype_$$hasInstance = function (thisArg, argList) {
 var FunctionPrototype_toMethod = function (thisArg, argList) {
     var superBinding = argList[0];
     var methodName = argList[1];
-    if (!IsCallable(thisArg)) return newTypeError( "this value is not callable");
-    if (Type(superBinding) !== OBJECT) return newTypeError( "superBinding is not an object");
+    if (!IsCallable(thisArg)) return newTypeError("this value is not callable");
+    if (Type(superBinding) !== OBJECT) return newTypeError("superBinding is not an object");
     if (methodName !== undefined) {
         methodName = ToPropertyKey(methodName);
         if (isAbrupt(methodName = ifAbrupt(methodName))) return methodName;
@@ -13337,9 +13679,9 @@ var FunctionConstructor_call = function (thisArg, argList) {
     }
     var boundNames = BoundNames(parameters);
     if (!IsSimpleParameterList(parameters)) {
-        if (dupesInTheTwoLists(boundNames, VarDeclaredNames(funcBody))) return newSyntaxError( "Duplicate Identifier in Parameters and VarDeclaredNames of funcBody");
+        if (dupesInTheTwoLists(boundNames, VarDeclaredNames(funcBody))) return newSyntaxError("Duplicate Identifier in Parameters and VarDeclaredNames of funcBody");
     }
-    if (dupesInTheTwoLists(boundNames, LexicallyDeclaredNames(funcBody))) return newSyntaxError( "Duplicate Identifier in Parameters and LexicallyDeclaredNames of funcBody");
+    if (dupesInTheTwoLists(boundNames, LexicallyDeclaredNames(funcBody))) return newSyntaxError("Duplicate Identifier in Parameters and LexicallyDeclaredNames of funcBody");
     var scope = getRealm().globalEnv;
     var F = thisArg;
     if (F === undefined || !hasInternalSlot(F, SLOTS.CODE)) {
@@ -13348,7 +13690,7 @@ var FunctionConstructor_call = function (thisArg, argList) {
         if (isAbrupt(proto = ifAbrupt(proto))) return proto;
         F = FunctionAllocate(C);
     }
-    if (getInternalSlot(F, SLOTS.FUNCTIONKIND) !== "normal") return newTypeError( "function object not a 'normal' function");
+    if (getInternalSlot(F, SLOTS.FUNCTIONKIND) !== "normal") return newTypeError("function object not a 'normal' function");
     FunctionInitialize(F, "normal", parameters, funcBody, scope, true);
     proto = ObjectCreate();
     var status = MakeConstructor(F);
@@ -13383,7 +13725,7 @@ var FunctionPrototype_toString = function (thisArg, argList) {
     var kind = getInternalSlot(F, SLOTS.FUNCTIONKIND);
     var star = kind === "generator" ? "*" : "";
     var callfn;
-    if (!C && (callfn=getInternalSlot(F, SLOTS.CALL))) {
+    if (!C && (callfn = getInternalSlot(F, SLOTS.CALL))) {
         var code = "// [[Builtin Function native JavaScript Code]]\r\n";
         // createbuiltin wraps the builtin
         if (callfn.steps) callfn = callfn.steps;
@@ -13404,7 +13746,7 @@ var FunctionPrototype_toString = function (thisArg, argList) {
         return NormalCompletion("function" + star + " " + name + " " + paramString + " " + bodyString);
     }
 };
-function MakeMethod (F, methodName, homeObject) {
+function MakeMethod(F, methodName, homeObject) {
     Assert(IsCallable(F), "MakeMethod: method is not a function");
     Assert(methodName === undefined || IsPropertyKey(methodName), "MakeMethod: methodName is neither undefined nor a valid property key");
     var homeObjectType = Type(homeObject);
@@ -13430,7 +13772,7 @@ function GetSuperBinding(obj) {
     if (!hasInternalSlot(obj, SLOTS.HOMEOBJECT)) return undefined;
     return getInternalSlot(obj, SLOTS.HOMEOBJECT);
 }
-function cloneFunction (func) {
+function cloneFunction(func) {
     var newFunc = OrdinaryFunction();
     setInternalSlot(newFunc, SLOTS.ENVIRONMENT, getInternalSlot(func, SLOTS.ENVIRONMENT));
     setInternalSlot(newFunc, SLOTS.CODE, getInternalSlot(func, SLOTS.CODE));
@@ -13557,7 +13899,7 @@ function CreateListFromArrayLike(arrayLike) {
 }
 function CreateArrayIterator(array, kind) {
     var O = ToObject(array);
-    if (isAbrupt(O=ifAbrupt(O))) return O;
+    if (isAbrupt(O = ifAbrupt(O))) return O;
     var proto = getIntrinsic(INTRINSICS.ARRAYITERATORPROTOTYPE);
     var iterator = ObjectCreate(proto);
     setInternalSlot(iterator, SLOTS.ITERATEDOBJECT, O);
@@ -13578,7 +13920,7 @@ function IsSparseArray(A) {
 function IsArray(A) {
     return A instanceof ArrayExoticObject;
 }
-var ArrayConstructor_call =  function (thisArg, argList) {
+var ArrayConstructor_call = function (thisArg, argList) {
     var O = thisArg;
     var array;
     var intLen;
@@ -13673,28 +14015,28 @@ var ArrayPrototype_copyWithin = function (thisArg, argList) {
     var start = argList[1];
     var end = argList[2];
     var O = ToObject(thisArg);
-    if (isAbrupt(O=ifAbrupt(O))) return O;
+    if (isAbrupt(O = ifAbrupt(O))) return O;
     var lenVal = Get(O, "length");
     var len = ToLength(lenVal);
-    if (isAbrupt(len=ifAbrupt(len))) return len;
+    if (isAbrupt(len = ifAbrupt(len))) return len;
     var relativeTarget = ToInteger(target);
-    if (isAbrupt(relativeTarget=ifAbrupt(relativeTarget))) return relativeTarget;
+    if (isAbrupt(relativeTarget = ifAbrupt(relativeTarget))) return relativeTarget;
     var from, to, final;
-    if (relativeTarget < 0) to = max((len+relativeTarget), 0);
+    if (relativeTarget < 0) to = max((len + relativeTarget), 0);
     else to = min(relativeTarget, len);
     var relativeStart = ToInteger(start);
-    if (isAbrupt(relativeStart=ifAbrupt(relativeStart))) return relativeStart;
-    if (relativeStart < 0) from = max((len+relativeStart), 0);
+    if (isAbrupt(relativeStart = ifAbrupt(relativeStart))) return relativeStart;
+    if (relativeStart < 0) from = max((len + relativeStart), 0);
     else from = min(relativeStart, len);
     var relativeEnd;
     if (end === undefined) relativeEnd = len;
     else relativeEnd = ToInteger(end);
-    if (isAbrupt(relativeEnd=ifAbrupt(relativeEnd))) return relativeEnd;
-    if (relativeEnd < 0) final = max((len+relativeEnd),0);
+    if (isAbrupt(relativeEnd = ifAbrupt(relativeEnd))) return relativeEnd;
+    if (relativeEnd < 0) final = max((len + relativeEnd), 0);
     else final = min(relativeEnd, len);
-    var count = min(final-from, len-to);
+    var count = min(final - from, len - to);
     var direction;
-    if (from < to && (to < from+count)) {
+    if (from < to && (to < from + count)) {
         direction = -1;
         from = from + count - 1;
         to = to + count - 1;
@@ -13705,7 +14047,7 @@ var ArrayPrototype_copyWithin = function (thisArg, argList) {
         var fromKey = ToString(from);
         var toKey = ToString(to);
         var fromPresent = HasProperty(O, fromKey);
-        if (isAbrupt(fromPresent=ifAbrupt(fromPresent))) return fromPresent;
+        if (isAbrupt(fromPresent = ifAbrupt(fromPresent))) return fromPresent;
         if (fromPresent === true) {
             var fromVal = Get(O, fromKey);
             if (isAbrupt(fromVal = ifAbrupt(fromVal))) return fromVal;
@@ -13725,10 +14067,10 @@ var ArrayPrototype_reduce = function reduce(thisArg, argList) {
     var callback = argList[0];
     var initialValue = argList[1];
     var O = ToObject(thisArg);
-    if (isAbrupt(O=ifAbrupt(O))) return O;
+    if (isAbrupt(O = ifAbrupt(O))) return O;
     var lenValue = Get(O, "length");
     var len = ToLength(lenValue);
-    if (isAbrupt(len=ifAbrupt(len))) return len;
+    if (isAbrupt(len = ifAbrupt(len))) return len;
     if (!IsCallable(callback)) return newTypeError(format("S_NOT_CALLABLE", "reduce: first argument"));
     var k = 0;
     var accumulator;
@@ -13739,10 +14081,10 @@ var ArrayPrototype_reduce = function reduce(thisArg, argList) {
         while (!kPresent && (k < len)) {
             var Pk = ToString(k);
             var kPresent = HasProperty(O, Pk);
-            if (isAbrupt(kPresent=ifAbrupt(kPresent))) return kPresent;
+            if (isAbrupt(kPresent = ifAbrupt(kPresent))) return kPresent;
             if (kPresent) {
                 accumulator = Get(O, Pk);
-                if (isAbrupt(accumulator=ifAbrupt(accumulator))) return accumulator;
+                if (isAbrupt(accumulator = ifAbrupt(accumulator))) return accumulator;
             }
             k = k + 1;
         }
@@ -13755,7 +14097,7 @@ var ArrayPrototype_reduce = function reduce(thisArg, argList) {
             var kValue = Get(O, Pk);
             if (isAbrupt(kPresent = ifAbrupt(kPresent))) return kPresent;
             accumulator = callInternalSlot(SLOTS.CALL, callback, undefined, [accumulator, kValue, k, O]);
-            if (isAbrupt(accumulator=ifAbrupt(accumulator))) return accumulator;
+            if (isAbrupt(accumulator = ifAbrupt(accumulator))) return accumulator;
         }
         k = k + 1;
     }
@@ -13765,10 +14107,10 @@ var ArrayPrototype_reduceRight = function reduceRight(thisArg, argList) {
     var callback = argList[0];
     var initialValue = argList[1];
     var O = ToObject(thisArg);
-    if (isAbrupt(O=ifAbrupt(O))) return O;
+    if (isAbrupt(O = ifAbrupt(O))) return O;
     var lenValue = Get(O, "length");
     var len = ToLength(lenValue);
-    if (isAbrupt(len=ifAbrupt(len))) return len;
+    if (isAbrupt(len = ifAbrupt(len))) return len;
     if (!IsCallable(callback)) return newTypeError(format("S_NOT_CALLABLE", "reduce: first argument"));
     var accumulator;
     var k = len - 1;
@@ -13779,10 +14121,10 @@ var ArrayPrototype_reduceRight = function reduceRight(thisArg, argList) {
         while (!kPresent && (k >= 0)) {
             var Pk = ToString(k);
             kPresent = HasProperty(O, Pk);
-            if (isAbrupt(kPresent=ifAbrupt(kPresent))) return kPresent;
+            if (isAbrupt(kPresent = ifAbrupt(kPresent))) return kPresent;
             if (kPresent) {
                 accumulator = Get(O, Pk);
-                if (isAbrupt(accumulator=ifAbrupt(accumulator))) return accumulator;
+                if (isAbrupt(accumulator = ifAbrupt(accumulator))) return accumulator;
             }
             k = k - 1;
         }
@@ -13795,7 +14137,7 @@ var ArrayPrototype_reduceRight = function reduceRight(thisArg, argList) {
             var kValue = Get(O, Pk);
             if (isAbrupt(kPresent = ifAbrupt(kPresent))) return kPresent;
             accumulator = callInternalSlot(SLOTS.CALL, callback, undefined, [accumulator, kValue, k, O]);
-            if (isAbrupt(accumulator=ifAbrupt(accumulator))) return accumulator;
+            if (isAbrupt(accumulator = ifAbrupt(accumulator))) return accumulator;
         }
         k = k - 1;
     }
@@ -13804,21 +14146,21 @@ var ArrayPrototype_reduceRight = function reduceRight(thisArg, argList) {
 var ArrayPrototype_unshift = function unshift(thisArg, argList) {
     var items = argList;
     var O = ToObject(thisArg);
-    if (isAbrupt(O=ifAbrupt(O))) return O;
+    if (isAbrupt(O = ifAbrupt(O))) return O;
     var lenValue = Get(O, "length");
     var len = ToLength(lenValue);
-    if (isAbrupt(len=ifAbrupt(len))) return len;
+    if (isAbrupt(len = ifAbrupt(len))) return len;
     var argCount = argList.length;
     var k = len;
     // first move 0...n to k+1..n+k+1
     while (k > 0) {
-        var from = ToString(k-1);
-        var to = ToString(k+argCount-1);
-        var fromPresent = HasProperty(O,from);
-        if (isAbrupt(fromPresent=ifAbrupt(fromPresent))) return fromPresent;
+        var from = ToString(k - 1);
+        var to = ToString(k + argCount - 1);
+        var fromPresent = HasProperty(O, from);
+        if (isAbrupt(fromPresent = ifAbrupt(fromPresent))) return fromPresent;
         if (fromPresent === true) {
             var fromValue = Get(O, from);
-            if (isAbrupt(fromValue=ifAbrupt(fromValue))) return fromValue;
+            if (isAbrupt(fromValue = ifAbrupt(fromValue))) return fromValue;
             var putStatus = Put(O, to, fromValue, true);
             if (isAbrupt(putStatus)) return putStatus;
         } else {
@@ -13833,23 +14175,23 @@ var ArrayPrototype_unshift = function unshift(thisArg, argList) {
     while (i < items.length) {
         var E = items[i];
         var putStatus = Put(O, ToString(j), E, true);
-        if(isAbrupt(putStatus)) return putSttus;
+        if (isAbrupt(putStatus)) return putSttus;
         i = i + 1;
         j = j + 1;
     }
-    putStatus = Put(O, "length", len+argCount, true);
+    putStatus = Put(O, "length", len + argCount, true);
     if (isAbrupt(putStatus)) return putStatus;
     // thats unshift (renumber the old, prepend the new) == O(n) total copy and define
-    return NormalCompletion(len+argCount);
+    return NormalCompletion(len + argCount);
 };
 var ArrayPrototype_findIndex = function (thisArg, argList) {
     var predicate = argList[0];
     var optThisArg = argList[1];
     var O = ToObject(thisArg);
-    if (isAbrupt(O=ifAbrupt(O))) return O;
+    if (isAbrupt(O = ifAbrupt(O))) return O;
     var lenValue = Get(O, "length");
     var len = ToLength(lenValue);
-    if (isAbrupt(len=ifAbrupt(len))) return len;
+    if (isAbrupt(len = ifAbrupt(len))) return len;
     if (!IsCallable(predicate)) return newTypeError(format("S_NOT_CALLABLE", "findIndex: predicate"));
     var T;
     if (optThisArg != undefined) T = optThisArg; else T = undefined; // or just "optThisArg = T;"
@@ -13857,12 +14199,12 @@ var ArrayPrototype_findIndex = function (thisArg, argList) {
     while (k < len) {
         var Pk = ToString(k);
         var kPresent = HasProperty(O, Pk);
-        if (isAbrupt(kPresent=ifAbrupt(kPresent))) return kPresent;
+        if (isAbrupt(kPresent = ifAbrupt(kPresent))) return kPresent;
         if (kPresent === true) {
             var kValue = Get(O, Pk);
-            if (isAbrupt(kValue=ifAbrupt(kValue))) return kValue;
+            if (isAbrupt(kValue = ifAbrupt(kValue))) return kValue;
             var testResult = callInternalSlot(SLOTS.CALL, predicate, T, [kValue, k, O]);
-            if (isAbrupt(testResult=ifAbrupt(testResult))) return testResult;
+            if (isAbrupt(testResult = ifAbrupt(testResult))) return testResult;
             if (ToBoolean(testResult) === true) return NormalCompletion(k);
         }
         k = k + 1;
@@ -13873,10 +14215,10 @@ var ArrayPrototype_find = function (thisArg, argList) {
     var predicate = argList[0];
     var optThisArg = argList[1];
     var O = ToObject(thisArg);
-    if (isAbrupt(O=ifAbrupt(O))) return O;
+    if (isAbrupt(O = ifAbrupt(O))) return O;
     var lenValue = Get(O, "length");
     var len = ToLength(lenValue);
-    if (isAbrupt(len=ifAbrupt(len))) return len;
+    if (isAbrupt(len = ifAbrupt(len))) return len;
     if (!IsCallable(predicate)) return newTypeError(format("S_NOT_CALLABLE", "findIndex: predicate"));
     var T;
     if (optThisArg != undefined) T = optThisArg; else T = undefined; // or just "optThisArg = T;"
@@ -13884,12 +14226,12 @@ var ArrayPrototype_find = function (thisArg, argList) {
     while (k < len) {
         var Pk = ToString(k);
         var kPresent = HasProperty(O, Pk);
-        if (isAbrupt(kPresent=ifAbrupt(kPresent))) return kPresent;
+        if (isAbrupt(kPresent = ifAbrupt(kPresent))) return kPresent;
         if (kPresent === true) {
             var kValue = Get(O, Pk);
-            if (isAbrupt(kValue=ifAbrupt(kValue))) return kValue;
+            if (isAbrupt(kValue = ifAbrupt(kValue))) return kValue;
             var testResult = callInternalSlot(SLOTS.CALL, predicate, T, [kValue, k, O]);
-            if (isAbrupt(testResult=ifAbrupt(testResult))) return testResult;
+            if (isAbrupt(testResult = ifAbrupt(testResult))) return testResult;
             if (ToBoolean(testResult) === true) return NormalCompletion(kValue);
         }
         k = k + 1;
@@ -13901,20 +14243,20 @@ var ArrayPrototype_fill = function (thisArg, argList) {
     var start = argList[1];
     var end = argList[2];
     var O = ToObject(thisArg);
-    if (isAbrupt(O=ifAbrupt(O))) return O;
+    if (isAbrupt(O = ifAbrupt(O))) return O;
     var lenVal = Get(O, "length");
     var len = ToLength(lenVal);
-    if (isAbrupt(len=ifAbrupt(len))) return len;
+    if (isAbrupt(len = ifAbrupt(len))) return len;
     var k, final;
     var relativeStart = ToInteger(start);
-    if (isAbrupt(relativeStart=ifAbrupt(relativeStart))) return relativeStart;
-    if (relativeStart < 0) k = max((len+relativeStart), 0);
+    if (isAbrupt(relativeStart = ifAbrupt(relativeStart))) return relativeStart;
+    if (relativeStart < 0) k = max((len + relativeStart), 0);
     else k = min(relativeStart, len);
     var relativeEnd;
     if (end === undefined) relativeEnd = len;
     else relativeEnd = ToInteger(end);
-    if (isAbrupt(relativeEnd=ifAbrupt(relativeEnd))) return relativeEnd;
-    if (relativeEnd < 0) final = max((len+relativeEnd),0);
+    if (isAbrupt(relativeEnd = ifAbrupt(relativeEnd))) return relativeEnd;
+    if (relativeEnd < 0) final = max((len + relativeEnd), 0);
     else final = min(relativeEnd, len);
     while (k < final) {
         var Pk = ToString(k);
@@ -13973,7 +14315,7 @@ var ArrayConstructor_of = function (thisArg, argList) {
     return NormalCompletion(A);
 
 };
-var ArrayConstructor_from  = function from(thisArg, argList) {
+var ArrayConstructor_from = function from(thisArg, argList) {
     var C = thisArg;
     var arrayLike = argList[0];
     var mapfn = argList[1];
@@ -14101,22 +14443,22 @@ function IsConcatSpreadable(O) {
 }
 var ArrayPrototype_concat = function (thisArg, argList) {
     var O = ToObject(thisArg);
-    if (isAbrupt(O=ifAbrupt(O))) return O;
+    if (isAbrupt(O = ifAbrupt(O))) return O;
     var A = undefined;
     if (IsArray(O)) {
         var C = Get(O, "constructor");
-        if (isAbrupt(C=isAbrupt(C))) return C;
+        if (isAbrupt(C = isAbrupt(C))) return C;
         if (IsConstructor(C)) {
             var thisRealm = getRealm();
             if (thisRealm === getInternalSlot(C, SLOTS.REALM)) {
-                A =  callInternalSlot(SLOTS.CONSTRUCT, C, [0]);
-                if (isAbrupt(A=ifAbrupt(A))) return A;
+                A = callInternalSlot(SLOTS.CONSTRUCT, C, [0]);
+                if (isAbrupt(A = ifAbrupt(A))) return A;
             }
         }
     }
     if (A === undefined) {
         A = ArrayCreate(0);
-        if (isAbrupt(A=ifAbrupt(A))) return A;
+        if (isAbrupt(A = ifAbrupt(A))) return A;
     }
     var n = 0;
     var items = [O].concat(argList);
@@ -14129,23 +14471,23 @@ var ArrayPrototype_concat = function (thisArg, argList) {
             var k = 0;
             var lenVal = Get(E, "length");
             var len = ToLength(lenVal);
-            if (isAbrupt(len=ifAbrupt(len))) return len;
+            if (isAbrupt(len = ifAbrupt(len))) return len;
             while (k < len) {
                 var P = ToString(k);
                 var exists = HasProperty(E, P);
-                if (isAbrupt(exists=ifAbrupt(exists))) return exists;
+                if (isAbrupt(exists = ifAbrupt(exists))) return exists;
                 if (exists) {
                     var subElement = Get(E, P);
-                    if (isAbrupt(subElement=ifAbrupt(subElement))) return subElement;
+                    if (isAbrupt(subElement = ifAbrupt(subElement))) return subElement;
                     status = CreateDataPropertyOrThrow(A, ToString(n), subElement);
                     if (isAbrupt(status)) return status;
                 }
                 n = n + 1;
                 k = k + 1;
             }
-        } else  {
+        } else {
             status = CreateDataPropertyOrThrow(A, ToString(n), E);
-            if (isAbrupt(status=ifAbrupt(status))) return status;
+            if (isAbrupt(status = ifAbrupt(status))) return status;
             n = n + 1;
         }
         i = i + 1;
@@ -14288,32 +14630,32 @@ var ArrayPrototype_shift = function shift(thisArg, argList) {
     var len = ToUint32(lenVal);
     if (isAbrupt(len = ifAbrupt(len))) return len;
     if (len === 0) {
-	var putStatus = Put(O, "length", 0, true);
-	if (isAbrupt(putStatus)) return putStatus;
-	return NormalCompletion(undefined);
+        var putStatus = Put(O, "length", 0, true);
+        if (isAbrupt(putStatus)) return putStatus;
+        return NormalCompletion(undefined);
     }
     var first = Get(O, "0");
-    if (isAbrupt(first=ifAbrupt(first))) return first;
+    if (isAbrupt(first = ifAbrupt(first))) return first;
     var k = 1;
     while (k < len) {
-	var from = ToString(k);
-	var to = ToString(k-1);
-	var fromPresent = HasProperty(O, from);
-	if (isAbrupt(fromPresent=ifAbrupt(fromPresent))) return fromPresent;
-	if (fromPresent === true) {
-	    var fromVal = Get(O, from);
-	    if (isAbrupt(fromVal = ifAbrupt(fromVal))) return fromVal;
-	    putStatus = Put(O, to, fromVal, true);
-	    if (isAbrupt(putStatus)) return putStatus;
-	} else {
-	    var deleteStatus = DeletePropertyOrThrow(O, to);
-	    if (isAbrupt(deleteStatus)) return deleteStatus;
-	}
-	k = k + 1;
+        var from = ToString(k);
+        var to = ToString(k - 1);
+        var fromPresent = HasProperty(O, from);
+        if (isAbrupt(fromPresent = ifAbrupt(fromPresent))) return fromPresent;
+        if (fromPresent === true) {
+            var fromVal = Get(O, from);
+            if (isAbrupt(fromVal = ifAbrupt(fromVal))) return fromVal;
+            putStatus = Put(O, to, fromVal, true);
+            if (isAbrupt(putStatus)) return putStatus;
+        } else {
+            var deleteStatus = DeletePropertyOrThrow(O, to);
+            if (isAbrupt(deleteStatus)) return deleteStatus;
+        }
+        k = k + 1;
     }
-    deleteStatus = DeletePropertyOrThrow(O, ToString(len-1));
+    deleteStatus = DeletePropertyOrThrow(O, ToString(len - 1));
     if (isAbrupt(deleteStatus)) return deleteStatus;
-    putStatus = Put(O, "length", len-1, true);
+    putStatus = Put(O, "length", len - 1, true);
     if (isAbrupt(putStatus)) return putStatus;
     return NormalCompletion(first);
 };
@@ -14361,39 +14703,39 @@ var ArrayPrototype_slice = function slice(thisArg, argList) {
     return NormalCompletion(A);
 };
 /*
-function SortCompare(thisArg, argList) {
-    var obj = thisArg;
-    var j = argList[0];
-    var k = argList[1];
-    var jString = ToString(j);
-    var kString = ToString(k);
-    var hasj = HasProperty(obj, jString);
-    var hask = HasProperty(obj, kString);
-    if (isAbrupt(hasj=ifAbrupt(hasj))) return hasj;
-    if (isAbrupt(hask=ifAbrupt(hask))) return hask;
-    if (!hasj && !hask) return NormalCompletion(+0);
-    if (!hasj) return NormalCompletion(1);
-    if (!hask) return NormalCompletion(-1);
-    var x = Get(obj, jString);
-    if (isAbrupt(x = ifAbrupt(x))) return x;
-    var y = Get(obj, kString);
-    if (isAbrupt(y = ifAbrupt(y))) return y;
-    if (x === undefined && y === undefined) return NormalCompletion(+0);
-    if (x === undefined) return NormalCompletion(1);
-    if (y === undefined) return NormalCompletion(-1);
-    if (comparefn != undefined) {
-        if (!IsCallable(comparefn)) return newTypeError("comparefn not callable");
-        return callInternalSlot(SLOTS.CALL, comparefn, undefined, [x,y]);
-    }
-    var xString = ToString(x);
-    if (isAbrupt(xString=ifAbrupt(xString))) return xString;
-    var yString = ToString(y);
-    if (isAbrupt(yString=ifAbrupt(yString))) return yString;
-    if (xString < yString) return -1
+ function SortCompare(thisArg, argList) {
+ var obj = thisArg;
+ var j = argList[0];
+ var k = argList[1];
+ var jString = ToString(j);
+ var kString = ToString(k);
+ var hasj = HasProperty(obj, jString);
+ var hask = HasProperty(obj, kString);
+ if (isAbrupt(hasj=ifAbrupt(hasj))) return hasj;
+ if (isAbrupt(hask=ifAbrupt(hask))) return hask;
+ if (!hasj && !hask) return NormalCompletion(+0);
+ if (!hasj) return NormalCompletion(1);
+ if (!hask) return NormalCompletion(-1);
+ var x = Get(obj, jString);
+ if (isAbrupt(x = ifAbrupt(x))) return x;
+ var y = Get(obj, kString);
+ if (isAbrupt(y = ifAbrupt(y))) return y;
+ if (x === undefined && y === undefined) return NormalCompletion(+0);
+ if (x === undefined) return NormalCompletion(1);
+ if (y === undefined) return NormalCompletion(-1);
+ if (comparefn != undefined) {
+ if (!IsCallable(comparefn)) return newTypeError("comparefn not callable");
+ return callInternalSlot(SLOTS.CALL, comparefn, undefined, [x,y]);
+ }
+ var xString = ToString(x);
+ if (isAbrupt(xString=ifAbrupt(xString))) return xString;
+ var yString = ToString(y);
+ if (isAbrupt(yString=ifAbrupt(yString))) return yString;
+ if (xString < yString) return -1
 
-};
-*/
-var defaultCompareFn_call = function(thisArg, argList) {
+ };
+ */
+var defaultCompareFn_call = function (thisArg, argList) {
     var a = argList[0];
     var b = argList[1];
     if (a > b) return 1;
@@ -14412,17 +14754,17 @@ var ArrayPrototype_sort = function (thisArg, argList) {
     // for today
 
     var arrayToSort = CreateListFromArrayLike(O);
-    if (isAbrupt(arrayToSort=ifAbrupt(arrayToSort))) return arrayToSort;
+    if (isAbrupt(arrayToSort = ifAbrupt(arrayToSort))) return arrayToSort;
 
     if (!comparefn) {
-	comparefn = getIntrinsic(INTRINSICS.DEFAULTCOMPARE);
-    } 
-    if (!IsCallable(comparefn)) { 
-	return newTypeError("comparefn is not callable");    
+        comparefn = getIntrinsic(INTRINSICS.DEFAULTCOMPARE);
+    }
+    if (!IsCallable(comparefn)) {
+        return newTypeError("comparefn is not callable");
     }
     var sortedArray = arrayToSort.sort(function (a, b) {
-	var result =  unwrap(callInternalSlot(SLOTS.CALL, comparefn, undefined, [a,b]));
-	return result;
+        var result = unwrap(callInternalSlot(SLOTS.CALL, comparefn, undefined, [a, b]));
+        return result;
     });
     return NormalCompletion(CreateArrayFromList(sortedArray));
 };
@@ -14438,8 +14780,8 @@ var ArrayPrototype_splice = function splice(thisArg, argList) {
     var relativeStart = ToInteger(start);
     if (isAbrupt(relativeStart = ifAbrupt(relativeStart))) return relativeStart;
     var actualStart;
-    if (relativeStart < 0) actualStart = max((len+relativeStart),0);
-    else actualStart=min(relativeStart,len);
+    if (relativeStart < 0) actualStart = max((len + relativeStart), 0);
+    else actualStart = min(relativeStart, len);
     if (start === undefined) {
         var actualDeleteCount = 0;
     } else if (deleteCount === undefined) {
@@ -14483,11 +14825,11 @@ var ArrayPrototype_splice = function splice(thisArg, argList) {
     if (itemCount < actualDeleteCount) {
         k = actualStart;
         while (k < (len - actualDeleteCount)) {
-            from = ToString(k+actualDeleteCount);
-            var to = ToString(k+itemCount);
+            from = ToString(k + actualDeleteCount);
+            var to = ToString(k + itemCount);
             fromPresent = HasProperty(O, from);
             if (isAbrupt(fromPresent = ifAbrupt(fromPresent))) return fromPresent;
-            if (fromPresent  === true) {
+            if (fromPresent === true) {
                 fromValue = Get(O, from);
                 if (isAbrupt(fromValue = ifAbrupt(fromValue))) return fromValue;
                 putStatus = Put(O, to, fromValue, true);
@@ -14739,7 +15081,7 @@ var ArrayPrototype_some = function some(thisArg, argList) {
             if (isAbrupt(testResult = ifAbrupt(testResult))) return testResult;
             if (ToBoolean(testResult) === true) return NormalCompletion(true);
         }
-            k = k + 1;
+        k = k + 1;
     }
     return NormalCompletion(false);
 };
@@ -14747,7 +15089,7 @@ var ArrayPrototype_first = function (thisArg, argList) {
     var O = ToObject(thisArg);
     if (isAbrupt(O = ifAbrupt(O))) return O;
     var result = Get(O, ToString(0));
-    if (isAbrupt(result=ifAbrupt(result))) return result;
+    if (isAbrupt(result = ifAbrupt(result))) return result;
     return NormalCompletion(result);
 };
 var ArrayPrototype_last = function (thisArg, argList) {
@@ -14756,8 +15098,8 @@ var ArrayPrototype_last = function (thisArg, argList) {
     var lenVal = Get(O, "length");
     var len = ToUint32(lenVal);
     if (isAbrupt(len = ifAbrupt(len))) return len;
-    var result = Get(O, ToString(len-1));
-    if (isAbrupt(result=ifAbrupt(result))) return result;
+    var result = Get(O, ToString(len - 1));
+    if (isAbrupt(result = ifAbrupt(result))) return result;
     return NormalCompletion(result);
 };
 var ArrayIteratorPrototype_$$iterator = function (thisArg, argList) {
@@ -14765,10 +15107,10 @@ var ArrayIteratorPrototype_$$iterator = function (thisArg, argList) {
 };
 var ArrayIteratorPrototype_next = function (thisArg, argList) {
     var O = thisArg;
-    if (Type(O) !== OBJECT) return newTypeError( "ArrayIterator.prototype.next: O is not an object. ");
+    if (Type(O) !== OBJECT) return newTypeError("ArrayIterator.prototype.next: O is not an object. ");
 
     if (!hasInternalSlot(O, SLOTS.ITERATEDOBJECT) || !hasInternalSlot(O, SLOTS.ARRAYITERATIONNEXTINDEX) || !hasInternalSlot(O, SLOTS.ARRAYITERATIONKIND)) {
-        return newTypeError( "Object has not all ArrayIterator properties.");
+        return newTypeError("Object has not all ArrayIterator properties.");
     }
 
     var a = getInternalSlot(O, SLOTS.ITERATEDOBJECT);
@@ -14830,10 +15172,10 @@ var ArrayIteratorPrototype_next = function (thisArg, argList) {
 };
 function ArrayExoticObject(proto) {
     var A = Object.create(ArrayExoticObject.prototype);
-    setInternalSlot(A, SLOTS.BINDINGS,Object.create(null));
+    setInternalSlot(A, SLOTS.BINDINGS, Object.create(null));
     setInternalSlot(A, SLOTS.SYMBOLS, Object.create(null));
     setInternalSlot(A, SLOTS.EXTENSIBLE, true);
-    setInternalSlot(A, SLOTS.PROTOTYPE, proto? proto : ArrayPrototype);
+    setInternalSlot(A, SLOTS.PROTOTYPE, proto ? proto : ArrayPrototype);
     return A;
 }
 ArrayExoticObject.prototype = {
@@ -14878,9 +15220,9 @@ function ArrayCreate(len, proto) {
     var array = ArrayExoticObject(p);
     setInternalSlot(array, SLOTS.EXTENSIBLE, true);
     if (len !== undefined) {
-        setInternalSlot(array , SLOTS.ARRAYINITIALISATIONSTATE, true);
+        setInternalSlot(array, SLOTS.ARRAYINITIALISATIONSTATE, true);
     } else {
-        setInternalSlot(array , SLOTS.ARRAYINITIALISATIONSTATE,  false);
+        setInternalSlot(array, SLOTS.ARRAYINITIALISATIONSTATE, false);
         len = 0;
     }
     OrdinaryDefineOwnProperty(array, "length", {
@@ -14897,8 +15239,8 @@ function ArraySetLength(A, Desc) {
     }
     var newLenDesc = assign(Object.create(null), Desc);
     var newLen = ToUint32(Desc.value);
-    if (newLen != ToNumber(Desc.value)) return newRangeError( "Array length index out of range");
-    if (isAbrupt(newLen=ifAbrupt(newLen))) return newLen;
+    if (newLen != ToNumber(Desc.value)) return newRangeError("Array length index out of range");
+    if (isAbrupt(newLen = ifAbrupt(newLen))) return newLen;
     newLenDesc.value = newLen;
     var oldLenDesc = callInternalSlot(SLOTS.GETOWNPROPERTY, A, "length");
     if (!oldLenDesc) oldLenDesc = Object.create(null);
@@ -14985,7 +15327,7 @@ function Decode(string, reservedSet) {
     var R = "";
     var k = 0;
     var S;
-    for (;;) {
+    for (; ;) {
         if (k === strLen) return NormalCompletion(R);
         var C = string[k];
         if (C !== "%") {
@@ -15048,7 +15390,7 @@ function thisTimeValue(value) {
         var b = getInternalSlot(value, SLOTS.DATEVALUE);
         if (b !== undefined) return b;
     }
-    return newTypeError( "thisTimeValue: value is not a Date");
+    return newTypeError("thisTimeValue: value is not a Date");
 }
 function Day(t) {
     return Math.floor(t / msPerDay);
@@ -15066,7 +15408,7 @@ function DaysInYear(y) {
     if (c === 0) return 366;
 }
 function DayFromYear(y) {
-    return 365 * (y - 1970) + floor((y-1969/4)) - floor((y-1901)/100) + floor((y-1601)/400);
+    return 365 * (y - 1970) + floor((y - 1969 / 4)) - floor((y - 1901) / 100) + floor((y - 1601) / 400);
 }
 function YearFromTime(t) {
     var y = t / (60 * 60 * 24 * 365);
@@ -15151,7 +15493,7 @@ function TimeClip(time) {
     if (Math.abs(time) > (8.64 * Math.pow(10, 15))) return NaN;
     return ToInteger(time) + (+0);
 }
-function WeekDay (t) {
+function WeekDay(t) {
     return ((Day(t) + 4) % 7);
 }
 var DateConstructor_call = function (thisArg, argList) {
@@ -15221,7 +15563,7 @@ var DateConstructor_construct = function (argList) {
 };
 var DateConstructor_parse = function (thisArg, argList) {
     var string = ToString(argList[0]);
-    
+
     return NormalCompletion(undefined);
 };
 var DateConstructor_now = function (thisArg, argList) {
@@ -15329,38 +15671,38 @@ var DatePrototype_getUTCSeconds = function (thisArg, argList) {
     return SecFromTime(t);
 };
 
-var DataViewConstructor_Call= function (thisArg, argList) {
+var DataViewConstructor_Call = function (thisArg, argList) {
     var O = thisArg;
     var buffer = argList[0];
     var byteOffset = argList[1];
     var byteLength = argList[2];
     if (byteOffset === undefined) byteOffset = 0;
-    if (Type(O) !== OBJECT || !hasInternalSlot(O, SLOTS.DATAVIEW)) return newTypeError( "DataView object expected");
+    if (Type(O) !== OBJECT || !hasInternalSlot(O, SLOTS.DATAVIEW)) return newTypeError("DataView object expected");
     Assert(hasInternalSlot(O, SLOTS.VIEWEDARRAYBUFFER), "O has to have a ViewedArrayBuffer slot.");
     var viewedArrayBuffer = getInternalSlot(O, SLOTS.VIEWEDARRAYBUFFER);
-    if (viewedArrayBuffer !== undefined) return newTypeError( "ViewedArrayBuffer of DataView has to be undefined.");
-    if (Type(buffer) !== OBJECT) return newTypeError( "buffer has to be an arraybuffer object");
+    if (viewedArrayBuffer !== undefined) return newTypeError("ViewedArrayBuffer of DataView has to be undefined.");
+    if (Type(buffer) !== OBJECT) return newTypeError("buffer has to be an arraybuffer object");
     var arrayBufferData;
-    if (!hasInternalSlot(buffer, SLOTS.ARRAYBUFFERDATA)) return newTypeError( "In DataView(buffer), buffer has to have ArrayBufferData slot");
+    if (!hasInternalSlot(buffer, SLOTS.ARRAYBUFFERDATA)) return newTypeError("In DataView(buffer), buffer has to have ArrayBufferData slot");
     arrayBufferData = getInternalSlot(buffer, SLOTS.ARRAYBUFFERDATA);
-    if (arrayBufferData === undefined) return newTypeError( "arrayBufferData of buffer may not be undefined");
+    if (arrayBufferData === undefined) return newTypeError("arrayBufferData of buffer may not be undefined");
     var numberOffset = ToNumber(byteOffset);
     var offset = ToInteger(numberOffset);
-    if (isAbrupt(offset=ifAbrupt(offset))) return offset;
-    if (numberOffset !== offset || offset < 0) return newRangeError( "numberOffset is not equal to offset or is less than 0.");
+    if (isAbrupt(offset = ifAbrupt(offset))) return offset;
+    if (numberOffset !== offset || offset < 0) return newRangeError("numberOffset is not equal to offset or is less than 0.");
     var byteBufferLength = getInternalSlot(buffer, SLOTS.ARRAYBUFFERBYTELENGTH);
-    if (offset > byteBufferLength) return newRangeError( "offset > byteBufferLength");
+    if (offset > byteBufferLength) return newRangeError("offset > byteBufferLength");
     if (byteLength === undefined) {
         var viewByteLength = byteBufferLength - offset;
     } else {
         var numberLength = ToNumber(byteLength);
         var viewLength = ToInteger(numberLength);
-        if (isAbrupt(viewLength=ifAbrupt(viewLength))) return viewLength;
+        if (isAbrupt(viewLength = ifAbrupt(viewLength))) return viewLength;
         if ((numberLength != viewLength) || viewLength < 0) return newRangeError("numberLength != viewLength or viewLength < 0");
         var viewByteLength = viewLength;
-        if ((offset+viewByteLength) > byteBufferLength) return newRangeError("offset + viewByteLength > byteBufferLength");
+        if ((offset + viewByteLength) > byteBufferLength) return newRangeError("offset + viewByteLength > byteBufferLength");
     }
-    if (getInternalSlot(O, SLOTS.VIEWEDARRAYBUFFER) !== undefined) return newTypeError( "ViewedArrayBuffer of O has to be undefined here");
+    if (getInternalSlot(O, SLOTS.VIEWEDARRAYBUFFER) !== undefined) return newTypeError("ViewedArrayBuffer of O has to be undefined here");
     setInternalSlot(O, SLOTS.VIEWEDARRAYBUFFER, buffer);
     setInternalSlot(O, SLOTS.BYTELENGTH, viewByteLength);
     setInternalSlot(O, SLOTS.BYTEOFFSET, offset);
@@ -15382,27 +15724,27 @@ var DataViewConstructor_$$create = function (thisArg, argList) {
 };
 var DataViewPrototype_get_buffer = function (thisArg, argList) {
     var O = thisArg;
-    if (Type(O) !== OBJECT) return newTypeError( "O is not an object");
-    if (!hasInternalSlot(O, SLOTS.VIEWEDARRAYBUFFER)) return newTypeError( "O has no ViewedArrayBuffer slot");
+    if (Type(O) !== OBJECT) return newTypeError("O is not an object");
+    if (!hasInternalSlot(O, SLOTS.VIEWEDARRAYBUFFER)) return newTypeError("O has no ViewedArrayBuffer slot");
     var buffer = getInternalSlot(O, SLOTS.VIEWEDARRAYBUFFER);
-    if (buffer === undefined) return newTypeError( "buffer is undefined but must not");
+    if (buffer === undefined) return newTypeError("buffer is undefined but must not");
     return NormalCompletion(buffer);
 };
 var DataViewPrototype_get_byteLength = function (thisArg, argList) {
     var O = thisArg;
-    if (Type(O) !== OBJECT) return newTypeError( "O is not an object");
-    if (!hasInternalSlot(O, SLOTS.VIEWEDARRAYBUFFER)) return newTypeError( "O has no ViewedArrayBuffer property");
+    if (Type(O) !== OBJECT) return newTypeError("O is not an object");
+    if (!hasInternalSlot(O, SLOTS.VIEWEDARRAYBUFFER)) return newTypeError("O has no ViewedArrayBuffer property");
     var buffer = getInternalSlot(O, SLOTS.VIEWEDARRAYBUFFER);
-    if (buffer === undefined) return newTypeError( "buffer is undefined");
+    if (buffer === undefined) return newTypeError("buffer is undefined");
     var size = getInternalSlot(O, SLOTS.BYTELENGTH);
     return NormalCompletion(size);
 };
 var DataViewPrototype_get_byteOffset = function (thisArg, argList) {
     var O = thisArg;
-    if (Type(O) !== OBJECT) return newTypeError( "O is not an object");
-    if (!hasInternalSlot(O, SLOTS.VIEWEDARRAYBUFFER)) return newTypeError( "O has no ViewedArrayBuffer property");
+    if (Type(O) !== OBJECT) return newTypeError("O is not an object");
+    if (!hasInternalSlot(O, SLOTS.VIEWEDARRAYBUFFER)) return newTypeError("O has no ViewedArrayBuffer property");
     var buffer = getInternalSlot(O, SLOTS.VIEWEDARRAYBUFFER);
-    if (buffer === undefined) return newTypeError( "buffer is undefined");
+    if (buffer === undefined) return newTypeError("buffer is undefined");
     var offset = getInternalSlot(O, SLOTS.BYTEOFFSET);
     return NormalCompletion(offset);
 };
@@ -15520,25 +15862,25 @@ var DataViewPrototype_setUint32 = function (thisArg, argList) {
 };
 function BetterComplicatedResumableEvaluationAlgorithmForASTVisitorsWithoutStack(generator, body) {
     /*
-	Here is Space to handle all relevant nodes
-	to reenter, where to restore pointer, what
-	to pop of the code eval stack getContext().state    
-    */
-    
+     Here is Space to handle all relevant nodes
+     to reenter, where to restore pointer, what
+     to pop of the code eval stack getContext().state
+     */
+
     return exports.Evaluate(body);
 }
 function printCodeEvaluationState() {
 }
 function Steps_GeneratorStart(generator, body) {
     var result = BetterComplicatedResumableEvaluationAlgorithmForASTVisitorsWithoutStack(generator, body);
-    
+
     if (isAbrupt(result = ifAbrupt(result))) return result;
     if (isAbrupt(result = ifAbrupt(result)) && result.type === "return") {
         setInternalSlot(generator, SLOTS.GENERATORSTATE, "completed");
         if (isAbrupt(result = ifAbrupt(result))) return result;
         getContext().resumeGenerator = undefined;
         return CreateItrResultObject(result, true);
-    }    
+    }
     return NormalCompletion(result);
 }
 function GeneratorStart(generator, body) {
@@ -15554,10 +15896,10 @@ function GeneratorStart(generator, body) {
     return generator;
 }
 function GeneratorResume(generator, value) {
-    if (Type(generator) !== OBJECT) return newTypeError( "resume: Generator is not an object");
-    if (!hasInternalSlot(generator, SLOTS.GENERATORSTATE)) return newTypeError( "resume: Generator has no GeneratorState property");
+    if (Type(generator) !== OBJECT) return newTypeError("resume: Generator is not an object");
+    if (!hasInternalSlot(generator, SLOTS.GENERATORSTATE)) return newTypeError("resume: Generator has no GeneratorState property");
     var state = getInternalSlot(generator, SLOTS.GENERATORSTATE);
-    if (state !== "suspendedStart" && state !== "suspendedYield") return newTypeError( "Generator is neither in suspendedStart nor suspendedYield state");
+    if (state !== "suspendedStart" && state !== "suspendedYield") return newTypeError("Generator is neither in suspendedStart nor suspendedYield state");
     var genContext = getInternalSlot(generator, SLOTS.GENERATORCONTEXT);
     var methodContext = getContext();
     getStack().push(genContext);
@@ -15581,7 +15923,7 @@ function GeneratorYield(itrNextObj) {
         return newTypeError("GeneratorContext mismatch at GeneratorYield")
     }
     // compl = yield smth;
-    genContext.resumeGenerator = function (compl) {        
+    genContext.resumeGenerator = function (compl) {
         return compl;
     };
     return NormalCompletion(itrNextObj);
@@ -15597,11 +15939,11 @@ var GeneratorPrototype_next = function (thisArg, argList) {
 var GeneratorPrototype_throw = function (thisArg, argList) {
     var g = thisArg;
     var exception = argList[0];
-    if (Type(g) !== OBJECT) return newTypeError( "throw: Generator is not an object");
-    if (!hasInternalSlot(g, SLOTS.GENERATORSTATE)) return newTypeError( "throw: generator has no GeneratorState property");
+    if (Type(g) !== OBJECT) return newTypeError("throw: Generator is not an object");
+    if (!hasInternalSlot(g, SLOTS.GENERATORSTATE)) return newTypeError("throw: generator has no GeneratorState property");
     var state = getInternalSlot(g, SLOTS.GENERATORSTATE);
     Assert(hasInternalSlot(g, SLOTS.GENERATORCONTEXT), "generator has to have a GeneratorContext property");
-    if (state !== "suspendedStart" && state != "suspendedYield") return newTypeError( "GeneratorState is neither suspendedStart nor -Yield");
+    if (state !== "suspendedStart" && state != "suspendedYield") return newTypeError("GeneratorState is neither suspendedStart nor -Yield");
     var E = CompletionRecord("throw", exception);
     if (state === "suspendedStart") {
         setInternalSlot(g, SLOTS.GENERATORSTATE, "completed");
@@ -15677,7 +16019,7 @@ var GeneratorFunction_call = function (thisArg, argList) {
     if (F == undefined || !hasInternalSlot(F, SLOTS.CODE)) {
         F = FunctionAllocate(GeneratorFunction, "generator");
     }
-    if (getInternalSlot(F, SLOTS.FUNCTIONKIND) !== "generator") return newTypeError( "function object not a generator");
+    if (getInternalSlot(F, SLOTS.FUNCTIONKIND) !== "generator") return newTypeError("function object not a generator");
     FunctionInitialize(F, "generator", parameters, funcBody, scope, true);
     var proto = ObjectCreate(getIntrinsic(INTRINSICS.GENERATORPROTOTYPE));
     MakeConstructor(F, true, proto);
@@ -15695,10 +16037,10 @@ var GeneratorFunction_$$create = function (thisArg, argList) {
     return obj;
 };
 
-function GetIterable (obj) {
+function GetIterable(obj) {
     if (Type(obj) !== OBJECT) return undefined;
     var iteratorGetter = Get(obj, $$iterator);
-    if (isAbrupt(iteratorGetter=ifAbrupt(iteratorGetter))) return iteratorGetter;
+    if (isAbrupt(iteratorGetter = ifAbrupt(iteratorGetter))) return iteratorGetter;
     return iteratorGetter;
 }
 function IsIterable(obj) {
@@ -15714,7 +16056,7 @@ function CreateItrResultObject(value, done) {
 function GetIterator(obj) {
     var iterator = Invoke(obj, $$iterator, []);
     if (isAbrupt(iterator = ifAbrupt(iterator))) return iterator;
-    if (Type(iterator) !== OBJECT) return newTypeError( "iterator is not an object");
+    if (Type(iterator) !== OBJECT) return newTypeError("iterator is not an object");
     return iterator;
 }
 function IteratorNext(itr, val) {
@@ -15722,7 +16064,7 @@ function IteratorNext(itr, val) {
     if (arguments.length === 1) result = Invoke(itr, "next", []);
     else result = Invoke(itr, "next", [val]);
     if (isAbrupt(result = ifAbrupt(result))) return result;
-    if (Type(result) !== OBJECT) return newTypeError( "IteratorNext: result is not an object");
+    if (Type(result) !== OBJECT) return newTypeError("IteratorNext: result is not an object");
     return result;
 }
 function IteratorComplete(itrResult) {
@@ -15756,8 +16098,8 @@ function MakeListIterator(list) {
     var len = list.length;
     var obj = ObjectCreate();
 
-    var listIteratorNext = CreateBuiltinFunction(getRealm(),function (thisArg, argList) {
-	var list = getInternalSlot(obj, "IteratedList");
+    var listIteratorNext = CreateBuiltinFunction(getRealm(), function (thisArg, argList) {
+        var list = getInternalSlot(obj, "IteratedList");
         var value, done;
         if (nextPos < len) {
             value = list[nextPos];
@@ -15773,10 +16115,10 @@ function MakeListIterator(list) {
     CreateDataProperty(obj, "next", listIteratorNext);
     return obj;
 }
-var ListIterator_next = function(thisArg, argList) {
+var ListIterator_next = function (thisArg, argList) {
     var O = thisArg;
     if (!hasInternalSlot(O, "IteratedList") || !hasInternalSlot(O, "IteratedListIndex")) {
-        return newTypeError( "this value is missing the [[IteratedList]] properties");
+        return newTypeError("this value is missing the [[IteratedList]] properties");
     }
     var list = getInternalSlot(O, "IteratedList");
     var index = getInternalSlot(O, "IteratedListIndex");
@@ -15785,8 +16127,8 @@ var ListIterator_next = function(thisArg, argList) {
         return CreateItrResultObject(undefined, true);
     }
     var result = CreateItrResultObject(list[index], false);
-    if (isAbrupt(result=ifAbrupt(result)))
-    setInternalSlot(O, "IteratedListIndex", index + 1);
+    if (isAbrupt(result = ifAbrupt(result)))
+        setInternalSlot(O, "IteratedListIndex", index + 1);
     return NormalCompletion(result);
 };
 function CreateListIterator(list) {
@@ -15812,7 +16154,7 @@ var CompoundIterator_next = function (thisArg, argList) {
     if (state === 1) {
         var iterator1 = getInternalSlot(O, SLOTS.ITERATOR1);
         var result1 = IteratorStep(iterator1);
-        if (isAbrupt(result1=ifAbrupt(result1))) return result1;
+        if (isAbrupt(result1 = ifAbrupt(result1))) return result1;
         if (result1 != false) return result1;
         setInternalSlot(O, SLOTS.STATE, 2);
     }
@@ -15847,12 +16189,12 @@ function AllocateArrayBuffer(F) {
     return obj;
 }
 function GetValueFromBuffer(arrayBuffer, byteIndex, type, isLittleEndian) {
-    var length = getInternalSlot(arrayBuffer, SLOTS.ARRAYBUFFERBYTELENGTH); 
+    var length = getInternalSlot(arrayBuffer, SLOTS.ARRAYBUFFERBYTELENGTH);
     var block = getInternalSlot(arrayBuffer, SLOTS.ARRAYBUFFERDATA);
     if (block === undefined || block === null) return newTypeError(format("SLOT_NOT_AVAILABLE_S", "[[ArrayBufferData]]"));
     var elementSize = arrayType2elementSize[type];
     var rawValue, intValue;
-    rawValue = block.dv["get"+type](byteIndex, isLittleEndian);
+    rawValue = block.dv["get" + type](byteIndex, isLittleEndian);
     return NormalCompletion(rawValue);
 }
 function SetValueInBuffer(arrayBuffer, byteIndex, type, value, isLittleEndian) {
@@ -15862,7 +16204,7 @@ function SetValueInBuffer(arrayBuffer, byteIndex, type, value, isLittleEndian) {
     //var elementSize = arrayType2elementSize[type];
     var numValue = +value;
     if (isAbrupt(numValue = ifAbrupt(numValue))) return numValue;
-    block.dv["set"+type](byteIndex, numValue, isLittleEndian);
+    block.dv["set" + type](byteIndex, numValue, isLittleEndian);
     return NormalCompletion(undefined);
 }
 function SetViewValue(view, requestIndex, isLittleEndian, type, value) {
@@ -15940,13 +16282,13 @@ var ArrayBufferConstructor_call = function (thisArg, argList) {
     var length = argList[0];
     var O = thisArg;
     if (Type(O) !== OBJECT || (!hasInternalSlot(O, SLOTS.ARRAYBUFFERDATA)) || (getInternalSlot(O, SLOTS.ARRAYBUFFERDATA) !== undefined)) {
-        return newTypeError( "Can not initialize the this argument as an ArrayBuffer or it is already initialized!");
+        return newTypeError("Can not initialize the this argument as an ArrayBuffer or it is already initialized!");
     }
     Assert(getInternalSlot(O, SLOTS.ARRAYBUFFERDATA) === undefined, "ArrayBuffer has already to be initialized here but it is not.");
     var numberLength = ToNumber(length);
     var byteLength = ToInteger(numberLength);
     if (isAbrupt(byteLength = ifAbrupt(byteLength))) return byteLength;
-    if ((numberLength != byteLength) || (byteLength < 0)) return newRangeError( "invalid byteLength");
+    if ((numberLength != byteLength) || (byteLength < 0)) return newRangeError("invalid byteLength");
     return SetArrayBufferData(O, byteLength);
 };
 var ArrayBufferConstructor_construct = function (argList) {
@@ -15962,8 +16304,8 @@ var ArrayBufferConstructor_$$create = function (thisArg, argList) {
 };
 var ArrayBufferPrototype_get_byteLength = function (thisArg, argList) {
     var O = thisArg;
-    if (!hasInternalSlot(O, SLOTS.ARRAYBUFFERDATA)) return newTypeError( "The this argument has no [[ArrayBufferData]]");
-    if (getInternalSlot(O, SLOTS.ARRAYBUFFERDATA) === undefined) return newTypeError( "The this arguments [[ArrayBufferData]] is not initialized");
+    if (!hasInternalSlot(O, SLOTS.ARRAYBUFFERDATA)) return newTypeError("The this argument has no [[ArrayBufferData]]");
+    if (getInternalSlot(O, SLOTS.ARRAYBUFFERDATA) === undefined) return newTypeError("The this arguments [[ArrayBufferData]] is not initialized");
     var length = getInternalSlot(O, SLOTS.ARRAYBUFFERBYTELENGTH);
     return length;
 };
@@ -16020,7 +16362,7 @@ IntegerIndexedExoticObject.prototype = assign(IntegerIndexedExoticObject.prototy
             if (isAbrupt(intIndex = ifAbrupt(intIndex))) return intIndex;
             if (SameValue(ToString(intIndex), P)) {
                 if (intIndex < 0) return false;
-                var len = getInternalSlot(O,SLOTS.ARRAYLENGTH);
+                var len = getInternalSlot(O, SLOTS.ARRAYLENGTH);
                 if (len === undefined) return newTypeError(format("S_IS_UNDEFINED", "length"));
                 if (intIndex >= len) return false;
                 if (IsAccessorDescriptor(Desc)) return false;
@@ -16129,8 +16471,8 @@ function IntegerIndexedElementGet(O, index) {
     var buffer = getInternalSlot(O, SLOTS.VIEWEDARRAYBUFFER);
     var length = getInternalSlot(O, SLOTS.ARRAYLENGTH);
     if (index < 0 || index >= length) return undefined;
-    var offset = getInternalSlot(O,SLOTS.BYTEOFFSET);
-    var arrayTypeName = getInternalSlot(O,SLOTS.TYPEDARRAYNAME);
+    var offset = getInternalSlot(O, SLOTS.BYTEOFFSET);
+    var arrayTypeName = getInternalSlot(O, SLOTS.TYPEDARRAYNAME);
     var elementSize = ToNumber(typedArrayElementSize[arrayTypeName]);
     var indexedPosition = (index * elementSize) + offset;
     var elementType = typedArrayElementType[arrayTypeName];
@@ -16147,8 +16489,8 @@ function IntegerIndexedElementSet(O, index, value) {
     var numValue = ToNumber(value);
     if (isAbrupt(numValue = ifAbrupt(numValue))) return numValue;
     if (index < 0 || index >= length) return numValue;
-    var offset = getInternalSlot(O,SLOTS.BYTEOFFSET);
-    var arrayTypeName = getInternalSlot(O,SLOTS.TYPEDARRAYNAME);
+    var offset = getInternalSlot(O, SLOTS.BYTEOFFSET);
+    var arrayTypeName = getInternalSlot(O, SLOTS.TYPEDARRAYNAME);
     var elementSize = ToNumber(typedArrayElementSize[arrayTypeName]);
     var indexedPosition = (index * elementSize) + offset;
     var elementType = typedArrayElementType[arrayTypeName];
@@ -16172,8 +16514,8 @@ function createTypedArrayVariant(_type, _bpe, _ctor, _proto, ctorName) {
     setInternalSlot(_ctor, SLOTS.PROTOTYPE, getIntrinsic(INTRINSICS.TYPEDARRAY));
     setInternalSlot(_ctor, SLOTS.CALL, function (thisArg, argList) {
         var O = thisArg;
-        if (Type(O) !== OBJECT) return newTypeError( "O is not an object");
-        if (!hasInternalSlot(O, SLOTS.TYPEDARRAYNAME)) return newTypeError( "[[TypedArrayName]] is missing");
+        if (Type(O) !== OBJECT) return newTypeError("O is not an object");
+        if (!hasInternalSlot(O, SLOTS.TYPEDARRAYNAME)) return newTypeError("[[TypedArrayName]] is missing");
         var suffix = "Array";
         if (_type === "Uint8C") suffix = "lamped" + suffix;
         setInternalSlot(O, SLOTS.TYPEDARRAYNAME, _type + suffix);
@@ -16196,111 +16538,111 @@ function createTypedArrayVariant(_type, _bpe, _ctor, _proto, ctorName) {
 
 var TypedArrayConstructor_Call = function (thisArg, argList) {
     var array, typedArray, length, O,
-    elementType,    numberLength,    elementLength,    elementSize,    byteLength,
-    status,    data,    constructorName;
+        elementType, numberLength, elementLength, elementSize, byteLength,
+        status, data, constructorName;
     array = argList[0];
     O = thisArg;
 
-        if (IsArray(array)) {
-            
-            Assert((Type(array) === OBJECT) && !hasInternalSlot(array, SLOTS.TYPEDARRAYNAME) && !hasInternalSlot(array, SLOTS.ARRAYBUFFERDATA),
-                "array has to be an object without [[TypedArrayName]] or [[ArrayBufferData]] slots");
-            var srcArray = array;
-            if (Type(O) != OBJECT || !hasInternalSlot(O, SLOTS.TYPEDARRAYNAME)) return withError(
-                "Type", "this value is no object or has no [[TypedArrayName]] slot"
-            );
-            Assert(hasInternalSlot(O, SLOTS.VIEWEDARRAYBUFFER), "this value has no [[ViewedArrayBuffer]] slot");
-            var constructorName = getInternalSlot(O, SLOTS.TYPEDARRAYNAME);
-            var elementType = typedArrayElementType[constructorName];
-            var arrayLength = Get(srcArray, "length");
-            if (isAbrupt(arrayLength=ifAbrupt(arrayLength))) return arrayLength;
-            var elementLength = ToLength(arrayLength);
-            if (isAbrupt(elementLength=ifAbrupt(elementLength))) return elementLength;
-            var data = AllocateArrayBuffer(getIntrinsic(INTRINSICS.ARRAYBUFFER));
-            if (isAbrupt(data=ifAbrupt(data))) return data;
-            //var elementSize = typedArrayElementSize[elementType];
-            elementSize = arrayType2elementSize[elementType];
-            var byteLength = elementSize * elementLength;
-            var status = SetArrayBufferData(data, byteLength);
-            if (isAbrupt(status)) return status;
-            var k = 0;
-            while (k < elementLength) {
-                var Pk = ToString(k);
-                var kValue = Get(srcArray, Pk);
-                var kNumber = ToNumber(k);
-                if (isAbrupt(kNumber=ifAbrupt(kNumber))) return kNumber;
-                SetValueInBuffer(data, k * elementSize, elementType, kNumber);
-                k = k + 1;
-            }
-            if (getInternalSlot(O, SLOTS.VIEWEDARRAYBUFFER) !== undefined) return newTypeError( "the this values [[ViewedArrayBuffer]] may not be initialized here");
-            setInternalSlot(O, SLOTS.VIEWEDARRAYBUFFER, data);
-            setInternalSlot(O, SLOTS.BYTELENGTH, byteLength);
-            setInternalSlot(O, SLOTS.BYTEOFFSET, 0);
-            setInternalSlot(O, SLOTS.ARRAYLENGTH, elementLength);
-            return NormalCompletion(O);
-        } else if ((typedArray = array) instanceof IntegerIndexedExoticObject) {
-            
-            Assert((Type(typedArray) === OBJECT) && hasInternalSlot(typedArray, SLOTS.TYPEDARRAYNAME), "typedArray has to be an object and to have a TypedArrayName slot");
-            var srcArray = typedArray;
-            O = thisArg;
-            if ((Type(O) !== OBJECT) || getInternalSlot(O, SLOTS.TYPEDARRAYNAME)===undefined) return newTypeError( "this value has to be object and to have a defined TypedArrayName slot");
-            Assert(hasInternalSlot(O, SLOTS.VIEWEDARRAYBUFFER), "this value has to have a ViewedArrayBuffer slot");
-            if (getInternalSlot(O, SLOTS.VIEWEDARRAYBUFFER) === undefined) return newTypeError( "ViewedArrayBuffer may not be undefined");
-            var constructorName = getInternalSlot(O, SLOTS.TYPEDARRAYNAME);
-            var elementType = typedArrayElementType[constructorName];
-            var elementLength = getInternalSlot(srcArray, SLOTS.ARRAYLENGTH);
-            var srcName = getInternalSlot(srcArray, SLOTS.TYPEDARRAYNAME);
-            var srcType = typedArrayElementType[srcName];
-            var srcElementSize = typedArrayElementSize[srcType];
-            var srcData = getInternalSlot(srcArray, SLOTS.VIEWEDARRAYBUFFER);
-            var srcByteOffset = getInternalSlot(srcArray, SLOTS.BYTEOFFSET);
-            //var elementSize = typedArrayElementSize[constructorName];
-            elementSize = arrayType2elementSize[elementType];
-            var byteLength = elementSize * elementLength;
-            if (SameValue(elementType, srcType)) {
-                var data = CloneArrayBuffer(srcData, srcByteOffset);
-                if (isAbrupt(data=ifAbrupt(data))) return data;
-            } else {
-                var bufferConstructor = Get(srcBuffer, "constructor");
-                if (isAbrupt(bufferConstructor=ifAbrupt(bufferConstructor))) return bufferConstructor;
-                if (bufferConstructor === undefined) bufferConstructor = getIntrinsic(INTRINSICS.ARRAYBUFFER);
-                var data = AllocateArrayBuffer(bufferConstructor);
-                var status = SetArrayBufferData(data, byteLength);
-                if (isAbrupt(status=ifAbrupt(status))) return status;
-                var srcByteIndex = srcByteOffset;
-                var targetByteIndex = 0;
-                var count = elementLength;
-                while (count > 0) {
-                    var value = GetValueFromBuffer(srcData, srcByteIndex, srcType);
-                    status = SetValueInBuffer(data, targetByteIndex, elementType, value);
-                    srcByteIndex = srcByteIndex + srcElementSize;
-                    targetByteIndex = targetByteIndex + elementSize;
-                    count = count - 1;
-                }
-            }
-            if (getInternalSlot(O, SLOTS.VIEWEDARRAYBUFFER) !== undefined) return newTypeError( "ViewedArrayBuffer may not be defined at this point");
-            setInternalSlot(O, SLOTS.VIEWEDARRAYBUFFER, data);
-            setInternalSlot(O, SLOTS.BYTELENGTH, byteLength);
-            setInternalSlot(O, SLOTS.BYTEOFFSET, 0);
-            setInternalSlot(O, SLOTS.ARRAYLENGTH, elementLength);
-            return NormalCompletion(O);
-    } else if (typeof (length = array) == "number") {
-        
+    if (IsArray(array)) {
+
+        Assert((Type(array) === OBJECT) && !hasInternalSlot(array, SLOTS.TYPEDARRAYNAME) && !hasInternalSlot(array, SLOTS.ARRAYBUFFERDATA),
+            "array has to be an object without [[TypedArrayName]] or [[ArrayBufferData]] slots");
+        var srcArray = array;
+        if (Type(O) != OBJECT || !hasInternalSlot(O, SLOTS.TYPEDARRAYNAME)) return withError(
+            "Type", "this value is no object or has no [[TypedArrayName]] slot"
+        );
+        Assert(hasInternalSlot(O, SLOTS.VIEWEDARRAYBUFFER), "this value has no [[ViewedArrayBuffer]] slot");
+        var constructorName = getInternalSlot(O, SLOTS.TYPEDARRAYNAME);
+        var elementType = typedArrayElementType[constructorName];
+        var arrayLength = Get(srcArray, "length");
+        if (isAbrupt(arrayLength = ifAbrupt(arrayLength))) return arrayLength;
+        var elementLength = ToLength(arrayLength);
+        if (isAbrupt(elementLength = ifAbrupt(elementLength))) return elementLength;
+        var data = AllocateArrayBuffer(getIntrinsic(INTRINSICS.ARRAYBUFFER));
+        if (isAbrupt(data = ifAbrupt(data))) return data;
+        //var elementSize = typedArrayElementSize[elementType];
+        elementSize = arrayType2elementSize[elementType];
+        var byteLength = elementSize * elementLength;
+        var status = SetArrayBufferData(data, byteLength);
+        if (isAbrupt(status)) return status;
+        var k = 0;
+        while (k < elementLength) {
+            var Pk = ToString(k);
+            var kValue = Get(srcArray, Pk);
+            var kNumber = ToNumber(k);
+            if (isAbrupt(kNumber = ifAbrupt(kNumber))) return kNumber;
+            SetValueInBuffer(data, k * elementSize, elementType, kNumber);
+            k = k + 1;
+        }
+        if (getInternalSlot(O, SLOTS.VIEWEDARRAYBUFFER) !== undefined) return newTypeError("the this values [[ViewedArrayBuffer]] may not be initialized here");
+        setInternalSlot(O, SLOTS.VIEWEDARRAYBUFFER, data);
+        setInternalSlot(O, SLOTS.BYTELENGTH, byteLength);
+        setInternalSlot(O, SLOTS.BYTEOFFSET, 0);
+        setInternalSlot(O, SLOTS.ARRAYLENGTH, elementLength);
+        return NormalCompletion(O);
+    } else if ((typedArray = array) instanceof IntegerIndexedExoticObject) {
+
+        Assert((Type(typedArray) === OBJECT) && hasInternalSlot(typedArray, SLOTS.TYPEDARRAYNAME), "typedArray has to be an object and to have a TypedArrayName slot");
+        var srcArray = typedArray;
         O = thisArg;
-        if (Type(O) !== OBJECT) return newTypeError( "this value is not an object");
-        if (!hasInternalSlot(O, SLOTS.TYPEDARRAYNAME)) return newTypeError( "object has no TypedArrayName property");
+        if ((Type(O) !== OBJECT) || getInternalSlot(O, SLOTS.TYPEDARRAYNAME) === undefined) return newTypeError("this value has to be object and to have a defined TypedArrayName slot");
+        Assert(hasInternalSlot(O, SLOTS.VIEWEDARRAYBUFFER), "this value has to have a ViewedArrayBuffer slot");
+        if (getInternalSlot(O, SLOTS.VIEWEDARRAYBUFFER) === undefined) return newTypeError("ViewedArrayBuffer may not be undefined");
+        var constructorName = getInternalSlot(O, SLOTS.TYPEDARRAYNAME);
+        var elementType = typedArrayElementType[constructorName];
+        var elementLength = getInternalSlot(srcArray, SLOTS.ARRAYLENGTH);
+        var srcName = getInternalSlot(srcArray, SLOTS.TYPEDARRAYNAME);
+        var srcType = typedArrayElementType[srcName];
+        var srcElementSize = typedArrayElementSize[srcType];
+        var srcData = getInternalSlot(srcArray, SLOTS.VIEWEDARRAYBUFFER);
+        var srcByteOffset = getInternalSlot(srcArray, SLOTS.BYTEOFFSET);
+        //var elementSize = typedArrayElementSize[constructorName];
+        elementSize = arrayType2elementSize[elementType];
+        var byteLength = elementSize * elementLength;
+        if (SameValue(elementType, srcType)) {
+            var data = CloneArrayBuffer(srcData, srcByteOffset);
+            if (isAbrupt(data = ifAbrupt(data))) return data;
+        } else {
+            var bufferConstructor = Get(srcBuffer, "constructor");
+            if (isAbrupt(bufferConstructor = ifAbrupt(bufferConstructor))) return bufferConstructor;
+            if (bufferConstructor === undefined) bufferConstructor = getIntrinsic(INTRINSICS.ARRAYBUFFER);
+            var data = AllocateArrayBuffer(bufferConstructor);
+            var status = SetArrayBufferData(data, byteLength);
+            if (isAbrupt(status = ifAbrupt(status))) return status;
+            var srcByteIndex = srcByteOffset;
+            var targetByteIndex = 0;
+            var count = elementLength;
+            while (count > 0) {
+                var value = GetValueFromBuffer(srcData, srcByteIndex, srcType);
+                status = SetValueInBuffer(data, targetByteIndex, elementType, value);
+                srcByteIndex = srcByteIndex + srcElementSize;
+                targetByteIndex = targetByteIndex + elementSize;
+                count = count - 1;
+            }
+        }
+        if (getInternalSlot(O, SLOTS.VIEWEDARRAYBUFFER) !== undefined) return newTypeError("ViewedArrayBuffer may not be defined at this point");
+        setInternalSlot(O, SLOTS.VIEWEDARRAYBUFFER, data);
+        setInternalSlot(O, SLOTS.BYTELENGTH, byteLength);
+        setInternalSlot(O, SLOTS.BYTEOFFSET, 0);
+        setInternalSlot(O, SLOTS.ARRAYLENGTH, elementLength);
+        return NormalCompletion(O);
+    } else if (typeof (length = array) == "number") {
+
+        O = thisArg;
+        if (Type(O) !== OBJECT) return newTypeError("this value is not an object");
+        if (!hasInternalSlot(O, SLOTS.TYPEDARRAYNAME)) return newTypeError("object has no TypedArrayName property");
         Assert(hasInternalSlot(O, SLOTS.VIEWEDARRAYBUFFER), "object has to have a ViewedArrayBuffer property");
-        if (getInternalSlot(O, SLOTS.VIEWEDARRAYBUFFER) === undefined) return newTypeError( "object has to have a well defined ViewedArrayBuffer property");
+        if (getInternalSlot(O, SLOTS.VIEWEDARRAYBUFFER) === undefined) return newTypeError("object has to have a well defined ViewedArrayBuffer property");
         constructorName = getInternalSlot(O, SLOTS.TYPEDARRAYNAME);
         elementType = typedArrayElementType[constructorName];
         numberLength = ToNumber(length);
         elementLength = ToLength(numberLength);
         if (isAbrupt(elementLength = ifAbrupt(elementLength))) return elementLength;
-        if (SameValueZero(numberLength, elementLength) === false) return newRangeError( "TypedArray: numberLength and elementLength are not equal");
+        if (SameValueZero(numberLength, elementLength) === false) return newRangeError("TypedArray: numberLength and elementLength are not equal");
         data = AllocateArrayBuffer(getIntrinsic(INTRINSICS.ARRAYBUFFER));
         if (isAbrupt(data = ifAbrupt(data))) return data;
         //elementSize = typedArrayElementSize[elementType];
-            elementSize = arrayType2elementSize[elementType];
+        elementSize = arrayType2elementSize[elementType];
         byteLength = elementSize * elementLength;
         status = SetArrayBufferData(data, byteLength);
         if (isAbrupt(status = ifAbrupt(status))) return status;
@@ -16310,7 +16652,7 @@ var TypedArrayConstructor_Call = function (thisArg, argList) {
         setInternalSlot(O, SLOTS.ARRAYLENGTH, elementLength);
         return NormalCompletion(O);
     } else {
-        
+
 
         Assert(hasInternalSlot(O, SLOTS.VIEWEDARRAYBUFFER), "O has to have [[ViewedArrayBuffer]]");
         var buffer = argList[0];
@@ -16320,33 +16662,33 @@ var TypedArrayConstructor_Call = function (thisArg, argList) {
         Assert((Type(buffer) === OBJECT) && hasInternalSlot(buffer, SLOTS.ARRAYBUFFERDATA), "buffer has to be an object and to have [[ArrayBufferData]]");
         O = thisArg;
         var arrayBufferData = getInternalSlot(buffer, SLOTS.ARRAYBUFFERDATA);
-        if (arrayBufferData === undefined) return newTypeError( "[[ArrayBufferData]] is undefined");
-        if (Type(O) !== OBJECT || !hasInternalSlot(O, SLOTS.TYPEDARRAYNAME)) return newTypeError( "O has to be object and to have [[TypedArrayName]]");
+        if (arrayBufferData === undefined) return newTypeError("[[ArrayBufferData]] is undefined");
+        if (Type(O) !== OBJECT || !hasInternalSlot(O, SLOTS.TYPEDARRAYNAME)) return newTypeError("O has to be object and to have [[TypedArrayName]]");
         var viewedArrayBuffer = getInternalSlot(O, SLOTS.VIEWEDARRAYBUFFER);
         var typedArrayName = getInternalSlot(O, SLOTS.TYPEDARRAYNAME);
-        if (typedArrayName === undefined) return newTypeError( "O has to have a well defined [[TypedArrayName]]");
+        if (typedArrayName === undefined) return newTypeError("O has to have a well defined [[TypedArrayName]]");
         constructorName = getInternalSlot(O, SLOTS.TYPEDARRAYNAME);
         elementType = typedArrayElementType[constructorName];
         elementSize = arrayType2elementSize[elementType];
         var offset = ToInteger(byteOffset);
         if (isAbrupt(offset = ifAbrupt(offset))) return offset;
-        if (offset < 0) return newRangeError( "offset is smaller 0");
-        if ((offset % elementSize) !== 0) return newRangeError( "offset mod elementSize is not 0");
+        if (offset < 0) return newRangeError("offset is smaller 0");
+        if ((offset % elementSize) !== 0) return newRangeError("offset mod elementSize is not 0");
 
         var byteBufferLength = getInternalSlot(buffer, SLOTS.ARRAYBUFFERBYTELENGTH);
-        if (offset + elementSize >= byteBufferLength) return newRangeError( "offset + elementSize is >= byteBufferLength");
+        if (offset + elementSize >= byteBufferLength) return newRangeError("offset + elementSize is >= byteBufferLength");
         var newByteLength;
         if (length === undefined) {
-            if (byteBufferLength % elementSize !== 0) return newRangeError( "byteBufferLength mod elementSize is not 0");
+            if (byteBufferLength % elementSize !== 0) return newRangeError("byteBufferLength mod elementSize is not 0");
             newByteLength = byteBufferLength + offset;
-            if (newByteLength < 0) return newRangeError( "newByteLength < 0 underflow when adding offset to byteBufferLength");
+            if (newByteLength < 0) return newRangeError("newByteLength < 0 underflow when adding offset to byteBufferLength");
         } else {
             var newLength = ToLength(length);
             if (isAbrupt(newLength = ifAbrupt(newLength))) return newLength;
             newByteLength = newLength * elementSize;
-            if (offset + newByteLength > byteBufferLength) return newRangeError( "offset + newByteLength is larger than byteBufferLength");
+            if (offset + newByteLength > byteBufferLength) return newRangeError("offset + newByteLength is larger than byteBufferLength");
         }
-        if (viewedArrayBuffer !== undefined) return newTypeError( "the [[ViewedArrayBuffer]] of O is not empty");
+        if (viewedArrayBuffer !== undefined) return newTypeError("the [[ViewedArrayBuffer]] of O is not empty");
 
         setInternalSlot(O, SLOTS.VIEWEDARRAYBUFFER, buffer);
         setInternalSlot(O, SLOTS.BYTELENGTH, newByteLength);
@@ -16369,8 +16711,8 @@ var typedArrayPrototypeNames = {
 };
 var TypedArrayConstructor_$$create = function $$create(thisArg, argList) {
     var F = thisArg;
-    if (Type(F) !== OBJECT) return newTypeError( "the this value is not an object");
-    if (!hasInternalSlot(F, SLOTS.TYPEDARRAYCONSTRUCTOR)) return newTypeError( "The this value has no [[TypedArrayConstructor]] property");
+    if (Type(F) !== OBJECT) return newTypeError("the this value is not an object");
+    if (!hasInternalSlot(F, SLOTS.TYPEDARRAYCONSTRUCTOR)) return newTypeError("The this value has no [[TypedArrayConstructor]] property");
     var proto = GetPrototypeFromConstructor(F, typedArrayPrototypeNames[getInternalSlot(F, SLOTS.TYPEDARRAYCONSTRUCTOR)]);
     if (isAbrupt(proto = ifAbrupt(proto))) return proto;
     var obj = IntegerIndexedObjectCreate(proto);
@@ -16464,13 +16806,13 @@ var TypedArrayConstructor_of = function of(thisArg, argList) {
     var items = CreateArrayFromList(argList);
     var lenValue = Get(items, "length");
     var len = ToLength(lenValue);
-    if (isAbrupt(len=ifAbrupt(length))) return length;
+    if (isAbrupt(len = ifAbrupt(length))) return length;
     var C = thisArg;
     if (IsConstructor(C)) {
         var newObj = callInternalSlot(SLOTS.CONSTRUCT, C, C, [len]);
         if (isAbrupt(newObj = ifAbrupt(newObj))) return newObj;
     } else {
-        return newTypeError( "The thisValue has to be a constructor");
+        return newTypeError("The thisValue has to be a constructor");
     }
     var k = 0;
     var status;
@@ -16487,28 +16829,28 @@ var TypedArrayConstructor_of = function of(thisArg, argList) {
 };
 var TypedArrayPrototype_get_byteLength = function (thisArg, argList) {
     var O = thisArg;
-    if (Type(O) !== OBJECT) return newTypeError( "this value is not an object");
-    if (!hasInternalSlot(O, SLOTS.VIEWEDARRAYBUFFER)) return newTypeError( "has no ViewedArrayBuffer slot");
+    if (Type(O) !== OBJECT) return newTypeError("this value is not an object");
+    if (!hasInternalSlot(O, SLOTS.VIEWEDARRAYBUFFER)) return newTypeError("has no ViewedArrayBuffer slot");
     var buffer = getInternalSlot(O, SLOTS.VIEWEDARRAYBUFFER);
-    if (buffer === undefined) return newTypeError( "slot value for viewed array buffer is undefined");
+    if (buffer === undefined) return newTypeError("slot value for viewed array buffer is undefined");
     var length = getInternalSlot(O, SLOTS.BYTELENGTH);
     return NormalCompletion(length);
 };
 var TypedArrayPrototype_get_byteOffset = function (thisArg, argList) {
     var O = thisArg;
-    if (Type(O) !== OBJECT) return newTypeError( "this value is not an object");
-    if (!hasInternalSlot(O, SLOTS.VIEWEDARRAYBUFFER)) return newTypeError( "has no ViewedArrayBuffer slot");
+    if (Type(O) !== OBJECT) return newTypeError("this value is not an object");
+    if (!hasInternalSlot(O, SLOTS.VIEWEDARRAYBUFFER)) return newTypeError("has no ViewedArrayBuffer slot");
     var buffer = getInternalSlot(O, SLOTS.VIEWEDARRAYBUFFER);
-    if (buffer === undefined) return newTypeError( "slot value for viewed array buffer is undefined");
+    if (buffer === undefined) return newTypeError("slot value for viewed array buffer is undefined");
     var offset = getInternalSlot(O, SLOTS.BYTEOFFSET);
     return NormalCompletion(offset);
 };
 var TypedArrayPrototype_get_buffer = function (thisArg, argList) {
     var O = thisArg;
-    if (Type(O) !== OBJECT) return newTypeError( "this value is not an object");
-    if (!hasInternalSlot(O, SLOTS.VIEWEDARRAYBUFFER)) return newTypeError( "has no ViewedArrayBuffer slot");
+    if (Type(O) !== OBJECT) return newTypeError("this value is not an object");
+    if (!hasInternalSlot(O, SLOTS.VIEWEDARRAYBUFFER)) return newTypeError("has no ViewedArrayBuffer slot");
     var buffer = getInternalSlot(O, SLOTS.VIEWEDARRAYBUFFER);
-    if (buffer === undefined) return newTypeError( "slot value for viewed array buffer is undefined");
+    if (buffer === undefined) return newTypeError("slot value for viewed array buffer is undefined");
     return NormalCompletion(buffer);
 };
 var TypedArrayPrototype_filter = function subarray(thisArg, argList) {
@@ -16552,8 +16894,8 @@ var TypedArrayPrototype_$$iterator = function iterator(thisArg, argList) {
 };
 var TypedArrayPrototype_get_$$toStringTag = function get_toStringTag(thisArg, argList) {
     var O = thisArg;
-    if (Type(O) !== OBJECT) return newTypeError( "the this value is not an object");
-    if (!hasInternalSlot(O, SLOTS.TYPEDARRAYNAME)) return newTypeError( "the this value has no [[TypedArrayName]] slot");
+    if (Type(O) !== OBJECT) return newTypeError("the this value is not an object");
+    if (!hasInternalSlot(O, SLOTS.TYPEDARRAYNAME)) return newTypeError("the this value has no [[TypedArrayName]] slot");
     var name = getInternalSlot(O, SLOTS.TYPEDARRAYNAME);
     Assert(Type(name) == STRING, "name has to be a string value");
     return NormalCompletion(name);
@@ -16728,18 +17070,18 @@ SymbolPrimitiveType.prototype = {
         return "[object SymbolPrimitiveType]";
     }
 };
-var $$unscopables        = SymbolPrimitiveType("@@unscopables",         "Symbol.unscopables");
-var $$create             = SymbolPrimitiveType("@@create",              "Symbol.create");
-var $$toPrimitive        = SymbolPrimitiveType("@@toPrimitive",         "Symbol.toPrimitive");
-var $$toStringTag        = SymbolPrimitiveType("@@toStringTag",         "Symbol.toStringTag");
-var $$hasInstance        = SymbolPrimitiveType("@@hasInstance",         "Symbol.hasInstance");
-var $$iterator           = SymbolPrimitiveType("@@iterator",            "Symbol.iterator");
-var $$isRegExp           = SymbolPrimitiveType("@@isRegExp",            "Symbol.isRegExp");
-var $$isConcatSpreadable = SymbolPrimitiveType("@@isConcatSpreadable",  "Symbol.isConcatSpreadable");
-var $$geti = SymbolPrimitiveType("@@geti",  "Symbol.geti");
-var $$seti = SymbolPrimitiveType("@@seti",  "Symbol.seti");
-var $$add  = SymbolPrimitiveType("@@ADD",  "Symbol.add");
-var $$addr = SymbolPrimitiveType("@@ADDR",  "Symbol.addR");
+var $$unscopables = SymbolPrimitiveType("@@unscopables", "Symbol.unscopables");
+var $$create = SymbolPrimitiveType("@@create", "Symbol.create");
+var $$toPrimitive = SymbolPrimitiveType("@@toPrimitive", "Symbol.toPrimitive");
+var $$toStringTag = SymbolPrimitiveType("@@toStringTag", "Symbol.toStringTag");
+var $$hasInstance = SymbolPrimitiveType("@@hasInstance", "Symbol.hasInstance");
+var $$iterator = SymbolPrimitiveType("@@iterator", "Symbol.iterator");
+var $$isRegExp = SymbolPrimitiveType("@@isRegExp", "Symbol.isRegExp");
+var $$isConcatSpreadable = SymbolPrimitiveType("@@isConcatSpreadable", "Symbol.isConcatSpreadable");
+var $$geti = SymbolPrimitiveType("@@geti", "Symbol.geti");
+var $$seti = SymbolPrimitiveType("@@seti", "Symbol.seti");
+var $$add = SymbolPrimitiveType("@@ADD", "Symbol.add");
+var $$addr = SymbolPrimitiveType("@@ADDR", "Symbol.addR");
 function addWellKnownSymbolsToRealmsLeakySymbolMap(realm) {
     /**
      * for getOwnPropertySymbols i need a lookup table
@@ -16769,7 +17111,7 @@ function thisSymbolValue(value) {
         var b = getInternalSlot(value, SLOTS.SYMBOLDATA);
         if (Type(b) === SYMBOL) return b;
     }
-    return newTypeError( "thisSymbolValue: value is not a Symbol");
+    return newTypeError("thisSymbolValue: value is not a Symbol");
 }
 var SymbolFunction_Call = function Call(thisArg, argList) {
     var descString;
@@ -16819,7 +17161,7 @@ var SymbolPrototype_$$toPrimitive = function (thisArg, argList) {
 };
 var SymbolFunction_keyFor = function (thisArg, argList) {
     var sym = argList[0];
-    if (Type(sym) !== SYMBOL) return newTypeError(format("S_NOT_A_SYMBOL","keyFor: sym"));
+    if (Type(sym) !== SYMBOL) return newTypeError(format("S_NOT_A_SYMBOL", "keyFor: sym"));
     var key = getInternalSlot(sym, SLOTS.DESCRIPTION);
     var e = getRealm().GlobalSymbolRegistry[key];
     if (SameValue(e.Symbol, sym)) return NormalCompletion(e.Key);
@@ -16894,11 +17236,11 @@ StringExoticObject.prototype = assign(StringExoticObject.prototype, {
         return ValidateAndApplyPropertyDescriptor(O, P, extensible, D, current);
     },
     Enumerate: function () {
-	var keys = [];
-	var O = this;
-	var str = getInternalSlot(O, SLOTS.STRINGDATA);
-	var len = str.length;
-	for (var i = 0; i < len; i++) keys.push(ToString(i));
+        var keys = [];
+        var O = this;
+        var str = getInternalSlot(O, SLOTS.STRINGDATA);
+        var len = str.length;
+        for (var i = 0; i < len; i++) keys.push(ToString(i));
         var iterator = Enumerate(this);
         var list = getInternalSlot(iterator, SLOTS.ITERATEDLIST);
         list = keys.concat(list);
@@ -16906,31 +17248,31 @@ StringExoticObject.prototype = assign(StringExoticObject.prototype, {
         return NormalCompletion(list);
     },
     OwnPropertyKeys: function () {
-	// just a thrown up
-	var keys = [];
-	var O = this;
-	var str = getInternalSlot(O, SLOTS.STRINGDATA);
-	var len = str.length;
-	for (var i = 0; i < len; i++) keys.push(ToString(i));
-	var bindings = getInternalSlot(O, SLOTS.BINDINGS);
-	for (var p in bindings) {
-	    var P = +p;
-	    if (ToInteger(P) >= len) keys.push(P);
-	}
-	for (p in bindings) {
-	    P = +p;
-	    if (P != P)
-	    keys.push(p);	
-	}
-	var symbols = getInternalSlot(O, SLOTS.SYMBOLS)
-	for (p in symbols) {
-	    var s = symbols[p];
-	    if (s && s.symbol) {	// have to add and
-		keys.push(s.symbol);	// repair
-	    }				// a ES5KEY-SYMBOL-REGISTRY
-					// to remove .symbol backref from desc
-					// (couldnt get from es5id the sym back w/o reggi)
-	}
+        // just a thrown up
+        var keys = [];
+        var O = this;
+        var str = getInternalSlot(O, SLOTS.STRINGDATA);
+        var len = str.length;
+        for (var i = 0; i < len; i++) keys.push(ToString(i));
+        var bindings = getInternalSlot(O, SLOTS.BINDINGS);
+        for (var p in bindings) {
+            var P = +p;
+            if (ToInteger(P) >= len) keys.push(P);
+        }
+        for (p in bindings) {
+            P = +p;
+            if (P != P)
+                keys.push(p);
+        }
+        var symbols = getInternalSlot(O, SLOTS.SYMBOLS)
+        for (p in symbols) {
+            var s = symbols[p];
+            if (s && s.symbol) {	// have to add and
+                keys.push(s.symbol);	// repair
+            }				// a ES5KEY-SYMBOL-REGISTRY
+            // to remove .symbol backref from desc
+            // (couldnt get from es5id the sym back w/o reggi)
+        }
         return CreateArrayFromList(keys);
     },
     toString: function () {
@@ -16953,7 +17295,7 @@ function thisStringValue(value) {
         var b = getInternalSlot(value, SLOTS.STRINGDATA);
         if (typeof b === "string") return b;
     }
-    return newTypeError( "thisStringValue: value is not a String", value);
+    return newTypeError("thisStringValue: value is not a String", value);
 }
 var StringConstructor_$$create = function (thisArg, argList) {
     var F = thisArg;
@@ -16988,10 +17330,10 @@ var StringConstructor_construct = function Construct(argList) {
     return OrdinaryConstruct(this, argList);
 };
 var normalizeOneOfs = {
-    "NFC":true,
-    "NFD":true,
-    "NFKC":true,
-    "NFKD":true
+    "NFC": true,
+    "NFD": true,
+    "NFKC": true,
+    "NFKD": true
 };
 var StringPrototype_normalize = function (thisArg, argList) {
     var from = argList[0];
@@ -17002,13 +17344,13 @@ var StringPrototype_normalize = function (thisArg, argList) {
     if (from === undefined) from = "NFC";
     var f = ToString(from);
     if ((f = ifAbrupt(f)) && ifAbrupt(f)) return f;
-    if (!normalizeOneOfs[f]) return newRangeError( "f is not one of nfc, nfd, nfkc, nfkd.");
+    if (!normalizeOneOfs[f]) return newRangeError("f is not one of nfc, nfd, nfkc, nfkd.");
     if (S.normalize) {
         // powers of native es.
         var ns = S.normalize(f);
     } else {
         // off point, but a fill-in
-        ns = ""+S;
+        ns = "" + S;
     }
     return NormalCompletion(ns);
 };
@@ -17028,7 +17370,7 @@ var StringPrototype_replace = function (thisArg, argList) {
     var len = S.length;
     var searchLen = searchString.length;
     while (i < len) {
-        if ((S[i] == searchString[0]) && (S[i+searchLen-1] == searchString[searchLen-1])) {
+        if ((S[i] == searchString[0]) && (S[i + searchLen - 1] == searchString[searchLen - 1])) {
             var k = 0;
             var match = true;
             while (k < searchLen) {
@@ -17085,10 +17427,10 @@ var StringPrototype_repeat = function (thisArg, argList) {
     if (isAbrupt(S = ifAbrupt(S))) return S;
     var n = ToInteger(count);
     if (isAbrupt(n = ifAbrupt(n))) return n;
-    if (n < 0) return newRangeError( "n is less than 0");
-    if (n === Infinity) return newRangeError( "n is infinity");
+    if (n < 0) return newRangeError("n is less than 0");
+    if (n === Infinity) return newRangeError("n is infinity");
     var T = "";
-    for (var i = 0; i < n; i++) T+=S;
+    for (var i = 0; i < n; i++) T += S;
     return NormalCompletion(T);
 };
 var StringPrototype_contains = function (thisArg, argList) {
@@ -17106,17 +17448,17 @@ var StringPrototype_contains = function (thisArg, argList) {
     var i = start;
     var j = len;
     var result = false;
-    while (i < len-searchLen) {
+    while (i < len - searchLen) {
 
-        if ((searchStr[0] === S[i]) && (searchStr[searchLen-1] === S[i+searchLen-1])) {
+        if ((searchStr[0] === S[i]) && (searchStr[searchLen - 1] === S[i + searchLen - 1])) {
             result = true;
-            for (var k = i+1, l = i+searchLen-1, m = 1; k < l; k++, m++) {
+            for (var k = i + 1, l = i + searchLen - 1, m = 1; k < l; k++, m++) {
                 if (searchStr[m] !== S[k]) result = false;
             }
             if (result) return true;
         }
 
-        i = i+1;
+        i = i + 1;
     }
     return false;
 };
@@ -17132,10 +17474,13 @@ var StringPrototype_startsWith = function (thisArg, argList) {
     var len = S.length;
     var start = min(max(pos, 0), len);
     var searchLength = searchString.length;
-    if (searchLength+start > len) return false;
+    if (searchLength + start > len) return false;
     var result = true;
-    for (var k = 0, i = start, j = searchLength+start; i < j; i++, k++) {
-        if (searchStr[k] !== S[i]) { result = false; break; }
+    for (var k = 0, i = start, j = searchLength + start; i < j; i++, k++) {
+        if (searchStr[k] !== S[i]) {
+            result = false;
+            break;
+        }
     }
     return result;
 };
@@ -17155,7 +17500,10 @@ var StringPrototype_endsWith = function (thisArg, argList) {
     if (start < 0) return false;
     var result = true;
     for (var i = start, j = start + searchLength, k = 0; i < j; i++, k++) {
-        if (searchString[k] !== S[i]) { result = false; break; }
+        if (searchString[k] !== S[i]) {
+            result = false;
+            break;
+        }
     }
     return result;
 };
@@ -17202,7 +17550,7 @@ var StringPrototype_search = function (thisArg, argList) {
     var S = ToString(O);
     if (isAbrupt(S = ifAbrupt(S))) return S;
     var rx;
-    if (Type(regexp) === OBJECT  && HasProperty(regexp, $$isRegExp)) {
+    if (Type(regexp) === OBJECT && HasProperty(regexp, $$isRegExp)) {
         rx = regexp;
     } else {
         rx = RegExpCreate(regexp, undefined);
@@ -17228,7 +17576,7 @@ var StringPrototype_toLowerCase = function (thisArg, argList) {
 };
 var StringPrototype_charAt = function (thisArg, argList) {
     var index = argList[0];
-    index = index|0;
+    index = index | 0;
     var O = CheckObjectCoercible(thisArg);
     if (isAbrupt(O = ifAbrupt(O))) return O;
     var S = ToString(O);
@@ -17238,7 +17586,7 @@ var StringPrototype_charAt = function (thisArg, argList) {
 };
 var StringPrototype_charCodeAt = function (thisArg, argList) {
     var index = argList[0];
-    index = index|0;
+    index = index | 0;
     var O = CheckObjectCoercible(thisArg);
     if (isAbrupt(O = ifAbrupt(O))) return O;
     var S = ToString(O);
@@ -17261,7 +17609,7 @@ var StringPrototype_split = function (thisArg, argList) {
     var A = ArrayCreate(0);
     var lengthA = 0;
     var lim;
-    if (limit === undefined) lim = Math.pow(2,53)-1;
+    if (limit === undefined) lim = Math.pow(2, 53) - 1;
     else lim = ToLength(limit);
     var s = S.length;
     var p = 0;
@@ -17278,13 +17626,15 @@ var StringPrototype_lpad = function (thisArg, argList) {
     if (isAbrupt(intMinLength = ifAbrupt(intMinLength))) return intMinLength;
     if (intMinLength === undefined) return NormalCompletion(S);
     var fillLen = intMinLength - S.length;
-    if (fillLen < 0) return newRangeError( "lpad: fillLen is smaller than the string");
-    if (fillLen == Infinity) return newRangeError( "lpad: fillLen is Infinity");
+    if (fillLen < 0) return newRangeError("lpad: fillLen is smaller than the string");
+    if (fillLen == Infinity) return newRangeError("lpad: fillLen is Infinity");
     var sFillStr;
     if (fillStr === undefined) sFillStr = " ";
-    else sFillStr = ""+fillStr;
+    else sFillStr = "" + fillStr;
     var sFillVal = sFillStr;
-    do { sFillVal += sFillStr; } while (sFillVal.length < fillLen);
+    do {
+        sFillVal += sFillStr;
+    } while (sFillVal.length < fillLen);
     if (sFillVal.length > fillLen) sFillVal = sFillVal.substr(0, fillLen);
     return NormalCompletion(sFillVal + S)
 };
@@ -17298,13 +17648,15 @@ var StringPrototype_rpad = function (thisArg, argList) {
     if (isAbrupt(intMinLength = ifAbrupt(intMinLength))) return intMinLength;
     if (intMinLength === undefined) return NormalCompletion(S);
     var fillLen = intMinLength - S.length;
-    if (fillLen < 0) return newRangeError( "lpad: fillLen is smaller than the string");
-    if (fillLen == Infinity) return newRangeError( "lpad: fillLen is Infinity");
+    if (fillLen < 0) return newRangeError("lpad: fillLen is smaller than the string");
+    if (fillLen == Infinity) return newRangeError("lpad: fillLen is Infinity");
     var sFillStr;
     if (fillStr === undefined) sFillStr = " ";
-    else sFillStr = ""+fillStr;
+    else sFillStr = "" + fillStr;
     var sFillVal = sFillStr;
-    do { sFillVal += sFillStr; } while (sFillVal.length < fillLen );
+    do {
+        sFillVal += sFillStr;
+    } while (sFillVal.length < fillLen);
     if (sFillVal.length > fillLen) sFillVal = sFillVal.substr(0, fillLen);
     return NormalCompletion(S + sFillVal);
 };
@@ -17317,10 +17669,10 @@ var StringPrototype_codePointAt = function (thisArg, argList) {
     var size = S.length;
     if (position < 0 || position >= size) return NormalCompletion(undefined);
     var first = S.charCodeAt(position);
-    if (first < 0xD800 || first > 0xDBFF || (position+1===size)) return S;
-    var second = S.charCodeAt(position+1);
+    if (first < 0xD800 || first > 0xDBFF || (position + 1 === size)) return S;
+    var second = S.charCodeAt(position + 1);
     if (second < 0xDC00 || second > 0xDFFF) return NormalCompletion(first);
-    var result = (((first - 0xD800)*1024) + (second - 0xDC00)) + 0x10000;
+    var result = (((first - 0xD800) * 1024) + (second - 0xDC00)) + 0x10000;
     return NormalCompletion(result);
 };
 var StringPrototype_concat = function (thisArg, argList) {
@@ -17330,7 +17682,7 @@ var StringPrototype_concat = function (thisArg, argList) {
     if (isAbrupt(S = ifAbrupt(S))) return S;
     var R = S;
     var next;
-    for (var i = 0, j = argList.length; i < j; i++ ) {
+    for (var i = 0, j = argList.length; i < j; i++) {
         next = argList[i];
         var nextString = ToString(next);
         if (isAbrupt(nextString = ifAbrupt(nextString))) return nextString;
@@ -17351,12 +17703,12 @@ var StringPrototype_indexOf = function (thisArg, argList) {
     var start = min(max(pos, 0), len);
     var searchLen = searchStr.length;
     outer:
-        for (var i = 0, j = (S.length-searchLen); i < j; i++) {
+        for (var i = 0, j = (S.length - searchLen); i < j; i++) {
             var ch = S[i];
             if (ch === searchStr[0]) {
                 var k = 0;
                 while (k < searchLen) {
-                    if (S[i+k] !== searchStr[k]) continue outer;
+                    if (S[i + k] !== searchStr[k]) continue outer;
                     k = k + 1;
                 }
                 return NormalCompletion(i);
@@ -17364,7 +17716,7 @@ var StringPrototype_indexOf = function (thisArg, argList) {
         }
     return NormalCompletion(-1);
 };
-var StringPrototype_lastIndexOf = function (thisArg, argList)   {
+var StringPrototype_lastIndexOf = function (thisArg, argList) {
     var searchString = argList[0];
     var position = argList[1];
     var O = CheckObjectCoercible(thisArg);
@@ -17372,12 +17724,12 @@ var StringPrototype_lastIndexOf = function (thisArg, argList)   {
     var S = ToString(O);
     if (isAbrupt(S = ifAbrupt(S))) return S;
     var searchStr = ToString(searchString);
-    if (isAbrupt(searchStr=ifAbrupt(searchStr))) return searchStr;
+    if (isAbrupt(searchStr = ifAbrupt(searchStr))) return searchStr;
     var numPos = ToNumber(position);
     if (isAbrupt(numPos = ifAbrupt(numPos))) return numPos;
     var pos;
     if (numPos !== numPos) pos = Infinity;
-    else pos = numPos|0;
+    else pos = numPos | 0;
     var len = S.length;
     var start = min(pos, len);
     var searchLen = searchStr.length;
@@ -17388,7 +17740,7 @@ var StringPrototype_lastIndexOf = function (thisArg, argList)   {
             if (ch === searchStr[0]) {
                 var k = 0;
                 while (k < searchLen) {
-                    if (S[i+k] !== searchStr[k]) continue outer;
+                    if (S[i + k] !== searchStr[k]) continue outer;
                     k = k + 1;
                 }
                 return NormalCompletion(i);
@@ -17410,21 +17762,21 @@ var StringPrototype_at = function (thisArg, argList) {
     var position = argList[0];
     var O = CheckObjectCoercible(thisArg);
     var S = ToString(O);
-    if (isAbrupt(S=ifAbrupt(S))) return S;
+    if (isAbrupt(S = ifAbrupt(S))) return S;
     var pos = ToInteger(position);
-    if (isAbrupt(pos=ifAbrupt(pos))) return pos;
+    if (isAbrupt(pos = ifAbrupt(pos))) return pos;
     var size = S.length;
     //if (pos < size || pos > size) return NormalCompletion("");
     var first = S[position];
     var cuFirst = s.charCodeAt(0);
     if (cuFirst < 0xD800 || cuFirst > 0xDBFF || (position + 1 === size)) return NormalCompletion(first);
-    var cuSecond = S.charCodeAt[position+1];
+    var cuSecond = S.charCodeAt[position + 1];
     if (cuSecond < 0xDC00 || cuSecond > 0xDFFF) return NormalCompletion(String.fromCharCode(cuFirst));
-    var second = S.charCodeAt[position+1];
-    var cp = (first - 0xD800) * 0x400+(second-0xDC00)+0x1000;
+    var second = S.charCodeAt[position + 1];
+    var cp = (first - 0xD800) * 0x400 + (second - 0xDC00) + 0x1000;
     return NormalCompletion(String.fromCharCode(cuFirst, cuSecond));
 };
-function GetReplaceSubstitution (matched, string, postion, captures) {
+function GetReplaceSubstitution(matched, string, postion, captures) {
     Assert(Type(matched) === STRING, "matched has to be a string");
     var matchLength = matched.length;
     Assert(Type(string) === STRING);
@@ -17445,7 +17797,7 @@ var StringConstructor_fromCharCode = function (thisArg, argList) {
     try {
         var str = String.fromCharCode.apply(null, argList);
     } catch (ex) {
-        return newTypeError( "error converting string to charcode");
+        return newTypeError("error converting string to charcode");
     }
     return NormalCompletion(str);
 };
@@ -17454,7 +17806,7 @@ var StringConstructor_fromCodePoint = function (thisArg, argList) {
     try {
         var str = String.fromCharCode.apply(null, argList);
     } catch (ex) {
-        return newTypeError( "error converting string to charcode");
+        return newTypeError("error converting string to charcode");
     }
     return NormalCompletion(str);
 };
@@ -17487,7 +17839,7 @@ var StringConstructor_raw = function (thisArg, argList) {
     if (literalSegments <= 0) return "";
     var stringElements = [];
     var nextIndex = 0;
-    for (;;) {
+    for (; ;) {
         var nextKey = ToString(nextIndex);
         var next = Get(raw, nextKey);
         var nextSeg = ToString(next);
@@ -17515,9 +17867,9 @@ var StringIteratorPrototype_$$iterator = function (thisArg, argList) {
 var StringIteratorPrototype_next = function (thisArg, argList) {
     var O = thisArg;
     if (Type(O) !== OBJECT)
-        return newTypeError( "the this value is not an object");
+        return newTypeError("the this value is not an object");
     if (!hasInternalSlot(O, SLOTS.ITERATEDSTRING) || !hasInternalSlot(O, SLOTS.ITERATORNEXTINDEX) || !hasInternalSlot(O, SLOTS.ITERATIONKIND))
-        return newTypeError( "iterator has not all of the required internal properties");
+        return newTypeError("iterator has not all of the required internal properties");
     var string = getInternalSlot(O, SLOTS.ITERATEDSTRING);
     var kind = getInternalSlot(O, SLOTS.ITERATIONKIND);
     var index = getInternalSlot(O, SLOTS.ITERATORNEXTINDEX);
@@ -17629,8 +17981,8 @@ var NumberPrototype_toString = function (thisArg, argList) {
     var s = "";
     if (radix === undefined) radixNumber = 10;
     else radixNumber = ToInteger(radix);
-    if (isAbrupt(radixNumber=ifAbrupt(radixNumber))) return radixNumber;
-    if (radixNumber < 2 || radixNumber > 36) return newRangeError( "radixNumber has to be between 2 and 36");
+    if (isAbrupt(radixNumber = ifAbrupt(radixNumber))) return radixNumber;
+    if (radixNumber < 2 || radixNumber > 36) return newRangeError("radixNumber has to be between 2 and 36");
     if (radixNumber === 10) return ToString(x);
     else s = ToString(x);
 
@@ -17678,7 +18030,7 @@ var NumberPrototype_toPrecision = function (thisArg, argList) {
     var result = +x.toPrecision(precision);
     return NormalCompletion(result);
 };
-function repeatString (str, times) {
+function repeatString(str, times) {
     var concat = "";
     for (var i = 0; i < times; i++) {
         concat += str;
@@ -17692,7 +18044,7 @@ var NumberPrototype_toFixed = function (thisArg, argList) {
     if (fractionDigits === undefined) return ToString(x);
     var f = ToInteger(fractionDigits);
     if (isAbrupt(f = ifAbrupt(f))) return f;
-    if ((f < 0) || (f > 20)) return newRangeError( "fractionDigits is less or more than 20");
+    if ((f < 0) || (f > 20)) return newRangeError("fractionDigits is less or more than 20");
     if (x !== x) return "NaN";
     var s = "";
     if (x < 0) {
@@ -17704,16 +18056,16 @@ var NumberPrototype_toFixed = function (thisArg, argList) {
     } else {
         var n;
         if (n === 0) m = "0";
-        else m = ""+n;
+        else m = "" + n;
         if (f != 0) {
             var k = Math.ceil(Math.log(Math.pow(n, Math.LOG2E))); // = number of elements in n
-            if (k <= f)  {
-                var z = repeatString(0x0030, f+1-k);
+            if (k <= f) {
+                var z = repeatString(0x0030, f + 1 - k);
                 m = z + m;
                 k = f + 1;
             }
-            var a = m.substr(0, k-f);
-            var b = m.substr(k-f);
+            var a = m.substr(0, k - f);
+            var b = m.substr(k - f);
             m = a + "." + b;
         }
     }
@@ -17737,10 +18089,10 @@ var NumberPrototype_toExponential = function (thisArg, argList) {
     if (x === Infinity || s === -Infinity) {
         return s + "Infinity";
     }
-    if (fractionDigits !== undefined && ((f < 0) || (f > 20))) return newRangeError( "toExponential: fractionDigits < 0 or > 20");
+    if (fractionDigits !== undefined && ((f < 0) || (f > 20))) return newRangeError("toExponential: fractionDigits < 0 or > 20");
     if (x === 0) {
         if (fractionDigits === undefined) f = 0;
-        var m = stringRepeat(0x0030, f+1);
+        var m = stringRepeat(0x0030, f + 1);
         var e = 0;
     } else {
         if (fractionDigits !== undefined) {
@@ -17753,7 +18105,7 @@ var NumberPrototype_toExponential = function (thisArg, argList) {
             e;
             n;
         }
-        m = ""+n;
+        m = "" + n;
     }
     if (f != 0) {
         var a = m.substr(m, 1);
@@ -17768,7 +18120,7 @@ var NumberPrototype_toExponential = function (thisArg, argList) {
             c = "-";
             e = -e;
         }
-        d = ""+e;
+        d = "" + e;
         m = m + "e" + c + d;
     }
 
@@ -17787,7 +18139,7 @@ var ParseIntFunction_call = function (thisArg, argList) {
 var ParseFloatFunction_call = function (thisArg, argList) {
     try {
         return parseFloat("" + argList[0]);
-    } catch(ex) {
+    } catch (ex) {
         return newTypeError(ex.message);
     }
 };
@@ -17799,7 +18151,7 @@ function thisBooleanValue(value) {
         var b = getInternalSlot(value, SLOTS.BOOLEANDATA);
         if (typeof b === "boolean") return b;
     }
-    return newTypeError( "thisBooleanValue: value is not a Boolean");
+    return newTypeError("thisBooleanValue: value is not a Boolean");
 }
 var BooleanConstructor_call = function (thisArg, argList) {
     var O = thisArg;
@@ -17815,7 +18167,7 @@ var BooleanConstructor_construct = function (argList) {
     return OrdinaryConstruct(this, argList);
 };
 var BooleanConstructor_$$create = function (thisArg, argList) {
-    return OrdinaryCreateFromConstructor(thisArg, INTRINSICS.BOOLEANPROTOTYPE,[SLOTS.BOOLEANDATA]);
+    return OrdinaryCreateFromConstructor(thisArg, INTRINSICS.BOOLEANPROTOTYPE, [SLOTS.BOOLEANDATA]);
 };
 var BooleanPrototype_toString = function toString(thisArg, argList) {
     var b = thisBooleanValue(thisArg);
@@ -17851,7 +18203,7 @@ ProxyExoticObject.prototype = {
         if (isAbrupt(handlerProto = ifAbrupt(handlerProto))) return handlerProto;
         var targetProto = GetPrototypeOf(T);
         if (isAbrupt(targetProto = ifAbrupt(targetProto))) return targetProto;
-        if (!SameValue(handlerProto, targetProto)) return newTypeError( "handler and target protos differ");
+        if (!SameValue(handlerProto, targetProto)) return newTypeError("handler and target protos differ");
         return handlerProto;
     },
 
@@ -17869,7 +18221,7 @@ ProxyExoticObject.prototype = {
         if (extensibleTarget === true) return trapResult;
         var targetProto = GetPrototypeOf(T);
         if (isAbrupt(targetProto = ifAbrupt(targetProto))) return targetProto;
-        if (!SameValue(V, targetProto)) return newTypeError( "prototype argument and targetProto differ");
+        if (!SameValue(V, targetProto)) return newTypeError("prototype argument and targetProto differ");
         return trapResult;
     },
 
@@ -17886,7 +18238,7 @@ ProxyExoticObject.prototype = {
         if (isAbrupt(booleanTrapResult = ifAbrupt(booleanTrapResult))) return booleanTrapResult;
         var targetResult = IsExtensible(T);
         if (isAbrupt(targetResult = ifAbrupt(targetResult))) return targetResult;
-        if (!SameValue(booleanTrapResult, targetResult)) return newTypeError( "trap and target boolean results differ");
+        if (!SameValue(booleanTrapResult, targetResult)) return newTypeError("trap and target boolean results differ");
         return booleanTrapResult;
     },
 
@@ -17902,7 +18254,7 @@ ProxyExoticObject.prototype = {
         if (isAbrupt(booleanTrapResult = ifAbrupt(booleanTrapResult))) return booleanTrapResult;
         var targetIsExtensible = IsExtensible(T);
         if (isAbrupt(targetIsExtensible = ifAbrupt(targetIsExtensible))) return targetIsExtensible;
-        if (booleanTrapResult === true && targetIsExtensible === true) return newTypeError( "target still extensible");
+        if (booleanTrapResult === true && targetIsExtensible === true) return newTypeError("target still extensible");
         return targetIsExtensible;
     },
 
@@ -17922,10 +18274,10 @@ ProxyExoticObject.prototype = {
             targetDesc = GetOwnProperty(T, P);
             if (isAbrupt(targetDesc = ifAbrupt(targetDesc))) return targetDesc;
             if (targetDesc) {
-                if (targetDesc.configurable === false) return newTypeError( "targetDesc.configurable is false");
+                if (targetDesc.configurable === false) return newTypeError("targetDesc.configurable is false");
                 extensibleTarget = IsExtensible(T);
                 if (isAbrupt(extensibleTarget = ifAbrupt(extensibleTarget))) return extensibleTarget;
-                if (ToBoolean(extensibleTarget) === false) return newTypeError( "target is not extensible");
+                if (ToBoolean(extensibleTarget) === false) return newTypeError("target is not extensible");
             }
         } else {
             extensibleTarget = IsExtensible(T);
@@ -17933,7 +18285,7 @@ ProxyExoticObject.prototype = {
             if (ToBoolean(extensibleTarget) === true) return success;
             targetDesc = GetOwnProperty(T, P);
             if (isAbrupt(targetDesc = ifAbrupt(targetDesc))) return targetDesc;
-            if (targetDesc === undefined) return newTypeError( "target descriptor is undefined");
+            if (targetDesc === undefined) return newTypeError("target descriptor is undefined");
         }
         return success;
     },
@@ -17947,16 +18299,16 @@ ProxyExoticObject.prototype = {
         if (trap === undefined) return GetOwnProperty(T, P);
         var trapResultObj = callInternalSlot(SLOTS.CALL, trap, H, [T, P]);
         if (isAbrupt(trapResultObj = ifAbrupt(trapResultObj))) return trapResultObj;
-        if (Type(trapResultObj) !== OBJECT && Type(trapResultObj) !== UNDEFINED) return newTypeError( "getown - neither object nor undefined");
+        if (Type(trapResultObj) !== OBJECT && Type(trapResultObj) !== UNDEFINED) return newTypeError("getown - neither object nor undefined");
         var targetDesc = GetOwnProperty(T, P);
         if (isAbrupt(targetDesc = ifAbrupt(targetDesc))) return targetDesc;
         var extensibleTarget;
         if (Type(trapResultObj) === UNDEFINED) {
             if (targetDesc === undefined) return undefined;
-            if (targetDesc.configurable === false) return newTypeError( "inconfigurable target problem");
+            if (targetDesc.configurable === false) return newTypeError("inconfigurable target problem");
             extensibleTarget = IsExtensible(T);
             if (isAbrupt(extensibleTarget = ifAbrupt(extensibleTarget))) return extensibleTarget;
-            if ((extensibleTarget = ToBoolean(extensibleTarget)) === false) return newTypeError( "target is not extensible");
+            if ((extensibleTarget = ToBoolean(extensibleTarget)) === false) return newTypeError("target is not extensible");
             return undefined;
         }
         extensibleTarget = IsExtensible(T);
@@ -17965,9 +18317,9 @@ ProxyExoticObject.prototype = {
         var resultDesc = ToPropertyDescriptor(trapResultObj);
         CompletePropertyDescriptor(resultDesc, targetDesc);
         var valid = IsCompatiblePropertyDescriptor(extensibleTarget, resultDesc, targetDesc);
-        if (!valid) return newTypeError( "invalid property descriptor");
+        if (!valid) return newTypeError("invalid property descriptor");
         if (resultDesc.configurable === false) {
-            if (targetDesc === undefined || targetDesc.configurable === true) return newTypeError( "descriptor configurability mismatch");
+            if (targetDesc === undefined || targetDesc.configurable === true) return newTypeError("descriptor configurability mismatch");
         }
         return resultDesc;
     },
@@ -17987,11 +18339,11 @@ ProxyExoticObject.prototype = {
         var settingConfigFalse;
         settingConfigFalse = D.configurable !== undefined && !D.configurable;
         if (targetDesc === undefined) {
-            if (!extensibleTarget) return newTypeError( "target not extensible");
-            if (settingConfigFalse) return newTypeError( "not configurable descriptor or undefined and no target descriptor?!");
+            if (!extensibleTarget) return newTypeError("target not extensible");
+            if (settingConfigFalse) return newTypeError("not configurable descriptor or undefined and no target descriptor?!");
         } else {
-            if (!IsCompatiblePropertyDescriptor(extensibleTarget, D, targetDesc)) return newTypeError( "incompatible descriptors");
-            if (settingConfigFalse && targetDesc.configurable) return newTypeError( "configurability incomptatiblity");
+            if (!IsCompatiblePropertyDescriptor(extensibleTarget, D, targetDesc)) return newTypeError("incompatible descriptors");
+            if (settingConfigFalse && targetDesc.configurable) return newTypeError("configurability incomptatiblity");
         }
         return true;
     },
@@ -18010,10 +18362,10 @@ ProxyExoticObject.prototype = {
             var targetDesc = GetOwnProperty(T, P);
             if (isAbrupt(targetDesc = ifAbrupt(targetDesc))) return targetDesc;
             if (targetDesc) {
-                if (targetDesc.configurable === false) return newTypeError( "targetDesc.configurable is false");
+                if (targetDesc.configurable === false) return newTypeError("targetDesc.configurable is false");
                 extensibleTarget = IsExtensible(T);
                 if (isAbrupt(extensibleTarget = ifAbrupt(extensibleTarget))) return extensibleTarget;
-                if (ToBoolean(extensibleTarget) === false) return newTypeError( "target is not extensible");
+                if (ToBoolean(extensibleTarget) === false) return newTypeError("target is not extensible");
             }
         }
         return success;
@@ -18033,9 +18385,9 @@ ProxyExoticObject.prototype = {
         if (isAbrupt(targetDesc = ifAbrupt(targetDesc))) return targetDesc;
         if (targetDesc) {
             if (IsDataDescriptor(targetDesc) && targetDesc.configurable === false && targetDesc.writable === false) {
-                if (!SameValue(trapResult, targetDesc.value)) return newTypeError( "trap and target values differ");
+                if (!SameValue(trapResult, targetDesc.value)) return newTypeError("trap and target values differ");
             } else if (IsAccessorDescriptor(targetDesc) && targetDesc.configurable === false && targetDesc.get === undefined) {
-                if (trapResult) return newTypeError( "Getter problem, undefined and not configurable");
+                if (trapResult) return newTypeError("Getter problem, undefined and not configurable");
             }
         }
         return trapResult;
@@ -18049,14 +18401,14 @@ ProxyExoticObject.prototype = {
         if (trap === undefined) return Set(T, P, V, R);
         var trapResult = callInternalSlot(SLOTS.CALL, trap, H, [T, P, V, R]);
         if (isAbrupt(trapResult = ifAbrupt(trapResult))) return trapResult;
-        if (ToBoolean(trapResult) === false) return newTypeError( "cant set value with trap");
+        if (ToBoolean(trapResult) === false) return newTypeError("cant set value with trap");
         var targetDesc = GetOwnProperty(T, P);
         if (isAbrupt(targetDesc = ifAbrupt(targetDesc))) return targetDesc;
         if (targetDesc) {
             if (IsDataDescriptor(targetDesc) && targetDesc.configurable === false && targetDesc.writable === false) {
-                if (!SameValue(trapResult, targetDesc.value)) return newTypeError( "trap and target values differ");
+                if (!SameValue(trapResult, targetDesc.value)) return newTypeError("trap and target values differ");
             } else if (IsAccessorDescriptor(targetDesc) && targetDesc.configurable === false) {
-                if (targetDesc.set === undefined) return newTypeError( "Getter problem, undefined and not configurable");
+                if (targetDesc.set === undefined) return newTypeError("Getter problem, undefined and not configurable");
             }
         }
         return true;
@@ -18086,7 +18438,7 @@ ProxyExoticObject.prototype = {
         var targetDesc = GetOwnProperty(T, P);
         if (isAbrupt(targetDesc = ifAbrupt(targetDesc))) return targetDesc;
         if (targetDesc === undefined) return true;
-        if (targetDesc.configurable === false) return newTypeError( "property is not configurable");
+        if (targetDesc.configurable === false) return newTypeError("property is not configurable");
         return true;
 
     },
@@ -18099,7 +18451,7 @@ ProxyExoticObject.prototype = {
         if (trap === undefined) return Enumerate(T);
         var trapResult = callInternalSlot(SLOTS.CALL, trap, H, [T]);
         if (isAbrupt(trapResult = ifAbrupt(trapResult))) return trapResult;
-        if (Type(trapResult) !== OBJECT) return newTypeError( "trapResult is not an object");
+        if (Type(trapResult) !== OBJECT) return newTypeError("trapResult is not an object");
         return trapResult;
     },
     OwnPropertyKeys: function () {
@@ -18110,7 +18462,7 @@ ProxyExoticObject.prototype = {
         if (trap === undefined) return OwnPropertyKeys(T);
         var trapResult = callInternalSlot(SLOTS.CALL, trap, H, [T]);
         if (isAbrupt(trapResult = ifAbrupt(trapResult))) return trapResult;
-        if (Type(trapResult) !== OBJECT) return newTypeError( "trapResult is not an object");
+        if (Type(trapResult) !== OBJECT) return newTypeError("trapResult is not an object");
         return trapResult;
     },
 
@@ -18119,7 +18471,7 @@ ProxyExoticObject.prototype = {
         var H = getInternalSlot(this, SLOTS.PROXYHANDLER);
         var trap = GetMethod(H, "apply");
         if (isAbrupt(trap = ifAbrupt(trap))) return trap;
-        if (trap === undefined) return callInternalSlot(SLOTS.CALL,T, thisArg, argList);
+        if (trap === undefined) return callInternalSlot(SLOTS.CALL, T, thisArg, argList);
         var argArray = CreateArrayFromList(argList);
         return callInternalSlot(SLOTS.CALL, trap, H, [T, thisArg, argArray]);
     },
@@ -18133,7 +18485,7 @@ ProxyExoticObject.prototype = {
         var argArray = CreateArrayFromList(argList);
         var newObj = callInternalSlot(SLOTS.CALL, trap, H, [T, argArray]);
         if (isAbrupt(newObj = ifAbrupt(newObj))) return newObj;
-        if (Type(newObj) !== OBJECT) return newTypeError( "returned value is not an object");
+        if (Type(newObj) !== OBJECT) return newTypeError("returned value is not an object");
         return newObj;
     }
 };
@@ -18186,16 +18538,16 @@ function evalJobs() {
     var LoadingJobs = getJobs(getRealm(), "LoadingJobs")
     var taskResults = NextJob(undefined, LoadingJobs);
     /*
-        managing multiple queues like this looks like errors,
+     managing multiple queues like this looks like errors,
 
-        will be changed soon
+     will be changed soon
      */
 }
 
-function PendingJobRecord_toString () {
+function PendingJobRecord_toString() {
     return "[object PendingJobRecord]";
 }
-function PendingJobRecord (task, args, realm, hostDefined) {
+function PendingJobRecord(task, args, realm, hostDefined) {
     var pendingJobRecord = Object.create(PendingJobRecord.prototype);
     pendingJobRecord.Job = task;
     pendingJobRecord.Arguments = args;
@@ -18219,7 +18571,7 @@ function getJobs(realm, name) {
     if (realm) return realm[name];
 }
 var queueNames = {
-    __proto__:null,
+    __proto__: null,
     "LoadingJobs": true,
     "PromiseJobs": true,
     "ScriptJobs": true,
@@ -18230,14 +18582,18 @@ function EnqueueJob(queueName, task, args, hostDefined) {
     Assert(Array.isArray(args), "arguments have to be a list and to be equal in the number of arguments of task");
     var callerRealm = getRealm();
     var pending = PendingJobRecord(task, args, callerRealm, hostDefined);
-    switch(queueName) {
-        case "PromiseJobs": callerRealm.PromiseJobs.push(pending);
+    switch (queueName) {
+        case "PromiseJobs":
+            callerRealm.PromiseJobs.push(pending);
             break;
-        case "LoadingJobs": callerRealm.LoadingJobs.push(pending);
+        case "LoadingJobs":
+            callerRealm.LoadingJobs.push(pending);
             break;
-        case "ScriptJobs": callerRealm.ScriptJobs.push(pending);
+        case "ScriptJobs":
+            callerRealm.ScriptJobs.push(pending);
             break;
-        case "TimerJobs": callerRealm.TimerJobs.push(pending);
+        case "TimerJobs":
+            callerRealm.TimerJobs.push(pending);
             break;
     }
     return NormalCompletion(empty);
@@ -18266,11 +18622,11 @@ function EnqueueJob(queueName, task, args, hostDefined) {
  * @constructor
  */
 
-function NextJob (result, nextQueue) {
+function NextJob(result, nextQueue) {
     if (!nextQueue || !nextQueue.length) return;
     if (isAbrupt(result = ifAbrupt(result))) {
         // performing implementation defined unhandled exception processing
-        console.log("NextJob: Got exception - which will remain unhandled - for debugging, i print them out." );
+        console.log("NextJob: Got exception - which will remain unhandled - for debugging, i print them out.");
         printException(result);
     }
 //  Assert(getStack().length === 0, "NextJob: The execution context stack has to be empty");
@@ -18280,7 +18636,7 @@ function NextJob (result, nextQueue) {
     newContext.realm = nextPending.Realm;
     getStack().push(newContext);
     var result = callInternalSlot(SLOTS.CALL, nextPending.Job, undefined, nextPending.Arguments);
-    if (isAbrupt(result=ifAbrupt(result))) {
+    if (isAbrupt(result = ifAbrupt(result))) {
         if (hasConsole) {
             var ex = makeNativeException(ex);
             console.log("NextJob got abruptly completed on [[Call]] of nextPending.Job");
@@ -18295,7 +18651,7 @@ function NextJob (result, nextQueue) {
     return NextJob(result, nextQueue);
 }
 
-function ScriptEvaluationJob (source) {
+function ScriptEvaluationJob(source) {
     Assert(typeof source === "string", "ScriptEvaluationJob: Source has to be a string");
     var status = NormalCompletion(undefined);
     try {
@@ -18345,6 +18701,7 @@ function handleEventQueue(shellMode, initialized) {
             // this will make a failure, but the function will be removed anyways very soon
         }
     }
+
     setTimeout(handler, 0);
 }
 var standard_properties = {
@@ -18385,12 +18742,12 @@ function getRecordFromList(list, field, value) {
 function thisLoader(value) {
     if (value instanceof CompletionRecord) return thisLoader(value.value);
     var m;
-    if (Type(value) === OBJECT && (m=getInternalSlot(value, SLOTS.LOADERRECORD))) {
+    if (Type(value) === OBJECT && (m = getInternalSlot(value, SLOTS.LOADERRECORD))) {
         if (m !== undefined) return value;
     }
-    return newTypeError( "thisLoader(value): value is not a valid loader object");
+    return newTypeError("thisLoader(value): value is not a valid loader object");
 }
-function LoaderRecord () {
+function LoaderRecord() {
     var lr = Object.create(LoaderRecord.prototype);
     lr.Realm = undefined;
     lr.Modules = undefined; // record { Name, Module }
@@ -18398,7 +18755,9 @@ function LoaderRecord () {
     lr.Loader = undefined;  // the loader obj
     return lr;
 }
-LoaderRecord.prototype.toString = function () { return "[object LoaderRecord]"; };
+LoaderRecord.prototype.toString = function () {
+    return "[object LoaderRecord]";
+};
 function CreateLoaderRecord(realm, object) {
     var loader = LoaderRecord();
     loader.Realm = realm;
@@ -18423,7 +18782,9 @@ function LoadRecord() {
     lr.constructor = LoadRecord;
     return lr;
 }
-LoadRecord.prototype.toString = function () { return "[object LoadRecord]"; };
+LoadRecord.prototype.toString = function () {
+    return "[object LoadRecord]";
+};
 function CreateLoad(name) {
     var load = LoadRecord();
     var metadata = ObjectCreate();
@@ -18438,12 +18799,12 @@ function CreateLoadRequestObject(name, metadata, address, source) {
     var obj = ObjectCreate();
     var status, errmsg = "CreateLoadRequest: CreateDataProperty must not fail";
     status = CreateDataProperty(obj, "name", name);
-    Assert(!isAbrupt(status), errmsg+ " - 1");
+    Assert(!isAbrupt(status), errmsg + " - 1");
     status = CreateDataProperty(obj, "metadata", metadata);
-    Assert(!isAbrupt(status), errmsg+ " - 2");
+    Assert(!isAbrupt(status), errmsg + " - 2");
     if (address !== undefined) {
         status = CreateDataProperty(obj, "address", address);
-        Assert(!isAbrupt(status), errmsg+ " - 3");
+        Assert(!isAbrupt(status), errmsg + " - 3");
     }
     if (source !== undefined) {
         status = CreateDataProperty(obj, "source", source);
@@ -18544,7 +18905,7 @@ function CallLocate() {
         var loaderObj = loader.LoaderObj;
         var hook = Get(loaderObj, "locate");
         if (isAbrupt(hook = ifAbrupt(hook))) return hook;
-        if (!IsCallable(hook)) return newTypeError( "call locate hook is not callable");
+        if (!IsCallable(hook)) return newTypeError("call locate hook is not callable");
         var obj = CreateLoadRequestObject(load.Name, load.Metadata);
         return callInternalSlot(SLOTS.CALL, hook, loader, [obj])
     };
@@ -18571,7 +18932,7 @@ function CallFetch() {
         var loaderObj = loader.LoaderObj;
         var hook = Get(loaderObj, "fetch");
         if (isAbrupt(hook = ifAbrupt(hook))) return hook;
-        if (!IsCallable(hook)) return newTypeError( "fetch hook is not a function");
+        if (!IsCallable(hook)) return newTypeError("fetch hook is not a function");
         var obj = CreateLoadRequestObject(load.Name, load.Metadata, address);
         return callInternalSlot(SLOTS.CALL, hook, loader, [obj]);
     };
@@ -18605,7 +18966,7 @@ function CallTranslate() {
         if (load.LinkSets.length === 0) return NormalCompletion(undefined);
         var hook = Get(loader, "translate");
         if (isAbrupt(hook = ifAbrupt(hook))) return hook;
-        if (!IsCallable(hook)) return newTypeError( "call translate hook is not callable");
+        if (!IsCallable(hook)) return newTypeError("call translate hook is not callable");
         var obj = CreateLoadRequestObject(load.Name, load.Metadata, load.Address, source);
         return callInternalSlot(SLOTS.CALL, hook, loader, [obj]);
     };
@@ -18622,7 +18983,7 @@ function CallInstantiate() {
         if (loader.LinkSets.length === 0) return NormalCompletion(undefined);
         var hook = Get(loader, "instantiate");
         if (isAbrupt(hook = ifAbrupt(hook))) return hook;
-        if (!IsCallable(hook)) return newTypeError( "call instantiate hook is not callable");
+        if (!IsCallable(hook)) return newTypeError("call instantiate hook is not callable");
         var obj = CreateLoadRequestObject(load.Name, load.Metadata, load.Address, source);
         return callInternalSlot(SLOTS.CALL, hook, loader, [obj]);
     };
@@ -18640,7 +19001,7 @@ function InstantiateSucceeded() {
             try {
                 var body = parseGoal("Module", load.Source);
             } catch (ex) {
-                return newSyntaxError( ex.message);
+                return newSyntaxError(ex.message);
             }
             load.Body = body;
             load.Kind = "declarative";
@@ -18658,7 +19019,7 @@ function InstantiateSucceeded() {
             load.Execute = execute;
             load.Kind = "dynamic";
         } else {
-            return newTypeError( "instantiateResult error");
+            return newTypeError("instantiateResult error");
         }
         return ProcessLoadDependencies(load, loader, depsList);
     };
@@ -18760,8 +19121,8 @@ function AsyncStartLoadPartwayThrough() {
         var name = state.ModuleName;
         var step = state.Step;
         var source = state.ModuleSource;
-        if (hasRecordInList(loader.Modules, "Name", name)) return newTypeError( "Got name in loader.Modules");
-        if (hasRecordInList(loader.Loads, "Name", name)) return newTypeError( "loader.Loads contains another entry with name '"+name+"'");
+        if (hasRecordInList(loader.Modules, "Name", name)) return newTypeError("Got name in loader.Modules");
+        if (hasRecordInList(loader.Loads, "Name", name)) return newTypeError("loader.Loads contains another entry with name '" + name + "'");
         var load = CreateLoad(name);
         load.Metadata = state.ModuleMetadata;
         var linkSet = CreateLinkSet(loader, load);
@@ -18783,7 +19144,7 @@ function AsyncStartLoadPartwayThrough() {
     setInternalSlot(F, SLOTS.CALL, AsyncStartLoadPartwayThrough_Call);
     return F;
 }
-function CreateModuleLinkageRecord (loader, body) {
+function CreateModuleLinkageRecord(loader, body) {
     var M = ObjectCreate(null);
     setInternalSlot(M, "Body", body);
     setInternalSlot(M, "BoundNames", DeclaredNames(body));
@@ -18805,7 +19166,7 @@ function CreateModuleLinkageRecord (loader, body) {
 function LookupExport(M, exportName) {
     var mExp = getInternalSlot(M, "Exports");
     var exp;
-    if (!(exp=getRecordFromList(mExp, "ExportName", exportName))) {
+    if (!(exp = getRecordFromList(mExp, "ExportName", exportName))) {
         return NormalCompletion(undefined);
     }
     return exp.Binding;
@@ -18825,11 +19186,13 @@ function LinkSet(loader, loads, done, resolve, reject) {
     ls.Reject = reject;
     return ls;
 }
-LinkSet.prototype.toString = function () { return "[object LinkSet]"; };
+LinkSet.prototype.toString = function () {
+    return "[object LinkSet]";
+};
 function CreateLinkSet(loader, startingLoad) {
     //debug2("createlinkset");
-    if (Type(loader) !== OBJECT) return newTypeError( "CreateLinkSet: loader has to be an object");
-    if (!hasInternalSlot(loader, SLOTS.LOAD)) return newTypeError( "CreateLinkSet: loader is missing internal properties");
+    if (Type(loader) !== OBJECT) return newTypeError("CreateLinkSet: loader has to be an object");
+    if (!hasInternalSlot(loader, SLOTS.LOAD)) return newTypeError("CreateLinkSet: loader is missing internal properties");
     var promiseCapability = PromiseBuiltinCapability();
     if (isAbrupt(promiseCapability = ifAbrupt(promiseCapability))) return promiseCapability;
     var linkSet = LinkSet(loader, loads, promiseCapability.Promise, promiseCapability.Resolve, promiseCapability.Reject);
@@ -18848,7 +19211,7 @@ function AddLoadToLinkSet(linkSet, load) {
                 var r = load.Dependencies[i];
                 if (!hasRecordInList(loader.Modules, "Key", name)) {       // Evil cubic stuff.
                     var depLoad;
-                    if ((depLoad=getRecordFromList(loader.Loads, "Name", name))) {
+                    if ((depLoad = getRecordFromList(loader.Loads, "Name", name))) {
                         AddLoadToLinkSet(linkSet, depLoad);
                     }
                 }
@@ -18883,9 +19246,9 @@ function LinkSetFailed(linkSet, exc) {
         var load = loads[i];
         var idx;
         Assert((idx = load.LinkSets.indexOf(v)) > -1, "load.LinkSets has to contain linkset");
-        load.LinkSets.splice(idx,1);    // SPLICE KOSTET EXTRA
-        if ((load.LinkSets.length === 0) && ((idx=loader.Loads.indexOf(load)) > -1)) {
-            loader.Loads.splice(idx,1); // SPLICE KOSTET EXTRA
+        load.LinkSets.splice(idx, 1);    // SPLICE KOSTET EXTRA
+        if ((load.LinkSets.length === 0) && ((idx = loader.Loads.indexOf(load)) > -1)) {
+            loader.Loads.splice(idx, 1); // SPLICE KOSTET EXTRA
         }
     }
     var result = callInternalSlot(SLOTS.CALL, linkset.Reject, undefined, [exc]);
@@ -18900,13 +19263,13 @@ function FinishLoad(loader, load) {
         loader.Modules.push({ key: load.Name, value: load.Module });
     }
     var idx;
-    if ((idx=loader.Loads.indexOf(load)) > -1) {
+    if ((idx = loader.Loads.indexOf(load)) > -1) {
         load.Loads.splice(idx, 1);
     }
     for (var i = 0, j = load.LinkSets.length; i < j; i++) {
         var loads = load.LinkSets[i].Loads;
         idx = loads.indexOf(loads);
-        if (idx>-1) {
+        if (idx > -1) {
             loads.splice(idx, 1);
         }
     }
@@ -18923,7 +19286,7 @@ function LinkageGroups(start) {
         var load = G[i];
         if (load.Kind != kind) {
             if (kind === undefined) kind = G[i].Kind;
-            else return newSyntaxError( "all loads must be of the same kind");
+            else return newSyntaxError("all loads must be of the same kind");
         }
     }
     var n = 0;
@@ -19000,11 +19363,11 @@ function LinkImports(M) {
         } else {
             var binding = ResolveExport(def.Module, def.ImportName);
             if (binding === undefined) {
-                var error = newReferenceError( "Can not resolve export to a binding record");
+                var error = newReferenceError("Can not resolve export to a binding record");
                 var linkErrors = getInternalSlot(M, "LinkErrors");
                 linkErrors.push(error);
                 return error;
-            }  else {
+            } else {
                 env.CreateImportBinding(envRec, def.LocalName);
                 // THIS FUNCTION DOES NOT EXIST YET.
             }
@@ -19023,7 +19386,7 @@ function ResolveExportEntries(M, visited) {
         var modReq = entry.ModuleRequest;
         var otherMod = LookupModuleDependency(M, modReq);
         if (entry.Module !== null && entry.LocalName !== null && !boundNames[entry.LocalName]) { // caps
-            var error = newReferenceError( "linkError created in ResolveExportEntries");
+            var error = newReferenceError("linkError created in ResolveExportEntries");
             linkErrors.push(error);
         }
         defs.push({ Module: otherMod, ImportName: entry.ImportName, LocalName: entry.LocalName,
@@ -19034,7 +19397,7 @@ function ResolveExportEntries(M, visited) {
     for (var i = 0; i < MUUE.length; i++) {
         modReq = LookupModuleDependency(M, modReq);
         if (visited.indexOf(otherMod) > -1) {
-            error = newSyntaxError( "otherMod is alreay in visited");
+            error = newSyntaxError("otherMod is alreay in visited");
             linkErrors.push(error);
         } else {
             visited.push(otherMod);
@@ -19059,14 +19422,14 @@ function ResolveExports(M) {
 }
 function ResolveExport(M, exportName, visited) {
     //debug2("resolve export");
-    var exports = getInternalSlot(M,"Exports");
+    var exports = getInternalSlot(M, "Exports");
     var exported;
-    if (exported=getRecordFromList(exports, "ExportName", exportName)) {
+    if (exported = getRecordFromList(exports, "ExportName", exportName)) {
         return NormalCompletion(exported.Binding)
     }
     var ref = { Module: M, ExportName: exportName };
     if (visited.indexOf(ref) !== -1) {
-        var error = newSyntaxError( "ResolveExport: can not find ref in visited");
+        var error = newSyntaxError("ResolveExport: can not find ref in visited");
         var linkErrors = getInternalSlot(M, "LinkErrors");
         linkErrors.push(error);
     }
@@ -19077,7 +19440,7 @@ function ResolveExport(M, exportName, visited) {
         if (def.ExportName === exportName) overlappingDefs.push(def);
     }
     if (!overlappingDefs.length) {
-        error = newReferenceError( "ResolveExport: overlappingDefs is empty");
+        error = newReferenceError("ResolveExport: overlappingDefs is empty");
         linkErrors = getInternalSlot(M, "LinkErrors");
         linkErrors.push(error);
     }
@@ -19087,7 +19450,7 @@ function ResolveExport(M, exportName, visited) {
         if (overlappingDef.Explicit === true) explicits.push(overlappingDef);
     }
     if ((explicits.length > 1) || ((overlappingDefs.length > 1) && !explicits.length)) {
-        error = newSyntaxError( "");
+        error = newSyntaxError("");
         linkErrors = getInternalSlot(M, "LinkErrors");
         linkErrors.push(error);
         return error;
@@ -19127,19 +19490,19 @@ function LinkDynamicModules(loads, loader) {
         if (isAbrupt(module = ifAbrupt(module))) return module;
 
         if (!hasInternalSlot(module, "Exports")) {
-            return newTypeError( "module object has not the required internal properties");
+            return newTypeError("module object has not the required internal properties");
         }
         load.Module = module;
         load.Status = "linked";
         var r = FinishLoad(loader, load);
-        if (isAbrupt(r=ifAbrupt(r))) return r;
+        if (isAbrupt(r = ifAbrupt(r))) return r;
     }
 }
 function LinkDeclarativeModules(loads, loader) {
     var unlinked = [];
     for (var i = 0, j = loads.length; i < j; i++) {
-        var module =CreateModuleLinkageRecord(loader, load.Body);
-        var pair ={ Module: module, Load: load };
+        var module = CreateModuleLinkageRecord(loader, load.Body);
+        var pair = { Module: module, Load: load };
         unlinked.push(pair);
     }
     for (i = 0, j = loads.length; i < j; i++) {
@@ -19218,7 +19581,7 @@ function EnsureEvaluated(mod, seen, loader) {
     if (getInternalSlot(mod, "Evaluated") === true) return NormalCompletion(undefined);
     setInternalSlot(mod, "Evaluated", true);
     var body;
-    if ((body=getInternalSlot(mod, "Body")) === undefined) return NormalCompletion(undefined);
+    if ((body = getInternalSlot(mod, "Body")) === undefined) return NormalCompletion(undefined);
     var env = getInternalSlot(mod, SLOTS.ENVIRONMENT);
     var status = InstantiateModuleDeclaration(body, env);
     var initContext = ExecutionContext(null);
@@ -19263,20 +19626,20 @@ function IterableToList(iterable) {
 function GetOption(options, name) {
     //debug2("get options");
     if (options == undefined) return undefined;
-    if (Type(options) !== OBJECT) return newTypeError( "options is not an object");
+    if (Type(options) !== OBJECT) return newTypeError("options is not an object");
     return Get(options, name);
 }
 function OrdinaryModule() {
     //debug2("ordinarymodule");
     var mod = ObjectCreate(null, {
-        "Environment" : undefined,
+        "Environment": undefined,
         "Exports": undefined,
         "Dependencies": undefined
     });
     return mod;
 }
 function Module(obj) {
-    if (Type(obj) !== OBJECT) return newTypeError( "module obj is not an object");
+    if (Type(obj) !== OBJECT) return newTypeError("module obj is not an object");
     var mod = OrdinaryModule();
     var keys = OwnPropertyKeysAsList(obj);
     for (var k in keys) {
@@ -19301,10 +19664,10 @@ var LoaderConstructor_Call = function (thisArg, argList) {
     var loader = thisArg;
 
     if (options === undefined) options = ObjectCreate();
-    if (Type(loader) !== OBJECT) return newTypeError( "Loader is not an object");
+    if (Type(loader) !== OBJECT) return newTypeError("Loader is not an object");
 
-    if (getInternalSlot(loader, SLOTS.LOADERRECORD) !== undefined) return newTypeError( "loader.[[LoaderRecord]] isnt undefined");
-    if (Type(options) !== OBJECT) return newTypeError( "the Loader constructors´ options argument is not an object");
+    if (getInternalSlot(loader, SLOTS.LOADERRECORD) !== undefined) return newTypeError("loader.[[LoaderRecord]] isnt undefined");
+    if (Type(options) !== OBJECT) return newTypeError("the Loader constructors´ options argument is not an object");
 
     var realmObject = Get(options, "realm");
     if (isAbrupt(realmObject = ifAbrupt(realmObject))) return realmObject;
@@ -19313,10 +19676,10 @@ var LoaderConstructor_Call = function (thisArg, argList) {
     if (realmObject === undefined) realm = getRealm();
     else {
         if ((Type(realmObject) !== OBJECT) || !hasInternalSlot(realmObject, SLOTS.REALM)) {
-            return newTypeError( "realmObject has to be an object and to have a [[RealmRecord]] internal slot");
+            return newTypeError("realmObject has to be an object and to have a [[RealmRecord]] internal slot");
         }
         var realm = getInternalSlot(realmObject, SLOTS.REALM);
-        if (realm === undefined) return newTypeError( "[[RealmRecord]] of a realmObject must not be undefined here.")
+        if (realm === undefined) return newTypeError("[[RealmRecord]] of a realmObject must not be undefined here.")
     }
 
     var define_loader_pipeline_hook = function (name) {
@@ -19343,7 +19706,7 @@ var LoaderConstructor_Call = function (thisArg, argList) {
     if (isAbrupt(status)) return status;
     status = define_loader_pipeline_hook("instantiate");
     if (isAbrupt(status)) return status;
-    if (getInternalSlot(loader, SLOTS.LOADERRECORD) !== undefined) return newTypeError( "loader.[[LoaderRecord]] seems to have been changed, expected the undefined value.");
+    if (getInternalSlot(loader, SLOTS.LOADERRECORD) !== undefined) return newTypeError("loader.[[LoaderRecord]] seems to have been changed, expected the undefined value.");
 
     var loaderRecord = CreateLoaderRecord(realm, loader);
     setInternalSlot(loader, SLOTS.LOADERRECORD, loaderRecord);
@@ -19360,7 +19723,7 @@ var LoaderConstructor_$$create = function (thisArg, argList) {
 var LoaderPrototype_get_realm = function (thisArg, argList) {
     var loader = thisArg;
     if (Type(loader) !== OBJECT || !hasInternalSlot(loader, SLOTS.REALM)) {
-        return newTypeError( "the this value is not a valid loader object");
+        return newTypeError("the this value is not a valid loader object");
     }
     var loaderRecord = getInternalSlot(loader, SLOTS.LOADERRECORD);
     var realm = loaderRecord.Realm;
@@ -19369,7 +19732,7 @@ var LoaderPrototype_get_realm = function (thisArg, argList) {
 var LoaderPrototype_get_global = function (thisArg, argList) {
     var loader = thisArg;
     if (Type(loader) !== OBJECT || !hasInternalSlot(loader, SLOTS.REALM)) {
-        return newTypeError( "the this value is not a valid loader object");
+        return newTypeError("the this value is not a valid loader object");
     }
     var loaderRecord = getInternalSlot(loader, SLOTS.LOADERRECORD);
     var realm = loaderRecord.Realm;
@@ -19391,7 +19754,7 @@ var LoaderPrototype_keys = function (thisArg, argList) {
 var LoaderPrototype_define = function (thisArg, argList) {
     //debug2("loaderprotodefine");
     var name = argList[0];
-    var source =argList[1];
+    var source = argList[1];
     var options = argList[2];
     var loader = thisArg;
     if (isAbrupt(loader = ifAbrupt(loader))) return loader;
@@ -19415,7 +19778,7 @@ var LoaderPrototype_load = function (thisArg, argList) {
     var options = argList[1];
     var loader = thisLoader(thisArg);
     if (isAbrupt(loader = ifAbrupt(loader))) return loader;
-    var loaderRecord = getInternalSlot(loader,SLOTS.LOADERRECORD);
+    var loaderRecord = getInternalSlot(loader, SLOTS.LOADERRECORD);
     var p = LoadModule(loader, name, options);
     if (isAbrupt(p = ifAbrupt(p))) return p;
     var F = ReturnUndefined();
@@ -19513,10 +19876,10 @@ var LoaderPrototype_set = function (thisArg, argList) {
     var loaderRecord = getInternalSlot(loader, SLOTS.LOADERRECORD);
     var name = ToString(name);
     if (isAbrupt(name = ifAbrupt(name))) return name;
-    if (Type(module) !== OBJECT) return newTypeError( "module is not an object");
+    if (Type(module) !== OBJECT) return newTypeError("module is not an object");
     var modules = loaderRecord.Modules;
     var p;
-    if (p=getRecordFromList(modules, "Key", name)) {
+    if (p = getRecordFromList(modules, "Key", name)) {
         p.Value = module;
         return NormalCompletion(loader);
     }
@@ -19553,31 +19916,31 @@ var LoaderPrototype_normalize = function (thisArg, argList) {
 var LoaderPrototype_locate = function (thisArg, argList) {
     var loadRequest = argList[0];
     var r = Get(loadRequest, "name");
-    if (isAbrupt(r=ifAbrupt(r))) return r;
+    if (isAbrupt(r = ifAbrupt(r))) return r;
     return NormalCompletion(r);
 };
 var LoaderPrototype_fetch = function (thisArg, argList) {
-    return newTypeError( "The Loader.prototype.fetch function is supposed to throw a type error.");
+    return newTypeError("The Loader.prototype.fetch function is supposed to throw a type error.");
 };
 var LoaderPrototype_translate = function (thisArg, argList) {
     var load = argList[0];
     var r = Get(load, "source");
-    if (isAbrupt(r=ifAbrupt(r))) return r;
+    if (isAbrupt(r = ifAbrupt(r))) return r;
     return NormalCompletion(r);
 };
 var LoaderPrototype_instantiate = function (thisArg, argList) {
     var loadRequest = argList[0];
     return NormalCompletion(undefined);
 };
-function CreateLinkedModuleInstance (loader) {
+function CreateLinkedModuleInstance(loader) {
     var mod = OrdinaryModule();
 //    var lr = getInternalSlot(loader, SLOTS.LOADERRECORD);
 //    lr.Modules.push({ Name: name, Module: mod });
     return mod;
 }
-var LoaderPrototype_newModule = function(thisArg, argList) {
+var LoaderPrototype_newModule = function (thisArg, argList) {
     var obj = argList[0];
-    if (Type(obj) !== OBJECT) return newTypeError( "newModule: obj is not an object");
+    if (Type(obj) !== OBJECT) return newTypeError("newModule: obj is not an object");
 
     var mod = CreateLinkedModuleInstance(thisArg);
     var keys = OwnPropertyKeysAsList(obj);
@@ -19606,10 +19969,14 @@ var EvalFunction_call = function (thisArg, argList) {
     var Evaluate = require("runtime").Evaluate;
 
     input = GetValue(argList[0]);
-    if (isAbrupt(input=ifAbrupt(input))) return input;
+    if (isAbrupt(input = ifAbrupt(input))) return input;
 
     if (Type(input) !== STRING) return input;
-    try {script = parse(input);} catch (ex) {return newSyntaxError(ex.message);}
+    try {
+        script = parse(input);
+    } catch (ex) {
+        return newSyntaxError(ex.message);
+    }
     if (script.type !== "Program") return undefined;
     if (script.strict) strictScript = strict = true;
     if (directCallToEval) direct = true;
@@ -19647,7 +20014,7 @@ var EvalFunction_call = function (thisArg, argList) {
 function NewModuleEnvironment(global) {
     return DeclarativeEnvironment(global);
 }
-function ModuleExoticObject (environment, exports) {
+function ModuleExoticObject(environment, exports) {
     var m = Object.create(ModuleExoticObject.prototype);
     setInternalSlot(m, "ModuleEnvironment", environment);
     setInternalSlot(m, "Exports", exports);
@@ -19655,10 +20022,12 @@ function ModuleExoticObject (environment, exports) {
 }
 ModuleExoticObject.prototype = {
     constructor: "ModuleExoticObject",
-    toString: function () { return "[ModuleExoticObject]"; },
+    toString: function () {
+        return "[ModuleExoticObject]";
+    },
     Get: function (P, R) {
         var O = this;
-        Assert(IsPropertyKey(P), "[[Delete]] expecting P to be a valid property key");  
+        Assert(IsPropertyKey(P), "[[Delete]] expecting P to be a valid property key");
         var exports = getInternalSlot(O, "Exports");
         if (exports.indexOf(P) > -1) return undefined;
         var env = getInternalSlot(O, "ModuleEnvironment");
@@ -19690,7 +20059,7 @@ ModuleExoticObject.prototype = {
 
     },
     GetOwnProperty: function () {
-        return newTypeError( "The [[GetOwnProperty]] of ModuleExoticObjects is supposed to throw a TypeError.")
+        return newTypeError("The [[GetOwnProperty]] of ModuleExoticObjects is supposed to throw a TypeError.")
     },
     DefineOwnProperty: function () {
         return false;
@@ -19821,14 +20190,14 @@ var LineTerminators = tables.LineTerminators;
 exports.RegExpCreate = RegExpCreate;
 function RegExpCreate(P, F) {
     var obj = RegExpAllocate(getIntrinsic(INTRINSICS.REGEXP));
-    if (isAbrupt(obj=ifAbrupt(obj))) return obj;
+    if (isAbrupt(obj = ifAbrupt(obj))) return obj;
     return RegExpInitialize(obj, P, F);
 }
 function EscapeRegExpPattern(P, F) {
     var S = "";
     for (var i = 0, j = P.length; i < j; i++) {
         var codePoint = P[i];
-        if (codePoint === "/" && P[i-1] != "\\" || P[i-2]=="\\") {
+        if (codePoint === "/" && P[i - 1] != "\\" || P[i - 2] == "\\") {
             S += "\\/";
         } else S += codePoint;
     }
@@ -19839,7 +20208,7 @@ function RegExpInitialize(obj, pattern, flags) {
     var P, F, BMP;
     if (pattern === undefined) P = "";
     else P = ToString(pattern);
-    if (isAbrupt(P=ifAbrupt(P))) return P;
+    if (isAbrupt(P = ifAbrupt(P))) return P;
     if (flags === undefined) F = "";
     else F = ToString(flags);
     BMP = F.indexOf("u") === -1;
@@ -19852,12 +20221,12 @@ function RegExpInitialize(obj, pattern, flags) {
     setInternalSlot(obj, SLOTS.REGEXPMATCHER, createRegExpMatcher(patternCharacters));
 
     var putStatus = Put(obj, "lastIndex", 0, true);
-    if (isAbrupt(putStatus=ifAbrupt(putStatus))) return putStatus;
+    if (isAbrupt(putStatus = ifAbrupt(putStatus))) return putStatus;
     return NormalCompletion(obj);
 }
 function RegExpAllocate(constructor) {
 
-    var obj = OrdinaryCreateFromConstructor(constructor, INTRINSICS.REGEXPPROTOTYPE,[
+    var obj = OrdinaryCreateFromConstructor(constructor, INTRINSICS.REGEXPPROTOTYPE, [
         SLOTS.REGEXPMATCHER,
         SLOTS.ORIGINALSOURCE,
         SLOTS.ORIGINALFLAGS
@@ -19872,7 +20241,7 @@ function RegExpAllocate(constructor) {
     if (isAbrupt(status = ifAbrupt(status))) return status;
     return NormalCompletion(obj);
 }
-function RegExpExec (R, S, ignore) {
+function RegExpExec(R, S, ignore) {
     Assert(getInternalSlot(R, SLOTS.REGEXPMATCHER) != undefined, "RegExpExec: R must be a initialized RegExp instance");
     Assert(Type(S) === STRING);
     Assert(Type(S) === STRING);
@@ -19909,18 +20278,18 @@ function RegExpExec (R, S, ignore) {
                     putStatus = Put(R, "lastIndex", 0, true);
                     if (isAbrupt(putStatus = ifAbrupt(putStatus))) return putStatus;
                 }
-            	return NormalCompletion(null);
+                return NormalCompletion(null);
             }
             i = i + 1;
         } else {
-    	    if (!(r && r.endIndex && r.captures)) return newTypeError( "RegExpExec: r has to be a state instance. Assertion failed.");
+            if (!(r && r.endIndex && r.captures)) return newTypeError("RegExpExec: r has to be a state instance. Assertion failed.");
             Assert(r && r.endIndex && r.captures, "RegExpExec: r has to be a state instance");
             matchSucceeded = true;
         }
     }
     e = r.endIndex;
     if (fullUnicode) {
-            // index
+        // index
     }
     if (global) {
         putStatus = Put(R, "lastIndex", e, true);
@@ -19954,7 +20323,7 @@ function RegExpExec (R, S, ignore) {
 var FAILURE = {};
 function createRegExpMatcher(pattern) {
     var patternMatcher; // Evaluate(Pattern::Disjunction) returns the [[RegExpMatcher]](x,c) i guess
-    var evaluator = function() {
+    var evaluator = function () {
         return patternMatcher.apply(evaluator, arguments);
     };
     // variables
@@ -19981,34 +20350,37 @@ function createRegExpMatcher(pattern) {
         return { endIndex: endIndex, captures: captures };
     };
     evaluator.evaluate = function (node) {
-	if (node === undefined) return FAILURE;
-        var f = this[node.type];4;
+        if (node === undefined) return FAILURE;
+        var f = this[node.type];
+        4;
         if (f) return f.call(evaluator, node);
     };
     patternMatcher = evaluator.evaluate.call(evaluator, pattern);
     evaluator.patternMatcher = patternMatcher;
     return evaluator;
 }
-function Pattern (node) {
+function Pattern(node) {
     // start at Pattern :: Disjunction
     var disjunction = node.disjunction;
     var m = this.evaluate(disjunction);
     // i guess here the compiled stuff can land.
     // and the closure just works on bytestreams anyways
 
-    return function matcher (str, index) {
+    return function matcher(str, index) {
         this.Input = new String(str);
         var listIndex = this.Input.indexOf(str[index]);
         this.InputLength = this.Input.length;
-        var c = this.Continuation(function (state) { return state; });
-        var cap = new Array((this.NCapturingParens|0) + 1); // indexed 1 bis
+        var c = this.Continuation(function (state) {
+            return state;
+        });
+        var cap = new Array((this.NCapturingParens | 0) + 1); // indexed 1 bis
         var x = this.State(listIndex, cap);
 
-        if (m != FAILURE) return m.call(this, x,c);
+        if (m != FAILURE) return m.call(this, x, c);
         // temp disabled
     };
 }
-function Disjunction (node) {
+function Disjunction(node) {
     var alternative = node.alternative;
     var disjunction = node.disjunction;
     if (!disjunction && alternative) {			// gates
@@ -20038,7 +20410,7 @@ function Alternative(node) {
     // abc ist alternative alternative term.. oder [x,y,]
     if (!atom) return FAILURE;
 }
-function Term (node) {
+function Term(node) {
     if (!node) return FAILURE;
     if (node.assertion) {
         return this.evaluate(node.assertion);
@@ -20046,13 +20418,13 @@ function Term (node) {
     return FAILURE;
 }
 function Assertion(node) {
-    return function m (x, c) {
+    return function m(x, c) {
         if (node == "^") {
-            return function assertion_tester_caret (x) {
+            return function assertion_tester_caret(x) {
                 var e = x.endIndex;
                 if (e === 0) return true;
                 if (this.Multiline === false) return false;
-                return LineTerminators[this.Input[e-1]];
+                return LineTerminators[this.Input[e - 1]];
             }
         }
 
@@ -20071,13 +20443,13 @@ var RegExp_Call = function (thisArg, argList) {
     var O = thisArg;
     var P, F, testP;
     if (!hasInternalSlot(O, SLOTS.REGEXPMATCHER) || getInternalSlot(O, SLOTS.REGEXPMATCHER) !== undefined) {
-        if (testP=(Type(pattern) === OBJECT && hasInternalSlot(pattern, SLOTS.REGEXPMATCHER))) return pattern;
+        if (testP = (Type(pattern) === OBJECT && hasInternalSlot(pattern, SLOTS.REGEXPMATCHER))) return pattern;
         O = RegExpAllocate(func);
         if (isAbrupt(O = ifAbrupt(O))) return O;
     }
     if (testP) {
-        if (getInternalSlot(pattern, SLOTS.REGEXPMATCHER) !== undefined) return newTypeError( "patterns [[RegExpMatcher]] isnt undefined");
-        if (flags != undefined) return newTypeError( "flag should be undefined for this call");
+        if (getInternalSlot(pattern, SLOTS.REGEXPMATCHER) !== undefined) return newTypeError("patterns [[RegExpMatcher]] isnt undefined");
+        if (flags != undefined) return newTypeError("flag should be undefined for this call");
         P = getInternalSlot(pattern, SLOTS.ORIGINALSOURCE);
         F = getInternalSlot(pattern, SLOTS.ORIGINALFLAGS);
     } else {
@@ -20091,70 +20463,70 @@ var RegExp_Construct = function (argList) {
 };
 var RegExpPrototype_get_global = function (thisArg, argList) {
     var R = thisArg;
-    if (Type(R) !== OBJECT) return newTypeError( "this value is no object");
-    if (!hasInternalSlot(R, SLOTS.ORIGINALFLAGS)) return newTypeError( "this value has no [[OriginalFlags]]");
+    if (Type(R) !== OBJECT) return newTypeError("this value is no object");
+    if (!hasInternalSlot(R, SLOTS.ORIGINALFLAGS)) return newTypeError("this value has no [[OriginalFlags]]");
     var flags = getInternalSlot(R, SLOTS.ORIGINALFLAGS);
     return NormalCompletion(flags.indexOf("g") > -1);
 };
 var RegExpPrototype_get_multiline = function (thisArg, argList) {
     var R = thisArg;
-    if (Type(R) !== OBJECT) return newTypeError( "this value is no object");
-    if (!hasInternalSlot(R, SLOTS.ORIGINALFLAGS)) return newTypeError( "this value has no [[OriginalFlags]]");
+    if (Type(R) !== OBJECT) return newTypeError("this value is no object");
+    if (!hasInternalSlot(R, SLOTS.ORIGINALFLAGS)) return newTypeError("this value has no [[OriginalFlags]]");
     var flags = getInternalSlot(R, SLOTS.ORIGINALFLAGS);
     return NormalCompletion(flags.indexOf("m") > -1);
 };
 var RegExpPrototype_get_ignoreCase = function (thisArg, argList) {
     var R = thisArg;
-    if (Type(R) !== OBJECT) return newTypeError( "this value is no object");
-    if (!hasInternalSlot(R, SLOTS.ORIGINALFLAGS)) return newTypeError( "this value has no [[OriginalFlags]]");
+    if (Type(R) !== OBJECT) return newTypeError("this value is no object");
+    if (!hasInternalSlot(R, SLOTS.ORIGINALFLAGS)) return newTypeError("this value has no [[OriginalFlags]]");
     var flags = getInternalSlot(R, SLOTS.ORIGINALFLAGS);
     return NormalCompletion(flags.indexOf("i") > -1);
 };
 var RegExpPrototype_get_sticky = function (thisArg, argList) {
     var R = thisArg;
-    if (Type(R) !== OBJECT) return newTypeError( "this value is no object");
-    if (!hasInternalSlot(R, SLOTS.ORIGINALFLAGS)) return newTypeError( "this value has no [[OriginalFlags]]");
+    if (Type(R) !== OBJECT) return newTypeError("this value is no object");
+    if (!hasInternalSlot(R, SLOTS.ORIGINALFLAGS)) return newTypeError("this value has no [[OriginalFlags]]");
     var flags = getInternalSlot(R, SLOTS.ORIGINALFLAGS);
     return NormalCompletion(flags.indexOf("y") > -1);
 };
 var RegExpPrototype_get_unicode = function (thisArg, argList) {
     var R = thisArg;
-    if (Type(R) !== OBJECT) return newTypeError( "this value is no object");
-    if (!hasInternalSlot(R, SLOTS.ORIGINALFLAGS)) return newTypeError( "this value has no [[OriginalFlags]]");
+    if (Type(R) !== OBJECT) return newTypeError("this value is no object");
+    if (!hasInternalSlot(R, SLOTS.ORIGINALFLAGS)) return newTypeError("this value has no [[OriginalFlags]]");
     var flags = getInternalSlot(R, SLOTS.ORIGINALFLAGS);
     return NormalCompletion(flags.indexOf("u") > -1);
 };
 var RegExpPrototype_get_source = function (thisArg, argList) {
     var R = thisArg;
-    if (Type(R) !== OBJECT) return newTypeError( "this value is no object");
-    if (!hasInternalSlot(R, SLOTS.ORIGINALSOURCE)) return newTypeError( "this value has no [[OriginalSource]]");
-    if (!hasInternalSlot(R, SLOTS.ORIGINALFLAGS)) return newTypeError( "this value has no [[OriginalFlags]]");
-    var source =getInternalSlot(R, SLOTS.ORIGINALSOURCE);
+    if (Type(R) !== OBJECT) return newTypeError("this value is no object");
+    if (!hasInternalSlot(R, SLOTS.ORIGINALSOURCE)) return newTypeError("this value has no [[OriginalSource]]");
+    if (!hasInternalSlot(R, SLOTS.ORIGINALFLAGS)) return newTypeError("this value has no [[OriginalFlags]]");
+    var source = getInternalSlot(R, SLOTS.ORIGINALSOURCE);
     var flags = getInternalSlot(R, SLOTS.ORIGINALFLAGS);
-    if (source === undefined || flags === undefined) return newTypeError( "source and flags may not be undefined");
+    if (source === undefined || flags === undefined) return newTypeError("source and flags may not be undefined");
     return EscapeRegExpPattern(source, flags);
 };
 var RegExpPrototype_exec = function (thisArg, argList) {
     var R = thisArg;
     var string = argList[0];
     var S;
-    if (Type(R) !== OBJECT) return newTypeError( "this value is not an object");
-    if (!hasInternalSlot(R, SLOTS.REGEXPMATCHER)) return newTypeError( "this value has not [[RegExpMatcher]] internal slot");
-    if (getInternalSlot(R, SLOTS.REGEXPMATCHER) === undefined) return newTypeError( "this value has not [[RegExpMatcher]] internal slot defined");
+    if (Type(R) !== OBJECT) return newTypeError("this value is not an object");
+    if (!hasInternalSlot(R, SLOTS.REGEXPMATCHER)) return newTypeError("this value has not [[RegExpMatcher]] internal slot");
+    if (getInternalSlot(R, SLOTS.REGEXPMATCHER) === undefined) return newTypeError("this value has not [[RegExpMatcher]] internal slot defined");
     S = ToString(string);
-    if (isAbrupt(S=ifAbrupt(S))) return S;
-    return RegExpExec(R,S);
+    if (isAbrupt(S = ifAbrupt(S))) return S;
+    return RegExpExec(R, S);
 };
 var RegExpPrototype_search = function (thisArg, argList) {
     var rx = thisArg;
     var S = argList[0];
-    if (Type(rx) !== OBJECT) return newTypeError( "this value is not an obect");
-    if (!hasInternalSlot(rx, SLOTS.REGEXPMATCHER)) return newTypeError( "this value has no [[RegExpMatcher]] internal slot");
+    if (Type(rx) !== OBJECT) return newTypeError("this value is not an obect");
+    if (!hasInternalSlot(rx, SLOTS.REGEXPMATCHER)) return newTypeError("this value has no [[RegExpMatcher]] internal slot");
     var matcher = getInternalSlot(rx, SLOTS.REGEXPMATCHER);
     var string = ToString(S);
-    if (isAbrupt(string=ifAbrupt(string))) return string;
+    if (isAbrupt(string = ifAbrupt(string))) return string;
     var result = RegExpExec(rx, string, true);
-    if (isAbrupt(result=ifAbrupt(result))) return result;
+    if (isAbrupt(result = ifAbrupt(result))) return result;
     if (result == null) return -1;
     return Get(result, "index");
 };
@@ -20162,13 +20534,13 @@ var RegExpPrototype_match = function (thisArg, argList) {
     var rx = thisArg;
     var string = argList[0];
     var S;
-    if (Type(rx) !== OBJECT) return newTypeError( "this value is not an object");
-    if (!hasInternalSlot(rx, SLOTS.REGEXPMATCHER)) return newTypeError( "this value has not [[RegExpMatcher]] internal slot");
-    if (getInternalSlot(rx, SLOTS.REGEXPMATCHER) === undefined) return newTypeError( "this value has not [[RegExpMatcher]] internal slot defined");
+    if (Type(rx) !== OBJECT) return newTypeError("this value is not an object");
+    if (!hasInternalSlot(rx, SLOTS.REGEXPMATCHER)) return newTypeError("this value has not [[RegExpMatcher]] internal slot");
+    if (getInternalSlot(rx, SLOTS.REGEXPMATCHER) === undefined) return newTypeError("this value has not [[RegExpMatcher]] internal slot defined");
     S = ToString(string);
-    if (isAbrupt(S=ifAbrupt(S))) return S;
+    if (isAbrupt(S = ifAbrupt(S))) return S;
     var global = ToBoolean(Get(rx, "global"));
-    if (isAbrupt(global=ifAbrupt(global))) return global;
+    if (isAbrupt(global = ifAbrupt(global))) return global;
     if (!global) {
         return RegExpExec(rx, S);
     } else {
@@ -20180,11 +20552,11 @@ var RegExpPrototype_match = function (thisArg, argList) {
         var lastMatch = true;
         while (lastMatch) {
             var result = RegExpExec(rx, S);
-            if (isAbrupt(result=ifAbrupt(result))) return result;
+            if (isAbrupt(result = ifAbrupt(result))) return result;
             if (result === null) lastMatch = false;
             else {
                 var thisIndex = ToInteger(Get(rx, "lastIndex"));
-                if (isAbrupt(thisIndex=ifAbrupt(thisIndex))) return thisIndex;
+                if (isAbrupt(thisIndex = ifAbrupt(thisIndex))) return thisIndex;
                 if (thisIndex === previousLastIndex) {
                     putStatus = Put(rx, "lastIndex", thisIndex + 1, true);
                     if (isAbrupt(putStatus)) return putStatus;
@@ -20195,7 +20567,7 @@ var RegExpPrototype_match = function (thisArg, argList) {
                 var matchStr = Get(result, "0");
                 var defineStatus = CreateDataPropertyOrThrow(A, ToString(n), matchStr);
                 if (isAbrupt(defineStatus)) return defineStatus;
-                n =  n + 1;
+                n = n + 1;
             }
         }
         if (n === 0) return NormalCompletion(null);
@@ -20205,13 +20577,12 @@ var RegExpPrototype_match = function (thisArg, argList) {
 var RegExpPrototype_test = function (thisArg, argList) {
     var R = thisArg;
     var string = argList[0];
-    if (Type(R) !== OBJECT) return newTypeError( "this value is no object");
+    if (Type(R) !== OBJECT) return newTypeError("this value is no object");
     var match = Invoke(R, "exec", [string]);
-    if (isAbrupt(match=ifAbrupt(match))) return match;
+    if (isAbrupt(match = ifAbrupt(match))) return match;
     return NormalCompletion(match !== null);
 };
 var RegExpPrototype_compile = function (thisArg, argList) {
-
 
 
 };
@@ -20223,16 +20594,16 @@ var RegExpPrototype_replace = function (thisArg, argList) {
     var replaceValue = argList[1];
     var rx = thisArg;
     var S;
-    if (Type(rx) !== OBJECT) return newTypeError( "this value is not an object");
-    if (!hasInternalSlot(rx, SLOTS.REGEXPMATCHER)) return newTypeError( "this value has not [[RegExpMatcher]] internal slot");
-    if (getInternalSlot(rx, SLOTS.REGEXPMATCHER) === undefined) return newTypeError( "this value has not [[RegExpMatcher]] internal slot defined");
+    if (Type(rx) !== OBJECT) return newTypeError("this value is not an object");
+    if (!hasInternalSlot(rx, SLOTS.REGEXPMATCHER)) return newTypeError("this value has not [[RegExpMatcher]] internal slot");
+    if (getInternalSlot(rx, SLOTS.REGEXPMATCHER) === undefined) return newTypeError("this value has not [[RegExpMatcher]] internal slot defined");
 
     var nCaptures = rx.NCapturingParens;
     S = ToString(string);
-    if (isAbrupt(S=ifAbrupt(S))) return S;
+    if (isAbrupt(S = ifAbrupt(S))) return S;
     var functionalReplace = IsCallable(replaceValue);
     var global = ToBoolean(Get(rx, "global"));
-    if (isAbrupt(global=ifAbrupt(global))) return global;
+    if (isAbrupt(global = ifAbrupt(global))) return global;
     var accumulatedResult = "";
     var nextSrcPosition = 0;
     if (global) {
@@ -20246,7 +20617,7 @@ var RegExpPrototype_replace = function (thisArg, argList) {
     var previousLastIndex;
     while (!done) {
         var result = RegExpExec(rx, S);
-        if (isAbrupt(result=ifAbrupt(result))) return result;
+        if (isAbrupt(result = ifAbrupt(result))) return result;
         if (result === null) done = true;
         else {
             if (global) {
@@ -20262,14 +20633,14 @@ var RegExpPrototype_replace = function (thisArg, argList) {
             }
             var sub = GetRegExpSubstitution(result);
             var matched = Get(result, "0");
-            if (isAbrupt(matched=ifAbrupt(matched))) return matched;
+            if (isAbrupt(matched = ifAbrupt(matched))) return matched;
             var position = Get(result, "index");
             if (isAbrupt(position = ifAbrupt(position))) return position;
             var n = 0;
             var captures = [];
             while (n < nCaptures) {
                 var capN = Get(result, ToString(n));
-                if(isAbrupt(capN=ifAbrupt(capN))) return capN;
+                if (isAbrupt(capN = ifAbrupt(capN))) return capN;
                 captures.push(capN);
                 n = n + 1;
             }
@@ -20281,10 +20652,10 @@ var RegExpPrototype_replace = function (thisArg, argList) {
             } else {
                 replacement = GetReplaceSubstitution(matched, string, position, captures);
             }
-            if (isAbrupt(replacement=ifAbrupt(replacement))) return replacement;
+            if (isAbrupt(replacement = ifAbrupt(replacement))) return replacement;
             var matchLength = matched.length;
             var replStr = ToString(replacement);
-            if (isAbrupt(replStr=ifAbrupt(replStr))) return replStr;
+            if (isAbrupt(replStr = ifAbrupt(replStr))) return replStr;
 
 
             /*
@@ -20308,43 +20679,43 @@ var RegExpPrototype_replace = function (thisArg, argList) {
 
     }
 
-    return NormalCompletion( accumulatedResult + S.substr(nextSrcPosition, S.length - nextSrcPosition) );
+    return NormalCompletion(accumulatedResult + S.substr(nextSrcPosition, S.length - nextSrcPosition));
 };
 var RegExpPrototype_toString = function (thisArg, argList) {
     var R = thisArg;
-    if (Type(R) !== OBJECT) return newTypeError( "this value is not an object");
-    if (!hasInternalSlot(R, SLOTS.REGEXPMATCHER)) return newTypeError( "this value has not [[RegExpMatcher]] internal slot");
-    if (getInternalSlot(R, SLOTS.REGEXPMATCHER) === undefined) return newTypeError( "this value has not [[RegExpMatcher]] internal slot defined");
+    if (Type(R) !== OBJECT) return newTypeError("this value is not an object");
+    if (!hasInternalSlot(R, SLOTS.REGEXPMATCHER)) return newTypeError("this value has not [[RegExpMatcher]] internal slot");
+    if (getInternalSlot(R, SLOTS.REGEXPMATCHER) === undefined) return newTypeError("this value has not [[RegExpMatcher]] internal slot defined");
     var pattern = ToString(Get(R, "source"));
-    if (isAbrupt(pattern=ifAbrupt(pattern))) return pattern;
+    if (isAbrupt(pattern = ifAbrupt(pattern))) return pattern;
     var result = "/" + pattern + "/";
     var global = ToBoolean(Get(R, "global"));
-    if (isAbrupt(global=ifAbrupt(global))) return global;
+    if (isAbrupt(global = ifAbrupt(global))) return global;
     if (global) result += "g";
 
     var ignoreCase = ToBoolean(Get(R, "ignoreCase"));
-    if (isAbrupt(ignoreCase=ifAbrupt(ignoreCase))) return ignoreCase;
+    if (isAbrupt(ignoreCase = ifAbrupt(ignoreCase))) return ignoreCase;
     if (ignoreCase) result += "i";
 
     var multiline = ToBoolean(Get(R, "multiline"));
-    if (isAbrupt(multiline=ifAbrupt(multiline))) return multiline;
+    if (isAbrupt(multiline = ifAbrupt(multiline))) return multiline;
     if (multiline) result += "m";
 
     var unicode = ToBoolean(Get(R, "unicode"));
-    if (isAbrupt(unicode=ifAbrupt(unicode))) return unicode;
+    if (isAbrupt(unicode = ifAbrupt(unicode))) return unicode;
     if (unicode) result += "u";
 
     var sticky = ToBoolean(Get(R, "sticky"));
-    if (isAbrupt(sticky=ifAbrupt(sticky))) return sticky;
+    if (isAbrupt(sticky = ifAbrupt(sticky))) return sticky;
     if (sticky) result += "y";
     return NormalCompletion(result);
 };
-function StructuredClone (input, transferList, targetRealm) {
+function StructuredClone(input, transferList, targetRealm) {
     var memory = []; //mapping
-    for (var i = 0, j = transferList.length; i< j; i++) {
+    for (var i = 0, j = transferList.length; i < j; i++) {
         var transferable = transferList[i];
         if (!hasInternalSlot(transferable, SLOTS.TRANSFER)) {
-            return newRangeError( "DataCloneError: transferable has no [[Transfer]] slot");
+            return newRangeError("DataCloneError: transferable has no [[Transfer]] slot");
         }
         var Transfer = getInternalSlot(transferable, SLOTS.TRANSFER);
         var transferResult = callInternalSlot(SLOTS.CALL, Transfer, transferable, [targetRealm]);
@@ -20362,12 +20733,12 @@ function StructuredClone (input, transferList, targetRealm) {
     }
     return NormalCompletion(clone);
 }
-function InternalStructuredClone (input, memory, targetRealm) {
+function InternalStructuredClone(input, memory, targetRealm) {
     var output;
     for (var i = 0, j = memory.length; i < j; i++) {
         if (memory[i].transferable === input) return NormalCompletion(memory[i].output);
     }
-    if (getInternalSlot(input, SLOTS.TRANSFER) === "neutered") return newRangeError( "DataCloneError: inputs [[Transfer]] is neutered.");
+    if (getInternalSlot(input, SLOTS.TRANSFER) === "neutered") return newRangeError("DataCloneError: inputs [[Transfer]] is neutered.");
     var value;
     if ((value = getInternalSlot(input, SLOTS.BOOLEANDATA)) !== undefined) {
         output = OrdinaryConstruct(getIntrinsic(INTRINSICS.BOOLEAN, targetRealm), [value]);
@@ -20395,7 +20766,7 @@ function InternalStructuredClone (input, memory, targetRealm) {
             setInternalSlot(output, SLOTS.BYTEOFFSET, getInternalSlot(input, SLOTS.BYTEOFFSET));
             setInternalSlot(output, SLOTS.BYTELENGTH, getInternalSlot(input, SLOTS.BYTELENGTH));
         } else {
-            output = OrdinaryConstruct(getIntrinsicFromRealm("%"+getInternalSlot(input, SLOTS.TYPEDARRAYCONSTRUCTOR)+"%", targetRealm), []);
+            output = OrdinaryConstruct(getIntrinsicFromRealm("%" + getInternalSlot(input, SLOTS.TYPEDARRAYCONSTRUCTOR) + "%", targetRealm), []);
             setInternalSlot(output, SLOTS.VIEWEDARRAYBUFFER, getInternalSlot(input, SLOTS.VIEWEDARRAYBUFFER));
             setInternalSlot(output, SLOTS.BYTEOFFSET, getInternalSlot(input, SLOTS.BYTEOFFSET));
             setInternalSlot(output, SLOTS.BYTELENGTH, getInternalSlot(input, SLOTS.BYTELENGTH));
@@ -20414,11 +20785,11 @@ function InternalStructuredClone (input, memory, targetRealm) {
         Set(output, "length", len, output);
 
     } else if (IsCallable(input)) {
-        return newRangeError( "DataCloneError: Can not clone a function.");
+        return newRangeError("DataCloneError: Can not clone a function.");
     } else if (hasInternalSlot(input, SLOTS.ERRORDATA)) {
-        return newRangeError( "DataCloneError: Can not clone error object.");
+        return newRangeError("DataCloneError: Can not clone error object.");
     } else if (Type(input) === OBJECT && input.toString() !== "[object OrdinaryObject]") {
-        return newRangeError( "DataCloneError: Can only copy ordinary objects, no exotic objects");
+        return newRangeError("DataCloneError: Can only copy ordinary objects, no exotic objects");
     } else {
         // setRealm() img.
         output = ObjectCreate();
@@ -20470,96 +20841,100 @@ var OnSuccessfulTransfer_Call = function (thisArg, argList) {
     }
 };
 var Nil = null;
-    function TypeDescriptorExoticObject() {
-        var obj = Object.create(TypeDescriptorExoticObject.prototype);
-        setInternalSlot(obj, SLOTS.STRUCTURE, undefined); // structure value
-        setInternalSlot(obj, SLOTS.RANK, undefined);    // int
-        setInternalSlot(obj, SLOTS.OPACITY, undefined); // bool
-        setInternalSlot(obj, SLOTS.ARRAYDESCRIPTOR, undefined); /// undef or typedesc
-        setInternalSlot(obj, SLOTS.OPAQUEDESCRIPTOR, undefined); // undef or typedesc
-        return obj;
+function TypeDescriptorExoticObject() {
+    var obj = Object.create(TypeDescriptorExoticObject.prototype);
+    setInternalSlot(obj, SLOTS.STRUCTURE, undefined); // structure value
+    setInternalSlot(obj, SLOTS.RANK, undefined);    // int
+    setInternalSlot(obj, SLOTS.OPACITY, undefined); // bool
+    setInternalSlot(obj, SLOTS.ARRAYDESCRIPTOR, undefined); /// undef or typedesc
+    setInternalSlot(obj, SLOTS.OPAQUEDESCRIPTOR, undefined); // undef or typedesc
+    return obj;
+}
+TypeDescriptorExoticObject.prototype = {
+    constructor: TypeDescriptorExoticObject,
+    toString: function () {
+        return "[object TypeDescriptorExoticObject]"
     }
-    TypeDescriptorExoticObject.prototype = {
-        constructor: TypeDescriptorExoticObject,
-        toString: function () { return "[object TypeDescriptorExoticObject]" }
-    };
-    addMissingProperties(TypeDescriptorExoticObject.prototype, OrdinaryObject.prototype);
-    function TypeExoticObject() {
-        var obj = Object.create(TypeExoticObject.prototype);
-        setInternalSlot(obj, SLOTS.TYPEDESCRIPTOR, undefined);
-        setInternalSlot(obj, SLOTS.DIMENSIONS, undefined);
-        // assert len(dim) == rank of typedesc
-        return obj;
-    }
-    TypeExoticObject.prototype = {
-        constructor: TypeDescriptorExoticObject,
-        toString: function () { return "[object TypeExoticObject]"; },
+};
+addMissingProperties(TypeDescriptorExoticObject.prototype, OrdinaryObject.prototype);
+function TypeExoticObject() {
+    var obj = Object.create(TypeExoticObject.prototype);
+    setInternalSlot(obj, SLOTS.TYPEDESCRIPTOR, undefined);
+    setInternalSlot(obj, SLOTS.DIMENSIONS, undefined);
+    // assert len(dim) == rank of typedesc
+    return obj;
+}
+TypeExoticObject.prototype = {
+    constructor: TypeDescriptorExoticObject,
+    toString: function () {
+        return "[object TypeExoticObject]";
+    },
 
-        Call: function (thisArg, argList) {
-            var typeObject = thisArg;
-            if (argList.length === 0) {
-                if (isGroundType(typeObject)) {
-                    var typeDescriptor = getInternalSlot(typeObject, SLOTS.TYPEDESCRIPTOR);
-                    return Default(typeDescriptor);
-                }
-                return CreateTypedObject(typeObject);
+    Call: function (thisArg, argList) {
+        var typeObject = thisArg;
+        if (argList.length === 0) {
+            if (isGroundType(typeObject)) {
+                var typeDescriptor = getInternalSlot(typeObject, SLOTS.TYPEDESCRIPTOR);
+                return Default(typeDescriptor);
             }
-            var arg0 = argList[0];
-            if (getInternalSlot(arg0, SLOTS.ARRAYBUFFERDATA)) {
-                 var length = argList[1];
-                 length = length || buffer.length;
-                 if (isGroundType(typeObject)) return newTypeError( "object is a ground object");
-                 return CreateTypedObjectFromBuffer(typedObject, buffer, length);
-
-            } else if (arg0 != undefined) {
-                 if (isGroundObject(typeObject)) return Coerce(typeObject, value);
-                 else {
-                     var o = CreateTypedObject(typeObject);
-                     typeDescriptor =getInternalSlot(typeObject, SLOTS.TYPEDESCRIPTOR);
-                     var dimensions = getInternalSlot(typeObject, SLOTS.DIMENSIONS);
-                     var buffer = getInternalSlot(typeObject, SLOTS.VIEWEDARRAYBUFFER);
-                     var offset = getInternalSlot(o, SLOTS.BYTEOFFSET);
-                     ConvertAndCopyTo(typeDescriptor, dimensions, buffer, offset, value);
-                 }
-            }
-        },
-
-        GetOwnProperty: function (P) {
-           var typeDescriptor = getInternalSlot(O, SLOTS.TYPEDESCRIPTOR);
-           var dimensions = getInternalSlot(O, SLOTS.DIMENSIONS);
-           var buffer = getInternalSlot(O, SLOTS.VIEWEDARRAYBUFFER);
-           var offset = getInternalSlot(O, SLOTS.BYTEOFFSET);
-           if (dimensions === Nil) {
-               var value = getInternalSlot(typeDescriptor, SLOTS.STRUCTURE);
-               var r = FieldRecord(P);
-
-           } else {
-
-               Assert(dimensions === Cons(length, remainingDimensions), "dimensions has to be Cons(doms, remainingDimensions)");
-               var isInteger;
-               if (!IsAbrupt(ToInteger(P))) isInteger = true;
-               if (!isInteger) return NormalCompletion(undefined);
-               var i = ToInteger(P);
-               var o = s * i + offset;
-               var value = Reify(typeDescriptor, remainingDimensions, buffer,o);
-
-           }
-        },
-        GetPrototypeOf: function () {
-            var O = this;
-            var typeDescriptor = getInternalSlot(O, SLOTS.TYPEDESCRIPTOR);
-            return typeDescriptor;
-        },
-        IsExtensible: function () {
-            return false;
-        },
-        Structure: function (O) {
-            var typeDescriptor = getInternalSlot(O, SLOTS.TYPEDESCRIPTOR);
-            return getInternalSlot(typeDescriptor, SLOTS.STRUCTURE);
+            return CreateTypedObject(typeObject);
         }
+        var arg0 = argList[0];
+        if (getInternalSlot(arg0, SLOTS.ARRAYBUFFERDATA)) {
+            var length = argList[1];
+            length = length || buffer.length;
+            if (isGroundType(typeObject)) return newTypeError("object is a ground object");
+            return CreateTypedObjectFromBuffer(typedObject, buffer, length);
 
-    };
-    addMissingProperties(TypeExoticObject.prototype, OrdinaryObject.prototype);
+        } else if (arg0 != undefined) {
+            if (isGroundObject(typeObject)) return Coerce(typeObject, value);
+            else {
+                var o = CreateTypedObject(typeObject);
+                typeDescriptor = getInternalSlot(typeObject, SLOTS.TYPEDESCRIPTOR);
+                var dimensions = getInternalSlot(typeObject, SLOTS.DIMENSIONS);
+                var buffer = getInternalSlot(typeObject, SLOTS.VIEWEDARRAYBUFFER);
+                var offset = getInternalSlot(o, SLOTS.BYTEOFFSET);
+                ConvertAndCopyTo(typeDescriptor, dimensions, buffer, offset, value);
+            }
+        }
+    },
+
+    GetOwnProperty: function (P) {
+        var typeDescriptor = getInternalSlot(O, SLOTS.TYPEDESCRIPTOR);
+        var dimensions = getInternalSlot(O, SLOTS.DIMENSIONS);
+        var buffer = getInternalSlot(O, SLOTS.VIEWEDARRAYBUFFER);
+        var offset = getInternalSlot(O, SLOTS.BYTEOFFSET);
+        if (dimensions === Nil) {
+            var value = getInternalSlot(typeDescriptor, SLOTS.STRUCTURE);
+            var r = FieldRecord(P);
+
+        } else {
+
+            Assert(dimensions === Cons(length, remainingDimensions), "dimensions has to be Cons(doms, remainingDimensions)");
+            var isInteger;
+            if (!IsAbrupt(ToInteger(P))) isInteger = true;
+            if (!isInteger) return NormalCompletion(undefined);
+            var i = ToInteger(P);
+            var o = s * i + offset;
+            var value = Reify(typeDescriptor, remainingDimensions, buffer, o);
+
+        }
+    },
+    GetPrototypeOf: function () {
+        var O = this;
+        var typeDescriptor = getInternalSlot(O, SLOTS.TYPEDESCRIPTOR);
+        return typeDescriptor;
+    },
+    IsExtensible: function () {
+        return false;
+    },
+    Structure: function (O) {
+        var typeDescriptor = getInternalSlot(O, SLOTS.TYPEDESCRIPTOR);
+        return getInternalSlot(typeDescriptor, SLOTS.STRUCTURE);
+    }
+
+};
+addMissingProperties(TypeExoticObject.prototype, OrdinaryObject.prototype);
 var int8 = "int8",
     uint8 = "uint8",
     int16 = "int16",
@@ -20572,19 +20947,19 @@ var int8 = "int8",
     string = "string",
     object = "object";
 var GroundStructures = {
-        __proto__:null,
-        "uint8": { "Structure": uint8, "Opacity": false },
-        "int8": { "Structure": int8, "Opacity": false},
-        "uint16": { "Structure": uint16, "Opacity": false},
-        "int16": { "Structure": int16, "Opacity": false},
-        "uint32": { "Structure": uint32, "Opacity": false},
-        "int32": { "Structure": int32, "Opacity": false},
-        "float32": { "Structure": float32, "Opacity": false},
-        "float64": { "Structure": float64, "Opacity": false},
-        "any": { "Structure": any, "Opacity": true},
-        "string": { "Structure": string, "Opacity": true},
-        "object": { "Structure": object, "Opacity": true}
-    };
+    __proto__: null,
+    "uint8": { "Structure": uint8, "Opacity": false },
+    "int8": { "Structure": int8, "Opacity": false},
+    "uint16": { "Structure": uint16, "Opacity": false},
+    "int16": { "Structure": int16, "Opacity": false},
+    "uint32": { "Structure": uint32, "Opacity": false},
+    "int32": { "Structure": int32, "Opacity": false},
+    "float32": { "Structure": float32, "Opacity": false},
+    "float64": { "Structure": float64, "Opacity": false},
+    "any": { "Structure": any, "Opacity": true},
+    "string": { "Structure": string, "Opacity": true},
+    "object": { "Structure": object, "Opacity": true}
+};
 var groundTypes = Object.create(null);
 groundTypes.int8 = int8;
 groundTypes.uint8 = uint8;
@@ -20606,7 +20981,7 @@ function IsTypeObject(O) {
 
 }
 function isGroundStructure(S) {
-    switch(S) {
+    switch (S) {
         case int8:
         case int16:
         case uint8:
@@ -20614,9 +20989,9 @@ function isGroundStructure(S) {
         case uint32:
         case float32:
         case float64:
-        return true;
+            return true;
         default:
-        return false;
+            return false;
     }
 
 }
@@ -20628,12 +21003,12 @@ function FieldRecord(fieldName, byteOffset, currentOffset, fieldType) {
     }
 }
 function Alignment(typeDescriptor) {
-   var S = getInternalSlot(typeDescriptor, SLOTS.STRUCTURE);
-   if (isGroundStructure(S)) return Size(S);
-   else {
+    var S = getInternalSlot(typeDescriptor, SLOTS.STRUCTURE);
+    if (isGroundStructure(S)) return Size(S);
+    else {
 
-   }
-   //fieldType values for each
+    }
+    //fieldType values for each
     //Alignment(TypeDescriptor(t))
 
 }
@@ -20680,7 +21055,7 @@ function Reify(typeDescriptor, dimensions, buffer, offset, opacity) {
 
 }
 function Cons(car, cdr) {
-   // wiki says from lisp: (cons 42 (cons 69 (cons 613 nil)))
+    // wiki says from lisp: (cons 42 (cons 69 (cons 613 nil)))
 }
 function SameDimensions(d1, d2) {
     if (d1 === Nil && d2 === Nil) return true;
@@ -20722,20 +21097,20 @@ exports.float32 = float32;
 exports.float64 = float64;
 var TypePrototypePrototype_get = function (thisArg, argList) {
     var O = thisArg;
-    if (!hasInternalSlot(O, SLOTS.TYPEDESCRIPTOR)) return newTypeError( "has no type descriptor");
+    if (!hasInternalSlot(O, SLOTS.TYPEDESCRIPTOR)) return newTypeError("has no type descriptor");
     return NormalCompletion(getInternalSlot(O, SLOTS.TYPEDESCRIPTOR));
 };
 var TypePrototype_arrayType = function (thisArg, argList) {
     var O = thisArg;
     var length = argList[0];
-    if (!TypeObject(O)) return newTypeError( "not a typed object");
+    if (!TypeObject(O)) return newTypeError("not a typed object");
     var typeDescriptor = getInternalSlot(O, SLOTS.TYPEDESCRIPTOR);
     var numberLength = ToNumber(length);
     var elementLength = ToLength(numberLength);
-    if (isAbrupt(elementLength=ifAbrupt(elementLength))) return elementLength;
-    if (SameValueZero(numberLength, elementLength)) return newRangeError( "numberLength is not elementLength");
+    if (isAbrupt(elementLength = ifAbrupt(elementLength))) return elementLength;
+    if (SameValueZero(numberLength, elementLength)) return newRangeError("numberLength is not elementLength");
     var arrayDescriptor = GetOrCreateArrayTypeDescriptor(typeDescriptor);
-    if (isAbrupt(arrayDescriptor=ifAbrupt(arrayDescriptor))) return arrayDescriptor;
+    if (isAbrupt(arrayDescriptor = ifAbrupt(arrayDescriptor))) return arrayDescriptor;
     var R = TypeExoticObject();
     setInternalSlot(R, SLOTS.TYPEDESCRIPTOR, arrayDescriptor);
     var newDimensions = Cons(N, dimension);
@@ -20756,17 +21131,17 @@ var TypePrototype_opaqueType = function (thisArg, argList) {
 };
 var StructTypeConstructor_Call = function (thisArg, argList) {
     var object = argList[0];
-    if (Type(object) !== OBJECT) return newTypeError( "first argument is not an object");
+    if (Type(object) !== OBJECT) return newTypeError("first argument is not an object");
 
     var O = thisArg;
-    if (!IsTypeObject(O)) return newTypeError( "O is no TypeObject");
+    if (!IsTypeObject(O)) return newTypeError("O is no TypeObject");
     var currentOffset = 0;
     var maxAlignment = 1;
     var structure = [];
     for (var P in object.Bindings) {
         var fieldType = Get(object, P);
-        if (isAbrupt(fieldType=ifAbrupt(fieldType))) return fieldType;
-        if (!IsTypeObject(fieldType)) return newTypeError( "fieldType is no TypeObject");
+        if (isAbrupt(fieldType = ifAbrupt(fieldType))) return fieldType;
+        if (!IsTypeObject(fieldType)) return newTypeError("fieldType is no TypeObject");
         var alignment = Alignment(fieldType);
         maxAlignment = Math.max(alignment, maxAlignment);
         currentOffset = AlignTo(currentOffset, alignment);
@@ -20774,7 +21149,7 @@ var StructTypeConstructor_Call = function (thisArg, argList) {
         var r = FieldRecord(fieldName, byteOffset, currentOffset, fieldType);
         structure.push(r);
         var s = Size(fieldType);
-        if (isAbrupt(s=ifAbrupt(s))) return s;
+        if (isAbrupt(s = ifAbrupt(s))) return s;
         currentOffset = currentOffset + s;
     }
     var size = AlignTo(currentOffset, maxAlignment);
@@ -20831,12 +21206,12 @@ var ReflectObject_parse = function (thisArg, argList) {
     var source = argList[0];
     var options = argList[1];
     var jsAst, newAst, message;
-    if (Type(source) !== STRING) return newTypeError( "String to parse expected");
+    if (Type(source) !== STRING) return newTypeError("String to parse expected");
     try {
         jsAst = parse(source);
     } catch (ex) {
         message = ex.message;
-        return newSyntaxError( message);
+        return newSyntaxError(message);
     }
     newAst = reflect_parse_transformASTtoOrdinaries(jsAst, options);
     if (isAbrupt(newAst = ifAbrupt(newAst))) return newAst;
@@ -20849,13 +21224,13 @@ var ReflectObject_parseGoal = function (thisArg, argList) {
     var goal = argList[0];
     var jsAst, newAst, message;
 
-    if (Type(goal) !== STRING) return newTypeError( "Goal to parse expected");
-    if (Type(source) !== STRING) return newTypeError( "String to parse expected");
+    if (Type(goal) !== STRING) return newTypeError("Goal to parse expected");
+    if (Type(source) !== STRING) return newTypeError("String to parse expected");
     try {
         jsAst = parseGoal(goal, source);
     } catch (ex) {
         message = ex.message;
-        return newSyntaxError( message);
+        return newSyntaxError(message);
     }
     newAst = reflect_parse_transformASTtoOrdinaries(jsAst);
     if (isAbrupt(newAst = ifAbrupt(newAst))) return newAst;
@@ -20872,7 +21247,7 @@ var ReflectObject_setPrototypeOf = function (thisArg, argList) {
     var proto = argList[1];
     var obj = ToObject(target);
     if (isAbrupt(obj = ifAbrupt(obj))) return obj;
-    if (Type(proto) !== OBJECT && proto !== null) return newTypeError( "Reflect.setPrototypeOf: proto is neither an object nor null!");
+    if (Type(proto) !== OBJECT && proto !== null) return newTypeError("Reflect.setPrototypeOf: proto is neither an object nor null!");
     return SetPrototypeOf(obj, proto);
 };
 var ReflectObject_isExtensible = function (thisArg, argList) {
@@ -20927,7 +21302,7 @@ var ReflectObject_get = function (thisArg, argList) {
     if (receiver === undefined) receiver = target;
     return obj.Get(key, receiver);
 };
-var ReflectObject_set =function (thisArg, argList) {
+var ReflectObject_set = function (thisArg, argList) {
     var target = argList[0];
     var propertyKey = argList[1];
     var V = argList[2];
@@ -20971,7 +21346,7 @@ var ReflectObject_defineProperty = function (thisArg, argList) {
     if (isAbrupt(key = ifAbrupt(key))) return key;
     var desc = ToPropertyDescriptor(attributes);
     if (isAbrupt(desc = ifAbrupt(desc))) return desc;
-    return callInternalSlot(SLOTS.DEFINEOWNPROPERTY, obj,key, desc);
+    return callInternalSlot(SLOTS.DEFINEOWNPROPERTY, obj, key, desc);
 };
 var ReflectObject_enumerate = function (thisArg, argList) {
     var target = argList[0];
@@ -20987,17 +21362,17 @@ var ReflectObject_ownKeys = function (thisArg, argList) {
 };
 var ReflectObject_getIntrinsic = function (thisArg, argList) {
     var intrinsic = ToString(argList[0]);
-    if (isAbrupt(intrinsic=ifAbrupt(intrinsic))) return intrinsic;
+    if (isAbrupt(intrinsic = ifAbrupt(intrinsic))) return intrinsic;
     return getIntrinsic(intrinsic);
 };
-var ReflectObject_createSelfHostingFunction = function(thisArg, argList) {
+var ReflectObject_createSelfHostingFunction = function (thisArg, argList) {
     var parseGoal = require("parser").parseGoal;
     var source = argList[0];
     var realm = argList[1];
     try {
         var fn = parseGoal("FunctionDeclaration", source);
     } catch (ex) {
-        return newSyntaxError( ex.message);
+        return newSyntaxError(ex.message);
     }
     var realmObject = realm === undefined ? getRealm() : getInternalSlot(realm, "RealmObject");
     var F = OrdinaryFunction();
@@ -21014,10 +21389,10 @@ var ReflectObject_createSelfHostingFunction = function(thisArg, argList) {
 var PromiseConstructor_call = function (thisArg, argList) {
     var executor = argList[0];
     var promise = thisArg;
-    if (Type(promise) !== OBJECT) return newTypeError( "promise is not an object");
-    if (!IsCallable(executor)) return newTypeError( "executor argument is not a callable");
-    if (!hasInternalSlot(promise, SLOTS.PROMISESTATE)) return newTypeError( "promise has no PromiseState Property");
-    if (getInternalSlot(promise, SLOTS.PROMISESTATE) !== undefined) return newTypeError( "promise´s PromiseState is not undefined");
+    if (Type(promise) !== OBJECT) return newTypeError("promise is not an object");
+    if (!IsCallable(executor)) return newTypeError("executor argument is not a callable");
+    if (!hasInternalSlot(promise, SLOTS.PROMISESTATE)) return newTypeError("promise has no PromiseState Property");
+    if (getInternalSlot(promise, SLOTS.PROMISESTATE) !== undefined) return newTypeError("promise´s PromiseState is not undefined");
     return InitializePromise(promise, executor);
 };
 var PromiseConstructor_Construct = function (argList) {
@@ -21069,21 +21444,21 @@ var PromiseConstructor_race = function (thisArg, argList) {
     var iterator = GetIterator(iterable);
     iterator = IfAbruptRejectPromise(iterator, promiseCapability);
     if (isAbrupt(iterator)) return iterator;
-    for (;;) {
+    for (; ;) {
         var next = IteratorStep(iterator);
         if (isAbrupt(next = ifAbrupt(next))) return next;
-        if ((next = IfAbruptRejectPromise(next, promiseCapability)) &&isAbrupt(next)) return next;
+        if ((next = IfAbruptRejectPromise(next, promiseCapability)) && isAbrupt(next)) return next;
         if (next === false) return NormalCompletion(promiseCapability.Promise);
         var nextValue = IteratorValue(next);
-        if ((nextValue=IfAbruptRejectPromise(nextValue, promiseCapability)) && isAbrupt(nextValue)) return nextValue;
+        if ((nextValue = IfAbruptRejectPromise(nextValue, promiseCapability)) && isAbrupt(nextValue)) return nextValue;
         var nextPromise = Invoke(C, "cast", [nextValue]);
-        if ((nextPromise=IfAbruptRejectPromise(nextPromise, promiseCapability)) && isAbrupt(nextPromise)) return nextPromise;
+        if ((nextPromise = IfAbruptRejectPromise(nextPromise, promiseCapability)) && isAbrupt(nextPromise)) return nextPromise;
         var result = Invoke(nextPromise, "then", [promiseCapability.Resolve, promiseCapability.Reject]);
         if ((result = IfAbruptRejectPromise(result, promiseCapability)) && isAbrupt(result)) return result;
     }
 
 };
-function makePromiseAllResolveElementsFunction () {
+function makePromiseAllResolveElementsFunction() {
     var PromiseAllResolveElements_call = function (thisArg, argList) {
         var x = argList[0];
         var index = getInternalSlot(F, SLOTS.INDEX);
@@ -21109,14 +21484,14 @@ var PromiseConstructor_all = function (thisArg, argList) {
     var promiseCapability = NewPromiseCapability(C);
     if (isAbrupt(promiseCapability = ifAbrupt(promiseCapability))) return promiseCapability;
     var iterator = GetIterator(iterable);
-    if ((iterator=IfAbruptRejectPromise(iterator, promiseCapability)) && isAbrupt(iterator)) return iterator;
+    if ((iterator = IfAbruptRejectPromise(iterator, promiseCapability)) && isAbrupt(iterator)) return iterator;
     var values = ArrayCreate(0);
     var remainingElementsCount = { value: 0 };
     var index = 0;
-    for (;;) {
+    for (; ;) {
         var next = IteratorStep(iterator);
         if (isAbrupt(next = ifAbrupt(next))) return next;
-        if ((next=IfAbruptRejectPromise(next, promiseCapability)) && isAbrupt(next)) return next;
+        if ((next = IfAbruptRejectPromise(next, promiseCapability)) && isAbrupt(next)) return next;
         if (next === false) {
             if (index == 0) {
                 var resolveResult = callInternalSlot(SLOTS.CALL, promiseCapability.Resolve, undefined, [values]);
@@ -21127,7 +21502,7 @@ var PromiseConstructor_all = function (thisArg, argList) {
         var nextValue = IteratorValue(next);
         if (isAbrupt(nextValue = IfAbruptRejectPromise(nextValue, promiseCapability)))  return nextValue;
         var nextPromise = Invoke(C, "cast", [nextValue]);
-        if (isAbrupt(nextPromise=IfAbruptRejectPromise(nextPromise, promiseCapability))) return nextPromise;
+        if (isAbrupt(nextPromise = IfAbruptRejectPromise(nextPromise, promiseCapability))) return nextPromise;
         var resolveElement = makePromiseAllResolveElementsFunction();
         setInternalSlot(resolveElement, SLOTS.INDEX, index);
         setInternalSlot(resolveElement, SLOTS.VALUES, values);
@@ -21143,7 +21518,7 @@ var PromisePrototype_then = function (thisArg, argList) {
     var onFulfilled = argList[0];
     var onRejected = argList[1];
     var promise = thisArg;
-    if (!IsPromise(promise)) return newTypeError( "then: this is not a promise object");
+    if (!IsPromise(promise)) return newTypeError("then: this is not a promise object");
     if (onFulfilled === undefined || onFulfilled === null) onFulfilled = makeIdentityFunction();
     if (onRejected === undefined || onRejected === null) onRejected = makeThrowerFunction();
     var C = Get(promise, "constructor");
@@ -21173,7 +21548,7 @@ var PromisePrototype_catch = function (thisArg, argList) {
     var onRejected = argList[0];
     return Invoke(thisArg, "then", [undefined, onRejected]);
 };
-function PromiseNew (executor) {
+function PromiseNew(executor) {
     var promise = AllocatePromise(getIntrinsic(INTRINSICS.PROMISE));
     return InitializePromise(promise, executor);
 }
@@ -21256,7 +21631,7 @@ function PromiseReactionJob() {
     return F;
 }
 function IfAbruptRejectPromise(value, capability) {
-    if (isAbrupt(value=ifAbrupt(value))) {
+    if (isAbrupt(value = ifAbrupt(value))) {
         var rejectedResult = callInternalSlot(SLOTS.CALL, capability.Reject, undefined, [value.value]);
         if (isAbrupt(rejectedResult = ifAbrupt(rejectedResult))) return rejectedResult;
         return NormalCompletion(capability.Promise);
@@ -21291,14 +21666,14 @@ function makePromiseResolveFunction() {
         var alreadyResolved = getInternalSlot(F, SLOTS.ALREADYRESOLVED);
         alreadyResolved.value = true;
         if (SameValue(resolution, promise)) {
-            var selfResolutionError = newTypeError( "self resolution handler");
+            var selfResolutionError = newTypeError("self resolution handler");
             return RejectPromise(promise, selfResolutionError);
         }
         if (Type(resolution) !== OBJECT) {
             return FulfillPromise(promise, resolution);
         }
         var then = Get(resolution, "then");
-        if (isAbrupt(then=ifAbrupt(then))) {
+        if (isAbrupt(then = ifAbrupt(then))) {
             return RejectPromise(promise, then.value);
         }
         if (!IsCallable(then)) {
@@ -21307,7 +21682,7 @@ function makePromiseResolveFunction() {
         var resolvingFunctions = CreateResolvingFunctions(promise);
         var thenCallResult = callInternalSlot(SLOTS.CALL, then, resolution, [resolvingFunctions.Resolve, resolvingFunctions.Reject]);
 
-        if (isAbrupt(thenCallResult=ifAbrupt(thenCallResult))) {
+        if (isAbrupt(thenCallResult = ifAbrupt(thenCallResult))) {
             return callInternalSlot(SLOTS.CALL, resolvingFunctions.Reject, undefined, [thenCallResult.value]);
         }
 
@@ -21317,8 +21692,8 @@ function makePromiseResolveFunction() {
     setInternalSlot(F, SLOTS.CALL, PromiseResolveFunction_call);
     return F;
 }
-function CreateResolvingFunctions (promise) {
-    var alreadyResolved = {value:false};
+function CreateResolvingFunctions(promise) {
+    var alreadyResolved = {value: false};
     var resolve = makePromiseResolveFunction();
     setInternalSlot(resolve, SLOTS.PROMISE, promise);
     setInternalSlot(resolve, SLOTS.ALREADYRESOLVED, alreadyResolved);
@@ -21327,7 +21702,7 @@ function CreateResolvingFunctions (promise) {
     setInternalSlot(reject, SLOTS.ALREADYRESOLVED, alreadyResolved);
     return { Resolve: resolve, Reject: reject };
 }
-function FulfillPromise (promise, value) {
+function FulfillPromise(promise, value) {
     Assert(getInternalSlot(promise, SLOTS.PROMISESTATE) === "pending", "[[PromiseState]] must be pending");
     var reactions = getInternalSlot(promise, SLOTS.PROMISERESOLVEREACTIONS);
     setInternalSlot(promise, SLOTS.PROMISERESULT, value);
@@ -21336,7 +21711,7 @@ function FulfillPromise (promise, value) {
     setInternalSlot(promise, SLOTS.PROMISESTATE, "fulfilled");
     return TriggerPromiseReactions(reactions, value);
 }
-function RejectPromise (promise, reason) {
+function RejectPromise(promise, reason) {
     Assert(getInternalSlot(promise, SLOTS.PROMISESTATE) === "pending", "[[PromiseState]] must not be pending");
     var reactions = getInternalSlot(promise, SLOTS.PROMISEREJECTREACTIONS);
     setInternalSlot(promise, SLOTS.PROMISERESULT, reason);
@@ -21346,7 +21721,7 @@ function RejectPromise (promise, reason) {
     return TriggerPromiseReactions(reactions, reason);
 }
 function NewPromiseCapability(C) {
-    if (!IsConstructor(C)) return newTypeError( "C is no constructor");
+    if (!IsConstructor(C)) return newTypeError("C is no constructor");
     // Assertion Step 2 missing 25.4.3.1
     var promise = CreateFromConstructor(C);
     if (isAbrupt(promise = ifAbrupt(promise))) return promise;
@@ -21358,20 +21733,20 @@ function CreatePromiseCapabilityRecord(promise, constructor) {
     setInternalSlot(executor, SLOTS.CAPABILITY, promiseCapability);
     var constructorResult = callInternalSlot(SLOTS.CALL, constructor, promise, [executor]);
     if (isAbrupt(constructorResult = ifAbrupt(constructorResult))) return constructorResult;
-    if (!IsCallable(promiseCapability.Resolve)) return newTypeError( "capability.[[Resolve]] is not a function");
-    if (!IsCallable(promiseCapability.Reject)) return newTypeError( "capability.[[Reject]] is not a function");
+    if (!IsCallable(promiseCapability.Resolve)) return newTypeError("capability.[[Resolve]] is not a function");
+    if (!IsCallable(promiseCapability.Reject)) return newTypeError("capability.[[Reject]] is not a function");
     if (Type(constructorResult) === OBJECT && (SameValue(promise, constructorResult) === false)) return newTypeError("constructorResult is not the same as promise");
     return promiseCapability;
 }
-function GetCapabilitiesExecutor () {
+function GetCapabilitiesExecutor() {
     var F = OrdinaryFunction();
     var GetCapabilitiesExecutor_call = function (thisArg, argList) {
         var resolve = argList[0];
         var reject = argList[1];
         var promiseCapability = getInternalSlot(F, SLOTS.CAPABILITY);
         Assert(promiseCapability !== undefined, "executor has to have a capability slot");
-        if (promiseCapability.Resolve !== undefined) return newTypeError( "promiseCapability has to have some undefined fields");
-        if (promiseCapability.Reject !== undefined) return newTypeError( "promiseCapability has to have some undefined fields");
+        if (promiseCapability.Resolve !== undefined) return newTypeError("promiseCapability has to have some undefined fields");
+        if (promiseCapability.Reject !== undefined) return newTypeError("promiseCapability has to have some undefined fields");
         promiseCapability.Resolve = resolve;
         promiseCapability.Reject = reject;
         return NormalCompletion(undefined);
@@ -21387,7 +21762,7 @@ function InitializePromise(promise, executor) {
     setInternalSlot(promise, SLOTS.PROMISEREJECTREACTIONS, []);
     var resolvingFunctions = CreateResolvingFunctions(promise);
     var completion = callInternalSlot(SLOTS.CALL, executor, undefined, [resolvingFunctions.Resolve, resolvingFunctions.Reject]);
-    if (isAbrupt(completion=ifAbrupt(completion))) {
+    if (isAbrupt(completion = ifAbrupt(completion))) {
         var status = callInternalSlot(SLOTS.CALL, resolvingFunctions.Reject, undefined, [completion.value]);
         if (isAbrupt(status)) return status;
     }
@@ -21412,7 +21787,7 @@ function IsPromise(x) {
     if (!hasInternalSlot(x, SLOTS.PROMISESTATE)) return false;
     return getInternalSlot(x, SLOTS.PROMISESTATE) !== undefined;
 }
-function makeIdentityFunction () {
+function makeIdentityFunction() {
     var F = OrdinaryFunction();
     var Identity_call = function (thisArg, argList) {
         var x = argList[0];
@@ -21423,7 +21798,7 @@ function makeIdentityFunction () {
     SetFunctionLength(F, 1);
     return F;
 }
-function makeResolutionHandlerFunction () {
+function makeResolutionHandlerFunction() {
     var handler = OrdinaryFunction();
     var handler_call = function (thisArg, argList) {
         var x = argList[0];
@@ -21431,7 +21806,7 @@ function makeResolutionHandlerFunction () {
         var fulfillmentHandler = getInternalSlot(handler, SLOTS.FULFILLMENTHANDLER);
         var rejectionHandler = getInternalSlot(handler, SLOTS.REJECTIONHANDLER);
         if (SameValue(x, promise)) {
-            var selfResolutionError = newTypeError( "selfResolutionError");
+            var selfResolutionError = newTypeError("selfResolutionError");
             return callInternalSlot(SLOTS.CALL, rejectionHandler, undefined, [selfResolutionError]);
         }
         var C = getInternalSlot(promise, SLOTS.PROMISECONSTRUCTOR);
@@ -21447,7 +21822,7 @@ function makeResolutionHandlerFunction () {
     setInternalSlot(handler, SLOTS.CALL, handler_call);
     return handler;
 }
-function makeThrowerFunction () {
+function makeThrowerFunction() {
     var F = OrdinaryFunction();
     var ThrowerFunction_call = function (thisArg, argList) {
         var e = argList[0];
@@ -21489,9 +21864,9 @@ var MapConstructor_call = function Call(thisArg, argList) {
     var comparator = argList[1];
     var map = thisArg;
 
-    if (Type(map) !== OBJECT) return newTypeError( "map is not an object");
-    if (!hasInternalSlot(map, SLOTS.MAPDATA)) return newTypeError( "MapData property missing on object");
-    if (getInternalSlot(map, SLOTS.MAPDATA) !== undefined) return newTypeError( "MapData property already initialized");
+    if (Type(map) !== OBJECT) return newTypeError("map is not an object");
+    if (!hasInternalSlot(map, SLOTS.MAPDATA)) return newTypeError("MapData property missing on object");
+    if (getInternalSlot(map, SLOTS.MAPDATA) !== undefined) return newTypeError("MapData property already initialized");
 
     var iter;
     var hasValues, adder;
@@ -21503,10 +21878,10 @@ var MapConstructor_call = function Call(thisArg, argList) {
         else iter = GetIterator(iterable);
         adder = Get(map, "set");
         if (isAbrupt(adder = ifAbrupt(adder))) return adder;
-        if (!IsCallable(adder)) return newTypeError( "map adder (the set function) is not callable");
+        if (!IsCallable(adder)) return newTypeError("map adder (the set function) is not callable");
     }
     if (comparator !== undefined) {
-        if (comparator !== "is") return newRangeError( "comparator argument has currently to be 'undefined' or 'is'");
+        if (comparator !== "is") return newRangeError("comparator argument has currently to be 'undefined' or 'is'");
     }
 
     setInternalSlot(map, SLOTS.MAPDATA, Object.create(null));
@@ -21515,7 +21890,7 @@ var MapConstructor_call = function Call(thisArg, argList) {
     if (iter === undefined) return NormalCompletion(map);
 
     var next, nextItem, done, k, v, status;
-    for (;;) {
+    for (; ;) {
         next = IteratorNext(iter);
         if (isAbrupt(next = ifAbrupt(next))) return next;
         done = IteratorComplete(next);
@@ -21542,8 +21917,8 @@ var MapPrototype_has = function has(thisArg, argList) {
     var key = argList[0];
     var M = thisArg;
 
-    if (Type(M) !== OBJECT) return newTypeError( "this argument is not an object");
-    if (!hasInternalSlot(M, SLOTS.MAPDATA)) return newTypeError( "this argument has no map data internal slot");
+    if (Type(M) !== OBJECT) return newTypeError("this argument is not an object");
+    if (!hasInternalSlot(M, SLOTS.MAPDATA)) return newTypeError("this argument has no map data internal slot");
 
     var entries = getInternalSlot(M, SLOTS.MAPDATA);
     var comparator = getInternalSlot(M, SLOTS.MAPCOMPARATOR);
@@ -21562,8 +21937,8 @@ var MapPrototype_get = function (thisArg, argList) {
     var key = argList[0];
     var M = thisArg;
     var same;
-    if (Type(M) !== OBJECT) return newTypeError( "this argument is not an object");
-    if (!hasInternalSlot(M, SLOTS.MAPDATA)) return newTypeError( "this argument has no map data internal slot");
+    if (Type(M) !== OBJECT) return newTypeError("this argument is not an object");
+    if (!hasInternalSlot(M, SLOTS.MAPDATA)) return newTypeError("this argument has no map data internal slot");
     var entries = getInternalSlot(M, SLOTS.MAPDATA);
     var comparator = getInternalSlot(M, SLOTS.MAPCOMPARATOR);
     if (comparator === undefined) same = SameValueZero;
@@ -21582,8 +21957,8 @@ var MapPrototype_set = function (thisArg, argList) {
     var value = argList[1];
     var M = thisArg;
     var same;
-    if (Type(M) !== OBJECT) return newTypeError( "this argument is not an object");
-    if (!hasInternalSlot(M, SLOTS.MAPDATA)) return newTypeError( "this argument has no map data internal slot");
+    if (Type(M) !== OBJECT) return newTypeError("this argument is not an object");
+    if (!hasInternalSlot(M, SLOTS.MAPDATA)) return newTypeError("this argument has no map data internal slot");
     var entries = getInternalSlot(M, SLOTS.MAPDATA);
     var comparator = getInternalSlot(M, SLOTS.MAPCOMPARATOR);
     if (comparator === undefined) same = SameValueZero;
@@ -21605,8 +21980,8 @@ var MapPrototype_delete = function (thisArg, argList) {
     var key = argList[0];
     var M = thisArg;
     var same;
-    if (Type(M) !== OBJECT) return newTypeError( "this argument is not an object");
-    if (!hasInternalSlot(M, SLOTS.MAPDATA)) return newTypeError( "this argument has no map data internal slot");
+    if (Type(M) !== OBJECT) return newTypeError("this argument is not an object");
+    if (!hasInternalSlot(M, SLOTS.MAPDATA)) return newTypeError("this argument has no map data internal slot");
     var entries = getInternalSlot(M, SLOTS.MAPDATA);
     var comparator = getInternalSlot(M, SLOTS.MAPCOMPARATOR);
     if (comparator === undefined) same = SameValueZero;
@@ -21637,8 +22012,10 @@ var MapPrototype_entries = function (thisArg, argList) {
     var O = thisArg;
     return CreateMapIterator(O, "key+value");
 };
-var MapPrototype_forEach = function (thisArg, argList) {};
-var MapPrototype_clear = function (thisArg, argList) {};
+var MapPrototype_forEach = function (thisArg, argList) {
+};
+var MapPrototype_clear = function (thisArg, argList) {
+};
 var MapConstructor_$$create = function $$create(thisArg, argList) {
     return OrdinaryCreateFromConstructor(thisArg, INTRINSICS.MAPPROTOTYPE, [
         SLOTS.MAPDATA,
@@ -21648,7 +22025,7 @@ var MapConstructor_$$create = function $$create(thisArg, argList) {
 function CreateMapIterator(map, kind) {
     var M = ToObject(map);
     if (isAbrupt(M = ifAbrupt(M))) return M;
-    if (!hasInternalSlot(M, SLOTS.MAPDATA)) return newTypeError( "object has no internal MapData slot");
+    if (!hasInternalSlot(M, SLOTS.MAPDATA)) return newTypeError("object has no internal MapData slot");
     var entries = getInternalSlot(M, SLOTS.MAPDATA);
     var MapIteratorPrototype = Get(getIntrinsics(), INTRINSICS.MAPITERATORPROTOTYPE);
     var iterator = ObjectCreate(MapIteratorPrototype, [
@@ -21666,13 +22043,12 @@ var MapIteratorPrototype_$$iterator = function $$iterator(thisArg, argList) {
 };
 var MapIteratorPrototype_next = function next(thisArg, argList) {
     var O = thisArg;
-    if (Type(O) !== OBJECT) return newTypeError( "the this value is not an object");
-    if (!hasInternalSlot(O, SLOTS.MAP) || !hasInternalSlot(O, SLOTS.MAPNEXTINDEX) ||
-        !hasInternalSlot(O, SLOTS.MAPITERATIONKIND)) {
-        return newTypeError( "iterator has not all of the required internal properties");
+    if (Type(O) !== OBJECT) return newTypeError("the this value is not an object");
+    if (!hasInternalSlot(O, SLOTS.MAP) || !hasInternalSlot(O, SLOTS.MAPNEXTINDEX) || !hasInternalSlot(O, SLOTS.MAPITERATIONKIND)) {
+        return newTypeError("iterator has not all of the required internal properties");
     }
     var entries = getInternalSlot(O, SLOTS.MAP);
-    var kind = getInternalSlot(O, SLOTS.MAPITERATIONKIND    );
+    var kind = getInternalSlot(O, SLOTS.MAPITERATIONKIND);
     var index = getInternalSlot(O, SLOTS.MAPNEXTINDEX);
     var result;
     var internalKeys = Object.keys(entries); // deviate from spec
@@ -21699,9 +22075,9 @@ var SetConstructor_call = function Call(thisArg, argList) {
     var iterable = argList[0];
     var comparator = argList[1];
     var set = thisArg;
-    if (Type(set) !== OBJECT) return newTypeError( "set is not an object");
-    if (!hasInternalSlot(set, SLOTS.SETDATA)) return newTypeError( "SetData property missing on object");
-    if (getInternalSlot(set, SLOTS.SETDATA) !== undefined) return newTypeError( "SetData property already initialized");
+    if (Type(set) !== OBJECT) return newTypeError("set is not an object");
+    if (!hasInternalSlot(set, SLOTS.SETDATA)) return newTypeError("SetData property missing on object");
+    if (getInternalSlot(set, SLOTS.SETDATA) !== undefined) return newTypeError("SetData property already initialized");
     var iter;
     var hasValues, adder;
     if (iterable === undefined || iterable === null) iter = undefined;
@@ -21712,16 +22088,16 @@ var SetConstructor_call = function Call(thisArg, argList) {
         else iter = GetIterator(iterable);
         adder = Get(set, "set");
         if (isAbrupt(adder = ifAbrupt(adder))) return adder;
-        if (!IsCallable(adder)) return newTypeError( "set adder (the set function) is not callable");
+        if (!IsCallable(adder)) return newTypeError("set adder (the set function) is not callable");
     }
     if (comparator !== undefined) {
-        if (comparator !== "is") return newRangeError( "comparator argument has currently to be 'undefined' or 'is'");
+        if (comparator !== "is") return newRangeError("comparator argument has currently to be 'undefined' or 'is'");
     }
     setInternalSlot(set, SLOTS.SETDATA, Object.create(null));
     setInternalSlot(set, SLOTS.SETCOMPARATOR, comparator);
     if (iter === undefined) return NormalCompletion(set);
     var next, nextItem, done, k, v, status;
-    for (;;) {
+    for (; ;) {
         next = IteratorNext(iter);
         if (isAbrupt(next = ifAbrupt(next))) return next;
         done = IteratorComplete(next);
@@ -21749,13 +22125,14 @@ var SetConstructor_$$create = function $$create(thisArg, argList) {
         SLOTS.SETCOMPARATOR
     ]);
 };
-var SetPrototype_clear = function clear(thisArg, argList) {};
+var SetPrototype_clear = function clear(thisArg, argList) {
+};
 var SetPrototype_set = function (thisArg, argList) {
     var value = argList[0];
     var S = thisArg;
     var same;
-    if (Type(S) !== OBJECT) return newTypeError( "this argument is not an object");
-    if (!hasInternalSlot(S, SLOTS.SETDATA)) return newTypeError( "this argument has no set data internal slot");
+    if (Type(S) !== OBJECT) return newTypeError("this argument is not an object");
+    if (!hasInternalSlot(S, SLOTS.SETDATA)) return newTypeError("this argument has no set data internal slot");
     var entries = getInternalSlot(S, SLOTS.SETDATA);
     var comparator = getInternalSlot(S, SLOTS.SETCOMPARATOR);
     if (comparator === undefined) same = SameValueZero;
@@ -21769,8 +22146,8 @@ var SetPrototype_has = function (thisArg, argList) {
     var value = argList[0];
     var S = thisArg;
     var same;
-    if (Type(S) !== OBJECT) return newTypeError( "this argument is not an object");
-    if (!hasInternalSlot(S, SLOTS.SETDATA)) return newTypeError( "this argument has no map data internal slot");
+    if (Type(S) !== OBJECT) return newTypeError("this argument is not an object");
+    if (!hasInternalSlot(S, SLOTS.SETDATA)) return newTypeError("this argument has no map data internal slot");
     var entries = getInternalSlot(S, SLOTS.SETDATA);
     var comparator = getInternalSlot(S, SLOTS.SETCOMPARATOR);
     if (comparator === undefined) same = SameValueZero;
@@ -21784,8 +22161,8 @@ var SetPrototype_delete = function (thisArg, argList) {
     var value = argList[0];
     var S = thisArg;
     var same;
-    if (Type(S) !== OBJECT) return newTypeError( "this argument is not an object");
-    if (!hasInternalSlot(S, SLOTS.SETDATA)) return newTypeError( "this argument has no map data internal slot");
+    if (Type(S) !== OBJECT) return newTypeError("this argument is not an object");
+    if (!hasInternalSlot(S, SLOTS.SETDATA)) return newTypeError("this argument has no map data internal slot");
     var entries = getInternalSlot(S, SLOTS.SETDATA);
     var comparator = getInternalSlot(S, SLOTS.SETCOMPARATOR);
     if (comparator === undefined) same = SameValueZero;
@@ -21814,7 +22191,7 @@ var SetPrototype_forEach = function (thisArg, argList) {
 function CreateSetIterator(set, kind) {
     var S = ToObject(set);
     if (isAbrupt(S = ifAbrupt(S))) return S;
-    if (!hasInternalSlot(S, SLOTS.SETDATA)) return newTypeError( "object has no internal SetData slot");
+    if (!hasInternalSlot(S, SLOTS.SETDATA)) return newTypeError("object has no internal SetData slot");
     var origEntries = getInternalSlot(S, SLOTS.SETDATA);
     var SetIteratorPrototype = getIntrinsic(INTRINSICS.SETITERATORPROTOTYPE);
     var iterator = ObjectCreate(SetIteratorPrototype,
@@ -21839,8 +22216,8 @@ function CreateSetIterator(set, kind) {
 }
 var SetIteratorPrototype_next = function (thisArg, argList) {
     var O = thisArg;
-    if (Type(O) !== OBJECT) return newTypeError( "the this value is not an object");
-    if (!hasInternalSlot(O, SLOTS.ITERATEDSET) || !hasInternalSlot(O, SLOTS.SETNEXTINDEX) || !hasInternalSlot(O, SLOTS.SETITERATIONKIND)) return newTypeError( "iterator has not all of the required internal properties");
+    if (Type(O) !== OBJECT) return newTypeError("the this value is not an object");
+    if (!hasInternalSlot(O, SLOTS.ITERATEDSET) || !hasInternalSlot(O, SLOTS.SETNEXTINDEX) || !hasInternalSlot(O, SLOTS.SETITERATIONKIND)) return newTypeError("iterator has not all of the required internal properties");
     var entries = getInternalSlot(O, SLOTS.ITERATEDSET);
     var kind = getInternalSlot(O, SLOTS.SETITERATIONKIND);
     var index = getInternalSlot(O, SLOTS.SETNEXTINDEX);
@@ -21870,7 +22247,7 @@ var SetTimeoutFunction_call = function (thisArg, argList) {
     var func = argList[0];
     var timeout = argList[1] | 0;
     var task;
-    if (!IsCallable(func)) return newTypeError( "setTimeout: function argument expected");
+    if (!IsCallable(func)) return newTypeError("setTimeout: function argument expected");
     task = {
         time: Date.now(),
         timeout: timeout,
@@ -21908,7 +22285,7 @@ var LoaderIteratorPrototype_next = function next(thisArg, argList) {
             if (itemKind === "key") result = e.Key;
             else if (itemKind === "value") result = e.Value;
             else {
-                Assert(itemKind==="key+value", "itemKind has to be key+value here");
+                Assert(itemKind === "key+value", "itemKind has to be key+value here");
                 result = ArrayCreate(2);
                 CreateDataProperty(result, "0", e.Key);
                 CreateDataProperty(result, "1", e.Value);
@@ -21926,14 +22303,14 @@ var IsNaNFunction_call = function (thisArg, argList) {
     var nan = ToNumber(argList[0]);
     return nan !== nan;
 };
-var IsFiniteFunction_call =function (thisArg, argList) {
+var IsFiniteFunction_call = function (thisArg, argList) {
     var number = ToNumber(argList[0]);
     return  !(number == Infinity || number == -Infinity || number != number);
 };
 function Str(key, holder, _state) {
     var replacer = _state.ReplaceFunction;
     var value = Get(holder, key);
-    if (isAbrupt(value=ifAbrupt(value))) return value;
+    if (isAbrupt(value = ifAbrupt(value))) return value;
     if (Type(value) === OBJECT) {
         var toJSON = Get(value, "toJSON");
         if (IsCallable(toJSON)) {
@@ -21980,12 +22357,12 @@ function JA(value, _state) {
     var indent = _state.indent;
     var gap = _state.gap;
     if (stack.indexOf(value) > -1) {
-        return newTypeError( "Because the structure is cyclical!");
+        return newTypeError("Because the structure is cyclical!");
     }
     stack.push(value);
     var stepback = indent;
     var len = Get(value, "length");
-    if (isAbrupt(len=ifAbrupt(len))) return len;
+    if (isAbrupt(len = ifAbrupt(len))) return len;
     var index = 0;
     var partial = [];
 
@@ -22023,7 +22400,7 @@ function JO(value, _state) {
     var gap = _state.gap;
     var PropertyList = _state.PropertyList;
     if (stack.indexOf(value) > -1) {
-        return newTypeError( "Because the structure is cyclical!");
+        return newTypeError("Because the structure is cyclical!");
     }
     stack.push(value);
     var stepback = indent;
@@ -22104,7 +22481,7 @@ function Walk(holder, name, reviver) {
                 var nextResult = IteratorNext(keys);
                 if (isAbrupt(nextResult = ifAbrupt(nextResult))) return nextResult;
                 var P = IteratorResult(nextResult);
-                if (isAbrupt(P=ifAbrupt(P))) return P;
+                if (isAbrupt(P = ifAbrupt(P))) return P;
                 newElement = Walk(val, P);
                 if (newElement === undefined) {
                     status = Delete(val, P);
@@ -22118,7 +22495,7 @@ function Walk(holder, name, reviver) {
                 }
                 if (isAbrupt(status = ifAbrupt(status))) return status;
                 done = IteratorComplete(nextResult);
-                if (isAbrupt(done=ifAbrupt(done))) return done;
+                if (isAbrupt(done = ifAbrupt(done))) return done;
             }
         }
     }
@@ -22161,12 +22538,12 @@ var JSONObject_stringify = function (thisArg, argList) {
             _state.ReplacerFunction = ReplacerFunction = replacer;
         } else if (IsArray(replacer)) {
             var len = Get(replacer, "length");
-            if (isAbrupt(len=ifAbrupt(len))) return len;
+            if (isAbrupt(len = ifAbrupt(len))) return len;
             var item, v;
             for (i = 0; i < len; i++) {
                 item = undefined;
                 v = Get(replacer, ToString(i));
-                if (isAbrupt(v=ifAbrupt(v))) return v;
+                if (isAbrupt(v = ifAbrupt(v))) return v;
                 if (Type(v) === STRING) item = v;
                 else if (Type(v) === NUMBER) item = ToString(v);
                 else if (Type(v) === OBJECT) {
@@ -22202,10 +22579,10 @@ var JSONObject_stringify = function (thisArg, argList) {
     var proto = getIntrinsic(INTRINSICS.OBJECTPROTOTYPE);
     var wrapper = ObjectCreate(proto);
     var status = CreateDataProperty(wrapper, "", value);
-    if (isAbrupt(status=ifAbrupt(status))) return status;
-    if (status === false) return newTypeError( "status may not be wrong here");
+    if (isAbrupt(status = ifAbrupt(status))) return status;
+    if (status === false) return newTypeError("status may not be wrong here");
     var result = Str("", wrapper, _state);
-    if (isAbrupt(result=ifAbrupt(result))) return result;
+    if (isAbrupt(result = ifAbrupt(result))) return result;
     return NormalCompletion(result);
 };
 var EscapeFunction_call = function (thisArg, argList) {
@@ -22245,7 +22622,9 @@ var ErrorConstructor_call = function (thisArg, argList) {
     }
 
     CreateDataProperty(O, "stack", stringifyErrorStack());
-    setInternalSlot(O, "toString", function () { return "[object Error]"; });
+    setInternalSlot(O, "toString", function () {
+        return "[object Error]";
+    });
     return O;
 }
 var ErrorConstructor_construct = function (argList) {
@@ -22278,13 +22657,31 @@ function createNativeError(nativeType, ctor, proto) {
     // var intrProtoName = "%" + nativeType + "ErrorPrototype%";
     var name;
     var intrProtoName;
-    switch(nativeType) {
-        case "URI": name = "URIError"; intrProtoName = INTRINSICS.URIERROR; break;
-        case "Range": name = "RangeError"; intrProtoName = INTRINSICS.RANGEERROR; break;
-        case "Type": name = "TypeError"; intrProtoName = INTRINSICS.TYPEERROR; break;
-        case "Reference": name = "ReferenceError"; intrProtoName = INTRINSICS.REFERENCEERROR; break;
-        case "Syntax": name = "SyntaxError"; intrProtoName = INTRINSICS.SYNTAXERROR; break;
-        case "Eval": name = "EvalError"; intrProtoName = INTRINSICS.EVALERROR; break;
+    switch (nativeType) {
+        case "URI":
+            name = "URIError";
+            intrProtoName = INTRINSICS.URIERROR;
+            break;
+        case "Range":
+            name = "RangeError";
+            intrProtoName = INTRINSICS.RANGEERROR;
+            break;
+        case "Type":
+            name = "TypeError";
+            intrProtoName = INTRINSICS.TYPEERROR;
+            break;
+        case "Reference":
+            name = "ReferenceError";
+            intrProtoName = INTRINSICS.REFERENCEERROR;
+            break;
+        case "Syntax":
+            name = "SyntaxError";
+            intrProtoName = INTRINSICS.SYNTAXERROR;
+            break;
+        case "Eval":
+            name = "EvalError";
+            intrProtoName = INTRINSICS.EVALERROR;
+            break;
     }
 
     //SetFunctionName(ctor, name);
@@ -22295,7 +22692,7 @@ function createNativeError(nativeType, ctor, proto) {
         if (Type(O) !== OBJECT ||
             (Type(O) === OBJECT && getInternalSlot(O, SLOTS.ERRORDATA) == undefined)) {
             O = OrdinaryCreateFromConstructor(func, intrProtoName);
-            if (isAbrupt(O=ifAbrupt(O))) return O;
+            if (isAbrupt(O = ifAbrupt(O))) return O;
         }
         if (Type(O) !== OBJECT) return newTypeError(format("S_NOT_OBJECT", "O"));
         setInternalSlot(O, SLOTS.ERRORDATA, name);
@@ -22320,7 +22717,7 @@ function createNativeError(nativeType, ctor, proto) {
         CreateDataProperty(O, "stack", stringifyErrorStack());
         // interne representation
         setInternalSlot(O, "toString", function () {
-            return "[object "+name+"]";
+            return "[object " + name + "]";
         });
         return O;
 
@@ -22356,7 +22753,7 @@ var EmitterConstructor_call = function (thisArg, argList) {
     if (type === OBJECT) {
         has = hasInternalSlot(O, SLOTS.EVENTLISTENERS);
         if (!has) {
-            return newTypeError( "this argument has to have a [[Listeners]] Property");
+            return newTypeError("this argument has to have a [[Listeners]] Property");
         } else {
             listeners = getInternalSlot(O, SLOTS.EVENTLISTENERS);
             if (!listeners) {
@@ -22365,7 +22762,7 @@ var EmitterConstructor_call = function (thisArg, argList) {
             }
         }
     } else {
-        return newTypeError( "this argument is not an object");
+        return newTypeError("this argument is not an object");
     }
     return O;
 };
@@ -22382,14 +22779,14 @@ var EmitterPrototype_on = function (thisArg, argList) {
     var E = thisArg,
         listeners, callback, event;
 
-    if (Type(E) !== OBJECT) return newTypeError( "this argument is not an object");
+    if (Type(E) !== OBJECT) return newTypeError("this argument is not an object");
 
-    if (!hasInternalSlot(E, SLOTS.EVENTLISTENERS)) return newTypeError( "[[Listeners]] missing on this argument");
+    if (!hasInternalSlot(E, SLOTS.EVENTLISTENERS)) return newTypeError("[[Listeners]] missing on this argument");
     else listeners = getInternalSlot(E, SLOTS.EVENTLISTENERS);
     var event = argList[0];
     var callback = argList[1];
-    if (Type(event) !== STRING) return newTypeError( "Your argument 1 is not an event name string.");
-    if (!IsCallable(callback)) return newTypeError( "Your argument 2 is not a callback function");
+    if (Type(event) !== STRING) return newTypeError("Your argument 1 is not an event name string.");
+    if (!IsCallable(callback)) return newTypeError("Your argument 2 is not a callback function");
 
     var list = listeners[event];
     if (list == undefined) list = listeners[event] = [];
@@ -22400,13 +22797,13 @@ var EmitterPrototype_on = function (thisArg, argList) {
 var EmitterPrototype_once = function (thisArg, argList) {
     var E = thisArg,
         listeners, callback, event;
-    if (Type(E) !== OBJECT) return newTypeError( "this argument is not an object");
-    if (!hasInternalSlot(E, SLOTS.EVENTLISTENERS)) return newTypeError( "[[Listeners]] missing on this argument");
+    if (Type(E) !== OBJECT) return newTypeError("this argument is not an object");
+    if (!hasInternalSlot(E, SLOTS.EVENTLISTENERS)) return newTypeError("[[Listeners]] missing on this argument");
     else listeners = getInternalSlot(E, SLOTS.EVENTLISTENERS);
     event = argList[0];
     callback = argList[1];
-    if (Type(event) !== STRING) return newTypeError( "Your argument 1 is not an event name string.");
-    if (!IsCallable(callback)) return newTypeError( "Your argument 2 is not a callback function");
+    if (Type(event) !== STRING) return newTypeError("Your argument 1 is not an event name string.");
+    if (!IsCallable(callback)) return newTypeError("Your argument 2 is not a callback function");
     var list = listeners[event];
     if (list == undefined) list = listeners[event] = [];
     list.push(
@@ -22425,13 +22822,13 @@ var EmitterPrototype_once = function (thisArg, argList) {
 var EmitterPrototype_remove = function (thisArg, argList) {
     var E = thisArg,
         listeners, callback, event, values;
-    if (Type(E) !== OBJECT) return newTypeError( "this argument is not an object");
-    if (!hasInternalSlot(E, SLOTS.EVENTLISTENERS)) return newTypeError( "[[Listeners]] missing on this argument");
+    if (Type(E) !== OBJECT) return newTypeError("this argument is not an object");
+    if (!hasInternalSlot(E, SLOTS.EVENTLISTENERS)) return newTypeError("[[Listeners]] missing on this argument");
     else listeners = getInternalSlot(E, SLOTS.EVENTLISTENERS);
     event = argList[0];
     callback = argList[1];
-    if (Type(event) !== STRING) return newTypeError( "Your argument 1 is not an event name string.");
-    if (!IsCallable(callback)) return newTypeError( "Your argument 2 is not a function.");
+    if (Type(event) !== STRING) return newTypeError("Your argument 1 is not an event name string.");
+    if (!IsCallable(callback)) return newTypeError("Your argument 2 is not a function.");
     var list = listeners[event];
     if (list == undefined) return NormalCompletion(undefined);
     var newList = [];
@@ -22447,11 +22844,11 @@ var EmitterPrototype_remove = function (thisArg, argList) {
 var EmitterPrototype_removeAll = function (thisArg, argList) {
     var E = thisArg,
         listeners, event;
-    if (Type(E) !== OBJECT) return newTypeError( "this argument is not an object");
-    if (!hasInternalSlot(E, SLOTS.EVENTLISTENERS)) return newTypeError( "[[Listeners]] missing on this argument");
+    if (Type(E) !== OBJECT) return newTypeError("this argument is not an object");
+    if (!hasInternalSlot(E, SLOTS.EVENTLISTENERS)) return newTypeError("[[Listeners]] missing on this argument");
     else listeners = getInternalSlot(E, SLOTS.EVENTLISTENERS);
     event = argList[0];
-    if (Type(event) !== STRING) return newTypeError( "Your argument 1 is not a event name string.");
+    if (Type(event) !== STRING) return newTypeError("Your argument 1 is not a event name string.");
     var list = listeners[event];
     if (list == undefined) return NormalCompletion(undefined);
     else listeners[event] = [];
@@ -22460,12 +22857,12 @@ var EmitterPrototype_removeAll = function (thisArg, argList) {
 var EmitterPrototype_emit = function (thisArg, argList) {
     var E = thisArg,
         listeners, callback, event, values;
-    if (Type(E) !== OBJECT) return newTypeError( "this argument is not an object");
-    if (!hasInternalSlot(E, SLOTS.EVENTLISTENERS)) return newTypeError( "[[Listeners]] missing on this argument");
+    if (Type(E) !== OBJECT) return newTypeError("this argument is not an object");
+    if (!hasInternalSlot(E, SLOTS.EVENTLISTENERS)) return newTypeError("[[Listeners]] missing on this argument");
     else listeners = getInternalSlot(E, SLOTS.EVENTLISTENERS);
     event = argList[0];
     values = arraySlice(argList, 1);
-    if (Type(event) !== STRING) return newTypeError( "Your argument 1 is not a event name string.");
+    if (Type(event) !== STRING) return newTypeError("Your argument 1 is not a event name string.");
     var list = listeners[event];
     if (list == undefined) return NormalCompletion(undefined);
     //setTimeout(function () {
@@ -22505,7 +22902,7 @@ var MessagePortPrototype_postMessage = function (thisArg, argList) {
  */
 var PrintFunction_call = function (thisArg, argList) {
     var str = "";
-    var j = argList.length-1;
+    var j = argList.length - 1;
     if (j === 0) str = argList[0];
     else {
         for (var i = 0; i < j; i++) {
@@ -22517,7 +22914,7 @@ var PrintFunction_call = function (thisArg, argList) {
     else if (hasPrint) print(str);
     return NormalCompletion(undefined);
 };
-var DebugFunction_call = function (thisArg, argList)  {
+var DebugFunction_call = function (thisArg, argList) {
 
     var TAB = "\t";
     var O = argList[0];
@@ -22527,19 +22924,19 @@ var DebugFunction_call = function (thisArg, argList)  {
 
     function printProps(name) {
         var desc = this[name];
-        console.log(TAB+TAB+name+": ("+Type(desc.value)+") "+(desc.enumerable?"e":"-")+""+(desc.configurable?"c":"-")+""+(desc.writable?"w":"-"));
+        console.log(TAB + TAB + name + ": (" + Type(desc.value) + ") " + (desc.enumerable ? "e" : "-") + "" + (desc.configurable ? "c" : "-") + "" + (desc.writable ? "w" : "-"));
     }
 
     if (type == OBJECT) {
 
         var isCallable = IsCallable(O);
 
-        if (!isCallable)  {
+        if (!isCallable) {
             var toString = Invoke(O, "toString", []);
-            if (isAbrupt(toString=ifAbrupt(toString))) return toString;
+            if (isAbrupt(toString = ifAbrupt(toString))) return toString;
         } else {
             var funcName = Get(O, "name");
-            console.log("[object Function]: "+funcName);
+            console.log("[object Function]: " + funcName);
         }
         console.log(toString);
         console.log("{");
@@ -22552,31 +22949,31 @@ var DebugFunction_call = function (thisArg, argList)  {
 
         if (proto == null) prototypeInfo = "null";
         else prototypeInfo = Invoke(proto, "toString", []);
-        if (isAbrupt(prototypeInfo=ifAbrupt(prototypeInfo))) return prototypeInfo;
+        if (isAbrupt(prototypeInfo = ifAbrupt(prototypeInfo))) return prototypeInfo;
 
-        console.log(TAB+"[[Prototype]]: " + prototypeInfo);
-        console.log(TAB+"[[Extensible]]: " +isExtensible);
+        console.log(TAB + "[[Prototype]]: " + prototypeInfo);
+        console.log(TAB + "[[Extensible]]: " + isExtensible);
 
-        console.log(TAB+"[[Bindings]]:");
+        console.log(TAB + "[[Bindings]]:");
         var printer = printProps.bind(bindings);
         Object.keys(bindings).forEach(printer);
 
-        console.log(TAB+"[[Symbols]]:");
+        console.log(TAB + "[[Symbols]]:");
         printer = printProps.bind(symbols);
         Object.keys(symbols).forEach(printer);
 
         if (IsCallable(O)) {
             var strict = getInternalSlot(O, SLOTS.STRICT);
-            console.log(TAB+"[[Strict]]:" + strict);
+            console.log(TAB + "[[Strict]]:" + strict);
 
             var thisMode = getInternalSlot(O, SLOTS.THISMODE);
-            console.log(TAB+"[[ThisMode]]: "+thisMode);
+            console.log(TAB + "[[ThisMode]]: " + thisMode);
 
             var formals = getInternalSlot(O, SLOTS.FORMALPARAMETERS);
-            console.log(TAB+"[[FormalParameters]]:");
+            console.log(TAB + "[[FormalParameters]]:");
             console.log(formals.join(","));
 
-            console.log(TAB+"[[Code]]:");
+            console.log(TAB + "[[Code]]:");
 
             var code = getInternalSlot(O, SLOTS.CODE);
             console.log(JSON.stringify(code, null, 4));
@@ -22589,23 +22986,23 @@ var DebugFunction_call = function (thisArg, argList)  {
 
     if (type == NUMBER) {
         console.log("Number");
-        console.log("binary (base 2): "+O.toString(2));
-        console.log("decimal (base 10): "+O.toString(10));
-        console.log("hex (base 16): "+O.toString(16));
+        console.log("binary (base 2): " + O.toString(2));
+        console.log("decimal (base 10): " + O.toString(10));
+        console.log("hex (base 16): " + O.toString(16));
 
     } else if (type == STRING) {
         var len = O.length;
         console.log("String");
-        console.log("value: "+O);
-        console.log("length: "+len);
+        console.log("value: " + O);
+        console.log("length: " + len);
 
     } else if (type == SYMBOL) {
         console.log("Symbol");
         var descr = getInternalSlot(O, SLOTS.DESCRIPTION);
-        console.log("[[Description]]: " +descr);
+        console.log("[[Description]]: " + descr);
     } else if (type == BOOLEAN) {
         console.log("Boolean");
-        console.log("value: "+!!O);
+        console.log("value: " + !!O);
     } else if (type === NULL) {
         console.log("it´s null");
     } else if (type === UNDEFINED) {
@@ -22618,7 +23015,7 @@ var LoadFunction_call = function (thisArg, argList) {
     try {
         var data = loaderAdapter(file);
     } catch (ex) {
-        return newTypeError( "loaderAdaper fails with a " + ex.name + ": " + ex.message + "\n" + ex.stack)
+        return newTypeError("loaderAdaper fails with a " + ex.name + ": " + ex.message + "\n" + ex.stack)
     }
     return data;
 };
@@ -22643,7 +23040,7 @@ var ConsoleObject_error = function error(thisArg, argList) {
 var ConsoleObject_html = function html(thisArg, argList) {
     var selector = argList[0];
     var html = "";
-    if (Type(selector) !== STRING) return newTypeError( "First argument of console.html should be a valid css selector string.");
+    if (Type(selector) !== STRING) return newTypeError("First argument of console.html should be a valid css selector string.");
     if (typeof document !== "undefined") {
         var element = document.querySelector(selector);
     } else {
@@ -22660,7 +23057,7 @@ var ConsoleObject_html = function html(thisArg, argList) {
         }
         html += "<br>\n";
     } else {
-        return newReferenceError( "document.querySelector could not find the element " + selector);
+        return newReferenceError("document.querySelector could not find the element " + selector);
     }
     element.innerHTML += html;
     return NormalCompletion(undefined);
@@ -22739,11 +23136,13 @@ var RealmConstructor_$$create = function (thisArg, argList) {
 var RealmPrototype_stdlib_get = function (thisArg, argList) {
     var RealmConstructor = thisArg;
     var source = argList[0];
-    if (Type(RealmConstructor) !== OBJECT || !hasInternalSlot(RealmConstructor, SLOTS.REALM)) return newTypeError("S_HAS_NO_S", "thisValue", "[[Realm]]");    var realm = getInternalSlot(RealmConstructor, SLOTS.REALM);
+    if (Type(RealmConstructor) !== OBJECT || !hasInternalSlot(RealmConstructor, SLOTS.REALM)) return newTypeError("S_HAS_NO_S", "thisValue", "[[Realm]]");
+    var realm = getInternalSlot(RealmConstructor, SLOTS.REALM);
     if (realm === undefined) return newTypeError(format("S_IS_UNDEFINED", "[[Realm]]"));
     var props = ObjectCreate(getIntrinsic(INTRINSICS.OBJECTPROTOTYPE));
     var bindings = getInternalSlot(getGlobalThis(), SLOTS.BINDINGS);
     var symbols = getInternalSlot(getGlobalThis(), SLOTS.SYMBOLS);
+
     function forEachProperty(props, bindings) {
         for (var P in bindings) {
             var desc = bindings[P];
@@ -22757,6 +23156,7 @@ var RealmPrototype_stdlib_get = function (thisArg, argList) {
             if (isAbrupt(status)) return status;
         }
     }
+
     forEachProperty(props, bindings);
     forEachProperty(props, symbols);
 
@@ -22779,28 +23179,28 @@ var timeZones = Object.create(null);
 timeZones.UTC = "UTC";
 var regExps = Object.create(null);
 regExps.notAtoZ = /[^A-Z]/;
-function IsStructurallyValidLanguageTag (locale) {
+function IsStructurallyValidLanguageTag(locale) {
     Assert(Type(locale) === STRING, "locale must be a string");
     // get a bcp 47 database and
     // verify locale
 }
-function CanonicalizeLanguageTag (locale) {
+function CanonicalizeLanguageTag(locale) {
     // get bcp 47
     // map to upper case
     // get the right from hash
     // return canon name
 }
-function DefaultLocale () {
+function DefaultLocale() {
     return getRealm().defaultLocale;
 }
-function IsWellFormedCurrencyCode (currency) {
+function IsWellFormedCurrencyCode(currency) {
     var c = ToString(currency);
     var normalized = c.toUpperCase();
     if (normalized.length != 3) return false;
     if (regExps.notAtoZ.test(normalized)) return false;
     return true;
 }
-function CanonicalizeLocaleList (locales) {
+function CanonicalizeLocaleList(locales) {
 
 }
 function BestAvailableLocale(availableLocales, locale) {
@@ -22809,29 +23209,31 @@ function BestAvailableLocale(availableLocales, locale) {
 function LookupMatcher(availableLocales, requestedLocales) {
 
 }
-function BestFitMatcher (availableLocales, requestedLocales) {
+function BestFitMatcher(availableLocales, requestedLocales) {
 
 }
-function ResolveLocale (availableLocales, requestedLocales, options, relevantExtensionKeys, localeData) {
+function ResolveLocale(availableLocales, requestedLocales, options, relevantExtensionKeys, localeData) {
 
 }
 
-function LookupSupportedLocales (availableLocales, requestedLocales) {
+function LookupSupportedLocales(availableLocales, requestedLocales) {
 
 }
-function BestFitSupportedLocales (availableLocales, requestedLocales) {
+function BestFitSupportedLocales(availableLocales, requestedLocales) {
 
 }
-function SupportedLocales (availableLocales, requestedLocales, options) {
+function SupportedLocales(availableLocales, requestedLocales, options) {
 
 }
-function GetOption_Intl (options, property, type, values, fallback) {
+function GetOption_Intl(options, property, type, values, fallback) {
     var value = callInternalSlot(SLOTS.GET, options, property);
-    if (isAbrupt(value=ifAbrupt(value))) return value;
+    if (isAbrupt(value = ifAbrupt(value))) return value;
     switch (type) {
-        case "boolean": value = ToBoolean(value);
+        case "boolean":
+            value = ToBoolean(value);
             break;
-        case "string": value = ToString(value);
+        case "string":
+            value = ToString(value);
             break;
     }
     if (values !== undefined) {
@@ -22840,9 +23242,9 @@ function GetOption_Intl (options, property, type, values, fallback) {
     }
     return fallback;
 }
-function GetNumberOption (options, property, minimum, maximum, fallback) {
+function GetNumberOption(options, property, minimum, maximum, fallback) {
     var value = callInternalSlot(SLOTS.GET, options, property);
-    if (isAbrupt(value=ifAbrupt(value))) return value;
+    if (isAbrupt(value = ifAbrupt(value))) return value;
     if (value != undefined) {
         value = ToNumber(value);
         if (isAbrupt(value)) return value;
@@ -23990,13 +24392,16 @@ define("runtime", function () {
     function debug() {
         if (debugmode && hasConsole) console.log.apply(console, arguments);
     }
+
     function debugdir() {
         if (debugmode && hasConsole) console.dir.apply(console, arguments);
     }
+
     function consoleLog() {
         if (hasConsole) console.log.apply(console, arguments);
         else if (hasPrint) print.apply(undefined, arguments);
     }
+
     function consoleDir() {
         if (hasConsole) console.dir.apply(console, arguments);
         else if (hasPrint) print.apply(undefined, arguments);
@@ -24195,15 +24600,18 @@ define("runtime", function () {
             eventQueue = realm.eventQueue;
         }
     }
-    function inStrict (node) {
+
+    function inStrict(node) {
         if (node && node.strict) return true;
         return getContext().strict;
 
     }
+
     function SkipDecl(node) {
         return SkipMeDeclarations[node.type] && !node.expression;
 
     }
+
     function assign(obj, obj2) {
         for (var k in obj2) {
             if (Object.prototype.hasOwnProperty.call(obj2, k)) obj[k] = obj2[k];
@@ -24224,7 +24632,7 @@ define("runtime", function () {
     function atLineCol() {
         var line = loc && loc.start.line;
         var column = loc && loc.start.column;
-        return " at line "+line+", column "+column;
+        return " at line " + line + ", column " + column;
     }
 
     function banner(str) {
@@ -24232,17 +24640,19 @@ define("runtime", function () {
             consoleLog(repeatch("-", 79));
             consoleLog(str);
             consoleLog(repeatch("-", 79));
-        } else if(hasPrint) {
+        } else if (hasPrint) {
             print(repeatch("-", 79));
             print(str);
             print(repeatch("-", 79));
         }
     }
+
     function ResolveBinding(name) {
         var lex = getLexEnv();
         var strict = getContext().strict;
         return GetIdentifierReference(lex, name, strict);
     }
+
     function InstantiateModuleDeclaration(code, env) {
         var declarations = LexicalDeclarations(code);
         var functionsToInitialize = [];
@@ -24253,7 +24663,7 @@ define("runtime", function () {
                     var dn = boundNames[k];
                     if (IsConstantDeclaration(d)) {
                         env.CreateImmutableBinding(dn);
-                    } else  {
+                    } else {
                         var status = env.CreateMutableBinding(dn, false);
                         if (isAbrupt(status)) return status;
                     }
@@ -24269,6 +24679,7 @@ define("runtime", function () {
             env.InitializeBinding(fn, fo);
         }
     }
+
     function InstantiateGlobalDeclaration(script, env, deletableBindings) {
         "use strict";
 
@@ -24284,14 +24695,14 @@ define("runtime", function () {
         var status, ex;
         for (i = 0, j = lexNames.length; i < j; i++) {
             if (name = lexNames[i]) {
-                if (env.HasVarDeclaration(name)) return newSyntaxError( "Instantiate global: existing var declaration: " + name);
-                if (env.HasLexicalDeclaration(name)) return newSyntaxError( "Instantiate global: existing lexical declaration: " + name);
+                if (env.HasVarDeclaration(name)) return newSyntaxError("Instantiate global: existing var declaration: " + name);
+                if (env.HasLexicalDeclaration(name)) return newSyntaxError("Instantiate global: existing lexical declaration: " + name);
             }
         }
 
         for (i = 0, j = varNames.length; i < j; i++) {
             if (name = varNames[i]) {
-                if (env.HasLexicalDeclaration(name)) return newSyntaxError( "Instantiate global: var " + name + " has already a lexical declaration: " + name);
+                if (env.HasLexicalDeclaration(name)) return newSyntaxError("Instantiate global: var " + name + " has already a lexical declaration: " + name);
             }
         }
 
@@ -24306,7 +24717,7 @@ define("runtime", function () {
             if (isFuncDecl[d.type]) {
                 fn = d && (d.id || d.id.name);
                 fnDefinable = env.CanDeclareGlobalFunction(fn);
-                if (!fnDefinable) return newTypeError( "Instantiate global: can not declare global function: " + fn);
+                if (!fnDefinable) return newTypeError("Instantiate global: can not declare global function: " + fn);
                 declaredFunctionNames[fn] = d;
                 functionsToInitialize.push(d);
             }
@@ -24323,7 +24734,7 @@ define("runtime", function () {
                 if (!declaredVarNames[vn]) {
                     vnDefinable = env.CanDeclareGlobalVar(vn);
                     //debug("Can declare global var: " + vn + ", is " + vnDefinable);
-                    if (!vnDefinable) return newTypeError( "Instantiate global: can not declare global variable" + vn);
+                    if (!vnDefinable) return newTypeError("Instantiate global: can not declare global variable" + vn);
                     declaredVarNames[vn] = d;
                 } //else //debug(vn + "is already declared");
 
@@ -24335,7 +24746,7 @@ define("runtime", function () {
                     if (!declaredVarNames[vn]) {
                         vnDefinable = env.CanDeclareGlobalVar(vn);
                         //debug("Can declare global var: " + vn + ", is " + vnDefinable);
-                        if (!vnDefinable) return newTypeError( "Instantiate global: can not declare global variable" + vn);
+                        if (!vnDefinable) return newTypeError("Instantiate global: can not declare global variable" + vn);
                         declaredVarNames[vn] = d;
                     } //else //debug(vn + "is already declared");
                 }
@@ -24391,6 +24802,7 @@ define("runtime", function () {
             }
         }
     }
+
     function InstantiateBlockDeclaration(code, env) {
         "use strict";
         var ex;
@@ -24430,6 +24842,7 @@ define("runtime", function () {
             SetFunctionName(fo, fn);
         }
     }
+
     function InstantiateFunctionObject(node, env) {
 
         var F;
@@ -24461,6 +24874,7 @@ define("runtime", function () {
         setInternalSlot(F, SLOTS.REALM, realm);
         return F;
     }
+
     function InstantiateFunctionDeclaration(F, argList, env) {
         "use strict";
         var x;
@@ -24563,6 +24977,7 @@ define("runtime", function () {
         }
         return F;
     }
+
     function InstantiateArgumentsObject(args) {
         var len = args.length;
         var obj = ArgumentsExoticObject();
@@ -24590,6 +25005,7 @@ define("runtime", function () {
 
         return obj;
     }
+
     function CompleteStrictArgumentsObject(obj) {
         AddRestrictedFunctionProperties(obj);
         return obj;
@@ -24612,7 +25028,7 @@ define("runtime", function () {
         var name;
         var indx = len - 1;
         var param;
-        var g,s;
+        var g, s;
         while (indx >= 0) {
             if (indx < numberOfNonRestFormals) {
                 param = formals[indx];
@@ -24677,21 +25093,28 @@ define("runtime", function () {
 
         return obj;
     }
+
     function makeArgumentsGetter(name) {
-        return [{
-            type: "ReturnStatement",
-            argument: {
-                type: "Identifier",
-                name: name
+        return [
+            {
+                type: "ReturnStatement",
+                argument: {
+                    type: "Identifier",
+                    name: name
+                }
             }
-        }];
+        ];
     }
+
     function makeArgumentsSetterFormals(name) {
-        return [{
-            type: "Identifier",
-            name: name + "_arg"
-        }];
+        return [
+            {
+                type: "Identifier",
+                name: name + "_arg"
+            }
+        ];
     }
+
     function makeArgumentsSetter(name) {
         return {
             type: "AssigmentExpression",
@@ -24706,6 +25129,7 @@ define("runtime", function () {
             }
         };
     }
+
     function MakeArgGetter(name, env) {
         var bodyText = makeArgumentsGetter(name);
         var formals = [];
@@ -24714,6 +25138,7 @@ define("runtime", function () {
         var F = FunctionCreate("normal", formals, bodyText, env, true);
         return F;
     }
+
     function MakeArgSetter(name, env) {
         var bodyText = makeArgumentsSetter(name);
         var formals = makeArgumentsSetterFormals(name);
@@ -24722,6 +25147,7 @@ define("runtime", function () {
         return FunctionCreate("normal", formals, bodyText, env, true);
 
     }
+
     function ArgumentListEvaluation(list) {
         var args = [], arg, type, value;
         for (var i = 0, j = list.length; i < j; i++) {
@@ -24738,7 +25164,7 @@ define("runtime", function () {
                 var array = GetValue(Evaluate(arg));
                 if (isAbrupt(array = ifAbrupt(array))) return array;
                 var l = Get(array, "length");
-                if (isAbrupt(l=ifAbrupt(l))) return l;
+                if (isAbrupt(l = ifAbrupt(l))) return l;
                 for (var k = 0; k < l; k++) {
                     value = Get(array, ToString(k));
                     if (isAbrupt(value = ifAbrupt(value))) return value;
@@ -24763,16 +25189,16 @@ define("runtime", function () {
 
     function EvaluateCall(ref, args, tailPosition) {
         var thisValue;
-        
+
         var func = GetValue(ref);
-        
+
         if (isAbrupt(func = ifAbrupt(func))) return func;
         var argList = ArgumentListEvaluation(args);
-        
+
         if (isAbrupt(argList = ifAbrupt(argList))) return argList;
 
-        if (Type(func) !== OBJECT) return newTypeError( "EvaluateCall: func is not an object");
-        if (!IsCallable(func)) return newTypeError( "EvaluateCall: func is not callable");
+        if (Type(func) !== OBJECT) return newTypeError("EvaluateCall: func is not an object");
+        if (!IsCallable(func)) return newTypeError("EvaluateCall: func is not callable");
 
         if (Type(ref) === REFERENCE) {
             if (IsPropertyReference(ref)) {
@@ -24781,11 +25207,11 @@ define("runtime", function () {
                 var env = GetBase(ref);
                 thisValue = env.WithBaseObject();
             }
-            
+
         } else {
             thisValue = undefined;
         }
-        
+
 //        if (tailPosition) { PrepareForTailCall(); }
 
         var result = callInternalSlot(SLOTS.CALL, func, thisValue, argList);
@@ -24794,11 +25220,12 @@ define("runtime", function () {
         return result;
 
     }
+
     function Call(thisArg, argList) {
         var status, result, fname, localEnv;
         var F = this;
         var code = getInternalSlot(this, SLOTS.CODE);
-        if (!code) return newTypeError( "Call: this value has no [[Code]] slot (if you called a native function it´s a bug and it´s [[Call]] isn´t set. but that shouldn´t happen.)");
+        if (!code) return newTypeError("Call: this value has no [[Code]] slot (if you called a native function it´s a bug and it´s [[Call]] isn´t set. but that shouldn´t happen.)");
         var params = getInternalSlot(this, SLOTS.FORMALPARAMETERS);
         var thisMode = getInternalSlot(this, SLOTS.THISMODE);
         var strictSlot = getInternalSlot(this, SLOTS.STRICT);
@@ -24830,7 +25257,7 @@ define("runtime", function () {
                 }
             }
             localEnv = NewFunctionEnvironment(this, this.thisValue);
-            if (isAbrupt(localEnv=ifAbrupt(localEnv))) return localEnv;
+            if (isAbrupt(localEnv = ifAbrupt(localEnv))) return localEnv;
         }
         calleeContext.VarEnv = localEnv;
         calleeContext.LexEnv = localEnv;
@@ -24840,21 +25267,26 @@ define("runtime", function () {
         Assert(stack.pop() === calleeContext, "The right context could not be popped from the stack");
         return result;
     }
+
     function PrepareForTailCall() {
         getStack().pop();
     }
+
     evaluation.SpreadExpression = SpreadExpression;
     function SpreadExpression(node) {
         return Evaluate(node.argument);
     }
+
     evaluation.BreakStatement = BreakStatement;
     function BreakStatement(node) {
         return Completion("break", undefined, node.label || empty);
     }
+
     evaluation.ContinueStatement = ContinueStatement;
     function ContinueStatement(node) {
         return Completion("continue", undefined, node.label || empty);
     }
+
     evaluation.ThrowStatement = ThrowStatement;
     function ThrowStatement(node) {
         var expr = node.argument;
@@ -24865,6 +25297,7 @@ define("runtime", function () {
 
         return Completion("throw", exprValue, empty);
     }
+
     evaluation.ReturnStatement = ReturnStatement;
     function ReturnStatement(node) {
         var expr = node.argument;
@@ -24873,6 +25306,7 @@ define("runtime", function () {
         var exprValue = GetValue(exprRef);
         return Completion("return", exprValue, empty);
     }
+
     evaluation.YieldExpression = YieldExpression;
     function YieldExpression(node, completion) {
 
@@ -24894,7 +25328,7 @@ define("runtime", function () {
             if (isAbrupt(iterator = ifAbrupt(iterator))) return iterator;
             var received = completion || NormalCompletion(undefined);
             var innerResult, done, innerValue;
-            for (;;) {
+            for (; ;) {
                 if (received.type === "normal") {
                     innerResult = IteratorNext(iterator, received.value);
                     if (isAbrupt(innerResult = ifAbrupt(innerResult))) return innerResult;
@@ -24919,6 +25353,7 @@ define("runtime", function () {
             return GeneratorYield(CreateItrResultObject(value, false));
         }
     }
+
     function CreateGeneratorInstance(F) {
         var env = GetThisEnvironment();
         var G = env.GetThisBinding();
@@ -24932,6 +25367,7 @@ define("runtime", function () {
         }
         return GeneratorStart(G, getInternalSlot(F, SLOTS.CODE));
     }
+
     function EvaluateConciseBody(F) {
         "use strict";
         var code = F.Code;
@@ -24957,11 +25393,12 @@ define("runtime", function () {
         // untellExecutionContext();
         return exprRef;
     }
+
     function EvaluateBody(F) {
         "use strict";
         var exprRef, exprValue;
         var node;
-        var code = getInternalSlot(F,SLOTS.CODE);
+        var code = getInternalSlot(F, SLOTS.CODE);
         var kind = getInternalSlot(F, SLOTS.FUNCTIONKIND);
         var thisMode = getInternalSlot(F, SLOTS.THISMODE);
         if (kind === "generator") {
@@ -24973,7 +25410,7 @@ define("runtime", function () {
             if ((node = code[i])) {
                 // tellExecutionContext(node, i, code);
                 exprRef = Evaluate(node);
-                if (isAbrupt(exprRef=ifAbrupt(exprRef))) {
+                if (isAbrupt(exprRef = ifAbrupt(exprRef))) {
                     // untellExecutionContext();
                     if (exprRef.type === "return") {
                         return NormalCompletion(exprRef.value);
@@ -24984,6 +25421,7 @@ define("runtime", function () {
         // untellExecutionContext();
         return NormalCompletion(undefined);
     }
+
     function EvaluateModuleBody(M) {
         "use strict";
         var exprRef, exprValue;
@@ -24993,7 +25431,7 @@ define("runtime", function () {
             if ((node = code[i])) {
                 // tellExecutionContext(node, i, code);
                 exprRef = Evaluate(node);
-                if (isAbrupt(exprRef=ifAbrupt(exprRef))) {
+                if (isAbrupt(exprRef = ifAbrupt(exprRef))) {
                     // untellExecutionContext();
                     if (exprRef.type === "return") {
                         return NormalCompletion(exprRef.value);
@@ -25004,6 +25442,7 @@ define("runtime", function () {
         // untellExecutionContext();
         return NormalCompletion(exprRef);
     }
+
     evaluation.GeneratorExpression = GeneratorDeclaration;
     evaluation.GeneratorDeclaration = GeneratorDeclaration;
     function GeneratorDeclaration(node) {
@@ -25033,6 +25472,7 @@ define("runtime", function () {
             return NormalCompletion(empty);
         }
     }
+
     evaluation.ArrowExpression = ArrowExpression;
     function ArrowExpression(node) {
         "use strict";
@@ -25042,10 +25482,11 @@ define("runtime", function () {
         var params = node.params;
         var strict = true;
         F = FunctionCreate("arrow", params, body, scope, strict);
-        setInternalSlot(F, SLOTS.THISMODE,  "lexical");
+        setInternalSlot(F, SLOTS.THISMODE, "lexical");
         //MakeConstructor(F);
         return NormalCompletion(F);
     }
+
     evaluation.FunctionExpression = FunctionDeclaration;
     evaluation.FunctionDeclaration = FunctionDeclaration;
     function FunctionDeclaration(node) {
@@ -25077,9 +25518,11 @@ define("runtime", function () {
         }
         return NormalCompletion(empty);
     }
-    function isSuperMemberExpression (node) {
+
+    function isSuperMemberExpression(node) {
         return node.object.type === "SuperExpression";
     }
+
     evaluation.MemberExpression = MemberExpression;
     function MemberExpression(node) {
         "use strict";
@@ -25120,10 +25563,12 @@ define("runtime", function () {
             return MakeSuperReference(propertyNameString, strict);
         }
     }
+
     evaluation.NewExpression = NewExpression;
     function isSuperCallExpression(node) {
         return node.callee.type === "SuperExpression";
     }
+
     function NewExpression(node) {
         "use strict";
         var exprRef;
@@ -25141,7 +25586,7 @@ define("runtime", function () {
             callee = GetValue(exprRef);
         }
         if (isAbrupt(callee = ifAbrupt(callee))) return callee;
-        if (!IsConstructor(callee)) return newTypeError( "expected function is not a constructor");
+        if (!IsConstructor(callee)) return newTypeError("expected function is not a constructor");
         if (callee) cx.callee = "new " + (Get(callee, "name") || "(anonymous)");
         var args = node.arguments;
         var argList;
@@ -25149,13 +25594,14 @@ define("runtime", function () {
         else argList = [];
         return callInternalSlot(SLOTS.CONSTRUCT, callee, argList);
     }
+
     evaluation.CallExpression = CallExpression;
     function CallExpression(node) {
         "use strict";
         var callee = node.callee;
         var notSuperExpr = !isSuperCallExpression(node);
         var strict = getContext().strict;
-        var tailCall = !! node.tailCall;
+        var tailCall = !!node.tailCall;
         var exprRef;
         if (notSuperExpr) {
             exprRef = Evaluate(callee);
@@ -25167,6 +25613,7 @@ define("runtime", function () {
             return EvaluateCall(exprRef, node.arguments, tailCall);
         }
     }
+
     evaluation.LexicalDeclaration = VariableDeclaration;
     evaluation.VariableDeclaration = VariableDeclaration;
     function VariableDeclaration(node) {
@@ -25182,15 +25629,15 @@ define("runtime", function () {
             type = decl.type;
             if (IsBindingPattern[type]) {
                 if (decl.init) initializer = GetValue(Evaluate(decl.init));
-                else return newTypeError( "Destructuring Patterns must have some = Initializer.");
-                if (isAbrupt(initializer=ifAbrupt(initializer))) return initializer;
+                else return newTypeError("Destructuring Patterns must have some = Initializer.");
+                if (isAbrupt(initializer = ifAbrupt(initializer))) return initializer;
                 status = BindingInitialization(decl, initializer, env);
                 if (isAbrupt(status = ifAbrupt(status))) return status;
             } else {
                 if (decl.init) {
                     name = decl.id.name;
                     initializer = GetValue(Evaluate(decl.init));
-                    if (isAbrupt(initializer=ifAbrupt(initializer))) return initializer;
+                    if (isAbrupt(initializer = ifAbrupt(initializer))) return initializer;
                     if (IsCallable(initializer)) {
                         if (!HasOwnProperty(initializer, "name")) {
                             SetFunctionName(initializer, name);
@@ -25203,6 +25650,7 @@ define("runtime", function () {
         }
         return NormalCompletion();
     }
+
     function KeyedBindingInitialization(decl, obj, env) {
         "use strict";
         var elem;
@@ -25211,7 +25659,7 @@ define("runtime", function () {
         var cx = getContext();
         var identName, newName, init, target;
         if (decl.type === "ObjectPattern" || decl.type === "ObjectExpression") {
-            var elems = decl.elements||decl.properties;
+            var elems = decl.elements || decl.properties;
             for (var p = 0, q = elems.length; p < q; p++) {
                 if (elem = elems[p]) {
                     var type = elem.type;
@@ -25226,7 +25674,7 @@ define("runtime", function () {
                         if (isAbrupt(initializer = ifAbrupt(initializer))) return initializer;
                     }
                     obj = ToObject(obj);
-                    if (isAbrupt(obj=ifAbrupt(obj))) return obj;
+                    if (isAbrupt(obj = ifAbrupt(obj))) return obj;
                     var val = Get(obj, ToString(identName));
                     val = ifAbrupt(val);
                     if (isAbrupt(val)) return val;
@@ -25246,17 +25694,20 @@ define("runtime", function () {
         }
         return NormalCompletion();
     }
+
     evaluation.BindingElement = BindingElement;
-    function BindingElement (node) {
+    function BindingElement(node) {
         if (node.target) {
             return ResolveBinding(node.target);
         } else {
             return Identifier(node);
         }
     }
+
     function IteratorBindingInitialization() {
 
     }
+
     function IndexedBindingInitialization(decl, nextIndex, value, env) {
         "use strict";
         var len = Get(value, "length");
@@ -25323,9 +25774,11 @@ define("runtime", function () {
         }
         return len;
     }
+
     function getStrict() {
         return getContext().strict;
     }
+
     function InitializeBoundName(name, value, environment) {
         Assert(Type(name) === STRING, "InitializeBoundName: name has to be a string");
         if (environment != undefined) {
@@ -25336,6 +25789,7 @@ define("runtime", function () {
             return PutValue(lhs, value);
         }
     }
+
     function BindingInitialization(node, value, env) {
         "use strict";
         var names, name, val, got, len, ex, decl, lhs, strict, type, identName;
@@ -25362,7 +25816,7 @@ define("runtime", function () {
             return NormalCompletion(undefined);
         }
         type = node.type;
-        strict = !! cx.strict;
+        strict = !!cx.strict;
         if (type === "ForDeclaration") {
             return BindingInitialization(node.id, value, env);
         }
@@ -25410,7 +25864,7 @@ define("runtime", function () {
                                 if (val == undefined && initializer != undefined) val = initializer;
                                 env.InitializeBinding(decl.target.name, val);
                             } else {    // is not a bindingelement, is an "Identifier"
-                                val =  Get(value, ToString(p), value);
+                                val = Get(value, ToString(p), value);
                                 if (isAbrupt(val = ifAbrupt(val))) return val;
                                 if (val == undefined && initializer != undefined) val = initializer;
                                 env.InitializeBinding(decl.name, val);
@@ -25450,23 +25904,22 @@ define("runtime", function () {
                     }
 
 
-
                     if (env) {
 
 
                         if (decl.id) {
-                            val =  Get(value, decl.id.name, value);
-                            if (isAbrupt(val=ifAbrupt(val))) return val;
+                            val = Get(value, decl.id.name, value);
+                            if (isAbrupt(val = ifAbrupt(val))) return val;
                             if (val === undefined && initializer != undefined) val = initializer;
 
                             env.InitializeBinding(decl.target.name, val);
 
                         } else if (decl.type === "Identifier") {
                             val = Get(value, decl.name, value);
-                            if (isAbrupt(val=ifAbrupt(val))) return val;
+                            if (isAbrupt(val = ifAbrupt(val))) return val;
                             if (val === undefined && initializer != undefined) val = initializer;
                             env.InitializeBinding(decl.name, val);
-                        } else  {
+                        } else {
 
                         }
 
@@ -25474,13 +25927,13 @@ define("runtime", function () {
                         if (decl.id) {
                             lhs = Evaluate(decl.id);
                             val = Get(value, decl.id.name);
-                            if (isAbrupt(val=ifAbrupt(val))) return val;
+                            if (isAbrupt(val = ifAbrupt(val))) return val;
                             if (val === undefined && initializer != undefined) val = initializer;
                             PutValue(lhs, val);
                         } else if (decl.type === "Identifier") {
                             lhs = Evaluate(decl.name);
-                            val =  Get(value, decl.name);
-                            if (isAbrupt(val=ifAbrupt(val))) return val;
+                            val = Get(value, decl.name);
+                            if (isAbrupt(val = ifAbrupt(val))) return val;
                             if (val === undefined && initializer != undefined) val = initializer;
                             PutValue(lhs, val);
                         }
@@ -25496,11 +25949,12 @@ define("runtime", function () {
         }
         return NormalCompletion(undefined);
     }
+
     function EmptyStatement(node) {
         return NormalCompletion(empty);
     }
-    
-    
+
+
     ecma.debuggerOutput = debuggerOutput;
     function debuggerOutput() {
         banner("stack");
@@ -25516,50 +25970,58 @@ define("runtime", function () {
         if (hasConsole) console.dir(getRealm());
         else if (hasPrint) print(getRealm());
     }
-    
+
     evaluation.EmptyStatement = EmptyStatement;
     function DebuggerStatement(node) {
         var loc = node.loc;
         var line = loc && loc.start ? loc.start.line : "bug";
         var column = loc && loc.start ? loc.start.column : "bug";
         banner("DebuggerStatement at line " + (line) + ", " + (column) + "\n");
-	debuggerOutput();
+        debuggerOutput();
         banner("DebuggerStatement end");
         return NormalCompletion(undefined);
     }
+
     evaluation.DebuggerStatement = DebuggerStatement;
     function RegularExpressionLiteral(node) {
         var source = node.value;
         var flags = node.flags;
         return RegExpCreate(source, flags);
     }
+
     evaluation.RegularExpressionLiteral = RegularExpressionLiteral;
     evaluation.StringLiteral = StringLiteral;
     function StringLiteral(node) {
         return node.computed || unquote(node.value);
     }
+
     evaluation.NumericLiteral = NumericLiteral;
     function NumericLiteral(node) {
         if (node.computed) return MV(node.computed);
         return MV(node.value);
         // return +node.value;
     }
+
     evaluation.NullLiteral = NullLiteral;
     function NullLiteral(node) {
         return null;
     }
+
     evaluation.BooleanLiteral = BooleanLiteral;
     function BooleanLiteral(node) {
         return node.value === "true";
     }
+
     evaluation.Literal = Literal;
     function Literal(node) {
         return node.value;
     }
+
     evaluation.ThisExpression = ThisExpression;
     function ThisExpression(node) {
         return ThisResolution();
     }
+
     evaluation.Identifier = Identifier;
     function Identifier(node) {
         var name = node.name || node.value;
@@ -25568,10 +26030,12 @@ define("runtime", function () {
         var strict = cx.strict;
         return GetIdentifierReference(lex, name, strict);
     }
+
     evaluation.Elision = Elision;
     function Elision(node) {
         return node.width;
     }
+
     function ArrayAccumulation(elementList, array, nextIndex) {
         "use strict";
         var exprRef;
@@ -25585,9 +26049,9 @@ define("runtime", function () {
             } else if (element.type === "SpreadExpression") {
                 var spreadRef = Evaluate(element);
                 var spreadObj = GetValue(spreadRef);
-                if (isAbrupt(spreadObj=ifAbrupt(spreadObj))) return spreadObj;
+                if (isAbrupt(spreadObj = ifAbrupt(spreadObj))) return spreadObj;
                 var spreadLen = Get(spreadObj, "length");
-                if (isAbrupt(spreadLen=ifAbrupt(spreadLen))) return spreadLen;
+                if (isAbrupt(spreadLen = ifAbrupt(spreadLen))) return spreadLen;
                 for (var k = 0; k < spreadLen; k++) {
                     exprValue = Get(spreadObj, ToString(k));
                     if (isAbrupt(exprValue = ifAbrupt(exprValue))) return exprValue;
@@ -25615,6 +26079,7 @@ define("runtime", function () {
         }
         return nextIndex;
     }
+
     evaluation.ArrayExpression = ArrayExpression;
     function ArrayExpression(node) {
         var j = node.elements.length;
@@ -25625,7 +26090,7 @@ define("runtime", function () {
             if (element.type === "Elision") {
                 array = ArrayCreate(0);
                 pad = element.width;
-                ArraySetLength(array,{
+                ArraySetLength(array, {
                     value: pad,
                     writable: true,
                     enumerable: false,
@@ -25646,11 +26111,12 @@ define("runtime", function () {
         });
         return NormalCompletion(array);
     }
+
     evaluation.PropertyDefinition = PropertyDefinition;
     function PropertyDefinition(newObj, propertyDefinition) {
         "use strict";
         var kind = propertyDefinition.kind;
-        var key =  propertyDefinition.key;
+        var key = propertyDefinition.key;
         var node = propertyDefinition.value;
         var computed = propertyDefinition.computed;
         var status;
@@ -25666,12 +26132,12 @@ define("runtime", function () {
                 if (isAbrupt(symValue = ifAbrupt(symValue))) return symValue;
                 if (!IsSymbol(symValue)) symValue = ToString(symValue);
                 if (isAbrupt(symValue = ifAbrupt(symValue))) return symValue;
-                if (!IsPropertyKey(symValue)) return newTypeError( "A [computed] property inside an object literal has to evaluate to a Symbol primitive");
+                if (!IsPropertyKey(symValue)) return newTypeError("A [computed] property inside an object literal has to evaluate to a Symbol primitive");
                 propName = symValue;
             } else {
                 // init
                 propName = ToString(PropName(key));
-                if (isAbrupt(propName=ifAbrupt(propName))) return propName;
+                if (isAbrupt(propName = ifAbrupt(propName))) return propName;
             }
             // value
             if (node.type === "FunctionDeclaration") {
@@ -25704,14 +26170,15 @@ define("runtime", function () {
                 if (isAbrupt(propName = ifAbrupt(propName))) return propName;
                 if (!IsSymbol(propName)) propName = ToString(propName);
                 if (isAbrupt(propName = ifAbrupt(propName))) return propName;
-                if (!IsPropertyKey(propName)) return newTypeError( "A [computed] property has to evaluate to valid property key");
+                if (!IsPropertyKey(propName)) return newTypeError("A [computed] property has to evaluate to valid property key");
             } else {
                 propName = typeof key === "string" ? key : key.name || key.value;
             }
             defineGetterOrSetterOnObject(node, newObj, propName, kind);
         }
     }
-    function defineFunctionOnObject (node, newObj, propName) {
+
+    function defineFunctionOnObject(node, newObj, propName) {
         "use strict";
         var cx = getContext();
         var scope = getLexEnv();
@@ -25741,7 +26208,8 @@ define("runtime", function () {
         SetFunctionName(propValue, propName);
         CreateDataProperty(newObj, propName, propValue);
     }
-    function defineGetterOrSetterOnObject (node, newObj, propName, kind) {
+
+    function defineGetterOrSetterOnObject(node, newObj, propName, kind) {
         var scope = getLexEnv();
         var body = node.body;
         var formals = node.params;
@@ -25772,6 +26240,7 @@ define("runtime", function () {
         status = DefineOwnPropertyOrThrow(newObj, propName, desc);
         if (isAbrupt(status)) return status;
     }
+
     evaluation.ObjectExpression = ObjectExpression;
     function ObjectExpression(node) {
         "use strict";
@@ -25784,23 +26253,28 @@ define("runtime", function () {
         }
         return NormalCompletion(newObj);
     }
+
     evaluation.AssignmentExpression = AssignmentExpression;
     evaluation.ObjectPattern = ObjectPattern;
     function ObjectPattern(node) {
         var rref = Evaluate(node.init);
         var rval = GetValue(rref);
-        if (isAbrupt(rval=ifAbrupt(rval))) return rval;
+        if (isAbrupt(rval = ifAbrupt(rval))) return rval;
         return DestructuringAssignmentEvaluation(node, rval, "=");
     }
-    function IteratorDestructuringEvaluation() {}
+
+    function IteratorDestructuringEvaluation() {
+    }
+
     function DestructuringAssignmentEvaluation(left, rval, op) {
-	var type = left.type;
+        var type = left.type;
         if (type === "ObjectPattern") {
             return ObjectPatternDestructuring(left, rval, op);
         } else if (type === "ArrayPattern") {
             return ArrayPatternDestructuring(left, rval, op);
         }
     }
+
     function ObjectPatternDestructuring(left, rval, op) {
         "use strict";
         var leftElems = left.elements;
@@ -25813,7 +26287,7 @@ define("runtime", function () {
         var status;
         obj = rval;
         var identName, newName;
-        if (Type(rval) !== OBJECT) return newTypeError( "can not desctructure a non-object into some object");
+        if (Type(rval) !== OBJECT) return newTypeError("can not desctructure a non-object into some object");
         for (i = 0, j = leftElems.length; i < j; i++) {
             var lel = leftElems[i];
             if (lel.id) identName = lel.id.name;
@@ -25840,7 +26314,8 @@ define("runtime", function () {
         }
         return NormalCompletion(result);
     }
-    function ArrayPatternDestructuring (left, rval, op) {
+
+    function ArrayPatternDestructuring(left, rval, op) {
         "use strict";
         var leftElems = left.elements;
         var type = left.type;
@@ -25850,7 +26325,7 @@ define("runtime", function () {
         var status;
         var array;
         array = rval;
-        if (Type(rval) !== OBJECT) return newTypeError( "can not desctructure a non-object into some object");
+        if (Type(rval) !== OBJECT) return newTypeError("can not desctructure a non-object into some object");
         var index = 0;
         var len = Get(rval, "length");
         var status;
@@ -25935,32 +26410,43 @@ define("runtime", function () {
         }
         return NormalCompletion(result);
     }
+
     evaluation.ConditionalExpression = ConditionalExpression;
 
     ecma.applyAssignmentBinOp = applyAssignmentBinOp;
     function applyAssignmentBinOp(op, lval, rval) {
         switch (op) {
-            case "=": return rval;
-            case "+=": return lval + rval;
-            case "%=": return lval % rval;
-            case "/=": return lval / rval;
-            case "*=": return lval * rval;
-            case "-=": return lval - rval;
-            case "^=": return lval ^ rval;
-            case "|=": return lval | rval;
-            case "&=": return lval & rval;
-            case ">>>=": return lval >>> rval;
+            case "=":
+                return rval;
+            case "+=":
+                return lval + rval;
+            case "%=":
+                return lval % rval;
+            case "/=":
+                return lval / rval;
+            case "*=":
+                return lval * rval;
+            case "-=":
+                return lval - rval;
+            case "^=":
+                return lval ^ rval;
+            case "|=":
+                return lval | rval;
+            case "&=":
+                return lval & rval;
+            case ">>>=":
+                return lval >>> rval;
         }
     }
 
 
     /*
-        auf den stack
-        1. test, consequent, alternate, dann ce expr
-        (4 * auf den stack)
+     auf den stack
+     1. test, consequent, alternate, dann ce expr
+     (4 * auf den stack)
 
-        wenn die expr dran ist,
-        poppt sie die anderen 3 nodes runter
+     wenn die expr dran ist,
+     poppt sie die anderen 3 nodes runter
 
      */
 
@@ -25970,11 +26456,11 @@ define("runtime", function () {
         var trueExpr = node.consequent;
         var falseExpr = node.alternate;
         /*
-            var cx = getContext();
+         var cx = getContext();
 
-            testExpr = cx.stack.pop();
-            trueExpr = cx.stack.pop();
-            falseExpr = cx.stack.pop();
+         testExpr = cx.stack.pop();
+         trueExpr = cx.stack.pop();
+         falseExpr = cx.stack.pop();
 
 
          */
@@ -25996,6 +26482,7 @@ define("runtime", function () {
             return NormalCompletion(falseValue);
         }
     }
+
     var lazyTypes = Object.create(null);
     lazyTypes[OBJECT] = "object";
     lazyTypes[NUMBER] = "number";
@@ -26120,15 +26607,15 @@ define("runtime", function () {
     evaluation.UnaryExpression = UnaryExpression;
     evaluation.BinaryExpression = BinaryExpression;
     function instanceOfOperator(O, C) {
-        if (Type(C) !== OBJECT) return newTypeError( "instanceOfOperator: C is not an object.");
+        if (Type(C) !== OBJECT) return newTypeError("instanceOfOperator: C is not an object.");
         var instHandler = GetMethod(C, $$hasInstance);
         if (isAbrupt(instHandler)) return instHandler;
         if (instHandler) {
-            if (!IsCallable(instHandler)) return newTypeError( "instanceOfOperator: [@@hasInstance] is expected to be a callable.");
+            if (!IsCallable(instHandler)) return newTypeError("instanceOfOperator: [@@hasInstance] is expected to be a callable.");
             var result = instHandler.Call(C, [O]);
             return ToBoolean(result);
         }
-        if (IsCallable(C) === false) return newTypeError( "instanceOfOperator: C ist not callable.");
+        if (IsCallable(C) === false) return newTypeError("instanceOfOperator: C ist not callable.");
         return OrdinaryHasInstance(C, O);
     }
 
@@ -26200,18 +26687,19 @@ define("runtime", function () {
         if (isAbrupt(rval = ifAbrupt(rval))) return rval;
 
 
-
         var result = applyBinOp(op, rval, lval)
 
         return NormalCompletion(result); // NormalCompletion(result);
     }
+
     evaluation.ExpressionStatement = ExpressionStatement;
 
     function ExpressionStatement(node) {
         return Evaluate(node.expression);
     }
+
     evaluation.ParenthesizedExpression = ParenthesizedExpression;
-    function ParenthesizedExpression (node) {
+    function ParenthesizedExpression(node) {
         return Evaluate(node.expression);
     }
 
@@ -26240,6 +26728,7 @@ define("runtime", function () {
         // untellExecutionContext();
         return NormalCompletion(V);
     }
+
     evaluation.FunctionStatementList = StatementList;
     evaluation.StatementList = StatementList;
     function StatementList(stmtList) {
@@ -26263,6 +26752,7 @@ define("runtime", function () {
         }
         return NormalCompletion(V);
     }
+
     evaluation.BlockStatement = BlockStatement;
     function BlockStatement(node) {
         var stmtList = node.body;
@@ -26282,6 +26772,7 @@ define("runtime", function () {
         return NormalCompletion(empty);
 
     }
+
     evaluation.IfStatement = IfStatement;
     function IfStatement(node) {
         var test = node.test;
@@ -26295,6 +26786,7 @@ define("runtime", function () {
         }
         return NormalCompletion();
     }
+
     function LoopContinues(completion, labelSet) {
         // -- inconsistency fix
         if (completion instanceof CompletionRecord === false) return true;
@@ -26305,6 +26797,7 @@ define("runtime", function () {
         return !!(labelSet && labelSet[completion.target]);
 
     }
+
     evaluation.WhileStatement = WhileStatement;
     function WhileStatement(node, labelSet) {
 
@@ -26314,7 +26807,7 @@ define("runtime", function () {
         var V, stmt;
         labelSet = labelSet || Object.create(null);
 
-        for (;;) {
+        for (; ;) {
             var testRef = Evaluate(test);
             if (isAbrupt(testRef = ifAbrupt(testRef))) return testRef;
             var testValue = GetValue(testRef);
@@ -26328,13 +26821,14 @@ define("runtime", function () {
             V = unwrap(exprValue);
         }
     }
+
     function DoWhileStatement(node, labelSet) {
         var test = node.test;
         var body = node.body;
         var exprRef, exprValue;
         var V, stmt;
         labelSet = labelSet || Object.create(null);
-        for (;;) {
+        for (; ;) {
             exprRef = Evaluate(body);
             exprValue = GetValue(exprRef);
             if (LoopContinues(exprValue, labelSet) === false) return exprValue;
@@ -26348,6 +26842,7 @@ define("runtime", function () {
             }
         }
     }
+
     evaluation.DoWhileStatement = DoWhileStatement;
     evaluation.ForDeclaration = ForDeclaration;
     function ForDeclaration(node) {
@@ -26377,18 +26872,19 @@ define("runtime", function () {
             keys = ToObject(iterator);
 
         } else if (iterationKind) {
-            return newTypeError( "ForInOfExpression: iterationKind is neither enumerate nor iterate.");
+            return newTypeError("ForInOfExpression: iterationKind is neither enumerate nor iterate.");
         }
 
         if (isAbrupt(keys)) {
             if (keys.type === "throw") return keys;
             if (LoopContinues(exprValue, labelSet) === false) return exprValue;
-            Assert(keys.type === "continue", "invalid completion value: "+keys.type);
+            Assert(keys.type === "continue", "invalid completion value: " + keys.type);
             return Completion("break");
         }
         return keys;
 
     }
+
     function ForInOfBodyEvaluation(lhs, stmt, keys, lhsKind, labelSet) {
         "use strict";
         var oldEnv = getLexEnv();
@@ -26398,10 +26894,10 @@ define("runtime", function () {
         var rval, lhsRef;
         var names = BoundNames(lhs);
 
-        for (;;) {
+        for (; ;) {
             nextResult = Invoke(keys, "next", noArgs);
             if (isAbrupt(nextResult = ifAbrupt(nextResult))) return nextResult;
-            if (Type(nextResult) !== OBJECT) return newTypeError( "ForInOfBodyEvaluation: nextResult is not an object");
+            if (Type(nextResult) !== OBJECT) return newTypeError("ForInOfBodyEvaluation: nextResult is not an object");
             done = IteratorComplete(nextResult);
             if (isAbrupt(done = ifAbrupt(done))) return done;
             if (done === true) return NormalCompletion(V);
@@ -26423,7 +26919,7 @@ define("runtime", function () {
             } else {
                 Assert(lhsKind === "lexicalBinding", "lhsKind has to be a lexical Binding");
                 // Assert(lhs == ForDeclaration);
-                
+
                 var iterationEnv = NewDeclarativeEnvironment(oldEnv);
                 for (var i = 0, j = names.length; i < j; i++) {
                     iterationEnv.CreateMutableBinding(names[i], true);
@@ -26449,6 +26945,7 @@ define("runtime", function () {
             if (isAbrupt(status) && LoopContinues(status, labelSet) === false) return status;
         }
     }
+
     function ForInStatement(node, labelSet) {
         var left = node.left;
         var right = node.right;
@@ -26464,6 +26961,7 @@ define("runtime", function () {
         var keyResult = ForInOfExpressionEvaluation(right, iterationKind, labelSet);
         return ForInOfBodyEvaluation(left, body, keyResult, lhsKind, labelSet);
     }
+
     evaluation.ForInStatement = ForInStatement;
     function ForOfStatement(node, labelSet) {
         "use strict";
@@ -26487,6 +26985,7 @@ define("runtime", function () {
         var keyResult = ForInOfExpressionEvaluation(right, iterationKind, labelSet);
         return ForInOfBodyEvaluation(left, body, keyResult, lhsKind, labelSet);
     }
+
     evaluation.ForOfStatement = ForOfStatement;
     function LabelledEvaluation(node, labelSet) {
         var result;
@@ -26496,6 +26995,7 @@ define("runtime", function () {
         else throw new SyntaxError("can not evaluate " + type + atLineCol());
         return NormalCompletion(result);
     }
+
     evaluation.LabelledStatement = LabelledStatement;
     function LabelledStatement(node) {
         var exists;
@@ -26509,6 +27009,7 @@ define("runtime", function () {
         //if (!exists) cx.labelSet = undefined;
         return result;
     }
+
     evaluation.ForStatement = ForStatement;
     function ForStatement(node, labelSet) {
         "use strict";
@@ -26541,16 +27042,16 @@ define("runtime", function () {
 
                     var names = BoundNames(initExpr.declarations[i]);
                     /*
-                	don´t wonder, if for is very, very slow. :-)
-                	capture boundnames at parsing
-                	or
-                	use a switch here and read it just little faster than a call
-                	better scan while parsing
-                	and forget having the fastest parser someday
-                	(which i already forgot anyways)
-                    */
-                    
-                    for (var y = 0, z = names.length; y < z; y++) {                    
+                     don´t wonder, if for is very, very slow. :-)
+                     capture boundnames at parsing
+                     or
+                     use a switch here and read it just little faster than a call
+                     better scan while parsing
+                     and forget having the fastest parser someday
+                     (which i already forgot anyways)
+                     */
+
+                    for (var y = 0, z = names.length; y < z; y++) {
                         var dn = names[y];
                         if (isConst) {
                             loopEnv.CreateImmutableBinding(dn);
@@ -26583,6 +27084,7 @@ define("runtime", function () {
         }
 
     }
+
     function CreatePerIterationEnvironment(perIterationBindings) {
         var len = perIterationBindings.length;
         if (len) {
@@ -26602,6 +27104,7 @@ define("runtime", function () {
         }
         return NormalCompletion(undefined);
     }
+
     function ForBodyEvaluation(testExpr, incrementExpr, stmt, labelSet, perIterationBindings) {
         "use strict";
         var V = undefined;
@@ -26610,7 +27113,7 @@ define("runtime", function () {
         var incrementExprRef, incrementExprValue;
         var status = CreatePerIterationEnvironment(perIterationBindings);
         if (isAbrupt(status)) return status;
-        for (;;) {
+        for (; ;) {
 
             if (testExpr) {
                 testExprRef = Evaluate(testExpr);
@@ -26658,16 +27161,16 @@ define("runtime", function () {
                 defaultClause = clause;
             } else {
                 clauseSelector = CaseSelectorEvaluation(clause);
-                if (isAbrupt(clauseSelector=ifAbrupt(clauseSelector))) return clauseSelector;
+                if (isAbrupt(clauseSelector = ifAbrupt(clauseSelector))) return clauseSelector;
                 if (searching) matched = SameValue(input, clauseSelector);
                 if (matched) {
                     searching = false;
                     sList = clause.consequent; // parseNode
                     if (sList) {
                         R = GetValue(Evaluate(sList));
-                        if (isAbrupt(R=ifAbrupt(R))) {
+                        if (isAbrupt(R = ifAbrupt(R))) {
                             if (R.type === "break") break;
-                            if (R.type === "continue") return newTypeError( "continue is not allowed in a switch statement");
+                            if (R.type === "continue") return newTypeError("continue is not allowed in a switch statement");
                             if (R.type === "throw") return R;
                             if (R.type === "return") return R;
                         } else {
@@ -26682,7 +27185,7 @@ define("runtime", function () {
             R = Evaluate(defaultClause.consequent);
             if (isAbrupt(R)) {
                 if (R.type === "break") return V;
-                if (R.type === "continue") return newTypeError( "continue is not allowed in a switch statement");
+                if (R.type === "continue") return newTypeError("continue is not allowed in a switch statement");
                 if (R.type === "throw") return R;
                 if (R.type === "return") return R;
             } else {
@@ -26691,6 +27194,7 @@ define("runtime", function () {
         }
         return NormalCompletion(V);
     }
+
     evaluation.SwitchStatement = SwitchStatement;
     function SwitchStatement(node) {
         var oldEnv, blockEnv;
@@ -26709,6 +27213,7 @@ define("runtime", function () {
         getContext().LexEnv = oldEnv;
         return R;
     }
+
     function TemplateStrings(node, raw) {
         var list = [];
         var spans = node.spans;
@@ -26716,17 +27221,18 @@ define("runtime", function () {
         var i, j;
         if (raw) {
             if (spans.length === 1) return spans;
-            for (i = 0, j = spans.length; i < j; i+=2) {
+            for (i = 0, j = spans.length; i < j; i += 2) {
                 if ((span = spans[i]) !== undefined) list.push(span);
             }
         } else {
             if (spans.length === 1) return [];
-            for (i = 1, j = spans.length; i < j; i+=2) {
+            for (i = 1, j = spans.length; i < j; i += 2) {
                 if ((span = spans[i]) !== undefined) list.push(span);
             }
         }
         return list;
     }
+
     function SubstitutionEvaluation(siteObj) {
         var len = +Get(siteObj, "length");
         var results = [];
@@ -26743,6 +27249,7 @@ define("runtime", function () {
         }
         return results;
     }
+
     function GetTemplateCallSite(templateLiteral) {
         if (templateLiteral.siteObj) return templateLiteral.siteObj;
         var cookedStrings = TemplateStrings(templateLiteral, false); // die expressions ??? bei mir jedenfalls gerade
@@ -26781,12 +27288,15 @@ define("runtime", function () {
         templateLiteral.siteObj = siteObj;
         return siteObj;
     }
+
     function TemplateLiteral(node) {
         return GetTemplateCallSite(node);
     }
+
     evaluation.TemplateLiteral = TemplateLiteral;
     var defaultClassConstructorFormalParameters = parseGoal("FormalParameterList", "...args");
     var defaultClassConstructorFunctionBody = parseGoal("FunctionBody", "return super(...args);");
+
     function DefineMethod(node, object, functionPrototype) {
         "use strict";
         var body = node.body;
@@ -26803,7 +27313,7 @@ define("runtime", function () {
             if (isAbrupt(propKey = ifAbrupt(propKey))) return propKey;
             if (!IsSymbol(propKey)) propKey = ToString(propKey);
             if (isAbrupt(propKey = ifAbrupt(propKey))) return propKey;
-            if (!IsPropertyKey(propKey)) return newTypeError( "A [computed] property has to evaluate to valid property key");
+            if (!IsPropertyKey(propKey)) return newTypeError("A [computed] property has to evaluate to valid property key");
         } else {
             propKey = PropName(node);
         }
@@ -26823,6 +27333,7 @@ define("runtime", function () {
         };
         return NormalCompletion(rec);
     }
+
     evaluation.MethodDefinition = MethodDefinition;
     function MethodDefinition(node, object) {
         "use strict";
@@ -26842,6 +27353,7 @@ define("runtime", function () {
         };
         return DefineOwnPropertyOrThrow(object, methodDef.key, desc);
     }
+
     evaluation.ClassDeclaration = ClassDeclaration;
     function ClassDeclaration(node) {
         "use strict";
@@ -26864,22 +27376,22 @@ define("runtime", function () {
         var status;
         if (isExtending) {
             superclass = GetValue(Evaluate(node.extends));
-            if (isAbrupt(superclass=ifAbrupt(superclass))) return superclass;
+            if (isAbrupt(superclass = ifAbrupt(superclass))) return superclass;
         }
         if (!superclass) {
             protoParent = null;
             // protoParent = ObjectPrototype;
             constructorParent = FunctionPrototype;
         } else {
-            if (Type(superclass) !== OBJECT) return newTypeError( "superclass is no object");
-            if (!IsConstructor(superclass)) return newTypeError( "superclass is no constructor");
+            if (Type(superclass) !== OBJECT) return newTypeError("superclass is no object");
+            if (!IsConstructor(superclass)) return newTypeError("superclass is no constructor");
             protoParent = Get(superclass, "prototype");
-            if (isAbrupt(protoParent=ifAbrupt(protoParent))) return protoParent;
-            if (Type(protoParent) !== OBJECT && Type(protoParent) !== NULL) return newTypeError( "prototype of superclass is not object, not null");
+            if (isAbrupt(protoParent = ifAbrupt(protoParent))) return protoParent;
+            if (Type(protoParent) !== OBJECT && Type(protoParent) !== NULL) return newTypeError("prototype of superclass is not object, not null");
             constructorParent = superclass;
         }
         Proto = ObjectCreate(protoParent);
-        if (isAbrupt(Proto=ifAbrupt(Proto))) return Proto;
+        if (isAbrupt(Proto = ifAbrupt(Proto))) return Proto;
         var lex = getLexEnv();
         var scope = NewDeclarativeEnvironment(lex);
         if (className && !isExpr) {
@@ -26891,8 +27403,8 @@ define("runtime", function () {
         cx.caller = caller;
 
         var F = FunctionCreate("normal", [], null, scope, true, FunctionPrototype, constructorParent);
-        if (isAbrupt(F=ifAbrupt(F))) return F;
-        
+        if (isAbrupt(F = ifAbrupt(F))) return F;
+
         if (!constructor) {
             if (isExtending) {
                 setInternalSlot(F, SLOTS.FORMALPARAMETERS, defaultClassConstructorFormalParameters);
@@ -26926,15 +27438,15 @@ define("runtime", function () {
         }
         MakeConstructor(F, false, Proto);
         if (isConst) {
-    	    SetIntegrityLevel(Proto, "frozen");
+            SetIntegrityLevel(Proto, "frozen");
         }
         setInternalSlot(F, SLOTS.CONSTRUCT, function (argList) {
             var O = OrdinaryConstruct(this, argList);
             if (isConst) {
-    		status = SetIntegrityLevel(O, "frozen");
-    		if (isAbrupt(status)) return status;
-    	    }
-    	    return O;
+                status = SetIntegrityLevel(O, "frozen");
+                if (isAbrupt(status)) return status;
+            }
+            return O;
         });
         if (className) {
             status = SetFunctionName(F, className);
@@ -26943,8 +27455,8 @@ define("runtime", function () {
         }
         getContext().LexEnv = lex;
         if (isConst) {
-    	    status = SetIntegrityLevel(F, "frozen");
-    	    if (isAbrupt(status)) return status;
+            status = SetIntegrityLevel(F, "frozen");
+            if (isAbrupt(status)) return status;
         }
         return NormalCompletion(F);
     }
@@ -26952,6 +27464,7 @@ define("runtime", function () {
     function SuperExpression(node) {
         return NormalCompletion(empty);
     }
+
     evaluation.SuperExpression = SuperExpression;
     evaluation.ModuleDeclaration = ModuleDeclaration;
     function ModuleDeclaration(node) {
@@ -26968,6 +27481,7 @@ define("runtime", function () {
 
         return NormalCompletion(undefined);
     }
+
     evaluation.ImportStatement = ImportStatement;
     evaluation.ExportStatement = ExportStatement;
     function ImportStatement(node) {
@@ -26981,9 +27495,11 @@ define("runtime", function () {
         // shh. wait for the next draft. ;)
         return NormalCompletion("this is an import");
     }
+
     function ExportStatement(node) {
         return NormalCompletion("this is an export");
     }
+
     evaluation.WithStatement = WithStatement;
     function WithStatement(node) {
         var body = node.body;
@@ -26998,6 +27514,7 @@ define("runtime", function () {
         if (isAbrupt(result)) return result;
         return NormalCompletion(undefined);
     }
+
     evaluation.ArrayComprehension = ArrayComprehension;
     evaluation.GeneratorComprehension = GeneratorComprehension;
     function ComprehensionEvaluation(node, accumulator) {
@@ -27018,9 +27535,9 @@ define("runtime", function () {
             if (!filter || (ToBoolean(filterValue) === true)) {
                 var exprRef = Evaluate(expr);
                 var exprValue = GetValue(exprRef);
-                if (isAbrupt(exprValue=ifAbrupt(exprValue))) return exprValue;
+                if (isAbrupt(exprValue = ifAbrupt(exprValue))) return exprValue;
                 var len = Get(accumulator, "length");
-                if (len >= (Math.pow(2, 53) - 1)) return newRangeError( "Range limit exceeded");
+                if (len >= (Math.pow(2, 53) - 1)) return newRangeError("Range limit exceeded");
                 var putStatus = Put(accumulator, ToString(len), exprValue, true);
                 if (isAbrupt(putStatus = ifAbrupt(putStatus))) return putStatus;
                 len = len + 1;
@@ -27034,6 +27551,7 @@ define("runtime", function () {
             return NormalCompletion(undefined);
         }
     }
+
     function QualifierEvaluation(block, node, accumulator) {
 
         var forBinding = block.left;
@@ -27047,10 +27565,10 @@ define("runtime", function () {
         var oldEnv = getLexEnv();
         var noArgs = [];
         var status;
-        for (;;) {
+        for (; ;) {
             var nextResult = Invoke(keys, "next", noArgs);
             if (isAbrupt(nextResult = ifAbrupt(nextResult))) return nextResult;
-            if (Type(nextResult) !== OBJECT) return newTypeError( "QualifierEvaluation: nextResult is not an object");
+            if (Type(nextResult) !== OBJECT) return newTypeError("QualifierEvaluation: nextResult is not an object");
             var done = IteratorComplete(nextResult);
             if (isAbrupt(done = ifAbrupt(done))) return done;
             if (done === true) return true;
@@ -27069,6 +27587,7 @@ define("runtime", function () {
             if (isAbrupt(continuer = ifAbrupt(continuer))) return continuer;
         }
     }
+
     function ArrayComprehension(node) {
         var blocks = node.blocks;
         var filter = node.filter;
@@ -27083,6 +27602,7 @@ define("runtime", function () {
         }
         return array;
     }
+
     function GeneratorComprehension(node) {
         var filter = node.filter;
         var blocks = node.blocks;
@@ -27090,6 +27610,7 @@ define("runtime", function () {
         var closure = FunctionCreate("generator", [], [], getLexEnv(), true);
         return callInternalSlot(SLOTS.CALL, closure, undefined, []);
     }
+
     function CatchClauseEvaluation(thrownValue, catchNode) {
         var status, oldEnv, catchEnv;
         var catchBlock = catchNode.block;
@@ -27108,13 +27629,15 @@ define("runtime", function () {
         getContext().LexEnv = oldEnv;
         return R;
     }
+
     evaluation.Finally = Finally;
     function Finally(node) {
         /*
-            return operandStack.pop();
+         return operandStack.pop();
          */
         return Evaluate(node.block);
     }
+
     evaluation.TryStatement = TryStatement;
     function TryStatement(node) {
         var tryBlock = node.handler;
@@ -27187,12 +27710,13 @@ define("runtime", function () {
 
     function tellContext(node) {
         /*var loc = node && node.loc;
-        var cx = getContext();
-        if (loc && loc.start) {
-            cx.line = loc.start.line;
-            cx.column = loc.start.column;
-        }*/
+         var cx = getContext();
+         if (loc && loc.start) {
+         cx.line = loc.start.line;
+         cx.column = loc.start.column;
+         }*/
     }
+
     ecma.Evaluate = Evaluate;
 
     function Evaluate(node, a, b, c) {
@@ -27215,173 +27739,169 @@ define("runtime", function () {
     }
 
 
-
-
-
-
     function putOnStack(node) {
-            var stack = [];
-            switch (node.type) {
-                case "Program":
-                    for (i = node.body.length - 1; i >= 0; i--) {
-                        putOnStack(node.body[i]);
-                    }
-                    stack.push(node);
-                    break;
+        var stack = [];
+        switch (node.type) {
+            case "Program":
+                for (i = node.body.length - 1; i >= 0; i--) {
+                    putOnStack(node.body[i]);
+                }
+                stack.push(node);
+                break;
 
-                case "Identifier":
-                    stack.push(node);
-                    break;
-                // // return {type:type,_id_:++nodeId,name:undefined,loc:undefined,extras:undefined};
-                case "ParenthesizedExpression":
-                case "ExpressionStatement":
-                    stack.push(node.expression);
-                    stack.push(node);
-                    break;
-                // // return {type:type,_id_:++nodeId,expression:undefined,loc:undefined,extras:undefined};
-                case "LexicalDeclaration":
-                case "VariableDeclaration":
-                    break;
-                case "FunctionDeclaration":
-                case "FunctionExpression":
-                case "GeneratorDeclaration":
-                case "GeneratorExpression":
-                    stack.push(node);
-                    // / // return {type:type,_id_:++nodeId,expression:undefined,generator:undefined,strict:undefined,id:undefined,params:undefined,body:undefined,loc:undefined,extras:undefined};
-                    break;
-                case "ArrowExpression":
-                    stack.push(node);
-                    // // return {type:type,_id_:++nodeId,params:undefined,body:undefined,loc:undefined,ebxtras:undefined};
-                    //stack.push(node);
-                    break;
-                case "NumericLiteral":
-                case "StringLiteral":
-                case "BooleanLiteral":
-                case "Literal":
-                    // // return {type:type,_id_:++nodeId,value:undefined,loc:undefined,extras:undefined}
+            case "Identifier":
+                stack.push(node);
+                break;
+            // // return {type:type,_id_:++nodeId,name:undefined,loc:undefined,extras:undefined};
+            case "ParenthesizedExpression":
+            case "ExpressionStatement":
+                stack.push(node.expression);
+                stack.push(node);
+                break;
+            // // return {type:type,_id_:++nodeId,expression:undefined,loc:undefined,extras:undefined};
+            case "LexicalDeclaration":
+            case "VariableDeclaration":
+                break;
+            case "FunctionDeclaration":
+            case "FunctionExpression":
+            case "GeneratorDeclaration":
+            case "GeneratorExpression":
+                stack.push(node);
+                // / // return {type:type,_id_:++nodeId,expression:undefined,generator:undefined,strict:undefined,id:undefined,params:undefined,body:undefined,loc:undefined,extras:undefined};
+                break;
+            case "ArrowExpression":
+                stack.push(node);
+                // // return {type:type,_id_:++nodeId,params:undefined,body:undefined,loc:undefined,ebxtras:undefined};
+                //stack.push(node);
+                break;
+            case "NumericLiteral":
+            case "StringLiteral":
+            case "BooleanLiteral":
+            case "Literal":
+                // // return {type:type,_id_:++nodeId,value:undefined,loc:undefined,extras:undefined}
 
-                    break;
-                case "TemplateLiteral":
-                    // // return {type:type,_id_:++nodeId,spans:undefined,loc:undefined,extras:undefined}
-                    break;
-                case "ObjectExpression":
-                    // // return {type:type,_id_:++nodeId,properties:undefined,loc:undefined,extras:undefined};
-                    stack.push(node);
-                    break;
-                case "ArrayExpression":
-                    // // return {type:type,_id_:++nodeId,elements:undefined,loc:undefined,extras:undefined};
-                    stack.push(node);
-                    break;
-                case "ObjectPattern":
-                case "ArrayPattern":
-                    stack.push(node);
-                    break;
+                break;
+            case "TemplateLiteral":
+                // // return {type:type,_id_:++nodeId,spans:undefined,loc:undefined,extras:undefined}
+                break;
+            case "ObjectExpression":
+                // // return {type:type,_id_:++nodeId,properties:undefined,loc:undefined,extras:undefined};
+                stack.push(node);
+                break;
+            case "ArrayExpression":
                 // // return {type:type,_id_:++nodeId,elements:undefined,loc:undefined,extras:undefined};
-                case "WhileStatement":
-                case "DoWhileStatement":
-                // // return {type:type,_id_:++nodeId,test:undefined, body:undefined,loc:undefined,extras:undefined};
-                case "BlockStatement":
-                    for (i = node.body.length - 1; i >= 0; i--) {
-                        putOnStack(node.body[i]);
-                    }
-                    break;
-                // // return {type:type,_id_:++nodeId,body:undefined,loc:undefined,extras:undefined};
-                case "IfStatement":
-                    // // return {type:type,_id_:++nodeId,test:undefined,consequent:undefined,alternate:undefined,loc:undefined,extras:undefined};
-                    stack.push(node.test);
-                    stack.push(node.consequent);
-                    stack.push(node.alternate);
-                    break;
-                case "ConditionalExpression":
-                    // // return {type:type,_id_:++nodeId,test:undefined,consequent:undefined,alternate:undefined,loc:undefined,extras:undefined};
-                    stack.push(node.test);
-                    stack.push(node.consequent);
-                    stack.push(node.alternate);
-                    break;
-                case "BinaryExpression":
-                case "AssignmentExpression":
-                    // // return {type:type,_id_:++nodeId,operator:undefined,left:undefined,right:undefined,loc:undefined,extras:undefined};
-                    stack.push(node.left);
-                    stack.push(node.right);
-                    break;
-                case "ForInOfStatement":
-                    // // return {type:type,_id_:++nodeId,left:undefined,right:undefined,body:undefined,loc:undefined,extras:undefined};
-                    stack.push(node.left);
-                    stack.push(node.right);
-                    break;
-                case "ForStatement":
-                    stack.push(node.init);
-                    stack.push(node.condition);
-                    stack.push(node.update);
-                    break;
-                // // return {type:type,_id_:++nodeId,init:undefined,test:undefined,update:undefined,loc:undefined,extras:undefined};
-                case "NewExpression":
-                // // return {type:type,_id_:++nodeId, callee:undefined, arguments:undefined, loc:undefined, extras:undefined};
-                case "CallExpression":
-                    stack.push(node.callee);
-                    stack.push(node.arguments);
-                    break;
-                // // return {type:type,_id_:++nodeId, callee:undefined, arguments:undefined, loc:undefined, extras:undefined};
-                case "RestParameter":
-                // // return {type:type,_id_:++nodeId, id:undefined, loc:undefined, extras:undefined};
-                case "SpreadExpression":
-                // // return {type:type,_id_:++nodeId, id:undefined, loc:undefined, extras:undefined};
-                case "BindingPattern":
-                    // // return {type:type,_id_:++nodeId, id:undefined, target:undefined, loc:undefined, extras:undefined};
-                    break;
-                case "ArrayComprehension":
-                // // return {type:type,_id_:++nodeId, blocks:undefined, filter:undefined, expression:undefined, loc:undefined, extras:undefined};
-                case "GeneratorComprehension":
-                    for (i = node.blocks.length - 1; i >= 0; i--) {
-                        stack.push(node.blocks[i]);
-                    }
-                    for (i = node.filters.length - 1; i >= 0; i--) {
-                        stack.push(node.filters[i]);
-                    }
-                    break;
-                // // return {type:type,_id_:++nodeId, loc:undefined, extras:undefined};
-                case "SwitchStatement":
-                    for (i = node.cases.length - 1; i >= 0; i--) {
-                        stack.push(node.cases[i]);
-                    }
-                // // return {type:type,_id_:++nodeId, discriminant:undefined, cases:undefined, loc:undefined, extras:undefined};
-                case "DefaultCase":
+                stack.push(node);
+                break;
+            case "ObjectPattern":
+            case "ArrayPattern":
+                stack.push(node);
+                break;
+            // // return {type:type,_id_:++nodeId,elements:undefined,loc:undefined,extras:undefined};
+            case "WhileStatement":
+            case "DoWhileStatement":
+            // // return {type:type,_id_:++nodeId,test:undefined, body:undefined,loc:undefined,extras:undefined};
+            case "BlockStatement":
+                for (i = node.body.length - 1; i >= 0; i--) {
+                    putOnStack(node.body[i]);
+                }
+                break;
+            // // return {type:type,_id_:++nodeId,body:undefined,loc:undefined,extras:undefined};
+            case "IfStatement":
+                // // return {type:type,_id_:++nodeId,test:undefined,consequent:undefined,alternate:undefined,loc:undefined,extras:undefined};
+                stack.push(node.test);
+                stack.push(node.consequent);
+                stack.push(node.alternate);
+                break;
+            case "ConditionalExpression":
+                // // return {type:type,_id_:++nodeId,test:undefined,consequent:undefined,alternate:undefined,loc:undefined,extras:undefined};
+                stack.push(node.test);
+                stack.push(node.consequent);
+                stack.push(node.alternate);
+                break;
+            case "BinaryExpression":
+            case "AssignmentExpression":
+                // // return {type:type,_id_:++nodeId,operator:undefined,left:undefined,right:undefined,loc:undefined,extras:undefined};
+                stack.push(node.left);
+                stack.push(node.right);
+                break;
+            case "ForInOfStatement":
+                // // return {type:type,_id_:++nodeId,left:undefined,right:undefined,body:undefined,loc:undefined,extras:undefined};
+                stack.push(node.left);
+                stack.push(node.right);
+                break;
+            case "ForStatement":
+                stack.push(node.init);
+                stack.push(node.condition);
+                stack.push(node.update);
+                break;
+            // // return {type:type,_id_:++nodeId,init:undefined,test:undefined,update:undefined,loc:undefined,extras:undefined};
+            case "NewExpression":
+            // // return {type:type,_id_:++nodeId, callee:undefined, arguments:undefined, loc:undefined, extras:undefined};
+            case "CallExpression":
+                stack.push(node.callee);
+                stack.push(node.arguments);
+                break;
+            // // return {type:type,_id_:++nodeId, callee:undefined, arguments:undefined, loc:undefined, extras:undefined};
+            case "RestParameter":
+            // // return {type:type,_id_:++nodeId, id:undefined, loc:undefined, extras:undefined};
+            case "SpreadExpression":
+            // // return {type:type,_id_:++nodeId, id:undefined, loc:undefined, extras:undefined};
+            case "BindingPattern":
+                // // return {type:type,_id_:++nodeId, id:undefined, target:undefined, loc:undefined, extras:undefined};
+                break;
+            case "ArrayComprehension":
+            // // return {type:type,_id_:++nodeId, blocks:undefined, filter:undefined, expression:undefined, loc:undefined, extras:undefined};
+            case "GeneratorComprehension":
+                for (i = node.blocks.length - 1; i >= 0; i--) {
+                    stack.push(node.blocks[i]);
+                }
+                for (i = node.filters.length - 1; i >= 0; i--) {
+                    stack.push(node.filters[i]);
+                }
+                break;
+            // // return {type:type,_id_:++nodeId, loc:undefined, extras:undefined};
+            case "SwitchStatement":
+                for (i = node.cases.length - 1; i >= 0; i--) {
+                    stack.push(node.cases[i]);
+                }
+            // // return {type:type,_id_:++nodeId, discriminant:undefined, cases:undefined, loc:undefined, extras:undefined};
+            case "DefaultCase":
 
-                // // return {type:type,_id_:++nodeId, consequent:undefined, loc:undefined, extras:undefined};
-                case "SwitchCase":
-                // // return {type:type,_id_:++nodeId, test:undefined, consequent:undefined, loc:undefined, extras:undefined};
-                case "TryStatement":
-                    stack.push(node.handler);
-                    stack.push(node.finalizer);
-                // // return {type:type,_id_:++nodeId, handler:undefined, guard:undefined, finalizer:undefined, loc:undefined, extras:undefined};
-                case "CatchClause":
-                // // return {type:type,_id_:++nodeId, block:undefined, loc:undefined, extras:undefined};
-                case "Finally":
-                // // return {type:type,_id_:++nodeId, block:undefined, loc:undefined, extras:undefined};
-                default:
-                // // return {type:type,_id_:++nodeId, loc:undefined, extras:undefined};
-            }
+            // // return {type:type,_id_:++nodeId, consequent:undefined, loc:undefined, extras:undefined};
+            case "SwitchCase":
+            // // return {type:type,_id_:++nodeId, test:undefined, consequent:undefined, loc:undefined, extras:undefined};
+            case "TryStatement":
+                stack.push(node.handler);
+                stack.push(node.finalizer);
+            // // return {type:type,_id_:++nodeId, handler:undefined, guard:undefined, finalizer:undefined, loc:undefined, extras:undefined};
+            case "CatchClause":
+            // // return {type:type,_id_:++nodeId, block:undefined, loc:undefined, extras:undefined};
+            case "Finally":
+            // // return {type:type,_id_:++nodeId, block:undefined, loc:undefined, extras:undefined};
+            default:
+            // // return {type:type,_id_:++nodeId, loc:undefined, extras:undefined};
+        }
         return stack;
     }
 
 
     /*
-        Downwards the EventQueue (setTimeout, Emitter):
-        put the handler together with the new JobQueue
-        and use "TimerJobs" for your "setTimeout" Jobs.
-        but change to use their task structure, my "task"
-        here is different.
+     Downwards the EventQueue (setTimeout, Emitter):
+     put the handler together with the new JobQueue
+     and use "TimerJobs" for your "setTimeout" Jobs.
+     but change to use their task structure, my "task"
+     here is different.
 
      */
 
     var HandleEventQueue = ecma.HandleEventQueue;
 
 
-    function setScriptLocation (loc) {
+    function setScriptLocation(loc) {
         scriptLocation = "(syntax.js)";
         if (typeof window !== "undefined") {
             loc = loc || document.location.href;
-            scriptLocation = "("+document.location.href + " @syntax.js)";
+            scriptLocation = "(" + document.location.href + " @syntax.js)";
         } else if (typeof process !== "undefined") {
             loc = loc || __dirname;
             scriptLocation = "(node.js interpreter)";
@@ -27395,6 +27915,7 @@ define("runtime", function () {
     function initializeTheRuntime() {
         initializedTheRuntime = true;
     }
+
     function endRuntime() {
         initializedTheRuntime = false;
     }
@@ -27403,10 +27924,9 @@ define("runtime", function () {
     function execute(source, shellModeBool, resetEnvNowBool) {
 
 
-
         var exprRef, exprValue, text, type, message, stack, error, name, callstack;
 
-        shellMode =  shellModeBool; // prolly just for this legacy execute function
+        shellMode = shellModeBool; // prolly just for this legacy execute function
 
         var node = typeof source === "string" ? parse(source) : source;
         if (!node) throw "example: Call execute(parse(source)) or execute(source)";
@@ -27452,7 +27972,9 @@ define("runtime", function () {
         var eventQueue = getEventQueue();
         var pt = getJobs(getRealm(), "PromiseJobs");
         if (!shellModeBool && initializedTheRuntime && !eventQueue.length && (!pt || !pt.length)) endRuntime();
-        else if (eventQueue.length || (pt&& pt.length)) setTimeout(function () {HandleEventQueue(shellModeBool, initializedTheRuntime);}, 0);
+        else if (eventQueue.length || (pt && pt.length)) setTimeout(function () {
+            HandleEventQueue(shellModeBool, initializedTheRuntime);
+        }, 0);
         return exprValue;
     }
 
@@ -27460,7 +27982,7 @@ define("runtime", function () {
     /*
      * experiment execution block (uncompleted concepts for async/eventual/transformed return values)
      */
-    function ExecuteAsync (source) {
+    function ExecuteAsync(source) {
         return makePromise(function (resolve, reject) {
             initializeTheRuntime();
             var result = Evaluate(parse(source));
@@ -27477,7 +27999,8 @@ define("runtime", function () {
         });
 
     }
-    function ExecuteAsyncTransform (source) {
+
+    function ExecuteAsyncTransform(source) {
         return makePromise(function (resolve, reject) {
             initializeTheRuntime();
             var result = Evaluate(parse(source));
@@ -27493,6 +28016,7 @@ define("runtime", function () {
             endRuntime();
         });
     }
+
     function DeepStaticJSSnapshotOfObject(O) {
         var keys = OwnPropertyKeysAsList(O);
         var o = {};
@@ -27500,6 +28024,7 @@ define("runtime", function () {
 
         });
     }
+
     function TransformObjectToJSObject(O) {
         /*
          incomplete transformer/static proxy
@@ -27510,7 +28035,7 @@ define("runtime", function () {
 
             var desc = GetOwnProperty(O, key);
             var dd;
-            if (!(dd=IsDataDescriptor(desc))) {
+            if (!(dd = IsDataDescriptor(desc))) {
                 var get = desc.get;
                 var set = desc.set;
                 var newGetter, newSetter;
@@ -27561,11 +28086,8 @@ define("runtime", function () {
         });
         return o;
     }
-    
-    
-    
-    
-    
+
+
     execute.evaluation = evaluation;
     execute.setCodeRealm = setCodeRealm;
 
@@ -28275,23 +28797,36 @@ define("asm-compiler", function (require, exports) {
         PROGSTART = unit.PROGSTART;
     }
 
+
     /**
      *
      * Include files:
      * --------------
+     *
+     *
      * bytecode: contains the bytecode definitions
      * library: contains a typed array/bytecode driven version of ecma 262
      * compiler: compiles the syntax tree into bytecode
-     *                      (attention eddie: 'target-independent/multi-target' should be considered earlier, maybe there could be a bytecode transfer to some other machine, what´s then? e.g. jvm, not arm instead of intel. what about 2 bytecodes generated from one compiler? or three or ten? this piece of the compiler is important.)
+     *
+     *                      (attention eddie: 'target-independent/multi-target' should be considered earlier,
+     *                      maybe there could be a bytecode transfer to some other machine,
+     *                      what´s then? e.g. jvm, not arm instead of intel.
+     *                      what about 2 bytecodes generated from one compiler? or three or ten?
+     *                      this piece of the compiler is important.)
+     *
      * runtime: dispatcher to execute the compiled basic blocks with ecma 262 semantics
+     *
      *
      */
 
+
 // the first assignments for the definition are more verbose, to store an in-doc description
 // for simpler access to the bytecodes meaning
+
+
 function defineByteCode(num, name, desc) {
     if (typeof num != "number" || typeof name != "string" || (desc !== undefined && typeof desc != "string")) {
-        throw new TypeError("invalid code definition. defineByteCode(0x01, 'ERROR', 'Code 0x01 is for the Error Example when wrong arguments are given to defineByteCode'");
+        throw new TypeError("invalid code definition. defineByteCode(0xF01, 'ERROR', 'Code 0x01 is for the Error Example when wrong arguments are given to defineByteCode'");
     }
     BYTECODESET.BYTECODE[name] = num;
     BYTECODESET.WORDS[num] = ""+name;
@@ -28394,10 +28929,10 @@ function flagSet () {
      *  BYTECODES
      */
 
-    defineByteCode(0x01, "END", "");
-    defineByteCode(0x02, "SYSCALL", "");
+    defineByteCode(0xF01, "END", "");
+    defineByteCode(0xF02, "SYSCALL", "");
 
-    defineByteCode(0x03, "DEBUGGER", "The debugger; Statement");
+    defineByteCode(0xF03, "DEBUGGER", "The debugger; Statement");
 
     /*
         ByteCodes to Identify
@@ -28423,29 +28958,29 @@ function flagSet () {
          */
 
 
-    defineByteCode(0x21, "STRINGCONST")
-    defineByteCode(0x22, "NUMCONST")
-    defineByteCode(0x23, "IDCONST")
-    defineByteCode(0x24, "NULL");
-    defineByteCode(0x25, "UNDEFINED");
-    defineByteCode(0x26, "SYMBOL");
-    defineByteCode(0x27, "STRING");
-    defineByteCode(0x28, "BOOLEAN");
-    defineByteCode(0x29, "NUMBER");
-    defineByteCode(0x2A, "OBJECT");
-    defineByteCode(0x2B, "LOCALREC");
-    defineByteCode(0x2C, "OBJECTREC");
-    defineByteCode(0x2D, "FUNCTIONREC");
-    defineByteCode(0x2E, "GLOBALREC");
-    defineByteCode(0x2F, "REFERENCE");
-    defineByteCode(0x30, "UNRESOLVEDREFERENCE");
-    defineByteCode(0x31, "EXECUTIONCONTEXT");
-    defineByteCode(0x32, "NORMALCOMPLETION");
-    defineByteCode(0x33, "THROWCOMPLETION");
-    defineByteCode(0x34, "RETURNCOMPLETION");
-    defineByteCode(0x35, "BREAKCOMPLETION");
-    defineByteCode(0x36, "CONTINUECOMPLETION");
-    defineByteCode(0x37, "CODEREALM");
+    defineByteCode(0xF21, "STRINGCONST")
+    defineByteCode(0xF22, "NUMCONST")
+    defineByteCode(0xF23, "IDCONST")
+    defineByteCode(0xF24, "NULL");
+    defineByteCode(0xF25, "UNDEFINED");
+    defineByteCode(0xF26, "SYMBOL");
+    defineByteCode(0xF27, "STRING");
+    defineByteCode(0xF28, "BOOLEAN");
+    defineByteCode(0xF29, "NUMBER");
+    defineByteCode(0xF2A, "OBJECT");
+    defineByteCode(0xF2B, "LOCALREC");
+    defineByteCode(0xF2C, "OBJECTREC");
+    defineByteCode(0xF2D, "FUNCTIONREC");
+    defineByteCode(0xF2E, "GLOBALREC");
+    defineByteCode(0xF2F, "REFERENCE");
+    defineByteCode(0xF30, "UNRESOLVEDREFERENCE");
+    defineByteCode(0xF31, "EXECUTIONCONTEXT");
+    defineByteCode(0xF32, "NORMALCOMPLETION");
+    defineByteCode(0xF33, "THROWCOMPLETION");
+    defineByteCode(0xF34, "RETURNCOMPLETION");
+    defineByteCode(0xF35, "BREAKCOMPLETION");
+    defineByteCode(0xF36, "CONTINUECOMPLETION");
+    defineByteCode(0xF37, "CODEREALM");
     /**
      * binary, relational, assignment expressions
      * btw. it makes sense to separate relational expressions
@@ -28455,144 +28990,144 @@ function flagSet () {
      * all assignments store a value
      * and compound assignments are two instructions, one to add, one to store
      */
-    defineByteCode(0x60, "ADD", "add");
-    defineByteCode(0x61, "ADDL", "add and assign");
-    defineByteCode(0x62, "SUB", "subtract");
-    defineByteCode(0x63, "SUBL", "subtract and assign");
-    defineByteCode(0x64, "MUL", "multiply");
-    defineByteCode(0x65, "MULL", "multiply and assign");
-    defineByteCode(0x66, "DIV", "");
-    defineByteCode(0x67, "DIVL", "");
-    defineByteCode(0x68, "MOD", "");
-    defineByteCode(0x69, "MODL", "");
-    defineByteCode(0x70, "SHL", "");
-    defineByteCode(0x71, "SHLL", "");
-    defineByteCode(0x72, "SHR", "");
-    defineByteCode(0x73, "SHRL", "");
-    defineByteCode(0x74, "SSHR", "");
-    defineByteCode(0x75, "SSHRL", "");
-    defineByteCode(0x76, "AND", "&");
-    defineByteCode(0x77, "OR", "|");
-    defineByteCode(0x78, "LAND", "&&");
-    defineByteCode(0x79, "LOR", "||");
-    defineByteCode(0x80, "NEG", "unary not with !");
-    defineByteCode(0x81, "XOR", "xor with ^");
-    defineByteCode(0x82, "INV", "invert with ~");
+    defineByteCode(0xF60, "ADD", "add");
+    defineByteCode(0xF61, "ADDL", "add and assign");
+    defineByteCode(0xF62, "SUB", "subtract");
+    defineByteCode(0xF63, "SUBL", "subtract and assign");
+    defineByteCode(0xF64, "MUL", "multiply");
+    defineByteCode(0xF65, "MULL", "multiply and assign");
+    defineByteCode(0xF66, "DIV", "");
+    defineByteCode(0xF67, "DIVL", "");
+    defineByteCode(0xF68, "MOD", "");
+    defineByteCode(0xF69, "MODL", "");
+    defineByteCode(0xF70, "SHL", "");
+    defineByteCode(0xF71, "SHLL", "");
+    defineByteCode(0xF72, "SHR", "");
+    defineByteCode(0xF73, "SHRL", "");
+    defineByteCode(0xF74, "SSHR", "");
+    defineByteCode(0xF75, "SSHRL", "");
+    defineByteCode(0xF76, "AND", "&");
+    defineByteCode(0xF77, "OR", "|");
+    defineByteCode(0xF78, "LAND", "&&");
+    defineByteCode(0xF79, "LOR", "||");
+    defineByteCode(0xF80, "NEG", "unary not with !");
+    defineByteCode(0xF81, "XOR", "xor with ^");
+    defineByteCode(0xF82, "INV", "invert with ~");
     // Data Structures (use the heap as structure)
-    defineByteCode(0xB00, "LIST", "Code telling that this HEAP/STACK Area is to be read as list");       // [0] = LIST, [1] = NEXT LISTNODE;
-    defineByteCode(0xB01, "LISTNODE", "ListNode with a pointer to next and it´s item"); // [0] LISTNODE [1] NEXT [2..DATA]
-    defineByteCode(0xB02, "DLISTNODE", "ListNode with a pointer to next, prev and it´s item"); // [0] LISTNODE [1] NEXT [2] PREV [3.. DATA]
-    defineByteCode(0xB03, "LISTLISTNODE", "ListNode with a pointer to next, prev, list and it´s item"); // [0] LISTNODE [1] NEXT [2] PREV [3] LIST [4.. DATA]
-    defineByteCode(0xB10, "HASH", "");
-    defineByteCode(0xB11, "HASHKEY", "");
-    defineByteCode(0xB12, "HASHVALUE", "");
-    defineByteCode(0xB13, "HASHFUNC", "Pointer to Hashfunction in Function Table");
-    defineByteCode(0xB20, "ARRAY", "Treat the following bytes as array structure");     // [0] = ARRAY [1] = LEN [2...2+LEN] ITEMS
+    defineByteCode(0xFB00, "LIST", "Code telling that this HEAP/STACK Area is to be read as list");       // [0] = LIST, [1] = NEXT LISTNODE;
+    defineByteCode(0xFB01, "LISTNODE", "ListNode with a pointer to next and it´s item"); // [0] LISTNODE [1] NEXT [2..DATA]
+    defineByteCode(0xFB02, "DLISTNODE", "ListNode with a pointer to next, prev and it´s item"); // [0] LISTNODE [1] NEXT [2] PREV [3.. DATA]
+    defineByteCode(0xFB03, "LISTLISTNODE", "ListNode with a pointer to next, prev, list and it´s item"); // [0] LISTNODE [1] NEXT [2] PREV [3] LIST [4.. DATA]
+    defineByteCode(0xFB10, "HASH", "");
+    defineByteCode(0xFB11, "HASHKEY", "");
+    defineByteCode(0xFB12, "HASHVALUE", "");
+    defineByteCode(0xFB13, "HASHFUNC", "Pointer to Hashfunction in Function Table");
+    defineByteCode(0xFB20, "ARRAY", "Treat the following bytes as array structure");     // [0] = ARRAY [1] = LEN [2...2+LEN] ITEMS
     // use HEAP32 etc as typed array (it is already one, so let´s gain speed inside syntax)
-    defineByteCode(0xB25, "INT32ARRAY", ""); // access HEAP like array of these, could speed up typed arrays in the vm :-)
-    defineByteCode(0xB26, "FLOAT64ARRAY", "");
+    defineByteCode(0xFB25, "INT32ARRAY", ""); // access HEAP like array of these, could speed up typed arrays in the vm :-)
+    defineByteCode(0xFB26, "FLOAT64ARRAY", "");
     // some HALT CODE
-    defineByteCode(0xFF, "HALT", "Stop script evaluation now and return whatever it is.");
+    defineByteCode(0xFFF, "HALT", "Stop script evaluation now and return whatever it is.");
 
     /**
      * Calling Builtin Constructors with one Instruction
      */
-    defineByteCode(0x200, "NEWOBJECT", "Shorty to create a new Object, hidden Class of PropNames from Parsing is in the Constant Pool");
-    defineByteCode(0x201, "NEWARRAY", "Shorty to create a new Array");
-    defineByteCode(0x202, "NEWSYMBOL", "Call Symbol()");
-    defineByteCode(0x203, "NEWNUMBER", "Call new Number()");
-    defineByteCode(0x204, "NEWSTRING", "");
-    defineByteCode(0x204, "NEWARRAYBUFFER", "");
-    defineByteCode(0x206, "NEWDATAVIEW", "");
-    defineByteCode(0x207, "NEWINT8ARRAY", "");
-    defineByteCode(0x208, "NEWINT16ARRAY", "");
-    defineByteCode(0x209, "NEWINT32ARRAY", "");
-    defineByteCode(0x210, "NEWUINT8ARRAY", "");
-    defineByteCode(0x211, "NEWUINT8CLAMPEDARRAY", "");
-    defineByteCode(0x212, "NEWUINT16ARRAY", "");
-    defineByteCode(0x213, "NEWUINT32ARRAY", "");
-    defineByteCode(0x214, "NEWFLOAT32ARRAY", "");
-    defineByteCode(0x215, "NEWFLOAT64ARRAY", "");
-    defineByteCode(0x216, "NEWFUNCTION", "");
-    defineByteCode(0x217, "NEWGENERATORFUNCTION", "");
+    defineByteCode(0xF200, "NEWOBJECT", "Shorty to create a new Object, hidden Class of PropNames from Parsing is in the Constant Pool");
+    defineByteCode(0xF201, "NEWARRAY", "Shorty to create a new Array");
+    defineByteCode(0xF202, "NEWSYMBOL", "Call Symbol()");
+    defineByteCode(0xF203, "NEWNUMBER", "Call new Number()");
+    defineByteCode(0xF204, "NEWSTRING", "");
+    defineByteCode(0xF204, "NEWARRAYBUFFER", "");
+    defineByteCode(0xF206, "NEWDATAVIEW", "");
+    defineByteCode(0xF207, "NEWINT8ARRAY", "");
+    defineByteCode(0xF208, "NEWINT16ARRAY", "");
+    defineByteCode(0xF209, "NEWINT32ARRAY", "");
+    defineByteCode(0xF210, "NEWUINT8ARRAY", "");
+    defineByteCode(0xF211, "NEWUINT8CLAMPEDARRAY", "");
+    defineByteCode(0xF212, "NEWUINT16ARRAY", "");
+    defineByteCode(0xF213, "NEWUINT32ARRAY", "");
+    defineByteCode(0xF214, "NEWFLOAT32ARRAY", "");
+    defineByteCode(0xF215, "NEWFLOAT64ARRAY", "");
+    defineByteCode(0xF216, "NEWFUNCTION", "");
+    defineByteCode(0xF217, "NEWGENERATORFUNCTION", "");
     /**
      * Accessing internal slots in one instruction
      */
-    defineByteCode(0x300, "GETSLOT", "lookup internal object slot");
-    defineByteCode(0x301, "SETSLOT", "");
-    defineByteCode(0x302, "HASSLOT", "");
+    defineByteCode(0xF300, "GETSLOT", "lookup internal object slot");
+    defineByteCode(0xF301, "SETSLOT", "");
+    defineByteCode(0xF302, "HASSLOT", "");
     /**
      * Call Codes
      */
-    defineByteCode(0x501, "CALL", "");
-    defineByteCode(0x502, "CONSTRUCT", "");
-    defineByteCode(0x503, "RET", "");
-    defineByteCode(0x504, "INVOKE", "");
-    defineByteCode(0x505, "FPROTOCALL", "");
-    defineByteCode(0x506, "FPROTOAPPLY", "");
-    defineByteCode(0x507, "SUPERCALL", "");
+    defineByteCode(0xF501, "CALL", "");
+    defineByteCode(0xF502, "CONSTRUCT", "");
+    defineByteCode(0xF503, "RET", "");
+    defineByteCode(0xF504, "INVOKE", "");
+    defineByteCode(0xF505, "FPROTOCALL", "");
+    defineByteCode(0xF506, "FPROTOAPPLY", "");
+    defineByteCode(0xF507, "SUPERCALL", "");
     /*
      * Conditional jumps
      */
-    defineByteCode(0x600, "JMP", "");
-    defineByteCode(0x601, "JEQ", "if op1 === op2 goto op3");
-    defineByteCode(0x602, "JNEQ", "");
-    defineByteCode(0x603, "JLT", "");
-    defineByteCode(0x604, "JLTEQ", "");
-    defineByteCode(0x605, "JGT", "");
-    defineByteCode(0x606, "JGTEQ", "");
+    defineByteCode(0xF600, "JMP", "");
+    defineByteCode(0xF601, "JEQ", "if op1 === op2 goto op3");
+    defineByteCode(0xF602, "JNEQ", "");
+    defineByteCode(0xF603, "JLT", "");
+    defineByteCode(0xF604, "JLTEQ", "");
+    defineByteCode(0xF605, "JGT", "");
+    defineByteCode(0xF606, "JGTEQ", "");
     /**
      * essentials in one instruction
      */
-    defineByteCode(0x700, "GETPROPERTY", "");
-    defineByteCode(0x701, "GET", "");
-    defineByteCode(0x702, "SET", "");
-    defineByteCode(0x703, "DEFINEOWNPROPERTY", "");
-    defineByteCode(0x704, "DELETEPROPERTY", "");
-    defineByteCode(0x705, "DEFINEOWNPROPERTYORTHROW", "");
-    defineByteCode(0x706, "DELETEPROPERTYORTHROW", "");
-    defineByteCode(0x707, "OWNPROPERTYKEYS", "");
-    defineByteCode(0x708, "ENUMERATE", "");
+    defineByteCode(0xF700, "GETPROPERTY", "");
+    defineByteCode(0xF701, "GET", "");
+    defineByteCode(0xF702, "SET", "");
+    defineByteCode(0xF703, "DEFINEOWNPROPERTY", "");
+    defineByteCode(0xF704, "DELETEPROPERTY", "");
+    defineByteCode(0xF705, "DEFINEOWNPROPERTYORTHROW", "");
+    defineByteCode(0xF706, "DELETEPROPERTYORTHROW", "");
+    defineByteCode(0xF707, "OWNPROPERTYKEYS", "");
+    defineByteCode(0xF708, "ENUMERATE", "");
     /**
      * reference
      */
-    defineByteCode(0x800, "GETVALUE", "");
-    defineByteCode(0x801, "SETVALUE", "");
-    defineByteCode(0x802, "ISUNRESOLVABLE", "");
-    defineByteCode(0x803, "ISPROPERTYREF", "");
+    defineByteCode(0xF800, "GETVALUE", "");
+    defineByteCode(0xF801, "SETVALUE", "");
+    defineByteCode(0xF802, "ISUNRESOLVABLE", "");
+    defineByteCode(0xF803, "ISPROPERTYREF", "");
     /**
      * creating iterators fast
      */
-    defineByteCode(0x900, "ITERATOR", "");
-    defineByteCode(0x901, "ITERATOR1", "");
-    defineByteCode(0x902, "ITERATOR2", "");
-    defineByteCode(0x903, "CREATELISTITERATOR", "");
-    defineByteCode(0x920, "CREATEARRAYITERATOR", "");
-    defineByteCode(0x921, "CREATELOADERITERATOR", "");
-    defineByteCode(0x922, "CREATESTRINGITERATOR", "");
-    defineByteCode(0x923, "CREATEMAPITERATOR", "");
-    defineByteCode(0x924, "CREATESETITERATOR", "");
+    defineByteCode(0xF900, "ITERATOR", "");
+    defineByteCode(0xF901, "ITERATOR1", "");
+    defineByteCode(0xF902, "ITERATOR2", "");
+    defineByteCode(0xF903, "CREATELISTITERATOR", "");
+    defineByteCode(0xF920, "CREATEARRAYITERATOR", "");
+    defineByteCode(0xF921, "CREATELOADERITERATOR", "");
+    defineByteCode(0xF922, "CREATESTRINGITERATOR", "");
+    defineByteCode(0xF923, "CREATEMAPITERATOR", "");
+    defineByteCode(0xF924, "CREATESETITERATOR", "");
     /*
      convert between lists and arrays
      */
-    defineByteCode(0xA00, "ARRAYFROMLIST", "");
-    defineByteCode(0xA01, "LISTFROMARRAY", "");
-    defineByteCode(0xE00, "EXPRESSION", "");
-    defineByteCode(0xE01, "SEQEXPR", "");
-    defineByteCode(0xE02, "PROGRAM", "");
+    defineByteCode(0xFA00, "ARRAYFROMLIST", "");
+    defineByteCode(0xFA01, "LISTFROMARRAY", "");
+    defineByteCode(0xFE00, "EXPRESSION", "");
+    defineByteCode(0xFE01, "SEQEXPR", "");
+    defineByteCode(0xFE02, "PROGRAM", "");
     /*
      declarative environments
      */
-    defineByteCode(0xE20, "HASBINDING", "");
-    defineByteCode(0xE21, "CREATEMUTABLEBINDING", "");
-    defineByteCode(0xE22, "CREATEIMMUTABLEBINDING", "");
-    defineByteCode(0xE23, "INITIALIZEBINDING", "");
-    defineByteCode(0xE24, "SETMUTABLEBINDING", "");
-    defineByteCode(0xE25, "GETBINDINGVALUE", "");
-    defineByteCode(0xE26, "DELETEBINDING", "");
-    defineByteCode(0xE29, "HASTHISBINDING", "");
-    defineByteCode(0xE27, "WITHBASEOBJECT", "");
-    defineByteCode(0xE28, "HASSUPERBINDING", "");
+    defineByteCode(0xFE20, "HASBINDING", "");
+    defineByteCode(0xFE21, "CREATEMUTABLEBINDING", "");
+    defineByteCode(0xFE22, "CREATEIMMUTABLEBINDING", "");
+    defineByteCode(0xFE23, "INITIALIZEBINDING", "");
+    defineByteCode(0xFE24, "SETMUTABLEBINDING", "");
+    defineByteCode(0xFE25, "GETBINDINGVALUE", "");
+    defineByteCode(0xFE26, "DELETEBINDING", "");
+    defineByteCode(0xFE29, "HASTHISBINDING", "");
+    defineByteCode(0xFE27, "WITHBASEOBJECT", "");
+    defineByteCode(0xFE28, "HASSUPERBINDING", "");
 
 
 
@@ -28993,8 +29528,18 @@ var FunctionTable = [
 
 
 
-
-
+/**
+ *
+ * deprecated
+ *
+ * will follow intel rules next
+ * and just encode heap8 code
+ * and use some bits, too.
+ *
+ *
+ *
+ * @param str
+ */
 
 
 /**
@@ -29435,6 +29980,53 @@ exports.compileUnit = compileUnit;
 exports.getEmptyUnit = getEmptyUnit;
 
 
+var encodeNum = (function () {
+    var buf = new ArrayBuffer(8);
+    var fbuf = new Float64Array(buf);
+    var bbuf = new Int8Array(buf);
+
+    function toBytes(num, bigEndian) {
+	fbuf[0] = num;
+        if (bigEndian) {
+    	    return [bbuf[7], bbuf[6], bbuf[5], bbuf[4],bbuf[3], bbuf[2], bbuf[1], bbuf[0]];
+        } else {
+            return [bbuf[0], bbuf[1], bbuf[2], bbuf[3],bbuf[4], bbuf[5], bbuf[6], bbuf[7]];	
+	}
+    }
+
+    function toFloat(bytes, bigEndian) {
+	if (bigEndian) {
+	    bbuf[0] = bytes[7];
+	    bbuf[1] = bytes[6];
+	    bbuf[2] = bytes[5];
+	    bbuf[3] = bytes[4];
+	    bbuf[4] = bytes[3];
+	    bbuf[5] = bytes[2];
+	    bbuf[6] = bytes[1];
+	    bbuf[7] = bytes[0];	    
+	    
+        } else {
+            bbuf[0] = bytes[0];
+	    bbuf[1] = bytes[1];
+    	    bbuf[2] = bytes[2];
+	    bbuf[3] = bytes[3];
+	    bbuf[4] = bytes[4];
+	    bbuf[5] = bytes[5];
+    	    bbuf[6] = bytes[6];
+	    bbuf[7] = bytes[7];
+	}
+	return fbuf[0];
+    }
+
+    return {
+	toBytes: toBytes,
+	toFloat: toFloat
+    };
+
+}());
+
+exports.encodeNum = encodeNum
+
 /**
  * asm-runtime is now an include file
  * and will take some while to become what
@@ -29730,7 +30322,6 @@ define("asm-parser", function (require, exports) {
         char = source[0];
         char2 = source[1];
         state = LABEL;
-        opcode
 
         while (token = token2) {
             token2 = nextToken();
@@ -29742,7 +30333,6 @@ define("asm-parser", function (require, exports) {
                     state = OPCODE;
                     continue;
                 case OPCODE:
-
                     HEAP32[ptr] = +token.value;
                     STACKTOP += 4;
                     // numOperands = 2; // numberOfOperators[opcode]; don´t know my new table yet
@@ -29752,32 +30342,29 @@ define("asm-parser", function (require, exports) {
                         nextToken();
                         HEAP32[ptr+i] = getValue(token);    // and do registering and and transforming
                         STACKTOP += 4;
-
                     }
-
             }
 
             switch (token.type) {
 
                 case OPCODE:
-
-                case OPERAND:
                     /*
-
+                     *
+                     */
+                case OPERAND:
+                   /*
+                    *
                     */
-
                 case OPERATOR:
                     /*
-                        encode with code
+                     *   encode with code
                      */
                 case LABEL:
                     /*
-                        translate to current position
-                        like equ $-str, where $ is this/here
+                     *   translate to current position
+                     *   like equ $-str, where $ is this/here
                      */
                     labels.push(STACKTOP);
-
-
             }
         }
     }
@@ -29785,7 +30372,6 @@ define("asm-parser", function (require, exports) {
     exports.parseDSL = parseDSL;
 
 });
-
 // *******************************************************************************************************************************
 // Highlight (UI Independent Function translating JS into a string of spans)
 // *******************************************************************************************************************************
@@ -29848,17 +30434,19 @@ define("highlight", function (require, exports) {
         }
         return string;
     }
-/*
-    switch(type) {
-        case "RegularExpressionLiteral":
-            word = RegExpToString(word);
-            break;
-        case "TemplateLiteral":
-            word = TemplateToString(word);
-            break;
-    }
-*/
+
+    /*
+     switch(type) {
+     case "RegularExpressionLiteral":
+     word = RegExpToString(word);
+     break;
+     case "TemplateLiteral":
+     word = TemplateToString(word);
+     break;
+     }
+     */
     var parse;
+
     function highlight(text, options, rec) {
         var highlighted = [];
         var tokens, word, m, n, type;
@@ -29911,7 +30499,7 @@ define("highlight", function (require, exports) {
             type = tokens[m].type;
             word = tokens[m].value;
 
-            switch(type) {
+            switch (type) {
                 case "RegularExpressionLiteral":
                     word = RegExpToString(word);
                     break;
@@ -29931,7 +30519,7 @@ define("highlight", function (require, exports) {
         }
 
         text = stringifyTokens(highlighted);    // "works" with template and value arrays, because it´s already concatted and highlighter,
-                                                // and there are no arrays, that´s why it works
+        // and there are no arrays, that´s why it works
 
         if (rec) {
             rec.highlightedTokens = highlighted;
@@ -29949,7 +30537,7 @@ define("highlight", function (require, exports) {
 
 define("annotations.de_DE", function (require, exports) {
 
-    var classAnnotations= {
+    var classAnnotations = {
         "syntaxjs-comment": "Kommentar",
         "syntaxjs-string": "Ein Zeichenkette, String genannt",
         "syntaxjs-regexp": "Regulaerer Ausdruck",
@@ -30039,11 +30627,11 @@ define("annotations.de_DE", function (require, exports) {
     annotations["arguments"] = "Das Arguments Objekt enthaelt alle Parameter, die beim Aufruf einer Funktion uebergeben wurden und ist nur innerhalb dieser gerufenen Funktion sichtbar. Ab ES6 gibt es ...rest RestParameter, die das arbeiten leichter machen.";
     annotations["JSRuntime"] = "JSRuntime ist die SpiderMonkey Laufzeitstruktur. Wird mit JSRuntime *rt = JS_CreateRuntime(bytes); gestartet. Mit der rt kann man dann den JSContext(rt, heapsize) erzeugen.";
 
-   return {
-      annotations: annotations,
-      buttonNames: buttonNames,
-      classAnnotations: classAnnotations,
-   };
+    return {
+        annotations: annotations,
+        buttonNames: buttonNames,
+        classAnnotations: classAnnotations,
+    };
 
 });
 define("annotations.en_US", function (require, exports) {
@@ -30051,9 +30639,9 @@ define("annotations.en_US", function (require, exports) {
     /* soon, that one english version exists for all non-german speaking */
 
     /* sooner, the surrogate code is added and a test for the unicode, to allow anyone to type js and strings
-       */
+     */
 
-    var classAnnotations= {
+    var classAnnotations = {
         "syntaxjs-comment": "Comment",
         "syntaxjs-string": "A chain of characters, called string",
         "syntaxjs-regexp": "A regular expression, the dominating example for teaching automata theory and a very good proof string matching thesis",
@@ -30204,27 +30792,22 @@ define("annotations.en_US", function (require, exports) {
  */
 
 
-
-
 if (typeof window != "undefined") {
-
-
-
 
 
     define("highlight-gui", function (require, exports) {
         "use strict";
-        
+
 
         /*
-            maybe i should go soon with jquery.
+         maybe i should go soon with jquery.
          */
         /*
-            that means ie + mobile + effects for free.
-            and future for the code.
+         that means ie + mobile + effects for free.
+         and future for the code.
          */
-        
-        
+
+
         var tables = require("tables");
         var tokenize = require("tokenizer").tokenizeIntoArrayWithWhiteSpaces;
         var parse = require("parser");
@@ -30233,7 +30816,7 @@ if (typeof window != "undefined") {
 
         var lang = "de_DE";
 
-        var hlIntl = require("annotations."+lang);
+        var hlIntl = require("annotations." + lang);
 
         var Builtins = tables.Builtins;
         var Punctuators = tables.Punctuators;
@@ -30323,7 +30906,7 @@ if (typeof window != "undefined") {
         annotationDiv.className = "syntaxjs-annotation";
 
 
-        var ClassTests = {};        
+        var ClassTests = {};
         for (var k in ClassNames) {
             ClassTests[k] = true;
         }
@@ -30336,6 +30919,7 @@ if (typeof window != "undefined") {
                 return element.attachEvent("on" + type, func);
             } else return element.addEventListener(type, func, capture);
         }
+
         function createRecord(element, options) {
             var rec = Object.create(null);
             if (element) {
@@ -30345,22 +30929,27 @@ if (typeof window != "undefined") {
             }
             return rec;
         }
+
         function setRecord(rec, data) {
             if (typeof data == "object") assign(rec, data);
             return null;
         }
+
         function assign(obj, obj2) {
             for (var k in obj2)
                 if (Object.hasOwnProperty.call(obj2, k))
                     obj[k] = obj2[k];
             return obj;
         }
+
         function setAnnotation(newAnnotation) {
             annotations = newAnnotation;
         }
+
         function getAnnotation() {
             return annotations;
         }
+
         function make_console_element(rec) {
             var element = rec.element;
             var consoleElement = document.createElement("div");
@@ -30370,6 +30959,7 @@ if (typeof window != "undefined") {
             rec.consoleElement = consoleElement;
             return consoleElement;
         }
+
         function make_button(rec, cname, bname, clickhndlr, nopushbool) {
             var button = document.createElement("button");
             button.className = ClassNames[cname];
@@ -30378,6 +30968,7 @@ if (typeof window != "undefined") {
             if (nopushbool) return button;
             return pushButton(rec, button)
         }
+
         /* append all buttons to the container element */
         function appendButtons(rec, element) {
             var buttons = rec.buttons;
@@ -30390,6 +30981,7 @@ if (typeof window != "undefined") {
             }
             element.appendChild(buttonContainer);
         }
+
         /* remove all the buttons from the container */
         function removeButtons(rec, element) {
             var buttons = rec.buttons;
@@ -30399,16 +30991,19 @@ if (typeof window != "undefined") {
                 if (buttons[i].parentNode) buttons[i].parentNode.removeChild(buttons[i]);
             }
         }
+
         // This function stores the buttons under each id.
         function pushButton(rec, button) {
             if (!rec.buttons) rec.buttons = [];
             rec.buttons.push(button);
             return button;
         }
+
         // CreateFeaturing Elements
         var registered_annotation = false;
         var globalControlsAttribute = document.documentElement.getAttribute(DataAttributes["controls"]);
         var globalControls = globalControlsAttribute !== undefined ? Duties[globalControlsAttribute] : false;
+
         function highlightElements(options) {
 
             var elements;
@@ -30441,8 +31036,8 @@ if (typeof window != "undefined") {
                             opts = options[tag];
 
                             if (opts) {
-                                controls =  opts.controls !== undefined ? opts.controls : false;
-                                annotate =  opts.annotate !== undefined ? opts.annotate : true;
+                                controls = opts.controls !== undefined ? opts.controls : false;
+                                annotate = opts.annotate !== undefined ? opts.annotate : true;
                             } else {
                                 controls = false;
                             }
@@ -30477,6 +31072,7 @@ if (typeof window != "undefined") {
                 }
             }
         }
+
         // live Editor -
         // the first bug i got to was when replacing innerHTML with the highlighted text
         function createFeaturingElements(rec) {
@@ -30495,9 +31091,10 @@ if (typeof window != "undefined") {
                 createEvaluateButton(rec);
                 createFileInformations(rec);
                 appendButtons(rec);
-            },0);
+            }, 0);
             return rec;
         }
+
         //
         // CreateWrapper wraps the original pre with some elements,
         // to contain the buttons, console, second view, (maybe tabs soon)  and more
@@ -30515,6 +31112,7 @@ if (typeof window != "undefined") {
             }
             return wrapper;
         }
+
         function createEditorButton(rec) {
 
             var element = rec.element;
@@ -30555,6 +31153,7 @@ if (typeof window != "undefined") {
                      newrange.setEnd(range.endContainer, range.endOffset);*/
                     // cursor.moveToPoint(e.pageX, e.pageY);
                 }
+
                 addEventListener(editor, "keyup", function (e) {
                     if (timeout) {
                         clearTimeout(timeout);
@@ -30568,11 +31167,13 @@ if (typeof window != "undefined") {
                 view.insertBefore(editor, element);
                 element.innerHTML = highlight(JSON.stringify(rec.ast || parse(rec.tokens), null, 4));
             }
+
             return make_button(rec, "editor", "editor", function (e) {
                 if (!editor) createEditor();
                 else editor.hidden = !editor.hidden;
             });
         }
+
         // FileInformations are "Filesize: __ bytes, __ LOC, Format: (unimpl.)" on the bottom
         // special: the span with the infos is added to the buttons array which contains all other widgets (buttons)
         function createFileInformations(rec) {
@@ -30584,6 +31185,7 @@ if (typeof window != "undefined") {
             span.innerHTML = html;
             rec.buttons.push(span);
         }
+
         // This buttons lets you return to the highlighted text
         function createHighlightButton(rec) {
             var element = rec.element;
@@ -30595,6 +31197,7 @@ if (typeof window != "undefined") {
                 if (element.scrollIntoView) element.scrollIntoView();
             });
         }
+
         // This button uses the nativejs eval function coz i havent coded a AST.Evaluate() yet.
         function createNativeEvalButton(rec) {
             var element = rec.element;
@@ -30612,6 +31215,7 @@ if (typeof window != "undefined") {
                 }
             });
         }
+
         // Finally i call Evaluate (i am proud not to be as stupid as my CV is)
         function createEvaluateButton(rec) {
 
@@ -30633,12 +31237,14 @@ if (typeof window != "undefined") {
                 }
             });
         }
+
         //
         // count_word adds 1 to the existing wordcount_obj[word] or creates a new entry [word] set to 1 on the wordcount_obj.
         //
         function count_word(word, wordcount_obj) {
             wordcount_obj[word] = typeof wordcount_obj[word] === "number" ? wordcount_obj[word] + 1 : 1;
         }
+
         /// Array.prototype.sort(sort_alpha) sortiert Worte.
         function sort_alpha(w1, w2) {
             var i, b1, b2;
@@ -30651,6 +31257,7 @@ if (typeof window != "undefined") {
                 else if (b1 > b2) return true;
             } while (b1 === b2);
         }
+
         //
         // The wordcount buttons shows a label with some informations about the tokens (counters)
         // Has to be improved with cooler statistics.
@@ -30658,12 +31265,15 @@ if (typeof window != "undefined") {
         function total(v) {
             return "<p>Total: <b>" + v + "</b></p>\n";
         }
+
         function ol() {
             return "<ol class=" + ClassNames["wordcount-list"] + ">";
         }
+
         function li(s, p) {
             return "<li>" + s + "x " + p + "\n";
         }
+
         function createWordCountButton(rec) {
 
             var flag = false;
@@ -30743,6 +31353,7 @@ if (typeof window != "undefined") {
                 html += panel.innerHTML = html;
                 calculated = true;
             }
+
             addEventListener(panel, "click", function (e) {
                 flag = false;
                 panel.parentNode.removeChild(panel);
@@ -30766,6 +31377,7 @@ if (typeof window != "undefined") {
                 flag = !flag;
             });
         }
+
         // fillnum(9, 3) returns "009" (fill "9" with 0s to a width of 3)
         function fillnum(n, w) {
             var s = "";
@@ -30776,6 +31388,7 @@ if (typeof window != "undefined") {
             s += n;
             return s;
         }
+
         //
         // This adds a line count by splitting the text into lines and adding a span in front of each
         //
@@ -30800,6 +31413,7 @@ if (typeof window != "undefined") {
                 if (element.scrollIntoView) element.scrollIntoView();
             });
         }
+
         //
         // This is a minifier, which bases on the Tokens-Array
         //
@@ -30820,6 +31434,7 @@ if (typeof window != "undefined") {
             }
             return text;
         }
+
         //
         // This function minifies the highlighted spans by testing for the classname
         //
@@ -30837,6 +31452,7 @@ if (typeof window != "undefined") {
             }
             return text;
         }
+
         //
         // The minifier Button
         //
@@ -30851,6 +31467,7 @@ if (typeof window != "undefined") {
                 if (element.scrollIntoView) element.scrollIntoView();
             });
         }
+
         //
         // Show original content of the Element
         //
@@ -30862,6 +31479,7 @@ if (typeof window != "undefined") {
                     if (element.scrollIntoView) element.scrollIntoView();
                 });
         }
+
         // ununused
         function createToSourceButton(rec) {
             var source;
@@ -30878,6 +31496,7 @@ if (typeof window != "undefined") {
                 if (element.scrollIntoView) element.scrollIntoView();
             });
         }
+
         //
         // Pressing this button displays the AST
         //
@@ -30904,6 +31523,7 @@ if (typeof window != "undefined") {
                 if (element.scrollIntoView) element.scrollIntoView();
             });
         }
+
         //
         // This Buttons shows the Tokens-Array
         // filterWhiteSpace used before displaying
@@ -30913,6 +31533,7 @@ if (typeof window != "undefined") {
                 return token.type !== "WhiteSpace";
             });
         }
+
         function createShowTokensButton(rec) {
             var element = rec.element;
             var newtext;
@@ -30921,12 +31542,14 @@ if (typeof window != "undefined") {
                 element.innerHTML = newtext;
             });
         }
+
         function createBeautyfierButton(rec) {
             var element = rec.element;
             return make_button(rec, "beauty", "beauty", function (e) {
                 element.innerHTML = highlight(beautify(rec.tokens));
             });
         }
+
         function createShellButton(rec) {
             var element = rec.element;
             var wrapper = rec.wrapper;
@@ -30987,6 +31610,7 @@ if (typeof window != "undefined") {
 
             });
         }
+
         /* War das 1. Feature */
         function annotateCode(e) {
             var key, str, html, target, className;
@@ -31038,7 +31662,7 @@ if (typeof window != "undefined") {
 
             lang = lang || i18n.getCurrentLanguage();
 
-            var pack = require("annotations."+lang);
+            var pack = require("annotations." + lang);
 
             if (pack && typeof pack === "object") {
 
@@ -31070,7 +31694,7 @@ if (typeof window != "undefined") {
                 list.appendChild(li);
             }
             e.target.appendChild(list);
-            list.onclick = function() {
+            list.onclick = function () {
                 list.parentNode.removeChild(list);
             }
         }
@@ -31097,22 +31721,21 @@ if (typeof window != "undefined") {
         }
 
 
-        
         /*
          Startet den Highlighter *****
          */
-        
+
         function defaultOptions() {
             var options = Object.create(null);
             options["PRE"] = {
-        	annotate: true,
-        	syntaxerrors:true,
-        	controls: false
+                annotate: true,
+                syntaxerrors: true,
+                controls: false
             };
             options["CODE"] = {
-            	annotate: true,
-        	syntaxerrors:true,
-        	controls: false
+                annotate: true,
+                syntaxerrors: true,
+                controls: false
             };
             return options;
         }
@@ -31125,16 +31748,16 @@ if (typeof window != "undefined") {
             else config = defaultOptions();
             setLanguage(lang);
             var onload = function (e) {
-                setTimeout(highlightElements.bind(null,config), 0);
+                setTimeout(highlightElements.bind(null, config), 0);
             };
             addEventListener(window, "DOMContentLoaded", onload, false);
         }
+
         /* -------------------------------- */
 
 
         exports.startHighlighterOnLoad = startHighlighterOnLoad;
         exports.highlightElements = highlightElements;
-
 
 
         exports.addLanguageButton = addLanguageButton;
