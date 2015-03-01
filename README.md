@@ -35,3 +35,8 @@ and really taking that serious. Meanwhile the specification evolved a little
 with a lack of bytecode and a stack machine instead of recursion, which
 prohibited the generator feature without patching too much.
 I still think, i will continue this tool, too. 
+
+
+2015 RC1 ES6
+============
+The saga continues with draft 33. When the browsers are ready, i will be pretty, he.
